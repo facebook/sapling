@@ -9,8 +9,12 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use crate::failure::{prelude::*, SlogKVError};
+use configerator::ConfigeratorAPI;
+use fbwhoami::FbWhoAmI;
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
+use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits};
+use serde_json;
 use slog::{self, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
@@ -27,8 +31,23 @@ use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
 use crate::repo_handlers::RepoHandler;
 
-use context::CoreContext;
+use context::{CoreContext, Metric};
 use hooks::HookManager;
+
+lazy_static! {
+    static ref DATACENTER_REGION_PREFIX: String = {
+        FbWhoAmI::new()
+            .expect("failed to init fbwhoami")
+            .get_region_data_center_prefix()
+            .expect("failed to get region from fbwhoami")
+            .to_string()
+    };
+}
+
+// It's made public so that the code that creates ConfigeratorAPI can subscribe to this category
+pub const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
+const CONFIGERATOR_TIMEOUT_MS: usize = 25;
+const DEFAULT_PERCENTAGE: f64 = 100.0;
 
 define_stats! {
     prefix = "mononoke.request_handler";
@@ -51,6 +70,7 @@ pub fn request_handler(
     }: RepoHandler,
     stdio: Stdio,
     hook_manager: Arc<HookManager>,
+    load_limiting_config: Option<(Arc<ConfigeratorAPI>, String)>,
 ) -> impl Future<Item = (), Error = ()> {
     let mut scuba_logger = scuba;
     let Stdio {
@@ -106,6 +126,18 @@ pub fn request_handler(
     };
 
     scuba_logger.log_with_msg("Connection established", None);
+    let client_hostname = preamble
+        .misc
+        .get("source_hostname")
+        .cloned()
+        .unwrap_or("".to_string());
+
+    let load_limiting_config = match load_limiting_config {
+        Some((configerator_api, category)) => {
+            loadlimiting_configs(configerator_api, client_hostname).map(|limits| (limits, category))
+        }
+        None => None,
+    };
 
     let ctx = CoreContext::new(
         session_uuid,
@@ -115,6 +147,7 @@ pub fn request_handler(
         trace.clone(),
         preamble.misc.get("unix_username").cloned(),
         SshEnvVars::from_map(&preamble.misc),
+        load_limiting_config,
     );
 
     // Construct a hg protocol handler
@@ -139,6 +172,10 @@ pub fn request_handler(
 
     // send responses back
     let endres = proto_handler
+        .inspect({
+            cloned!(ctx);
+            move |bytes| ctx.bump_load(Metric::EgressBytes, bytes.len() as f64)
+        })
         .map_err(Error::from)
         .forward(stdout)
         .map(|_| ());
@@ -169,4 +206,53 @@ pub fn request_handler(
                 "remote" => "true"
             );
         })
+}
+
+fn loadlimiting_configs(
+    configerator_api: Arc<ConfigeratorAPI>,
+    client_hostname: String,
+) -> Option<MononokeThrottleLimit> {
+    let data = configerator_api
+        .get_entity(CONFIGERATOR_LIMITS_CONFIG, CONFIGERATOR_TIMEOUT_MS)
+        .ok();
+    data.and_then(|data| {
+        let config: Option<MononokeThrottleLimits> = serde_json::from_str(&data.contents).ok();
+        config
+    })
+    .and_then(|config| {
+        let region_percentage = config
+            .datacenter_prefix_capacity
+            .get(&*DATACENTER_REGION_PREFIX)
+            .copied()
+            .unwrap_or(DEFAULT_PERCENTAGE);
+        let host_scheme = hostname_scheme(client_hostname);
+        let limit = config
+            .hostprefixes
+            .get(&host_scheme)
+            .or(Some(&config.defaults))
+            .copied();
+
+        match limit {
+            Some(limit) => Some(MononokeThrottleLimit {
+                egress_bytes: limit.egress_bytes * region_percentage / 100.0,
+                ingress_blobstore_bytes: limit.ingress_blobstore_bytes * region_percentage / 100.0,
+                total_manifests: limit.total_manifests * region_percentage / 100.0,
+                quicksand_manifests: limit.quicksand_manifests * region_percentage / 100.0,
+            }),
+            _ => None,
+        }
+    })
+}
+
+/// Translates a hostname in to a host scheme:
+///   devvm001.lla1.facebook.com -> devvm
+///   hg001.lla1.facebook.com -> hg
+fn hostname_scheme(hostname: String) -> String {
+    let mut hostprefix = hostname.clone();
+    let index = hostprefix.find(|c: char| !c.is_ascii_alphabetic());
+    match index {
+        Some(index) => hostprefix.truncate(index),
+        None => {}
+    }
+    hostprefix
 }

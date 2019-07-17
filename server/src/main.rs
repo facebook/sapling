@@ -13,7 +13,6 @@ use clap::{App, ArgMatches};
 use failure_ext::SlogKVError;
 use futures::Future;
 use lazy_static::lazy_static;
-use loadlimiter;
 use metaconfig_parser::RepoConfigs;
 use slog::{crit, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
@@ -114,8 +113,6 @@ fn main() {
             .value_of("ssl-ticket-seeds")
             .unwrap_or(secure_utils::fb_tls::SEED_PATH)
             .to_string();
-
-        loadlimiter::init(&config.common);
 
         let ssl = secure_utils::SslConfig {
             cert,

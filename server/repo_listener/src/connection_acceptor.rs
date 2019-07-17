@@ -17,11 +17,12 @@ use crate::acl::VALID_ACL_MEMBER_TYPES;
 use crate::failure::{err_msg, SlogKVError};
 use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
+use configerator::ConfigeratorAPI;
+use fbinit;
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use itertools::join;
-use loadlimiter::{bump_load, LIMIT_EGRESS_BYTES};
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -42,6 +43,7 @@ use crate::repo_handlers::RepoHandler;
 use crate::request_handler::request_handler;
 
 const CHUNK_SIZE: usize = 10000;
+const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
 
 lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
@@ -56,7 +58,7 @@ pub fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
-    _test_instance: bool,
+    test_instance: bool,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
@@ -64,6 +66,21 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
+    let configerator_api = if !test_instance {
+        let _ = *fbinit::FACEBOOK;
+
+        let api = Arc::new(ConfigeratorAPI::new().expect("failed to create cfgr api"));
+        api.subscribe_to_config(CONFIGERATOR_LIMITS_CONFIG)
+            .expect("can't subscribe to configerator config");
+        Some(api)
+    } else {
+        None
+    };
+
+    let load_limiting_config = common_config
+        .loadlimiter_category
+        .clone()
+        .and_then(|category| configerator_api.map(|api| (api, category)));
     let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(common_config).map_err(
         |err| {
             let e: Error =
@@ -77,7 +94,13 @@ pub fn connection_acceptor(
     TakeUntilNotSet::new(listener.boxify(), terminate_process)
         .for_each(move |sock| {
             // Accept the request without blocking the listener
-            cloned!(root_log, repo_handlers, tls_acceptor, security_checker);
+            cloned!(
+                load_limiting_config,
+                root_log,
+                repo_handlers,
+                tls_acceptor,
+                security_checker
+            );
             OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
             tokio::spawn(future::lazy(move || {
                 accept(
@@ -86,6 +109,7 @@ pub fn connection_acceptor(
                     repo_handlers,
                     tls_acceptor,
                     security_checker.clone(),
+                    load_limiting_config.clone(),
                 )
                 .then(|res| {
                     OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
@@ -113,6 +137,7 @@ fn accept(
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     tls_acceptor: Arc<SslAcceptor>,
     security_checker: Arc<ConnectionsSecurityChecker>,
+    load_limiting_config: Option<(Arc<ConfigeratorAPI>, String)>,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 
@@ -190,8 +215,13 @@ fn accept(
                         .add("client_identities", join(identities.iter(), ","));
 
                     if security_checker.check_if_connections_allowed(&identities) {
-                        request_handler(handler.clone(), stdio, handler.repo.hook_manager())
-                            .left_future()
+                        request_handler(
+                            handler.clone(),
+                            stdio,
+                            handler.repo.hook_manager(),
+                            load_limiting_config,
+                        )
+                        .left_future()
                     } else {
                         let err: Error = ErrorKind::AuthorizationFailed.into();
                         let tmp_conn_log = create_conn_logger(&stdio);
@@ -349,17 +379,11 @@ where
                 let (etx, erx) = mpsc::channel(1);
 
                 let orx = orx
-                    .map(|blob: Bytes| {
-                        bump_load(&LIMIT_EGRESS_BYTES, blob.len() as f64);
-                        split_bytes_in_chunk(blob, CHUNK_SIZE)
-                    })
+                    .map(|blob: Bytes| split_bytes_in_chunk(blob, CHUNK_SIZE))
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stdout, v));
                 let erx = erx
-                    .map(|blob: Bytes| {
-                        bump_load(&LIMIT_EGRESS_BYTES, blob.len() as f64);
-                        split_bytes_in_chunk(blob, CHUNK_SIZE)
-                    })
+                    .map(|blob: Bytes| split_bytes_in_chunk(blob, CHUNK_SIZE))
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stderr, v));
 

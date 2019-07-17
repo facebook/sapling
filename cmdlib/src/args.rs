@@ -229,6 +229,8 @@ pub fn get_core_context<'a>(matches: &ArgMatches<'a>) -> CoreContext {
         trace.clone(),
         None,
         SshEnvVars::default(),
+        // TODO(stash): use load limiting?
+        None,
     )
 }
 
