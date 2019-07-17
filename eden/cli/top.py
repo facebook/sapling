@@ -28,6 +28,9 @@ class Top:
     def __init__(self):
         self.running = False
         self.ephemeral = False
+
+        # Maps (mount, name) pairs to another dictionary,
+        # which tracks the # of FUSE calls per PID
         self.processes: DefaultDict[
             Tuple[bytes, bytes], DefaultDict[int, int]
         ] = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
@@ -81,11 +84,17 @@ class Top:
                 name = names_by_pid.get(pid, b"<unknown>")
                 process = (mount, name)
 
-                self.processes[process][pid] += calls.count
+                calls_by_pid = self.processes[process]
+                # Delete, increment, and re-add to end of OrderedDict
+                del self.processes[process]
+                calls_by_pid[pid] += calls.count
+                self.processes[process] = calls_by_pid
 
     def update_rows(self):
         self.rows = []
-        for (mount, name), calls_per_pid in self.processes.items():
+
+        ordered_processes = reversed(list(self.processes.items()))
+        for (mount, name), calls_per_pid in ordered_processes:
             name = format_name(name)
             mount = format_mount(mount)
             calls = sum(calls_per_pid.values())
@@ -102,8 +111,7 @@ class Top:
         return sum(c[0] for c in ls)
 
     def render(self, stdscr):
-        stdscr.noutrefresh()
-        stdscr.erase()
+        stdscr.clear()
 
         self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
@@ -111,7 +119,7 @@ class Top:
         self.render_column_titles(stdscr)
         self.render_rows(stdscr)
 
-        curses.doupdate()
+        stdscr.refresh()
 
     def render_top_bar(self, stdscr):
         TITLE = "eden top"
