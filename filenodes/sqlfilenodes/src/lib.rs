@@ -182,29 +182,25 @@ impl SqlConstructors for SqlFilenodes {
 
 impl SqlFilenodes {
     pub fn with_sharded_myrouter(
-        tier: &str,
+        tier: String,
         port: u16,
         shard_count: usize,
     ) -> BoxFuture<Self, Error> {
-        let tier = tier.to_string();
-
         Self::with_sharded_factory(shard_count, move |shard_id| {
             Ok(create_myrouter_connections(
-                &format!("{}.{}", tier, shard_id),
+                format!("{}.{}", tier, shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
-                "shardedfilenodes",
+                "shardedfilenodes".to_string(),
             ))
             .into_future()
             .boxify()
         })
     }
 
-    pub fn with_sharded_raw_xdb(tier: &str, shard_count: usize) -> BoxFuture<Self, Error> {
-        let tier = tier.to_string();
-
+    pub fn with_sharded_raw_xdb(tier: String, shard_count: usize) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
-            create_raw_xdb_connections(&format!("{}.{}", &tier, shard_id)).boxify()
+            create_raw_xdb_connections(&format!("{}.{}", tier, shard_id)).boxify()
         })
     }
 

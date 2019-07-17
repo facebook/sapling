@@ -102,7 +102,7 @@ pub struct RepoConfig {
 
 impl RepoConfig {
     /// Returns a db address that is referenced in this config or None if there is none
-    pub fn get_db_address(&self) -> Option<&str> {
+    pub fn get_db_address(&self) -> Option<String> {
         self.storage_config.dbconfig.get_db_address()
     }
 }
@@ -608,9 +608,9 @@ impl MetadataDBConfig {
 
     /// Return address we should connect to for a remote DB
     /// (Assumed to be Mysql)
-    pub fn get_db_address(&self) -> Option<&str> {
+    pub fn get_db_address(&self) -> Option<String> {
         match self {
-            MetadataDBConfig::Mysql { db_address, .. } => Some(db_address.as_str()),
+            MetadataDBConfig::Mysql { db_address, .. } => Some(db_address.clone()),
             MetadataDBConfig::LocalDB { .. } => None,
         }
     }

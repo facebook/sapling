@@ -67,18 +67,16 @@ pub struct Sqlblob {
 impl Sqlblob {
     pub fn with_myrouter(
         repo_id: RepositoryId,
-        shardmap: &str,
+        shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<Self, Error> {
-        let shardmap = shardmap.to_string();
-
         Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
-                &format!("{}.{}", shardmap, shard_id),
+                format!("{}.{}", shardmap, shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
-                "blobstore",
+                "blobstore".to_string(),
             ))
             .into_future()
             .boxify()
@@ -87,13 +85,11 @@ impl Sqlblob {
 
     pub fn with_raw_xdb_shardmap(
         repo_id: RepositoryId,
-        shardmap: &str,
+        shardmap: String,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<Self, Error> {
-        let shardmap = shardmap.to_string();
-
         Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
-            create_raw_xdb_connections(&format!("{}.{}", &shardmap, shard_id)).boxify()
+            create_raw_xdb_connections(&format!("{}.{}", shardmap, shard_id)).boxify()
         })
     }
 

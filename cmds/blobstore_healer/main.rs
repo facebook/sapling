@@ -85,7 +85,7 @@ fn maybe_schedule_healer_for_storage(
                     shard_num,
                 } => {
                     let blobstore =
-                        Sqlblob::with_myrouter(repo_id, &shard_map, myrouter_port, shard_num)
+                        Sqlblob::with_myrouter(repo_id, shard_map, myrouter_port, shard_num)
                             .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
                     blobstores.insert(id, blobstore.boxify());
                 }
@@ -118,7 +118,7 @@ fn maybe_schedule_healer_for_storage(
     .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
     let sync_queue: Arc<dyn BlobstoreSyncQueue> = {
-        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port);
+        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(db_address.clone(), myrouter_port);
 
         if !dry_run {
             Arc::new(sync_queue)
@@ -133,7 +133,7 @@ fn maybe_schedule_healer_for_storage(
     conn_builder
         .service_type(myrouter::ServiceType::SLAVE)
         .locality(myrouter::DbLocality::EXPLICIT)
-        .tier(&db_address)
+        .tier(db_address.clone())
         .port(myrouter_port);
 
     for region in replication_lag_db_regions {
@@ -159,7 +159,7 @@ fn maybe_schedule_healer_for_storage(
             schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
         }
     });
-    Ok(myrouter::wait_for_myrouter(myrouter_port, &db_address)
+    Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
         .and_then(|_| heal)
         .boxify())
 }

@@ -113,11 +113,11 @@ impl MononokeRepo {
 
 pub fn streaming_clone(
     blobrepo: BlobRepo,
-    db_address: &str,
+    db_address: String,
     myrouter_port: Option<u16>,
     repoid: RepositoryId,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    SqlStreamingChunksFetcher::with_xdb(&db_address, myrouter_port)
+    SqlStreamingChunksFetcher::with_xdb(db_address, myrouter_port)
         .map(move |fetcher| SqlStreamingCloneConfig {
             fetcher,
             blobstore: blobrepo.get_blobstore(),

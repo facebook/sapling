@@ -7,6 +7,6 @@
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
 #![deny(warnings)]
-#![feature(never_type)]
+#![feature(never_type, bind_by_move_pattern_guards)]
 
 pub mod args;

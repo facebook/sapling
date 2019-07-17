@@ -279,12 +279,12 @@ where
 
     let (_, config) = try_boxfuture!(get_config(matches));
 
-    match &config.storage_config.dbconfig {
+    match config.storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => {
             T::with_sqlite_path(path.join(name)).into_future().boxify()
         }
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(&db_address, parse_myrouter_port(matches))
+            T::with_xdb(db_address, parse_myrouter_port(matches))
         }
         MetadataDBConfig::Mysql { .. } => Err(err_msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",

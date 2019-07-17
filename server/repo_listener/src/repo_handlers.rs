@@ -55,7 +55,9 @@ fn open_db_from_config<S: SqlConstructors>(
         MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join(S::LABEL))
             .into_future()
             .boxify(),
-        MetadataDBConfig::Mysql { ref db_address, .. } => S::with_xdb(&db_address, myrouter_port),
+        MetadataDBConfig::Mysql { ref db_address, .. } => {
+            S::with_xdb(db_address.clone(), myrouter_port)
+        }
     }
 }
 
@@ -141,7 +143,7 @@ pub fn repo_handlers(
                 ));
 
                 let streaming_clone = if let Some(db_address) = dbconfig.get_db_address() {
-                    streaming_clone(blobrepo.clone(), &db_address, myrouter_port, repoid)
+                    streaming_clone(blobrepo.clone(), db_address, myrouter_port, repoid)
                         .map(Some)
                         .left_future()
                 } else {
@@ -150,7 +152,7 @@ pub fn repo_handlers(
 
                 // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
                 let sql_read_write_status = if let Some(addr) = write_lock_db_address {
-                    SqlRepoReadWriteStatus::with_xdb(&addr, myrouter_port)
+                    SqlRepoReadWriteStatus::with_xdb(addr, myrouter_port)
                         .map(Some)
                         .left_future()
                 } else {

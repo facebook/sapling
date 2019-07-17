@@ -346,7 +346,7 @@ fn main() -> Result<(), Error> {
     let config = Arc::new(parse_args()?);
     let manifold = ThriftManifoldBlob::new(config.manifold_args.bucket.clone())?.into_inner();
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
-        &config.db_address,
+        config.db_address.clone(),
         config.myrouter_port,
     ));
     let mut runtime = runtime::Runtime::new()?;

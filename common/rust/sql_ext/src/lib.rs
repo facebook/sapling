@@ -48,10 +48,10 @@ impl PoolSizeConfig {
 }
 
 pub fn create_myrouter_connections(
-    tier: &str,
+    tier: String,
     port: u16,
     pool_size_config: PoolSizeConfig,
-    label: &str,
+    label: String,
 ) -> SqlConnections {
     let mut builder = Connection::myrouter_builder();
     builder.tier(tier).port(port);
@@ -80,21 +80,23 @@ pub fn create_myrouter_connections(
     }
 }
 
-pub fn create_raw_xdb_connections(tier: &str) -> impl Future<Item = SqlConnections, Error = Error> {
-    let tier = tier.to_string();
+pub fn create_raw_xdb_connections<'a, T>(
+    tier: &'a T,
+) -> impl Future<Item = SqlConnections, Error = Error>
+where
+    T: ?Sized,
+    &'a T: AsRef<str>,
+{
+    let tier: &str = tier.as_ref();
 
     let write_connection =
-        raw::RawConnection::new_from_tier(&tier, raw::InstanceRequirement::Master, None, None);
+        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::Master, None, None);
 
-    let read_connection = raw::RawConnection::new_from_tier(
-        &tier,
-        raw::InstanceRequirement::ReplicaFirst,
-        None,
-        None,
-    );
+    let read_connection =
+        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::ReplicaFirst, None, None);
 
     let read_master_connection =
-        raw::RawConnection::new_from_tier(&tier, raw::InstanceRequirement::Master, None, None);
+        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::Master, None, None);
 
     write_connection
         .into_future()
@@ -119,7 +121,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
 
     fn get_up_query() -> &'static str;
 
-    fn with_myrouter(tier: &str, port: u16) -> Self {
+    fn with_myrouter(tier: String, port: u16) -> Self {
         let SqlConnections {
             write_connection,
             read_connection,
@@ -128,14 +130,14 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             tier,
             port,
             PoolSizeConfig::for_regular_connection(),
-            Self::LABEL,
+            Self::LABEL.to_string(),
         );
 
         Self::from_connections(write_connection, read_connection, read_master_connection)
     }
 
-    fn with_raw_xdb_tier(tier: &str) -> BoxFuture<Self, Error> {
-        create_raw_xdb_connections(tier)
+    fn with_raw_xdb_tier(tier: String) -> BoxFuture<Self, Error> {
+        create_raw_xdb_connections(&tier)
             .map(|r| {
                 let SqlConnections {
                     write_connection,
@@ -148,7 +150,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             .boxify()
     }
 
-    fn with_xdb(tier: &str, port: Option<u16>) -> BoxFuture<Self, Error> {
+    fn with_xdb(tier: String, port: Option<u16>) -> BoxFuture<Self, Error> {
         match port {
             Some(myrouter_port) => ok(Self::with_myrouter(tier, myrouter_port)).boxify(),
             None => Self::with_raw_xdb_tier(tier),
@@ -176,7 +178,7 @@ fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
 }
 
 pub fn myrouter_ready(
-    db_addr_opt: Option<&str>,
+    db_addr_opt: Option<String>,
     myrouter_port: Option<u16>,
 ) -> impl Future<Item = (), Error = Error> {
     match db_addr_opt {

@@ -67,7 +67,7 @@ impl XdbFactory {
 
 impl SqlFactory for XdbFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        T::with_xdb(&self.db_address, self.myrouter_port)
+        T::with_xdb(self.db_address.clone(), self.myrouter_port)
             .map(|r| Arc::new(r))
             .boxify()
     }
@@ -81,7 +81,8 @@ impl SqlFactory for XdbFactory {
                 }),
                 Some(port),
             ) => {
-                let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into());
+                let conn =
+                    SqlFilenodes::with_sharded_myrouter(shard_map.clone(), port, shard_num.into());
                 (shard_map, conn)
             }
             (
@@ -91,11 +92,11 @@ impl SqlFactory for XdbFactory {
                 }),
                 None,
             ) => {
-                let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into());
+                let conn = SqlFilenodes::with_sharded_raw_xdb(shard_map.clone(), shard_num.into());
                 (shard_map, conn)
             }
             (None, port) => {
-                let conn = SqlFilenodes::with_xdb(&self.db_address, port);
+                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port);
                 (self.db_address.clone(), conn)
             }
         };
@@ -193,9 +194,9 @@ pub fn make_blobstore<T: SqlFactory>(
             shard_map,
             shard_num,
         } => if let Some(myrouter_port) = myrouter_port {
-            Sqlblob::with_myrouter(repoid, shard_map, myrouter_port, *shard_num)
+            Sqlblob::with_myrouter(repoid, shard_map.clone(), myrouter_port, *shard_num)
         } else {
-            Sqlblob::with_raw_xdb_shardmap(repoid, shard_map, *shard_num)
+            Sqlblob::with_raw_xdb_shardmap(repoid, shard_map.clone(), *shard_num)
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
