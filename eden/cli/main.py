@@ -538,6 +538,14 @@ class DoctorCmd(Subcmd):
 
 @subcmd("top", "Monitor Eden accesses by process.")
 class TopCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--ephemeral",
+            "-e",
+            action="store_true",
+            help="Don't accumulate data; refresh the screen every update cycle.",
+        )
+
     def run(self, args: argparse.Namespace) -> int:
         top = top_mod.Top()
         return top.start(args)

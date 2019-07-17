@@ -11,7 +11,7 @@ import curses
 import datetime
 import os
 import socket
-from typing import Dict, List, Tuple
+from typing import DefaultDict, List, Tuple
 
 from . import cmd_util
 
@@ -27,13 +27,18 @@ PIDS_WIDTH = 25
 class Top:
     def __init__(self):
         self.running = False
+        self.ephemeral = False
+        self.processes: DefaultDict[
+            Tuple[bytes, bytes], DefaultDict[int, int]
+        ] = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
 
         self.height = 0
         self.width = 0
-        self.rows: List = []
+        self.rows: List[Tuple[bytes, bytes, int, bytes]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
+        self.ephemeral = args.ephemeral
 
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client() as client:
@@ -46,7 +51,6 @@ class Top:
     def run(self, client):
         def mainloop(stdscr):
             self.height, self.width = stdscr.getmaxyx()
-
             stdscr.timeout(REFRESH_SECONDS * 1000)
             curses.curs_set(0)
 
@@ -61,71 +65,38 @@ class Top:
         return mainloop
 
     def update(self, client):
-        processes = self.get_process_data(client)
-        self.populate_rows(processes)
+        self.update_processes(client)
+        self.update_rows()
 
-    def get_process_data(self, client):
+    def update_processes(self, client):
+        if self.ephemeral:
+            self.processes.clear()
+
         counts = client.getAccessCounts(REFRESH_SECONDS)
         names_by_pid = counts.exeNamesByPid
 
-        processes: Dict[
-            Tuple[bytes, bytes], List[Tuple[int, int]]
-        ] = collections.defaultdict(lambda: [])
-
         for mount, accesses in counts.fuseAccessesByMount.items():
             for pid, calls in accesses.fuseAccesses.items():
-                key = (os.path.basename(mount), names_by_pid.get(pid, b"<unknown>"))
-                val = (calls.count, pid)
-                processes[key].append(val)
+                mount = os.path.basename(mount)
+                name = names_by_pid.get(pid, b"<unknown>")
+                process = (mount, name)
 
-        return processes
+                self.processes[process][pid] += calls.count
 
-    def populate_rows(
-        self, processes: Dict[Tuple[bytes, bytes], List[Tuple[int, int]]]
-    ):
+    def update_rows(self):
         self.rows = []
-        for (mount, name), calls_and_pids in sorted(
-            processes.items(), key=lambda kv: self.compute_total(kv[1]), reverse=True
-        ):
-            name = self.format_name(name)
-            mount = self.format_mount(mount)
-            calls = self.compute_total(calls_and_pids)
-            pids = self.format_pids(calls_and_pids)
+        for (mount, name), calls_per_pid in self.processes.items():
+            name = format_name(name)
+            mount = format_mount(mount)
+            calls = sum(calls_per_pid.values())
+
+            # Sort PIDs by fuse calls
+            sorted_pairs = sorted(calls_per_pid.items(), key=lambda kv: kv[1])
+            pids = [pid for pid, _ in reversed(sorted_pairs)]
+            pids = format_pids(pids)
 
             row = (name, mount, calls, pids)
             self.rows.append(row)
-
-    def format_name(self, name):
-        name = os.fsdecode(name)
-        args = name.split("\x00", 2)
-
-        # Focus on just the basename as the paths can be quite long
-        cmd = args[0]
-        name = os.path.basename(cmd)[:NAME_WIDTH]
-
-        # Show cmdline args too, provided they fit in the remaining space
-        remaining_space = NAME_WIDTH - len(name) - len(" ")
-        if len(args) > 1 and remaining_space > 0:
-            arg_str = args[1].replace("\x00", " ")[:remaining_space]
-            name += f" {arg_str}"
-
-        return name
-
-    def format_mount(self, mount):
-        return os.fsdecode(mount)[:MOUNT_WIDTH]
-
-    def format_pids(self, calls_and_pids):
-        pids = [pid for _, pid in sorted(calls_and_pids)]
-
-        if not pids:
-            return ""
-
-        pids_str = str(pids[0])
-        for pid in pids[1:]:
-            new_str = f"{pids_str}, {pid}"
-            if len(new_str) <= PIDS_WIDTH:
-                pids_str = new_str
-        return pids_str
 
     def compute_total(self, ls):
         return sum(c[0] for c in ls)
@@ -181,3 +152,36 @@ class Top:
             self.height, self.width = stdscr.getmaxyx()
         elif key == ord("q"):
             self.running = False
+
+
+def format_name(name):
+    name = os.fsdecode(name)
+    args = name.split("\x00", 2)
+
+    # Focus on just the basename as the paths can be quite long
+    cmd = args[0]
+    name = os.path.basename(cmd)[:NAME_WIDTH]
+
+    # Show cmdline args too, provided they fit in the remaining space
+    remaining_space = NAME_WIDTH - len(name) - len(" ")
+    if len(args) > 1 and remaining_space > 0:
+        arg_str = args[1].replace("\x00", " ")[:remaining_space]
+        name += f" {arg_str}"
+
+    return name
+
+
+def format_mount(mount):
+    return os.fsdecode(mount)[:MOUNT_WIDTH]
+
+
+def format_pids(pids):
+    if not pids:
+        return ""
+
+    pids_str = str(pids[0])
+    for pid in pids[1:]:
+        new_str = f"{pids_str}, {pid}"
+        if len(new_str) <= PIDS_WIDTH:
+            pids_str = new_str
+    return pids_str
