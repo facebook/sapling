@@ -26,6 +26,10 @@ use sql_ext::SqlConstructors;
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
+/// PRESERVE_STATE_RATIO should be divisible by CHUNK_SIZE as otherwise progress
+/// reporting will be broken
+const CHUNK_SIZE: usize = 1000;
+const INIT_COUNT_VALUE: usize = 0;
 
 #[derive(Debug)]
 struct ManifoldArgs {
@@ -61,18 +65,18 @@ struct State {
 impl State {
     fn from_init(init_range: Arc<ManifoldRange>) -> Self {
         Self {
-            count: 1,
+            count: INIT_COUNT_VALUE,
             current_range: init_range.clone(),
             init_range,
         }
     }
 
-    fn with_current(self, current_range: Arc<ManifoldRange>) -> Self {
+    fn with_current_many(self, current_range: Arc<ManifoldRange>, num: usize) -> Self {
         let State {
             count, init_range, ..
         } = self;
         Self {
-            count: count + 1,
+            count: count + num,
             init_range,
             current_range,
         }
@@ -88,7 +92,7 @@ struct StateSerde {
 impl From<StateSerde> for State {
     fn from(state: StateSerde) -> Self {
         Self {
-            count: 1, // start with to avoid immediate preserve of the state
+            count: INIT_COUNT_VALUE,
             init_range: Arc::new(state.init_range),
             current_range: Arc::new(state.current_range),
         }
@@ -272,7 +276,7 @@ fn put_resume_state(
     state: State,
 ) -> impl Future<Item = State, Error = Error> {
     match &config.state_key {
-        Some(state_key) if state.count % PRESERVE_STATE_RATIO == 0 => {
+        Some(state_key) if state.count % PRESERVE_STATE_RATIO == INIT_COUNT_VALUE => {
             let started_at = config.started_at;
             let ctx = config.ctx.clone();
             cloned!(state_key, manifold);
@@ -285,8 +289,8 @@ fn put_resume_state(
                     if termion::is_tty(&std::io::stderr()) {
                         let elapsed = started_at.elapsed().as_secs() as f64;
                         let count = state.count as f64;
-                        eprint!(
-                            "\x1b[K keys processed: {:.0} speed: {:.2}/s\r",
+                        eprintln!(
+                            "Keys processed: {:.0} speed: {:.2}/s",
                             count,
                             count / elapsed
                         );
@@ -307,22 +311,26 @@ fn populate_healer_queue(
     get_resume_state(&manifold, &config).and_then(move |state| {
         manifold
             .enumerate((*state.current_range).clone())
-            .fold(state, move |state, entry| {
-                let state = state.with_current(entry.range.clone());
+            .chunks(CHUNK_SIZE)
+            .fold(state, move |state, entries| {
+                let range = entries[0].range.clone();
+                let state = state.with_current_many(range, entries.len());
+                let repo_id = config.repo_id;
+                let src_blobstore_id = config.src_blobstore_id;
 
                 let enqueue = if config.dry_run {
                     future::ok(()).left_future()
                 } else {
-                    queue
-                        .add(
-                            config.ctx.clone(),
-                            BlobstoreSyncQueueEntry::new(
-                                config.repo_id,
-                                entry.key,
-                                config.src_blobstore_id,
-                                DateTime::now(),
-                            ),
+                    let iterator_box = Box::new(entries.into_iter().map(move |entry| {
+                        BlobstoreSyncQueueEntry::new(
+                            repo_id,
+                            entry.key,
+                            src_blobstore_id,
+                            DateTime::now(),
                         )
+                    }));
+                    queue
+                        .add_many(config.ctx.clone(), iterator_box)
                         .right_future()
                 };
 

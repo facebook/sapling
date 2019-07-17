@@ -64,8 +64,13 @@ impl<Q: BlobstoreSyncQueue> DummyBlobstoreSyncQueue<Q> {
 }
 
 impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
-    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
-        info!(self.logger, "I would have written {:#?}", entry);
+    fn add_many(
+        &self,
+        _ctx: CoreContext,
+        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
+    ) -> BoxFuture<(), Error> {
+        let entries: Vec<_> = entries.collect();
+        info!(self.logger, "I would have written {:#?}", entries);
         Ok(()).into_future().boxify()
     }
 

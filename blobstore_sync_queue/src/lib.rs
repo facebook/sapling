@@ -53,7 +53,15 @@ impl BlobstoreSyncQueueEntry {
 }
 
 pub trait BlobstoreSyncQueue: Send + Sync {
-    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error>;
+    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
+        self.add_many(ctx, Box::new(vec![entry].into_iter()))
+    }
+
+    fn add_many(
+        &self,
+        ctx: CoreContext,
+        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
+    ) -> BoxFuture<(), Error>;
 
     /// Returns list of entries that consist of two groups of entries:
     /// 1. Group with at most `limit` entries that are older than `older_than`
@@ -81,8 +89,12 @@ pub trait BlobstoreSyncQueue: Send + Sync {
 }
 
 impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
-    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
-        (**self).add(ctx, entry)
+    fn add_many(
+        &self,
+        ctx: CoreContext,
+        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
+    ) -> BoxFuture<(), Error> {
+        (**self).add_many(ctx, entries)
     }
 
     fn iter(
@@ -276,19 +288,40 @@ fn insert_entries(
 }
 
 impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
-    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
-        STATS::adds.add_value(1);
-
+    fn add_many(
+        &self,
+        _ctx: CoreContext,
+        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
+    ) -> BoxFuture<(), Error> {
         cloned!(self.write_sender);
         self.ensure_worker_scheduled
             .clone()
             .then(move |res| match res {
                 Ok(_) => {
-                    let (send, recv) = oneshot::channel();
-                    try_boxfuture!(write_sender.unbounded_send((send, entry)));
+                    let (senders_entries, receivers): (Vec<_>, Vec<_>) = entries
+                        .map(|entry| {
+                            let (sender, receiver) = oneshot::channel();
+                            ((sender, entry), receiver)
+                        })
+                        .unzip();
 
-                    recv.map_err(|err| err_msg(format!("failed to receive result {}", err)))
-                        .and_then(|res| res)
+                    STATS::adds.add_value(senders_entries.len() as i64);
+                    let r: Result<_, _> = senders_entries
+                        .into_iter()
+                        .map(|(send, entry)| write_sender.unbounded_send((send, entry)))
+                        .collect();
+                    let _ = try_boxfuture!(r);
+                    future::join_all(receivers)
+                        .map_err(|errs| format_err!("failed to receive result {:?}", errs))
+                        .and_then(|results| {
+                            let errs: Vec<_> =
+                                results.into_iter().filter_map(|r| r.err()).collect();
+                            if errs.len() > 0 {
+                                future::err(format_err!("failed to receive result {:?}", errs))
+                            } else {
+                                future::ok(())
+                            }
+                        })
                         .boxify()
                 }
                 Err(_) => {
