@@ -284,6 +284,18 @@ impl Display for Sha256 {
     }
 }
 
+impl Arbitrary for Sha256 {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let mut bytes = [0; 32];
+        g.fill_bytes(&mut bytes);
+        Sha256(bytes)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        empty_shrinker()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

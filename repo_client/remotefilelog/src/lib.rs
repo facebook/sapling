@@ -81,6 +81,13 @@ pub fn create_remotefilelog_blob(
         .boxify()
 }
 
+fn extract_copy_from<'a>(filenode: &'a FilenodeInfo) -> Option<(MPath, HgFileNodeId)> {
+    filenode
+        .copyfrom
+        .clone()
+        .map(|(path, node)| (path.into_mpath().unwrap(), node))
+}
+
 fn validate_content(
     content: &FileContents,
     filenode: FilenodeInfo,
@@ -88,14 +95,7 @@ fn validate_content(
     actual: HgFileNodeId,
 ) -> Result<(), Error> {
     let mut out: Vec<u8> = vec![];
-    File::generate_metadata(
-        filenode
-            .copyfrom
-            .map(|(path, node)| (path.into_mpath().unwrap(), node))
-            .as_ref(),
-        content,
-        &mut out,
-    )?;
+    File::generate_metadata(extract_copy_from(&filenode).as_ref(), content, &mut out)?;
     let mut bytes = BytesMut::from(out);
     bytes.extend_from_slice(content.as_bytes());
 
@@ -127,17 +127,18 @@ pub fn get_raw_content(
     let filenode_fut =
         get_maybe_draft_filenode(ctx.clone(), repo.clone(), repopath.clone(), node.clone());
 
-    repo.get_file_size(ctx.clone(), node)
-        .map({
-            move |file_size| match lfs_params.threshold {
-                Some(threshold) => (file_size <= threshold, file_size),
-                None => (true, file_size),
-            }
-        })
+    repo.get_file_envelope(ctx.clone(), node)
         .join(filenode_fut)
         .and_then({
             cloned!(ctx, repo);
-            move |((direct_fetching_file, file_size), filenode_info)| {
+            move |(envelope, filenode_info)| {
+                let file_size = envelope.content_size();
+
+                let direct_fetching_file = match lfs_params.threshold {
+                    Some(threshold) => (file_size <= threshold),
+                    None => true,
+                };
+
                 if direct_fetching_file {
                     (
                         repo.get_file_content(ctx, node)
@@ -153,14 +154,18 @@ pub fn get_raw_content(
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
                 } else {
-                    // pass content id to prevent envelope fetching
-                    cloned!(repo);
+                    let copy_from =
+                        extract_copy_from(&filenode_info).map(|copy_from| copy_from.clone());
+
+                    let file_fut = repo
+                        .get_file_sha256(ctx, envelope.content_id())
+                        .and_then(move |oid| {
+                            File::generate_lfs_file(oid, envelope.content_size(), copy_from)
+                        })
+                        .map(|bytes| FileContents::Bytes(bytes));
+
                     (
-                        repo.get_file_content_id(ctx.clone(), node)
-                            .and_then(move |content_id| {
-                                repo.generate_lfs_file(ctx, content_id, file_size)
-                            })
-                            .right_future(),
+                        file_fut.right_future(),
                         Ok(RevFlags::REVIDX_EXTSTORED).into_future(),
                     )
                 }

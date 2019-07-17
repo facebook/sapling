@@ -449,17 +449,6 @@ impl BlobRepo {
             })
     }
 
-    pub fn generate_lfs_file(
-        &self,
-        ctx: CoreContext,
-        content_id: ContentId,
-        file_size: u64,
-    ) -> impl Future<Item = FileContents, Error = Error> {
-        self.get_file_sha256(ctx, content_id)
-            .and_then(move |alias| File::generate_lfs_file(alias, file_size))
-            .map(|bytes| FileContents::Bytes(bytes))
-    }
-
     // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper
     // around a Chain, but it isn't because of API deficiencies in bytes::Buf. See D8412210.
 

@@ -246,13 +246,17 @@ impl File {
         Self::get_copied_from_with_keys(contents, HGCOPY, HGCOPYREV)
     }
 
-    pub fn generate_lfs_file(oid: Sha256, size: u64) -> Result<Bytes> {
+    pub fn generate_lfs_file(
+        oid: Sha256,
+        size: u64,
+        copy_from: Option<(MPath, HgFileNodeId)>,
+    ) -> Result<Bytes> {
         let git_version = String::from_utf8(GIT_VERSION.to_vec())?;
         let lfs_content = LFSContent {
             version: git_version,
             oid,
             size,
-            copy_from: None,
+            copy_from,
         };
         lfs_content.into_bytes()
     }
@@ -310,6 +314,18 @@ impl LFSContent {
         out.write_all(b" ")?;
         out.write_all(format!("{}", self.size).as_ref())?;
         out.write_all(b"\n")?;
+
+        if let Some((ref mpath, ref nodehash)) = self.copy_from {
+            out.write_all(HGCOPY)?;
+            out.write_all(b" ")?;
+            mpath.generate(&mut out)?;
+            out.write_all(b"\n")?;
+
+            out.write_all(HGCOPYREV)?;
+            out.write_all(b" ")?;
+            out.write_all(nodehash.to_hex().as_ref())?;
+            out.write_all(b"\n")?;
+        }
 
         Ok(Bytes::from(out))
     }
@@ -620,7 +636,7 @@ mod test {
                 .unwrap();
         let size = 10;
 
-        let generated_file = File::generate_lfs_file(oid, size).unwrap();
+        let generated_file = File::generate_lfs_file(oid, size, None).unwrap();
         let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
 
         let expected_lfs_struct = LFSContent {
@@ -647,6 +663,20 @@ mod test {
                 _ => {
                     false
                 }
+            }
+        }
+
+        fn lfs_copy_info_roundtrip(
+            oid: Sha256,
+            size: u64,
+            copy_from: Option<(MPath, HgFileNodeId)>
+        ) -> bool {
+            let result = File::generate_lfs_file(oid, size, copy_from.clone())
+                .and_then(|bytes| File::data_only(bytes).get_lfs_content());
+
+            match result {
+                Ok(result) => result.oid == oid && result.size == size && result.copy_from == copy_from,
+                _ => false,
             }
         }
     }
