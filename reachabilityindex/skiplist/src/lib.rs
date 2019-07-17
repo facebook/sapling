@@ -650,7 +650,7 @@ mod test {
     fn test_add_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -713,7 +713,7 @@ mod test {
     fn test_skip_edges_reach_end_in_linear() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -795,7 +795,7 @@ mod test {
     fn test_skip_edges_progress_powers_of_2() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -857,7 +857,7 @@ mod test {
     fn test_skip_edges_reach_end_in_merge() {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -964,7 +964,7 @@ mod test {
     fn test_partial_index_in_merge() {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -1099,7 +1099,7 @@ mod test {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock();
             // this repo has no merges but many branches
-            let repo = Arc::new(branch_wide::getrepo(None));
+            let repo = Arc::new(branch_wide::getrepo());
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -1293,7 +1293,7 @@ mod test {
                 fn no_index() {
                     let mut runtime = tokio::runtime::Runtime::new().unwrap();
                     let ctx = CoreContext::test_mock();
-                    let repo = Arc::new($repo::getrepo(None));
+                    let repo = Arc::new($repo::getrepo());
                     let sli = SkiplistIndex::new();
                     $test_name(&mut runtime, ctx, repo, sli)
                 }
@@ -1301,7 +1301,7 @@ mod test {
                 #[test]
                 fn all_indexed() {
                     let ctx = CoreContext::test_mock();
-                    let repo = Arc::new($repo::getrepo(None));
+                    let repo = Arc::new($repo::getrepo());
                     let sli = SkiplistIndex::new();
                     {
                         let mut runtime = tokio::runtime::Runtime::new().unwrap();
@@ -1390,7 +1390,7 @@ mod test {
     fn test_query_reachability_from_unindexed_node() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo(None));
+        let repo = Arc::new(linear::getrepo());
         let sli = SkiplistIndex::new();
         let get_parents_count = Arc::new(AtomicUsize::new(0));
         let get_gen_number_count = Arc::new(AtomicUsize::new(0));

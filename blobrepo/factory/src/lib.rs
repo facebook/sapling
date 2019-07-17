@@ -11,7 +11,6 @@ use failure_ext::prelude::*;
 use failure_ext::{Error, Result};
 use futures::{future::IntoFuture, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use slog::{self, o, Discard, Drain, Logger};
 use std::collections::HashMap;
 
 use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
@@ -52,7 +51,6 @@ pub enum Caching {
 /// configure a local blobstore with a remote db, or vice versa. There's no error checking
 /// at this level (aside from disallowing a multiplexed blobstore with a local db).
 pub fn open_blobrepo(
-    logger: Logger,
     storage_config: StorageConfig,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
@@ -64,7 +62,6 @@ pub fn open_blobrepo(
     myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
         .and_then(move |()| match storage_config.dbconfig {
             MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
-                logger,
                 SqliteFactory::new(path),
                 storage_config.blobstore,
                 caching,
@@ -79,7 +76,6 @@ pub fn open_blobrepo(
                 db_address,
                 sharded_filenodes,
             } => do_open_blobrepo(
-                logger,
                 XdbFactory::new(db_address, myrouter_port, sharded_filenodes),
                 storage_config.blobstore,
                 caching,
@@ -95,7 +91,6 @@ pub fn open_blobrepo(
 }
 
 fn do_open_blobrepo<T: SqlFactory>(
-    logger: slog::Logger,
     sql_factory: T,
     blobconfig: BlobConfig,
     caching: Caching,
@@ -124,7 +119,6 @@ fn do_open_blobrepo<T: SqlFactory>(
     uncensored_blobstore.join(censored_blobs).and_then(
         move |(uncensored_blobstore, censored_blobs)| match caching {
             Caching::Disabled => new_development(
-                logger,
                 &sql_factory,
                 uncensored_blobstore,
                 censored_blobs,
@@ -132,7 +126,6 @@ fn do_open_blobrepo<T: SqlFactory>(
                 repoid,
             ),
             Caching::Enabled => new_production(
-                logger,
                 &sql_factory,
                 uncensored_blobstore,
                 censored_blobs,
@@ -145,10 +138,7 @@ fn do_open_blobrepo<T: SqlFactory>(
 }
 
 /// Used by tests
-pub fn new_memblob_empty(
-    logger: Option<Logger>,
-    blobstore: Option<Arc<dyn Blobstore>>,
-) -> Result<BlobRepo> {
+pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRepo> {
     let repo_blobstore_args = RepoBlobstoreArgs::new(
         blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
         None,
@@ -157,7 +147,6 @@ pub fn new_memblob_empty(
     );
 
     Ok(BlobRepo::new(
-        logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
         repo_blobstore_args,
         Arc::new(
@@ -179,7 +168,6 @@ pub fn new_memblob_empty(
 /// Create a new BlobRepo with purely local state. (Well, it could be a remote blobstore, but
 /// that would be weird to use with a local metadata db.)
 fn new_development<T: SqlFactory>(
-    logger: Logger,
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
@@ -213,7 +201,6 @@ fn new_development<T: SqlFactory>(
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
 
                 BlobRepo::new(
-                    logger,
                     bookmarks,
                     RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
                     filenodes,
@@ -229,7 +216,6 @@ fn new_development<T: SqlFactory>(
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
 fn new_production<T: SqlFactory>(
-    logger: Logger,
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
@@ -306,7 +292,6 @@ fn new_production<T: SqlFactory>(
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
 
                 BlobRepo::new_with_changeset_fetcher_factory(
-                    logger,
                     bookmarks,
                     RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
                     Arc::new(filenodes),

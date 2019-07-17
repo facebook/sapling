@@ -1140,7 +1140,7 @@ fn default_changeset_id() -> HgChangesetId {
 
 fn hook_manager_blobrepo() -> HookManager {
     let ctx = CoreContext::test_mock();
-    let repo = many_files_dirs::getrepo(None);
+    let repo = many_files_dirs::getrepo();
     let changeset_store = BlobRepoChangesetStore::new(repo.clone());
     let content_store = BlobRepoFileContentStore::new(repo);
     let logger = Logger::root(Discard {}.ignore_res(), o!());
@@ -1160,7 +1160,7 @@ fn to_mpath(string: &str) -> MPath {
 
 fn hook_manager_inmem() -> HookManager {
     let ctx = CoreContext::test_mock();
-    let repo = many_files_dirs::getrepo(None);
+    let repo = many_files_dirs::getrepo();
     // Load up an in memory store with a single commit from the many_files_dirs store
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
     let cs = repo

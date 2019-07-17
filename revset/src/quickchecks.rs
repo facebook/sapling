@@ -323,7 +323,7 @@ mod test {
                 fn prop(set: RevsetSpec) -> bool {
                     async_unit::tokio_unit_test(|| {
                         let ctx = CoreContext::test_mock();
-                        let repo = Arc::new($repo::getrepo(None));
+                        let repo = Arc::new($repo::getrepo());
                         match_hashset_to_revset(ctx, repo, set)
                     })
                 }
@@ -402,7 +402,7 @@ mod test {
                 async_unit::tokio_unit_test(|| {
                     let ctx = CoreContext::test_mock();
 
-                    let repo = Arc::new($repo::getrepo(None));
+                    let repo = Arc::new($repo::getrepo());
                     let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                         Arc::new(TestChangesetFetcher::new(repo.clone()));
 

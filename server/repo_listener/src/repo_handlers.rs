@@ -93,7 +93,6 @@ pub fn repo_handlers(
             let disabled_hooks = disabled_hooks.clone();
 
             open_blobrepo(
-                logger.clone(),
                 config.storage_config.clone(),
                 repoid,
                 myrouter_port,

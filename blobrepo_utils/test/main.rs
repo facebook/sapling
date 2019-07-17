@@ -33,7 +33,7 @@ mod test {
                         let drain = glog_drain().filter_level(Level::Debug).fuse();
                         let logger = Logger::root(drain, slog::o![]);
 
-                        let repo = $repo::getrepo(Some(logger.clone()));
+                        let repo = $repo::getrepo();
                         let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
                         let verify = BonsaiMFVerify {

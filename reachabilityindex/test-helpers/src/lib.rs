@@ -34,7 +34,7 @@ pub fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str)
 pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo(None));
+        let repo = Arc::new(linear::getrepo());
         let index = index_creator();
         let ordered_hashes = vec![
             string_to_bonsai(
@@ -97,7 +97,7 @@ pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: f
 pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(merge_uneven::getrepo(None));
+        let repo = Arc::new(merge_uneven::getrepo());
         let index = index_creator();
         let root_node = string_to_bonsai(
             ctx.clone(),
@@ -221,7 +221,7 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creat
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock();
         // this repo has no merges but many branches
-        let repo = Arc::new(branch_wide::getrepo(None));
+        let repo = Arc::new(branch_wide::getrepo());
         let index = index_creator();
         let root_node = string_to_bonsai(
             ctx.clone(),
@@ -361,7 +361,7 @@ mod test {
     fn test_helpers() {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let mut ordered_hashes_oldest_to_newest = vec![
                 string_to_bonsai(
                     ctx.clone(),

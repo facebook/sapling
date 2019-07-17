@@ -397,7 +397,7 @@ mod tests {
     {
         let result = convert_to_revlog_filelog(
             ctx,
-            Arc::new(new_memblob_empty(None, None).unwrap()),
+            Arc::new(new_memblob_empty(None).unwrap()),
             iter_ok(inp.into_iter().collect::<Vec<_>>()),
         )
         .collect()
@@ -554,7 +554,7 @@ mod tests {
 
         let result = convert_to_revlog_filelog(
             ctx,
-            Arc::new(new_memblob_empty(None, None).unwrap()),
+            Arc::new(new_memblob_empty(None).unwrap()),
             iter_ok(inp),
         )
         .collect()

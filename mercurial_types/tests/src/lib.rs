@@ -353,7 +353,7 @@ fn do_check(
 fn test_recursive_changed_entry_stream_linear() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo(None));
+        let repo = Arc::new(linear::getrepo());
         let main_hash = HgNodeHash::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let base_hash = HgNodeHash::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
 
@@ -376,7 +376,7 @@ fn test_recursive_changed_entry_stream_linear() {
 fn test_recursive_changed_entry_stream_simple() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let main_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
         // main_hash is a child of base_hash
@@ -419,7 +419,7 @@ fn test_recursive_changed_entry_stream_simple() {
 fn test_recursive_entry_stream() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let changesetid = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
 
         // hg up 2f866e7e549760934e31bf0420a873f65100ad63
@@ -497,7 +497,7 @@ fn test_recursive_entry_stream() {
 fn test_recursive_changed_entry_stream_changed_dirs() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         // main_hash is a child of base_hash
@@ -531,7 +531,7 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let main_hash = HgNodeHash::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash
@@ -575,7 +575,7 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 fn test_depth_parameter() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         // main_hash is a child of base_hash
@@ -681,7 +681,7 @@ where
 fn test_recursive_changed_entry_prune() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let repo = Arc::new(many_files_dirs::getrepo());
         let main_hash = HgNodeHash::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash

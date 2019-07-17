@@ -30,7 +30,6 @@ use rand::{
 };
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
-use slog::{self, o, Discard, Drain, Logger};
 use sql_ext::SqlConstructors;
 use sqlfilenodes::SqlFilenodes;
 use std::{sync::Arc, time::Duration};
@@ -121,7 +120,6 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(BlobRepo::new(
-        Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,
         blobstore,
         filenodes,

@@ -113,7 +113,6 @@ define_stats! {
 }
 
 pub struct BlobRepo {
-    logger: Logger,
     blobstore: RepoBlobstore,
     bookmarks: Arc<dyn Bookmarks>,
     filenodes: Arc<dyn Filenodes>,
@@ -129,7 +128,6 @@ pub struct BlobRepo {
 
 impl BlobRepo {
     pub fn new(
-        logger: Logger,
         bookmarks: Arc<dyn Bookmarks>,
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
@@ -150,7 +148,6 @@ impl BlobRepo {
         };
 
         BlobRepo {
-            logger,
             bookmarks,
             blobstore,
             filenodes,
@@ -163,7 +160,6 @@ impl BlobRepo {
     }
 
     pub fn new_with_changeset_fetcher_factory(
-        logger: Logger,
         bookmarks: Arc<dyn Bookmarks>,
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
@@ -176,7 +172,6 @@ impl BlobRepo {
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
         BlobRepo {
-            logger,
             bookmarks,
             blobstore,
             filenodes,
@@ -199,7 +194,6 @@ impl BlobRepo {
     #[allow(non_snake_case)]
     pub fn in_memory_writes_READ_DOC_COMMENT(self) -> BlobRepo {
         let BlobRepo {
-            logger,
             bookmarks,
             blobstore,
             filenodes,
@@ -216,7 +210,6 @@ impl BlobRepo {
             });
 
         BlobRepo::new(
-            logger,
             bookmarks,
             repo_blobstore_args,
             filenodes,
@@ -945,15 +938,17 @@ impl BlobRepo {
             );
         }
 
-        self.blobstore.put(ctx, key.clone(), contents).timed({
-            let logger = self.logger.clone();
-            move |stats, result| {
-                if result.is_ok() {
-                    log_upload_stats(logger, key, "blob uploaded", stats)
+        self.blobstore
+            .put(ctx.clone(), key.clone(), contents)
+            .timed({
+                let logger = ctx.logger().clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_upload_stats(logger, key, "blob uploaded", stats)
+                    }
+                    Ok(())
                 }
-                Ok(())
-            }
-        })
+            })
     }
 
     pub fn upload_blob_no_alias<Id>(
@@ -1019,10 +1014,6 @@ impl BlobRepo {
     // This is used by tests
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.blobstore.clone()
-    }
-
-    pub fn get_logger(&self) -> Logger {
-        self.logger.clone()
     }
 
     pub fn get_repoid(&self) -> RepositoryId {
@@ -1871,14 +1862,13 @@ impl UploadHgTreeEntry {
         ctx: CoreContext,
         repo: &BlobRepo,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
-        self.upload_to_blobstore(ctx, &repo.blobstore, &repo.logger)
+        self.upload_to_blobstore(ctx, &repo.blobstore)
     }
 
     pub(crate) fn upload_to_blobstore(
         self,
         ctx: CoreContext,
         blobstore: &RepoBlobstore,
-        logger: &Logger,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         STATS::upload_hg_tree_entry.add_value(1);
         let UploadHgTreeEntry {
@@ -1889,6 +1879,7 @@ impl UploadHgTreeEntry {
             path,
         } = self;
 
+        let logger = ctx.logger().clone();
         let computed_node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
         let node_id: HgNodeHash = match upload_node_id {
             UploadHgNodeHash::Generate => computed_node_id,
@@ -2026,10 +2017,10 @@ impl UploadHgFileContents {
                 };
 
                 let upload_fut = repo
-                    .upload_blob(ctx, contents_blob, alias_key)
+                    .upload_blob(ctx.clone(), contents_blob, alias_key)
                     .map(|_content_id| ())
                     .timed({
-                        let logger = repo.logger.clone();
+                        let logger = ctx.logger().clone();
                         move |stats, result| {
                             if result.is_ok() {
                                 UploadHgFileEntry::log_stats(
@@ -2123,7 +2114,7 @@ impl UploadHgFileEntry {
         let content_id = cbinfo.meta.id;
 
         let blobstore = repo.blobstore.clone();
-        let logger = repo.logger.clone();
+        let logger = ctx.logger().clone();
 
         let envelope_upload =
             compute_fut.and_then(move |(computed_node_id, metadata, content_size)| {
@@ -2599,7 +2590,6 @@ impl CreateChangeset {
 impl Clone for BlobRepo {
     fn clone(&self) -> Self {
         Self {
-            logger: self.logger.clone(),
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),
             filenodes: self.filenodes.clone(),

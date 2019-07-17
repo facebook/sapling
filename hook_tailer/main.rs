@@ -83,7 +83,6 @@ fn main() -> Result<()> {
     let caching = cmdlib::args::init_cachelib(&matches);
 
     let blobrepo = open_blobrepo(
-        logger.clone(),
         config.storage_config.clone(),
         RepositoryId::new(config.repoid),
         cmdlib::args::parse_myrouter_port(&matches),

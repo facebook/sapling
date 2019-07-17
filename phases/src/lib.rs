@@ -391,7 +391,7 @@ mod tests {
     fn add_get_phase_sql_test() -> Result<()> {
         let mut rt = Runtime::new()?;
         let ctx = CoreContext::test_mock();
-        let repo = blobrepo_factory::new_memblob_empty(None, None)?;
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
         let phases = SqlPhases::with_sqlite_in_memory()?;
 
         rt.block_on(phases.add_public(ctx.clone(), repo.clone(), vec![ONES_CSID]))?;
@@ -468,7 +468,7 @@ mod tests {
     fn get_phase_hint_test() {
         let mut rt = Runtime::new().unwrap();
 
-        let repo = linear::getrepo(None);
+        let repo = linear::getrepo();
         //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
         //  |
         //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
@@ -619,7 +619,7 @@ mod tests {
     fn test_mark_reachable_as_public() -> Result<()> {
         let mut rt = Runtime::new()?;
 
-        let repo = fixtures::branch_even::getrepo(None);
+        let repo = fixtures::branch_even::getrepo();
         // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
         // |
         // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)

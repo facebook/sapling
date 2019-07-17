@@ -120,7 +120,7 @@ mod test {
     fn valid_changeset() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let bcs_id = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
@@ -137,7 +137,7 @@ mod test {
     fn invalid_changeset() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let cs_id = ONES_CSID;
             let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 

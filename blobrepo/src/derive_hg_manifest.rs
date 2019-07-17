@@ -188,7 +188,7 @@ fn create_hg_manifest(
                 p2,
                 path: path.clone(),
             }
-            .upload_to_blobstore(ctx.clone(), &blobstore, ctx.logger())
+            .upload_to_blobstore(ctx.clone(), &blobstore)
             .map(|(hash, future)| future.map(move |_| hash))
             .into_future()
             .flatten()

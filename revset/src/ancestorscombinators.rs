@@ -372,7 +372,7 @@ mod test {
     fn empty_ancestors_combinators() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -408,7 +408,7 @@ mod test {
     fn linear_ancestors_with_excludes() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -443,7 +443,7 @@ mod test {
     fn linear_ancestors_with_excludes_empty() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -470,7 +470,7 @@ mod test {
     fn ancestors_union() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -508,7 +508,7 @@ mod test {
     fn merge_ancestors_from_merge_excludes() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -544,7 +544,7 @@ mod test {
     fn merge_ancestors_from_merge_excludes_union() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 

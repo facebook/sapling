@@ -140,7 +140,7 @@ mod test {
     fn difference_identical_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -161,7 +161,7 @@ mod test {
     fn difference_node_and_empty() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -182,7 +182,7 @@ mod test {
     fn difference_empty_and_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -204,7 +204,7 @@ mod test {
     fn difference_two_nodes() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -228,7 +228,7 @@ mod test {
     fn difference_error_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -264,7 +264,7 @@ mod test {
             let ctx = CoreContext::test_mock();
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream = SetDifferenceNodeStream::new(
@@ -294,7 +294,7 @@ mod test {
     fn difference_union_with_single_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -337,7 +337,7 @@ mod test {
     fn difference_single_node_with_union() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -371,7 +371,7 @@ mod test {
     fn difference_merge_even() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_even::getrepo(None));
+            let repo = Arc::new(merge_even::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -427,7 +427,7 @@ mod test {
     fn difference_merge_uneven() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 

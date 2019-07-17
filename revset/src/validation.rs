@@ -85,7 +85,7 @@ mod test {
     fn validate_accepts_single_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -105,7 +105,7 @@ mod test {
             let ctx = CoreContext::test_mock();
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -136,7 +136,7 @@ mod test {
     fn repeat_hash_panics() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let head_csid = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
@@ -161,7 +161,7 @@ mod test {
     fn wrong_order_panics() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let nodestream = single_changeset_id(
                 ctx.clone(),

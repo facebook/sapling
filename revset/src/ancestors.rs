@@ -189,7 +189,7 @@ mod test {
     fn linear_ancestors() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -222,7 +222,7 @@ mod test {
     fn merge_ancestors_from_merge() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -260,7 +260,7 @@ mod test {
     fn merge_ancestors_one_branch() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -291,7 +291,7 @@ mod test {
             let ctx = CoreContext::test_mock();
             // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
             // by starting at the head and working back to the original unshared history commits
-            let repo = Arc::new(unshared_merge_uneven::getrepo(None));
+            let repo = Arc::new(unshared_merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -335,7 +335,7 @@ mod test {
     fn no_common_ancestor() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(unshared_merge_uneven::getrepo(None));
+            let repo = Arc::new(unshared_merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -355,7 +355,7 @@ mod test {
     fn greatest_common_ancestor_different_branches() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -383,7 +383,7 @@ mod test {
     fn greatest_common_ancestor_same_branch() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -411,7 +411,7 @@ mod test {
     fn all_common_ancestors_different_branches() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -439,7 +439,7 @@ mod test {
     fn all_common_ancestors_same_branch() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 

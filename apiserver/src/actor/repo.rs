@@ -73,7 +73,6 @@ impl MononokeRepo {
         let repoid = RepositoryId::new(config.repoid);
 
         open_blobrepo(
-            logger.clone(),
             config.storage_config.clone(),
             repoid,
             myrouter_port,

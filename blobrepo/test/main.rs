@@ -141,8 +141,8 @@ fn upload_blob_aliases() {
         let repoid = RepositoryId::new(0);
         let prefixed_blobstore = PrefixBlobstore::new(memblob, repoid.prefix());
 
-        let repo = blobrepo_factory::new_memblob_empty(None, Some(blobstore))
-            .expect("cannot create empty repo");
+        let repo =
+            blobrepo_factory::new_memblob_empty(Some(blobstore)).expect("cannot create empty repo");
         let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
         // The blob with alias does not exist...
@@ -656,7 +656,7 @@ test_both_repotypes!(
 fn test_compute_changed_files_no_parents() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let repo = many_files_dirs::getrepo(None);
+        let repo = many_files_dirs::getrepo();
         let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let expected = vec![
             MPath::new(b"1").unwrap(),
@@ -694,7 +694,7 @@ fn test_compute_changed_files_one_parent() {
         // Note that this is a commit and its parent commit, so you can use:
         // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
         // to see how Mercurial would compute the files list and confirm that it's the same
-        let repo = many_files_dirs::getrepo(None);
+        let repo = many_files_dirs::getrepo();
         let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
         let expected = vec![
@@ -774,7 +774,7 @@ fn test_find_files_in_manifest() -> Result<(), Error> {
 
     let mut rt = Runtime::new()?;
     let ctx = CoreContext::test_mock();
-    let repo = many_files_dirs::getrepo(None);
+    let repo = many_files_dirs::getrepo();
 
     let mf = rt
         .block_on(repo.get_changeset_by_changesetid(
@@ -811,7 +811,7 @@ fn test_find_files_in_manifest() -> Result<(), Error> {
 fn test_get_manifest_from_bonsai() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let repo = merge_uneven::getrepo(None);
+        let repo = merge_uneven::getrepo();
         let get_manifest_for_changeset = {
             cloned!(ctx, repo);
             move |cs_nodehash: &str| -> HgManifestId {
@@ -939,7 +939,7 @@ fn test_get_manifest_from_bonsai() {
 fn test_case_conflict_in_manifest() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let repo = many_files_dirs::getrepo(None);
+        let repo = many_files_dirs::getrepo();
         let get_manifest_for_changeset = |cs_id: HgChangesetId| -> HgManifestId {
             run_future(repo.get_changeset_by_changesetid(ctx.clone(), cs_id))
                 .unwrap()
@@ -1229,7 +1229,7 @@ fn create_bonsai_changeset_with_author(
 
 #[test]
 fn test_hg_commit_generation_simple() {
-    let repo = fixtures::linear::getrepo(None);
+    let repo = fixtures::linear::getrepo();
     let bcs = create_bonsai_changeset(vec![]);
 
     let bcs_id = bcs.get_changeset_id();
@@ -1251,7 +1251,7 @@ fn test_hg_commit_generation_simple() {
 
 #[test]
 fn test_hg_commit_generation_stack() {
-    let repo = fixtures::linear::getrepo(None);
+    let repo = fixtures::linear::getrepo();
     let mut changesets = vec![];
     let bcs = create_bonsai_changeset(vec![]);
 
@@ -1286,7 +1286,7 @@ fn test_hg_commit_generation_stack() {
 fn test_hg_commit_generation_one_after_another() {
     let ctx = CoreContext::test_mock();
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo(None);
+    let repo = fixtures::linear::getrepo();
 
     let first_bcs = create_bonsai_changeset(vec![]);
     let first_bcs_id = first_bcs.get_changeset_id();
@@ -1347,7 +1347,7 @@ fn save_diamond_commits(
 fn test_hg_commit_generation_diamond() {
     let ctx = CoreContext::test_mock();
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo(None);
+    let repo = fixtures::linear::getrepo();
 
     let last_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), &mut runtime, vec![]);
 
@@ -1361,7 +1361,7 @@ fn test_hg_commit_generation_diamond() {
 fn test_hg_commit_generation_many_diamond() {
     let ctx = CoreContext::test_mock();
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo(None);
+    let repo = fixtures::linear::getrepo();
     let mut last_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), &mut runtime, vec![]);
 
     // Make sure that algorithm is not exponential in the number of merges

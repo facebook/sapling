@@ -699,40 +699,11 @@ fn open_repo_internal<'a>(
         reponame,
         repo_id.as_ref().unwrap()
     );
-    let logger = match &config.storage_config.blobstore {
-        BlobConfig::Disabled => {
-            logger.new(o!["BlobConfig:Disabled" => "Disabled in config".to_string()])
-        }
-        BlobConfig::Files { path } => {
+    match &config.storage_config.blobstore {
+        BlobConfig::Files { path } | BlobConfig::Rocks { path } | BlobConfig::Sqlite { path } => {
             setup_repo_dir(path, create).expect("Setting up file blobrepo failed");
-            logger.new(o!["BlobConfig:Files" => path.to_string_lossy().into_owned()])
         }
-        BlobConfig::Rocks { path } => {
-            setup_repo_dir(path, create).expect("Setting up rocksdb blobrepo failed");
-            logger.new(o!["BlobConfig:Rocksdb" => path.to_string_lossy().into_owned()])
-        }
-        BlobConfig::Sqlite { path } => {
-            setup_repo_dir(path, create).expect("Setting up sqlite blobrepo failed");
-            logger.new(o!["BlobConfig:Sqlite" => path.to_string_lossy().into_owned()])
-        }
-        BlobConfig::Manifold { bucket, prefix } => {
-            logger.new(o!["BlobConfig:Manifold" => format!("{} {}", bucket, prefix)])
-        }
-        BlobConfig::Gluster {
-            tier,
-            export,
-            basepath,
-        } => logger.new(o!["BlobConfig:Gluster" => format!("{} {} {}", tier, export, basepath)]),
-        BlobConfig::Mysql {
-            shard_map,
-            shard_num,
-        } => logger.new(o!["BlobConfig:Mysql" => format!("{} {}", shard_map, shard_num)]),
-        BlobConfig::Multiplexed { blobstores, .. } => {
-            logger.new(o!["BlobConfig:Multiplexed" => format!("{:?}", blobstores)])
-        }
-        BlobConfig::Scrub { blobstores, .. } => {
-            logger.new(o!["BlobConfig:Scrub" => format!("{:?}", blobstores)])
-        }
+        _ => {}
     };
 
     let myrouter_port = parse_myrouter_port(matches);
@@ -741,7 +712,6 @@ fn open_repo_internal<'a>(
         .into_future()
         .and_then(move |repo_id| {
             open_blobrepo(
-                logger.clone(),
                 config.storage_config,
                 repo_id,
                 myrouter_port,

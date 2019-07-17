@@ -253,7 +253,7 @@ mod test {
     fn linear_range() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -306,7 +306,7 @@ mod test {
     fn linear_direct_parent_range() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -344,7 +344,7 @@ mod test {
     fn linear_single_node_range() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -379,7 +379,7 @@ mod test {
     fn linear_empty_range() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo(None));
+            let repo = Arc::new(linear::getrepo());
 
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
@@ -406,7 +406,7 @@ mod test {
     fn merge_range_from_merge() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -449,7 +449,7 @@ mod test {
     fn merge_range_everything() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo = Arc::new(merge_uneven::getrepo());
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),

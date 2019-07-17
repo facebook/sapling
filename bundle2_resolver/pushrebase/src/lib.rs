@@ -1013,7 +1013,7 @@ mod tests {
     fn pushrebase_one_commit() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1056,7 +1056,7 @@ mod tests {
     fn pushrebase_stack() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1125,7 +1125,7 @@ mod tests {
     fn pushrebase_stack_with_renames() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1209,7 +1209,7 @@ mod tests {
         //
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let config = PushrebaseParams::default();
 
             let root0 = repo
@@ -1339,7 +1339,7 @@ mod tests {
     fn pushrebase_conflict() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1420,7 +1420,7 @@ mod tests {
     fn pushrebase_caseconflicting_rename() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1486,7 +1486,7 @@ mod tests {
     fn pushrebase_caseconflicting_dirs() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1543,7 +1543,7 @@ mod tests {
     fn pushrebase_recursion_limit() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1646,7 +1646,7 @@ mod tests {
     fn pushrebase_rewritedates() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1726,7 +1726,7 @@ mod tests {
     fn pushrebase_case_conflict() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = many_files_dirs::getrepo(None);
+            let repo = many_files_dirs::getrepo();
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1825,7 +1825,7 @@ mod tests {
 
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             let path_1 = MPath::new("1").unwrap();
 
             let root_hg =
@@ -1961,7 +1961,7 @@ mod tests {
     fn pushrebase_simultaneously() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -2047,7 +2047,7 @@ mod tests {
     fn pushrebase_create_new_bookmark() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo(None);
+        let repo = linear::getrepo();
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2084,7 +2084,7 @@ mod tests {
     fn pushrebase_simultaneously_and_create_new() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo(None);
+            let repo = linear::getrepo();
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -2152,7 +2152,7 @@ mod tests {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo(None);
+        let repo = linear::getrepo();
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2205,7 +2205,7 @@ mod tests {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo(None);
+        let repo = linear::getrepo();
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2271,7 +2271,7 @@ mod tests {
     fn forbid_p2_root_rebases() {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo(None);
+        let repo = linear::getrepo();
 
         let root = run_future(
             &mut runtime,
