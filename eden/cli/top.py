@@ -22,12 +22,14 @@ NAME_WIDTH = 15
 MOUNT_WIDTH = 15
 CALLS_WIDTH = 12
 PIDS_WIDTH = 25
-PADDING = " " * 4
 
 
 class Top:
     def __init__(self):
         self.running = False
+
+        self.height = 0
+        self.width = 0
         self.rows: List = []
 
     def start(self, args: argparse.Namespace) -> int:
@@ -43,16 +45,17 @@ class Top:
 
     def run(self, client):
         def mainloop(stdscr):
+            self.height, self.width = stdscr.getmaxyx()
+
             stdscr.timeout(REFRESH_SECONDS * 1000)
             curses.curs_set(0)
 
+            # Avoid displaying a blank screen during the first update()
+            self.render(stdscr)
+
             while self.running:
-                stdscr.noutrefresh()
-                stdscr.erase()
                 self.update(client)
                 self.render(stdscr)
-                curses.doupdate()
-
                 self.get_keypress(stdscr)
 
         return mainloop
@@ -71,9 +74,9 @@ class Top:
 
         for mount, accesses in counts.fuseAccessesByMount.items():
             for pid, calls in accesses.fuseAccesses.items():
-                processes[
-                    (os.path.basename(mount), names_by_pid.get(pid, b"<unknown>"))
-                ].append((calls.count, pid))
+                key = (os.path.basename(mount), names_by_pid.get(pid, b"<unknown>"))
+                val = (calls.count, pid)
+                processes[key].append(val)
 
         return processes
 
@@ -84,7 +87,7 @@ class Top:
         for (mount, name), calls_and_pids in sorted(
             processes.items(), key=lambda kv: self.compute_total(kv[1]), reverse=True
         ):
-            name = self.format_name(os.fsdecode(name))
+            name = self.format_name(name)
             mount = self.format_mount(mount)
             calls = self.compute_total(calls_and_pids)
             pids = self.format_pids(calls_and_pids)
@@ -93,30 +96,34 @@ class Top:
             self.rows.append(row)
 
     def format_name(self, name):
+        name = os.fsdecode(name)
         args = name.split("\x00", 2)
-        # focus on just the basename as the paths can be quite long
-        result = os.path.basename(args[0])[:NAME_WIDTH]
-        if len(args) > 1 and len(result) < NAME_WIDTH:
-            # show cmdline args too, provided they fit in the available space
-            args = args[1].replace("\x00", " ")
-            result += " "
-            result += args[: NAME_WIDTH - len(result)]
-        return result
+
+        # Focus on just the basename as the paths can be quite long
+        cmd = args[0]
+        name = os.path.basename(cmd)[:NAME_WIDTH]
+
+        # Show cmdline args too, provided they fit in the remaining space
+        remaining_space = NAME_WIDTH - len(name) - len(" ")
+        if len(args) > 1 and remaining_space > 0:
+            arg_str = args[1].replace("\x00", " ")[:remaining_space]
+            name += f" {arg_str}"
+
+        return name
 
     def format_mount(self, mount):
         return os.fsdecode(mount)[:MOUNT_WIDTH]
 
     def format_pids(self, calls_and_pids):
-        pids_str = ""
-        for _, pid in sorted(calls_and_pids):
-            if not pid:
-                continue
-            if not pids_str:
-                pids_str = str(pid)
-            else:
-                new_str = pids_str + "," + str(pid)
-                if len(new_str) > PIDS_WIDTH:
-                    break
+        pids = [pid for _, pid in sorted(calls_and_pids)]
+
+        if not pids:
+            return ""
+
+        pids_str = str(pids[0])
+        for pid in pids[1:]:
+            new_str = f"{pids_str}, {pid}"
+            if len(new_str) <= PIDS_WIDTH:
                 pids_str = new_str
         return pids_str
 
@@ -124,63 +131,53 @@ class Top:
         return sum(c[0] for c in ls)
 
     def render(self, stdscr):
-        height, width = stdscr.getmaxyx()
+        stdscr.noutrefresh()
+        stdscr.erase()
 
         self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
-        stdscr.hline(1, 0, curses.ACS_HLINE, width)
-
+        stdscr.hline(1, 0, curses.ACS_HLINE, self.width)
         self.render_column_titles(stdscr)
         self.render_rows(stdscr)
 
+        curses.doupdate()
+
     def render_top_bar(self, stdscr):
-        height, width = stdscr.getmaxyx()
+        TITLE = "eden top"
+        hostname = socket.gethostname()[: self.width]
+        date = datetime.datetime.now().strftime("%x %X")[: self.width]
 
-        hostname = socket.gethostname()[:width]
-        date = datetime.datetime.now().strftime("%x %X")[:width]
-
-        stdscr.addnstr(0, 0, "eden top", width)
-        # center the date
-        stdscr.addnstr(0, (width - len(date)) // 2, date, width)
-        # right-align the hostname
-        stdscr.addnstr(0, width - len(hostname), hostname, width)
+        # left: title
+        stdscr.addnstr(0, 0, TITLE, self.width)
+        # center: date
+        stdscr.addnstr(0, (self.width - len(date)) // 2, date, self.width)
+        # right: hostname
+        stdscr.addnstr(0, self.width - len(hostname), hostname, self.width)
 
     def render_column_titles(self, stdscr):
-        height, width = stdscr.getmaxyx()
-
-        heading = (
-            f'{"PROCESS":{NAME_WIDTH}}{PADDING}'
-            + f'{"MOUNT":{MOUNT_WIDTH}}{PADDING}'
-            + f'{"FUSE CALLS":>{CALLS_WIDTH}}{PADDING}'
-            + f'{"TOP PIDS":{PIDS_WIDTH}}'
-        )
-        stdscr.addnstr(2, 0, heading.ljust(width), width, curses.A_REVERSE)
+        LINE = 2
+        ROW = ("PROCESS", "MOUNT", "FUSE CALLS", "TOP PIDS")
+        self.render_row(stdscr, LINE, ROW, curses.A_REVERSE)
 
     def render_rows(self, stdscr):
-        height, width = stdscr.getmaxyx()
+        START_LINE = 3
+        line_numbers = range(START_LINE, self.height - 1)
 
-        line = 3
-        for name, mount, calls, pids in self.rows:
-            if line >= height:
-                break
+        for line, row in zip(line_numbers, self.rows):
+            self.render_row(stdscr, line, row)
 
-            # Fully writing the last line is an error, so write one fewer character.
-            max_line_width = width - 1 if line + 1 == height else width
-            stdscr.addnstr(
-                line,
-                0,
-                f"{name:{NAME_WIDTH}}{PADDING}"
-                + f"{mount:{MOUNT_WIDTH}}{PADDING}"
-                + f"{calls:{CALLS_WIDTH}}{PADDING}"
-                + f"{pids:{PIDS_WIDTH}}",
-                max_line_width,
-            )
-            line += 1
+    def render_row(self, stdscr, y, data, style=curses.A_NORMAL):
+        SPACING = (NAME_WIDTH, MOUNT_WIDTH, CALLS_WIDTH, PIDS_WIDTH)
+        PAD = " " * 4
+        text = "".join(f"{str:{len}}{PAD}" for str, len in zip(data, SPACING))
+
+        stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
 
     def get_keypress(self, stdscr):
         key = stdscr.getch()
         if key == curses.KEY_RESIZE:
             curses.update_lines_cols()
             stdscr.redrawwin()
-        if key == ord("q"):
+            self.height, self.width = stdscr.getmaxyx()
+        elif key == ord("q"):
             self.running = False
