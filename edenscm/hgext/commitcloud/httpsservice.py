@@ -328,7 +328,6 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
     def getsmartlog(self, reponame, workspace, repo):
-
         self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
 
         path = "/commit_cloud/get_smartlog"
@@ -359,5 +358,46 @@ class HttpsCommitCloudService(baseservice.BaseService):
         nodes = self._makenodes(smartlog)
         try:
             return self._makefakedag(nodes, repo)
+        except Exception as e:
+            raise ccerror.UnexpectedError(self.ui, e)
+
+    @perftrace.tracefunc("Get Commit Cloud Smartlog By Version")
+    def getsmartlogbyversion(self, reponame, workspace, repo, date, version):
+        self.ui.debug("sending 'get_old_smartlog' request\n", component="commitcloud")
+        path = "/commit_cloud/get_smartlog_by_version"
+        if date:
+            data = {"repo_name": reponame, "workspace": workspace, "timestamp": date[0]}
+        else:
+            data = {"repo_name": reponame, "workspace": workspace, "version": version}
+
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+
+        if "error" in response:
+            raise ccerror.ServiceError(self.ui, response["error"])
+
+        # if 200 OK response format is:
+        # {
+        #   "rc":0,
+        #   "smartlog": <thrift structure SmartlogData serialized to json using Thrift JSON serialization>
+        # }
+        smartlog = response["smartlog"]
+
+        self.ui.debug(
+            "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
+            component="commitcloud",
+        )
+
+        nodes = self._makenodes(smartlog)
+        try:
+            return (
+                self._makefakedag(nodes, repo),
+                response["smartlog"]["version"],
+                response["smartlog"]["timestamp"],
+            )
         except Exception as e:
             raise ccerror.UnexpectedError(self.ui, e)

@@ -235,34 +235,66 @@ def cloudauth(ui, repo, **opts):
             authenticate(ui, repo, tokenlocator)
 
 
-@subcmd("smartlog|sl", workspace.workspaceopts)
+@subcmd(
+    "smartlog|sl",
+    [
+        (
+            "d",
+            "date",
+            "",
+            _("show version of the smartlog on date specified"),
+            _("DATE"),
+        ),
+        (
+            "",
+            "version_number",
+            int,
+            "show the specified version of the smartlog",
+            _("NUM"),
+        ),
+    ]
+    + workspace.workspaceopts,
+)
 def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     """get smartlog view for the default workspace of the given user
 
     If the requested template is not defined in the config
     the command provides a simple view as a list of draft commits.
     """
-
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
+    date = opts.get("date")
+    version = opts.get("version_number")
+    if date:
+        parseddate = util.parsedate(date)
+    else:
+        parseddate = None
 
     ui.status(
         _("searching draft commits for the '%s' workspace for the '%s' repo\n")
         % (workspacename, reponame),
         component="commitcloud",
     )
-
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
-
-    with progress.spinner(ui, _("fetching")):
-        revdag = serv.getsmartlog(reponame, workspacename, repo)
-
-    ui.status(_("Smartlog:\n\n"))
-
+    if parseddate is None and version is None:
+        with progress.spinner(ui, _("fetching")):
+            revdag = serv.getsmartlog(reponame, workspacename, repo)
+    else:
+        with progress.spinner(ui, _("fetching")):
+            revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
+                reponame, workspacename, repo, parseddate, version
+            )
+    if parseddate or version:
+        formatteddate = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(sltimestamp))
+        ui.status(
+            _("Smartlog version %d \nsynced at %s\n\n") % (slversion, formatteddate)
+        )
+    else:
+        ui.status(_("Smartlog:\n\n"))
     # set up pager
     ui.pager("smartlog")
 

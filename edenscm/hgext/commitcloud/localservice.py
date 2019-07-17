@@ -144,3 +144,16 @@ class LocalService(baseservice.BaseService):
             return self._makefakedag(nodes, repo)
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
+
+    def getsmartlogbyversion(self, reponame, workspace, repo, date, version):
+        filename = os.path.join(self.path, "usersmartlogbyversiondata")
+        if not os.path.exists(filename):
+            nodes = {}
+        else:
+            with open(filename) as f:
+                data = json.load(f)
+                nodes = self._makenodes(data["smartlog"])
+        try:
+            return self._makefakedag(nodes, repo), 42, 1562690787
+        except Exception as e:
+            raise ccerror.UnexpectedError(self._ui, e)
