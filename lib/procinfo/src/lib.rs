@@ -1,54 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#![deny(warnings)]
-
-#[cfg(unix)]
-use libc::getppid;
-
-/// Holds state from which we can derive the name of the process
-/// that spawned this hg invocation.
-/// Desirable because we don't want to block the hg command
-/// on waiting for the ps parsing to complete.
-/// Making the struct serializeable allows embedding an
-/// instance of this directly into the CommandInfo that we pass
-/// between the wrapper and scm-telem-log processes.
-/// Note that on Windows the name is processed in the constructor,
-/// while on unix we process it once we call the name() function.
-pub struct ParentProcess {
-    // parent process pid
-    #[cfg(unix)]
-    parent_pid: i32,
-    // parent process name
-    #[cfg(windows)]
-    name: Option<String>,
-}
-
-#[cfg(windows)]
-impl ParentProcess {
-    pub fn new() -> Self {
-        ParentProcess {
-            name: get_parent_process_name().ok(),
-        }
-    }
-
-    pub fn name(&self) -> Option<String> {
-        self.name.clone()
-    }
-}
-
-#[cfg(unix)]
-impl ParentProcess {
-    pub fn new() -> Self {
-        ParentProcess {
-            parent_pid: unsafe { getppid() },
-        }
-    }
-
-    pub fn name(&self) -> Option<String> {
-        get_process_name(self.parent_pid).ok()
-    }
-}
-
 #[cfg(windows)]
 mod windows {
     use failure::{format_err, Error};
