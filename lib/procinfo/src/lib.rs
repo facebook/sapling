@@ -8,7 +8,6 @@ extern "C" {
 
 #[cfg(windows)]
 mod windows {
-    use failure::{format_err, Error};
     use kernel32::{
         CloseHandle, CreateToolhelp32Snapshot, GetCurrentProcess, GetCurrentProcessId, GetFileType,
         GetLastError, GetStdHandle, K32GetProcessMemoryInfo, Process32FirstW, Process32NextW,
@@ -37,15 +36,12 @@ mod windows {
             pe
         }
 
-        pub(crate) fn new() -> Result<Snapshot, Error> {
+        pub(crate) fn new() -> Result<Snapshot, ()> {
             let snapshot_handle: HANDLE =
                 unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
 
             if snapshot_handle == INVALID_HANDLE_VALUE {
-                return Err(format_err!(
-                    "failed to create the ToolHelp snapshot: {:?}",
-                    unsafe { GetLastError() }
-                ));
+                return Err(());
             }
 
             Ok(Snapshot {
@@ -53,16 +49,13 @@ mod windows {
             })
         }
 
-        fn find<F>(&self, condition: F) -> Result<PROCESSENTRY32W, Error>
+        fn find<F>(&self, condition: F) -> Result<PROCESSENTRY32W, ()>
         where
             F: Fn(&PROCESSENTRY32W) -> bool,
         {
             let mut pe32 = Snapshot::new_pe32();
             if unsafe { Process32FirstW(self.handle, &mut pe32) } == 0 {
-                return Err(format_err!(
-                    "failed to call Process32FirstW: {:?}",
-                    unsafe { GetLastError() }
-                ));
+                return Err(());
             }
 
             loop {
@@ -75,25 +68,19 @@ mod windows {
                 }
             }
 
-            Err(format_err!(
-                "could not find a process matching a condition: {:?}",
-                unsafe { GetLastError() }
-            ))
+            Err(())
         }
 
-        fn find_by_pid(&self, pid: DWORD) -> Result<PROCESSENTRY32W, Error> {
+        fn find_by_pid(&self, pid: DWORD) -> Result<PROCESSENTRY32W, ()> {
             self.find(|pe32| pe32.th32ProcessID == pid)
         }
 
-        pub(crate) fn get_parent_process_id(&self, process_id: DWORD) -> Result<DWORD, Error> {
+        pub(crate) fn get_parent_process_id(&self, process_id: DWORD) -> Result<DWORD, ()> {
             self.find_by_pid(process_id)
                 .map(|pe32| pe32.th32ParentProcessID)
         }
 
-        pub(crate) fn get_process_executable_name(
-            &self,
-            process_id: DWORD,
-        ) -> Result<String, Error> {
+        pub(crate) fn get_process_executable_name(&self, process_id: DWORD) -> Result<String, ()> {
             self.find_by_pid(process_id)
                 .map(|pe32| pe32.szExeFile)
                 .map(|cs| {
