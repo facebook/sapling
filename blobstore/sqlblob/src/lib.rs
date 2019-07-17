@@ -89,7 +89,7 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
     ) -> BoxFuture<Self, Error> {
         Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
-            create_raw_xdb_connections(&format!("{}.{}", shardmap, shard_id)).boxify()
+            create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id)).boxify()
         })
     }
 

@@ -200,7 +200,7 @@ impl SqlFilenodes {
 
     pub fn with_sharded_raw_xdb(tier: String, shard_count: usize) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
-            create_raw_xdb_connections(&format!("{}.{}", tier, shard_id)).boxify()
+            create_raw_xdb_connections(format!("{}.{}", tier, shard_id)).boxify()
         })
     }
 

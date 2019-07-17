@@ -8,7 +8,10 @@ extern crate failure_ext as failure;
 extern crate sql;
 
 use failure::{Error, Result};
-use futures::{future::ok, Future, IntoFuture};
+use futures::{
+    future::{loop_fn, ok, Loop},
+    Future, IntoFuture,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use std::path::Path;
 
@@ -80,7 +83,7 @@ pub fn create_myrouter_connections(
     }
 }
 
-pub fn create_raw_xdb_connections<'a, T>(
+pub fn do_create_raw_xdb_connections<'a, T>(
     tier: &'a T,
 ) -> impl Future<Item = SqlConnections, Error = Error>
 where
@@ -98,14 +101,31 @@ where
     let read_master_connection =
         raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::Master, None, None);
 
-    write_connection
+    (write_connection, read_connection, read_master_connection)
         .into_future()
-        .join3(read_connection, read_master_connection)
         .map(|(wr, rd, rm)| SqlConnections {
             write_connection: Connection::Raw(wr),
             read_connection: Connection::Raw(rd),
             read_master_connection: Connection::Raw(rm),
         })
+}
+
+pub fn create_raw_xdb_connections(
+    tier: String,
+) -> impl Future<Item = SqlConnections, Error = Error> {
+    let max_attempts = 5;
+
+    loop_fn(0, move |i| {
+        do_create_raw_xdb_connections(&tier).then(move |r| {
+            let loop_state = if r.is_ok() || i > max_attempts {
+                Loop::Break(r)
+            } else {
+                Loop::Continue(i + 1)
+            };
+            Ok(loop_state)
+        })
+    })
+    .and_then(|r| r)
 }
 
 /// Set of useful constructors for Mononoke's sql based data access objects
@@ -137,7 +157,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
     }
 
     fn with_raw_xdb_tier(tier: String) -> BoxFuture<Self, Error> {
-        create_raw_xdb_connections(&tier)
+        create_raw_xdb_connections(tier)
             .map(|r| {
                 let SqlConnections {
                     write_connection,
