@@ -1,5 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn darwin_ppid(pid: u32) -> u32;
+    fn darwin_exepath(pid: u32) -> *const libc::c_char;
+}
+
 #[cfg(windows)]
 mod windows {
     use failure::{format_err, Error};
