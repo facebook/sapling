@@ -254,6 +254,18 @@ impl HgBlobEntry {
             }
         }
     }
+
+    pub fn get_copy_info(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = Option<(MPath, HgFileNodeId)>, Error = Error> {
+        match self.id {
+            HgEntryId::Manifest(_) => future::ok(None).left_future(),
+            HgEntryId::File(_, hash) => fetch_file_envelope(ctx.clone(), &self.blobstore, hash)
+                .and_then(get_rename_from_envelope)
+                .right_future(),
+        }
+    }
 }
 
 impl Entry for HgBlobEntry {
