@@ -90,7 +90,10 @@ mod windows {
                 .map(|pe32| pe32.th32ParentProcessID)
         }
 
-        pub fn get_process_executable_name(&self, process_id: DWORD) -> Result<String, Error> {
+        pub(crate) fn get_process_executable_name(
+            &self,
+            process_id: DWORD,
+        ) -> Result<String, Error> {
             self.find_by_pid(process_id)
                 .map(|pe32| pe32.szExeFile)
                 .map(|cs| {
@@ -102,56 +105,6 @@ mod windows {
                 .map(|ref v| OsString::from_wide(v).into_string().unwrap_or("".into()))
         }
     }
-
-    /// Given a child pid, returns the parent process name.
-    pub fn get_parent_process_name() -> Result<String, Error> {
-        let mut pid = unsafe { GetCurrentProcessId() };
-        let snapshot = Snapshot::new()?;
-        loop {
-            pid = snapshot.get_parent_process_id(pid)?;
-            let name = snapshot.get_process_executable_name(pid)?;
-            if !name.contains("hg.") {
-                return Ok(name);
-            }
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
-mod linux {
-    use failure::Error;
-    use std::fs::read;
-
-    /// Given a process pid, returns the process name.
-    pub fn get_process_name(ppid: i32) -> Result<String, Error> {
-        let contents = read(format!("/proc/{}/cmdline", ppid))?;
-        let arg0: Vec<u8> = contents.iter().take_while(|&&b| b != 0).cloned().collect();
-        let s = String::from_utf8_lossy(arg0.as_slice());
-        return Ok(s.trim().to_string());
-    }
-
-}
-
-#[cfg(target_os = "macos")]
-mod macos {
-    use failure::Error;
-    use std::process::Command;
-
-    /// Given a process pid, returns the process name.
-    pub fn get_process_name(ppid: i32) -> Result<String, Error> {
-        // ucomm is the "accounting" name and excludes cruft
-        // The D-wrapper saves the arguments which has the advantage
-        // of knowing whether node or Java are running Nuclide, Buck,
-        // etc., but at the disadvantage of storing a lot of extra
-        // space in Scuba.
-        let out = Command::new("ps")
-            .arg("-o ucomm=")
-            .arg("-p")
-            .arg(format!("{}", ppid))
-            .output()?;
-        return Ok(String::from_utf8_lossy(&out.stdout).trim().into());
-    }
-
 }
 
 /// Get the max RSS usage of the current process in bytes.
@@ -236,9 +189,31 @@ pub fn parent_pid(pid: u32) -> u32 {
     0
 }
 
-#[cfg(target_os = "linux")]
-use self::linux::get_process_name;
-#[cfg(target_os = "macos")]
-use self::macos::get_process_name;
-#[cfg(windows)]
-use self::windows::get_parent_process_name;
+/// Get the executable name of the specified pid. Return an empty string on error.
+pub fn exe_name(pid: u32) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        use std::ffi::CStr;
+        let slice = unsafe { CStr::from_ptr(crate::darwin_exepath(pid)) };
+        return slice.to_string_lossy().into_owned();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(path) = std::fs::read_link(format!("/proc/{}/exe", pid)) {
+            return path.into_os_string().to_string_lossy().into_owned();
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(snapshot) = windows::Snapshot::new() {
+            if let Ok(name) = snapshot.get_process_executable_name(pid) {
+                return name;
+            }
+        }
+    }
+
+    #[allow(unreachable_code)]
+    String::new()
+}
