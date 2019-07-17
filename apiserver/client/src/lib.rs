@@ -4,11 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate apiserver_thrift;
-extern crate failure_ext;
-extern crate futures_ext;
-extern crate srclient;
-
 use std::sync::Arc;
 
 use futures_ext::BoxFuture;

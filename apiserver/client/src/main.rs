@@ -4,19 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate apiserver_client as client;
-extern crate clap;
-extern crate futures;
-extern crate futures_ext;
-extern crate tokio;
-
 use std::string::String;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use crate::client::MononokeAPIClient;
+use apiserver_client::MononokeAPIClient;
 
 fn cat(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let revision = matches.value_of("revision").expect("must provide revision");
