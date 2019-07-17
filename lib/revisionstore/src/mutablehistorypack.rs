@@ -122,6 +122,11 @@ impl MutableHistoryPack {
 
 impl MutableHistoryStore for MutableHistoryPack {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
+        // assert.
+        assert_ne!(key.node, info.parents[0].node);
+        assert_ne!(key.node, info.parents[1].node);
+
         // Ideally we could use something like:
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
@@ -340,7 +345,7 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use types::node::Node;
+    use types::{node::Node, testutil::key};
 
     use crate::historypack::HistoryPack;
     use crate::repack::IterableStore;
@@ -411,6 +416,22 @@ mod tests {
         }
 
         assert_eq!(actual_order, expected_order);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_loop() {
+        let tempdir = tempdir().unwrap();
+        let mut muthistorypack =
+            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+
+        let k = key("a", "1");
+        let nodeinfo = NodeInfo {
+            parents: [k.clone(), k.clone()],
+            linknode: Default::default(),
+        };
+
+        muthistorypack.add(&k, &nodeinfo).unwrap();
     }
 
     #[test]
