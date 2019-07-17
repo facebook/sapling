@@ -109,16 +109,6 @@ mod windows {
             }
         }
     }
-
-    pub fn get_max_rss() -> Option<i64> {
-        type DWORD = u32;
-        let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { zeroed() };
-        pmc.cb = size_of_val(&pmc) as DWORD;
-        match unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut pmc, pmc.cb) } {
-            0 => None,
-            _ => Some(pmc.WorkingSetSize as i64),
-        }
-    }
 }
 
 #[cfg(target_os = "linux")]
@@ -158,36 +148,47 @@ mod macos {
 
 }
 
-#[cfg(unix)]
-mod unix {
-    use core::mem;
-    use libc;
-
-    pub fn get_max_rss() -> Option<i64> {
+/// Get the max RSS usage of the current process in bytes.
+/// Return 0 on unsupported platform.
+pub fn max_rss_bytes() -> u64 {
+    #[cfg(unix)]
+    {
         let usage = unsafe {
-            let mut usage: libc::rusage = mem::zeroed();
-            libc::getrusage(libc::RUSAGE_CHILDREN, &mut usage as *mut _);
+            let mut usage: libc::rusage = std::mem::zeroed();
+            libc::getrusage(libc::RUSAGE_SELF, &mut usage as *mut _);
             usage
         };
-        // Normalize maxrsss into number of bytes since Linux returns
-        // in kbytes while macos returns the number of bytes.
-        if cfg!(target_os = "linux") {
-            Some(usage.ru_maxrss * 1024)
-        } else if cfg!(target_os = "macos") {
-            Some(usage.ru_maxrss)
+        // POSIX didn't specify unit of ru_maxrss. Linux uses KB while BSD and
+        // OSX use bytes (despite their manpages might say differently).
+        let scale = if cfg!(target_os = "linux") {
+            1024
         } else {
-            None
-        }
+            // Assume BSD-ish
+            1
+        };
+        return usage.ru_maxrss as u64 * scale;
     }
+
+    #[cfg(windows)]
+    {
+        use kernel32::{GetCurrentProcess, K32GetProcessMemoryInfo};
+        use winapi::psapi::PROCESS_MEMORY_COUNTERS;
+        type DWORD = u32;
+        let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+        pmc.cb = std::mem::size_of_val(&pmc) as DWORD;
+        return match unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut pmc, pmc.cb) } {
+            0 => 0,
+            _ => pmc.PeakWorkingSetSize as u64,
+        };
+    }
+
+    #[allow(unreachable_code)]
+    0
 }
 
 #[cfg(target_os = "linux")]
 use self::linux::get_process_name;
 #[cfg(target_os = "macos")]
 use self::macos::get_process_name;
-#[cfg(unix)]
-pub use self::unix::get_max_rss;
-#[cfg(windows)]
-pub use self::windows::get_max_rss;
 #[cfg(windows)]
 use self::windows::get_parent_process_name;
