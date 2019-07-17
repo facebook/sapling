@@ -20,7 +20,7 @@ mod windows {
     use winapi::winbase::{FILE_TYPE_CHAR, STD_OUTPUT_HANDLE};
     use winapi::{DWORD, HANDLE, INVALID_HANDLE_VALUE, PROCESSENTRY32W, TH32CS_SNAPPROCESS};
 
-    struct Snapshot {
+    pub(crate) struct Snapshot {
         handle: HANDLE,
     }
 
@@ -37,7 +37,7 @@ mod windows {
             pe
         }
 
-        fn new() -> Result<Snapshot, Error> {
+        pub(crate) fn new() -> Result<Snapshot, Error> {
             let snapshot_handle: HANDLE =
                 unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
 
@@ -85,7 +85,7 @@ mod windows {
             self.find(|pe32| pe32.th32ProcessID == pid)
         }
 
-        fn get_parent_process_id(&self, process_id: DWORD) -> Result<DWORD, Error> {
+        pub(crate) fn get_parent_process_id(&self, process_id: DWORD) -> Result<DWORD, Error> {
             self.find_by_pid(process_id)
                 .map(|pe32| pe32.th32ParentProcessID)
         }
@@ -186,6 +186,50 @@ pub fn max_rss_bytes() -> u64 {
             0 => 0,
             _ => pmc.PeakWorkingSetSize as u64,
         };
+    }
+
+    #[allow(unreachable_code)]
+    0
+}
+
+/// Get the parent pid. Return 0 on error or unsupported platform.
+/// If pid is 0, return the parent pid of the current process.
+pub fn parent_pid(pid: u32) -> u32 {
+    if pid == 0 {
+        #[cfg(unix)]
+        return unsafe { libc::getppid() as u32 };
+
+        #[cfg(not(unix))]
+        return parent_pid(unsafe { libc::getpid() as u32 });
+    }
+
+    #[cfg(target_os = "macos")]
+    unsafe {
+        return crate::darwin_ppid(pid);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(content) = std::fs::read_to_string(format!("/proc/{}/status", pid)) {
+            let prefix = "PPid:";
+            for line in content.lines() {
+                if line.starts_with(prefix) {
+                    if let Ok(ppid) = line[prefix.len()..].trim().parse() {
+                        return ppid;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(snapshot) = windows::Snapshot::new() {
+            if let Ok(ppid) = snapshot.get_parent_process_id(pid) {
+                return ppid;
+            }
+        }
     }
 
     #[allow(unreachable_code)]
