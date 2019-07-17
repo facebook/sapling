@@ -249,7 +249,7 @@ def cloudauth(ui, repo, **opts):
         (
             "",
             "version_number",
-            int,
+            "",
             "show the specified version of the smartlog",
             _("NUM"),
         ),
@@ -292,7 +292,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         component="commitcloud",
     )
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
-    if parseddate is None and version is None:
+    if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
             revdag = serv.getsmartlog(reponame, workspacename, repo)
     else:
@@ -637,7 +637,7 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
         (
             "",
             "workspace-version",
-            int,
+            "",
             _(
                 "target workspace version to sync to "
                 "(skip `cloud sync` if the current version is greater or equal than the given one) (EXPERIMENTAL)"
@@ -685,7 +685,15 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
 
     full = opts.get("full")
 
-    version = opts.get("workspace_version")
+    version = None
+    versionstr = opts.get("workspace_version")
+    if versionstr:
+        try:
+            version = int(versionstr)
+        except ValueError:
+            raise error.Abort(
+                _("error: argument 'workspace-version' should be a number")
+            )
 
     remotepath = ccutil.getremotepath(repo, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
