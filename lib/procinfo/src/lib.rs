@@ -168,13 +168,6 @@ mod windows {
             _ => Some(pmc.WorkingSetSize as i64),
         }
     }
-
-    pub fn is_interactive() -> bool {
-        // Get std out handle type and check wthether it was a
-        // console handle.
-        let file_type = unsafe { GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) };
-        file_type == FILE_TYPE_CHAR
-    }
 }
 
 #[cfg(target_os = "linux")]
@@ -218,7 +211,6 @@ mod macos {
 mod unix {
     use core::mem;
     use libc;
-    use std::fs::OpenOptions;
 
     pub fn get_max_rss() -> Option<i64> {
         let usage = unsafe {
@@ -236,14 +228,6 @@ mod unix {
             None
         }
     }
-
-    // We consider ourselves to be interactive if we have a controlling
-    // tty. This works even if the standard file descriptors are
-    // redirected or closed.
-    pub fn is_interactive() -> bool {
-        OpenOptions::new().write(true).open("/dev/tty").is_ok()
-    }
-
 }
 
 #[cfg(target_os = "linux")]
@@ -252,11 +236,7 @@ use self::linux::get_process_name;
 use self::macos::get_process_name;
 #[cfg(unix)]
 pub use self::unix::get_max_rss;
-#[cfg(unix)]
-pub use self::unix::is_interactive;
 #[cfg(windows)]
 pub use self::windows::get_max_rss;
 #[cfg(windows)]
 use self::windows::get_parent_process_name;
-#[cfg(windows)]
-pub use self::windows::is_interactive;
