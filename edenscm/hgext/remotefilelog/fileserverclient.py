@@ -145,6 +145,7 @@ class cacheconnection(object):
         self.subprocess = None
         self.connected = False
         self.repo = repo
+        self._requested = None
 
     def connect(self, cachecommand):
         if self.pipeo:
@@ -212,6 +213,7 @@ class cacheconnection(object):
                 self.close()
 
     def _makerequest(self, command, keys):
+        self._requested = keys
         request = "%s\n%d\n%s\n" % (command, len(keys), "\n".join(keys))
         self._request(request)
 
@@ -245,6 +247,11 @@ class cacheconnection(object):
             if key == "0":
                 # the end of the stream
                 break
+
+            if key == "1":
+                # An error happened while writing to the cache, let's pretend
+                # that all the keys are misses.
+                return self._requested
 
             if key.startswith("_hits_"):
                 # hit -> receive progress reports
