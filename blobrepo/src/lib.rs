@@ -15,6 +15,7 @@
 pub mod alias;
 mod bonsai_generation;
 pub mod derive_hg_manifest;
+mod envelope;
 pub mod file;
 pub mod file_history;
 mod manifest;

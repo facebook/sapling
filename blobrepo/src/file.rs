@@ -7,12 +7,13 @@
 //! Plain files, symlinks
 
 use super::alias::get_sha256;
+use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
 use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
 use blobstore::Blobstore;
 use context::CoreContext;
 use failure_ext::{bail_err, bail_msg, Error, FutureFailureErrorExt};
-use futures::future::{self, lazy, Future};
+use futures::future::{lazy, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
@@ -255,16 +256,16 @@ impl HgBlobEntry {
         }
     }
 
-    pub fn get_copy_info(
-        &self,
-        ctx: CoreContext,
-    ) -> impl Future<Item = Option<(MPath, HgFileNodeId)>, Error = Error> {
+    pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture<Box<dyn HgBlobEnvelope>, Error> {
         match self.id {
-            HgEntryId::Manifest(_) => future::ok(None).left_future(),
-            HgEntryId::File(_, hash) => fetch_file_envelope(ctx.clone(), &self.blobstore, hash)
-                .and_then(get_rename_from_envelope)
+            HgEntryId::Manifest(hash) => fetch_manifest_envelope(ctx, &self.blobstore, hash)
+                .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
+                .left_future(),
+            HgEntryId::File(_, hash) => fetch_file_envelope(ctx, &self.blobstore, hash)
+                .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
                 .right_future(),
         }
+        .boxify()
     }
 }
 
@@ -274,25 +275,7 @@ impl Entry for HgBlobEntry {
     }
 
     fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
-        match self.id {
-            HgEntryId::Manifest(hash) => {
-                fetch_manifest_envelope(ctx.clone(), &self.blobstore, hash)
-                    .map(move |envelope| {
-                        let (p1, p2) = envelope.parents();
-                        HgParents::new(p1, p2)
-                    })
-                    .boxify()
-            }
-            HgEntryId::File(_, hash) => fetch_file_envelope(ctx.clone(), &self.blobstore, hash)
-                .map(move |envelope| {
-                    let (p1, p2) = envelope.parents();
-                    HgParents::new(
-                        p1.map(HgFileNodeId::into_nodehash),
-                        p2.map(HgFileNodeId::into_nodehash),
-                    )
-                })
-                .boxify(),
-        }
+        self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
     }
 
     fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
@@ -349,14 +332,9 @@ impl Entry for HgBlobEntry {
 
     // XXX get_size should probably return a u64, not a usize
     fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
-        match self.id {
-            HgEntryId::Manifest(_) => future::ok(None).boxify(),
-            HgEntryId::File(_, filenode_id) => {
-                fetch_file_envelope(ctx.clone(), &self.blobstore, filenode_id)
-                    .map(|envelope| Some(envelope.content_size() as usize))
-                    .boxify()
-            }
-        }
+        self.get_envelope(ctx)
+            .map(|e| e.get_size().map(|s| s as usize))
+            .boxify()
     }
 
     fn get_hash(&self) -> HgEntryId {

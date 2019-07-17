@@ -35,6 +35,7 @@ use mercurial_types::{
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 use stats::define_stats;
 
+use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
 use crate::file::HgBlobEntry;
 use crate::BlobRepo;
@@ -425,25 +426,26 @@ impl UploadEntries {
                 future::ok(()).left_future()
             } else {
                 let filenodeinfos = stream::futures_unordered(uploaded_entries.into_iter().map(
-                    // TODO: We are duplicating the envelope fetch here.
                     |(path, blobentry)| {
-                        (
-                            blobentry.get_parents(ctx.clone()),
-                            compute_copy_from_info(ctx.clone(), &path, &blobentry),
-                        )
-                            .into_future()
-                            .map(move |(parents, copyfrom)| {
-                                let (p1, p2) = parents.get_nodes();
-                                FilenodeInfo {
-                                    path,
-                                    filenode: HgFileNodeId::new(
-                                        blobentry.get_hash().into_nodehash(),
-                                    ),
-                                    p1: p1.map(HgFileNodeId::new),
-                                    p2: p2.map(HgFileNodeId::new),
-                                    copyfrom,
-                                    linknode: HgChangesetId::new(cs_id),
-                                }
+                        blobentry
+                            .get_envelope(ctx.clone())
+                            .and_then(move |envelope| {
+                                let parents = envelope.get_parents();
+                                let copy_from = compute_copy_from_info(&path, &envelope);
+
+                                copy_from.map(move |copy_from| {
+                                    let (p1, p2) = parents.get_nodes();
+                                    FilenodeInfo {
+                                        path,
+                                        filenode: HgFileNodeId::new(
+                                            blobentry.get_hash().into_nodehash(),
+                                        ),
+                                        p1: p1.map(HgFileNodeId::new),
+                                        p2: p2.map(HgFileNodeId::new),
+                                        copyfrom: copy_from,
+                                        linknode: HgChangesetId::new(cs_id),
+                                    }
+                                })
                             })
                     },
                 ))
@@ -474,21 +476,19 @@ impl UploadEntries {
 }
 
 fn compute_copy_from_info(
-    ctx: CoreContext,
     path: &RepoPath,
-    blobentry: &HgBlobEntry,
-) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
+    envelope: &Box<dyn HgBlobEnvelope>,
+) -> Result<Option<(RepoPath, HgFileNodeId)>> {
     match path {
         &RepoPath::FilePath(_) => {
             STATS::finalize_compute_copy_from_info.add_value(1);
-            blobentry
-                .get_copy_info(ctx)
+            envelope
+                .get_copy_info()
                 .map(|copiedfrom| copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), node)))
-                .boxify()
         }
         &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => {
             // No copy information for directories/repo roots
-            Ok(None).into_future().boxify()
+            Ok(None)
         }
     }
 }
