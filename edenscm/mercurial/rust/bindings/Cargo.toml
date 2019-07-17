@@ -18,6 +18,7 @@ byteorder = "1.2.7"
 configparser = { path = "../../../../lib/configparser" }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython-failure = { path = "../../../../lib/cpython-failure" }
+dag = { path = "../../../../lib/dag" }
 edenapi = { path = "../../../../lib/edenapi" }
 encoding = { path = "../../../../lib/encoding" }
 env_logger = "0.5.13"
