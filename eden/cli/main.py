@@ -1342,7 +1342,7 @@ class StopCmd(Subcmd):
             try:
                 with instance.get_thrift_client() as client:
                     client.set_timeout(self.__thrift_timeout(args))
-                    pid = client.getPid()
+                    pid = client.getDaemonInfo().pid
                     stop_aux_processes(client)
                     # Ask the client to shutdown
                     print(f"Stopping edenfs daemon (pid {pid})...")

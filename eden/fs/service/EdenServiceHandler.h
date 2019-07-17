@@ -30,7 +30,9 @@ class TreeInode;
 class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
                            public facebook::fb303::FacebookBase2 {
  public:
-  explicit EdenServiceHandler(EdenServer* server);
+  explicit EdenServiceHandler(
+      std::vector<std::string> originalCommandLine,
+      EdenServer* server);
 
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
@@ -196,6 +198,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void reloadConfig() override;
 
+  void getDaemonInfo(DaemonInfo& result) override;
+
   /**
    * A thrift client has requested that we shutdown.
    */
@@ -222,6 +226,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       const EdenMount* mount,
       const RelativePathPiece filename);
 
+  const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
 };
 } // namespace eden

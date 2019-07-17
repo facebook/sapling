@@ -65,6 +65,7 @@ class StartupLogger;
 #ifndef _WIN32
 class TakeoverServer;
 #endif
+
 /*
  * EdenServer contains logic for running the Eden main loop.
  *
@@ -96,6 +97,7 @@ class EdenServer : private TakeoverHandler {
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
+      std::vector<std::string> originalCommandLine,
       UserInfo userInfo,
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig);
@@ -442,6 +444,7 @@ class EdenServer : private TakeoverHandler {
    * backingStores_ and localStore_.
    */
 
+  const std::vector<std::string> originalCommandLine_;
   EdenStateDir edenDir_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;

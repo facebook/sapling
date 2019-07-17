@@ -329,7 +329,7 @@ class EdenFS(object):
 
     def get_pid_via_thrift(self):
         with self.get_thrift_client() as client:
-            return client.getPid()
+            return client.getDaemonInfo().pid
 
     def graceful_restart(self, timeout: float = 30) -> None:
         assert self._process is not None

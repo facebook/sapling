@@ -89,4 +89,4 @@ class FakeEdenFS(typing.ContextManager[int]):
 
 def get_fake_edenfs_argv(eden_dir: pathlib.Path) -> typing.List[str]:
     with eden.thrift.create_thrift_client(str(eden_dir)) as client:
-        return client.getCommandLine().split("\0")
+        return client.getDaemonInfo().commandLine

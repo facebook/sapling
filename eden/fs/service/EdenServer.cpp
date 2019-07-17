@@ -190,10 +190,12 @@ class EdenServer::ThriftServerEventHandler
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 
 EdenServer::EdenServer(
+    std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig)
-    : edenDir_{edenConfig->getEdenDir()},
+    : originalCommandLine_{std::move(originalCommandLine)},
+      edenDir_{edenConfig->getEdenDir()},
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
@@ -1113,7 +1115,7 @@ Future<Unit> EdenServer::createThriftServer() {
       std::make_unique<apache::thrift::RSRoutingHandler>());
   server_->enableRocketServer(false);
 
-  handler_ = make_shared<EdenServiceHandler>(this);
+  handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
 
   // Get the path to the thrift socket.

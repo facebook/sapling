@@ -144,14 +144,15 @@ class FakeEdenServer {
     cleanShutdownFile_ = path;
   }
 
-  string getCommandLine() const {
-    return commandLine_;
-  }
-  void setCommandLine(folly::StringPiece commandLine) {
+  void setCommandLine(std::vector<string> commandLine) {
     // Note that setCommandLine() is not thread-safe.
     // It should only be called immediately after construction of the
     // FakeEdenServer, before it can be used from multiple threads.
-    commandLine_ = commandLine;
+    commandLine_ = std::move(commandLine);
+  }
+
+  std::vector<string> getCommandLine() {
+    return commandLine_;
   }
 
  private:
@@ -168,7 +169,7 @@ class FakeEdenServer {
   std::chrono::milliseconds getPidSleepDuration_{0ms};
   std::chrono::milliseconds stopSleepDuration_{0ms};
   std::optional<AbsolutePath> cleanShutdownFile_{};
-  string commandLine_;
+  std::vector<string> commandLine_;
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -209,20 +210,12 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
     }
   }
 
-  void getCommandLine(string& result) override {
-    result = server_->getCommandLine();
-  }
-
-  int64_t getPid() override {
-    return server_->getPid();
+  void getDaemonInfo(DaemonInfo& result) override {
+    result.pid = server_->getPid();
+    result.commandLine = server_->getCommandLine();
   }
 
   void listMounts(std::vector<MountInfo>& /* results */) override {
-    return;
-  }
-
-  void shutdown() override {
-    server_->stop("received shutdown() thrift request");
   }
 
   void initiateShutdown(std::unique_ptr<string> reason) override {
@@ -369,7 +362,7 @@ int main(int argc, char** argv) {
   }
 
   FakeEdenServer server;
-  server.setCommandLine(folly::join("\0"_sp, originalCommandArguments));
+  server.setCommandLine(originalCommandArguments);
   if (!FLAGS_cleanShutdownFile.empty()) {
     server.setCleanShutdownFile(AbsolutePath{FLAGS_cleanShutdownFile});
   }

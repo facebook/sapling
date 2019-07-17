@@ -163,7 +163,7 @@ def check_health(
     try:
         with get_client() as client:
             client.set_timeout(timeout)
-            pid = client.getPid()
+            pid = client.getDaemonInfo().pid
             status = client.getStatus()
     except (
         eden.thrift.EdenNotRunningError,

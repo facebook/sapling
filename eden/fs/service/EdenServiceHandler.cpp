@@ -216,8 +216,12 @@ facebook::eden::InodePtr inodeFromUserPath(
 namespace facebook {
 namespace eden {
 
-EdenServiceHandler::EdenServiceHandler(EdenServer* server)
-    : FacebookBase2("Eden"), server_(server) {
+EdenServiceHandler::EdenServiceHandler(
+    std::vector<std::string> originalCommandLine,
+    EdenServer* server)
+    : FacebookBase2{"Eden"},
+      originalCommandLine_{std::move(originalCommandLine)},
+      server_{server} {
 #ifndef _WIN32
   struct HistConfig {
     int64_t bucketSize{250};
@@ -225,6 +229,7 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
     int64_t max{25000};
   };
   auto methodConfigs = {
+      // TODO: enumerate the methods specified in the generated Thrift
       std::make_tuple("listMounts", HistConfig{20, 0, 1000}),
       std::make_tuple("mount", HistConfig{}),
       std::make_tuple("unmount", HistConfig{}),
@@ -246,6 +251,7 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
       std::make_tuple("flushStatsNow", HistConfig{20, 0, 1000}),
       std::make_tuple("invalidateKernelInodeCache", HistConfig{}),
       std::make_tuple("getStatInfo", HistConfig{}),
+      std::make_tuple("getDaemonInfo", HistConfig{}),
       std::make_tuple("initiateShutdown", HistConfig{}),
       std::make_tuple("reloadConfig", HistConfig{200, 0, 10000}),
   };
@@ -1439,6 +1445,11 @@ int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
 void EdenServiceHandler::reloadConfig() {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO);
   server_->reloadConfig();
+}
+
+void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
+  result.pid = getpid();
+  result.commandLine = originalCommandLine_;
 }
 
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {

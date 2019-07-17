@@ -67,7 +67,11 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
   auto privHelper = make_unique<FakePrivHelper>();
   config->setEdenDir(edenDir, ConfigSource::CommandLine);
 
-  return make_unique<EdenServer>(userInfo, std::move(privHelper), config);
+  return make_unique<EdenServer>(
+      std::vector<std::string>{"edenfs_unit_test"},
+      userInfo,
+      std::move(privHelper),
+      config);
 }
 
 } // namespace eden

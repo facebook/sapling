@@ -96,6 +96,8 @@ void EdenMain::runServer(const EdenServer& server) {
 }
 
 int EdenMain::main(int argc, char** argv) {
+  std::vector<std::string> originalCommandLine{argv, argv + argc};
+
   // Fork the privhelper process, then drop privileges in the main process.
   // This should be done as early as possible, so that everything else we do
   // runs only with normal user privileges.
@@ -202,7 +204,10 @@ int EdenMain::main(int argc, char** argv) {
     startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
 
     server.emplace(
-        std::move(identity), std::move(privHelper), std::move(edenConfig));
+        std::move(originalCommandLine),
+        std::move(identity),
+        std::move(privHelper),
+        std::move(edenConfig));
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {
