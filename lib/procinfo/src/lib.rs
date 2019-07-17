@@ -8,16 +8,16 @@ extern "C" {
 
 #[cfg(windows)]
 mod windows {
-    use kernel32::{
-        CloseHandle, CreateToolhelp32Snapshot, GetCurrentProcess, GetCurrentProcessId, GetFileType,
-        GetLastError, GetStdHandle, K32GetProcessMemoryInfo, Process32FirstW, Process32NextW,
-    };
     use std::ffi::OsString;
-    use std::mem::{size_of, size_of_val, zeroed};
+    use std::mem::{size_of, zeroed};
     use std::os::windows::ffi::OsStringExt;
-    use winapi::psapi::PROCESS_MEMORY_COUNTERS;
-    use winapi::winbase::{FILE_TYPE_CHAR, STD_OUTPUT_HANDLE};
-    use winapi::{DWORD, HANDLE, INVALID_HANDLE_VALUE, PROCESSENTRY32W, TH32CS_SNAPPROCESS};
+    use winapi::shared::minwindef::DWORD;
+    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+    use winapi::um::tlhelp32::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    use winapi::um::winnt::HANDLE;
 
     pub(crate) struct Snapshot {
         handle: HANDLE,
@@ -117,9 +117,9 @@ pub fn max_rss_bytes() -> u64 {
 
     #[cfg(windows)]
     {
-        use kernel32::{GetCurrentProcess, K32GetProcessMemoryInfo};
-        use winapi::psapi::PROCESS_MEMORY_COUNTERS;
-        type DWORD = u32;
+        use winapi::shared::minwindef::DWORD;
+        use winapi::um::processthreadsapi::GetCurrentProcess;
+        use winapi::um::psapi::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
         let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
         pmc.cb = std::mem::size_of_val(&pmc) as DWORD;
         return match unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut pmc, pmc.cb) } {
