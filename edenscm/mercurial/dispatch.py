@@ -394,7 +394,7 @@ def dispatch(req):
         _formatparse(ferr.write, inst)
         return -1
 
-    msg = _formatargs(req.args)
+    cmdmsg = _formatargs(req.args)
     starttime = util.timer()
     ret = None
     retmask = 255
@@ -467,7 +467,7 @@ def dispatch(req):
         req.ui.log(
             "command_finish",
             "%s exited %d after %0.2f seconds\n",
-            msg,
+            cmdmsg,
             ret or 0,
             duration,
         )
