@@ -743,9 +743,17 @@ class TestBase(unittest.TestCase):
         return hg.repository(testui(), self.wc_path)
 
     def pushrevisions(self, expected_extra_back=0):
-        before = repolen(self.repo)
-        self.repo.ui.setconfig("hgsubversion", "stupid", str(self.stupid))
-        res = commands.push(self.repo.ui, self.repo)
+        return self.pushrevisionswithconfigs(expected_extra_back)
+
+    def pushrevisionswithconfigs(self, expected_extra_back=0, configs=None):
+        repo = self.repo
+        ui = repo.ui
+        before = repolen(repo)
+        ui.setconfig("hgsubversion", "stupid", str(self.stupid))
+        if configs:
+            for sec, name, val in configs:
+                ui.setconfig(sec, name, val)
+        res = commands.push(ui, repo)
         after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
         return res

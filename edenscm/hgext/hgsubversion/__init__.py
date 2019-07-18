@@ -15,6 +15,13 @@ automated tests. See 'README' in the hgsubversion directory for
 details.
 
 For more information and instructions, see :hg:`help subversion`.
+
+Config::
+
+  [hgsubversion]
+  # Append 'REVERSE_SYNC_ONLY_HG_NODE: {hghash}' to the commit message when
+  # committing to SVN. The hghash here is the original hash, before any rebase.
+  rewritesvncommitwithhghash = False
 """
 
 from __future__ import absolute_import
@@ -419,6 +426,9 @@ configitem("hgsubversion", "failonmissing", default=configitem.dynamicdefault)
 configitem("hgsubversion", "reposubdir", default="")
 # for stopping hg svn rebuildmeta from getting this info from svn server
 configitem("hgsubversion", "repouuid", default="")
+# write the hg hash in the svn commit message when pushing to svn.
+# only used for HG -> SVN reverse sync.
+configitem("hgsubversion", "rewritesvncommitwithhghash", default=False)
 
 
 @templatekeyword("svnrev")

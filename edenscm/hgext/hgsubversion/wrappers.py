@@ -308,7 +308,9 @@ def push(repo, dest, force, revs):
             tip_hash = hashes[tip_ctx.node()][0]
             try:
                 ui.status("committing %s\n" % current_ctx)
-                pushedrev = pushmod.commit(ui, repo, current_ctx, meta, tip_hash, svn)
+                pushedrev = pushmod.commit(
+                    ui, repo, current_ctx, original_ctx, meta, tip_hash, svn
+                )
             except pushmod.NoFilesException:
                 ui.warn(
                     "Could not push revision %s because it had no changes "

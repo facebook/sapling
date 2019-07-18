@@ -222,7 +222,6 @@ class PushTests(test_hgsubversion_util.TestBase):
         self.svnserve_pid = svnserve.pid
         try:
             time.sleep(2)
-            import shutil
 
             shutil.rmtree(self.wc_path)
             commands.clone(
@@ -809,6 +808,51 @@ class PushTests(test_hgsubversion_util.TestBase):
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(tip["adding_file"].data(), "fooFirstFile")
         self.assertEqual(tip["newdir/new_file"].data(), "fooNewFile")
+
+    def test_push_with_rewrite_svncommit(self, commit=True):
+        repo = self.repo
+        old_tip = repo["tip"].node()
+        expected_parent = repo["default"].node()
+
+        def file_callback(repo, memctx, path):
+            if path == "adding_file":
+                return compathacks.makememfilectx(
+                    repo,
+                    memctx=memctx,
+                    path=path,
+                    data="foo",
+                    islink=False,
+                    isexec=False,
+                    copied=False,
+                )
+            raise IOError(errno.EINVAL, "Invalid operation: " + path)
+
+        ctx = context.memctx(
+            repo,
+            (repo["default"].node(), node.nullid),
+            "automated test",
+            ["adding_file"],
+            file_callback,
+            "an_author",
+            "2008-10-07 20:59:48 -0500",
+            {"branch": "default"},
+        )
+        repo.commitctx(ctx)
+        if not commit:
+            return  # some tests use this test as an extended setup.
+        hg.update(repo, repo["tip"].node())
+        old_tip_hex = repo["tip"].hex()
+        self.pushrevisionswithconfigs(
+            configs=[("hgsubversion", "rewritesvncommitwithhghash", True)]
+        )
+        tip = self.repo["tip"]
+        self.assertNotEqual(tip.node(), old_tip)
+        self.assertEqual(node.hex(tip.parents()[0].node()), node.hex(expected_parent))
+        self.assertEqual(tip["adding_file"].data(), "foo")
+        self.assertEqual(
+            tip.description(),
+            "automated test\nREVERSE_SYNC_ONLY_HG_NODE: " + old_tip_hex,
+        )
 
 
 if __name__ == "__main__":
