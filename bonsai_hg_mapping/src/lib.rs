@@ -33,7 +33,7 @@ pub use crate::errors::*;
 pub use crate::mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {
-    prefix = "mononoke.bonsai-hg-mapping";
+    prefix = "mononoke.bonsai_hg_mapping";
     gets: timeseries(RATE, SUM),
     gets_master: timeseries(RATE, SUM),
     adds: timeseries(RATE, SUM),
