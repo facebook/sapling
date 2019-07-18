@@ -64,7 +64,7 @@ class LazyCommand(object):
         # rhs is mangled by "_repr"
         if rhs.startswith("\n"):
             rhs = rhs[1:]
-        autofix.eq(out, rhs, nested=1)
+        autofix.eq(out, rhs, nested=1, eqfunc=eqglob)
 
     def __del__(self):
         # Need the side-effect calculating output, if __eq__ is not called.
@@ -182,3 +182,35 @@ def _normalizeerr(out, _errors=_errors):
         for value in values:
             out = out.replace(value, name)
     return out
+
+
+def eqglob(a, b):
+    """Compare multi-line strings, with '(glob)', '(re)' etc. support"""
+    if not (isinstance(a, str) and isinstance(b, str)):
+        return False
+    if os.name == "nt":
+        # Normalize path on Windows
+        a = a.replace("\\", "/")
+        b = b.replace("\\", "/")
+    alines = a.splitlines()
+    blines = b.splitlines()
+    if len(alines) != len(blines):
+        return False
+    for aline, bline in zip(alines, blines):
+        if bline.endswith(" (glob)"):
+            # As an approximation, use fnmatch to do the job.
+            # "[]" do not have special meaning in run-tests.py glob patterns.
+            # Replace them with "?".
+            globline = bline[:-7].replace("[", "?").replace("]", "?")
+            if not fnmatch.fnmatch(aline, globline):
+                return False
+        elif bline.endswith(" (esc)"):
+            bline = bline[:-6].decode("string-escape")
+            if bline != aline:
+                return False
+        elif bline.endswith(" (re)"):
+            if not re.match(bline[:-5] + r"\Z").match(aline):
+                return False
+        elif aline != bline:
+            return False
+    return True
