@@ -21,7 +21,8 @@ use std::time::SystemTime;
 /// Local, rotated log consists of events tagged with "Invocation ID" and
 /// timestamps.
 pub struct Blackbox {
-    log: RotateLog,
+    // Used by singleton.
+    pub(crate) log: RotateLog,
     opts: BlackboxOptions,
 
     // An ID that can be "grouped by" to figure everything about a session.
@@ -380,7 +381,7 @@ fn new_session_id() -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use serde_derive::{Deserialize, Serialize};
     use std::collections::HashSet;
@@ -391,7 +392,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    enum Event {
+    pub(crate) enum Event {
         A(u64),
         B(String),
     }

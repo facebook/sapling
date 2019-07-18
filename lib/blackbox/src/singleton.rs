@@ -8,8 +8,9 @@
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
 use crate::{Blackbox, BlackboxOptions};
+use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::sync::Mutex;
 
 lazy_static! {
@@ -18,14 +19,28 @@ lazy_static! {
 }
 
 /// Replace the global [`Blackbox`] instance.
-pub fn init(blackbox: Blackbox) {
+///
+/// If [`log`] was called, their side effects will be re-applied to the
+/// specified blackbox.
+pub fn init(mut blackbox: Blackbox) {
     let mut singleton = SINGLETON.lock().unwrap();
+
+    // Insert dirty entries to the new blackbox.
+    let old_blackbox = singleton.deref();
+    for log in old_blackbox.log.logs().iter() {
+        for entry in log.iter_dirty() {
+            if let Ok(entry) = entry {
+                let _ = blackbox.log.append(entry);
+            }
+        }
+    }
+
     *singleton.deref_mut() = blackbox;
 }
 
 /// Log to the global [`Blackbox`] instance.
 ///
-/// Do nothing if [`init`] was not called.
+/// If [`init`] was not called, log requests will be buffered in memory.
 pub fn log(data: &impl serde::Serialize) {
     if let Ok(mut singleton) = SINGLETON.lock() {
         let blackbox = singleton.deref_mut();
@@ -39,4 +54,32 @@ pub fn sync() {
         let blackbox = singleton.deref_mut();
         blackbox.sync();
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::blackbox::{tests::Event, IndexFilter};
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_buffered_writes() {
+        let events = vec![Event::A(42), Event::B("foo".to_string())];
+        for e in &events {
+            log(e);
+        }
+
+        let dir = tempdir().unwrap();
+        let blackbox = BlackboxOptions::new().open(&dir).unwrap();
+        init(blackbox);
+
+        for e in &events[1..2] {
+            log(e);
+        }
+
+        let mut singleton = SINGLETON.lock().unwrap();
+        let blackbox = singleton.deref_mut();
+        assert_eq!(blackbox.filter::<Event>(IndexFilter::Nop, None).len(), 3);
+    }
+
 }
