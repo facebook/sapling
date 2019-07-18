@@ -27,7 +27,10 @@ use futures_stats::{FutureStats, Timed};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde::Serialize;
 use slog::Logger;
+use sshrelay::SshEnvVars;
 use time_ext::DurationExt;
+use tracing::TraceContext;
+use uuid::Uuid;
 
 use super::super::actor::{Mononoke, MononokeRepoResponse};
 
@@ -85,8 +88,17 @@ impl MononokeAPIServiceImpl {
         scuba
     }
 
-    fn create_ctx(&self) -> CoreContext {
-        CoreContext::new_with_logger(self.logger.clone())
+    fn create_ctx(&self, scuba: ScubaSampleBuilder) -> CoreContext {
+        CoreContext::new(
+            Uuid::new_v4(),
+            self.logger.clone(),
+            scuba,
+            None,
+            TraceContext::default(),
+            None,
+            SshEnvVars::default(),
+            None,
+        )
     }
 }
 
@@ -113,21 +125,21 @@ fn log_time<T, U>(
 
 impl MononokeApiservice for MononokeAPIServiceImpl {
     fn get_raw(&self, params: MononokeGetRawParams) -> BoxFuture<Vec<u8>, GetRawExn> {
-        let ctx = self.create_ctx();
-
-        let mut scuba = self.create_scuba_logger(
+        let scuba = self.create_scuba_logger(
             "get_raw",
             &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
         );
 
+        let ctx = self.create_ctx(scuba);
+
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -140,7 +152,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|vec| vec.len()).unwrap_or(0),
@@ -155,21 +167,21 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         &self,
         params: MononokeGetChangesetParams,
     ) -> BoxFuture<MononokeChangeset, GetChangesetExn> {
-        let ctx = self.create_ctx();
-
-        let mut scuba = self.create_scuba_logger(
+        let scuba = self.create_scuba_logger(
             "get_changeset",
             &params,
             None,
             Some(params.revision.clone()),
         );
 
+        let ctx = self.create_ctx(scuba);
+
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -184,7 +196,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|resp| {
@@ -205,16 +217,16 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         &self,
         params: MononokeGetBranchesParams,
     ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
-        let ctx = self.create_ctx();
+        let scuba = self.create_scuba_logger("get_branches", &params, None, None);
 
-        let mut scuba = self.create_scuba_logger("get_branches", &params, None, None);
+        let ctx = self.create_ctx(scuba);
 
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -227,7 +239,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|resp| {
@@ -248,21 +260,21 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         &self,
         params: MononokeListDirectoryParams,
     ) -> BoxFuture<MononokeDirectory, ListDirectoryExn> {
-        let ctx = self.create_ctx();
-
-        let mut scuba = self.create_scuba_logger(
+        let scuba = self.create_scuba_logger(
             "list_directory",
             &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
         );
 
+        let ctx = self.create_ctx(scuba);
+
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -277,7 +289,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|resp| {
@@ -297,14 +309,13 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     }
 
     fn is_ancestor(&self, params: MononokeIsAncestorParams) -> BoxFuture<bool, IsAncestorExn> {
-        let ctx = self.create_ctx();
-
         let mut scuba = self.create_scuba_logger(
             "is_ancestor",
             &params,
             None,
             Some(params.descendant.clone()),
         );
+
         let ancestor = match params.ancestor.clone() {
             MononokeRevision::commit_hash(hash) => hash,
             MononokeRevision::bookmark(bookmark) => bookmark,
@@ -312,6 +323,8 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         };
 
         scuba.add("ancestor", ancestor);
+
+        let ctx = self.create_ctx(scuba);
 
         params
             .try_into()
@@ -330,6 +343,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| IsAncestorExn::e(e.into()))
             .timed({
                 move |stats, resp| {
+                    let mut scuba = ctx.scuba().clone();
                     if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
                         scuba.add("extra_context", counters);
                     };
@@ -341,16 +355,16 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     }
 
     fn get_blob(&self, params: MononokeGetBlobParams) -> BoxFuture<MononokeBlob, GetBlobExn> {
-        let ctx = self.create_ctx();
+        let scuba = self.create_scuba_logger("get_blob", &params, None, None);
 
-        let mut scuba = self.create_scuba_logger("get_blob", &params, None, None);
+        let ctx = self.create_ctx(scuba);
 
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -365,7 +379,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|resp| resp.content.len()).unwrap_or(0),
@@ -377,16 +391,16 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     }
 
     fn get_tree(&self, params: MononokeGetTreeParams) -> BoxFuture<MononokeDirectory, GetTreeExn> {
-        let ctx = self.create_ctx();
+        let scuba = self.create_scuba_logger("get_tree", &params, None, None);
 
-        let mut scuba = self.create_scuba_logger("get_tree", &params, None, None);
+        let ctx = self.create_ctx(scuba);
 
         params
             .try_into()
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -398,10 +412,11 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                 ))),
             })
             .map_err(move |e| GetTreeExn::e(e.into()))
-            .timed({
+            .timed(
+                {
                 move |stats, resp| {
                     log_time(
-                        &mut scuba,
+                        &mut ctx.scuba().clone(),
                         &stats,
                         resp,
                         resp.map(|resp| {
