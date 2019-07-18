@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::time::Instant;
+
 use actix_web::{
     error::Result,
     middleware::{Finished, Middleware, Started},
@@ -19,20 +21,48 @@ use x509::identity;
 
 use tracing::TraceContext;
 
-use super::response_time::ResponseTime;
+use time_ext::DurationExt;
 
 pub struct CoreContextMiddleware {
     logger: Logger,
     scuba: ScubaSampleBuilder,
 }
 
+#[derive(Clone)]
+enum TimeMeasurement {
+    StartTime(Instant),
+    ResponseTime(u64),
+}
+
 impl CoreContextMiddleware {
     pub fn new(logger: Logger, scuba: ScubaSampleBuilder) -> CoreContextMiddleware {
         CoreContextMiddleware { logger, scuba }
     }
-}
 
-impl<S> ResponseTime<S> for CoreContextMiddleware {}
+    fn start_timer<S>(&self, req: &HttpRequest<S>) {
+        req.extensions_mut()
+            .insert(TimeMeasurement::StartTime(Instant::now()));
+    }
+
+    fn time_cost<S>(&self, req: &HttpRequest<S>) -> Option<u64> {
+        let maybe_time = req.extensions().get::<TimeMeasurement>().map(|x| x.clone());
+
+        if let Some(time) = maybe_time {
+            match time {
+                TimeMeasurement::ResponseTime(t) => Some(t),
+                TimeMeasurement::StartTime(t) => {
+                    let cost = t.elapsed().as_micros_unchecked();
+                    req.extensions_mut()
+                        .insert(TimeMeasurement::ResponseTime(cost));
+
+                    Some(cost)
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
 
 impl<S> Middleware<S> for CoreContextMiddleware {
     fn start(&self, req: &HttpRequest<S>) -> Result<Started> {
