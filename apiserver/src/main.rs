@@ -43,17 +43,17 @@ use crate::actor::{
 };
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
-use crate::middleware::ScubaMiddleware;
 
 mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
     pub const MAX_PAYLOAD_SIZE: usize = 1024 * 1024 * 1024;
 }
 
-// Currently logging and scuba is handled using the middleware service
-// so we pass on a fake context
-fn prepare_fake_ctx(state: &State<HttpServerState>) -> CoreContext {
-    CoreContext::new_with_logger(state.logger.clone())
+fn get_ctx(req: &HttpRequest<HttpServerState>, state: &State<HttpServerState>) -> CoreContext {
+    match req.extensions().get::<CoreContext>() {
+        Some(ctx) => ctx.clone(),
+        None => CoreContext::new_with_logger(state.logger.clone()),
+    }
 }
 
 #[derive(Deserialize)]
@@ -69,11 +69,15 @@ struct GetRawFileParams {
 // for us. In this case, the `State<HttpServerState>` and `Path<GetRawFileParams>`.
 // [1] https://docs.rs/actix-web/0.6.11/actix_web/trait.FromRequest.html#impl-FromRequest%3CS%3E-3
 fn get_raw_file(
-    (state, params): (State<HttpServerState>, Path<GetRawFileParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<GetRawFileParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetRawFile {
@@ -92,7 +96,11 @@ struct IsAncestorParams {
 }
 
 fn is_ancestor(
-    (state, params): (State<HttpServerState>, Path<IsAncestorParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<IsAncestorParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     let ancestor_parsed = percent_decode(params.ancestor.as_bytes())
@@ -102,7 +110,7 @@ fn is_ancestor(
         .decode_utf8_lossy()
         .to_string();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::IsAncestor {
@@ -121,11 +129,15 @@ struct ListDirectoryParams {
 }
 
 fn list_directory(
-    (state, params): (State<HttpServerState>, Path<ListDirectoryParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<ListDirectoryParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::ListDirectory {
@@ -143,11 +155,15 @@ struct GetBlobParams {
 }
 
 fn get_blob_content(
-    (state, params): (State<HttpServerState>, Path<GetBlobParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<GetBlobParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetBlobContent { hash: params.hash },
@@ -162,11 +178,15 @@ struct GetTreeParams {
 }
 
 fn get_tree(
-    (state, params): (State<HttpServerState>, Path<GetTreeParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<GetTreeParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetTree { hash: params.hash },
@@ -181,11 +201,15 @@ struct GetChangesetParams {
 }
 
 fn get_changeset(
-    (state, params): (State<HttpServerState>, Path<GetChangesetParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<GetChangesetParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetChangeset {
@@ -202,11 +226,15 @@ struct DownloadLargeFileParams {
 }
 
 fn download_large_file(
-    (state, params): (State<HttpServerState>, Path<DownloadLargeFileParams>),
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<DownloadLargeFileParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::DownloadLargeFile { oid: params.oid },
@@ -249,7 +277,7 @@ fn lfs_batch(
         });
 
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        req.extensions().get::<CoreContext>().unwrap().clone(),
         MononokeQuery {
             repo: params.repo.clone(),
             kind: MononokeRepoQuery::LfsBatch {
@@ -269,11 +297,16 @@ struct UploadLargeFileParams {
 
 // TODO(anastasiyaz): T32937714 Bytes -> Streaming
 fn upload_large_file(
-    (state, body, params): (State<HttpServerState>, Bytes, Path<UploadLargeFileParams>),
+    (state, body, params, req): (
+        State<HttpServerState>,
+        Bytes,
+        Path<UploadLargeFileParams>,
+        HttpRequest<HttpServerState>,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
     state.mononoke.send_query(
-        prepare_fake_ctx(&state),
+        get_ctx(&req, &state),
         MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::UploadLargeFile {
@@ -296,11 +329,12 @@ struct EdenGetDataQuery {
 }
 
 fn eden_get_data(
-    (state, params, query, body): (
+    (state, params, query, body, req): (
         State<HttpServerState>,
         Path<EdenGetDataParams>,
         Query<EdenGetDataQuery>,
         Bytes,
+        HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
@@ -309,7 +343,7 @@ fn eden_get_data(
         Ok(request) => state
             .mononoke
             .send_query(
-                prepare_fake_ctx(&state),
+                get_ctx(&req, &state),
                 MononokeQuery {
                     repo: params.repo,
                     kind: MononokeRepoQuery::EdenGetData {
@@ -339,11 +373,12 @@ struct EdenGetHistoryQuery {
 }
 
 fn eden_get_history(
-    (state, params, query, body): (
+    (state, params, query, body, req): (
         State<HttpServerState>,
         Path<EdenGetHistoryParams>,
         Query<EdenGetHistoryQuery>,
         Bytes,
+        HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
@@ -352,7 +387,7 @@ fn eden_get_history(
         Ok(request) => state
             .mononoke
             .send_query(
-                prepare_fake_ctx(&state),
+                get_ctx(&req, &state),
                 MononokeQuery {
                     repo: params.repo,
                     kind: MononokeRepoQuery::EdenGetHistory {
@@ -382,11 +417,12 @@ struct EdenGetTreesQuery {
 }
 
 fn eden_get_trees(
-    (state, params, query, body): (
+    (state, params, query, body, req): (
         State<HttpServerState>,
         Path<EdenGetTreesParams>,
         Query<EdenGetTreesQuery>,
         Bytes,
+        HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
@@ -395,7 +431,7 @@ fn eden_get_trees(
         Ok(request) => state
             .mononoke
             .send_query(
-                prepare_fake_ctx(&state),
+                get_ctx(&req, &state),
                 MononokeQuery {
                     repo: params.repo,
                     kind: MononokeRepoQuery::EdenGetTrees {
@@ -425,11 +461,12 @@ struct EdenPrefetchTreesQuery {
 }
 
 fn eden_prefetch_trees(
-    (state, params, query, body): (
+    (state, params, query, body, req): (
         State<HttpServerState>,
         Path<EdenPrefetchTreesParams>,
         Query<EdenPrefetchTreesQuery>,
         Bytes,
+        HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
@@ -438,7 +475,7 @@ fn eden_prefetch_trees(
         Ok(request) => state
             .mononoke
             .send_query(
-                prepare_fake_ctx(&state),
+                get_ctx(&req, &state),
                 MononokeQuery {
                     repo: params.repo,
                     kind: MononokeRepoQuery::EdenPrefetchTrees {
@@ -674,14 +711,16 @@ fn main() -> Fallible<()> {
 
     let server = server::new(move || {
         App::with_state(state.clone())
-            .middleware(middleware::SLogger::new(actix_logger.clone()))
-            .middleware(ScubaMiddleware::new(scuba_builder.clone()))
+            .middleware(middleware::CoreContextMiddleware::new(
+                actix_logger.clone(),
+                scuba_builder.clone(),
+            ))
             .route(
                 "/health_check",
                 http::Method::GET,
                 |req: HttpRequest<HttpServerState>| {
-                    // removing ScubaSampleBuilder will disable scuba logging for this request.
-                    req.extensions_mut().remove::<ScubaSampleBuilder>();
+                    // removing CoreContext will disable scuba logging for this request.
+                    req.extensions_mut().remove::<CoreContext>();
                     HttpResponse::Ok().body("I_AM_ALIVE")
                 },
             )

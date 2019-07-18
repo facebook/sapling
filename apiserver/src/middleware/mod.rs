@@ -4,9 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod core_context;
 mod response_time;
-mod scuba;
-mod slogger;
 
-pub use self::scuba::ScubaMiddleware;
-pub use self::slogger::SLogger;
+pub use self::core_context::CoreContextMiddleware;
