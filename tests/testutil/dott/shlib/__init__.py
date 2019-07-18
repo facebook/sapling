@@ -166,6 +166,34 @@ def true():
 globals()["["] = test
 
 
+# shell builtin
+
+
+def source(path):
+    name = os.path.basename(path)
+    if name in {"helpers-usechg.sh", "histedit-helpers.sh"}:
+        return
+
+    defs = {}
+    if name == "library.sh":
+        name = os.path.basename(os.path.dirname(path))
+        if name == "tests":
+            # remotefilelog helpers
+            from . import remotefilelog
+
+            defs = remotefilelog.__dict__
+    if defs:
+        for name, body in defs.items():
+            if callable(body):
+                globals()[name] = body
+        return
+
+    raise NotImplementedError("source not implemented")
+
+
+globals()["."] = source
+
+
 # hg commands
 
 
