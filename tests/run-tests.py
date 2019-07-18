@@ -3454,7 +3454,7 @@ class TestRunner(object):
         if failed:
             return 1
         elif allskipped:
-            return Test.SKIPPED_STATUS
+            return 0
         elif errored:
             return 2
 
