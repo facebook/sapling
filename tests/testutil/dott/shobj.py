@@ -157,3 +157,28 @@ _normalizefuncs = []
 
 # Decorator. Add an output normalizing function.
 normalizeoutput = _normalizefuncs.append
+
+
+_errors = {
+    br"$ENOENT$": (
+        # strerror()
+        br"No such file or directory",
+        # FormatMessage(ERROR_FILE_NOT_FOUND)
+        br"The system cannot find the file specified",
+    ),
+    br"$ENOTDIR$": (
+        # strerror()
+        br"Not a directory",
+        # FormatMessage(ERROR_PATH_NOT_FOUND)
+        br"The system cannot find the path specified",
+    ),
+}
+
+
+@normalizeoutput
+def _normalizeerr(out, _errors=_errors):
+    """Translate error messages to '$ENOENT$'"""
+    for name, values in _errors.items():
+        for value in values:
+            out = out.replace(value, name)
+    return out
