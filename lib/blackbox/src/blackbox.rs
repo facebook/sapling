@@ -89,18 +89,7 @@ impl BlackboxOptions {
     /// Create a [`Blackbox`] instance at the given path using the specified options.
     pub fn open(self, path: impl AsRef<Path>) -> Fallible<Blackbox> {
         let path = path.as_ref();
-        let opts = OpenOptions::new()
-            .max_bytes_per_log(self.max_bytes_per_log)
-            .max_log_count(self.max_log_count)
-            .index("timestamp", |_| {
-                vec![IndexOutput::Reference(0..TIMESTAMP_BYTES as u64)]
-            })
-            .index("session_id", |_| {
-                vec![IndexOutput::Reference(
-                    TIMESTAMP_BYTES as u64..HEADER_BYTES as u64,
-                )]
-            })
-            .create(true);
+        let opts = self.rotate_log_open_options();
         let log = match opts.clone().open(path) {
             Err(_) => {
                 // Some error at opening (ex. metadata corruption).
@@ -121,6 +110,19 @@ impl BlackboxOptions {
         Ok(blackbox)
     }
 
+    pub fn create_in_memory(self) -> Fallible<Blackbox> {
+        let opts = self.rotate_log_open_options();
+        let log = opts.create_in_memory()?;
+        Ok(Blackbox {
+            log,
+            opts: self,
+            // pid is used as an initial guess of "unique" session id
+            session_id: new_session_id(),
+            is_broken: Cell::new(false),
+            last_write_time: Cell::new(0),
+        })
+    }
+
     pub fn new() -> Self {
         Self {
             max_bytes_per_log: 100_000_000,
@@ -136,6 +138,21 @@ impl BlackboxOptions {
     pub fn max_log_count(mut self, count: u8) -> Self {
         self.max_log_count = count;
         self
+    }
+
+    fn rotate_log_open_options(&self) -> OpenOptions {
+        OpenOptions::new()
+            .max_bytes_per_log(self.max_bytes_per_log)
+            .max_log_count(self.max_log_count)
+            .index("timestamp", |_| {
+                vec![IndexOutput::Reference(0..TIMESTAMP_BYTES as u64)]
+            })
+            .index("session_id", |_| {
+                vec![IndexOutput::Reference(
+                    TIMESTAMP_BYTES as u64..HEADER_BYTES as u64,
+                )]
+            })
+            .create(true)
     }
 }
 
