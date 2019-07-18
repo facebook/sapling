@@ -1412,14 +1412,23 @@ class ui(object):
 
             editor = self.geteditor()
 
-            with perftrace.trace("Editor"):
-                self.system(
-                    '%s "%s"' % (editor, name),
-                    environ=environ,
-                    onerr=error.Abort,
-                    errprefix=_("edit failed"),
-                    blockedtag="editor",
-                )
+            # Special cases to avoid shelling out
+            if editor == "cat":
+                # Print the text
+                self.write(text)
+            elif editor == "cat>":
+                # Read from stdin
+                text = self.fin.read()
+                util.writefile(name, text)
+            else:
+                with perftrace.trace("Editor"):
+                    self.system(
+                        '%s "%s"' % (editor, name),
+                        environ=environ,
+                        onerr=error.Abort,
+                        errprefix=_("edit failed"),
+                        blockedtag="editor",
+                    )
 
             f = open(name, r"rb")
             t = util.fromnativeeol(f.read())
