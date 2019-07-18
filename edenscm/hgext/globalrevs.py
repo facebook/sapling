@@ -52,7 +52,19 @@ template.
     # would resolve to a commit with <svnrev> as the corresponding svn revision
     # number and/or <globalrev> as the corresponding strictly increasing global
     # revision number.
+    #
+    # Optionally, the `svnrev` and `globalrev` template keywords will exhibit
+    # similar behavior i.e. resolving to the `globalrev` if both this
+    # configuration and the `overridesvnrevkeyword` are true.
     svnrevinteroperation = False
+
+    # If this configuration is true, the `svnrev` template keyword would
+    # function as it were the `globalrev` template keyword i.e. the `globalrev`
+    # would be returned when requesting for the `svnrev` via templates.
+    #
+    # Not that this configuration requires the `svnrevinteroperation`
+    # configuration to be true.
+    overridesvnrevkeyword = False
 
     # If this configuration is true, we use a cached mapping from `globalrev ->
     # hash` to enable fast lookup of commits based on the globalrev. This
@@ -93,6 +105,7 @@ configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
 configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
+configitem("globalrevs", "overridesvnrevkeyword", default=False)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
 configitem("globalrevs", "scmquerylookup ", default=False)
@@ -139,6 +152,7 @@ def uisetup(ui):
             extensions.wrapfunction(
                 hgsubversionmod.util, "lookuprev", _lookupsvnrevwrapper
             )
+            extensions.wrapfunction(hgsubversionmod, "_svnrevkw", _svnrevkwwrapper)
 
     if ui.configbool("globalrevs", "svnrevinteroperation"):
         extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
@@ -275,6 +289,14 @@ def _sqllocalrepowrapper(orig, repo):
 
 def _lookupsvnrevwrapper(orig, repo, rev):
     return _lookupglobalrev(repo, rev)
+
+
+def _svnrevkwwrapper(orig, repo, ctx, **kwargs):
+    return (
+        globalrevkw(repo, ctx, **kwargs)
+        if repo.ui.configbool("globalrevs", "overridesvnrevkeyword")
+        else orig(repo, ctx, **kwargs)
+    )
 
 
 _u64lestruct = struct.Struct("<Q")

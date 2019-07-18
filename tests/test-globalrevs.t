@@ -704,3 +704,38 @@ repository.
 
   $ getglobalrev 'globalrev(-1)'
   
+
+
+Test that the `overridesvnrevkeyword` configuration works as expected.
+
+- Enable the `hgsubversion` extension to start supporting the `svnrev` template
+keyword.
+
+  $ enable hgsubversion
+
+
+- The test repository is not backed by Subversion. Therefore, requesting the
+`svnrev` for a commit via the `svnrev` template keyword should give no output.
+However, the `globalrev` keyword template should resolve the `globalrev` for the
+commit as expected.
+
+  $ hg log -G -r "m5007" -T "svnrev:{svnrev} globalrev:{globalrev}\n"
+  o  svnrev: globalrev:5007
+  |
+  ~
+
+
+- Now lets set the configurations for making the `svnrev` keyword template
+behave exactly like the `globalrev` keyword template.
+
+  $ setconfig globalrevs.svnrevinteroperation=True \
+  > globalrevs.overridesvnrevkeyword=True
+
+
+- Running the earlier log command again should now resolve the `svnrev` keyword
+template to the `globalrev` for the commit.
+
+  $ hg log -G -r "m5007" -T "svnrev:{svnrev} globalrev:{globalrev}\n"
+  o  svnrev:5007 globalrev:5007
+  |
+  ~
