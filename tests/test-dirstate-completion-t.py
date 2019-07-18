@@ -10,6 +10,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 for testcase in ["v0", "v1", "v2"]:
 
+    sh % "cd $TESTTMP"
+
     if feature.check(["v0"]):
         sh % "setconfig 'format.dirstate=0'"
 
