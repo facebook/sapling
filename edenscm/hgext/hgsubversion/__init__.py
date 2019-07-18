@@ -432,9 +432,18 @@ configitem("hgsubversion", "rewritesvncommitwithhghash", default=False)
 
 
 @templatekeyword("svnrev")
-def svnrevkw(**args):
+def svnrevkw(repo, ctx, **kwargs):
     """:svnrev: String. Converted subversion revision number."""
-    convertinfo = util.getsvnrev(args["ctx"], "")
+    return _svnrevkw(repo, ctx, **kwargs)
+
+
+def _svnrevkw(repo, ctx, **kwargs):
+    """:svnrev: String. Converted subversion revision number.
+
+    Isolating this method allows easy wrapping by other extensions like
+    globalrevs.
+    """
+    convertinfo = util.getsvnrev(ctx, "")
 
     if not convertinfo or not convertinfo.startswith("svn:"):
         return ""
