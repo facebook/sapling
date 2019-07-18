@@ -1519,7 +1519,7 @@ if safehasattr(time, "perf_counter"):
     timer = time.perf_counter
 
 
-if "TESTTMP" in encoding.environ:
+if "TESTTMP" in encoding.environ or "testutil" in sys.modules:
     # Stabilize test output
     def timer():
         return 0
