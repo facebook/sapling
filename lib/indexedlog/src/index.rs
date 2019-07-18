@@ -66,7 +66,7 @@ use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
 use crate::errors::{data_error, parameter_error};
 use crate::lock::ScopedFileLock;
-use crate::utils::mmap_readonly;
+use crate::utils::{mmap_empty, mmap_readonly};
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use failure::{self, Fallible};
@@ -1418,7 +1418,7 @@ impl IterState {
 /// non-radix-trees). Though none of them are implemented.
 pub struct Index {
     // For locking and low-level access.
-    file: File,
+    file: Option<File>,
 
     // For efficient and shared random reading.
     buf: Mmap,
@@ -1617,7 +1617,7 @@ impl OpenOptions {
         let key_buf = self.key_buf.clone();
 
         Ok(Index {
-            file,
+            file: Some(file),
             buf: mmap,
             read_only,
             root,
@@ -1637,8 +1637,13 @@ impl OpenOptions {
 impl Index {
     /// Return a cloned [`Index`].
     pub(crate) fn clone(&self) -> Fallible<Index> {
-        let file = self.file.duplicate()?;
-        let mmap = mmap_readonly(&file, Some(self.len))?.0;
+        let (file, mmap) = match &self.file {
+            Some(f) => (Some(f.duplicate()?), mmap_readonly(&f, Some(self.len))?.0),
+            None => {
+                assert_eq!(self.len, 0);
+                (None, mmap_empty()?)
+            }
+        };
         let checksum = match self.checksum {
             Some(ref table) => Some(table.clone()?),
             None => None,
@@ -1701,6 +1706,19 @@ impl Index {
             let err: io::Error = io::ErrorKind::PermissionDenied.into();
             return Err(err.into());
         }
+        if self.file.is_none() {
+            // Why is this Ok, not Err?
+            //
+            // An in-memory Index does not share data with anybody else,
+            // therefore no need to flush. In other words, whether flush
+            // happens or not does not change the result of other APIs on
+            // this Index instance.
+            //
+            // Another way to think about it, an in-memory Index is similar
+            // to a private anonymous mmap, and msync on that mmap would
+            // succeed.
+            return Ok(0);
+        }
 
         let mut new_len = self.len;
         if !self.root.radix_offset.is_dirty() {
@@ -1712,7 +1730,7 @@ impl Index {
         {
             let mut offset_map = OffsetMap::empty_for_index(self);
             let estimated_dirty_bytes = self.dirty_links.len() * 50;
-            let mut lock = ScopedFileLock::new(&mut self.file, true)?;
+            let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)?;
             let len = lock.as_mut().seek(SeekFrom::End(0))?;
             let mut buf = Vec::with_capacity(estimated_dirty_bytes);
 
