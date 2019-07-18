@@ -53,7 +53,7 @@ lasttime = 0
 
 def gettime():
     # Make it "run-tests.py -i" friendly
-    if "TESTTMP" in encoding.environ:
+    if util.istest():
         global lasttime
         lasttime += 1
         return lasttime

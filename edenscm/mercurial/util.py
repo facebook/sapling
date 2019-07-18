@@ -1527,6 +1527,15 @@ if "TESTTMP" in encoding.environ or "testutil" in sys.modules:
     def getuser():
         return "test"
 
+    def istest():
+        return True
+
+
+else:
+
+    def istest():
+        return False
+
 
 def fstat(fp):
     """stat file object that may not have fileno method."""

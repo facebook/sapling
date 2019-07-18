@@ -48,6 +48,7 @@ from edenscm.mercurial import (
     extensions,
     node,
     pycompat,
+    util,
 )
 from edenscm.mercurial.node import nullid, wdirid
 from edenscm.mercurial.scmutil import status
@@ -389,14 +390,10 @@ def verifychecksum(key, value):
     return payload
 
 
-def _runningintests():
-    return "TESTTMP" in encoding.environ
-
-
 def _debug(ui, msg):
     config = ui.configbool("simplecache", "showdebug", None)
     if config is None:
-        config = not _runningintests()
+        config = not util.istest()
 
     if config:
         ui.debug(msg)
