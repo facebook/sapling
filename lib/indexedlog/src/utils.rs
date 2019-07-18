@@ -42,12 +42,17 @@ pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
     };
     let mmap = unsafe {
         if len == 0 {
-            MmapOptions::new().len(1).map_anon()?.make_read_only()?
+            mmap_empty()?
         } else {
             MmapOptions::new().len(len as usize).map(&file)?
         }
     };
     Ok((mmap, len))
+}
+
+/// Return a [`Mmap`] that is expected to be empty.
+pub fn mmap_empty() -> io::Result<Mmap> {
+    Ok(MmapOptions::new().len(1).map_anon()?.make_read_only()?)
 }
 
 /// Open a path. Usually for locking purpose.
