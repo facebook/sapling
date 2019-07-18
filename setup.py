@@ -1207,7 +1207,7 @@ class buildpyzip(Command):
         depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
 
         if appendzippath is None:
-            zippath = pjoin(builddir, "IPython.zip")
+            zippath = pjoin(builddir, "edenscmdeps.zip")
         else:
             zippath = appendzippath
         # Perform a mtime check so we can skip building if possible
@@ -1217,8 +1217,7 @@ class buildpyzip(Command):
             if zipmtime > depmtime:
                 return
 
-        # Compile all (pure Python) IPython dependencies and zip them into
-        # IPython.zip
+        # Compile all (pure Python) IPython dependencies and zip them.
         if not appendzippath:
             tryunlink(zippath)
         # Special case: Delete files using Python 3 syntax so writepy won't
@@ -1344,7 +1343,7 @@ class hginstalllib(install_lib):
             file_util.copy_file = realcopyfile
 
     def _installpyzip(self):
-        for src, dst in [("IPython.zip", "edenscm/mercurial/thirdparty/IPython.zip")]:
+        for src, dst in [("edenscmdeps.zip", "edenscmdeps.zip")]:
             srcpath = pjoin(builddir, src)
             dstpath = pjoin(self.install_dir, dst)
             file_util.copy_file(srcpath, dstpath)

@@ -30,14 +30,17 @@ def run():
     # Make available various deps that are either not new enough on the system
     # or not provided by the system.  These include a newer version of IPython
     # for `hg dbsh` and the thrift runtime for the eden extension
-    from edenscm.mercurial import thirdparty
+    import edenscm
 
-    ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
-    if not os.path.exists(ipypath):
-        # we keep the IPython.zip in different location in case of dev builds
-        ipypath = os.path.join(libdir, "build", "IPython.zip")
-    if ipypath not in sys.path and os.path.exists(ipypath):
-        sys.path.insert(0, ipypath)
+    depspath = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(edenscm.__file__))),
+        "edenscmdeps.zip",
+    )
+    if not os.path.exists(depspath):
+        # we keep the edenscmdeps.zip in different location in case of dev builds
+        depspath = os.path.join(libdir, "build", "edenscmdeps.zip")
+    if depspath not in sys.path and os.path.exists(depspath):
+        sys.path.insert(0, depspath)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]
