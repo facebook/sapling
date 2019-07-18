@@ -79,6 +79,7 @@ class LazyCommand(object):
         if rhs.startswith("\n"):
             rhs = rhs[1:]
             rhs = autofix._removeindent(rhs)
+            rhs = _removetrailingspacesmark(rhs)
         autofix.eq(out, rhs, nested=1, eqfunc=eqglob)
 
     def __del__(self):
@@ -100,6 +101,7 @@ class LazyCommand(object):
             # Strip the newline added by autofix._repr
             heredoc = heredoc[1:]
         heredoc = autofix._removeindent(heredoc)
+        heredoc = _removetrailingspacesmark(heredoc)
         self._stdin = heredoc
         return self
 
@@ -198,6 +200,11 @@ def _normalizeerr(out, _errors=_errors):
         for value in values:
             out = out.replace(value, name)
     return out
+
+
+def _removetrailingspacesmark(out):
+    """Remove '(trailing spaces)'"""
+    return out.replace(" (trailing spaces)", "")
 
 
 def eqglob(a, b):

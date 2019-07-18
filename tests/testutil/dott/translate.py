@@ -117,6 +117,7 @@ def translatecontent(code, state):
                 redirects.append("<< open(%r).read()" % opts["<"])
             elif opts["<<"]:
                 heredoc, rest = _scanheredoc(rest)
+                heredoc = _marktrailingspaces(heredoc)
                 redirects.append("<< %s" % _repr(heredoc, indent=0))
             # stdout
             if opts[">"]:
@@ -127,12 +128,31 @@ def translatecontent(code, state):
             # compare output for the last command
             if cmd is parsed[-1][0]:
                 output, rest = _scanoutput(rest)
+                output = _marktrailingspaces(output.rstrip())
                 if output:
-                    code += " == %s" % _repr(output.rstrip(), indent=4)
+                    code += " == %s" % _repr(output, indent=4)
             allcode += code + "\n"
         return allcode, rest
 
     return "", code
+
+
+def _marktrailingspaces(text):
+    """append '(trailing space)' to lines with trailing spaces"""
+    if "\n" in text:
+        lines = text.splitlines(True)
+        newtext = ""
+        for line in lines:
+            if line.endswith("\n"):
+                if line[-2:-1].isspace():
+                    line = line[:-1] + " (trailing space)\n"
+            else:
+                if line[-1:].isspace():
+                    line += " (trailing space)"
+            newtext += line
+        return newtext
+    else:
+        return text
 
 
 def _scanoutput(content):
