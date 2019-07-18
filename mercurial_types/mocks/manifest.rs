@@ -262,7 +262,7 @@ impl Entry for MockEntry {
     fn get_content(&self, _ctx: CoreContext) -> BoxFuture<Content, Error> {
         Ok((self.content_factory)()).into_future().boxify()
     }
-    fn get_size(&self, _ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
+    fn get_size(&self, _ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
         unimplemented!();
     }
     fn get_hash(&self) -> HgEntryId {

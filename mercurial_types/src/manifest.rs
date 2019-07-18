@@ -188,7 +188,7 @@ pub trait Entry: Send + 'static {
     fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error>;
 
     /// Get the logical size of the entry. Some entries don't really have a meaningful size.
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error>;
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error>;
 
     /// Get the identity of the object this entry refers to.
     fn get_hash(&self) -> HgEntryId;
@@ -245,7 +245,7 @@ where
         self.entry.get_content(ctx).boxify()
     }
 
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
         self.entry.get_size(ctx).boxify()
     }
 
@@ -275,7 +275,7 @@ impl Entry for Box<dyn Entry + Sync> {
         (**self).get_content(ctx)
     }
 
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
         (**self).get_size(ctx)
     }
 

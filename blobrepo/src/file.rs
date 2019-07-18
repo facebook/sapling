@@ -330,11 +330,8 @@ impl Entry for HgBlobEntry {
         }
     }
 
-    // XXX get_size should probably return a u64, not a usize
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
-        self.get_envelope(ctx)
-            .map(|e| e.get_size().map(|s| s as usize))
-            .boxify()
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
+        self.get_envelope(ctx).map(|e| e.get_size()).boxify()
     }
 
     fn get_hash(&self) -> HgEntryId {
