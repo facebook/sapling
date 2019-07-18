@@ -39,7 +39,9 @@ pub use crate::bytes_stream::{BytesStream, BytesStreamFuture};
 pub use crate::futures_ordered::{futures_ordered, FuturesOrdered};
 pub use crate::launch::top_level_launch;
 pub use crate::select_all::{select_all, SelectAll};
-pub use crate::stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
+pub use crate::stream_wrappers::{
+    BoxStreamWrapper, CollectNoConsume, CollectTo, StreamWrapper, TakeWhile,
+};
 
 /// Map `Item` and `Error` to `()`
 ///
@@ -339,6 +341,13 @@ pub trait StreamExt: Stream {
         Fut: Future<Item = I, Error = E>,
     {
         WeightLimitedBufferedStream::new(params, self)
+    }
+
+    fn collect_to<C: Default + Extend<Self::Item>>(self) -> CollectTo<Self, C>
+    where
+        Self: Sized,
+    {
+        CollectTo::new(self)
     }
 }
 
@@ -1209,6 +1218,45 @@ mod test {
             assert_eq!(counter.load(Ordering::SeqCst), 2);
         } else {
             panic!("failed to block on a stream");
+        }
+    }
+
+    use std::collections::HashSet;
+    use std::iter::Iterator;
+
+    fn assert_same_elements<I, T>(src: Vec<I>, iter: T)
+    where
+        I: Copy + Debug + Ord,
+        T: IntoIterator<Item = I>,
+    {
+        let mut dst_sorted: Vec<I> = iter.into_iter().collect();
+        dst_sorted.sort();
+
+        let mut src_sorted = src;
+        src_sorted.sort();
+
+        assert_eq!(src_sorted, dst_sorted);
+    }
+
+    #[test]
+    fn collect_into_vec() {
+        let items = vec![1, 2, 3];
+        let future = futures::stream::iter_ok::<_, ()>(items.clone()).collect_to();
+        let mut runtime = Runtime::new().unwrap();
+        match runtime.block_on::<_, Vec<i32>, _>(future) {
+            Ok(collections) => assert_same_elements(items, collections),
+            Err(_) => panic!("future is supposed to succeed"),
+        }
+    }
+
+    #[test]
+    fn collect_into_set() {
+        let items = vec![1, 2, 3];
+        let future = futures::stream::iter_ok::<_, ()>(items.clone()).collect_to();
+        let mut runtime = Runtime::new().unwrap();
+        match runtime.block_on::<_, HashSet<i32>, _>(future) {
+            Ok(collections) => assert_same_elements(items, collections),
+            Err(_) => panic!("future is supposed to succeed"),
         }
     }
 }

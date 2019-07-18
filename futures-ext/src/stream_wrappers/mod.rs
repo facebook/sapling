@@ -5,11 +5,13 @@
 // GNU General Public License version 2 or any later version.
 
 pub mod collect_no_consume;
+pub mod collect_to;
 pub mod take_while;
 
 use futures::Stream;
 
 pub use self::collect_no_consume::CollectNoConsume;
+pub use self::collect_to::CollectTo;
 pub use self::take_while::TakeWhile;
 
 /// A stream that wraps another stream. into_inner consumes this stream and
