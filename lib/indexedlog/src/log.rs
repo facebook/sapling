@@ -244,7 +244,7 @@ struct ExternalKeyBuffer {
     disk_buf: Arc<Mmap>,
     disk_len: u64,
 
-    // Prove the reference is valid:
+    // Prove the pointer is valid:
     // 1. If ExternalKeyBuffer is alive, then the Index owning it is alive.
     //    This is because ExternalKeyBuffer is private to Index, and there
     //    is no way to get a clone of ExternalKeyBuffer without also
@@ -271,9 +271,19 @@ struct ExternalKeyBuffer {
     // - A normal lifetime will enforce the `mem_buf` to be read-only.
     //   But Log needs to write to it.
     //
+    // Note: Rust reference cannot be used here, because a reference implies
+    // LLVM "noalias", which is not true since Log can change Log.mem_buf.
+    //
     // (UNSAFE NOTICE)
-    mem_buf: &'static Vec<u8>,
+    mem_buf: *const Vec<u8>,
 }
+
+// mem_buf can be read from multiple threads at the same time if no thread is
+// changing the actual mem_buf. If there is a thread changing mem_buf by
+// calling Log::append(&mut self, ...), then the compiler should make sure
+// Log methods taking &self are not called at the same time.
+unsafe impl Send for ExternalKeyBuffer {}
+unsafe impl Sync for ExternalKeyBuffer {}
 
 // Some design notes:
 // - Public APIs do not expose internal offsets of entries. This avoids issues when an in-memory
@@ -769,10 +779,7 @@ impl Log {
 
         let primary_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
         let mem_buf: &Vec<u8> = &mem_buf;
-        // UNSAFE NOTICE: This disables the lifetime check for &mem_buf.
-        // See the "(UNSAFE NOTICE)" comment block in ExternalKeyBuffer for
-        // why this is correct and desirable.
-        let mem_buf: &'static Vec<u8> = unsafe { std::mem::transmute(mem_buf) };
+        let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
         let key_buf = Arc::new(ExternalKeyBuffer {
             disk_buf: primary_buf.clone(),
             disk_len: meta.primary_len,
@@ -1399,7 +1406,10 @@ impl ReadonlyBuffer for ExternalKeyBuffer {
             &self.disk_buf[(start as usize)..(start + len) as usize]
         } else {
             let start = start - self.disk_len;
-            &self.mem_buf[(start as usize)..(start + len) as usize]
+            // See "UNSAFE NOTICE" in ExternalKeyBuffer definition.
+            // This pointer cannot be null.
+            let mem_buf = unsafe { &*self.mem_buf };
+            &mem_buf[(start as usize)..(start + len) as usize]
         }
     }
 }
