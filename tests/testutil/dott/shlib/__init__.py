@@ -166,7 +166,40 @@ def true():
 globals()["["] = test
 
 
+# hg commands
+
+
+def hg(*args, **kwargs):
+    stdin = kwargs.get("stdin")
+    ui = uimod.ui()
+    if "HGRCPATH" in os.environ:
+        ui.readconfig(os.environ["HGRCPATH"])
+    fout = util.stringio()
+    req = dispatch.request(
+        list(args), ui=ui, fin=util.stringio(stdin or ""), fout=fout, ferr=fout
+    )
+    status = (dispatch.dispatch(req) or 0) & 255
+    buf = fout.getvalue().rstrip()
+    if status:
+        if not buf.endswith("\n") and buf:
+            buf += "\n"
+        buf += "[%s]" % status
+    return buf
+
+
 # helper specific to shlib
+
+
+def reload(*args):
+    """Reload edenscm Python modules. Cancel side effects by hg extensions."""
+    todel = [k for k in sys.modules if k.startswith("edenscm")]
+    for name in todel:
+        del sys.modules[name]
+    from edenscm.mercurial import dispatch, ui as uimod, util
+
+    globals()["dispatch"] = dispatch
+    globals()["uimod"] = uimod
+    globals()["util"] = util
 
 
 def expandpath(path):
