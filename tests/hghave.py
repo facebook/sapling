@@ -858,3 +858,14 @@ def has_eden():
         "hg --debug --config extensions.eden= --version 2>&1",
         re.compile(br"^\s*eden\s+(in|ex)ternal\s*$", re.MULTILINE),
     )
+
+
+@check("parso", "parso parsing library")
+def has_parso():
+    try:
+        import parso
+
+        parso.parse
+        return True
+    except ImportError:
+        return False
