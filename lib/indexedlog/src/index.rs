@@ -1734,6 +1734,9 @@ impl Index {
     /// On the other hand, if "merging changes" is the desired behavior, the
     /// caller needs to take another lock, re-instantiate [`Index`] and re-insert
     /// keys.
+    ///
+    /// For in-memory-only indexes, this function does nothing and returns 0,
+    /// unless read-only was set at open time.
     pub fn flush(&mut self) -> Fallible<u64> {
         if self.read_only {
             let err: io::Error = io::ErrorKind::PermissionDenied.into();

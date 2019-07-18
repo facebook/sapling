@@ -391,6 +391,8 @@ impl Log {
     /// "snapshotted" at open time.
     ///
     /// Return the size of the updated primary log file in bytes.
+    ///
+    /// For in-memory-only Logs, this function does nothing, and returns 0.
     pub fn sync(&mut self) -> Fallible<u64> {
         if self.dir.is_none() {
             // See Index::flush for why this is not an Err.
@@ -637,6 +639,8 @@ impl Log {
     }
 
     /// Return an iterator for in-memory entries that haven't been flushed to disk.
+    ///
+    /// For in-memory Logs, this is the same as [`Log::iter`].
     pub fn iter_dirty(&self) -> LogIter {
         LogIter {
             log: self,
@@ -1141,6 +1145,28 @@ impl OpenOptions {
     pub fn open(self, dir: impl AsRef<Path>) -> Fallible<Log> {
         let dir = dir.as_ref();
         self.open_internal(dir, None)
+    }
+
+    /// Construct an empty in-memory [`Log`] without side-effects on the
+    /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
+    pub fn create_in_memory(self) -> Fallible<Log> {
+        let meta = LogMetadata {
+            primary_len: PRIMARY_START_OFFSET,
+            indexes: BTreeMap::new(),
+        };
+        let mem_buf = Box::pin(Vec::new());
+        let (disk_buf, indexes) =
+            Log::load_log_and_indexes(None, &meta, &self.index_defs, &mem_buf, None)?;
+
+        Ok(Log {
+            dir: None,
+            disk_buf,
+            mem_buf,
+            meta,
+            indexes,
+            index_corrupted: false,
+            open_options: self,
+        })
     }
 
     // "Back-door" version of "open" that allows reusing indexes.
@@ -1988,8 +2014,10 @@ mod tests {
         fn test_roundtrip_entries(entries: Vec<(Vec<u8>, bool, bool)>) -> bool {
             let dir = tempdir().unwrap();
             let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+            let mut log_mem = OpenOptions::new().create_in_memory().unwrap();
             for &(ref data, flush, reload) in &entries {
                 log.append(data).expect("append");
+                log_mem.append(data).expect("append");
                 if flush {
                     log.sync().expect("flush");
                     if reload {
@@ -1997,9 +2025,10 @@ mod tests {
                     }
                 }
             }
-            let retrived: Vec<Vec<u8>> = log.iter().map(|v| v.unwrap().to_vec()).collect();
+            let retrieved: Vec<Vec<u8>> = log.iter().map(|v| v.unwrap().to_vec()).collect();
+            let retrieved_mem: Vec<Vec<u8>> = log_mem.iter().map(|v| v.unwrap().to_vec()).collect();
             let entries: Vec<Vec<u8>> = entries.iter().map(|v| v.0.clone()).collect();
-            retrived == entries
+            retrieved == entries && retrieved_mem == entries
         }
     }
 }
