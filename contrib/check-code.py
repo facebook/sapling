@@ -395,6 +395,16 @@ pypats = [
         (r"def.*[( ]\w+=\{\}", "don't use mutable default arguments"),
         (r"\butil\.Abort\b", "directly use error.Abort"),
         (r"^@(\w*\.)?cachefunc", "module-level @cachefunc is risky, please avoid"),
+        (r"\.next\(\)", "don't use .next(), use next(...)"),
+        (
+            r"([a-z]*).revision\(\1\.node\(",
+            "don't convert rev to node before passing to revision(nodeorrev)",
+        ),
+    ],
+    [],
+]
+corepypats = [
+    [
         (r"^import atexit", "don't use atexit, use ui.atexit"),
         (r"^import Queue", "don't use Queue, use util.queue + util.empty"),
         (r"^import cStringIO", "don't use cStringIO.StringIO, use util.stringio"),
@@ -409,11 +419,6 @@ pypats = [
         (
             r"^(from|import) mercurial\.(cext|pure|cffi)",
             "use mercurial.policy.importmod instead",
-        ),
-        (r"\.next\(\)", "don't use .next(), use next(...)"),
-        (
-            r"([a-z]*).revision\(\1\.node\(",
-            "don't convert rev to node before passing to revision(nodeorrev)",
         ),
         (r"platform\.system\(\)", "don't use platform.system(), use pycompat"),
         # rules depending on implementation of repquote()
@@ -690,6 +695,7 @@ py3pats = [
 
 checks = [
     ("python", r".*\.(py|cgi)$", r"^#!.*python", pyfilters, pypats),
+    ("python", r"edenscm.*\.(py|cgi)$", r"^#!.*python", pyfilters, corepypats),
     ("python", r".*\.(py|cgi)$", r"^#!.*python", [], pynfpats),
     ("python", r".*hgext.*\.py$", "", [], pyextnfpats),
     (
