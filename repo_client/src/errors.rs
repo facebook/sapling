@@ -19,4 +19,6 @@ pub enum ErrorKind {
         expected: HgNodeHash,
         actual: HgNodeHash,
     },
+    #[fail(display = "Request {} was throttled", _0)]
+    RequestThrottled { request_name: String },
 }

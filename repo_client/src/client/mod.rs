@@ -12,7 +12,7 @@ use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, Metric};
 use failure::{err_msg, format_err};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
@@ -463,6 +463,14 @@ impl RepoClient {
                 move |(entry, basepath)| {
                     ctx.perf_counters()
                         .increment_counter("gettreepack_num_treepacks");
+
+                    ctx.bump_load(Metric::EgressTotalManifests, 1.0);
+                    STATS::total_tree_count.add_value(1);
+                    if ctx.is_quicksand() {
+                        ctx.bump_load(Metric::EgressQuicksandManifests, 1.0);
+                        STATS::quicksand_tree_count.add_value(1);
+                    }
+
                     fetch_treepack_part_input(
                         ctx.clone(),
                         &blobrepo,
@@ -1218,8 +1226,25 @@ impl HgCommands for RepoClient {
         });
         let args = json!(vec![args]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
+        let load_limit_timeframe = Duration::from_secs(1);
 
-        self.gettreepack_untimed(params)
+        let throttle = self
+            .ctx
+            .should_throttle(Metric::EgressTotalManifests, load_limit_timeframe)
+            .and_then({
+                cloned!(self.ctx);
+                move |throttle| {
+                    if !throttle && ctx.is_quicksand() {
+                        ctx.should_throttle(Metric::EgressQuicksandManifests, load_limit_timeframe)
+                            .left_future()
+                    } else {
+                        future::ok(throttle).right_future()
+                    }
+                }
+            });
+
+        let s = self
+            .gettreepack_untimed(params)
             .whole_stream_timeout(timeout_duration())
             .map_err(process_stream_timeout_error)
             .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
@@ -1229,10 +1254,8 @@ impl HgCommands for RepoClient {
                     ctx.perf_counters()
                         .add_to_counter("gettreepack_response_size", bytes.len() as i64);
                     STATS::total_tree_size.add_value(bytes.len() as i64);
-                    STATS::total_tree_count.add_value(1);
                     if ctx.is_quicksand() {
                         STATS::quicksand_tree_size.add_value(bytes.len() as i64);
-                        STATS::quicksand_tree_count.add_value(1);
                     }
                 }
             })
@@ -1245,7 +1268,20 @@ impl HgCommands for RepoClient {
                     wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                     Ok(())
                 }
+            });
+
+        throttle
+            .and_then(move |throttle| {
+                if throttle {
+                    Err(ErrorKind::RequestThrottled {
+                        request_name: ops::GETTREEPACK.into(),
+                    }
+                    .into())
+                } else {
+                    Ok(s)
+                }
             })
+            .flatten_stream()
             .boxify()
     }
 
