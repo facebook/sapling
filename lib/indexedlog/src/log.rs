@@ -77,7 +77,7 @@ const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 /// Writes are buffered in memory. Flushing in-memory parts to
 /// disk requires taking a flock on the directory.
 pub struct Log {
-    pub dir: PathBuf,
+    pub dir: Option<PathBuf>,
     disk_buf: Arc<Mmap>,
     mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
@@ -392,9 +392,14 @@ impl Log {
     ///
     /// Return the size of the updated primary log file in bytes.
     pub fn sync(&mut self) -> Fallible<u64> {
+        if self.dir.is_none() {
+            // See Index::flush for why this is not an Err.
+            return Ok(0);
+        }
+
         // Read-only fast path - no need to take directory lock.
         if self.mem_buf.is_empty() {
-            let meta = Self::load_or_create_meta(&self.dir, false)?;
+            let meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
             let changed = self.meta != meta;
             // No need to reload anything if metadata hasn't changed.
             if changed {
@@ -406,25 +411,25 @@ impl Log {
                 *self = self
                     .open_options
                     .clone()
-                    .open_internal(&self.dir, Some(indexes))?;
+                    .open_internal(self.dir.as_ref().unwrap(), Some(indexes))?;
             }
             return Ok(self.meta.primary_len);
         }
 
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
-        let mut dir_file = open_dir(&self.dir)?;
+        let mut dir_file = open_dir(self.dir.as_ref().unwrap())?;
         let _lock = ScopedFileLock::new(&mut dir_file, true)?;
 
         // Step 1: Reload metadata to get the latest view of the files.
-        let mut meta = Self::load_or_create_meta(&self.dir, false)?;
+        let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
         let changed = self.meta != meta;
 
         if changed && self.open_options.flush_filter.is_some() {
             let filter = self.open_options.flush_filter.unwrap();
 
             // Start with a clean log that does not have dirty entries.
-            let mut log = self.open_options.clone().open(&self.dir)?;
+            let mut log = self.open_options.clone().open(self.dir.as_ref().unwrap())?;
 
             for entry in self.iter_dirty() {
                 let content = entry?;
@@ -442,7 +447,7 @@ impl Log {
         }
 
         // Step 2: Append to the primary log.
-        let primary_path = self.dir.join(PRIMARY_FILE);
+        let primary_path = self.dir.as_ref().unwrap().join(PRIMARY_FILE);
         let mut primary_file = fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -489,7 +494,7 @@ impl Log {
 
         // Step 3: Reload primary log and indexes to get the latest view.
         let (disk_buf, indexes) = Self::load_log_and_indexes(
-            &self.dir,
+            self.dir.as_ref().unwrap(),
             &meta,
             &self.open_options.index_defs,
             &self.mem_buf,
@@ -525,7 +530,8 @@ impl Log {
         }
 
         // Step 5: Write the updated meta file.
-        self.meta.write_file(self.dir.join(META_FILE))?;
+        self.meta
+            .write_file(self.dir.as_ref().unwrap().join(META_FILE))?;
 
         Ok(self.meta.primary_len)
     }
@@ -1150,7 +1156,7 @@ impl OpenOptions {
         let (disk_buf, indexes) =
             Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf, reuse_indexes)?;
         let mut log = Log {
-            dir: dir.to_path_buf(),
+            dir: Some(dir.to_path_buf()),
             disk_buf,
             mem_buf,
             meta,
