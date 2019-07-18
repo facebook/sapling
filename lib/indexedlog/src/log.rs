@@ -34,7 +34,7 @@
 use crate::errors::{data_error, parameter_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedFileLock;
-use crate::utils::{atomic_write, mmap_readonly, open_dir, xxhash, xxhash32};
+use crate::utils::{atomic_write, mmap_empty, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use failure::{self, Fallible};
 use memmap::Mmap;
@@ -494,7 +494,7 @@ impl Log {
 
         // Step 3: Reload primary log and indexes to get the latest view.
         let (disk_buf, indexes) = Self::load_log_and_indexes(
-            self.dir.as_ref().unwrap(),
+            Some(self.dir.as_ref().unwrap()),
             &meta,
             &self.open_options.index_defs,
             &self.mem_buf,
@@ -773,17 +773,22 @@ impl Log {
     /// order. This should only be used in `sync` code path when the on-disk `meta` matches
     /// the in-memory `meta`. Otherwise it is not a sound use.
     fn load_log_and_indexes(
-        dir: &Path,
+        dir: Option<&Path>,
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<Vec<Index>>,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
-        let primary_file = fs::OpenOptions::new()
-            .read(true)
-            .open(dir.join(PRIMARY_FILE))?;
+        let primary_buf = match dir {
+            Some(dir) => {
+                let primary_file = fs::OpenOptions::new()
+                    .read(true)
+                    .open(dir.join(PRIMARY_FILE))?;
+                Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0)
+            }
+            None => Arc::new(mmap_empty()?),
+        };
 
-        let primary_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
         let mem_buf: &Vec<u8> = &mem_buf;
         let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
         let key_buf = Arc::new(ExternalKeyBuffer {
@@ -829,19 +834,27 @@ impl Log {
 
     /// Load a single index.
     fn load_index(
-        dir: &Path,
+        dir: Option<&Path>,
         name: &str,
         len: u64,
         buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
     ) -> Fallible<Index> {
-        // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
-        const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
-        let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
-        index::OpenOptions::new()
-            .checksum_chunk_size(INDEX_CHECKSUM_CHUNK_SIZE)
-            .logical_len(Some(len))
-            .key_buf(Some(buf))
-            .open(path)
+        match dir {
+            Some(dir) => {
+                // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
+                const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
+                let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+                index::OpenOptions::new()
+                    .checksum_chunk_size(INDEX_CHECKSUM_CHUNK_SIZE)
+                    .logical_len(Some(len))
+                    .key_buf(Some(buf))
+                    .open(path)
+            }
+            None => index::OpenOptions::new()
+                .logical_len(Some(len))
+                .key_buf(Some(buf))
+                .create_in_memory(),
+        }
     }
 
     /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
@@ -1154,7 +1167,7 @@ impl OpenOptions {
 
         let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) =
-            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf, reuse_indexes)?;
+            Log::load_log_and_indexes(Some(dir), &meta, &self.index_defs, &mem_buf, reuse_indexes)?;
         let mut log = Log {
             dir: Some(dir.to_path_buf()),
             disk_buf,
