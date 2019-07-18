@@ -1632,6 +1632,39 @@ impl OpenOptions {
             len,
         })
     }
+
+    /// Create an in-memory [`Index`] that skips flushing to disk.
+    /// Return an error if `checksum_chunk_size` is not 0.
+    pub fn create_in_memory(&self) -> Fallible<Index> {
+        if self.checksum_chunk_size != 0 {
+            return Err(parameter_error(
+                "checksum_chunk_size is not supported for in-memory Index",
+            ));
+        }
+        let dirty_radixes = vec![MemRadix::default()];
+        let root = {
+            let radix_offset = RadixOffset::from_dirty_index(0);
+            let meta = Default::default();
+            MemRoot { radix_offset, meta }
+        };
+        let key_buf = self.key_buf.clone();
+
+        Ok(Index {
+            file: None,
+            buf: mmap_empty()?,
+            read_only: self.write == Some(false),
+            root,
+            dirty_radixes,
+            dirty_links: vec![],
+            dirty_leafs: vec![],
+            dirty_keys: vec![],
+            dirty_ext_keys: vec![],
+            checksum: None,
+            checksum_chunk_size: 0,
+            key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
+            len: 0,
+        })
+    }
 }
 
 impl Index {
@@ -2928,6 +2961,7 @@ mod tests {
 
     #[test]
     fn test_clone() {
+        // Test on-disk Index
         let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
@@ -2938,6 +2972,18 @@ mod tests {
 
         let index2 = index.clone().expect("clone");
         assert_eq!(format!("{:?}", index), format!("{:?}", index2));
+
+        // Test in-memory Index
+        let mut index3 = open_opts()
+            .checksum_chunk_size(0)
+            .create_in_memory()
+            .unwrap();
+        let index4 = index3.clone().unwrap();
+        assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
+
+        index3.insert(&[0x15], 99).expect("insert");
+        let index4 = index3.clone().unwrap();
+        assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
     }
 
     #[test]
@@ -3255,10 +3301,12 @@ mod tests {
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
             let dir = tempdir().unwrap();
             let mut index = open_opts().open(dir.path().join("a")).expect("open");
+            let mut index_mem = open_opts().checksum_chunk_size(0).create_in_memory().unwrap();
 
             for (key, values) in &map {
                 for value in values.iter().rev() {
                     index.insert(key, *value).expect("insert");
+                    index_mem.insert(key, *value).expect("insert");
                 }
                 if values.len() == 0 {
                     // Flush sometimes.
@@ -3269,7 +3317,9 @@ mod tests {
             map.iter().all(|(key, values)| {
                 let v: Vec<u64> =
                     index.get(key).unwrap().values(&index).map(|v| v.unwrap()).collect();
-                v == *values
+                let v_mem: Vec<u64> =
+                    index_mem.get(key).unwrap().values(&index_mem).map(|v| v.unwrap()).collect();
+                v == *values && v_mem == *values
             })
         }
 
