@@ -76,6 +76,8 @@ def show(ui):
     if names and not isacked("hint-ack"):
         msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
         ui.write_err(msg, notice=_("hint[%s]") % "hint-ack")
+    messages[:] = []
+    triggered.clear()
 
 
 def silence(ui, names):
