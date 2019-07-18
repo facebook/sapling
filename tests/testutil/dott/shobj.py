@@ -64,6 +64,7 @@ class LazyCommand(object):
         # rhs is mangled by "_repr"
         if rhs.startswith("\n"):
             rhs = rhs[1:]
+            rhs = autofix._removeindent(rhs)
         autofix.eq(out, rhs, nested=1, eqfunc=eqglob)
 
     def __del__(self):
@@ -84,6 +85,7 @@ class LazyCommand(object):
         if heredoc.startswith("\n"):
             # Strip the newline added by autofix._repr
             heredoc = heredoc[1:]
+        heredoc = autofix._removeindent(heredoc)
         self._stdin = heredoc
         return self
 

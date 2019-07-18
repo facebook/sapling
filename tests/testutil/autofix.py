@@ -7,7 +7,6 @@ from __future__ import absolute_import
 
 import ast
 import atexit
-import inspect
 import os
 import sys
 
@@ -30,11 +29,10 @@ def eq(actual, expected, nested=0, eqfunc=None):
     wrapping this function.
     """
     # For strings. Remove leading spaces and compare them again.
-    # The easiest way is to use inspect.cleandoc.
     if isinstance(actual, str) and isinstance(expected, str) and "\n" in expected:
         multiline = True
-        actual = inspect.cleandoc(actual.replace("\t", " ")).strip()
-        expected = inspect.cleandoc(expected.replace("\t", " ")).strip()
+        actual = _removeindent(actual.replace("\t", " ")).strip()
+        expected = _removeindent(expected.replace("\t", " ")).strip()
     else:
         multiline = False
 
@@ -124,6 +122,21 @@ def _fix():
 
         with open(path, "wb") as f:
             f.write("".join(lines))
+
+
+def _removeindent(text):
+    if text:
+        try:
+            indent = min(
+                len(l) - len(l.lstrip(" "))
+                for l in text.splitlines()
+                if l not in {"\n", ""}
+            )
+        except ValueError:
+            pass
+        else:
+            text = "".join(l[indent:] for l in text.splitlines(True))
+    return text
 
 
 # Whether to autofix changes. This can be changed by the callsite.
