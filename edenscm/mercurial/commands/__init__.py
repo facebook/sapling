@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-from . import cmdtable
+from ... import hgdemandimport
 from .. import (
     archival,
     bookmarks,
@@ -58,9 +58,9 @@ from .. import (
     ui as uimod,
     util,
 )
-from ... import hgdemandimport
 from ..i18n import _
 from ..node import bin, hex, nullid, nullrev, short
+from . import cmdtable
 
 
 with hgdemandimport.disabled():
@@ -4925,8 +4925,13 @@ def push(ui, repo, dest=None, **opts):
         pushvar = "PUSH_REASON="
         reasons = list(v for v in opts.get("pushvars", []) if v.startswith(pushvar))
         if reasons:
-            reason = reasons[-1][len(pushvar):]
-            ui.log("pushreason", "bypassing push block with reason: %s", reason, pushreason=reason)
+            reason = reasons[-1][len(pushvar) :]
+            ui.log(
+                "pushreason",
+                "bypassing push block with reason: %s",
+                reason,
+                pushreason=reason,
+            )
         else:
             msg = ui.config("push", "requirereasonmsg")
             raise error.Abort(msg, hint="use `--pushvars PUSH_REASON='because ...'`")

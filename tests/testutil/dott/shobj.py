@@ -36,6 +36,13 @@ class LazyCommand(object):
             else:
                 args = self._command
             args = map(os.path.expandvars, args)
+            # Work with environment variables
+            backupenv = {}
+            while args and "=" in args[0]:
+                name, value = args[0].split("=", 1)
+                backupenv[name] = os.environ.get(name)
+                os.environ[name] = shlib.expandpath(value)
+                args = args[1:]
             if args:
                 # Lookup a function named args[0] in shlib
                 func = getattr(shlib, args[0], None)
@@ -51,8 +58,15 @@ class LazyCommand(object):
                         self._output = ""
                 else:
                     raise NotImplementedError("shell command %r is unknown" % (args,))
+                for name, value in backupenv.items():
+                    if value is None:
+                        del os.environ[name]
+                    else:
+                        os.environ[name] = value
             else:
                 self._output = ""
+                # Do not restore environ in this case.
+                # This allows "commands" like "A=B" to have side effect on environ.
         return self._output
 
     def __eq__(self, rhs):
