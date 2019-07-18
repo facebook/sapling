@@ -187,6 +187,82 @@ def hg(*args, **kwargs):
     return buf
 
 
+# utilities in tinit.sh
+
+
+def enable(*args):
+    setconfig(*["extensions.%s=" % arg for arg in args])
+
+
+def setconfig(*args):
+    if os.path.exists(".hg"):
+        hgrcpath = ".hg/hgrc"
+    else:
+        from .. import testtmp  # avoid side effect
+
+        assert testtmp.HGRCPATH, "setconfig called before setuptesttmp"
+        hgrcpath = testtmp.HGRCPATH
+    content = ""
+    for config in args:
+        section, namevalue = config.split(".", 1)
+        content = "\n[%s]\n%s\n" % (section, namevalue)
+    util.appendfile(hgrcpath, content)
+
+
+_newrepoid = 0
+
+
+def newrepo(name=None):
+    from .. import testtmp  # avoid side effect
+
+    if name is None:
+        global _newrepoid
+        _newrepoid += 1
+        name = "repo%s" % _newrepoid
+    path = os.path.join(testtmp.TESTTMP, name)
+    hg("init", path)
+    cd(path)
+
+
+def drawdag(*args, **kwargs):
+    result = hg("debugdrawdag", *args, **kwargs)
+    for line in hg("tags", "-T", "{tag}={node}\n").splitlines():
+        name, value = line.split("=", 1)
+        os.environ[name] = value
+    rm(".hg/localtags")
+    return result
+
+
+def showgraph():
+    return hg("log", "-G", "-T", "{rev} {node|short} {desc|firstline}")
+
+
+def tglog(*args):
+    return hg(
+        "log", "-G", "-T", "{rev}: {node|short} '{desc}' {bookmarks} {branches}", *args
+    )
+
+
+def tglogp(*args):
+    return hg(
+        "log",
+        "-G",
+        "-T",
+        "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}",
+        *args
+    )
+
+
+def tglogm(*args):
+    return hg(
+        "log",
+        "-G",
+        "-T",
+        "{rev}: {node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % '{node|short}', ', ')})', ' ')}",
+        *args
+    )
+
+
 # helper specific to shlib
 
 
