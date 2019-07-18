@@ -28,7 +28,7 @@ use sql_ext::SqlConstructors;
 const PRESERVE_STATE_RATIO: usize = 10_000;
 /// PRESERVE_STATE_RATIO should be divisible by CHUNK_SIZE as otherwise progress
 /// reporting will be broken
-const CHUNK_SIZE: usize = 1000;
+const CHUNK_SIZE: usize = 5000;
 const INIT_COUNT_VALUE: usize = 0;
 
 #[derive(Debug)]

@@ -256,7 +256,7 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
     }
 }
 
-const WRITE_BUFFER_SIZE: usize = 1000;
+const WRITE_BUFFER_SIZE: usize = 5000;
 
 fn insert_entries(
     write_connection: Arc<Connection>,
