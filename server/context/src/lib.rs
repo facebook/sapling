@@ -169,12 +169,14 @@ impl ::std::fmt::Debug for Inner {
             perf counters: {:?}
             user unix name: {:?}
             ssh_env_vars: {:?}
+            load_limit_config: {:?}
             ",
             self.session,
             self.wireproto_scribe_category,
             self.perf_counters,
             self.user_unix_name,
-            self.ssh_env_vars
+            self.ssh_env_vars,
+            self.load_limit_config,
         )
     }
 }
