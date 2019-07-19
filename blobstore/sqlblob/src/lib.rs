@@ -73,10 +73,11 @@ impl Sqlblob {
     ) -> BoxFuture<Self, Error> {
         Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
-                format!("{}.{}", shardmap, shard_id),
+                shardmap.clone(),
+                Some(shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
-                "blobstore".to_string(),
+                "blobstore".into(),
             ))
             .into_future()
             .boxify()

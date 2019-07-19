@@ -188,10 +188,11 @@ impl SqlFilenodes {
     ) -> BoxFuture<Self, Error> {
         Self::with_sharded_factory(shard_count, move |shard_id| {
             Ok(create_myrouter_connections(
-                format!("{}.{}", tier, shard_id),
+                tier.clone(),
+                Some(shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
-                "shardedfilenodes".to_string(),
+                "shardedfilenodes".into(),
             ))
             .into_future()
             .boxify()

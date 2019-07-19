@@ -52,12 +52,13 @@ impl PoolSizeConfig {
 
 pub fn create_myrouter_connections(
     tier: String,
+    shard_id: Option<usize>,
     port: u16,
     pool_size_config: PoolSizeConfig,
     label: String,
 ) -> SqlConnections {
     let mut builder = Connection::myrouter_builder();
-    builder.tier(tier).port(port);
+    builder.tier(tier, shard_id).port(port);
 
     builder.tie_break(myrouter::TieBreak::SLAVE_FIRST);
 
@@ -148,6 +149,7 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
             read_master_connection,
         } = create_myrouter_connections(
             tier,
+            None,
             port,
             PoolSizeConfig::for_regular_connection(),
             Self::LABEL.to_string(),

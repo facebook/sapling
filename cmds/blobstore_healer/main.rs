@@ -133,7 +133,7 @@ fn maybe_schedule_healer_for_storage(
     conn_builder
         .service_type(myrouter::ServiceType::SLAVE)
         .locality(myrouter::DbLocality::EXPLICIT)
-        .tier(db_address.clone())
+        .tier(db_address.clone(), None)
         .port(myrouter_port);
 
     for region in replication_lag_db_regions {
