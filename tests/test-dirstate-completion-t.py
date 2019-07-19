@@ -21,8 +21,7 @@ for testcase in ["v0", "v1", "v2"]:
     if feature.check(["v2"]):
         sh % "setconfig 'format.dirstate=2'"
 
-    sh % "hg init repo"
-    sh % "cd repo"
+    sh % "newrepo"
     sh % "echo file1" > "file1"
     sh % "echo file2" > "file2"
     sh % "mkdir -p dira dirb"
