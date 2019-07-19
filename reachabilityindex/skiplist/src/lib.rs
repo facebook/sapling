@@ -18,6 +18,7 @@ use futures::future::{join_all, loop_fn, ok, Future, Loop};
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::{hashmap, hashset};
+use slog::{info, Logger};
 
 use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
@@ -38,6 +39,7 @@ const DEFAULT_EDGE_COUNT: u32 = 10;
 // - It only has edges to its parents.
 #[derive(Clone)]
 pub enum SkiplistNodeType {
+    SingleEdge((ChangesetId, Generation)),
     // A list of skip edges which keep doubling
     // in distance from their root node.
     // The ith skip edge is at most 2^i commits away.
@@ -47,20 +49,30 @@ pub enum SkiplistNodeType {
 
 impl SkiplistNodeType {
     pub fn to_thrift(&self) -> skiplist_thrift::SkiplistNodeType {
+        fn encode_edge_to_thrift(
+            cs_id: ChangesetId,
+            gen_num: Generation,
+        ) -> skiplist_thrift::CommitAndGenerationNumber {
+            let cs_id = cs_id.into_thrift();
+            let gen = skiplist_thrift::GenerationNum(gen_num.value() as i64);
+            skiplist_thrift::CommitAndGenerationNumber { cs_id, gen }
+        };
+
         fn encode_vec_to_thrift(
             cs_gen: Vec<(ChangesetId, Generation)>,
         ) -> Vec<skiplist_thrift::CommitAndGenerationNumber> {
             cs_gen
                 .into_iter()
-                .map(|(cs_id, gen_num)| {
-                    let cs_id = cs_id.into_thrift();
-                    let gen = skiplist_thrift::GenerationNum(gen_num.value() as i64);
-                    skiplist_thrift::CommitAndGenerationNumber { cs_id, gen }
-                })
+                .map(|(cs_id, gen_num)| encode_edge_to_thrift(cs_id, gen_num))
                 .collect()
-        }
+        };
 
         match self {
+            SkiplistNodeType::SingleEdge((cs_id, gen)) => {
+                let edges = vec![encode_edge_to_thrift(*cs_id, *gen)];
+                let skip_edges = skiplist_thrift::SkipEdges { edges };
+                skiplist_thrift::SkiplistNodeType::SkipEdges(skip_edges)
+            }
             SkiplistNodeType::SkipEdges(edges) => {
                 let edges = encode_vec_to_thrift(edges.clone());
                 let skip_edges = skiplist_thrift::SkipEdges { edges };
@@ -91,7 +103,13 @@ impl SkiplistNodeType {
 
         match skiplist_node {
             skiplist_thrift::SkiplistNodeType::SkipEdges(thrift_edges) => {
-                decode_vec_to_thrift(thrift_edges.edges).map(SkiplistNodeType::SkipEdges)
+                decode_vec_to_thrift(thrift_edges.edges).map(|edges| {
+                    if edges.len() == 1 {
+                        SkiplistNodeType::SingleEdge(edges[0])
+                    } else {
+                        SkiplistNodeType::SkipEdges(edges)
+                    }
+                })
             }
             skiplist_thrift::SkiplistNodeType::ParentEdges(thrift_edges) => {
                 decode_vec_to_thrift(thrift_edges.edges).map(SkiplistNodeType::ParentEdges)
@@ -106,20 +124,55 @@ impl SkiplistNodeType {
     }
 }
 
-pub fn deserialize_skiplist_map(bytes: Bytes) -> Result<HashMap<ChangesetId, SkiplistNodeType>> {
+pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<SkiplistIndex> {
     let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
-
-    let v: Result<Vec<_>> = map
-        .into_iter()
-        .map(|(cs_id, skiplist_thrift)| {
-            ChangesetId::from_thrift(cs_id).map(|cs_id| {
-                SkiplistNodeType::from_thrift(skiplist_thrift)
-                    .map(move |skiplist| (cs_id, skiplist))
-            })
-        })
-        .collect();
-
-    v?.into_iter().collect()
+    // chashmap 2.2.2 load factor len/buckets before expanding in CHashMap::insert is 85/100.
+    // Unfortunately CHashMap::with_capacity ignores load factor and adds in a factor of 4
+    // This takes into account load factor and removes the factor of 4 so we can preallocate to
+    // right size and that insert won't reallocate.  CHashMap::shrink_to_fit has same 4x issue.
+    // TODO - try to fix upstream
+    let cmap: CHashMap<ChangesetId, SkiplistNodeType> =
+        CHashMap::with_capacity((map.len() * 100 / 85 + 4) / 4);
+    let mut pnodecount = 0;
+    let mut snodecount = 0;
+    let mut maxsedgelen = 0;
+    let mut maxpedgelen = 0;
+    for (cs_id, skiplist_thrift) in map {
+        let v = SkiplistNodeType::from_thrift(skiplist_thrift)?;
+        match &v {
+            SkiplistNodeType::SingleEdge(_) => {
+                snodecount += 1;
+                if 1 > maxsedgelen {
+                    maxsedgelen = 1;
+                }
+            }
+            SkiplistNodeType::SkipEdges(edges) => {
+                let sedgelen = edges.len();
+                if sedgelen > maxsedgelen {
+                    maxsedgelen = sedgelen;
+                }
+                snodecount += sedgelen;
+            }
+            SkiplistNodeType::ParentEdges(edges) => {
+                let edgelen = edges.len();
+                if edgelen > maxpedgelen {
+                    maxpedgelen = edgelen;
+                }
+                pnodecount += edges.len()
+            }
+        }
+        cmap.insert(ChangesetId::from_thrift(cs_id)?, v);
+    }
+    info!(
+        logger,
+        "cmap size {}, parent nodecount {}, skip nodecount {}, maxsedgelen {}, maxpedgelen {}",
+        cmap.len(),
+        pnodecount,
+        snodecount,
+        maxsedgelen,
+        maxpedgelen
+    );
+    Ok(SkiplistIndex::new_with_skiplist_graph(cmap))
 }
 
 struct SkiplistEdgeMapping {
@@ -131,6 +184,13 @@ impl SkiplistEdgeMapping {
     pub fn new() -> Self {
         SkiplistEdgeMapping {
             mapping: CHashMap::new(),
+            skip_edges_per_node: DEFAULT_EDGE_COUNT,
+        }
+    }
+
+    pub fn from_map(map: CHashMap<ChangesetId, SkiplistNodeType>) -> Self {
+        SkiplistEdgeMapping {
+            mapping: map,
             skip_edges_per_node: DEFAULT_EDGE_COUNT,
         }
     }
@@ -164,17 +224,22 @@ fn compute_skip_edges(
     let mut i: usize = 0;
 
     while let Some(read_locked_entry) = skip_edge_mapping.mapping.get(&curr.0) {
-        if let SkiplistNodeType::SkipEdges(edges) = &*read_locked_entry {
-            if let Some(next_node) = nth_node_or_last(edges, i) {
-                curr = next_node;
+        match &*read_locked_entry {
+            SkiplistNodeType::SingleEdge(next_node) => {
+                curr = *next_node;
                 skip_edges.push(curr);
-                if skip_edges.len() >= max_skip_edge_count {
+            }
+            SkiplistNodeType::SkipEdges(edges) => {
+                if let Some(next_node) = nth_node_or_last(edges, i) {
+                    curr = next_node;
+                    skip_edges.push(curr)
+                } else {
                     break;
                 }
-            } else {
-                break;
             }
-        } else {
+            _ => break,
+        };
+        if skip_edges.len() >= max_skip_edge_count {
             break;
         }
         i += 1;
@@ -328,12 +393,12 @@ impl SkiplistIndex {
         }
     }
 
-    pub fn new_with_skiplist_graph(skiplist_graph: HashMap<ChangesetId, SkiplistNodeType>) -> Self {
-        let s = Self::new();
-        for (key, value) in skiplist_graph {
-            s.skip_list_edges.mapping.insert(key, value);
+    pub fn new_with_skiplist_graph(
+        skiplist_graph: CHashMap<ChangesetId, SkiplistNodeType>,
+    ) -> Self {
+        SkiplistIndex {
+            skip_list_edges: Arc::new(SkiplistEdgeMapping::from_map(skiplist_graph)),
         }
-        s
     }
 
     pub fn with_skip_edge_count(skip_edges_per_node: u32) -> Self {
@@ -444,6 +509,13 @@ fn move_skippable_nodes(
     for cs_id in all_cs_ids {
         if let Some(read_locked_entry) = skip_edges.mapping.get(&cs_id) {
             match &*read_locked_entry {
+                SkiplistNodeType::SingleEdge(edge_pair) => {
+                    if edge_pair.1 >= gen {
+                        node_frontier.insert(edge_pair.clone());
+                    } else {
+                        no_skiplist_edges.push(cs_id);
+                    }
+                }
                 SkiplistNodeType::SkipEdges(edges) => {
                     let best_edge = edges
                         .iter()

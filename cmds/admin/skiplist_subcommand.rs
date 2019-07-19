@@ -22,7 +22,7 @@ use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use cmdlib::args;
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation, RepositoryId};
-use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
+use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 
 use crate::cmdargs::{SKIPLIST_BUILD, SKIPLIST_READ};
@@ -173,8 +173,13 @@ fn read_skiplist_index<S: ToString>(
                 Some(bytes) => {
                     debug!(logger, "received {} bytes from blobstore", bytes.len());
                     let bytes = bytes.into_bytes();
-                    let skiplist_map = try_boxfuture!(deserialize_skiplist_map(bytes));
-                    info!(logger, "skiplist graph has {} entries", skiplist_map.len());
+                    let skiplist_index =
+                        try_boxfuture!(deserialize_skiplist_index(logger.clone(), bytes));
+                    info!(
+                        logger,
+                        "skiplist graph has {} entries",
+                        skiplist_index.indexed_node_count()
+                    );
                 }
                 None => {
                     println!("not found map");

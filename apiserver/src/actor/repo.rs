@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    collections::HashMap,
     convert::{TryFrom, TryInto},
     sync::Arc,
 };
@@ -39,7 +38,7 @@ use types::{
 
 use mononoke_types::{FileContents, MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
-use skiplist::{deserialize_skiplist_map, SkiplistIndex};
+use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
@@ -90,15 +89,20 @@ impl MononokeRepo {
                         Some(skiplist_index_blobstore_key) => repo
                             .get_blobstore()
                             .get(ctx.clone(), skiplist_index_blobstore_key)
-                            .and_then(|maybebytes| {
-                                let map = match maybebytes {
-                                    Some(bytes) => {
-                                        let bytes = bytes.into_bytes();
-                                        try_boxfuture!(deserialize_skiplist_map(bytes))
-                                    }
-                                    None => HashMap::new(),
-                                };
-                                ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
+                            .and_then({
+                                cloned!(logger);
+                                |maybebytes| {
+                                    let sli = match maybebytes {
+                                        Some(bytes) => {
+                                            let bytes = bytes.into_bytes();
+                                            try_boxfuture!(deserialize_skiplist_index(
+                                                logger, bytes
+                                            ))
+                                        }
+                                        None => SkiplistIndex::new(),
+                                    };
+                                    ok(Arc::new(sli)).boxify()
+                                }
                             })
                             .left_future(),
                         None => ok(Arc::new(SkiplistIndex::new())).right_future(),

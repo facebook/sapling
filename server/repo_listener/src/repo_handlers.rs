@@ -30,7 +30,7 @@ use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use skiplist::{deserialize_skiplist_map, SkiplistIndex};
+use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 use sql_ext::SqlConstructors;
 
 #[derive(Clone)]
@@ -120,7 +120,6 @@ pub fn repo_handlers(
                     wireproto_scribe_category,
                     bundle2_replay_params,
                     push,
-                    skiplist_index_blobstore_key,
                     ..
                 } = config.clone();
 
@@ -131,7 +130,7 @@ pub fn repo_handlers(
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
                     hook_manager_params,
-                    logger,
+                    logger.clone(),
                 );
 
                 // TODO: Don't require full config in load_hooks so we can avoid a clone here.
@@ -200,23 +199,23 @@ pub fn repo_handlers(
                             let preserve_raw_bundle2 = bundle2_replay_params.preserve_raw_bundle2;
                             let pure_push_allowed = push.pure_push_allowed;
 
-                            let skip_index = match skiplist_index_blobstore_key.clone() {
+                            let skip_index = match config.skiplist_index_blobstore_key.clone() {
                                 Some(skiplist_index_blobstore_key) => {
                                     let blobstore = repo.blobrepo().get_blobstore();
+                                    cloned!(logger);
                                     blobstore
                                         .get(ctx.clone(), skiplist_index_blobstore_key)
                                         .and_then(|maybebytes| {
-                                            let map = match maybebytes {
+                                            let slg = match maybebytes {
                                                 Some(bytes) => {
                                                     let bytes = bytes.into_bytes();
-                                                    try_boxfuture!(deserialize_skiplist_map(bytes))
+                                                    try_boxfuture!(deserialize_skiplist_index(
+                                                        logger, bytes
+                                                    ))
                                                 }
-                                                None => HashMap::new(),
+                                                None => SkiplistIndex::new(),
                                             };
-                                            ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(
-                                                map,
-                                            )))
-                                            .boxify()
+                                            ok(Arc::new(slg)).boxify()
                                         })
                                         .left_future()
                                 }
