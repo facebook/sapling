@@ -473,6 +473,9 @@ def getparser():
     harness.add_argument(
         "-v", "--verbose", action="store_true", help="output verbose messages"
     )
+    harness.add_argument(
+        "--testpilot", action="store_true", help="run tests with testpilot"
+    )
 
     hgconf = parser.add_argument_group("Mercurial Configuration")
     hgconf.add_argument(
@@ -3038,6 +3041,71 @@ class TextTestRunner(unittest.TextTestRunner):
         )
 
 
+class TestpilotTestResult(object):
+    def __init__(self, testpilotjson):
+        self.testsSkipped = 0
+        self.errors = 0
+        self.failures = []
+
+        with open(testpilotjson, "r") as fp:
+            for line in fp:
+                result = json.loads(line)
+                summary = result["summary"]
+                if summary != "passed":
+                    if summary == "OMITTED" or summary == "skipped":
+                        self.testsSkipped += 1
+                    else:
+                        self.failures += result
+                        self.errors += 1
+
+
+class TestpilotTestRunner(object):
+    def __init__(self, runner):
+        self._runner = runner
+
+    def run(self, tests):
+        testlist = []
+
+        for t in tests:
+            testlist.append(
+                {
+                    "type": "custom",
+                    "target": "hg-%s-%s" % (sys.platform, t),
+                    "command": [os.path.abspath(_bytespath(__file__)), "%s" % t.path],
+                }
+            )
+
+        jsonpath = os.path.join(self._runner._outputdir, b"buck-test-info.json")
+        with open(jsonpath, "w") as fp:
+            json.dump(testlist, fp)
+
+        # Remove the proxy settings. If they are set, testpilot will hang
+        # trying to get test information from the network
+        env = os.environ
+        env["http_proxy"] = ""
+        env["https_proxy"] = ""
+
+        testpilotjson = os.path.join(self._runner._outputdir, b"testpilot-result.json")
+        try:
+            os.remove(testpilotjson)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
+
+        subprocess.call(
+            [
+                "testpilot",
+                "--buck-test-info",
+                jsonpath,
+                "--print-json-to-file",
+                testpilotjson,
+            ],
+            env=env,
+        )
+
+        return TestpilotTestResult(testpilotjson)
+
+
 class TestRunner(object):
     """Holds context for executing tests.
 
@@ -3420,7 +3488,11 @@ class TestRunner(object):
             verbosity = 1
             if self.options.verbose:
                 verbosity = 2
-            runner = TextTestRunner(self, verbosity=verbosity)
+
+            if self.options.testpilot:
+                runner = TestpilotTestRunner(self)
+            else:
+                runner = TextTestRunner(self, verbosity=verbosity)
 
             if self.options.list_tests:
                 result = runner.listtests(suite)
