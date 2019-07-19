@@ -197,6 +197,7 @@ Update make sure revsets work
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Make another clone with selectivepull disabled
+  $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo localrepo2
   $ cd localrepo2
   $ hg book --list-subscriptions
@@ -282,11 +283,12 @@ Clone remote repo with the selectivepull enabled
   $ cd ..
 
   $ hg clone --config remotenames.selectivepull=True --config remotenames.selectivepulldefault=master ssh://user@dummy/remoterepo new_localrepo
+  requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
-  new changesets 1449e7934ec1:0238718db2b1
+  added 4 changesets with 4 changes to 1 files (+1 heads)
+  new changesets 1449e7934ec1:c47dca9795c9
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd new_localrepo
@@ -296,11 +298,12 @@ Clone remote repo with the selectivepull enabled
   $ setconfig remotenames.selectivepulldefault=master
 
   $ hg book --list-subscriptions
-     default/master            1:0238718db2b1
+     default/master            2:0238718db2b1
 
 Check remote bookmarks after push
+  $ hg up master -q
   $ echo "new commit to push" >> pushsh
   $ hg commit -qAm "push commit"
   $ hg push -r . --to master -q
   $ hg book --list-subscriptions
-     default/master            2:a81520e7283a
+     default/master            4:a81520e7283a

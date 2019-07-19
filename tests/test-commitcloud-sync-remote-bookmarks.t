@@ -70,10 +70,14 @@ Setup first client repo
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
-  @  2 a2: public  default/master
+  @  4 a2: public  default/master
   |
-  o  1 a1: public
+  o  3 a1: public
   |
+  | o  2 b1: public
+  |/
+  | o  1 c1: public
+  |/
   o  0 root: public
   
 Setup second client repo
@@ -112,14 +116,18 @@ Common case of unsynchronized remote bookmarks
   $ mkcommit draft-1
   $ hg cloud sync -q
   $ showgraph
-  @  4 draft-1: draft
+  @  6 draft-1: draft
   |
-  o  3 a3: public  default/master
+  o  5 a3: public  default/master
   |
-  o  2 a2: public
+  o  4 a2: public
   |
-  o  1 a1: public
+  o  3 a1: public
   |
+  | o  2 b1: public
+  |/
+  | o  1 c1: public
+  |/
   o  0 root: public
   
 
@@ -127,14 +135,18 @@ default/master should point to the new commit
   $ cd ../client1
   $ hg cloud sync -q
   $ showgraph
-  o  4 draft-1: draft
+  o  6 draft-1: draft
   |
-  o  3 a3: public  default/master
+  o  5 a3: public  default/master
   |
-  @  2 a2: public
+  @  4 a2: public
   |
-  o  1 a1: public
+  o  3 a1: public
   |
+  | o  2 b1: public
+  |/
+  | o  1 c1: public
+  |/
   o  0 root: public
   
 Subscribe to a new remote bookmark
@@ -143,41 +155,45 @@ Subscribe to a new remote bookmark
   $ hg pull -B stable -q
   $ hg cloud sync -q
   $ showgraph
-  o  5 b1: public  default/stable
+  o  6 draft-1: draft
   |
-  | o  4 draft-1: draft
-  | |
-  | o  3 a3: public  default/master
-  | |
-  | @  2 a2: public
-  | |
-  | o  1 a1: public
+  o  5 a3: public  default/master
+  |
+  @  4 a2: public
+  |
+  o  3 a1: public
+  |
+  | o  2 b1: public  default/stable
+  |/
+  | o  1 c1: public
   |/
   o  0 root: public
   
   $ hg book --list-subscriptions
-     default/master            3:1b6e90080435
-     default/stable            5:b2bfab231667
+     default/master            5:1b6e90080435
+     default/stable            2:b2bfab231667
 
 the other client should be subscribed to this bookmark as well
   $ cd ../client2
   $ hg cloud sync -q
   $ showgraph
-  o  5 b1: public  default/stable
+  @  6 draft-1: draft
   |
-  | @  4 draft-1: draft
-  | |
-  | o  3 a3: public  default/master
-  | |
-  | o  2 a2: public
-  | |
-  | o  1 a1: public
+  o  5 a3: public  default/master
+  |
+  o  4 a2: public
+  |
+  o  3 a1: public
+  |
+  | o  2 b1: public  default/stable
+  |/
+  | o  1 c1: public
   |/
   o  0 root: public
   
   $ hg book --list-subscriptions
-     default/master            3:1b6e90080435
-     default/stable            5:b2bfab231667
+     default/master            5:1b6e90080435
+     default/stable            2:b2bfab231667
 
 try to create a commit on top of the default/stable
   $ cd ../client1
@@ -188,17 +204,19 @@ try to create a commit on top of the default/stable
   $ cd ../client2
   $ hg cloud sync -q
   $ showgraph
-  o  6 draft-2: draft
+  o  7 draft-2: draft
   |
-  o  5 b1: public  default/stable
-  |
-  | @  4 draft-1: draft
+  | @  6 draft-1: draft
   | |
-  | o  3 a3: public  default/master
+  | o  5 a3: public  default/master
   | |
-  | o  2 a2: public
+  | o  4 a2: public
   | |
-  | o  1 a1: public
+  | o  3 a1: public
+  | |
+  o |  2 b1: public  default/stable
+  |/
+  | o  1 c1: public
   |/
   o  0 root: public
   
@@ -212,19 +230,19 @@ check that copy with disabled remote bookmarks sync doesn't affect the other cop
   $ showgraph
   @  8 draft-3: draft
   |
-  o  7 c1: public  default/warm
-  |
-  | o  6 draft-2: draft
+  | o  7 draft-2: draft
   | |
-  | o  5 b1: public  default/stable
-  |/
-  | o  4 draft-1: draft
-  | |
-  | o  3 a3: public  default/master
-  | |
-  | o  2 a2: public
-  | |
-  | o  1 a1: public
+  | | o  6 draft-1: draft
+  | | |
+  | | o  5 a3: public  default/master
+  | | |
+  | | o  4 a2: public
+  | | |
+  | | o  3 a1: public
+  | | |
+  | o |  2 b1: public  default/stable
+  | |/
+  o /  1 c1: public  default/warm
   |/
   o  0 root: public
   
@@ -245,13 +263,13 @@ sync and create a new commit on top of the draft-3
   | | |
   | | o  5 a3: public
   | | |
-  | o |  4 b1: public
+  | | o  4 a2: public  default/master
   | | |
-  o | |  3 c1: public
-  |/ /
-  | o  2 a2: public  default/master
-  | |
-  | o  1 a1: public
+  | | o  3 a1: public
+  | | |
+  | o |  2 b1: public
+  | |/
+  o /  1 c1: public
   |/
   o  0 root: public
   
@@ -264,19 +282,19 @@ sync and create a new commit on top of the draft-3
   |
   o  8 draft-3: draft
   |
-  o  7 c1: public  default/warm
-  |
-  | o  6 draft-2: draft
+  | o  7 draft-2: draft
   | |
-  | o  5 b1: public  default/stable
-  |/
-  | @  4 draft-1: draft
-  | |
-  | o  3 a3: public  default/master
-  | |
-  | o  2 a2: public
-  | |
-  | o  1 a1: public
+  | | @  6 draft-1: draft
+  | | |
+  | | o  5 a3: public  default/master
+  | | |
+  | | o  4 a2: public
+  | | |
+  | | o  3 a1: public
+  | | |
+  | o |  2 b1: public  default/stable
+  | |/
+  o /  1 c1: public  default/warm
   |/
   o  0 root: public
   

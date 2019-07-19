@@ -711,8 +711,15 @@ def clone(
                         stream = False
                     else:
                         stream = None
-                # internal config: ui.quietbookmarkmove
-                overrides = {("ui", "quietbookmarkmove"): True}
+
+                overrides = {
+                    # internal config: ui.quietbookmarkmove
+                    ("ui", "quietbookmarkmove"): True,
+                    # the normal pull process each commit and so is more expensive
+                    # than streaming bytes from disk to the wire.
+                    # disabling selectivepull allows to run a streamclone
+                    ("remotenames", "selectivepull"): False,
+                }
                 with local.ui.configoverride(overrides, "clone"):
                     exchange.pull(local, srcpeer, revs, streamclonerequested=stream)
             elif srcrepo:
