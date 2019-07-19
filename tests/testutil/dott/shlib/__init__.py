@@ -18,12 +18,43 @@ import stat
 import sys
 
 
+def editsyspath(modname, relpaths):
+    """Try to make sure a top-level Python module is in sys.path
+
+    This is done by trying adding
+
+        os.path.join(p, r for p in sys.path for r in relpaths)
+
+    to sys.path to satisfy the need.
+    """
+    for path in sys.path:
+        path = os.path.abspath(path)
+        for relpath in relpaths:
+            candidate = os.path.realpath(os.path.join(path, relpath))
+            if (
+                candidate.endswith("zip")
+                and os.path.exists(candidate)
+                or os.path.exists(os.path.join(candidate, modname, "__init__.py"))
+            ):
+                if candidate not in sys.path:
+                    sys.path.insert(0, candidate)
+                return
+
+
 # Use "edenscm" for shell utilities and main hg commands.
-# Try to make "edenscm" available. Assuming sys.path includes "TESTDIR".
-for candidate in sys.path:
-    if os.path.exists(os.path.join(candidate, "../edenscm/__init__.py")):
-        sys.path.insert(0, os.path.dirname(candidate))
-        break
+# Try to make "edenscm" and "edenscmnative" available.
+#
+# ".." works when:
+# - sys.path includes "$TESTDIR" (because run-tests.py path is in $TESTDIR)
+# - "$TESTDIR/.." has the desired modules (in-place local build)
+#
+# "../../.." and "../python27.zip" works when:
+# - `fb/packaging/build_nupkg.py --test` copies `tests/` to `build/embedded`
+# - `build/embedded/python27.zip` includes `edenscm` packages.
+editsyspath("edenscmnative", ["..", "../../.."])
+editsyspath("edenscm", ["..", "../python27.zip"])
+
+
 for candidate in sys.path:
     if os.path.exists(os.path.join(candidate, "hghave.py")):
         TESTDIR = os.path.abspath(candidate)
