@@ -940,7 +940,6 @@ Missing skips or blacklisted skips don't count as executed:
   Skipped test-bogus.t: Doesn't exist
   Skipped test-failure.t: blacklisted
   # Ran 0 tests, 2 skipped, 0 failed.
-  [80]
   $ cat report.json
   {
       "test-bogus.t": {
@@ -1247,7 +1246,6 @@ test support for --allow-slow-tests
   s
   Skipped test-very-slow-test.t: missing feature: allow slow tests (use --allow-slow-tests)
   # Ran 0 tests, 1 skipped, 0 failed.
-  [80]
   $ rt $HGTEST_RUN_TESTS_PURE --allow-slow-tests test-very-slow-test.t
   .
   # Ran 1 tests, 0 skipped, 0 failed.
