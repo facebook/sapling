@@ -799,7 +799,6 @@ class fetchbuilddeps(Command):
             ],
         ),
         fbsourcepylibrary("eden", "../../eden/py/eden"),
-        fbsourcepylibrary("eden/thrift", "../../eden/fs/service"),
     ]
     pyassets += [
         edenpythrift(name="eden-rust-deps-ea4913daef53b814b9b40b58511a24bdb1c0cb7b.zip")
