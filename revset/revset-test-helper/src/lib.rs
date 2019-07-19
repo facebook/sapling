@@ -10,6 +10,7 @@ use failure_ext::Error;
 use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::Stream;
+use futures_ext::BoxStream;
 use mercurial_types::nodehash::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
@@ -46,7 +47,7 @@ pub fn assert_changesets_sequence<I>(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: I,
-    stream: Box<dyn Stream<Item = ChangesetId, Error = Error>>,
+    stream: BoxStream<ChangesetId, Error>,
 ) where
     I: IntoIterator<Item = ChangesetId>,
 {

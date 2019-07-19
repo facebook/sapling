@@ -30,7 +30,7 @@ pub struct ValidateNodeStream {
 impl ValidateNodeStream {
     pub fn new(
         ctx: CoreContext,
-        wrapped: Box<BonsaiNodeStream>,
+        wrapped: BonsaiNodeStream,
         changeset_fetcher: &Arc<dyn ChangesetFetcher>,
     ) -> ValidateNodeStream {
         ValidateNodeStream {
@@ -111,7 +111,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream = ValidateNodeStream::new(
                 ctx,
-                Box::new(NotReadyEmptyStream::new(repeats)),
+                NotReadyEmptyStream::new(repeats).boxify(),
                 &changeset_fetcher,
             )
             .boxify();

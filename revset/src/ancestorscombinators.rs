@@ -31,7 +31,7 @@ use crate::failure::prelude::*;
 use futures::future::{ok, Future};
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, IntoFuture, Poll};
-use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, SelectAll, StreamExt};
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -99,8 +99,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     current_generation: Generation,
 
     // Parents of entries from `drain`. We fetch generation number for them.
-    pending_changesets:
-        SelectAll<Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send>>,
+    pending_changesets: SelectAll<BoxStream<(ChangesetId, Generation), Error>>,
 
     // Stream of (Hashset, Generation) that needs to be excluded
     exclude_ancestors_future: BoxFuture<NodeFrontier, Error>,
@@ -118,31 +117,30 @@ fn make_pending(
     ctx: CoreContext,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     hash: ChangesetId,
-) -> Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
+) -> BoxStream<(ChangesetId, Generation), Error> {
     let new_repo_changesets = changeset_fetcher.clone();
     let new_repo_gennums = changeset_fetcher.clone();
 
-    Box::new(
-        Ok::<_, Error>(hash)
-            .into_future()
-            .and_then({
-                cloned!(ctx);
-                move |hash| {
-                    new_repo_changesets
-                        .get_parents(ctx, hash)
-                        .map(|parents| parents.into_iter())
-                        .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
-                }
-            })
-            .map(|parents| iter_ok::<_, Error>(parents))
-            .flatten_stream()
-            .and_then(move |node_hash| {
-                new_repo_gennums
-                    .get_generation_number(ctx.clone(), node_hash)
-                    .map(move |gen_id| (node_hash, gen_id))
-                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
-            }),
-    )
+    Ok::<_, Error>(hash)
+        .into_future()
+        .and_then({
+            cloned!(ctx);
+            move |hash| {
+                new_repo_changesets
+                    .get_parents(ctx, hash)
+                    .map(|parents| parents.into_iter())
+                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+            }
+        })
+        .map(|parents| iter_ok::<_, Error>(parents))
+        .flatten_stream()
+        .and_then(move |node_hash| {
+            new_repo_gennums
+                .get_generation_number(ctx.clone(), node_hash)
+                .map(move |gen_id| (node_hash, gen_id))
+                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+        })
+        .boxify()
 }
 
 impl DifferenceOfUnionsOfAncestorsNodeStream {
@@ -151,7 +149,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
         changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hash: ChangesetId,
-    ) -> Box<BonsaiNodeStream> {
+    ) -> BonsaiNodeStream {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, vec![hash], vec![])
     }
 
@@ -160,7 +158,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
         changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
-    ) -> Box<BonsaiNodeStream> {
+    ) -> BonsaiNodeStream {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, hashes, vec![])
     }
 
@@ -170,7 +168,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
-    ) -> Box<BonsaiNodeStream> {
+    ) -> BonsaiNodeStream {
         add_generations_by_bonsai(
             ctx.clone(),
             stream::iter_ok(excludes.into_iter()).boxify(),

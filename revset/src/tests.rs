@@ -57,7 +57,7 @@ pub fn get_single_bonsai_streams(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: &[&str],
-) -> Vec<Box<BonsaiNodeStream>> {
+) -> Vec<BonsaiNodeStream> {
     hashes
         .iter()
         .map(|hash| {

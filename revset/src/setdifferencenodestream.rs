@@ -9,7 +9,6 @@ use context::CoreContext;
 use futures::stream::Stream;
 use futures::{Async, Poll};
 use mononoke_types::{ChangesetId, Generation};
-use std::boxed::Box;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -32,8 +31,8 @@ impl SetDifferenceNodeStream {
     pub fn new(
         ctx: CoreContext,
         changeset_fetcher: &Arc<dyn ChangesetFetcher>,
-        keep_input: Box<BonsaiNodeStream>,
-        remove_input: Box<BonsaiNodeStream>,
+        keep_input: BonsaiNodeStream,
+        remove_input: BonsaiNodeStream,
     ) -> SetDifferenceNodeStream {
         SetDifferenceNodeStream {
             keep_input: add_generations_by_bonsai(
@@ -51,10 +50,6 @@ impl SetDifferenceNodeStream {
             remove_nodes: HashSet::new(),
             remove_generation: None,
         }
-    }
-
-    pub fn boxed(self) -> Box<BonsaiNodeStream> {
-        return Box::new(self);
     }
 
     fn next_keep(&mut self) -> Result<&Async<Option<(ChangesetId, Generation)>>> {
@@ -171,7 +166,7 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
-                Box::new(NotReadyEmptyStream::new(0)),
+                NotReadyEmptyStream::new(0).boxify(),
             )
             .boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream);
@@ -191,7 +186,7 @@ mod test {
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                Box::new(NotReadyEmptyStream::new(0)),
+                NotReadyEmptyStream::new(0).boxify(),
                 single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
             )
             .boxify();
@@ -238,9 +233,10 @@ mod test {
                 SetDifferenceNodeStream::new(
                     ctx.clone(),
                     &changeset_fetcher,
-                    Box::new(RepoErrorStream {
+                    RepoErrorStream {
                         item: changeset.clone(),
-                    }),
+                    }
+                    .boxify(),
                     single_changeset_id(ctx.clone(), changeset, &repo).boxify(),
                 )
                 .boxify(),
@@ -270,8 +266,8 @@ mod test {
             let mut nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                Box::new(NotReadyEmptyStream::new(repeats)),
-                Box::new(NotReadyEmptyStream::new(repeats)),
+                NotReadyEmptyStream::new(repeats).boxify(),
+                NotReadyEmptyStream::new(repeats).boxify(),
             )
             .boxify();
 

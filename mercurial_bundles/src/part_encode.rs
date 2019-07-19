@@ -11,13 +11,14 @@ use std::mem;
 
 use bytes::Bytes;
 use futures::{Async, Future, Poll, Stream};
+use futures_ext::{BoxStream, StreamExt};
 
 use crate::chunk::Chunk;
 use crate::errors::*;
 use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType, PartId};
 
 /// Represents a stream of chunks produced by the individual part handler.
-pub struct ChunkStream(Box<dyn Stream<Item = Chunk, Error = Error> + Send>);
+pub struct ChunkStream(BoxStream<Chunk, Error>);
 
 impl Debug for ChunkStream {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -117,7 +118,7 @@ impl PartEncodeBuilder {
         S: 'static + Stream<Item = Chunk, Error = Error> + Send,
     {
         let stream = stream.filter(|chunk| !chunk.is_empty());
-        self.data = PartEncodeData::Generated(ChunkStream(Box::new(stream)));
+        self.data = PartEncodeData::Generated(ChunkStream(stream.boxify()));
         self
     }
 

@@ -10,7 +10,6 @@ use futures::stream::Stream;
 use futures::Async;
 use futures::Poll;
 use mononoke_types::{ChangesetId, Generation};
-use std::boxed::Box;
 use std::collections::hash_set::IntoIter;
 use std::collections::HashSet;
 use std::iter::IntoIterator;
@@ -39,7 +38,7 @@ impl UnionNodeStream {
         inputs: I,
     ) -> Self
     where
-        I: IntoIterator<Item = Box<BonsaiNodeStream>>,
+        I: IntoIterator<Item = BonsaiNodeStream>,
     {
         let csid_and_gen = inputs.into_iter().map(move |i| {
             (
@@ -53,10 +52,6 @@ impl UnionNodeStream {
             accumulator: HashSet::new(),
             drain: None,
         }
-    }
-
-    pub fn boxed(self) -> Box<BonsaiNodeStream> {
-        Box::new(self)
     }
 
     fn gc_finished_inputs(&mut self) {
@@ -185,7 +180,7 @@ mod test {
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let head_csid = string_to_bonsai(&repo, hash);
 
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+            let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify(),
             ];
@@ -207,10 +202,11 @@ mod test {
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let expected_csid = string_to_bonsai(&repo, hash);
 
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
-                Box::new(RepoErrorStream {
+            let inputs: Vec<BonsaiNodeStream> = vec![
+                RepoErrorStream {
                     item: expected_csid,
-                }),
+                }
+                .boxify(),
                 single_changeset_id(ctx.clone(), expected_csid.clone(), &repo).boxify(),
             ];
             let mut nodestream = spawn(
@@ -241,7 +237,7 @@ mod test {
             let bcs_3c1 = string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759");
             let bcs_a947 = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
             // Note that these are *not* in generation order deliberately.
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+            let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), bcs_a947, &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_3c1, &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_d0a, &repo).boxify(),
@@ -267,7 +263,7 @@ mod test {
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![];
+            let inputs: Vec<BonsaiNodeStream> = vec![];
             let nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
@@ -285,7 +281,7 @@ mod test {
             let bcs_d0a = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
             let bcs_3c1 = string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759");
             // Note that these are *not* in generation order deliberately.
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+            let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), bcs_d0a, &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_3c1, &repo).boxify(),
             ];
@@ -294,7 +290,7 @@ mod test {
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             let bcs_a947 = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+            let inputs: Vec<BonsaiNodeStream> = vec![
                 nodestream,
                 single_changeset_id(ctx.clone(), bcs_a947, &repo).boxify(),
             ];
@@ -320,8 +316,7 @@ mod test {
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let inputs: Vec<Box<BonsaiNodeStream>> =
-                vec![Box::new(NotReadyEmptyStream::new(repeats))];
+            let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(repeats).boxify()];
             let mut nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -355,7 +350,7 @@ mod test {
             ];
 
             // Two nodes should share the same generation number
-            let inputs: Vec<Box<BonsaiNodeStream>> = nodes
+            let inputs: Vec<BonsaiNodeStream> = nodes
                 .clone()
                 .into_iter()
                 .map(|cs| single_changeset_id(ctx.clone(), cs, &repo).boxify())
@@ -380,7 +375,7 @@ mod test {
             let cs_4 = string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33");
             let cs_5 = string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc");
             // Two nodes should share the same generation number
-            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+            let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), cs_1.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), cs_2.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), cs_3.clone(), &repo).boxify(),

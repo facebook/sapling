@@ -15,7 +15,7 @@ use crate::failure::prelude::*;
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, Poll};
-use futures_ext::StreamExt;
+use futures_ext::{BoxStream, StreamExt};
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -43,7 +43,7 @@ pub struct RangeNodeStream {
     start_generation: Box<dyn Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
     // Child, parent
-    pending_nodes: Box<dyn Stream<Item = ParentChild, Error = Error> + Send>,
+    pending_nodes: BoxStream<ParentChild, Error>,
     output_nodes: Option<BTreeMap<Generation, HashSet<ChangesetId>>>,
     drain: Option<IntoIter<ChangesetId>>,
 }
@@ -52,7 +52,7 @@ fn make_pending(
     ctx: CoreContext,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     child: HashGen,
-) -> Box<dyn Stream<Item = ParentChild, Error = Error> + Send> {
+) -> BoxStream<ParentChild, Error> {
     changeset_fetcher
         .get_parents(ctx.clone(), child.hash)
         .map(move |parents| (child, parents))
@@ -191,13 +191,13 @@ impl Stream for RangeNodeStream {
                 }
 
                 if next_pending.parent.generation > start_generation {
-                    let old_pending = replace(&mut self.pending_nodes, Box::new(stream::empty()));
+                    let old_pending = replace(&mut self.pending_nodes, stream::empty().boxify());
                     let pending = old_pending.chain(make_pending(
                         self.ctx.clone(),
                         self.changeset_fetcher.clone(),
                         next_pending.parent,
                     ));
-                    self.pending_nodes = Box::new(pending);
+                    self.pending_nodes = pending.boxify();
                 }
             }
         }

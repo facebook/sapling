@@ -89,10 +89,6 @@ impl AncestorsNodeStream {
             sorted_unique_generations: UniqueHeap::new(),
         }
     }
-
-    pub fn boxed(self) -> Box<BonsaiNodeStream> {
-        Box::new(self)
-    }
 }
 
 impl Stream for AncestorsNodeStream {
@@ -151,7 +147,7 @@ pub fn common_ancestors<I>(
     ctx: CoreContext,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     nodes: I,
-) -> Box<BonsaiNodeStream>
+) -> BonsaiNodeStream
 where
     I: IntoIterator<Item = ChangesetId>,
 {
@@ -167,11 +163,13 @@ pub fn greatest_common_ancestor<I>(
     ctx: CoreContext,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     nodes: I,
-) -> Box<BonsaiNodeStream>
+) -> BonsaiNodeStream
 where
     I: IntoIterator<Item = ChangesetId>,
 {
-    Box::new(common_ancestors(ctx, changeset_fetcher, nodes).take(1))
+    common_ancestors(ctx, changeset_fetcher, nodes)
+        .take(1)
+        .boxify()
 }
 
 #[cfg(test)]

@@ -136,8 +136,8 @@ mod test {
             output.pop().expect("No revisions").into_iter().collect()
         }
 
-        pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> Box<BonsaiNodeStream> {
-            let mut output: Vec<Box<BonsaiNodeStream>> = Vec::with_capacity(self.rp_entries.len());
+        pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> BonsaiNodeStream {
+            let mut output: Vec<BonsaiNodeStream> = Vec::with_capacity(self.rp_entries.len());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             for entry in self.rp_entries.iter() {

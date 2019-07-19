@@ -8,10 +8,10 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::future::Future;
 use futures::stream::Stream;
+use futures_ext::{BoxStream, StreamExt};
 #[cfg(test)]
 use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
-use std::boxed::Box;
 #[cfg(test)]
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -22,21 +22,22 @@ use crate::BonsaiNodeStream;
 
 use futures::{Async, Poll};
 
-type GenericStream<T> = Box<dyn Stream<Item = (T, Generation), Error = Error> + 'static + Send>;
+type GenericStream<T> = BoxStream<(T, Generation), Error>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;
 
 pub fn add_generations_by_bonsai(
     ctx: CoreContext,
-    stream: Box<BonsaiNodeStream>,
+    stream: BonsaiNodeStream,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
 ) -> BonsaiInputStream {
-    let stream = stream.and_then(move |changesetid| {
-        changeset_fetcher
-            .get_generation_number(ctx.clone(), changesetid)
-            .map(move |gen_id| (changesetid, gen_id))
-            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
-    });
-    Box::new(stream)
+    stream
+        .and_then(move |changesetid| {
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), changesetid)
+                .map(move |gen_id| (changesetid, gen_id))
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+        })
+        .boxify()
 }
 
 pub fn all_inputs_ready<T>(

@@ -30,8 +30,7 @@ extern crate revset_test_helper;
 extern crate skiplist;
 extern crate uniqueheap;
 
-use futures::stream::Stream;
-use mercurial_types::HgNodeHash;
+use futures_ext::BoxStream;
 use mononoke_types::ChangesetId;
 
 mod setcommon;
@@ -48,8 +47,7 @@ pub use crate::setdifferencenodestream::SetDifferenceNodeStream;
 pub mod errors;
 pub use crate::errors::{Error, ErrorKind};
 
-pub type NodeStream = dyn Stream<Item = HgNodeHash, Error = errors::Error> + Send + 'static;
-pub type BonsaiNodeStream = dyn Stream<Item = ChangesetId, Error = errors::Error> + Send + 'static;
+pub type BonsaiNodeStream = BoxStream<ChangesetId, errors::Error>;
 
 mod validation;
 pub use crate::validation::ValidateNodeStream;
