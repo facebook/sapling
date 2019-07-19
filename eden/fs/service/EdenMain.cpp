@@ -96,7 +96,14 @@ void EdenMain::runServer(const EdenServer& server) {
 }
 
 int EdenMain::main(int argc, char** argv) {
-  std::vector<std::string> originalCommandLine{argv, argv + argc};
+  ////////////////////////////////////////////////////////////////////
+  // Running as root: do not add any new code here.
+  // EdenFS normally starts with root privileges so it can perform mount
+  // operations.  We should be very careful about anything we do here
+  // before we have dropped privileges.  In general do not add any new
+  // code here at the start of main: new initialization logic should
+  // only go after the "Root privileges dropped" comment below.
+  ////////////////////////////////////////////////////////////////////
 
   // Fork the privhelper process, then drop privileges in the main process.
   // This should be done as early as possible, so that everything else we do
@@ -108,6 +115,12 @@ int EdenMain::main(int argc, char** argv) {
   auto originalEUID = geteuid();
   auto privHelper = startPrivHelper(identity);
   identity.dropPrivileges();
+
+  ////////////////////////////////////////////////////////////////////
+  //// Root privileges dropped
+  ////////////////////////////////////////////////////////////////////
+
+  std::vector<std::string> originalCommandLine{argv, argv + argc};
 
 #ifdef EDEN_HAVE_CURL
   // We need to call curl_global_init before any thread is created to avoid
