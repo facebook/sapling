@@ -29,12 +29,10 @@ DEPS = ["future", "six", "toml"]
 # The lhs of each tuple is the path in the eden tree where the
 # python sources are found, and the rhs is the destination path
 MODULES = [
-    # The eden dirstate library
+    # Eden python libraries
     ("eden/py/eden", "eden"),
     # The cli
     ("eden/cli", "eden/cli"),
-    # A helper for the eden thrift client
-    ("eden/fs/service", "eden/thrift"),
 ]
 
 
