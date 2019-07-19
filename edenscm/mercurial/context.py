@@ -1203,6 +1203,9 @@ class basefilectx(object):
 
         return zip(hist[base][0], hist[base][1].splitlines(True))
 
+    def topologicalancestors(self, followfirst=False):
+        return self.ancestors(followfirst=followfirst)
+
     def ancestors(self, followfirst=False):
         visit = {}
         c = self

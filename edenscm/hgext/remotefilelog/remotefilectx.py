@@ -476,8 +476,7 @@ class remotefilectx(context.filectx):
             # the correct linknode.
             return False
 
-    def ancestors(self, followfirst=False):
-        ancestors = []
+    def topologicalancestors(self, followfirst=False):
         queue = collections.deque((self,))
         seen = set()
         while queue:
@@ -486,7 +485,8 @@ class remotefilectx(context.filectx):
                 continue
             seen.add(current.filenode())
 
-            ancestors.append(current)
+            if current is not self:
+                yield current
 
             parents = current.parents()
             first = True
@@ -495,11 +495,12 @@ class remotefilectx(context.filectx):
                     queue.append(p)
                 first = False
 
-        # Remove self
-        ancestors.pop(0)
+    def ancestors(self, followfirst=False):
+        ancestors = list(self.topologicalancestors(followfirst=followfirst))
 
         # Sort by linkrev
-        # The copy tracing algorithm depends on these coming out in order
+        # TODO(strager): Remove this sort. linkrev() can be very expensive
+        # (O(changelog)), and the caller might not care about the order.
         ancestors = sorted(ancestors, reverse=True, key=lambda x: x.linkrev())
 
         for ancestor in ancestors:

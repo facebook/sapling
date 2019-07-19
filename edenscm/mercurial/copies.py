@@ -129,7 +129,7 @@ def _tracefile(fctx, am, limit=-1):
     """return file context that is the ancestor of fctx present in ancestor
     manifest am, stopping after the first ancestor lower than limit"""
 
-    for f in fctx.ancestors():
+    for f in fctx.topologicalancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
         if limit >= 0 and f.linkrev() < limit and f.rev() < limit:
