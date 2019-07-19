@@ -1842,27 +1842,39 @@ def debugmergestate(ui, repo, *args):
             printrecords(2)
 
 
-@command("debugnamecomplete", [], _("NAME..."))
-def debugnamecomplete(ui, repo, *args):
+@command(
+    "debugnamecomplete",
+    [
+        ("d", "description", False, _("include first line of the message")),
+        ("a", "age", 7, _("include commits from this number of days ago")),
+    ],
+)
+def debugnamecomplete(ui, repo, *args, **opts):
     """complete "names" - tags, open branch names, bookmark names"""
 
     names = set()
     # since we previously only listed open branches, we will handle that
     # specially (after this for loop)
     for name, ns in repo.names.iteritems():
-        if name != "branches":
+        if name != "branches" and name != "remotebookmarks":
             names.update(ns.listnames(repo))
-    names.update(
-        tag
-        for (tag, heads, tip, closed) in repo.branchmap().iterbranches()
-        if not closed
-    )
-    completions = set()
-    if not args:
-        args = [""]
-    for a in args:
-        completions.update(n for n in names if n.startswith(a))
-    ui.write("\n".join(sorted(completions)))
+
+    age = opts.get("age", 7)
+    draft = repo.set("sort(draft() and age('<%dd'), -date)", age)
+    changelog = repo.unfiltered().changelog
+    draft = [changelog.shortest(cs.hex(), 8) for cs in draft]
+
+    completions = []
+    completions.extend(draft)
+    completions.extend(sorted(n for n in names if n not in ["default", "tip"]))
+
+    if opts.get("description", False):
+        completions = [
+            "{}:{}".format(name, repo[name].description().splitlines()[0])
+            for name in completions
+        ]
+
+    ui.write("\n".join(completions))
     ui.write("\n")
 
 
