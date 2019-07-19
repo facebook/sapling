@@ -747,10 +747,14 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         if name not in omittedbookmarks
     }
 
+    remotebookmarkschanged = (
+        _isremotebookmarkssyncenabled(repo.ui)
+        and localremotebookmarks != lastsyncstate.remotebookmarks
+    )
     if (
         set(localheads) == set(localsyncedheads)
         and localbookmarks == localsyncedbookmarks
-        and localremotebookmarks == lastsyncstate.remotebookmarks
+        and not remotebookmarkschanged
         and lastsyncstate.version != 0
         and not obsmarkers
     ):
@@ -793,6 +797,13 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             ),
         )
 
+    oldremotebookmarks = []
+    newremotebookmarks = {}
+    if _isremotebookmarkssyncenabled(repo.ui):
+        # do not need to submit local remote bookmarks if the feature is not enabled
+        oldremotebookmarks = lastsyncstate.remotebookmarks.keys()
+        newremotebookmarks = localremotebookmarks
+
     backuplock.progress(repo, "finishing synchronizing with '%s'" % workspacename)
     synced, cloudrefs = serv.updatereferences(
         reponame,
@@ -803,8 +814,8 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         lastsyncstate.bookmarks.keys(),
         newcloudbookmarks,
         obsmarkers,
-        lastsyncstate.remotebookmarks.keys(),
-        localremotebookmarks,
+        oldremotebookmarks,
+        newremotebookmarks,
     )
     if synced:
         lastsyncstate.update(
@@ -814,7 +825,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newomittedheads,
             newomittedbookmarks,
             lastsyncstate.maxage,
-            localremotebookmarks,
+            newremotebookmarks,
         )
         obsmarkersmod.clearsyncingobsmarkers(repo)
 

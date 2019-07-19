@@ -118,7 +118,8 @@ class LocalService(baseservice.BaseService):
         data["heads"] = newheads
         data["bookmarks"] = newbookmarks
         data["obsmarkers"][str(newversion)] = self._encodedmarkers(newobsmarkers)
-        data["remote_bookmarks"] = self._makeremotebookmarks(newremotebookmarks)
+        if not data.get("remote_bookmarks", {}) or newremotebookmarks:
+            data["remote_bookmarks"] = self._makeremotebookmarks(newremotebookmarks)
         self._ui.debug(
             "commitcloud local service: "
             "update_references to %s (%s heads, %s bookmarks, %s remote bookmarks)\n"
