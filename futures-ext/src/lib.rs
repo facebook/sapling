@@ -121,9 +121,60 @@ where
             Ok(Async::NotReady) => Ok(Async::NotReady),
             Ok(Async::Ready(e)) => Ok(Async::Ready(e)),
             Err(e) => {
-                (self.f.take().expect("cannot poll InspectErr twice"))(&e);
-                Err(e)
+                self.f.take().map_or_else(
+                    // Act like a fused future
+                    || Ok(Async::NotReady),
+                    |func| {
+                        func(&e);
+                        Err(e)
+                    },
+                )
             }
+        }
+    }
+}
+
+/// Inspect the Result returned by a future
+///
+/// This is created by the `FutureExt::inspect_result` method.
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub struct InspectResult<A, F>
+where
+    A: Future,
+{
+    future: A,
+    f: Option<F>,
+}
+
+impl<A, F> Future for InspectResult<A, F>
+where
+    A: Future,
+    F: FnOnce(Result<&A::Item, &A::Error>),
+{
+    type Item = A::Item;
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<A::Item, A::Error> {
+        match self.future.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::Ready(i)) => self.f.take().map_or_else(
+                // Act like a fused future
+                || Ok(Async::NotReady),
+                |func| {
+                    func(Ok(&i));
+                    Ok(Async::Ready(i))
+                },
+            ),
+
+            Err(e) => self.f.take().map_or_else(
+                // Act like a fused future
+                || Ok(Async::NotReady),
+                |func| {
+                    func(Err(&e));
+                    Err(e)
+                },
+            ),
         }
     }
 }
@@ -170,6 +221,17 @@ pub trait FutureExt: Future + Sized {
         Self: Sized,
     {
         InspectErr {
+            future: self,
+            f: Some(f),
+        }
+    }
+
+    fn inspect_result<F>(self, f: F) -> InspectResult<Self, F>
+    where
+        F: FnOnce(Result<&Self::Item, &Self::Error>) -> (),
+        Self: Sized,
+    {
+        InspectResult {
             future: self,
             f: Some(f),
         }
@@ -999,6 +1061,25 @@ mod test {
             panic!("future is supposed to succeed");
         }
         assert_eq!(0, count.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn inspect_result() {
+        let count = Arc::new(AtomicUsize::new(0));
+        cloned!(count as count_cloned);
+        let mut runtime = Runtime::new().unwrap();
+        let work = err::<i32, i32>(42).inspect_result(move |res| {
+            if let Err(e) = res {
+                assert_eq!(42, *e);
+                count_cloned.fetch_add(1, Ordering::SeqCst);
+            } else {
+                count_cloned.fetch_add(2, Ordering::SeqCst);
+            }
+        });
+        if let Ok(_) = runtime.block_on(work) {
+            panic!("future is supposed to fail");
+        }
+        assert_eq!(1, count.load(Ordering::SeqCst));
     }
 
     #[test]
