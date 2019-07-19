@@ -43,6 +43,7 @@ void debugSetLogLevel(std::string category, std::string level) {
 
 int __cdecl main(int argc, char** argv) {
   XLOG(INFO) << "Eden Windows - starting";
+  std::vector<std::string> originalCommandLine{argv, argv + argc};
 
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
@@ -64,7 +65,10 @@ int __cdecl main(int argc, char** argv) {
   std::optional<EdenServer> server;
   try {
     server.emplace(
-        std::move(identity), std::move(privHelper), std::move(edenConfig));
+        std::move(originalCommandLine),
+        std::move(identity),
+        std::move(privHelper),
+        std::move(edenConfig));
     prepareFuture = server->prepare(startupLogger);
 
     // startupLogger->log("Starting Eden");
