@@ -30,7 +30,7 @@ DEPS = ["future", "six", "toml"]
 # python sources are found, and the rhs is the destination path
 MODULES = [
     # The eden dirstate library
-    ("eden/py", "eden"),
+    ("eden/py/eden", "eden"),
     # The cli
     ("eden/cli", "eden/cli"),
     # A helper for the eden thrift client
