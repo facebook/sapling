@@ -501,7 +501,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
             # we don't have cloudnode in the repo, assume that cloudnode is newer
             # than the local
             return True
-        if repo.changelog.isancestor(localnode, cloudnode):
+        if repo.changelog.isancestor(nodemod.bin(localnode), nodemod.bin(cloudnode)):
             # cloudnode is descendant of the localnode, assume that remote book
             # should move forward to the newer node
             #
