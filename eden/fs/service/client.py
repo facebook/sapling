@@ -103,6 +103,18 @@ class EdenClient(EdenService.Client):
             % (os.getpid(), os.getuid())
         )
 
+    def getPid(self):
+        # type: () -> int
+        try:
+            return self.getDaemonInfo().pid
+        except TApplicationException as ex:
+            if ex.type == TApplicationException.UNKNOWN_METHOD:
+                # Running on an older server build, fall back to the
+                # old getPid() method.
+                return super().getPid()
+            else:
+                raise
+
     def initiateShutdown(self, reason):
         # type: (str) -> None
         """Helper for stopping the server.
