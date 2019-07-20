@@ -2,8 +2,9 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
+use crate::utils::get_prefix_bounds;
 use failure::{bail, Fallible};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 
 /// FlagDefinition represents a tuple of options that represent
@@ -189,7 +190,7 @@ pub struct Parser<'a> {
     /// map holding &character -> &flag where the character == flag.short_name
     short_map: HashMap<&'a char, &'a Flag<'a>>,
     /// map holding &str -> &flag where the str == flag.long_name
-    long_map: HashMap<&'a str, &'a Flag<'a>>,
+    long_map: BTreeMap<String, &'a Flag<'a>>,
     opts: HashMap<String, Value>,
 }
 
@@ -209,7 +210,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn new(flags: &'a Vec<Flag<'a>>) -> Self {
         let mut short_map = HashMap::new();
-        let mut long_map = HashMap::new();
+        let mut long_map = BTreeMap::new();
         let mut opts = HashMap::new();
 
         for flag in flags {
@@ -217,7 +218,7 @@ impl<'a> Parser<'a> {
                 short_map.insert(character, flag);
             }
 
-            long_map.insert(flag.long_name, flag);
+            long_map.insert(flag.long_name.to_string(), flag);
             let value_opt = match flag.value_type {
                 _ => flag.value_type.clone(),
             };
@@ -318,7 +319,24 @@ impl<'a> Parser<'a> {
             return Ok(());
         };
 
-        bail!("Could not parse a flag!")
+        let range = self.long_map.range(get_prefix_bounds(clean_arg));
+        let prefixed_flags: Vec<&Flag> = range.map(|(_, flag)| *flag).collect();
+
+        if prefixed_flags.len() > 1 {
+            bail!("ambiguous command prefix!")
+        } else if prefixed_flags.len() == 0 {
+            bail!("could not parse flag!")
+        } else {
+            let matched_flag = prefixed_flags.get(0).unwrap();
+            match opts.get_mut(matched_flag.long_name) {
+                Some(Value::Bool(ref mut b)) => *b = positive_flag,
+                Some(ref mut value) => {
+                    value.accept(next)?;
+                }
+                None => unreachable!(),
+            }
+            return Ok(());
+        }
     }
 
     fn parse_single_hyphen_flag(
@@ -910,6 +928,83 @@ mod tests {
         let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
         assert_eq!(configs.len(), 1);
         assert_eq!(configs.get(0).unwrap(), "");
+    }
+
+    #[test]
+    fn test_prefix_match_double_flag() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec!["--con", "test"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+        assert_eq!(configs.len(), 1);
+        assert_eq!(configs.get(0).unwrap(), "test");
+    }
+
+    #[test]
+    fn test_prefix_match_trailing_equals() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec!["--con="]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+        assert_eq!(configs.len(), 1);
+        assert_eq!(configs.get(0).unwrap(), "");
+    }
+
+    #[test]
+    fn test_prefix_match_ambiguous() {
+        let definitions = vec![
+            ('c', "config", "config overrides", Value::List(Vec::new())),
+            (' ', "configfile", "config files", Value::List(Vec::new())),
+        ];
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec!["--co="]); // this is an ambiguous flag
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+        let configfiles: Vec<String> = result
+            .get("configfile")
+            .unwrap()
+            .clone()
+            .try_into()
+            .unwrap();
+        assert_eq!(configs.len(), 0);
+        assert_eq!(configfiles.len(), 0);
+    }
+
+    #[test]
+    fn test_prefix_match_mixed_with_exact_match_and_short_flags() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec![
+            "--c=",
+            "--config",
+            "section.key=val",
+            "-c=",
+            "--conf=section.key=val",
+        ]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+
+        let expected = vec!["", "section.key=val", "=", "section.key=val"];
+
+        assert_eq!(configs, expected);
     }
 
 }
