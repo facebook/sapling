@@ -300,13 +300,7 @@ def addremove(ui, repo, *pats, **opts):
     "^annotate|blame",
     [
         ("r", "rev", "", _("annotate the specified revision"), _("REV")),
-        (
-            "",
-            "follow",
-            None,
-            _("follow copies/renames and list the filename (DEPRECATED)"),
-        ),
-        ("", "no-follow", None, _("don't follow copies and renames")),
+        ("", "no-follow", False, _("don't follow copies and renames")),
         ("a", "text", None, _("treat all files as text")),
         ("u", "user", None, _("list the author (long with -v)")),
         ("f", "file", None, _("list the filename")),
@@ -344,11 +338,6 @@ def annotate(ui, repo, *pats, **opts):
     opts = pycompat.byteskwargs(opts)
     if not pats:
         raise error.Abort(_("at least one filename or pattern is required"))
-
-    if opts.get("follow"):
-        # --follow is deprecated and now just an alias for -f/--file
-        # to mimic the behavior of Mercurial before version 1.5
-        opts["file"] = True
 
     ctx = scmutil.revsingle(repo, opts.get("rev"))
 
@@ -588,8 +577,7 @@ def archive(ui, repo, dest, **opts):
     "backout",
     [
         ("", "merge", None, _("merge with old dirstate parent after backout")),
-        ("", "commit", None, _("commit if no conflicts were encountered (DEPRECATED)")),
-        ("", "no-commit", None, _("do not commit")),
+        ("", "no-commit", False, _("do not commit")),
         (
             "",
             "parent",
@@ -5669,7 +5657,7 @@ def serve(ui, repo, **opts):
         ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
         ("", "stat", None, _("output diffstat-style summary of changes")),
         ("g", "git", None, _("use git extended diff format")),
-        ("U", "unified", int, _("number of lines of diff context to show")),
+        ("U", "unified", 3, _("number of lines of diff context to show")),
     ]
     + diffwsopts
     + templateopts

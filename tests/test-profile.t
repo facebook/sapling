@@ -143,10 +143,10 @@ profiler extension could be loaded before other extensions
   > fooprof = $TESTTMP/fooprof.py
   > EOF
 
-  $ hg root
+  $ hg log -r null -T "foo\n"
   otherextension: loaded
   fooprof: loaded
-  $TESTTMP/b
+  foo
   $ HGPROF=fooprof hg root --profile
   fooprof: loaded
   fooprof: start profile

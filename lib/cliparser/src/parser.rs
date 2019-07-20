@@ -3,6 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 use crate::utils::get_prefix_bounds;
+use cpython::{
+    FromPyObject, PyBool, PyInt, PyList, PyObject, PyResult, PyString, Python, PythonObject,
+    ToPyObject,
+};
 use failure::Fail;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
@@ -103,6 +107,50 @@ impl Value {
                 Ok(())
             }
         }
+    }
+}
+
+use cpython_ext::Bytes;
+
+impl ToPyObject for Value {
+    type ObjectType = PyObject;
+
+    fn to_py_object(&self, py: Python) -> Self::ObjectType {
+        match self {
+            Value::OptBool() => py.None().into_object(),
+            Value::Bool(b) => b.to_py_object(py).into_object(),
+            Value::Str(s) => Bytes::from(s.to_string()).to_py_object(py).into_object(),
+            Value::Int(i) => i.to_py_object(py).into_object(),
+            Value::List(vec) => {
+                let collection: Vec<Bytes> = vec
+                    .into_iter()
+                    .map(|s: &String| Bytes::from(s.to_string()))
+                    .collect();
+                collection.to_py_object(py).into_object()
+            }
+        }
+    }
+}
+
+impl<'source> FromPyObject<'source> for Value {
+    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+        if let Ok(b) = obj.cast_as::<PyBool>(py) {
+            return Ok(Value::Bool(b.is_true()));
+        }
+
+        if let Ok(_l) = obj.cast_as::<PyList>(py) {
+            return Ok(Value::List(Vec::new()));
+        }
+
+        if let Ok(s) = obj.cast_as::<PyString>(py) {
+            return Ok(Value::Str(s.to_string(py).unwrap().to_string()));
+        }
+
+        if let Ok(_i) = obj.cast_as::<PyInt>(py) {
+            return Ok(Value::Int(obj.extract::<i64>(py).unwrap()));
+        }
+
+        Ok(Value::OptBool())
     }
 }
 

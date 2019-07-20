@@ -410,7 +410,7 @@ generate ABA rename configuration
 
 annotate after ABA with follow
 
-  $ hg annotate --follow foo
+  $ hg annotate --file foo
   foo: foo
 
 missing file

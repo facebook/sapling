@@ -250,7 +250,7 @@ Show an error if we use --options with an ambiguous abbreviation
 Show all commands + options
   $ hg debugcommands
   add: include, exclude, dry-run
-  annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
+  annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
   clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
@@ -271,7 +271,7 @@ Show all commands + options
   update: clean, check, merge, date, rev, inactive, tool
   addremove: similarity, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, include, exclude
-  backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
+  backout: merge, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
   blackbox: start, end, pattern, timestamp, sid
   bookmarks: force, rev, delete, strip, rename, inactive, template

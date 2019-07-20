@@ -8,6 +8,7 @@ use cliparser::alias::expand_aliases;
 use cliparser::hgflags::global_hg_flag_definitions;
 use cliparser::parser::*;
 use cpython::*;
+use cpython_ext::Bytes;
 use std::collections::{BTreeMap, HashMap};
 
 mod exceptions {
@@ -50,7 +51,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "parsecommand",
         py_fn!(
             py,
-            parse_command(args: Vec<String>, definitions: Vec<PyTuple>)
+            parse_command(args: Vec<String>, definitions: Vec<(String, String, Value)>)
         ),
     )?;
     {
@@ -77,17 +78,15 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn parse_command(py: Python, args: Vec<String>, definitions: Vec<PyTuple>) -> PyResult<PyTuple> {
-    let mut rust_definitions: Vec<FlagDefinition> = Vec::new();
-    for definition in definitions {
-        let short_obj = definition.get_item(py, 0);
-        let long_obj = definition.get_item(py, 1);
-        let val_obj = definition.get_item(py, 2);
-        let short = convert_short(py, short_obj);
-        let long = convert_long(py, long_obj);
-        let val = convert_val(py, val_obj);
-        rust_definitions.push((short, long.into(), "".into(), val));
-    }
+fn parse_command(
+    py: Python,
+    args: Vec<String>,
+    definitions: Vec<(String, String, Value)>,
+) -> PyResult<(Vec<PyBytes>, HashMap<Bytes, Value>)> {
+    let rust_definitions: Vec<FlagDefinition> = definitions
+        .into_iter()
+        .map(|(c, s, v)| (c.chars().next().unwrap_or(' '), s.into(), "".into(), v))
+        .collect();
 
     let parsing_options = OpenOptions::new()
         .flag_alias("repo", "repository")
@@ -108,63 +107,11 @@ fn parse_command(py: Python, args: Vec<String>, definitions: Vec<PyTuple>) -> Py
         .map(|s| PyBytes::new(py, s.as_bytes()))
         .collect();
 
-    let rust_opts = result.opts();
-    let mut opts = HashMap::new();
+    let opts = result.opts().clone();
 
-    for (key, value) in rust_opts {
-        let val: PyObject = match value {
-            Value::OptBool() => py.None().into_object(),
-            Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => PyBytes::new(py, s.as_bytes()).into_object(),
-            Value::Int(i) => i.to_py_object(py).into_object(),
-            Value::List(vec) => {
-                let converted: Vec<PyBytes> = vec
-                    .into_iter()
-                    .map(|s| PyBytes::new(py, s.as_bytes()))
-                    .collect();
-                converted.to_py_object(py).into_object()
-            }
-        };
-        opts.insert(key, val);
-    }
+    let options: HashMap<Bytes, Value> = opts.into_iter().map(|(k, v)| (k.into(), v)).collect();
 
-    Ok(PyTuple::new(
-        py,
-        &[
-            arguments.to_py_object(py).into_object(),
-            opts.to_py_object(py).into_object(),
-        ],
-    ))
-}
-
-fn convert_short(py: Python, short: PyObject) -> char {
-    let short_str = convert_long(py, short);
-    short_str.chars().next().unwrap_or(' ')
-}
-
-fn convert_long(py: Python, long: PyObject) -> String {
-    let py_str = long.cast_into::<PyString>(py).unwrap();
-    return py_str.to_string(py).unwrap().to_string();
-}
-
-fn convert_val(py: Python, val: PyObject) -> Value {
-    if let Ok(b) = val.cast_as::<PyBool>(py) {
-        return Value::Bool(b.is_true());
-    }
-
-    if let Ok(_l) = val.cast_as::<PyList>(py) {
-        return Value::List(Vec::new());
-    }
-
-    if let Ok(s) = val.cast_as::<PyString>(py) {
-        return Value::Str(s.to_string(py).unwrap().to_string());
-    }
-
-    if let Ok(_i) = val.cast_as::<PyInt>(py) {
-        return Value::Int(val.extract::<i64>(py).unwrap());
-    }
-
-    Value::OptBool()
+    Ok((arguments, options))
 }
 
 fn expand_args(
@@ -229,13 +176,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
     let mut opts = HashMap::new();
 
     for (key, value) in rust_opts {
-        let val: PyObject = match value {
-            Value::OptBool() => py.None().into_object(),
-            Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => s.to_py_object(py).into_object(),
-            Value::Int(i) => i.to_py_object(py).into_object(),
-            Value::List(vec) => vec.to_py_object(py).into_object(),
-        };
+        let val: PyObject = value.into_py_object(py).into_object();
         opts.insert(key, val);
     }
     Ok(opts)
@@ -266,13 +207,7 @@ fn parse(py: Python, args: Vec<String>, keep_sep: bool) -> PyResult<PyTuple> {
     let mut opts = HashMap::new();
 
     for (key, value) in rust_opts {
-        let val: PyObject = match value {
-            Value::OptBool() => py.None().into_object(),
-            Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => s.to_py_object(py).into_object(),
-            Value::Int(i) => i.to_py_object(py).into_object(),
-            Value::List(vec) => vec.to_py_object(py).into_object(),
-        };
+        let val: PyObject = value.to_py_object(py).into_object();
         opts.insert(key, val);
     }
 

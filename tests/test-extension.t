@@ -181,9 +181,9 @@ Check "from __future__ import absolute_import" support for external libraries
   > def extsetup():
   >     print('ambigabs.s=%s' % ambigabs.s)
   > EOF
-  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py log -r null -T "foo\n")
   ambigabs.s=libroot/ambig.py
-  $TESTTMP/a
+  foo
 
 #if no-py3k
   $ cat > $TESTTMP/libroot/mod/ambigrel.py <<EOF
@@ -195,9 +195,9 @@ Check "from __future__ import absolute_import" support for external libraries
   > def extsetup():
   >     print('ambigrel.s=%s' % ambigrel.s)
   > EOF
-  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py root)
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py log -r null -T "foo\n")
   ambigrel.s=libroot/mod/ambig.py
-  $TESTTMP/a
+  foo
 #endif
 
 Check absolute/relative import of extension specific modules
@@ -242,13 +242,13 @@ Check absolute/relative import of extension specific modules
   > from extroot.bar import s
   > buf.append('from extroot.bar import s: %s' % s)
   > EOF
-  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.extroot=$TESTTMP/extroot root)
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.extroot=$TESTTMP/extroot log -r null -T 'foo\n')
   (extroot) from extroot.bar import *: this is extroot.bar
   (extroot) import extroot.sub1.baz: this is extroot.sub1.baz
   (extroot) import extroot: this is extroot.__init__
   (extroot) from extroot.bar import s: this is extroot.bar
   (extroot) import extroot.bar in func(): this is extroot.bar
-  $TESTTMP/a
+  foo
 
 #if no-py3k
   $ rm "$TESTTMP"/extroot/foo.*
@@ -274,13 +274,13 @@ Check absolute/relative import of extension specific modules
   > from bar import s
   > buf.append('from bar import s: %s' % s)
   > EOF
-  $ hg --config extensions.extroot=$TESTTMP/extroot root
+  $ hg --config extensions.extroot=$TESTTMP/extroot log -r null -T "foo\n"
   (extroot) from bar import *: this is extroot.bar
   (extroot) import sub1.baz: this is extroot.sub1.baz
   (extroot) import sub1: this is extroot.sub1.__init__
   (extroot) from bar import s: this is extroot.bar
   (extroot) import bar in func(): this is extroot.bar
-  $TESTTMP/a
+  foo
 #endif
 
 #if demandimport

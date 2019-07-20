@@ -1088,13 +1088,29 @@ def _parse(ui, args):
     #    c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
-        args = fancyopts.fancyopts(fullargs, c, cmdoptions, gnu=True)
-        # remove the command name - TODO: verify cmdname is consistent with the above command name
+        flagdefs = [(flagdef[0], flagdef[1], flagdef[2]) for flagdef in c]
+
+        args, cmdoptions = cliparser.parsecommand(fullargs, flagdefs)
         args = args[level:]
-    except getopt.GetoptError as inst:
-        raise error.CommandError(cmd, inst)
+    except (
+        cliparser.OptionNotRecognized,
+        cliparser.OptionRequiresArgument,
+        cliparser.OptionAmbiguous,
+    ) as e:
+        raise error.CommandError(cmd, e.args[0])
+    except cliparser.OptionArgumentInvalid as e:
+        raise error.Abort(e.args[0])
 
     # separate global options back out
+    for (k, v) in cmdoptions.items():
+        if "-" in k:
+            orig = k
+            k = k.replace("-", "_")
+            cmdoptions[k] = v
+            del cmdoptions[orig]
+        else:
+            cmdoptions[k] = v
+
     for o in commands.globalopts:
         n = o[1]
         options[n] = cmdoptions[n]
