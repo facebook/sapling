@@ -27,6 +27,7 @@ members = [
     "procinfo",
     "radixbuf",
     "revisionstore",
+    "shlex",
     "treestate",
     "types",
     "url-ext",
