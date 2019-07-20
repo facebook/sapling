@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import time
 
-from edenscm.mercurial import encoding, error, progress, registrar, revlog
+from edenscm.mercurial import encoding, error, progress, registrar, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid
 
@@ -125,9 +125,12 @@ def fixcorrupt(ui, repo, *args, **opts):
 
     # we may access hidden nodes
     repo = repo.unfiltered()
+    manifestlog = repo.manifestlog
 
     # only interested in these 2 revlogs
-    logs = [("changelog", repo.changelog), ("manifest", repo.manifestlog._revlog)]
+    logs = [("changelog", repo.changelog)]
+    if util.safehasattr(manifestlog, "_revlog"):
+        logs += [("manifest", manifestlog._revlog)]
 
     # ensure they are REVLOGV1 and do not use inline index
     for name, log in logs:
