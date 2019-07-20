@@ -7,9 +7,11 @@ extern crate cpython;
 extern crate python27_sys;
 
 mod bytearrayobject;
+mod bytes;
 mod bytesobject;
 mod pybuf;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;
 pub use crate::pybuf::SimplePyBuf;
+pub use bytes::Bytes;
