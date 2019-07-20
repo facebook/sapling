@@ -24,7 +24,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-py_class!(class config |py| {
+py_class!(pub class config |py| {
     data cfg: RefCell<ConfigSet>;
 
     def __new__(_cls) -> PyResult<config> {
@@ -155,6 +155,12 @@ py_class!(class config |py| {
         config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
 });
+
+impl config {
+    pub fn get_cfg(&self, py: Python) -> ConfigSet {
+        self.cfg(py).clone().into_inner()
+    }
+}
 
 fn parselist(py: Python, value: PyBytes) -> PyResult<Vec<PyBytes>> {
     let value = value.data(py);
