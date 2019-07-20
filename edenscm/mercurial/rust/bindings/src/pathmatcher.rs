@@ -8,6 +8,7 @@
 use std::path::Path;
 
 use cpython::*;
+use cpython_ext::Bytes;
 
 use encoding::local_bytes_to_path;
 use pathmatcher::GitignoreMatcher;
@@ -41,8 +42,8 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).match_relative(&path, is_dir))
     }
 
-    def explain(&self, path: &PyBytes, is_dir: bool) -> PyResult<String> {
+    def explain(&self, path: &PyBytes, is_dir: bool) -> PyResult<Bytes> {
         let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
-        Ok(self.matcher(py).explain(&path, is_dir))
+        Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
