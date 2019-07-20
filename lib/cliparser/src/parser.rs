@@ -317,7 +317,7 @@ impl<'a> Parser<'a> {
             } else if arg.starts_with("--") {
                 if let Err(_msg) = self.parse_double_hyphen_flag(&mut iter, &mut opts) {
                     // TODO implement actual error handling with Fallible
-                    unknown_args.push(arg);
+                    positional_args.push(arg);
                 }
             } else if arg.starts_with("-") {
                 if let Err(_msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
@@ -453,8 +453,12 @@ impl ParseOutput {
         self.opts.get(long_name)
     }
 
-    pub fn opts(&self) -> HashMap<String, Value> {
-        self.opts.clone()
+    pub fn opts(&self) -> &HashMap<String, Value> {
+        &self.opts
+    }
+
+    pub fn args(&self) -> &Vec<String> {
+        &self.args
     }
 }
 

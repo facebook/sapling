@@ -13,6 +13,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "cliparser"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add(py, "earlyparse", py_fn!(py, early_parse(args: Vec<String>)))?;
+    m.add(py, "parseargs", py_fn!(py, parse_args(args: Vec<String>)))?;
     Ok(m)
 }
 
@@ -25,7 +26,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
     let flags = Flag::from_flags(&definitions);
     let parser = Parser::new(&flags).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
-    let rust_opts = result.opts();
+    let rust_opts = result.opts().clone();
     let mut opts = HashMap::new();
 
     for (key, value) in rust_opts {
@@ -38,4 +39,15 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
         opts.insert(key, val);
     }
     Ok(opts)
+}
+
+fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
+    let parsing_options = OpenOptions::new().flag_alias("repo", "repository");
+    let definitions = global_hg_flag_definitions();
+    let flags = Flag::from_flags(&definitions);
+    let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+    let result = parser.parse_args(&args).unwrap();
+    let arguments = result.args().clone();
+
+    Ok(arguments)
 }

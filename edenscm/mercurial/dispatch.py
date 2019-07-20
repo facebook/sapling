@@ -525,6 +525,7 @@ def _runcatch(req):
         realcmd = None
         try:
             cmdargs = fancyopts.fancyopts(req.args[:], commands.globalopts, {})
+            cmdargs = cliparser.parseargs(req.args[:])
             cmd = cmdargs[0]
             aliases, entry = cmdutil.findcmd(cmd, commands.table, False)
             realcmd = aliases[0]
@@ -533,6 +534,7 @@ def _runcatch(req):
             error.AmbiguousCommand,
             IndexError,
             getopt.GetoptError,
+            UnicodeDecodeError,
         ):
             # Don't handle this here. We know the command is
             # invalid, but all we're worried about for now is that
