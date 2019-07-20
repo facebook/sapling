@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 use crate::utils::get_prefix_bounds;
-use failure::{bail, Fallible};
+use failure::Fail;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
@@ -33,8 +33,38 @@ use std::convert::TryInto;
 /// ```
 pub type FlagDefinition<'a> = (char, Cow<'a, str>, Cow<'a, str>, Value);
 
+#[derive(Debug, Fail)]
+pub enum ParseError {
+    #[fail(display = "option {} not recognized", option_name)]
+    OptionNotRecognized { option_name: String },
+    #[fail(display = "option {} requires argument", option_name)]
+    OptionRequiresArgument { option_name: String },
+    #[fail(
+        display = "invalid value '{}' for option {}, expected {}",
+        given, option_name, expected
+    )]
+    OptionArgumentInvalid {
+        option_name: String,
+        given: String,
+        expected: String,
+    },
+    #[fail(display = "option {} not a unique prefix", option_name)]
+    OptionAmbiguous {
+        option_name: String,
+        possibilities: Vec<String>,
+    },
+    #[fail(display = "Command {} is ambiguous", command_name)]
+    AmbiguousCommand {
+        command_name: String,
+        possibilities: Vec<String>,
+    },
+    #[fail(display = "Alias {} resulted in a circular reference", command_name)]
+    CircularReference { command_name: String },
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value {
+    OptBool(),
     Bool(bool),
     Str(String),
     Int(i64),
@@ -42,20 +72,30 @@ pub enum Value {
 }
 
 impl Value {
-    fn accept(&mut self, token_opt: Option<&str>) -> Fallible<()> {
+    fn accept(&mut self, token_opt: Option<&str>) -> Result<(), ParseError> {
         let token = match token_opt {
             Some(s) => s,
-            None => return Ok(()),
+            None => {
+                return Err(ParseError::OptionRequiresArgument {
+                    option_name: "".to_string(),
+                })
+            }
         };
 
         match self {
-            Value::Bool(_) => bail!("Bool doesn't accept a token to parse!"),
+            Value::Bool(_) | Value::OptBool() => unreachable!(),
             Value::Str(ref mut s) => {
                 *s = token.to_string();
                 Ok(())
             }
             Value::Int(ref mut i) => {
-                *i = token.parse::<i64>()?;
+                *i = token
+                    .parse::<i64>()
+                    .map_err(|_| ParseError::OptionArgumentInvalid {
+                        option_name: "".to_string(),
+                        given: token.to_string(),
+                        expected: "int".to_string(),
+                    })?;
                 Ok(())
             }
             Value::List(ref mut vec) => {
@@ -66,46 +106,38 @@ impl Value {
     }
 }
 
-impl TryInto<String> for Value {
-    type Error = failure::Error;
-
-    fn try_into(self) -> Fallible<String> {
-        match self {
-            Value::Str(s) => Ok(s),
-            _ => bail!("Only Value::Str can convert to String!"),
+impl From<Value> for String {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Str(s) => s,
+            _ => panic!("programming error:  {:?} was converted to String", v),
         }
     }
 }
 
-impl TryInto<i64> for Value {
-    type Error = failure::Error;
-
-    fn try_into(self) -> Fallible<i64> {
-        match self {
-            Value::Int(i) => Ok(i),
-            _ => bail!("Only Value::Int can convert to i64!"),
+impl From<Value> for i64 {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Int(i) => i,
+            _ => panic!("programming error:  {:?} was converted to i64", v),
         }
     }
 }
 
-impl TryInto<bool> for Value {
-    type Error = failure::Error;
-
-    fn try_into(self) -> Fallible<bool> {
-        match self {
-            Value::Bool(b) => Ok(b),
-            _ => bail!("Only Value::Bool can convert to bool!"),
+impl From<Value> for bool {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Bool(b) => b,
+            _ => panic!("programming error:  {:?} was converted to bool", v),
         }
     }
 }
 
-impl TryInto<Vec<String>> for Value {
-    type Error = failure::Error;
-
-    fn try_into(self) -> Fallible<Vec<String>> {
-        match self {
-            Value::List(vec) => Ok(vec),
-            _ => bail!("Only Value::List can convert to List!"),
+impl From<Value> for Vec<String> {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::List(vec) => vec,
+            _ => panic!("programming error:  {:?} was converted to Vec<String>", v),
         }
     }
 }
@@ -188,6 +220,7 @@ pub struct OpenOptions {
     ignore_errors: bool,
     early_parse: bool,
     keep_sep: bool,
+    error_on_unknown_opts: bool,
     flag_aliases: HashMap<String, String>,
 }
 
@@ -198,6 +231,7 @@ impl OpenOptions {
             ignore_errors: false,
             early_parse: false,
             keep_sep: false,
+            error_on_unknown_opts: false,
             flag_aliases: HashMap::new(),
         }
     }
@@ -225,6 +259,11 @@ impl OpenOptions {
     pub fn flag_alias(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> Self {
         self.flag_aliases
             .insert(key.as_ref().to_string(), value.as_ref().to_string());
+        self
+    }
+
+    pub fn error_on_unknown_opts(mut self, error_on_unknown_opts: bool) -> Self {
+        self.error_on_unknown_opts = error_on_unknown_opts;
         self
     }
 }
@@ -302,13 +341,13 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
-    pub fn parse_args(&self, args: &'a Vec<String>) -> Fallible<ParseOutput> {
+    pub fn parse_args(&self, args: &'a Vec<String>) -> Result<ParseOutput, ParseError> {
         let arg_vec: Vec<&'a str> = args.iter().map(|string| &string[..]).collect();
 
         self._parse(arg_vec)
     }
 
-    pub fn _parse(&self, args: Vec<&'a str>) -> Fallible<ParseOutput> {
+    pub fn _parse(&self, args: Vec<&'a str>) -> Result<ParseOutput, ParseError> {
         let mut opts = self.opts.clone();
         let mut iter = args.into_iter().peekable();
         let mut positional_args = Vec::new();
@@ -321,15 +360,24 @@ impl<'a> Parser<'a> {
                 }
                 positional_args.extend(iter);
                 break;
+            } else if arg.eq("-") {
+                positional_args.push(arg);
+                iter.next();
             } else if arg.starts_with("--") {
-                if let Err(_msg) = self.parse_double_hyphen_flag(&mut iter, &mut opts) {
-                    // TODO implement actual error handling with Fallible
-                    positional_args.push(arg);
+                if let Err(msg) = self.parse_double_hyphen_flag(&mut iter, &mut opts) {
+                    if self.parsing_options.error_on_unknown_opts {
+                        return Err(msg);
+                    } else {
+                        positional_args.push(arg);
+                    }
                 }
             } else if arg.starts_with("-") {
-                if let Err(_msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
-                    // TODO implement actual error handling with Fallible
-                    positional_args.push(arg);
+                if let Err(msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
+                    if self.parsing_options.error_on_unknown_opts {
+                        return Err(msg);
+                    } else {
+                        positional_args.push(arg);
+                    }
                 }
             } else {
                 positional_args.push(arg);
@@ -347,7 +395,7 @@ impl<'a> Parser<'a> {
         &self,
         iter: &mut dyn Iterator<Item = &'a str>,
         opts: &mut HashMap<String, Value>,
-    ) -> Fallible<()> {
+    ) -> Result<(), ParseError> {
         let arg = iter.next().unwrap();
         debug_assert!(arg.starts_with("--"));
         let arg = &arg[2..];
@@ -368,34 +416,76 @@ impl<'a> Parser<'a> {
 
         if let Some(known_flag) = self.long_map.get(clean_arg) {
             match opts.get_mut(known_flag.long_name) {
+                Some(Value::OptBool()) => {
+                    opts.insert(known_flag.long_name.to_string(), Value::Bool(positive_flag));
+                }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next());
-                    value.accept(next)?;
+                    value
+                        .accept(next)
+                        .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
                 }
                 None => unreachable!(),
             }
             return Ok(());
         };
 
+        let flag_with_no: String = "no-".to_string() + clean_arg;
+
+        if let Some(known_flag) = self.long_map.get(&flag_with_no) {
+            match opts.get_mut(known_flag.long_name) {
+                Some(Value::OptBool()) => {
+                    opts.insert(known_flag.long_name.to_string(), Value::Bool(true));
+                }
+                Some(Value::Bool(ref mut b)) => *b = true,
+                Some(ref mut value) => {
+                    let next = parts.next().or_else(|| iter.next());
+                    value
+                        .accept(next)
+                        .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
+                }
+                None => unreachable!(),
+            }
+            return Ok(());
+        }
+
         if self.parsing_options.ignore_prefix {
-            bail!("exact match argument was not found!")
+            return Err(ParseError::OptionNotRecognized {
+                option_name: "--".to_owned() + clean_arg,
+            });
         }
 
         let range = self.long_map.range(get_prefix_bounds(clean_arg));
         let prefixed_flags: Vec<&Flag> = range.map(|(_, flag)| *flag).collect();
 
         if prefixed_flags.len() > 1 {
-            bail!("ambiguous command prefix!")
+            return Err(ParseError::OptionAmbiguous {
+                option_name: "--".to_owned() + clean_arg,
+                possibilities: prefixed_flags
+                    .iter()
+                    .map(|f| f.long_name.to_string())
+                    .collect(),
+            });
         } else if prefixed_flags.len() == 0 {
-            bail!("could not parse flag!")
+            return Err(ParseError::OptionNotRecognized {
+                option_name: "--".to_owned() + clean_arg,
+            });
         } else {
             let matched_flag = prefixed_flags.get(0).unwrap();
             match opts.get_mut(matched_flag.long_name) {
+                Some(Value::OptBool()) => {
+                    opts.insert(
+                        matched_flag.long_name.to_string(),
+                        Value::Bool(positive_flag),
+                    );
+                }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next());
-                    value.accept(next)?;
+                    value
+                        .accept(next)
+                        .map_err(|e| Parser::inject_option_name("--", matched_flag.long_name, e))?;
                 }
                 None => unreachable!(),
             }
@@ -407,7 +497,7 @@ impl<'a> Parser<'a> {
         &self,
         iter: &mut dyn Iterator<Item = &'a str>,
         opts: &mut HashMap<String, Value>,
-    ) -> Fallible<()> {
+    ) -> Result<(), ParseError> {
         let clean_arg = iter.next().unwrap().trim_start_matches("-");
 
         let mut char_iter = clean_arg.chars().peekable();
@@ -416,29 +506,67 @@ impl<'a> Parser<'a> {
             if let Some(known_flag) = self.short_map.get(&curr_char) {
                 let flag_name = known_flag.long_name.to_string();
                 match opts.get_mut(&flag_name) {
+                    Some(Value::OptBool()) => {
+                        opts.insert(flag_name, Value::Bool(true));
+                    }
                     Some(Value::Bool(ref mut b)) => *b = true,
                     Some(ref mut value) => {
                         if char_iter.peek().is_none() {
                             let next = iter.next();
-                            value.accept(next)?;
+                            value.accept(next).map_err(|e| {
+                                Parser::inject_option_name("-", curr_char.to_string().as_ref(), e)
+                            })?;
                         } else {
                             let consumed = char_iter.collect::<String>();
                             let consumed = Some(&consumed[..]);
-                            value.accept(consumed)?;
+                            value.accept(consumed).map_err(|e| {
+                                Parser::inject_option_name("-", curr_char.to_string().as_ref(), e)
+                            })?;
                             break;
                         }
                     }
                     None => unreachable!(),
                 }
             } else {
-                bail!("could not parse flag!")
+                return Err(ParseError::OptionNotRecognized {
+                    option_name: "-".to_string() + curr_char.to_string().as_ref(),
+                });
             }
             if self.parsing_options.early_parse {
                 break;
             }
         }
-
         Ok(())
+    }
+
+    fn inject_option_name(prefix: &str, name: &str, error: ParseError) -> ParseError {
+        match error {
+            ParseError::OptionNotRecognized { option_name: _ } => ParseError::OptionNotRecognized {
+                option_name: prefix.to_string() + name,
+            },
+            ParseError::OptionRequiresArgument { option_name: _ } => {
+                ParseError::OptionRequiresArgument {
+                    option_name: prefix.to_string() + name,
+                }
+            }
+            ParseError::OptionArgumentInvalid {
+                option_name: _,
+                given,
+                expected,
+            } => ParseError::OptionArgumentInvalid {
+                option_name: prefix.to_string() + name,
+                given,
+                expected,
+            },
+            ParseError::OptionAmbiguous {
+                option_name: _,
+                possibilities,
+            } => ParseError::OptionAmbiguous {
+                option_name: prefix.to_string() + name,
+                possibilities,
+            },
+            err => err,
+        }
     }
 }
 
@@ -460,6 +588,17 @@ impl ParseOutput {
 
     pub fn get(&self, long_name: &str) -> Option<&Value> {
         self.opts.get(long_name)
+    }
+
+    pub fn get_or_default<T>(&self, long_name: &str, default: T) -> T
+    where
+        T: std::convert::From<Value>,
+    {
+        self.opts
+            .get(long_name)
+            .map(|v| v.clone())
+            .and_then(|v| v.try_into().ok())
+            .unwrap_or(default)
     }
 
     pub fn opts(&self) -> &HashMap<String, Value> {
@@ -997,7 +1136,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only Value::List can convert to List")]
+    #[should_panic]
     fn test_type_mismatch_try_into_list_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
@@ -1013,7 +1152,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only Value::Str can convert to String")]
+    #[should_panic]
     fn test_type_mismatch_try_into_str_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
@@ -1029,7 +1168,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only Value::Int can convert to i64")]
+    #[should_panic]
     fn test_type_mismatch_try_into_int_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
@@ -1045,7 +1184,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only Value::Bool can convert to bool")]
+    #[should_panic]
     fn test_type_mismatch_try_into_bool_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);

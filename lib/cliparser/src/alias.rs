@@ -2,21 +2,10 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
+use crate::parser::ParseError;
 use crate::utils::get_prefix_bounds;
-use failure::Fail;
 use shlex::split;
 use std::collections::{BTreeMap, HashMap, HashSet};
-
-#[derive(Debug, Fail)]
-pub enum Error {
-    #[fail(display = "Command {} is ambiguous", command_name)]
-    AmbiguousCommand {
-        command_name: String,
-        possibilities: Vec<String>,
-    },
-    #[fail(display = "Alias {} resulted in a circular reference", command_name)]
-    CircularReference { command_name: String },
-}
 
 /// Expands all aliases accounting for circular references and prefix matching.
 ///
@@ -40,7 +29,7 @@ pub fn expand_aliases(
     command_map: &BTreeMap<String, usize>,
     mut arg: String,
     strict: bool,
-) -> Result<(Vec<String>, Vec<String>), Error> {
+) -> Result<(Vec<String>, Vec<String>), ParseError> {
     let mut following_args = Vec::new();
     let mut replaced = Vec::new(); // keep track of what is replaced in-order
 
@@ -60,7 +49,7 @@ pub fn expand_aliases(
         match visited.get(&arg) {
             Some(amount) => {
                 if amount > &1 {
-                    return Err(Error::CircularReference { command_name: arg });
+                    return Err(ParseError::CircularReference { command_name: arg });
                 }
             }
             _ => (),
@@ -119,7 +108,10 @@ pub fn expand_aliases(
 ///
 /// If there is an exact match the argument is returned as-is.  
 /// If there is no match the argument is returned as-is.
-fn replace_prefix(command_map: &BTreeMap<String, usize>, arg: String) -> Result<String, Error> {
+fn replace_prefix(
+    command_map: &BTreeMap<String, usize>,
+    arg: String,
+) -> Result<String, ParseError> {
     let resolved = match command_map.get(&arg) {
         Some(_) => arg,
         None => {
@@ -157,7 +149,7 @@ fn replace_prefix(command_map: &BTreeMap<String, usize>, arg: String) -> Result<
                     .map(|(_, vec)| vec.join(" or "))
                     .collect();
 
-                return Err(Error::AmbiguousCommand {
+                return Err(ParseError::AmbiguousCommand {
                     command_name: arg,
                     possibilities,
                 });
