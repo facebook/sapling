@@ -31,7 +31,7 @@ TODO: Make this test compatibile with obsstore enabled.
   M x
   M y
   ? a
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
   $ hg add a
   $ hg status
   M x
