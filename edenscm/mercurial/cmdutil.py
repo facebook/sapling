@@ -804,7 +804,7 @@ def findcmd(cmd, table, strict=True):
 
 
 def findsubcmd(args, table, strict=True, partial=False):
-    cmd, args = args[0], args[1:]
+    cmd, args, level = args[0], args[1:], 1
     aliases, entry = findcmd(cmd, table, strict)
     cmd = aliases[0]
     while args and entry[0].subcommands:
@@ -817,10 +817,10 @@ def findsubcmd(args, table, strict=True, partial=False):
                 break
         else:
             aliases, entry = subaliases, subentry
-            cmd, args = "%s %s" % (cmd, aliases[0]), args[1:]
+            cmd, args, level = "%s %s" % (cmd, aliases[0]), args[1:], level + 1
     if not partial and entry[0].subonly:
         raise error.UnknownSubcommand(cmd, None, None)
-    return cmd, args, aliases, entry
+    return cmd, args, aliases, entry, level
 
 
 def findrepo(p):

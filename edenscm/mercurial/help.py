@@ -424,7 +424,7 @@ class _helpdispatch(object):
 
     def helpcmd(self, name, subtopic=None):
         try:
-            cmd, args, aliases, entry = cmdutil.findsubcmd(
+            cmd, args, aliases, entry, _level = cmdutil.findsubcmd(
                 name.split(), self.commands.table, strict=self.unknowncmd, partial=True
             )
         except error.AmbiguousCommand as inst:

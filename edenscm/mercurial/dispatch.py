@@ -715,7 +715,7 @@ def _callcatch(ui, func):
     return -1
 
 
-def aliasargs(fn, givenargs):
+def aliascmdnameandargs(fn, givenargs):
     args = []
     # only care about alias 'args', ignore 'args' set by extensions.wrapfunction
     if not util.safehasattr(fn, "_origfunc"):
@@ -735,7 +735,7 @@ def aliasargs(fn, givenargs):
         cmd = re.sub(br"\$(\d+|\$)", replacer, cmd)
         givenargs = [x for i, x in enumerate(givenargs) if i not in nums]
         args = pycompat.shlexsplit(cmd)
-    return args + givenargs
+    return getattr(fn, "cmdname", None), (args + givenargs)
 
 
 def aliasinterpolate(name, args, cmd):
@@ -831,7 +831,7 @@ class cmdalias(object):
 
         self.cmdname = cmd = args[0]
         try:
-            cmd, args, aliases, entry = cmdutil.findsubcmd(
+            cmd, args, aliases, entry, _level = cmdutil.findsubcmd(
                 args, cmdtable, strict=False, partial=True
             )
             self.cmdname = cmd
@@ -868,7 +868,7 @@ class cmdalias(object):
     @property
     def args(self):
         args = pycompat.maplist(util.expandpath, self.givenargs)
-        return aliasargs(self.fn, args)
+        return aliascmdnameandargs(self.fn, args)[1]
 
     def __getattr__(self, name):
         adefaults = {
@@ -1022,34 +1022,72 @@ def addaliases(ui, cmdtable):
 
 
 def _parse(ui, args):
+    resolved = set()
+    while True:
+        try:
+            return _parseonce(ui, args, resolved)
+        except AliasArguments as ex:
+            args = ex.args
+
+
+class AliasArguments(RuntimeError):
+    def __init__(self, args):
+        self.args = args
+
+
+def _parseonce(ui, args, resolved):
     options = {}
     cmdoptions = {}
 
-    try:
-        args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except getopt.GetoptError as inst:
-        raise error.CommandError(None, inst)
+    # -cm foo: --config m foo
+    fullargs = list(args)
+    args, options = cliparser.parse(args, True)
 
     if args:
         strict = ui.configbool("ui", "strict")
-        cmd, args, aliases, entry = cmdutil.findsubcmd(args, commands.table, strict)
-        args = aliasargs(entry[0], args)
+        # Only need to figure out the command name. Parse result is dropped.
+        cmd, _args, aliases, entry, level = cmdutil.findsubcmd(
+            args, commands.table, strict
+        )
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = (
-                pycompat.maplist(util.expandpath, pycompat.shlexsplit(defaults)) + args
+            fullargs = (
+                pycompat.maplist(util.expandpath, pycompat.shlexsplit(defaults))
+                + fullargs
             )
+
         c = list(entry[1])
+        # fullargs = aliasargs(entry[0], fullargs)
+        aliascmdname, aliasargs = aliascmdnameandargs(entry[0], [])
     else:
         cmd = None
+        aliascmdname = aliasargs = None
+        level = 0
         c = []
 
     # combine global options into local
-    for o in commands.globalopts:
-        c.append((o[0], o[1], options[o[1]], o[3]))
+    c += commands.globalopts
+    # for o in commands.globalopts:
+    #    c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
-        args = fancyopts.fancyopts(args, c, cmdoptions, gnu=True)
+        args = fancyopts.fancyopts(fullargs, c, cmdoptions, gnu=True)
+        if aliascmdname is not None:
+            # Find position of command name (incorrect, but good enough)
+            cmdpos = fullargs.index(args[0])
+            assert cmdpos >= 0
+            # Only resolve "foo = foo ..." once
+            # Circular aliases are handled before _parse.
+            if cmd not in resolved:
+                resolved.add(cmd)
+                raise AliasArguments(
+                    fullargs[0:cmdpos]
+                    + [aliascmdname]
+                    + list(aliasargs)
+                    + fullargs[cmdpos + level :]
+                )
+        # remove the command name - TODO: verify cmdname is consistent with the above command name
+        args = args[level:]
     except getopt.GetoptError as inst:
         raise error.CommandError(cmd, inst)
 

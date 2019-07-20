@@ -189,6 +189,7 @@ pub struct OpenOptions {
     ignore_prefix: bool,
     ignore_errors: bool,
     early_parse: bool,
+    keep_sep: bool,
     flag_aliases: HashMap<String, String>,
 }
 
@@ -198,6 +199,7 @@ impl OpenOptions {
             ignore_prefix: false,
             ignore_errors: false,
             early_parse: false,
+            keep_sep: false,
             flag_aliases: HashMap::new(),
         }
     }
@@ -214,6 +216,11 @@ impl OpenOptions {
 
     pub fn early_parse(mut self, early_parse: bool) -> Self {
         self.early_parse = early_parse;
+        self
+    }
+
+    pub fn keep_sep(mut self, keep_sep: bool) -> Self {
+        self.keep_sep = keep_sep;
         self
     }
 
@@ -307,11 +314,13 @@ impl<'a> Parser<'a> {
         let mut opts = self.opts.clone();
         let mut iter = args.into_iter().peekable();
         let mut positional_args = Vec::new();
-        let mut unknown_args = Vec::new();
+        //let mut unknown_args = Vec::new();
 
         while let Some(&arg) = iter.peek() {
             if arg.eq("--") {
-                let _ = iter.next(); // don't care about -- it's just a separator
+                if !self.parsing_options.keep_sep {
+                    let _ = iter.next(); // don't care about -- it's just a separator
+                }
                 positional_args.extend(iter);
                 break;
             } else if arg.starts_with("--") {
@@ -322,7 +331,7 @@ impl<'a> Parser<'a> {
             } else if arg.starts_with("-") {
                 if let Err(_msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
                     // TODO implement actual error handling with Fallible
-                    unknown_args.push(arg);
+                    positional_args.push(arg);
                 }
             } else {
                 positional_args.push(arg);
@@ -423,6 +432,8 @@ impl<'a> Parser<'a> {
                     }
                     None => unreachable!(),
                 }
+            } else {
+                bail!("could not parse flag!")
             }
             if self.parsing_options.early_parse {
                 break;
@@ -1139,6 +1150,25 @@ mod tests {
         let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
 
         assert_eq!(configs.len(), 0);
+    }
+
+    #[test]
+    fn test_keep_sep() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parsing_options = OpenOptions::new()
+            .early_parse(true)
+            .ignore_prefix(true)
+            .keep_sep(true);
+        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+
+        let args = create_args(vec!["--", "-1", "4"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let parsed_args = result.args().clone();
+
+        assert_eq!(parsed_args, vec!["--", "-1", "4"]);
     }
 
 }

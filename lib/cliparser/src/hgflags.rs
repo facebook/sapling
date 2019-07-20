@@ -29,7 +29,7 @@ pub fn global_hg_flag_definitions() -> Vec<FlagDefinition> {
             'v',
             "verbose",
             "enable additional output",
-            Value::Bool(true),
+            Value::Bool(false),
         ),
         (
             ' ',
@@ -79,6 +79,12 @@ pub fn global_hg_flag_definitions() -> Vec<FlagDefinition> {
             ' ',
             "profile",
             "print command execution profile",
+            Value::Bool(false),
+        ),
+        (
+            ' ',
+            "version",
+            "output version information and exit",
             Value::Bool(false),
         ),
         ('h', "help", "display help and exit", Value::Bool(false)),

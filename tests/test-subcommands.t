@@ -64,6 +64,13 @@
   
   (some details hidden, use --verbose to show complete help)
   [255]
+
+
+
+
+
+
+
   $ hg test one
   test subcommand one called
   $ hg test two
@@ -86,6 +93,13 @@
   
   (some details hidden, use --verbose to show complete help)
   [255]
+
+
+
+
+
+
+
 
   $ hg tes o
   test subcommand one called
@@ -112,6 +126,15 @@
   
   (some details hidden, use --verbose to show complete help)
   [255]
+
+
+
+
+
+
+
+
+
   $ hg xt one
   test subcommand one called
   $ hg xt too
@@ -119,9 +142,26 @@
   (did you mean two?)
   [255]
   $ hg xt1
-  test subcommand one called
+  hg: unknown command 'test one'
+  (did you mean test?)
+  [255]
   $ hg xt0
-  abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
+  hg test: subcommand required
+  hg test SUBCOMMAND
+  
+  test command
+  
+  First Category:
+  
+   one           first test subcommand
+  
+  Other Subcommands:
+  
+   two           second test subcommand
+  
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
+  
+  (some details hidden, use --verbose to show complete help)
   [255]
 
   $ hg othertest
@@ -139,11 +179,13 @@
   $ hg othertest alpha beta
   other test command alpha/beta called
   $ hg yt
-  hg yt: invalid arguments
-  (use 'hg yt -h' to get help)
+  hg othertest: invalid arguments
+  (use 'hg othertest -h' to get help)
   [255]
   $ hg yta foo
-  other test command alpha called with 'foo'
+  hg: unknown command 'othertest alpha'
+  (did you mean othertest?)
+  [255]
   $ hg ytf
   other test command called with 'foo'
 
@@ -163,6 +205,13 @@
   (use 'hg help test SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
+
+
+
+
+
+
+
   $ hg help test --quiet
   hg test SUBCOMMAND
   
@@ -175,16 +224,24 @@
   Other Subcommands:
   
    two           second test subcommand
+
+
+
+
+
   $ hg help test one
   hg test one
   
   first test subcommand
   
   (some details hidden, use --verbose to show complete help)
+
+
   $ hg help test one --quiet
   hg test one
   
   first test subcommand
+
   $ hg help test two --verbose
   hg test two
   
@@ -216,6 +273,9 @@
       --hidden              consider hidden changesets
       --pager TYPE          when to paginate (boolean, always, auto, or never)
                             (default: auto)
+
+
+
   $ hg help test nonexistent
   abort: 'test' has no such subcommand: nonexistent
   (run 'hg help test' to see available subcommands)
@@ -258,6 +318,12 @@
   
   (use 'hg help othertest SUBCOMMAND' to show complete subcommand help)
 
+
+
+
+
+
+
   $ hg help xt
   hg xt SUBCOMMAND
   
@@ -278,12 +344,23 @@
   (use 'hg help xt SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
+
+
+
+
+
+
+
+
+
   $ hg help xt one
   hg xt one
   
   first test subcommand
   
   (some details hidden, use --verbose to show complete help)
+
+
   $ hg help xt1
   hg xt1
   
@@ -294,9 +371,15 @@
   defined by: testcommandsext
   
   (some details hidden, use --verbose to show complete help)
+
+
+
+
   $ hg othertest alpha beta --help
   hg othertest alpha beta
   
   other test subcommand alpha subcommand beta
   
   (some details hidden, use --verbose to show complete help)
+
+

@@ -26,7 +26,6 @@ alias expansion is logged
   $ hg confuse
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command] confuse
-  [legacy][command_alias] alias 'confuse' expands to 'log --limit 3'
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
@@ -36,8 +35,6 @@ recursive aliases work correctly
   $ hg so-confusing
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command] so-confusing
-  [legacy][command_alias] alias 'so-confusing' expands to 'confuse --style compact'
-  [legacy][command_alias] alias 'confuse' expands to 'log --limit 3'
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
