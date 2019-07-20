@@ -211,7 +211,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ find $CACHEDIR -type f | sort
   $ echo b > b
   $ hg commit -qAm b
-  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob) (?)
   $ hg bookmark temporary
   $ sleep 1
   $ hg debugwaitonprefetch >/dev/null 2>%1
@@ -266,7 +266,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg rebase -s temporary -d foo
   rebasing 3:58147a5b5242 "b" (temporary tip)
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/58147a5b5242-c3678817-rebase.hg (glob)
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob)
   $ sleep 1
   $ hg debugwaitonprefetch >/dev/null 2>%1
   $ sleep 1
