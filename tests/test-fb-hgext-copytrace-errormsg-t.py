@@ -32,13 +32,13 @@ sh % "hg ci -m dest"
 sh % "hg rebase -s 1 -d ." == r"""
     rebasing 1:812796267395 "2"
     other [source] changed 1 which local [dest] deleted
-    hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --tracecopies flag, but this will significantly slow down the operation, so you will need to be patient.
+    hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
     Source control team is working on fixing this problem.
     use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
     unresolved conflicts (see hg resolve, then hg rebase --continue)
     [1]"""
 sh % "hg rebase --abort" == "rebase aborted"
-sh % "hg rebase -s 1 -d . --tracecopies" == r"""
+sh % "hg rebase -s 1 -d . --config=experimental.copytrace=on" == r"""
     rebasing 1:812796267395 "2"
     merging 2 and 1 to 2
     saved backup bundle to $TESTTMP/repo/.hg/strip-backup/812796267395-81e11405-rebase.hg (glob)"""

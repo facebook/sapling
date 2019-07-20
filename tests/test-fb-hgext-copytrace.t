@@ -79,7 +79,7 @@ Make sure filename heuristics do not when they are not related
   $ hg rebase -s . -d 1
   rebasing 2:d526312210b9 "mode a" (tip)
   other [source] changed a which local [dest] deleted
-  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --tracecopies flag, but this will significantly slow down the operation, so you will need to be patient.
+  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
   Source control team is working on fixing this problem.
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -301,7 +301,7 @@ Too many move candidates
   $ hg rebase -s 2 -d 1
   rebasing 2:ef716627c70b "mod a" (tip)
   other [source] changed a which local [dest] deleted
-  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --tracecopies flag, but this will significantly slow down the operation, so you will need to be patient.
+  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
   Source control team is working on fixing this problem.
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -645,7 +645,7 @@ changed in same move
   o  changeset 81973cd24b58db2fdf18ce3d64fb2cc3284e9ab3
       desc initial, phase: draft
 
-  $ hg rebase -s . -d 1 --tracecopies
+  $ hg rebase -s . -d 1 --config=experimental.copytrace=on
   rebasing 2:6207d2d318e7 "mod a" (tip)
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
@@ -682,7 +682,7 @@ while adding file to original directory in other merge parent. File moved on reb
   o  changeset a235dcce55dcf42034c4e374cb200662d0bb4a13
       desc initial, phase: draft
 
-  $ hg rebase -s . -d 1 --tracecopies
+  $ hg rebase -s . -d 1 --config=experimental.copytrace=on
   rebasing 2:e8919e7df8d0 "mv dir1 dir2" (tip)
   $ ls dir2
   a

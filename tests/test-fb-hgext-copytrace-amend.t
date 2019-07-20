@@ -233,7 +233,7 @@ Test amend copytrace can be disabled
   $ hg rebase --restack
   rebasing 2:ad25e018afa9 "mod a"
   other [source] changed a which local [dest] deleted
-  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --tracecopies flag, but this will significantly slow down the operation, so you will need to be patient.
+  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
   Source control team is working on fixing this problem.
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
