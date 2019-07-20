@@ -19,6 +19,8 @@ import sys
 import time
 import traceback
 
+from edenscmnative import bindings
+
 from . import (
     blackbox,
     cmdutil,
@@ -43,6 +45,9 @@ from . import (
     util,
 )
 from .i18n import _
+
+
+cliparser = bindings.cliparser
 
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
@@ -1086,7 +1091,10 @@ def _earlyparseopts(ui, args):
         early=True,
         optaliases={"repository": ["repo"]},
     )
-    return options
+    try:
+        return cliparser.earlyparse(args)
+    except UnicodeDecodeError:
+        raise error.Abort(_("cannot decode command line arguments"))
 
 
 def _earlysplitopts(args):

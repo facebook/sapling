@@ -1583,19 +1583,18 @@ test in problematic encoding
   > '''.encode('cp932')
   > EOF
   $ sh < test.sh
-  0
+  abort: cannot decode command line arguments
   ====
-  1
+  abort: cannot decode command line arguments
   ====
-  2
+  abort: cannot decode command line arguments
   ====
-  3
+  abort: cannot decode command line arguments
   ====
-  0
-  2
+  abort: cannot decode command line arguments
   ====
-  1
-  3
+  abort: cannot decode command line arguments
+  [255]
 
 test error message of bad revset
   $ hg log -r 'foo\\'

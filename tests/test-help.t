@@ -1587,21 +1587,15 @@ such str.lower().
   > upper = "\x8bL\x98^"
   > print("hg --encoding cp932 help -e ambiguous.%s" % upper)
   > EOF
-  \x8bL\x98^ (esc)
-  ----
-  
-  Upper name should show only this message
-  
+  abort: cannot decode command line arguments
+  [255]
 
   $ $PYTHON <<EOF | sh
   > lower = "\x8bl\x98^"
   > print("hg --encoding cp932 help -e ambiguous.%s" % lower)
   > EOF
-  \x8bl\x98^ (esc)
-  ----
-  
-  Lower name should show only this message
-  
+  abort: cannot decode command line arguments
+  [255]
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

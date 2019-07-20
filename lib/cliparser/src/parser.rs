@@ -185,6 +185,45 @@ impl<'a> Flag<'a> {
     }
 }
 
+pub struct OpenOptions {
+    ignore_prefix: bool,
+    ignore_errors: bool,
+    early_parse: bool,
+    flag_aliases: HashMap<String, String>,
+}
+
+impl OpenOptions {
+    pub fn new() -> Self {
+        OpenOptions {
+            ignore_prefix: false,
+            ignore_errors: false,
+            early_parse: false,
+            flag_aliases: HashMap::new(),
+        }
+    }
+
+    pub fn ignore_prefix(mut self, ignore_prefix: bool) -> Self {
+        self.ignore_prefix = ignore_prefix;
+        self
+    }
+
+    pub fn ignore_errors(mut self, ignore_errors: bool) -> Self {
+        self.ignore_errors = ignore_errors;
+        self
+    }
+
+    pub fn early_parse(mut self, early_parse: bool) -> Self {
+        self.early_parse = early_parse;
+        self
+    }
+
+    pub fn flag_alias(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> Self {
+        self.flag_aliases
+            .insert(key.as_ref().to_string(), value.as_ref().to_string());
+        self
+    }
+}
+
 /// [`Parser`] keeps flag definitions and uses them to parse string arguments.
 pub struct Parser<'a> {
     /// map holding &character -> &flag where the character == flag.short_name
@@ -192,6 +231,7 @@ pub struct Parser<'a> {
     /// map holding &str -> &flag where the str == flag.long_name
     long_map: BTreeMap<String, &'a Flag<'a>>,
     opts: HashMap<String, Value>,
+    parsing_options: OpenOptions,
 }
 
 impl<'a> Parser<'a> {
@@ -229,7 +269,13 @@ impl<'a> Parser<'a> {
             short_map,
             long_map,
             opts,
+            parsing_options: OpenOptions::new(),
         }
+    }
+
+    pub fn with_parsing_options(mut self, parsing_options: OpenOptions) -> Self {
+        self.parsing_options = parsing_options;
+        self
     }
 
     /// entry-point for parsing command line arguments from std::env
@@ -306,18 +352,28 @@ impl<'a> Parser<'a> {
 
         let mut parts = arg.splitn(2, "=");
         let clean_arg = parts.next().unwrap();
-        let next = parts.next().or_else(|| iter.next());
+        let clean_arg = self
+            .parsing_options
+            .flag_aliases
+            .get(clean_arg)
+            .map(|name| name.as_ref())
+            .unwrap_or(clean_arg);
 
         if let Some(known_flag) = self.long_map.get(clean_arg) {
             match opts.get_mut(known_flag.long_name) {
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
+                    let next = parts.next().or_else(|| iter.next());
                     value.accept(next)?;
                 }
                 None => unreachable!(),
             }
             return Ok(());
         };
+
+        if self.parsing_options.ignore_prefix {
+            bail!("exact match argument was not found!")
+        }
 
         let range = self.long_map.range(get_prefix_bounds(clean_arg));
         let prefixed_flags: Vec<&Flag> = range.map(|(_, flag)| *flag).collect();
@@ -331,6 +387,7 @@ impl<'a> Parser<'a> {
             match opts.get_mut(matched_flag.long_name) {
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
+                    let next = parts.next().or_else(|| iter.next());
                     value.accept(next)?;
                 }
                 None => unreachable!(),
@@ -367,6 +424,9 @@ impl<'a> Parser<'a> {
                     None => unreachable!(),
                 }
             }
+            if self.parsing_options.early_parse {
+                break;
+            }
         }
 
         Ok(())
@@ -391,6 +451,10 @@ impl ParseOutput {
 
     pub fn get(&self, long_name: &str) -> Option<&Value> {
         self.opts.get(long_name)
+    }
+
+    pub fn opts(&self) -> HashMap<String, Value> {
+        self.opts.clone()
     }
 }
 
@@ -1005,6 +1069,72 @@ mod tests {
         let expected = vec!["", "section.key=val", "=", "section.key=val"];
 
         assert_eq!(configs, expected);
+    }
+
+    #[test]
+    fn test_no_prefix_match() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parsing_options = OpenOptions::new().ignore_prefix(true);
+        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+
+        let args = create_args(vec!["--conf", "section.key=val"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+
+        assert_eq!(configs.len(), 0);
+    }
+
+    #[test]
+    fn test_no_errors_match() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parsing_options = OpenOptions::new().ignore_prefix(true).ignore_errors(true);
+        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+
+        let args = create_args(vec!["--shallow", "--config", "section.key=val"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+
+        assert_eq!(configs, vec!["section.key=val"]);
+    }
+
+    #[test]
+    fn test_aliased_option() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parsing_options = OpenOptions::new()
+            .flag_alias("conf", "config")
+            .ignore_prefix(true);
+        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+
+        let args = create_args(vec!["--shallow", "--conf", "section.key=val"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+
+        assert_eq!(configs, vec!["section.key=val"]);
+    }
+
+    #[test]
+    fn test_early_parse() {
+        let definitions = definitions();
+        let flags = Flag::from_flags(&definitions);
+        let parsing_options = OpenOptions::new().early_parse(true).ignore_prefix(true);
+        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+
+        let args = create_args(vec!["-qc."]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
+
+        assert_eq!(configs.len(), 0);
     }
 
 }

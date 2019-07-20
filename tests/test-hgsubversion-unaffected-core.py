@@ -16,7 +16,7 @@ def _dispatch(ui, cmd):
             "config": [],
             "configfile": [],
             "cwd": "",
-            "debugger": None,
+            "debugger": False,
             "profile": False,
             "repository": "",
         }

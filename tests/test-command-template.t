@@ -4505,16 +4505,18 @@ json filter takes input as utf-8b:
   $ HGENCODING=ascii hg log -T "{'`cat utf-8`'|json}\n" -l1
   "\u00e9"
   $ HGENCODING=ascii hg log -T "{'`cat latin1`'|json}\n" -l1
-  "\udce9"
+  abort: cannot decode command line arguments
+  [255]
 
 utf8 filter:
 
   $ HGENCODING=ascii hg log -T "round-trip: {bookmarks % '{bookmark|utf8|hex}'}\n" -r0
   round-trip: c3a9
   $ HGENCODING=latin1 hg log -T "decoded: {'`cat latin1`'|utf8|hex}\n" -l1
-  decoded: c3a9
+  abort: cannot decode command line arguments
+  [255]
   $ HGENCODING=ascii hg log -T "replaced: {'`cat latin1`'|utf8|hex}\n" -l1
-  abort: decoding near * (glob)
+  abort: cannot decode command line arguments
   [255]
   $ hg log -T "invalid type: {rev|utf8}\n" -r0
   abort: template filter 'utf8' is not compatible with keyword 'rev'

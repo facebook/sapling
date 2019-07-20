@@ -40,18 +40,14 @@ these should work
   $ echo "utf-8" > a
   $ HGENCODING=utf-8 hg ci -l utf-8
   $ HGENCODING=latin-1 hg tag `cat latin-1-tag`
+  abort: cannot decode command line arguments
+  [255]
 
 hg log (ascii)
 
   $ hg --encoding ascii log
-  changeset:   4:94db611b4196
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag ? for changeset ca661e7520de
-  
   changeset:   3:ca661e7520de
-  tag:         ?
+  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: ?
@@ -75,14 +71,8 @@ hg log (ascii)
 hg log (latin-1)
 
   $ hg --encoding latin-1 log
-  changeset:   4:94db611b4196
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag \xe9 for changeset ca661e7520de (esc)
-  
   changeset:   3:ca661e7520de
-  tag:         \xe9 (esc)
+  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xe9 (esc)
@@ -106,14 +96,8 @@ hg log (latin-1)
 hg log (utf-8)
 
   $ hg --encoding utf-8 log
-  changeset:   4:94db611b4196
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag \xc3\xa9 for changeset ca661e7520de (esc)
-  
   changeset:   3:ca661e7520de
-  tag:         \xc3\xa9 (esc)
+  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)
@@ -137,35 +121,26 @@ hg log (utf-8)
 hg tags (ascii)
 
   $ HGENCODING=ascii hg tags
-  tip                                4:94db611b4196
-  ?                                  3:ca661e7520de
+  tip                                3:ca661e7520de
 
 hg tags (latin-1)
 
   $ HGENCODING=latin-1 hg tags
-  tip                                4:94db611b4196
-  \xe9                                  3:ca661e7520de (esc)
+  tip                                3:ca661e7520de
 
 hg tags (utf-8)
 
   $ HGENCODING=utf-8 hg tags
-  tip                                4:94db611b4196
-  \xc3\xa9                                  3:ca661e7520de (esc)
+  tip                                3:ca661e7520de
 
 hg tags (JSON)
 
   $ hg tags -Tjson
   [
    {
-    "node": "94db611b4196db9c0da8fd0ccb6b0431b91b09f7",
-    "rev": 4,
-    "tag": "tip",
-    "type": ""
-   },
-   {
     "node": "ca661e7520dec3f5438a63590c350bebadb04989",
     "rev": 3,
-    "tag": "\xc3\xa9", (esc)
+    "tag": "tip",
     "type": ""
    }
   ]
@@ -173,14 +148,8 @@ hg tags (JSON)
 hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log
-  changeset:   4:94db611b4196
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag \xc3\xa9 for changeset ca661e7520de (esc)
-  
   changeset:   3:ca661e7520de
-  tag:         \xc3\xa9 (esc)
+  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)
@@ -213,7 +182,8 @@ hg log (dolphin)
 Test roundtrip encoding of lookup tables when not using UTF-8 (issue2763)
 
   $ HGENCODING=latin-1 hg up `cat latin-1-tag`
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  abort: cannot decode command line arguments
+  [255]
 
   $ cd ..
 
