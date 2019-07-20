@@ -125,7 +125,13 @@ ambiguous
 
   $ hg ambiguous
   hg: command 's' is ambiguous:
-      self serve shortlog show showconfig status summary
+  	self
+  	serve
+  	shortlog
+  	show
+  	showconfig
+  	status
+  	summary
   [255]
   $ hg help ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
@@ -166,9 +172,58 @@ disabled
 no definition
 
   $ hg nodef
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
-  [255]
+  Mercurial Distributed SCM
+  
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Get the latest commits from the server:
+  
+   pull          pull changes from the specified source
+  
+  View commits:
+  
+   show          show commit in detail
+   diff          show differences between commits
+  
+  Check out a commit:
+  
+   checkout      check out a specific commit
+  
+  Work with your checkout:
+  
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
+  
+  Commit changes and modify commits:
+  
+   commit        save all pending changes or specified files in a new commit
+  
+  Rearrange commits:
+  
+   graft         copy commits from a different location
+  
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
+  Other commands:
+  
+   config        show config settings
+   grep          search for a pattern in tracked files in the working directory
+  
+  Additional help topics:
+  
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
   $ hg help nodef
   no definition for alias 'nodefinition'
 
@@ -176,8 +231,7 @@ no definition
 no closing quotation
 
   $ hg noclosing
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: error in definition for alias 'noclosingquotation': No closing quotation
   [255]
   $ hg help noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
@@ -192,43 +246,38 @@ no closing quotation
 invalid options
 
   $ hg no--cwd
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: option --cwd may not be abbreviated!
   [255]
   $ hg help no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the
   command line
   $ hg no-R
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no-R
   error in definition for alias 'no-R': -R may only be given on the command line
   $ hg no--repo
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no--repo
   error in definition for alias 'no--repo': --repo may only be given on the
   command line
   $ hg no--repository
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given
   on the command line
   $ hg no--config
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  abort: option --config may not be abbreviated!
   [255]
   $ hg no --config alias.no='--repo elsewhere --cwd elsewhere status'
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  hg: unknown command '--repo'
+  (did you mean no--repo?)
   [255]
   $ hg no --config alias.no='--repo elsewhere'
-  hg: command '' is ambiguous:
-      add addremove ambiguous annotate archive backout bisect blackbox blank bookmarks branch bundle cat ci cleanstatus clone commit config copy count diff disabled dln documented echo1 echo13 echo2 echoall echotokens escaped1 escaped2 escaped3 escaped4 exit1 export files forget fs githelp graft grep heads help hint histgrep idalias idaliaslong idaliasshell identify import incoming init locate log lognull manifest mcount merge mycommit myinit mylog no no--config no--cwd no--repo no--repository no-R noclosingquotation nodefinition nousage optionalrepo outgoing parents parentsshell1 parentsshell2 paths phase positional pull push put record recover recursive remove rename resolve revert rollback root rt self serve shortlog show status summary tag tags tip unbundle uncommit unknown update verify version
+  hg: unknown command '--repo'
+  (did you mean no--repo?)
   [255]
 
 optional repository
@@ -277,18 +326,6 @@ with opts and whitespace
   $ hg shortlog
   0 e63c23eaa88a | 1970-01-01 00:00 +0000
 
-positional arguments
-
-  $ hg positional
-  abort: too few arguments for command alias
-  [255]
-  $ hg positional a
-  abort: too few arguments for command alias
-  [255]
-  $ hg positional 'node|short' rev
-  abort: too few arguments for command alias
-  [255]
-
 interaction with defaults
 
   $ hg mylog
@@ -317,28 +354,6 @@ properly recursive
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
   
-
-
-
-path expanding
-
-  $ FOO=`pwd` hg put
-  $ cat 0.diff
-  # HG changeset patch
-  # User test
-  # Date 0 0
-  #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID e63c23eaa88ae77967edcf4ea194d31167c478b0
-  # Parent  0000000000000000000000000000000000000000
-  foo
-  
-  diff -r 000000000000 -r e63c23eaa88a foo
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +foo
-
-
 
 simple shell aliases
 
@@ -397,7 +412,7 @@ simple shell aliases
   2
 
   $ tglog
-  @  1: 042423737847 'bar'
+  @  1: c0c7cf58edc5 'bar'
   |
   o  0: e63c23eaa88a 'foo'
   
@@ -408,23 +423,32 @@ shadowing
 
   $ hg i
   hg: command 'i' is ambiguous:
-      idalias idaliaslong idaliasshell identify import incoming init
+  	id or identify
+  	idalias
+  	idaliaslong
+  	idaliasshell
+  	import
+  	in or incoming
+  	init
   [255]
   $ hg id
-  042423737847 tip
+  c0c7cf58edc5 tip
   $ hg ida
   hg: command 'ida' is ambiguous:
-      idalias idaliaslong idaliasshell
+  	idalias
+  	idaliaslong
+  	idaliasshell
   [255]
   $ hg idalias
-  042423737847 tip
+  c0c7cf58edc5 tip
   $ hg idaliasl
-  042423737847 tip
+  c0c7cf58edc5 tip
   $ hg idaliass
   test
   $ hg parentsshell
   hg: command 'parentsshell' is ambiguous:
-      parentsshell1 parentsshell2
+  	parentsshell1
+  	parentsshell2
   [255]
   $ hg parentsshell1
   one
@@ -527,7 +551,8 @@ command provided extension, should be aborted.
 #endif
   $ hg reba
   hg: command 'reba' is ambiguous:
-      rebase rebate
+  	rebase
+  	rebate
   [255]
   $ hg rebat
   this is rebate

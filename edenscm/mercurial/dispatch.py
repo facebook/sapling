@@ -317,7 +317,7 @@ def runchgserver():
     ui = uimod.ui()
     repo = None
     args = sys.argv[1:]
-    cmd, func, args, globalopts, cmdopts = _parse(ui, args)
+    cmd, func, args, globalopts, cmdopts, _foundaliases = _parse(ui, args)
     if not (cmd == "serve" and cmdopts["cmdserver"] == "chgunix2"):
         raise error.ProgrammingError("runchgserver called without chg command")
     from . import chgserver, server
@@ -654,8 +654,8 @@ def _callcatch(ui, func):
         return scmutil.callcatch(ui, func)
     except error.AmbiguousCommand as inst:
         ui.warn(
-            _("hg: command '%s' is ambiguous:\n    %s\n")
-            % (inst.args[0], " ".join(inst.args[1]))
+            _("hg: command '%s' is ambiguous:\n\t%s\n")
+            % (inst.args[0], "\n\t".join(inst.args[1]))
         )
     except error.CommandError as inst:
         if inst.args[0]:
@@ -1022,46 +1022,63 @@ def addaliases(ui, cmdtable):
 
 
 def _parse(ui, args):
-    resolved = set()
-    while True:
-        try:
-            return _parseonce(ui, args, resolved)
-        except AliasArguments as ex:
-            args = ex.args
-
-
-class AliasArguments(RuntimeError):
-    def __init__(self, args):
-        self.args = args
-
-
-def _parseonce(ui, args, resolved):
     options = {}
     cmdoptions = {}
 
     # -cm foo: --config m foo
     fullargs = list(args)
-    args, options = cliparser.parse(args, True)
+    commandnames = [command for command in commands.table]
 
+    args, options = cliparser.parse(args, True)
+    strict = ui.configbool("ui", "strict")
     if args:
-        strict = ui.configbool("ui", "strict")
+        try:
+            replacement, aliases = cliparser.expandargs(
+                ui._rcfg, commandnames, args[0], strict
+            )
+        except cliparser.AmbiguousCommand as e:
+            e.args[2].sort()
+            possibilities = e.args[2]
+            raise error.AmbiguousCommand(e.args[1], possibilities)
+        except cliparser.CircularReference as e:
+            alias = e.args[1]
+            raise error.Abort(_("circular alias: %s") % alias)
+
+    else:
+        replacement = []
+
+    if len(replacement) > 0:
+
+        replace = 0
+        for idx, arg in enumerate(fullargs):
+            if arg == args[0]:
+                replace = idx
+                break
+
+        fullargs = fullargs[:replace] + replacement + fullargs[replace + 1 :]
+        replacement = replacement + args[1:]
+
         # Only need to figure out the command name. Parse result is dropped.
-        cmd, _args, aliases, entry, level = cmdutil.findsubcmd(
-            args, commands.table, strict
+        cmd, _args, a, entry, level = cmdutil.findsubcmd(
+            replacement, commands.table, strict
         )
-        defaults = ui.config("defaults", cmd)
-        if defaults:
-            fullargs = (
-                pycompat.maplist(util.expandpath, pycompat.shlexsplit(defaults))
-                + fullargs
+        fulldefaults = [ui.config("defaults", cmd)]
+
+        for alias in aliases:
+            fulldefaults.append(ui.config("defaults", alias))
+
+        fulldefaults = [default for default in fulldefaults if default is not None]
+
+        if len(fulldefaults) > 0:
+            fulldefaults = sum(
+                (val for val in pycompat.maplist(pycompat.shlexsplit, fulldefaults)), []
             )
 
+            fullargs = pycompat.maplist(util.expandpath, fulldefaults) + fullargs
         c = list(entry[1])
-        # fullargs = aliasargs(entry[0], fullargs)
-        aliascmdname, aliasargs = aliascmdnameandargs(entry[0], [])
     else:
+        aliases = []
         cmd = None
-        aliascmdname = aliasargs = None
         level = 0
         c = []
 
@@ -1072,20 +1089,6 @@ def _parseonce(ui, args, resolved):
 
     try:
         args = fancyopts.fancyopts(fullargs, c, cmdoptions, gnu=True)
-        if aliascmdname is not None:
-            # Find position of command name (incorrect, but good enough)
-            cmdpos = fullargs.index(args[0])
-            assert cmdpos >= 0
-            # Only resolve "foo = foo ..." once
-            # Circular aliases are handled before _parse.
-            if cmd not in resolved:
-                resolved.add(cmd)
-                raise AliasArguments(
-                    fullargs[0:cmdpos]
-                    + [aliascmdname]
-                    + list(aliasargs)
-                    + fullargs[cmdpos + level :]
-                )
         # remove the command name - TODO: verify cmdname is consistent with the above command name
         args = args[level:]
     except getopt.GetoptError as inst:
@@ -1097,7 +1100,7 @@ def _parseonce(ui, args, resolved):
         options[n] = cmdoptions[n]
         del cmdoptions[n]
 
-    return (cmd, cmd and entry[0] or None, args, options, cmdoptions)
+    return (cmd, cmd and entry[0] or None, args, options, cmdoptions, aliases)
 
 
 def _parseconfig(ui, config):
@@ -1314,7 +1317,12 @@ def _dispatch(req):
             encoding.fallbackencoding = fallback
 
         fullargs = args
-        cmd, func, args, options, cmdoptions = _parse(lui, args)
+
+        cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
+
+        if cmd == "help" and len(foundaliases) > 0:
+            cmd = foundaliases[0]
+            options["help"] = True
 
         if options["encoding"]:
             encoding.encoding = options["encoding"]
@@ -1399,6 +1407,10 @@ def _dispatch(req):
         if options["version"]:
             return commands.version_(ui)
         if options["help"]:
+            if len(foundaliases) > 0:
+                aliascmd = foundaliases[0]
+                return commands.help_(ui, aliascmd, command=cmd is not None)
+
             return commands.help_(ui, cmd, command=cmd is not None)
         elif not cmd:
             return commands.help_(ui)

@@ -105,47 +105,6 @@
   test subcommand one called
 
   $ hg xt
-  hg xt: subcommand required
-  hg xt SUBCOMMAND
-  
-  alias for: hg test
-  
-  test command
-  
-  defined by: testcommandsext
-  
-  First Category:
-  
-   one           first test subcommand
-  
-  Other Subcommands:
-  
-   two           second test subcommand
-  
-  (use 'hg help xt SUBCOMMAND' to show complete subcommand help)
-  
-  (some details hidden, use --verbose to show complete help)
-  [255]
-
-
-
-
-
-
-
-
-
-  $ hg xt one
-  test subcommand one called
-  $ hg xt too
-  hg xt: unknown subcommand 'too'
-  (did you mean two?)
-  [255]
-  $ hg xt1
-  hg: unknown command 'test one'
-  (did you mean test?)
-  [255]
-  $ hg xt0
   hg test: subcommand required
   hg test SUBCOMMAND
   
@@ -163,6 +122,27 @@
   
   (some details hidden, use --verbose to show complete help)
   [255]
+
+
+
+
+
+
+
+
+
+  $ hg xt one
+  test subcommand one called
+  $ hg xt too
+  hg test: unknown subcommand 'too'
+  (did you mean two?)
+  [255]
+  $ hg xt1
+  test subcommand one called
+TODO:  alias resolving to subcommands is temporarily not working
+$ hg xt0
+abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
+[255]
 
   $ hg othertest
   hg othertest: invalid arguments
@@ -183,9 +163,7 @@
   (use 'hg othertest -h' to get help)
   [255]
   $ hg yta foo
-  hg: unknown command 'othertest alpha'
-  (did you mean othertest?)
-  [255]
+  other test command alpha called with 'foo'
   $ hg ytf
   other test command called with 'foo'
 

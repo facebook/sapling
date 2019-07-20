@@ -240,7 +240,11 @@ Show the options for the "serve" command
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
   hg: command 's' is ambiguous:
-      serve show showconfig status summary
+  	serve
+  	show
+  	showconfig
+  	status
+  	summary
   [255]
 
 Show all commands + options

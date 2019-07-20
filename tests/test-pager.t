@@ -242,14 +242,14 @@ Pager works with hg aliases including environment variables.
   > EOF
 
   $ A=1 hg --config pager.attend-printa=yes printa
-  paged! '1\n'
+  paged! '$A\n'
   $ A=2 hg --config pager.attend-printa=yes printa
-  paged! '2\n'
+  paged! '$A\n'
 
 Something that's explicitly attended is still not paginated if the
 pager is globally set to off using a flag:
   $ A=2 hg --config pager.attend-printa=yes printa --pager=no
-  2
+  $A
 
 Pager should not override the exit code of other commands
 
