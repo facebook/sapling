@@ -885,7 +885,7 @@ Shelve --patch and shelve --stat should work with a single valid shelfname
   +patch a
 No-argument --patch should also work
   $ hg shelve --patch
-  default-01      (*s ago)    shelve changes to: create conflict (glob)
+  default-01 * (* ago)    shelve changes to: create conflict (glob)
   
   diff --git a/shelf-patch-b b/shelf-patch-b
   new file mode 100644
