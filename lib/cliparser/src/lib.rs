@@ -20,6 +20,7 @@
 //! as other languages ( python ) or files ( configuration ).
 //!
 
+pub mod alias;
 pub mod hgflags;
 pub mod parser;
 pub mod utils;

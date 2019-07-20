@@ -24,19 +24,35 @@ command, exit codes, and duration
 alias expansion is logged
   $ rm -rf ./.hg/blackbox*
   $ hg confuse
-  $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  $ hg blackbox
+  [legacy][env_vars]
   [legacy][command] confuse
+  [legacy][dirstate_info]
+  [legacy][jobid]
+  [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
-  [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command_info]
+  [legacy][env_vars]
+  [legacy][command] blackbox
+  [legacy][dirstate_info]
+  [legacy][jobid]
   [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
 
 recursive aliases work correctly
   $ rm -rf ./.hg/blackbox*
   $ hg so-confusing
-  $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  $ hg blackbox
+  [legacy][env_vars]
   [legacy][command] so-confusing
+  [legacy][dirstate_info]
+  [legacy][jobid]
+  [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
-  [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command_info]
+  [legacy][env_vars]
+  [legacy][command] blackbox
+  [legacy][dirstate_info]
+  [legacy][jobid]
   [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
 
 incoming change tracking
