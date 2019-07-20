@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 use crate::utils::get_prefix_bounds;
 use failure::{bail, Fallible};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 
@@ -26,11 +27,11 @@ use std::convert::TryInto;
 /// use cliparser::parser::{Value, FlagDefinition};
 ///
 /// let def: FlagDefinition = ('q',
-///     "quiet",
-///     "silences the output",
+///     "quiet".into(),
+///     "silences the output".into(),
 ///     Value::Bool(false));
 /// ```
-pub type FlagDefinition = (char, &'static str, &'static str, Value);
+pub type FlagDefinition<'a> = (char, Cow<'a, str>, Cow<'a, str>, Value);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value {
@@ -126,20 +127,20 @@ impl<'a> Flag<'a> {
     ///
     /// ```
     /// use cliparser::parser::*;
-    /// let def = ('q', "quiet", "silences the output", Value::Bool(false));
+    /// let def: FlagDefinition = ('q', "quiet".into(), "silences the output".into(), Value::Bool(false));
     /// let flag = Flag::new(&def);
     /// ```
     ///
     /// If no short_name should be used, provide an empty char ' '
     /// ```
     /// use cliparser::parser::*;
-    /// let def = (' ', "quiet", "silences the output", Value::Bool(false));
+    /// let def: FlagDefinition = (' ', "quiet".into(), "silences the output".into(), Value::Bool(false));
     /// ```
     ///
     /// If no description should be used, provide an empty string
     /// ```
     /// use cliparser::parser::*;
-    /// let def = ('q', "quiet", "", Value::Bool(false));
+    /// let def: FlagDefinition = ('q', "quiet".into(), "".into(), Value::Bool(false));
     /// ```
     ///
     pub fn new(definition: &'a FlagDefinition) -> Self {
@@ -148,19 +149,16 @@ impl<'a> Flag<'a> {
             _ => Some(definition.0),
         };
 
-        let long_name = definition.1;
+        let long_name = definition.1.as_ref();
 
-        let description_opt = match definition.2 {
-            description if description.is_empty() => None,
-            _ => Some(definition.2),
-        };
+        let description = Some(definition.2.as_ref());
 
         let value_type = &definition.3;
 
         Flag {
             short_name: short_name_opt,
             long_name,
-            description: description_opt,
+            description,
             value_type,
         }
     }
@@ -171,10 +169,10 @@ impl<'a> Flag<'a> {
     /// use cliparser::parser::*;
     ///
     /// let defs: Vec<FlagDefinition> = vec![
-    /// ('q', "quiet", "silences the output", Value::Bool(false)),
-    /// ('c', "config", "supply config file", Value::Str("".to_string())),
-    /// ('h', "help", "get some help", Value::Bool(false)),
-    /// ('v', "verbose", "level of verbosity", Value::Bool(false)),
+    /// ('q', "quiet".into(), "silences the output".into(), Value::Bool(false)),
+    /// ('c', "config".into(), "supply config file".into(), Value::Str("".to_string())),
+    /// ('h', "help".into(), "get some help".into(), Value::Bool(false)),
+    /// ('v', "verbose".into(), "level of verbosity".into(), Value::Bool(false)),
     /// ];
     ///
     /// let flags = Flag::from_flags(&defs);
@@ -246,10 +244,10 @@ impl<'a> Parser<'a> {
     /// ```
     /// use cliparser::parser::*;
     ///
-    /// let definitions = vec![
-    /// ('c', "config", "supply a config", Value::Bool(false)),
-    /// ('h', "help", "get some help", Value::Bool(false)),
-    /// ('q', "quiet", "silence the output", Value::Bool(false))
+    /// let definitions: Vec<FlagDefinition> = vec![
+    /// ('c', "config".into(), "supply a config".into(), Value::Bool(false)),
+    /// ('h', "help".into(), "get some help".into(), Value::Bool(false)),
+    /// ('q', "quiet".into(), "silence the output".into(), Value::Bool(false))
     /// ];
     ///
     /// let flags = Flag::from_flags(&definitions);
@@ -293,8 +291,8 @@ impl<'a> Parser<'a> {
     ///
     /// let env_args = env::args().collect();
     ///
-    /// let definitions = vec![
-    /// ('q', "quiet", "silence the output", Value::Bool(false))
+    /// let definitions: Vec<FlagDefinition> = vec![
+    /// ('q', "quiet".into(), "silence the output".into(), Value::Bool(false))
     /// ];
     ///
     /// let flags = Flag::from_flags(&definitions);
@@ -477,13 +475,38 @@ impl ParseOutput {
 mod tests {
     use super::*;
 
-    fn definitions() -> Vec<FlagDefinition> {
+    fn definitions() -> Vec<FlagDefinition<'static>> {
         vec![
-            ('q', "quiet", "silences the output", Value::Bool(false)),
-            ('c', "config", "supply config file", Value::List(Vec::new())),
-            ('h', "help", "get some help", Value::Bool(false)),
-            ('v', "verbose", "level of verbosity", Value::Bool(false)),
-            ('r', "rev", "revision hash", Value::Str("".to_string())),
+            (
+                'q',
+                "quiet".into(),
+                "silences the output".into(),
+                Value::Bool(false),
+            ),
+            (
+                'c',
+                "config".into(),
+                "supply config file".into(),
+                Value::List(Vec::new()),
+            ),
+            (
+                'h',
+                "help".into(),
+                "get some help".into(),
+                Value::Bool(false),
+            ),
+            (
+                'v',
+                "verbose".into(),
+                "level of verbosity".into(),
+                Value::Bool(false),
+            ),
+            (
+                'r',
+                "rev".into(),
+                "revision hash".into(),
+                Value::Str("".to_string()),
+            ),
         ]
     }
 
@@ -493,7 +516,12 @@ mod tests {
 
     #[test]
     fn test_create_1_flag() {
-        let def = ('q', "quiet", "silences the output", Value::Bool(false));
+        let def = (
+            'q',
+            "quiet".into(),
+            "silences the output".into(),
+            Value::Bool(false),
+        );
         let flag = Flag::new(&def);
         assert_eq!('q', flag.short_name.unwrap());
         assert_eq!("quiet", flag.long_name);
@@ -503,26 +531,49 @@ mod tests {
 
     #[test]
     fn test_create_1_flag_with_empty_short_name() {
-        let def = (' ', "quiet", "silences the output", Value::Bool(false));
+        let def = (
+            ' ',
+            "quiet".into(),
+            "silences the output".into(),
+            Value::Bool(false),
+        );
         let flag = Flag::new(&def);
         assert!(flag.short_name.is_none());
     }
 
     #[test]
-    fn test_create_1_flag_with_empty_description() {
-        let def = ('q', "quiet", "", Value::Bool(false));
-        let flag = Flag::new(&def);
-        assert!(flag.description.is_none());
-    }
-
-    #[test]
     fn test_create_many_from_flags_vector() {
         let definitions: Vec<FlagDefinition> = vec![
-            ('q', "quiet", "silences the output", Value::Bool(false)),
-            ('c', "config", "supply config file", Value::List(Vec::new())),
-            ('h', "help", "get some help", Value::Bool(false)),
-            ('v', "verbose", "level of verbosity", Value::Bool(false)),
-            ('r', "rev", "revision hash", Value::Str("".to_string())),
+            (
+                'q',
+                "quiet".into(),
+                "silences the output".into(),
+                Value::Bool(false),
+            ),
+            (
+                'c',
+                "config".into(),
+                "supply config file".into(),
+                Value::List(Vec::new()),
+            ),
+            (
+                'h',
+                "help".into(),
+                "get some help".into(),
+                Value::Bool(false),
+            ),
+            (
+                'v',
+                "verbose".into(),
+                "level of verbosity".into(),
+                Value::Bool(false),
+            ),
+            (
+                'r',
+                "rev".into(),
+                "revision hash".into(),
+                Value::Str("".to_string()),
+            ),
         ];
 
         let flags = Flag::from_flags(&definitions);
@@ -560,7 +611,12 @@ mod tests {
 
     #[test]
     fn test_parse_single_no_value_flag() {
-        let definition = ('q', "quiet", "silences the output", Value::Bool(false));
+        let definition = (
+            'q',
+            "quiet".into(),
+            "silences the output".into(),
+            Value::Bool(false),
+        );
         let flag = Flag::new(&definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
@@ -579,8 +635,8 @@ mod tests {
     fn test_parse_single_value_flag() {
         let definition = (
             'c',
-            "config",
-            "supply config file",
+            "config".into(),
+            "supply config file".into(),
             Value::Str("".to_string()),
         );
         let flag = Flag::new(&definition);
@@ -615,7 +671,12 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_no_value() {
-        let definition = ('q', "quiet", "silences the output", Value::Bool(false));
+        let definition = (
+            'q',
+            "quiet".into(),
+            "silences the output".into(),
+            Value::Bool(false),
+        );
         let flag = Flag::new(&definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
@@ -634,8 +695,8 @@ mod tests {
     fn test_parse_long_single_with_value() {
         let definition = (
             'c',
-            "config",
-            "supply config file",
+            "config".into(),
+            "supply config file".into(),
             Value::Str("".to_string()),
         );
         let flag = Flag::new(&definition);
@@ -657,7 +718,12 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_int_value() {
-        let definition = ('n', "number", "supply a number", Value::Int(0));
+        let definition = (
+            'n',
+            "number".into(),
+            "supply a number".into(),
+            Value::Int(0),
+        );
         let flag = Flag::new(&definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
@@ -678,8 +744,8 @@ mod tests {
     fn test_parse_long_single_list_value() {
         let definition = (
             'n',
-            "number",
-            "supply a list of numbers",
+            "number".into(),
+            "supply a list of numbers".into(),
             Value::List(Vec::new()),
         );
         let flag = Flag::new(&definition);
@@ -706,8 +772,8 @@ mod tests {
     fn test_parse_long_and_short_single_list_value() {
         let definition = (
             'n',
-            "number",
-            "supply a list of numbers",
+            "number".into(),
+            "supply a list of numbers".into(),
             Value::List(Vec::new()),
         );
         let flag = Flag::new(&definition);
@@ -784,8 +850,8 @@ mod tests {
     fn test_parse_equals_in_value() {
         let definition = (
             'c',
-            "config",
-            "supply a config file",
+            "config".into(),
+            "supply a config file".into(),
             Value::Str("".to_string()),
         );
 
@@ -806,8 +872,8 @@ mod tests {
     fn test_parse_list_equals_in_values() {
         let definition = (
             'c',
-            "config",
-            "supply multiple config files",
+            "config".into(),
+            "supply multiple config files".into(),
             Value::List(Vec::new()),
         );
 
@@ -840,8 +906,8 @@ mod tests {
     fn test_parse_list_short_name_with_equals_in_value() {
         let definition = (
             'c',
-            "config",
-            "supply multiple config files",
+            "config".into(),
+            "supply multiple config files".into(),
             Value::Str("".to_string()),
         );
 
@@ -908,8 +974,8 @@ mod tests {
     fn test_template_value_long_str_value() {
         let definition = (
             'T',
-            "template",
-            "specify a template",
+            "template".into(),
+            "specify a template".into(),
             Value::Str("".to_string()),
         );
 
@@ -1042,8 +1108,18 @@ mod tests {
     #[test]
     fn test_prefix_match_ambiguous() {
         let definitions = vec![
-            ('c', "config", "config overrides", Value::List(Vec::new())),
-            (' ', "configfile", "config files", Value::List(Vec::new())),
+            (
+                'c',
+                "config".into(),
+                "config overrides".into(),
+                Value::List(Vec::new()),
+            ),
+            (
+                ' ',
+                "configfile".into(),
+                "config files".into(),
+                Value::List(Vec::new()),
+            ),
         ];
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
