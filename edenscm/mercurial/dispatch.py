@@ -1082,7 +1082,7 @@ def _earlyparseopts(ui, args):
         args,
         commands.globalopts,
         options,
-        gnu=not ui.plain("strictflags"),
+        gnu=True,
         early=True,
         optaliases={"repository": ["repo"]},
     )
