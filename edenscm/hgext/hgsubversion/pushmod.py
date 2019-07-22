@@ -208,7 +208,7 @@ def commit(ui, repo, rev_ctx, original_ctx, meta, base_revision, svn):
     try:
         message = rev_ctx.description()
         if ui.configbool("hgsubversion", "rewritesvncommitwithhghash"):
-            message += "\nREVERSE_SYNC_ONLY_HG_NODE: {}".format(original_ctx.hex())
+            message += "\nREVERSE_SYNC_ONLY_HG_NODE: {}\n".format(original_ctx.hex())
         return svn.commit(
             new_target_files,
             message,
