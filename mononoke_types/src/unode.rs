@@ -113,6 +113,14 @@ impl FileUnode {
         &self.parents
     }
 
+    pub fn content_id(&self) -> &ContentId {
+        &self.content_id
+    }
+
+    pub fn file_type(&self) -> &FileType {
+        &self.file_type
+    }
+
     pub fn linknode(&self) -> &ChangesetId {
         &self.linknode
     }

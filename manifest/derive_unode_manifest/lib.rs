@@ -14,7 +14,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, ManifestUnodeId, MononokeId,
+    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPathHash, ManifestUnodeId,
+    MononokeId,
 };
 use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
@@ -22,8 +23,12 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
+    #[fail(display = "cannot fetch FileUnode: {}", _0)]
+    FailFetchFileUnode(FileUnodeId),
     #[fail(display = "cannot fetch ManifestUnode: {}", _0)]
     FailFetchManifestUnode(ManifestUnodeId),
+    #[fail(display = "Invalid bonsai changeset: {}", _0)]
+    InvalidBonsai(String),
 }
 
 // Id type is added so that we can implement Loadable trait for ManifestUnodeId
@@ -46,6 +51,25 @@ impl Loadable for Id<ManifestUnodeId> {
             .and_then(move |bytes| match bytes {
                 None => Err(ErrorKind::FailFetchManifestUnode(unode_id).into()),
                 Some(bytes) => ManifestUnode::from_bytes(bytes.as_bytes().as_ref()).map(Id),
+            })
+            .boxify()
+    }
+}
+
+impl Loadable for Id<FileUnodeId> {
+    type Value = Id<FileUnode>;
+
+    fn load(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+    ) -> BoxFuture<Self::Value, Error> {
+        let unode_id = self.0;
+        blobstore
+            .get(ctx, unode_id.blobstore_key())
+            .and_then(move |bytes| match bytes {
+                None => Err(ErrorKind::FailFetchFileUnode(unode_id).into()),
+                Some(bytes) => FileUnode::from_bytes(bytes.as_bytes().as_ref()).map(Id),
             })
             .boxify()
     }
@@ -150,6 +174,27 @@ fn create_unode_file(
     blobstore: RepoBlobstore,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
 ) -> BoxFuture<FileUnodeId, Error> {
+    fn save_unode(
+        ctx: CoreContext,
+        blobstore: RepoBlobstore,
+        parents: Vec<FileUnodeId>,
+        content_id: ContentId,
+        file_type: FileType,
+        path_hash: MPathHash,
+        linknode: ChangesetId,
+    ) -> BoxFuture<FileUnodeId, Error> {
+        let file_unode = FileUnode::new(parents, content_id, file_type, path_hash, linknode);
+        let file_unode_id = file_unode.get_unode_id();
+        blobstore
+            .put(
+                ctx,
+                file_unode_id.blobstore_key(),
+                file_unode.into_blob().into(),
+            )
+            .map(move |()| file_unode_id)
+            .boxify()
+    }
+
     let LeafInfo {
         leaf,
         path,
@@ -157,26 +202,88 @@ fn create_unode_file(
     } = leaf_info;
 
     if let Some((content_id, file_type)) = leaf {
-        let file_unode = FileUnode::new(
+        save_unode(
+            ctx.clone(),
+            blobstore,
             parents,
             content_id,
             file_type,
             path.get_path_hash(),
             linknode,
-        );
-        let file_unode_id = file_unode.get_unode_id();
-        return blobstore
-            .put(
-                ctx,
-                file_unode_id.blobstore_key(),
-                file_unode.into_blob().into(),
+        )
+    } else {
+        // We can end up in this codepath if there are at least 2 parent commits have a unode with
+        // this file path, and these unodes are different, but current bonsai changeset have no
+        // changes for this file path.
+        //
+        //  Example:
+        //         o <- merge commit, it doesn't modify any of the files
+        //        / \
+        //       o ---> changed file 'A' content to 'B'
+        //       |  |
+        //       |   o -> changed file 'A content to 'B' as well
+        //       \  /
+        //        o  <- created file 'A' with content 'A'
+        //
+        // In that case we need to check file content and file type.
+        // if they are the same then we need to create a new file unode.
+        //
+        // If content or file type are different then we need to return an error
+
+        // Note that there's a difference from how we handle this case in mercurial manifests.
+        // In mercurial manifests we compare file content with copy information, while in unodes
+        // copy information is ignored. It might mean that some bonsai changesets would be
+        // considered valid for unode manifests, but invalid for mercurial
+        if parents.len() < 2 {
+            return future::err(
+                ErrorKind::InvalidBonsai(
+                    "no change is provided, but file unode has only one parent".to_string(),
+                )
+                .into(),
             )
-            .map(move |()| file_unode_id)
             .boxify();
+        }
+        future::join_all(parents.clone().into_iter().map({
+            cloned!(blobstore, ctx);
+            move |id| Id(id).load(ctx.clone(), blobstore.clone())
+        }))
+        .and_then(
+            move |parent_unodes| match return_if_unique_filenode(&parent_unodes) {
+                Some((content_id, file_type)) => save_unode(
+                    ctx,
+                    blobstore,
+                    parents,
+                    content_id.clone(),
+                    *file_type,
+                    path.get_path_hash(),
+                    linknode,
+                ),
+                _ => future::err(
+                    ErrorKind::InvalidBonsai(
+                        "no change is provided, but content is different".to_string(),
+                    )
+                    .into(),
+                )
+                .boxify(),
+            },
+        )
+        .boxify()
     }
 
-    // TODO(stash): implement merges
-    unimplemented!()
+    // TODO(stash): filter out unode parents if one of them is ancestor of another
+}
+
+// If all elements in `unodes` are the same than this element is returned, otherwise None is returned
+fn return_if_unique_filenode(unodes: &Vec<Id<FileUnode>>) -> Option<(&ContentId, &FileType)> {
+    let mut iter = unodes
+        .iter()
+        .map(|elem| (elem.0.content_id(), elem.0.file_type()));
+    let first_elem = iter.next()?;
+    if iter.all(|next_elem| next_elem == first_elem) {
+        Some(first_elem)
+    } else {
+        None
+    }
 }
 
 fn convert_unode(unode_entry: &UnodeEntry) -> Entry<Id<ManifestUnodeId>, FileUnodeId> {
@@ -191,7 +298,7 @@ mod tests {
     use super::*;
     use blobrepo::{save_bonsai_changesets, BlobManifest};
     use bytes::Bytes;
-    use failure_ext::err_msg;
+    use failure_ext::Result;
     use fixtures::linear;
     use futures::stream::{self, Stream};
     use futures_ext::bounded_traversal::bounded_traversal_stream;
@@ -305,23 +412,8 @@ mod tests {
             runtime: &mut Runtime,
             file_changes: BTreeMap<MPath, Option<FileChange>>,
         ) {
-            let bcs = BonsaiChangesetMut {
-                parents: vec![],
-                author: "author".to_string(),
-                author_date: DateTime::now(),
-                committer: None,
-                committer_date: None,
-                message: "message".to_string(),
-                extra: btreemap! {},
-                file_changes,
-            }
-            .freeze()
-            .unwrap();
-
+            let bcs = create_bonsai_changeset(repo.clone(), runtime, file_changes);
             let bcs_id = bcs.get_changeset_id();
-            save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone())
-                .wait()
-                .unwrap();
 
             let f = derive_unode_manifest(
                 ctx.clone(),
@@ -345,7 +437,7 @@ mod tests {
         let file_changes = store_files(
             ctx.clone(),
             &mut runtime,
-            btreemap! {"file1" => Some("content"), "file2" => Some("content")},
+            btreemap! {"file1" => Some(("content", FileType::Regular)), "file2" => Some(("content", FileType::Regular))},
             repo.clone(),
         );
         check_unode_uniqeness(ctx.clone(), repo.clone(), &mut runtime, file_changes);
@@ -353,10 +445,52 @@ mod tests {
         let file_changes = store_files(
             ctx.clone(),
             &mut runtime,
-            btreemap! {"dir1/file" => Some("content"), "dir2/file" => Some("content")},
+            btreemap! {"dir1/file" => Some(("content", FileType::Regular)), "dir2/file" => Some(("content", FileType::Regular))},
             repo.clone(),
         );
         check_unode_uniqeness(ctx.clone(), repo.clone(), &mut runtime, file_changes);
+    }
+
+    #[test]
+    fn test_same_content_no_change() {
+        let repo = linear::getrepo();
+        let mut runtime = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock();
+
+        assert!(build_diamond_graph(
+            ctx.clone(),
+            &mut runtime,
+            repo.clone(),
+            btreemap! {"A" => Some(("A", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {},
+        )
+        .is_ok());
+
+        // Content is different - fail!
+        assert!(build_diamond_graph(
+            ctx.clone(),
+            &mut runtime,
+            repo.clone(),
+            btreemap! {"A" => Some(("A", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {"A" => Some(("C", FileType::Regular))},
+            btreemap! {},
+        )
+        .is_err());
+
+        // Type is different - fail!
+        assert!(build_diamond_graph(
+            ctx,
+            &mut runtime,
+            repo,
+            btreemap! {"A" => Some(("A", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Executable))},
+            btreemap! {},
+        )
+        .is_err());
     }
 
     fn iterate_all_unodes(
@@ -397,10 +531,135 @@ mod tests {
         runtime.block_on(walk_future).unwrap()
     }
 
+    fn build_diamond_graph(
+        ctx: CoreContext,
+        mut runtime: &mut Runtime,
+        repo: BlobRepo,
+        changes_first: BTreeMap<&str, Option<(&str, FileType)>>,
+        changes_merge_p1: BTreeMap<&str, Option<(&str, FileType)>>,
+        changes_merge_p2: BTreeMap<&str, Option<(&str, FileType)>>,
+        changes_merge: BTreeMap<&str, Option<(&str, FileType)>>,
+    ) -> Result<ManifestUnodeId> {
+        let file_changes = store_files(ctx.clone(), &mut runtime, changes_first, repo.clone());
+
+        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+        let first_bcs_id = bcs.get_changeset_id();
+
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            first_bcs_id,
+            vec![].into_iter(),
+            get_changes(&bcs),
+        );
+        let first_unode_id = runtime.block_on(f).unwrap();
+
+        let (merge_p1, merge_p1_unode_id) = {
+            let file_changes =
+                store_files(ctx.clone(), &mut runtime, changes_merge_p1, repo.clone());
+            let merge_p1 = create_bonsai_changeset_with_params(
+                repo.clone(),
+                &mut runtime,
+                file_changes.clone(),
+                "merge_p1",
+                vec![first_bcs_id.clone()],
+            );
+            let merge_p1_id = merge_p1.get_changeset_id();
+            let f = derive_unode_manifest(
+                ctx.clone(),
+                repo.clone(),
+                merge_p1_id,
+                vec![first_unode_id.clone()].into_iter(),
+                get_changes(&merge_p1),
+            );
+            let merge_p1_unode_id = runtime.block_on(f).unwrap();
+            (merge_p1, merge_p1_unode_id)
+        };
+
+        let (merge_p2, merge_p2_unode_id) = {
+            let file_changes =
+                store_files(ctx.clone(), &mut runtime, changes_merge_p2, repo.clone());
+
+            let merge_p2 = create_bonsai_changeset_with_params(
+                repo.clone(),
+                &mut runtime,
+                file_changes,
+                "merge_p2",
+                vec![first_bcs_id.clone()],
+            );
+            let merge_p2_id = merge_p2.get_changeset_id();
+            let f = derive_unode_manifest(
+                ctx.clone(),
+                repo.clone(),
+                merge_p2_id,
+                vec![first_unode_id.clone()].into_iter(),
+                get_changes(&merge_p2),
+            );
+            let merge_p2_unode_id = runtime.block_on(f).unwrap();
+            (merge_p2, merge_p2_unode_id)
+        };
+
+        let file_changes = store_files(ctx.clone(), &mut runtime, changes_merge, repo.clone());
+        let merge = create_bonsai_changeset_with_params(
+            repo.clone(),
+            &mut runtime,
+            file_changes,
+            "merge",
+            vec![merge_p1.get_changeset_id(), merge_p2.get_changeset_id()],
+        );
+        let merge_id = merge.get_changeset_id();
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            merge_id,
+            vec![merge_p1_unode_id, merge_p2_unode_id].into_iter(),
+            get_changes(&merge),
+        );
+        runtime.block_on(f)
+    }
+
+    fn create_bonsai_changeset(
+        repo: BlobRepo,
+        runtime: &mut Runtime,
+        file_changes: BTreeMap<MPath, Option<FileChange>>,
+    ) -> BonsaiChangeset {
+        create_bonsai_changeset_with_params(repo, runtime, file_changes, "message", vec![])
+    }
+
+    fn create_bonsai_changeset_with_params(
+        repo: BlobRepo,
+        runtime: &mut Runtime,
+        file_changes: BTreeMap<MPath, Option<FileChange>>,
+        message: &str,
+        parents: Vec<ChangesetId>,
+    ) -> BonsaiChangeset {
+        let bcs = BonsaiChangesetMut {
+            parents,
+            author: "author".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: message.to_string(),
+            extra: btreemap! {},
+            file_changes,
+        }
+        .freeze()
+        .unwrap();
+
+        runtime
+            .block_on(save_bonsai_changesets(
+                vec![bcs.clone()],
+                CoreContext::test_mock(),
+                repo.clone(),
+            ))
+            .unwrap();
+        bcs
+    }
+
     fn store_files(
         ctx: CoreContext,
         runtime: &mut Runtime,
-        files: BTreeMap<&str, Option<&str>>,
+        files: BTreeMap<&str, Option<(&str, FileType)>>,
         repo: BlobRepo,
     ) -> BTreeMap<MPath, Option<FileChange>> {
         let mut res = btreemap! {};
@@ -408,15 +667,14 @@ mod tests {
         for (path, content) in files {
             let path = MPath::new(path).unwrap();
             match content {
-                Some(content) => {
+                Some((content, file_type)) => {
                     let size = content.len();
                     let content = FileContents::Bytes(Bytes::from(content));
                     let content_id = runtime
                         .block_on(repo.unittest_store(ctx.clone(), content))
                         .unwrap();
 
-                    let file_change =
-                        FileChange::new(content_id, FileType::Regular, size as u64, None);
+                    let file_change = FileChange::new(content_id, file_type, size as u64, None);
                     res.insert(path, Some(file_change));
                 }
                 None => {
@@ -425,25 +683,6 @@ mod tests {
             }
         }
         res
-    }
-
-    impl Loadable for Id<FileUnodeId> {
-        type Value = Id<FileUnode>;
-
-        fn load(
-            &self,
-            ctx: CoreContext,
-            blobstore: impl Blobstore + Clone,
-        ) -> BoxFuture<Self::Value, Error> {
-            let unode_id = self.0;
-            blobstore
-                .get(ctx, unode_id.blobstore_key())
-                .and_then(move |bytes| match bytes {
-                    None => Err(err_msg("failed to fetch filenode")),
-                    Some(bytes) => FileUnode::from_bytes(bytes.as_bytes().as_ref()).map(Id),
-                })
-                .boxify()
-        }
     }
 
     fn get_changes(
