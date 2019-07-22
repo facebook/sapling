@@ -15,6 +15,7 @@ pub mod dag;
 pub mod edenapi;
 mod init;
 pub mod lz4;
+pub mod manifest;
 pub mod mutationstore;
 pub mod nodemap;
 pub mod pathmatcher;
@@ -34,6 +35,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "dag", dag::init_module(py, &name)?)?;
     m.add(py, "edenapi", edenapi::init_module(py, &name)?)?;
     m.add(py, "lz4", lz4::init_module(py, &name)?)?;
+    m.add(py, "manifest", manifest::init_module(py, &name)?)?;
     m.add(py, "mutationstore", mutationstore::init_module(py, &name)?)?;
     m.add(py, "nodemap", nodemap::init_module(py, &name)?)?;
     m.add(py, "pathmatcher", pathmatcher::init_module(py, &name)?)?;

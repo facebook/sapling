@@ -25,6 +25,8 @@ mod windows;
 use std::ffi::{CString, OsStr};
 use std::path::Path;
 
+use types::RepoPath;
+
 #[cfg(unix)]
 pub use crate::unix::{
     local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes, path_to_local_bytes,
@@ -57,6 +59,26 @@ pub fn path_to_local_cstring(path: &Path) -> CString {
 pub fn osstring_to_local_cstring(os: &OsStr) -> CString {
     let bytes: Vec<u8> = osstring_to_local_bytes(&os).unwrap().to_vec();
     unsafe { CString::from_vec_unchecked(bytes) }
+}
+
+/// Converts local bytes `&[u8]` to `&RepoPath`.
+/// This function panics on failure.
+/// We assume that stored paths are UTF8 encoded and normalized. `RepoPath`
+/// represents normalized paths encoded as UTF8. This function is useful
+/// because the application has different representations for paths in
+/// different contexts. This function marks the crossing of a boundary.
+pub fn local_bytes_to_repo_path(bytes: &[u8]) -> &RepoPath {
+    RepoPath::from_utf8(bytes).unwrap()
+}
+
+/// Converts local bytes `&RepoPath` to `&[u8]`.
+/// This function cannot fail.
+/// We assume that stored paths are UTF8 encoded and normalized. `RepoPath`
+/// represents normalized paths encoded as UTF8. This function is useful
+/// because the application has different representations for paths in
+/// different contexts. This function marks the crossing of a boundary.
+pub fn repo_path_to_local_bytes(path: &RepoPath) -> &[u8] {
+    path.as_byte_slice()
 }
 
 #[cfg(test)]

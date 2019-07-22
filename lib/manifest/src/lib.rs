@@ -112,5 +112,5 @@ impl quickcheck::Arbitrary for FileMetadata {
     }
 }
 
-mod tree;
+pub mod tree;
 pub use crate::tree::{diff, Tree, TreeStore};

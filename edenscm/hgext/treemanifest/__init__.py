@@ -135,6 +135,14 @@ trees for new draft roots added to the repository.
 
     [treemanifest]
     prefetchdraftparents = True
+
+`treemanifest.rustmanifest` causes treemanifest to use the Rust
+implementation rather than the C++ one.
+
+::
+
+    [treemanifest]
+    rustmanifest = True
 """
 from __future__ import absolute_import
 
@@ -180,7 +188,7 @@ from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscmnative import cstore
-from edenscmnative.bindings import revisionstore
+from edenscmnative.bindings import manifest as rustmanifest, revisionstore
 
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
@@ -225,6 +233,7 @@ configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "usehttp", default=False)
 configitem("treemanifest", "prefetchdraftparents", default=True)
+configitem("treemanifest", "rustmanifest", default=False)
 
 PACK_CATEGORY = "manifests"
 
@@ -985,11 +994,20 @@ class treemanifestctx(object):
 
     def read(self):
         if self._tree is None:
+            userust = self._manifestlog.ui.configbool("treemanifest", "rustmanifest")
             store = self._manifestlog.datastore
             if self._node != nullid:
-                self._tree = cstore.treemanifest(store, self._node)
+                if userust:
+                    self._tree = rustmanifest.treemanifest(store, self._node)
+                else:
+                    self._tree = cstore.treemanifest(store, self._node)
             else:
-                self._tree = cstore.treemanifest(store)
+                if userust:
+                    # untested
+                    self._tree = rustmanifest.treemanifest(store)
+                else:
+                    self._tree = cstore.treemanifest(store)
+
         return self._tree
 
     def node(self):

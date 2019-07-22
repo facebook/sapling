@@ -25,7 +25,6 @@ use crate::revisionstore::datastorepyext::{
 use crate::revisionstore::historystorepyext::{HistoryStorePyExt, MutableHistoryStorePyExt};
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
-use crate::revisionstore::pythondatastore::PythonDataStore;
 use crate::revisionstore::pythonutil::{from_key, to_pyerr};
 use crate::revisionstore::repackablepyext::RepackablePyExt;
 
@@ -38,7 +37,7 @@ mod pythonhistorystore;
 mod pythonutil;
 mod repackablepyext;
 
-pub use crate::revisionstore::pythondatastore::PythonMutableDataPack;
+pub use crate::revisionstore::pythondatastore::{PythonDataStore, PythonMutableDataPack};
 pub use crate::revisionstore::pythonhistorystore::PythonMutableHistoryPack;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

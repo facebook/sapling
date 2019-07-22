@@ -23,11 +23,11 @@ pub trait TreeStore {
 
 #[derive(Clone)]
 pub struct InnerStore {
-    tree_store: Arc<dyn TreeStore>,
+    tree_store: Arc<dyn TreeStore + Send + Sync>,
 }
 
 impl InnerStore {
-    pub fn new(tree_store: Arc<dyn TreeStore>) -> Self {
+    pub fn new(tree_store: Arc<dyn TreeStore + Send + Sync>) -> Self {
         InnerStore { tree_store }
     }
 

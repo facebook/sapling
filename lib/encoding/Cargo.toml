@@ -3,6 +3,9 @@ name = "encoding"
 version = "0.1.0"
 edition = "2018"
 
+[dependencies]
+types = { path = "../types" }
+
 [target.'cfg(windows)'.dependencies]
 local-encoding = "*"
 winapi = "0.2.7"
