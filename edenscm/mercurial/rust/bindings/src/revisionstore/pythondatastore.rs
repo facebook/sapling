@@ -35,12 +35,6 @@ impl PythonDataStore {
     }
 }
 
-// All accesses are protected by the GIL, so it's thread safe. This is required because it is
-// eventually stored on the `datastore` python class and Rust CPython requires that stored members
-// implement Send.
-unsafe impl Send for PythonDataStore {}
-unsafe impl Send for PythonMutableDataPack {}
-
 impl DataStore for PythonDataStore {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         let gil = Python::acquire_gil();
