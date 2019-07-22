@@ -3,14 +3,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
+
 use ignore::{
     self,
     gitignore::{self, Glob},
     Match,
 };
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use types::RepoPath;
+
+use crate::{DirectoryMatch, Matcher};
 
 /// Lazy `.gitignore` matcher that loads `.gitignore` files on demand.
 pub struct GitignoreMatcher {
@@ -114,13 +118,14 @@ impl GitignoreMatcher {
     }
 
     /// Check .gitignore for the relative path.
-    fn match_path(
+    fn match_path<P: AsRef<Path>>(
         &self,
-        path: &Path,
+        path: P,
         is_dir: bool,
         root: &GitignoreMatcher,
         explain: &mut Option<&mut Explain>,
     ) -> MatchResult {
+        let path = path.as_ref();
         // Everything is ignored regardless if this directory is ignored.
         if self.ignored {
             if let Some(ref mut explain) = explain {
@@ -290,6 +295,20 @@ impl Explain {
         }
 
         text
+    }
+}
+
+impl Matcher for GitignoreMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
+        match self.match_path(path.as_str(), true, self, &mut None) {
+            MatchResult::Ignored => DirectoryMatch::Everything,
+            MatchResult::Whitelisted => DirectoryMatch::Nothing,
+            MatchResult::Unspecified => DirectoryMatch::ShouldTraverse,
+        }
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> bool {
+        self.match_relative(path.as_str(), false)
     }
 }
 

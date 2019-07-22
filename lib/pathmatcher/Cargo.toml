@@ -7,6 +7,7 @@ edition = "2018"
 bitflags = "1.0"
 globset = "0.4.2"
 ignore = "0.4"
+types = { path = "../types" }
 
 [dev-dependencies]
 tempfile = "3.0.7"
