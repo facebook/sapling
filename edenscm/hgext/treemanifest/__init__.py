@@ -981,16 +981,16 @@ class treemanifestctx(object):
         self._manifestlog = manifestlog
         self._dir = dir
         self._node = node
-        self._data = None
+        self._tree = None
 
     def read(self):
-        if self._data is None:
+        if self._tree is None:
             store = self._manifestlog.datastore
             if self._node != nullid:
-                self._data = cstore.treemanifest(store, self._node)
+                self._tree = cstore.treemanifest(store, self._node)
             else:
-                self._data = cstore.treemanifest(store)
-        return self._data
+                self._tree = cstore.treemanifest(store)
+        return self._tree
 
     def node(self):
         return self._node
