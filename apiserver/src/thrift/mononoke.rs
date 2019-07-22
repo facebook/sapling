@@ -56,6 +56,7 @@ impl MononokeAPIServiceImpl {
         params_json: &K,
         path: Option<Vec<u8>>,
         revision: Option<MononokeRevision>,
+        reponame: String,
     ) -> ScubaSampleBuilder {
         let mut scuba = self.scuba_builder.clone();
         scuba
@@ -66,7 +67,8 @@ impl MononokeAPIServiceImpl {
                 "params",
                 serde_json::to_string(params_json)
                     .unwrap_or_else(|_| "Error converting request to json".to_string()),
-            );
+            )
+            .add("reponame", reponame);
 
         if let Some(path) = path {
             scuba.add(
@@ -130,6 +132,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
+            params.repo.clone(),
         );
 
         let ctx = self.create_ctx(scuba);
@@ -172,6 +175,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             &params,
             None,
             Some(params.revision.clone()),
+            params.repo.clone(),
         );
 
         let ctx = self.create_ctx(scuba);
@@ -217,7 +221,8 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         &self,
         params: MononokeGetBranchesParams,
     ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
-        let scuba = self.create_scuba_logger("get_branches", &params, None, None);
+        let scuba =
+            self.create_scuba_logger("get_branches", &params, None, None, params.repo.clone());
 
         let ctx = self.create_ctx(scuba);
 
@@ -265,6 +270,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
+            params.repo.clone(),
         );
 
         let ctx = self.create_ctx(scuba);
@@ -314,6 +320,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             &params,
             None,
             Some(params.descendant.clone()),
+            params.repo.clone(),
         );
 
         let ancestor = match params.ancestor.clone() {
@@ -355,7 +362,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     }
 
     fn get_blob(&self, params: MononokeGetBlobParams) -> BoxFuture<MononokeBlob, GetBlobExn> {
-        let scuba = self.create_scuba_logger("get_blob", &params, None, None);
+        let scuba = self.create_scuba_logger("get_blob", &params, None, None, params.repo.clone());
 
         let ctx = self.create_ctx(scuba);
 
@@ -391,7 +398,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     }
 
     fn get_tree(&self, params: MononokeGetTreeParams) -> BoxFuture<MononokeDirectory, GetTreeExn> {
-        let scuba = self.create_scuba_logger("get_tree", &params, None, None);
+        let scuba = self.create_scuba_logger("get_tree", &params, None, None, params.repo.clone());
 
         let ctx = self.create_ctx(scuba);
 
