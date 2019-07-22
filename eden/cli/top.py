@@ -16,11 +16,9 @@ from typing import DefaultDict, List, Tuple
 from . import cmd_util
 
 
-REFRESH_SECONDS = 2
-
-NAME_WIDTH = 15
+NAME_WIDTH = 20
 MOUNT_WIDTH = 15
-CALLS_WIDTH = 12
+CALLS_WIDTH = 10
 PIDS_WIDTH = 25
 
 
@@ -28,6 +26,7 @@ class Top:
     def __init__(self):
         self.running = False
         self.ephemeral = False
+        self.refresh_rate = 1
 
         # Maps (mount, name) pairs to another dictionary,
         # which tracks the # of FUSE calls per PID
@@ -42,6 +41,7 @@ class Top:
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
         self.ephemeral = args.ephemeral
+        self.refresh_rate = args.refresh_rate
 
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client() as client:
@@ -54,7 +54,7 @@ class Top:
     def run(self, client):
         def mainloop(stdscr):
             self.height, self.width = stdscr.getmaxyx()
-            stdscr.timeout(REFRESH_SECONDS * 1000)
+            stdscr.timeout(self.refresh_rate * 1000)
             curses.curs_set(0)
 
             # Avoid displaying a blank screen during the first update()
@@ -75,7 +75,7 @@ class Top:
         if self.ephemeral:
             self.processes.clear()
 
-        counts = client.getAccessCounts(REFRESH_SECONDS)
+        counts = client.getAccessCounts(self.refresh_rate)
         names_by_pid = counts.exeNamesByPid
 
         for mount, accesses in counts.fuseAccessesByMount.items():
@@ -115,7 +115,6 @@ class Top:
 
         self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
-        stdscr.hline(1, 0, curses.ACS_HLINE, self.width)
         self.render_column_titles(stdscr)
         self.render_rows(stdscr)
 
@@ -125,11 +124,12 @@ class Top:
         TITLE = "eden top"
         hostname = socket.gethostname()[: self.width]
         date = datetime.datetime.now().strftime("%x %X")[: self.width]
+        extra_space = self.width - len(TITLE + hostname + date)
 
         # left: title
         stdscr.addnstr(0, 0, TITLE, self.width)
         # center: date
-        stdscr.addnstr(0, (self.width - len(date)) // 2, date, self.width)
+        stdscr.addnstr(0, len(TITLE) + extra_space // 2, date, self.width)
         # right: hostname
         stdscr.addnstr(0, self.width - len(hostname), hostname, self.width)
 
@@ -147,8 +147,7 @@ class Top:
 
     def render_row(self, stdscr, y, data, style=curses.A_NORMAL):
         SPACING = (NAME_WIDTH, MOUNT_WIDTH, CALLS_WIDTH, PIDS_WIDTH)
-        PAD = " " * 4
-        text = "".join(f"{str:{len}}{PAD}" for str, len in zip(data, SPACING))
+        text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
 
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
 

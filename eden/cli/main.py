@@ -545,6 +545,13 @@ class TopCmd(Subcmd):
             action="store_true",
             help="Don't accumulate data; refresh the screen every update cycle.",
         )
+        parser.add_argument(
+            "--refresh-rate",
+            "-r",
+            default=1,
+            help="Specify the rate (in seconds) at which eden top updates.",
+            type=int,
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         top = top_mod.Top()
