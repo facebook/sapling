@@ -11,7 +11,8 @@ use cpython::*;
 use cpython_ext::Bytes;
 
 use encoding::local_bytes_to_path;
-use pathmatcher::GitignoreMatcher;
+use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher};
+use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");
@@ -47,3 +48,50 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).explain(&path, is_dir).into())
     }
 });
+
+pub struct PythonMatcher<'a> {
+    py: Python<'a>,
+    py_matcher: PyObject,
+}
+
+impl<'a> PythonMatcher<'a> {
+    pub fn new(py: Python<'a>, py_matcher: PyObject) -> Self {
+        PythonMatcher { py, py_matcher }
+    }
+}
+
+impl<'a> Matcher for PythonMatcher<'a> {
+    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
+        let py = self.py;
+        let py_path = PyBytes::new(py, path.as_byte_slice());
+        // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
+        // it crashes the rust stuff and returns a rust exception to Python.
+        let py_result = self
+            .py_matcher
+            .call_method(py, "visitdir", (py_path,), None)
+            .unwrap();
+        match PyBool::extract(py, &py_result) {
+            Ok(py_bool) => match py_bool.is_true() {
+                true => DirectoryMatch::ShouldTraverse,
+                false => DirectoryMatch::Nothing,
+            },
+            Err(_) => {
+                let py_string = PyString::extract(py, &py_result).unwrap();
+                if py_string.to_string(py).unwrap() == "all" {
+                    DirectoryMatch::Everything
+                } else {
+                    panic!("Unexpected value returned from matcher: {:?}", py_result);
+                }
+            }
+        }
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> bool {
+        let py = self.py;
+        let py_path = PyBytes::new(py, path.as_byte_slice());
+        // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
+        // it crashes the rust stuff and returns a rust exception to Python.
+        let py_result = self.py_matcher.call(py, (py_path,), None).unwrap();
+        PyBool::extract(py, &py_result).unwrap().is_true()
+    }
+}
