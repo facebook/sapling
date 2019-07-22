@@ -88,9 +88,33 @@ pub struct FileUnode {
 }
 
 impl FileUnode {
+    pub fn new(
+        parents: Vec<FileUnodeId>,
+        content_id: ContentId,
+        file_type: FileType,
+        path_hash: MPathHash,
+        linknode: ChangesetId,
+    ) -> Self {
+        Self {
+            parents,
+            content_id,
+            file_type,
+            path_hash,
+            linknode,
+        }
+    }
+
     pub fn get_unode_id(&self) -> FileUnodeId {
         // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
         *self.clone().into_blob().id()
+    }
+
+    pub fn parents(&self) -> &Vec<FileUnodeId> {
+        &self.parents
+    }
+
+    pub fn linknode(&self) -> &ChangesetId {
+        &self.linknode
     }
 
     pub(crate) fn from_thrift(t: thrift::FileUnode) -> Result<FileUnode> {
@@ -124,6 +148,12 @@ impl FileUnode {
             linknode: self.linknode.into_thrift(),
         }
     }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(bytes)
+            .chain_err(ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
 }
 
 impl BlobstoreValue for FileUnode {
@@ -153,6 +183,34 @@ pub struct ManifestUnode {
 }
 
 impl ManifestUnode {
+    pub fn new(
+        parents: Vec<ManifestUnodeId>,
+        subentries: BTreeMap<MPathElement, UnodeEntry>,
+        linknode: ChangesetId,
+    ) -> Self {
+        Self {
+            parents,
+            subentries,
+            linknode,
+        }
+    }
+
+    pub fn lookup(&self, basename: &MPathElement) -> Option<&UnodeEntry> {
+        self.subentries.get(basename)
+    }
+
+    pub fn list(&self) -> impl Iterator<Item = (&MPathElement, &UnodeEntry)> {
+        self.subentries.iter()
+    }
+
+    pub fn parents(&self) -> &Vec<ManifestUnodeId> {
+        &self.parents
+    }
+
+    pub fn linknode(&self) -> &ChangesetId {
+        &self.linknode
+    }
+
     pub fn get_unode_id(&self) -> ManifestUnodeId {
         // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
         *self.clone().into_blob().id()
@@ -199,6 +257,12 @@ impl ManifestUnode {
             subentries,
             linknode: self.linknode.into_thrift(),
         }
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(bytes)
+            .chain_err(ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
+        Self::from_thrift(thrift_tc)
     }
 }
 
@@ -251,8 +315,6 @@ impl BlobstoreValue for ManifestUnode {
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
-        Self::from_thrift(thrift_tc)
+        Self::from_bytes(blob.data().as_ref())
     }
 }

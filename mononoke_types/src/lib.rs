@@ -33,7 +33,9 @@ pub use generation::Generation;
 pub use path::{check_case_conflicts, MPath, MPathElement, RepoPath, RepoPathCached};
 pub use rawbundle2::RawBundle2;
 pub use repo::RepositoryId;
-pub use typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};
+pub use typed_hash::{
+    ChangesetId, ContentId, FileUnodeId, ManifestUnodeId, MononokeId, RawBundle2Id,
+};
 
 mod thrift {
     pub use mononoke_types_thrift::*;

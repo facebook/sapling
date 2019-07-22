@@ -26,7 +26,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::*;
-use crate::hash::Blake2;
+use crate::hash::{Blake2, Context};
 use crate::thrift;
 
 impl Weight for RepoPath {
@@ -564,6 +564,12 @@ impl MPath {
     pub fn display_opt<'a>(path_opt: Option<&'a MPath>) -> DisplayOpt<'a> {
         DisplayOpt(path_opt)
     }
+
+    pub fn get_path_hash(&self) -> MPathHash {
+        let mut context = MPathHashContext::new();
+        context.update(self.to_vec());
+        context.finish()
+    }
 }
 
 /// Hash of the file path (used in unode)
@@ -583,6 +589,31 @@ impl MPathHash {
 
     pub fn into_thrift(self) -> thrift::MPathHash {
         thrift::MPathHash(thrift::IdType::Blake2(self.0.into_thrift()))
+    }
+}
+
+/// Context for incrementally computing a hash.
+#[derive(Clone)]
+pub struct MPathHashContext(Context);
+
+impl MPathHashContext {
+    /// Construct a context.
+    #[inline]
+    pub fn new() -> Self {
+        Self(Context::new("mpathhash".as_bytes()))
+    }
+
+    #[inline]
+    pub fn update<T>(&mut self, data: T)
+    where
+        T: AsRef<[u8]>,
+    {
+        self.0.update(data)
+    }
+
+    #[inline]
+    pub fn finish(self) -> MPathHash {
+        MPathHash(self.0.finish())
     }
 }
 
