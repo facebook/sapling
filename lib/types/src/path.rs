@@ -98,6 +98,12 @@ impl RepoPathBuf {
         Ok(RepoPathBuf(s))
     }
 
+    /// Consumes the current instance and returns a String with the contents of this `RepoPathBuf`.
+    /// Intended for code that converts between different formats. FFI / serialization.
+    pub fn into_string(self) -> String {
+        self.0
+    }
+
     /// Converts the `RepoPathBuf` in a `RepoPath`.
     pub fn as_repo_path(&self) -> &RepoPath {
         self
@@ -211,6 +217,11 @@ impl RepoPath {
         self.0.as_bytes()
     }
 
+    /// Returns the `str` interpretation of the `RepoPath`.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
     /// Return the parent of the path. The empty path, `RepoPath::empty()` does not have a
     /// parent so `None` is returned in that case.
     pub fn parent(&self) -> Option<&RepoPath> {
@@ -296,6 +307,13 @@ impl PathComponentBuf {
         Ok(PathComponentBuf(s))
     }
 
+    /// Consumes the current instance and returns a String with the contents of this
+    /// `PathComponentBuf`.
+    /// Intended for code that converts between different formats. FFI / serialization.
+    pub fn into_string(self) -> String {
+        self.0
+    }
+
     /// Converts the `PathComponentBuf` in a `PathComponent`.
     pub fn as_path_component(&self) -> &PathComponent {
         self
@@ -353,6 +371,11 @@ impl PathComponent {
     /// Returns the underlying bytes of the `PathComponent`.
     pub fn as_byte_slice(&self) -> &[u8] {
         self.0.as_bytes()
+    }
+
+    /// Returns the `str` interpretation of the `RepoPath`.
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
