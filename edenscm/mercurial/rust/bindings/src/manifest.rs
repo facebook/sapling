@@ -15,6 +15,7 @@ use manifest::Manifest;
 use revisionstore::DataStore;
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
+use crate::pathmatcher::PythonMatcher;
 use crate::revisionstore::PythonDataStore;
 
 struct ManifestStore<T> {
@@ -76,11 +77,10 @@ py_class!(class treemanifest |py| {
     }
 
     // Returns a list<path> for all files that match the predicate passed to the function.
-    def walk(&self, _matcher: Option<PyObject> = None) -> PyResult<Vec<PyBytes>> {
+    def walk(&self, matcher: PyObject) -> PyResult<Vec<PyBytes>> {
         let mut result = Vec::new();
         let manifest = self.underlying(py);
-        let files = manifest.files();
-        for entry in files {
+        for entry in manifest.files(&PythonMatcher::new(py, matcher)) {
             let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
             result.push(path_to_pybytes(py, &path));
         }

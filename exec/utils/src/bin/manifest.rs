@@ -9,6 +9,7 @@ use bytes::Bytes;
 use failure::Fallible;
 use structopt::StructOpt;
 
+use pathmatcher::AlwaysMatcher;
 use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::UnionDataStore};
 use types::{Key, Node, RepoPath};
 
@@ -28,7 +29,7 @@ fn main() {
     let store = Arc::new(DataPackStore::new(PathBuf::from(args.manifest_path)).unwrap());
     let manifest = manifest::Tree::durable(store, args.node);
 
-    for (file, _meta) in manifest.files().map(|x| x.unwrap()) {
+    for (file, _meta) in manifest.files(&AlwaysMatcher::new()).map(|x| x.unwrap()) {
         println!("{}", file);
     }
 }

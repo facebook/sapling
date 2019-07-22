@@ -17,6 +17,7 @@ use crypto::{digest::Digest, sha1::Sha1};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
+use pathmatcher::{DirectoryMatch, Matcher};
 use types::{Node, PathComponent, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
@@ -52,9 +53,13 @@ impl Tree {
     }
 
     /// Returns an iterator over all the files that are present in the tree.
-    pub fn files<'a>(&'a self) -> Files<'a> {
+    pub fn files<'a, M>(&'a self, matcher: &'a M) -> Files<'a, M>
+    where
+        M: Matcher,
+    {
         Files {
             cursor: self.root_cursor(),
+            matcher,
         }
     }
 
@@ -359,11 +364,15 @@ impl Tree {
     }
 }
 
-pub struct Files<'a> {
+pub struct Files<'a, M> {
     cursor: Cursor<'a>,
+    matcher: &'a M,
 }
 
-impl<'a> Iterator for Files<'a> {
+impl<'a, M> Iterator for Files<'a, M>
+where
+    M: Matcher,
+{
     type Item = Fallible<(RepoPathBuf, FileMetadata)>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -371,7 +380,15 @@ impl<'a> Iterator for Files<'a> {
             match self.cursor.step() {
                 Step::Success => {
                     if let Leaf(file_metadata) = self.cursor.link() {
-                        return Some(Ok((self.cursor.path().to_owned(), *file_metadata)));
+                        if self.matcher.matches_file(self.cursor.path()) {
+                            return Some(Ok((self.cursor.path().to_owned(), *file_metadata)));
+                        }
+                    } else {
+                        if self.matcher.matches_directory(self.cursor.path())
+                            == DirectoryMatch::Nothing
+                        {
+                            self.cursor.skip_subtree();
+                        }
                     }
                 }
                 Step::Err(error) => return Some(Err(error)),
@@ -518,6 +535,7 @@ impl<'a> Iterator for Diff<'a> {
 mod tests {
     use super::*;
 
+    use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
     use self::store::TestStore;
@@ -860,7 +878,7 @@ mod tests {
     #[test]
     fn test_files_empty() {
         let tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        assert!(tree.files().next().is_none());
+        assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
     }
 
     #[test]
@@ -871,20 +889,16 @@ mod tests {
         tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
 
-        let mut files = tree.files();
         assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            tree.files(&AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                (repo_path_buf("a1/b1/c1/d1"), meta("10")),
+                (repo_path_buf("a1/b2"), meta("20")),
+                (repo_path_buf("a2/b2/c2"), meta("30")),
+            )
         );
-        assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a1/b2"), meta("20"))
-        );
-        assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a2/b2/c2"), meta("30"))
-        );
-        assert!(files.next().is_none());
     }
 
     #[test]
@@ -898,30 +912,64 @@ mod tests {
         let node = tree.flush().unwrap();
         let tree = Tree::durable(store.clone(), node);
 
-        let mut files = tree.files();
         assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            tree.files(&AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                (repo_path_buf("a1/b1/c1/d1"), meta("10")),
+                (repo_path_buf("a1/b2"), meta("20")),
+                (repo_path_buf("a2/b2/c2"), meta("30")),
+            )
+        );
+    }
+
+    #[test]
+    fn test_files_matcher() {
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c3"), meta("40")).unwrap();
+        tree.insert(repo_path_buf("a3/b2/c3"), meta("50")).unwrap();
+
+        assert_eq!(
+            tree.files(&TreeMatcher::from_rules(["a2/b2"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                (repo_path_buf("a2/b2/c2"), meta("30")),
+                (repo_path_buf("a2/b2/c3"), meta("40"))
+            )
         );
         assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a1/b2"), meta("20"))
+            tree.files(&TreeMatcher::from_rules(["a1/*/c1"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!((repo_path_buf("a1/b1/c1/d1"), meta("10")),)
         );
         assert_eq!(
-            files.next().unwrap().unwrap(),
-            (repo_path_buf("a2/b2/c2"), meta("30"))
+            tree.files(&TreeMatcher::from_rules(["**/c3"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                (repo_path_buf("a2/b2/c3"), meta("40")),
+                (repo_path_buf("a3/b2/c3"), meta("50"))
+            )
         );
-        assert!(files.next().is_none());
     }
 
     #[test]
     fn test_files_finish_on_error_when_collecting_to_vec() {
         let tree = Tree::durable(Arc::new(TestStore::new()), node("1"));
-        let file_results = tree.files().collect::<Vec<_>>();
+        let file_results = tree.files(&AlwaysMatcher::new()).collect::<Vec<_>>();
         assert_eq!(file_results.len(), 1);
         assert!(file_results[0].is_err());
 
-        let files_result = tree.files().collect::<Result<Vec<_>, _>>();
+        let files_result = tree
+            .files(&AlwaysMatcher::new())
+            .collect::<Result<Vec<_>, _>>();
         assert!(files_result.is_err());
     }
 
