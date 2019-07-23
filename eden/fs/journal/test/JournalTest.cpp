@@ -237,3 +237,76 @@ TEST(Journal, set_get_memory_limit) {
   journal.setMemoryLimit(0);
   ASSERT_EQ(0, journal.getMemoryLimit());
 }
+
+TEST(Journal, limit_of_zero_holds_one_entry) {
+  Journal journal;
+  // Even though limit is 0, journal will always remember at least one entry
+  journal.setMemoryLimit(0);
+  // With 1 file we should be able to accumulate from anywhere without
+  // truncation, nullptr returned for sequenceID's > 1 (empty ranges)
+  journal.recordCreated("file1.txt"_relpath);
+  auto summed = journal.accumulateRange(1);
+  ASSERT_TRUE(summed);
+  EXPECT_FALSE(summed->isTruncated);
+  summed = journal.accumulateRange(2);
+  EXPECT_FALSE(summed);
+}
+
+TEST(Journal, limit_of_zero_truncates_after_one_entry) {
+  Journal journal;
+  // Even though limit is 0, journal will always remember at least one entry
+  journal.setMemoryLimit(0);
+  // With 2 files but only one entry in the journal we can only accumulate from
+  // sequenceID 2 and above without truncation, nullptr returned for
+  // sequenceID's > 2 (empty ranges)
+  journal.recordCreated("file1.txt"_relpath);
+  journal.recordCreated("file2.txt"_relpath);
+  auto summed = journal.accumulateRange(1);
+  ASSERT_TRUE(summed);
+  EXPECT_TRUE(summed->isTruncated);
+  summed = journal.accumulateRange(2);
+  ASSERT_TRUE(summed);
+  EXPECT_FALSE(summed->isTruncated);
+  summed = journal.accumulateRange(3);
+  EXPECT_FALSE(summed);
+}
+
+TEST(Journal, truncation_nonzero) {
+  Journal journal;
+  // Set the journal to a size such that it can store a few entries
+  journal.setMemoryLimit(1500);
+  int totalEntries = 0;
+  int rememberedEntries;
+  // Keep looping until we get a decent amount of truncation
+  do {
+    if (totalEntries % 2 == 0) {
+      journal.recordCreated("file1.txt"_relpath);
+    } else {
+      journal.recordRemoved("file1.txt"_relpath);
+    }
+    ++totalEntries;
+    rememberedEntries = journal.getStats()->entryCount;
+    auto firstUntruncatedEntry = totalEntries - rememberedEntries + 1;
+    for (int j = 1; j < firstUntruncatedEntry; j++) {
+      auto summed = journal.accumulateRange(j);
+      ASSERT_TRUE(summed);
+      // If the value we are accumulating from is more than rememberedEntries
+      // from the current sequenceID then it should be truncated
+      EXPECT_TRUE(summed->isTruncated)
+          << "Failed when remembering " << rememberedEntries
+          << " entries out of " << totalEntries
+          << " total entries with j = " << j;
+    }
+    for (int j = firstUntruncatedEntry; j <= totalEntries; j++) {
+      auto summed = journal.accumulateRange(j);
+      ASSERT_TRUE(summed);
+      // If the value we are accumulating from is less than or equal to
+      // rememberedEntries from the current sequenceID then it should not be
+      // truncated
+      EXPECT_FALSE(summed->isTruncated)
+          << "Failed when remembering " << rememberedEntries
+          << " entries out of " << totalEntries
+          << " total entries with j = " << j;
+    }
+  } while (rememberedEntries + 5 > totalEntries);
+}

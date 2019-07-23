@@ -617,6 +617,9 @@ void EdenServiceHandler::getFilesChangedSince(
   out.fromPosition = out.toPosition;
 
   if (summed) {
+    if (summed->isTruncated) {
+      throw newEdenError(EDOM, "Journal entry range has been truncated.");
+    }
     out.toPosition.sequenceNumber = summed->toSequence;
     out.toPosition.snapshotHash = thriftHash(summed->toHash);
     out.toPosition.mountGeneration = edenMount->getMountGeneration();

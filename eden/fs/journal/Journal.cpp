@@ -60,6 +60,17 @@ void Journal::recordUncleanPaths(
   addDelta(std::move(delta));
 }
 
+void Journal::truncateIfNecessary(
+    folly::Synchronized<DeltaState>::LockedPtr& deltaState) {
+  while (!deltaState->deltas.empty() &&
+         deltaState->stats->memoryUsage > deltaState->memoryLimit) {
+    deltaState->stats->entryCount--;
+    deltaState->stats->memoryUsage -=
+        deltaState->deltas.front().estimateMemoryUsage();
+    deltaState->deltas.pop_front();
+  }
+}
+
 void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   {
     auto deltaState = deltaState_.wlock();
@@ -80,19 +91,19 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
     if (deltaState->stats) {
       ++(deltaState->stats->entryCount);
       deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
-      deltaState->stats->earliestTimestamp =
-          std::min(deltaState->stats->earliestTimestamp, delta->time);
-      deltaState->stats->latestTimestamp =
-          std::max(deltaState->stats->latestTimestamp, delta->time);
     } else {
       deltaState->stats = JournalStats();
       deltaState->stats->entryCount = 1;
       deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
-      deltaState->stats->earliestTimestamp = delta->time;
-      deltaState->stats->latestTimestamp = delta->time;
     }
+    deltaState->stats->latestTimestamp = delta->time;
 
+    truncateIfNecessary(deltaState);
+
+    // emplace after memory check to make sure we have at least one entry
     deltaState->deltas.emplace_back(std::move(*delta));
+
+    deltaState->stats->earliestTimestamp = deltaState->deltas.front().time;
   }
 
   // Careful to call the subscribers with no locks held.
@@ -178,14 +189,26 @@ size_t Journal::getMemoryLimit() const {
 }
 
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() const {
-  return accumulateRange(0);
+  return accumulateRange(1);
 }
 
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber from) const {
+  DCHECK(from > 0);
   std::unique_ptr<JournalDeltaRange> result = nullptr;
+  auto deltaState = deltaState_.rlock();
+  // If this is going to be truncated handle it before iterating.
+  if (!deltaState->deltas.empty() &&
+      deltaState->deltas.front().sequenceID > from) {
+    result = std::make_unique<JournalDeltaRange>();
+    result->isTruncated = true;
+    return result;
+  }
   forEachDelta(
-      from, std::nullopt, [&result](const JournalDelta& current) -> void {
+      deltaState->deltas,
+      from,
+      std::nullopt,
+      [&result](const JournalDelta& current) -> void {
         if (!result) {
           result = std::make_unique<JournalDeltaRange>();
           result->toSequence = current.sequenceID;
@@ -228,7 +251,9 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     std::optional<size_t> limit,
     long mountGeneration) const {
   auto result = std::vector<DebugJournalDelta>();
+  auto deltaState = deltaState_.rlock();
   forEachDelta(
+      deltaState->deltas,
       from,
       limit,
       [mountGeneration, &result](const JournalDelta& current) -> void {
@@ -267,13 +292,12 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
 // Func: void(const JournalDelta&)
 template <class Func>
 void Journal::forEachDelta(
+    const std::deque<JournalDelta>& deltas,
     SequenceNumber from,
     std::optional<size_t> lengthLimit,
     Func&& deltaCallback) const {
-  auto deltaState = deltaState_.rlock();
   size_t iters = 0;
-  for (auto deltaIter = deltaState->deltas.rbegin();
-       deltaIter != deltaState->deltas.rend();
+  for (auto deltaIter = deltas.rbegin(); deltaIter != deltas.rend();
        ++deltaIter) {
     const JournalDelta& current = *deltaIter;
     if (current.sequenceID < from) {

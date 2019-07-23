@@ -159,7 +159,7 @@ class Journal {
    */
   void addDelta(std::unique_ptr<JournalDelta>&& delta);
 
-  static constexpr size_t kDefaultJournalMemoryLimit = 500000000;
+  static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
   struct DeltaState {
     /** The sequence number that we'll use for the next entry
@@ -174,6 +174,12 @@ class Journal {
   };
   folly::Synchronized<DeltaState> deltaState_;
 
+  /** Removes the oldest deltas until the memory usage of the journal is below
+   * the journal's memory limit.
+   */
+  void truncateIfNecessary(
+      folly::Synchronized<DeltaState>::LockedPtr& deltaState);
+
   struct SubscriberState {
     SubscriberId nextSubscriberId{1};
     std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
@@ -185,6 +191,7 @@ class Journal {
    * */
   template <class Func>
   void forEachDelta(
+      const std::deque<JournalDelta>& deltas,
       SequenceNumber from,
       std::optional<size_t> lengthLimit,
       Func&& deltaCallback) const;
