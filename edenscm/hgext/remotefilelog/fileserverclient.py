@@ -36,7 +36,6 @@ from . import constants, edenapi, shallowutil, wirepack
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .metadatastore import unionmetadatastore
-from .repack import domaintenancerepack
 
 
 # Statistics for debugging
@@ -186,14 +185,6 @@ class cacheconnection(object):
             self.bufferedpipeo = None
             tryclose(self.pipeo)
             self.pipeo = None
-
-            # When hg makes many fetch request, memcache will store each
-            # request into its own packfile. This can happen when using "hg log
-            # -p", and this causes the number of packfiles to grow very
-            # quickly, killing the performance of other commands. To avoid this
-            # pathological case, we can run a quick repack on these files.
-            if self.repo.ui.configbool("remotefilelog", "fetchpacks"):
-                domaintenancerepack(self.repo)
 
             # The cacheclient may be executing expensive set commands in the
             # background, As soon as the exit command, or the pipe above is
