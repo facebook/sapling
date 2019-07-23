@@ -14,6 +14,7 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipapp
 from pipes import quote as shellquote
@@ -111,7 +112,18 @@ def move_site_packages_to_root(instdir):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("python")
+# Allow the caller to specify a specific python interpreter to use for the output
+# application.  This may help minimize headaches if the system python is upgraded and
+# we want to use an alternate one.
+parser.add_argument(
+    "--python", default=sys.executable, help="The python interpreter to use"
+)
+parser.add_argument(
+    "-o",
+    "--output",
+    default="eden.zip",
+    help="The output file location (default=%(default)s)",
+)
 parser.add_argument("--oss_dir", default=DEFAULT_OSS_DIR)
 parser.add_argument(
     "--thrift-compiler",
@@ -138,13 +150,8 @@ with tempfile.TemporaryDirectory() as instdir:
         run_cmd([args.python, "-m", "pip", "install", dep, "--prefix", instdir])
 
     move_site_packages_to_root(instdir)
-    # run_cmd(["find", instdir])
 
     # Generate the `eden` executable zipfile.
-    # We keep the shebang a little more flexible than just sys.executable to
-    # minimize headaches if the system python is upgraded; there are no guarantees
-    # that we'll keep running, but it seems more likely that we will than if we
-    # hard coded it.
     zipapp.create_archive(
-        instdir, target="eden.zip", interpreter=args.python, main="eden.cli.main:main"
+        instdir, target=args.output, interpreter=args.python, main="eden.cli.main:main"
     )
