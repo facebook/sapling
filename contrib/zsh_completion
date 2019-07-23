@@ -163,7 +163,7 @@ _hg_revrange() {
 }
 
 _hg_labels() {
-  labels=("${(f)$(_hg_cmd debugnamecomplete --description)}")
+  labels=("${(f)$(_hg_cmd debugnamecomplete)}")
   (( $#labels )) && _describe -t labels 'labels' labels
 }
 

@@ -316,7 +316,7 @@ Show all commands + options
   debugmergestate: 
   debugmutation: 
   debugmutationfromobsmarkers: 
-  debugnamecomplete: description, age
+  debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
@@ -409,6 +409,11 @@ Test debugnamecomplete
 
   $ hg debugnamecomplete
   Fum
+  default
+  fee
+  fo
+  tip
+  $ hg debugnamecomplete f
   fee
   fo
 
@@ -417,5 +422,10 @@ used for completions in some shells.
 
   $ hg debuglabelcomplete
   Fum
+  default
+  fee
+  fo
+  tip
+  $ hg debuglabelcomplete f
   fee
   fo

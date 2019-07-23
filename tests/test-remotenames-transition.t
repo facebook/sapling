@@ -38,19 +38,25 @@ Test renaming
 Test hoisting basics
   $ hg book
   no bookmarks set
-  $ hg log -r 'remotenames()' -T '{join(remotenames, "\n")}'
+  $ hg debugnamecomplete
+  default
   remote/bm1
-  remote/bm2 (no-eol)
+  remote/bm2
+  tip
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "hoist = remote" >> $HGRCPATH
-  $ hg log -r 'remotenames()' -T '{join(remotenames, "\n")}'
+  $ hg debugnamecomplete
+  bm1
+  bm2
+  default
   remote/bm1
-  remote/bm2 (no-eol)
+  remote/bm2
+  tip
 
 Test hoisting name lookup
   $ rm .hg/remotenames
-  $ hg log -r . -T '{hoistedbookmarks}'
-
+  $ hg log -r . -T '{hoistedbookmarks}\n'
+  
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
@@ -121,3 +127,4 @@ Test pull from renamed source
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
+
