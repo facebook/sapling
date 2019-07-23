@@ -11,7 +11,7 @@ mod store;
 
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::store::{ChunkSqlStore, DataSqlStore};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, CountedBlobstore};
 use cacheblob::{dummy::DummyCache, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
@@ -37,6 +37,9 @@ const MAX_KEY_SIZE: usize = 200;
 // does, but leave some extra bytes for metadata
 const CHUNK_SIZE: usize = MEMCACHE_VALUE_MAX_SIZE - 1000;
 const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(100) };
+
+const COUNTED_ID: &str = "sqlblob";
+pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
 
 define_stats! {
     prefix = "mononoke.blobstore.sqlblob";
@@ -70,8 +73,8 @@ impl Sqlblob {
         shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
-    ) -> BoxFuture<Self, Error> {
-        Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
+    ) -> BoxFuture<CountedSqlblob, Error> {
+        Self::with_connection_factory(repo_id, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
                 Some(shard_id),
@@ -88,17 +91,18 @@ impl Sqlblob {
         repo_id: RepositoryId,
         shardmap: String,
         shard_num: NonZeroUsize,
-    ) -> BoxFuture<Self, Error> {
-        Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
+    ) -> BoxFuture<CountedSqlblob, Error> {
+        Self::with_connection_factory(repo_id, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id)).boxify()
         })
     }
 
     fn with_connection_factory(
         repo_id: RepositoryId,
+        label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let shard_count = shard_num.get();
 
         let futs: Vec<_> = (0..shard_count)
@@ -136,41 +140,44 @@ impl Sqlblob {
                 let read_connection = Arc::new(cons.read_connection);
                 let read_master_connection = Arc::new(cons.read_master_connection);
 
-                Self {
-                    data_store: DataSqlStore::new(
-                        repo_id,
-                        shard_num,
-                        write_connection.clone(),
-                        read_connection.clone(),
-                        read_master_connection.clone(),
-                    ),
-                    chunk_store: ChunkSqlStore::new(
-                        repo_id,
-                        shard_num,
-                        write_connection,
-                        read_connection,
-                        read_master_connection,
-                    ),
-                    data_cache: SqlblobCacheOps::new(
-                        Arc::new(
-                            MemcacheOps::new("sqlblob.data", repo_id.id())
-                                .expect("failed to create MemcacheOps"),
+                Self::counted(
+                    Self {
+                        data_store: DataSqlStore::new(
+                            repo_id,
+                            shard_num,
+                            write_connection.clone(),
+                            read_connection.clone(),
+                            read_master_connection.clone(),
                         ),
-                        DataCacheTranslator::new(repo_id),
-                    ),
-                    chunk_cache: SqlblobCacheOps::new(
-                        Arc::new(
-                            MemcacheOps::new("sqlblob.chunk", repo_id.id())
-                                .expect("failed to create MemcacheOps"),
+                        chunk_store: ChunkSqlStore::new(
+                            repo_id,
+                            shard_num,
+                            write_connection,
+                            read_connection,
+                            read_master_connection,
                         ),
-                        ChunkCacheTranslator::new(repo_id),
-                    ),
-                }
+                        data_cache: SqlblobCacheOps::new(
+                            Arc::new(
+                                MemcacheOps::new("sqlblob.data", repo_id.id())
+                                    .expect("failed to create MemcacheOps"),
+                            ),
+                            DataCacheTranslator::new(repo_id),
+                        ),
+                        chunk_cache: SqlblobCacheOps::new(
+                            Arc::new(
+                                MemcacheOps::new("sqlblob.chunk", repo_id.id())
+                                    .expect("failed to create MemcacheOps"),
+                            ),
+                            ChunkCacheTranslator::new(repo_id),
+                        ),
+                    },
+                    label,
+                )
             })
             .boxify()
     }
 
-    pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<Self> {
+    pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<CountedSqlblob> {
         Self::with_sqlite(repo_id, |_| {
             let con = SqliteConnection::open_in_memory()?;
             con.execute_batch(Self::get_up_query())?;
@@ -178,7 +185,10 @@ impl Sqlblob {
         })
     }
 
-    pub fn with_sqlite_path<P: Into<PathBuf>>(repo_id: RepositoryId, path: P) -> Result<Self> {
+    pub fn with_sqlite_path<P: Into<PathBuf>>(
+        repo_id: RepositoryId,
+        path: P,
+    ) -> Result<CountedSqlblob> {
         let path = path.into();
         Self::with_sqlite(repo_id, move |shard_id| {
             let con = SqliteConnection::open(path.join(format!("shard_{}.sqlite", shard_id)))?;
@@ -189,7 +199,7 @@ impl Sqlblob {
         })
     }
 
-    fn with_sqlite<F>(repo_id: RepositoryId, mut constructor: F) -> Result<Self>
+    fn with_sqlite<F>(repo_id: RepositoryId, mut constructor: F) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -201,30 +211,37 @@ impl Sqlblob {
 
         let cons = Arc::new(cons);
 
-        Ok(Self {
-            data_store: DataSqlStore::new(
-                repo_id,
-                SQLITE_SHARD_NUM,
-                cons.clone(),
-                cons.clone(),
-                cons.clone(),
-            ),
-            chunk_store: ChunkSqlStore::new(
-                repo_id,
-                SQLITE_SHARD_NUM,
-                cons.clone(),
-                cons.clone(),
-                cons,
-            ),
-            data_cache: SqlblobCacheOps::new(
-                Arc::new(DummyCache {}),
-                DataCacheTranslator::new(repo_id),
-            ),
-            chunk_cache: SqlblobCacheOps::new(
-                Arc::new(DummyCache {}),
-                ChunkCacheTranslator::new(repo_id),
-            ),
-        })
+        Ok(Self::counted(
+            Self {
+                data_store: DataSqlStore::new(
+                    repo_id,
+                    SQLITE_SHARD_NUM,
+                    cons.clone(),
+                    cons.clone(),
+                    cons.clone(),
+                ),
+                chunk_store: ChunkSqlStore::new(
+                    repo_id,
+                    SQLITE_SHARD_NUM,
+                    cons.clone(),
+                    cons.clone(),
+                    cons,
+                ),
+                data_cache: SqlblobCacheOps::new(
+                    Arc::new(DummyCache {}),
+                    DataCacheTranslator::new(repo_id),
+                ),
+                chunk_cache: SqlblobCacheOps::new(
+                    Arc::new(DummyCache {}),
+                    ChunkCacheTranslator::new(repo_id),
+                ),
+            },
+            "sqlite".into(),
+        ))
+    }
+
+    fn counted(self, label: String) -> CountedSqlblob {
+        CountedBlobstore::new(format!("{}.{}", COUNTED_ID, label), self)
     }
 
     fn get_up_query() -> &'static str {
