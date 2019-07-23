@@ -706,6 +706,8 @@ class fbsourcepylibrary(asset):
         topdir = pjoin(builddir, self.destdir)
         ensureexists(topdir)
         destpath = pjoin(topdir, self.pkgname)
+        if os.path.exists(destpath):
+            shutil.rmtree(destpath)
         shutil.copytree(self.path, destpath)
         for root, dirs, files in os.walk(topdir):
             if "__init__.py" not in files:
@@ -713,10 +715,6 @@ class fbsourcepylibrary(asset):
                     f.write("\n")
         for name in self.excludes:
             tryunlink(pjoin(topdir, name))
-
-    def _isready(self):
-        destpath = pjoin(builddir, self.destdir)
-        return os.path.exists(destpath)
 
 
 class edenpythrift(asset):
