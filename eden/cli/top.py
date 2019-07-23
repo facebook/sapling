@@ -7,7 +7,6 @@
 
 import argparse
 import collections
-import curses
 import datetime
 import os
 import socket
@@ -24,6 +23,9 @@ PIDS_WIDTH = 25
 
 class Top:
     def __init__(self):
+        import curses
+
+        self.curses = curses
         self.running = False
         self.ephemeral = False
         self.refresh_rate = 1
@@ -46,7 +48,7 @@ class Top:
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client() as client:
             try:
-                curses.wrapper(self.run(client))
+                self.curses.wrapper(self.run(client))
             except KeyboardInterrupt:
                 pass
         return 0
@@ -55,7 +57,7 @@ class Top:
         def mainloop(stdscr):
             self.height, self.width = stdscr.getmaxyx()
             stdscr.timeout(self.refresh_rate * 1000)
-            curses.curs_set(0)
+            self.curses.curs_set(0)
 
             # Avoid displaying a blank screen during the first update()
             self.render(stdscr)
@@ -136,7 +138,7 @@ class Top:
     def render_column_titles(self, stdscr):
         LINE = 2
         ROW = ("PROCESS", "MOUNT", "FUSE CALLS", "TOP PIDS")
-        self.render_row(stdscr, LINE, ROW, curses.A_REVERSE)
+        self.render_row(stdscr, LINE, ROW, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
         START_LINE = 3
@@ -145,7 +147,9 @@ class Top:
         for line, row in zip(line_numbers, self.rows):
             self.render_row(stdscr, line, row)
 
-    def render_row(self, stdscr, y, data, style=curses.A_NORMAL):
+    def render_row(self, stdscr, y, data, style=None):
+        if style is None:
+            style = self.curses.A_NORMAL
         SPACING = (NAME_WIDTH, MOUNT_WIDTH, CALLS_WIDTH, PIDS_WIDTH)
         text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
 
@@ -153,8 +157,8 @@ class Top:
 
     def get_keypress(self, stdscr):
         key = stdscr.getch()
-        if key == curses.KEY_RESIZE:
-            curses.update_lines_cols()
+        if key == self.curses.KEY_RESIZE:
+            self.curses.update_lines_cols()
             stdscr.redrawwin()
             self.height, self.width = stdscr.getmaxyx()
         elif key == ord("q"):

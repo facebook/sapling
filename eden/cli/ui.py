@@ -6,7 +6,6 @@
 # GNU General Public License version 2.
 
 import abc
-import curses
 import enum
 import sys
 from typing import BinaryIO, Dict, Optional, TextIO, Tuple
@@ -100,6 +99,8 @@ class TerminalSettings:
         if _term_settings is not None:
             return _term_settings
 
+        import curses
+
         curses.setupterm()
 
         set_foreground = curses.tigetstr("setaf") or b""
@@ -189,6 +190,13 @@ def get_output(io: Optional[TextIO] = None) -> Output:
     io_buffer = getattr(io, "buffer", None)
     if io_buffer is None:
         return PlainOutput(io)
+
+    if sys.platform == "win32":
+        from . import win_ui
+
+        return win_ui.WindowsOutput(io)
+
+    import curses
 
     try:
         encoding = getattr(io, "encoding", "utf-8")
