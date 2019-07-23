@@ -138,6 +138,22 @@ pub fn derive_unode_manifest(
     })
 }
 
+// Note that in some rare cases it's possible to have unode where one parent is ancestor of another
+// (that applies both to files and directories)
+//
+//  Example:
+//       4 o <- merge commit modifies file 'A'
+//        / \
+//     2 o ---> changed file 'A' content to 'B'
+//       |   |
+//       | 3 o -> changed some other file
+//       \  /
+//      1 o  <- created file 'A' with content 'A'
+//
+// In that case unode for file 'A' in a merge commit will have two parents - from commit '2' and
+// from commit '1', and unode from commit '1' is ancestor of unode from commit '2'.
+// Case like that might create slight confusion, however it should be rare and we should be
+// able to fix it in the ui.
 fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
