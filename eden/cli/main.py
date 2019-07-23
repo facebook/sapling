@@ -27,6 +27,7 @@ from fb303.ttypes import fb_status
 from . import (
     buck,
     config as config_mod,
+    debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
     mtab,
@@ -47,7 +48,7 @@ from .util import ShutdownError, print_stderr
 
 
 if os.name != "nt":
-    from . import daemon, debug as debug_mod, fsck as fsck_mod, rage as rage_mod
+    from . import daemon, fsck as fsck_mod, rage as rage_mod
 
 
 subcmd = subcmd_mod.Decorator()
@@ -1434,8 +1435,7 @@ def create_parser() -> argparse.ArgumentParser:
         redirect_mod.RedirectCmd,
     ]
 
-    if os.name != "nt":
-        subcmd_add_list.append(debug_mod.DebugCmd)
+    subcmd_add_list.append(debug_mod.DebugCmd)
 
     subcmd_mod.add_subcommands(parser, subcmd.commands + subcmd_add_list)
 
