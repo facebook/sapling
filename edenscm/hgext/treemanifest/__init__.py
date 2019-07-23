@@ -546,13 +546,13 @@ def wraprepo(repo):
             usehttp = self.ui.configbool("treemanifest", "usehttp")
             if edenapi.enabled(self.ui) and usehttp:
                 try:
-                    if edenapi.debug(self.ui):
+                    if self.ui.interactive() and edenapi.debug(self.ui):
                         self.ui.warn(_("fetching trees over HTTPS\n"))
                     dpack, hpack = self.manifestlog.getmutablesharedpacks()
                     stats = self.edenapi.prefetch_trees(
                         rootdir, mfnodes, basemfnodes, dpack, depth
                     )
-                    if edenapi.debug(self.ui):
+                    if self.ui.interactive() and edenapi.debug(self.ui):
                         self.ui.warn(_("%s\n") % stats.to_str())
                     return
                 except Exception as e:

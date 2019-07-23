@@ -792,7 +792,7 @@ class fileserverclient(object):
             % n
         )
 
-        if edenapi.debug(self.ui):
+        if self.ui.interactive() and edenapi.debug(self.ui):
             self.ui.warn(("%s\n") % msg)
 
         self.ui.metrics.gauge("http_getfiles_revs", n)
@@ -809,7 +809,7 @@ class fileserverclient(object):
 
             stats = self.repo.edenapi.get_files(fileids, dpack, progcallback)
 
-        if edenapi.debug(self.ui):
+        if self.ui.interactive() and edenapi.debug(self.ui):
             self.ui.warn(_("%s\n") % stats.to_str())
 
         self.ui.metrics.gauge("http_getfiles_time_ms", stats.time_in_millis())
@@ -830,7 +830,7 @@ class fileserverclient(object):
             % n
         )
 
-        if edenapi.debug(self.ui):
+        if self.ui.interactive() and edenapi.debug(self.ui):
             self.ui.warn(("%s\n") % msg)
 
         self.ui.metrics.gauge("http_gethistory_revs", n)
@@ -847,7 +847,7 @@ class fileserverclient(object):
 
             stats = self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
 
-        if edenapi.debug(self.ui):
+        if self.ui.interactive() and edenapi.debug(self.ui):
             self.ui.warn(_("%s\n") % stats.to_str())
 
         self.ui.metrics.gauge("http_gethistory_time_ms", stats.time_in_millis())
