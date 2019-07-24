@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
-use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
@@ -41,6 +41,7 @@ use futures_ext::{
 };
 use futures_stats::{FutureStats, Timed};
 use lock_ext::LockExt;
+use maplit::hashmap;
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -65,6 +66,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use time_ext::DurationExt;
+use topo_sort::sort_topological;
 use tracing::{trace_args, EventId, Traced};
 use uuid::Uuid;
 
@@ -1712,6 +1714,20 @@ impl BlobRepo {
                     }
                 },
             )
+            .map(|changesets| {
+                let mut graph = hashmap! {};
+                let mut id_to_bcs = hashmap! {};
+                for cs in changesets {
+                    graph.insert(cs.get_changeset_id(), cs.parents().collect());
+                    id_to_bcs.insert(cs.get_changeset_id(), cs);
+                }
+                sort_topological(&graph)
+                    .expect("commit graph has cycles!")
+                    .into_iter()
+                    .map(|cs_id| id_to_bcs.remove(&cs_id))
+                    .filter_map(|x| x)
+                    .collect()
+            })
         }
 
         // Panics if changeset not found

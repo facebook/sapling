@@ -7,14 +7,17 @@
 use crate::BonsaiDerived;
 use crate::BonsaiDerivedMapping;
 use blobrepo::BlobRepo;
-use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
-use futures::{future, Future};
+use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, FutureExt};
 use mononoke_types::ChangesetId;
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+};
+use topo_sort::sort_topological;
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
@@ -33,77 +36,110 @@ pub(crate) fn derive_impl<
     derived_mapping: Mapping,
     start_csid: ChangesetId,
 ) -> impl Future<Item = Derived, Error = Error> {
-    DeriveNode::from_bonsai(ctx.clone(), derived_mapping.clone(), start_csid).and_then(
-        move |init| {
-            if let DeriveNode::Derived(id) = init {
-                // derivation fetched from the cache
-                return future::ok(id).left_future();
+    // Find all ancestor commits that don't have derived data generated.
+    // Note that they might not be topologically sorted.
+    let changeset_fetcher = repo.get_changeset_fetcher();
+    // This is necessary to avoid visiting the same commit a lot of times in mergy repos
+    let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
+
+    bounded_traversal::bounded_traversal_stream(100, start_csid, {
+        cloned!(ctx, derived_mapping);
+        move |cs_id| {
+            DeriveNode::from_bonsai(ctx.clone(), derived_mapping.clone(), cs_id).and_then({
+                cloned!(ctx, changeset_fetcher, visited);
+                move |derive_node| match derive_node {
+                    DeriveNode::Derived(_) => future::ok((None, vec![])).left_future(),
+                    DeriveNode::Bonsai(bcs_id) => changeset_fetcher
+                        .get_parents(ctx.clone(), bcs_id)
+                        .map({
+                            cloned!(visited);
+                            move |parents| {
+                                let parents_to_visit: Vec<_> = {
+                                    let mut visited = visited.lock().unwrap();
+                                    parents
+                                        .iter()
+                                        .cloned()
+                                        .filter(|p| visited.insert(*p))
+                                        .collect()
+                                };
+
+                                // Topological sort needs parents, so return them here
+                                (Some((bcs_id, parents)), parents_to_visit)
+                            }
+                        })
+                        .right_future(),
+                }
+            })
+        }
+    })
+    .filter_map(|x| x) // Remove all None
+    .collect()
+    .map(|v| {
+        stream::iter_ok(
+            sort_topological(&v.into_iter().collect::<HashMap<_, _>>())
+                .expect("commit graph has cycles!")
+                .into_iter()
+                .rev(),
+        )
+    })
+    .flatten_stream()
+    .for_each({
+        cloned!(ctx, derived_mapping, repo);
+        move |bcs_id| derive_may_panic(ctx.clone(), repo.clone(), derived_mapping.clone(), bcs_id)
+    })
+    .and_then(move |()| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
+}
+
+// Panics if any of the parents is not derived yet
+fn derive_may_panic<Derived, Mapping>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    derived_mapping: Mapping,
+    bcs_id: ChangesetId,
+) -> impl Future<Item = (), Error = Error>
+where
+    Derived: BonsaiDerived,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
+{
+    let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id.clone());
+
+    let changeset_fetcher = repo.get_changeset_fetcher();
+    let derived_parents =
+        changeset_fetcher
+            .get_parents(ctx.clone(), bcs_id)
+            .and_then({
+                cloned!(ctx, derived_mapping);
+                move |parents| {
+                    future::join_all(parents.into_iter().map(move |p| {
+                        fetch_derived_may_panic(ctx.clone(), p, derived_mapping.clone())
+                    }))
+                }
+            });
+
+    bcs_fut
+        .join(derived_parents)
+        .and_then({
+            cloned!(ctx);
+            move |(bcs, parents)| Derived::derive_from_parents(ctx, repo, bcs, parents)
+        })
+        .and_then(move |derived| derived_mapping.put(ctx, bcs_id, derived))
+}
+
+fn fetch_derived_may_panic<Derived, Mapping>(
+    ctx: CoreContext,
+    bcs_id: ChangesetId,
+    derived_mapping: Mapping,
+) -> impl Future<Item = Derived, Error = Error>
+where
+    Derived: BonsaiDerived,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
+{
+    DeriveNode::from_bonsai(ctx, derived_mapping, bcs_id).map(
+        move |derive_node| match derive_node {
+            DeriveNode::Derived(derived) => derived,
+            DeriveNode::Bonsai(_) => {
+                panic!("{} should be derived already", bcs_id);
             }
-            bounded_traversal::bounded_traversal(
-                100,
-                init,
-                {
-                    let changeset_fetcher = repo.get_changeset_fetcher();
-                    cloned!(ctx, derived_mapping);
-                    move |node| {
-                        // FIXME - this code might have problems with very mergy repos.
-                        // It may result in a combinatoral explosion in mergy repos, like the following:
-                        //  o
-                        //  |\
-                        //  | o
-                        //  |/|
-                        //  o |
-                        //  |\|
-                        //  | o
-                        //  |/|
-                        //  o |
-                        //  |\|
-                        //  ...
-                        //  |/|
-                        //  | ~
-                        //  o
-                        //  |\
-                        //  ~ ~
-                        //
-                        //
-                        node.dependencies(
-                            ctx.clone(),
-                            derived_mapping.clone(),
-                            changeset_fetcher.clone(),
-                        )
-                        .map(move |deps| (node, deps))
-                    }
-                },
-                {
-                    cloned!(ctx, repo);
-                    move |node, parents| match node {
-                        DeriveNode::Derived(id) => future::ok(id).left_future(),
-                        DeriveNode::Bonsai(csid) => repo
-                            .get_bonsai_changeset(ctx.clone(), csid)
-                            .and_then({
-                                cloned!(ctx, repo);
-                                move |bonsai| {
-                                    Derived::derive_from_parents(
-                                        ctx,
-                                        repo,
-                                        bonsai,
-                                        parents.collect(),
-                                    )
-                                }
-                            })
-                            .and_then({
-                                cloned!(ctx, derived_mapping);
-                                move |derived_id| {
-                                    derived_mapping
-                                        .put(ctx, csid, derived_id.clone())
-                                        .map(move |_| derived_id)
-                                }
-                            })
-                            .right_future(),
-                    }
-                },
-            )
-            .right_future()
         },
     )
 }
@@ -134,37 +170,6 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
                 None => DeriveNode::Bonsai(csid),
             })
     }
-
-    // dependencies which need to be computed before we can create derivation for current node
-    fn dependencies<Mapping>(
-        &self,
-        ctx: CoreContext,
-        derived_mapping: Mapping,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    ) -> impl Future<Item = Vec<Self>, Error = Error>
-    where
-        Mapping: BonsaiDerivedMapping<Value = Derived> + Clone,
-    {
-        match self {
-            DeriveNode::Derived(_) => future::ok(Vec::new()).left_future(),
-            DeriveNode::Bonsai(csid) => changeset_fetcher
-                .get_parents(ctx.clone(), *csid)
-                .and_then(move |csids| {
-                    derived_mapping
-                        .get(ctx, csids.clone())
-                        .map(move |mut csid_to_id| {
-                            csids
-                                .into_iter()
-                                .map(|csid| match csid_to_id.remove(&csid) {
-                                    Some(id) => DeriveNode::Derived(id.clone()),
-                                    None => DeriveNode::Bonsai(csid),
-                                })
-                                .collect()
-                        })
-                })
-                .right_future(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -172,26 +177,34 @@ mod test {
     use super::*;
 
     use bookmarks::BookmarkName;
-    use fixtures::linear;
+    use fixtures::{
+        branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
+        merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
+    };
     use futures_ext::BoxFuture;
     use maplit::hashmap;
     use mononoke_types::BonsaiChangeset;
+    use revset::AncestorsNodeStream;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
     use tokio::runtime::Runtime;
 
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd)]
-    struct TestGenNum(u64);
+    struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);
 
     impl BonsaiDerived for TestGenNum {
         fn derive_from_parents(
             _ctx: CoreContext,
             _repo: BlobRepo,
-            _bonsai: BonsaiChangeset,
+            bonsai: BonsaiChangeset,
             parents: Vec<Self>,
         ) -> BoxFuture<Self, Error> {
+            let parent_commits = parents.iter().map(|x| x.1).collect();
+
             future::ok(Self(
                 parents.into_iter().max().map(|x| x.0).unwrap_or(0) + 1,
+                bonsai.get_changeset_id(),
+                parent_commits,
             ))
             .boxify()
         }
@@ -244,26 +257,85 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_derive_linear() {
-        let ctx = CoreContext::test_mock();
-        let mut runtime = Runtime::new().unwrap();
-
-        let repo = linear::getrepo();
+    fn derive_for_master(runtime: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = runtime
             .block_on(repo.get_bonsai_bookmark(ctx.clone(), &master_book))
             .unwrap()
             .unwrap();
+        let expected = runtime
+            .block_on(
+                repo.get_changeset_fetcher()
+                    .get_generation_number(ctx.clone(), bcs_id.clone()),
+            )
+            .unwrap();
 
-        let res = runtime
+        let mapping = Arc::new(TestMapping::new());
+        let actual = runtime
             .block_on(TestGenNum::derive(
-                ctx,
-                repo,
-                Arc::new(TestMapping::new()),
+                ctx.clone(),
+                repo.clone(),
+                mapping.clone(),
                 bcs_id,
             ))
             .unwrap();
-        assert_eq!(res.0, 11);
+        assert_eq!(expected.value(), actual.0);
+
+        let changeset_fetcher = repo.get_changeset_fetcher();
+        runtime
+            .block_on(
+                AncestorsNodeStream::new(
+                    ctx.clone(),
+                    &repo.get_changeset_fetcher(),
+                    bcs_id.clone(),
+                )
+                .and_then(move |new_bcs_id| {
+                    let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
+                    let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]);
+
+                    parents.join(mapping).map(move |(parents, mapping)| {
+                        let gen_num = mapping.get(&new_bcs_id).unwrap();
+                        assert_eq!(parents, gen_num.2);
+                    })
+                })
+                .collect(),
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn test_derive_linear() {
+        let ctx = CoreContext::test_mock();
+        let mut runtime = Runtime::new().unwrap();
+
+        let repo = branch_even::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = branch_uneven::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = branch_wide::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = linear::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = many_files_dirs::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = merge_even::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = merge_uneven::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = unshared_merge_even::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = unshared_merge_uneven::getrepo();
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        let repo = many_diamonds::getrepo(&mut runtime);
+        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
     }
 }

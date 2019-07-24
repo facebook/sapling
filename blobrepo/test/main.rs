@@ -14,7 +14,7 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
-use fixtures::{many_files_dirs, merge_uneven};
+use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
@@ -1194,39 +1194,6 @@ fn test_no_case_conflict_removal_dir() {
     });
 }
 
-fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
-    BonsaiChangesetMut {
-        parents,
-        author: "author".to_string(),
-        author_date: DateTime::from_timestamp(0, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
-    }
-    .freeze()
-    .unwrap()
-}
-
-fn create_bonsai_changeset_with_author(
-    parents: Vec<ChangesetId>,
-    author: String,
-) -> BonsaiChangeset {
-    BonsaiChangesetMut {
-        parents,
-        author,
-        author_date: DateTime::from_timestamp(0, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
-    }
-    .freeze()
-    .unwrap()
-}
-
 #[test]
 fn test_hg_commit_generation_simple() {
     let repo = fixtures::linear::getrepo();
@@ -1313,43 +1280,19 @@ fn test_hg_commit_generation_one_after_another() {
     assert_eq!(count, 1);
 }
 
-fn save_diamond_commits(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    runtime: &mut tokio::runtime::Runtime,
-    parents: Vec<ChangesetId>,
-) -> ChangesetId {
-    let first_bcs = create_bonsai_changeset(parents);
-    let first_bcs_id = first_bcs.get_changeset_id();
-
-    let second_bcs = create_bonsai_changeset(vec![first_bcs_id]);
-    let second_bcs_id = second_bcs.get_changeset_id();
-
-    let third_bcs =
-        create_bonsai_changeset_with_author(vec![first_bcs_id], "another_author".to_string());
-    let third_bcs_id = third_bcs.get_changeset_id();
-
-    let fourth_bcs = create_bonsai_changeset(vec![second_bcs_id, third_bcs_id]);
-    let fourth_bcs_id = fourth_bcs.get_changeset_id();
-
-    runtime
-        .block_on(blobrepo::save_bonsai_changesets(
-            vec![first_bcs, second_bcs, third_bcs, fourth_bcs],
-            ctx.clone(),
-            repo.clone(),
-        ))
-        .unwrap();
-
-    fourth_bcs_id
-}
-
 #[test]
 fn test_hg_commit_generation_diamond() {
     let ctx = CoreContext::test_mock();
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     let repo = fixtures::linear::getrepo();
 
-    let last_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), &mut runtime, vec![]);
+    let last_bcs_id = runtime
+        .block_on(fixtures::save_diamond_commits(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+        ))
+        .unwrap();
 
     let (_, count) = runtime
         .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), last_bcs_id))
@@ -1361,22 +1304,53 @@ fn test_hg_commit_generation_diamond() {
 fn test_hg_commit_generation_many_diamond() {
     let ctx = CoreContext::test_mock();
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo();
-    let mut last_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), &mut runtime, vec![]);
-
-    // Make sure that algorithm is not exponential in the number of merges
-    let diamond_stack_size = 50;
-    for _ in 1..diamond_stack_size {
-        let new_bcs_id =
-            save_diamond_commits(ctx.clone(), repo.clone(), &mut runtime, vec![last_bcs_id]);
-        last_bcs_id = new_bcs_id;
-    }
-
-    let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), last_bcs_id))
+    let repo = fixtures::many_diamonds::getrepo(&mut runtime);
+    let book = bookmarks::BookmarkName::new("master").unwrap();
+    let bcs_id = runtime
+        .block_on(repo.get_bonsai_bookmark(ctx.clone(), &book))
+        .unwrap()
         .unwrap();
 
-    assert_eq!(count, 4 * diamond_stack_size);
+    let (_, count) = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), bcs_id))
+        .unwrap();
+    assert_eq!(count, 200);
+}
+
+#[test]
+fn test_hg_commit_generation_uneven_branch() {
+    let ctx = CoreContext::test_mock();
+    let repo = blobrepo_factory::new_memblob_empty(None).expect("cannot create empty repo");
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+
+    let root_bcs = fixtures::create_bonsai_changeset(vec![]);
+
+    let large_branch_1 = fixtures::create_bonsai_changeset(vec![root_bcs.get_changeset_id()]);
+    let large_branch_2 = fixtures::create_bonsai_changeset(vec![large_branch_1.get_changeset_id()]);
+
+    let short_branch = fixtures::create_bonsai_changeset(vec![root_bcs.get_changeset_id()]);
+
+    let merge = fixtures::create_bonsai_changeset(vec![
+        short_branch.get_changeset_id(),
+        large_branch_2.get_changeset_id(),
+    ]);
+
+    let f = blobrepo::save_bonsai_changesets(
+        vec![
+            root_bcs,
+            large_branch_1,
+            large_branch_2,
+            short_branch,
+            merge.clone(),
+        ],
+        ctx.clone(),
+        repo.clone(),
+    );
+
+    runtime.block_on(f).unwrap();
+    runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), merge.get_changeset_id()))
+        .unwrap();
 }
 
 #[test]

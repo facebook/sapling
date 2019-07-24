@@ -6,21 +6,6 @@
 
 #![deny(warnings)]
 
-#[cfg(test)]
-extern crate async_unit;
-extern crate blobrepo;
-extern crate blobrepo_factory;
-
-extern crate bookmarks;
-extern crate bytes;
-extern crate context;
-extern crate futures;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate slog;
-
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
@@ -28,9 +13,14 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
+use failure::Error;
 use futures::future::{join_all, Future};
+use futures_ext::{BoxFuture, FutureExt};
+use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
-use mononoke_types::{BonsaiChangesetMut, DateTime, FileChange, FileContents, FileType};
+use mononoke_types::{
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
+};
 
 fn store_files(
     ctx: CoreContext,
@@ -1465,6 +1455,105 @@ pub mod unshared_merge_uneven {
     }
 }
 
+pub fn save_diamond_commits(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    parents: Vec<ChangesetId>,
+) -> BoxFuture<ChangesetId, Error> {
+    let first_bcs = create_bonsai_changeset(parents);
+    let first_bcs_id = first_bcs.get_changeset_id();
+
+    let second_bcs = create_bonsai_changeset(vec![first_bcs_id]);
+    let second_bcs_id = second_bcs.get_changeset_id();
+
+    let third_bcs =
+        create_bonsai_changeset_with_author(vec![first_bcs_id], "another_author".to_string());
+    let third_bcs_id = third_bcs.get_changeset_id();
+
+    let fourth_bcs = create_bonsai_changeset(vec![second_bcs_id, third_bcs_id]);
+    let fourth_bcs_id = fourth_bcs.get_changeset_id();
+
+    blobrepo::save_bonsai_changesets(
+        vec![first_bcs, second_bcs, third_bcs, fourth_bcs],
+        ctx.clone(),
+        repo.clone(),
+    )
+    .map(move |()| fourth_bcs_id)
+    .boxify()
+}
+
+pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        parents,
+        author: "author".to_string(),
+        author_date: DateTime::from_timestamp(0, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "message".to_string(),
+        extra: btreemap! {},
+        file_changes: btreemap! {},
+    }
+    .freeze()
+    .unwrap()
+}
+
+pub fn create_bonsai_changeset_with_author(
+    parents: Vec<ChangesetId>,
+    author: String,
+) -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        parents,
+        author,
+        author_date: DateTime::from_timestamp(0, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "message".to_string(),
+        extra: btreemap! {},
+        file_changes: btreemap! {},
+    }
+    .freeze()
+    .unwrap()
+}
+
+pub mod many_diamonds {
+    use super::*;
+
+    pub fn getrepo(runtime: &mut tokio::runtime::Runtime) -> BlobRepo {
+        let repo = blobrepo_factory::new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock();
+
+        let mut last_bcs_id = runtime
+            .block_on(save_diamond_commits(ctx.clone(), repo.clone(), vec![]))
+            .unwrap();
+
+        let diamond_stack_size = 50;
+        for _ in 1..diamond_stack_size {
+            let new_bcs_id = runtime
+                .block_on(save_diamond_commits(
+                    ctx.clone(),
+                    repo.clone(),
+                    vec![last_bcs_id],
+                ))
+                .unwrap();
+            last_bcs_id = new_bcs_id;
+        }
+
+        let ctx = CoreContext::test_mock();
+        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkName::new("master").unwrap(),
+            last_bcs_id,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
+        )
+        .unwrap();
+        runtime.block_on(txn.commit()).unwrap();
+
+        repo
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1530,5 +1619,11 @@ mod test {
         async_unit::tokio_unit_test(|| {
             unshared_merge_uneven::getrepo();
         })
+    }
+
+    #[test]
+    fn test_many_diamonds() {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        many_diamonds::getrepo(&mut runtime);
     }
 }
