@@ -3,6 +3,83 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+//! Classes for constructing and serializing a histpack file and index.
+//!
+//! A history pack is a pair of files that contain the revision history for
+//! various file revisions in Mercurial. It contains only revision history (like
+//! parent pointers and linknodes), not any revision content information.
+//!
+//! It consists of two files, with the following format:
+//!
+//! ```text
+//!
+//! .histpack
+//!     The pack itself is a series of file revisions with some basic header
+//!     information on each.
+//!
+//!     datapack = <version: 1 byte>
+//!                [<filesection>,...]
+//!     filesection = <filename len: 2 byte unsigned int>
+//!                   <filename>
+//!                   <revision count: 4 byte unsigned int>
+//!                   [<revision>,...]
+//!     revision = <node: 20 byte>
+//!                <p1node: 20 byte>
+//!                <p2node: 20 byte>
+//!                <linknode: 20 byte>
+//!                <copyfromlen: 2 byte>
+//!                <copyfrom>
+//!
+//!     The revisions within each filesection are stored in topological order
+//!     (newest first). If a given entry has a parent from another file (a copy)
+//!     then p1node is the node from the other file, and copyfrom is the
+//!     filepath of the other file.
+//!
+//! .histidx
+//!     The index file provides a mapping from filename to the file section in
+//!     the histpack. In V1 it also contains sub-indexes for specific nodes
+//!     within each file. It consists of three parts, the fanout, the file index
+//!     and the node indexes.
+//!
+//!     The file index is a list of index entries, sorted by filename hash (one
+//!     per file section in the pack). Each entry has:
+//!
+//!     - node (The 20 byte hash of the filename)
+//!     - pack entry offset (The location of this file section in the histpack)
+//!     - pack content size (The on-disk length of this file section's pack
+//!                          data)
+//!     - node index offset (The location of the file's node index in the index
+//!                          file) [1]
+//!     - node index size (the on-disk length of this file's node index) [1]
+//!
+//!     The fanout is a quick lookup table to reduce the number of steps for
+//!     bisecting the index. It is a series of 4 byte pointers to positions
+//!     within the index. It has 2^16 entries, which corresponds to hash
+//!     prefixes [00, 01, 02,..., FD, FE, FF]. Example: the pointer in slot 4F
+//!     points to the index position of the first revision whose node starts
+//!     with 4F. This saves log(2^16) bisect steps.
+//!
+//!     dataidx = <fanouttable>
+//!               <file count: 8 byte unsigned> [1]
+//!               <fileindex>
+//!               <node count: 8 byte unsigned> [1]
+//!               [<nodeindex>,...] [1]
+//!     fanouttable = [<index offset: 4 byte unsigned int>,...] (2^16 entries)
+//!
+//!     fileindex = [<file index entry>,...]
+//!     fileindexentry = <node: 20 byte>
+//!                      <pack file section offset: 8 byte unsigned int>
+//!                      <pack file section size: 8 byte unsigned int>
+//!                      <node index offset: 4 byte unsigned int> [1]
+//!                      <node index size: 4 byte unsigned int>   [1]
+//!     nodeindex = <filename>[<node index entry>,...] [1]
+//!     filename = <filename len : 2 byte unsigned int><filename value> [1]
+//!     nodeindexentry = <node: 20 byte> [1]
+//!                      <pack file node offset: 8 byte unsigned int> [1]
+//!
+//! ```
+//! [1]: new in version 1.
+
 use std::{
     fs::File,
     io::{Cursor, Read, Write},
