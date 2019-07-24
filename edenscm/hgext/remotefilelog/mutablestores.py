@@ -7,7 +7,6 @@ from edenscm.mercurial.node import hex
 from edenscmnative.bindings import revisionstore
 
 from . import shallowutil
-from .datapack import mutabledatapack
 from .historypack import mutablehistorypack
 
 
@@ -30,11 +29,8 @@ class mutablebasestore(object):
 class mutabledatastore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
-        if repo.ui.configbool("format", "userustmutablestore", True):
-            shallowutil.mkstickygroupdir(repo.ui, path)
-            return revisionstore.mutabledeltastore(packfilepath=path)
-        else:
-            return mutabledatapack(repo.ui, path)
+        shallowutil.mkstickygroupdir(repo.ui, path)
+        return revisionstore.mutabledeltastore(packfilepath=path)
 
     def __init__(self, repo, path):
         super(mutabledatastore, self).__init__()
