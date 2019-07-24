@@ -59,18 +59,43 @@ def hfsignoreclean(s):
     return s
 
 
-# encoding.environ is provided read-only, which may not be used to modify
-# the process environment
-_nativeenviron = not pycompat.ispy3 or os.supports_bytes_environ
-if not pycompat.ispy3:
-    environ = os.environ  # re-exports
-elif _nativeenviron:
-    environ = os.environb  # re-exports
-else:
-    # preferred encoding isn't known yet; use utf-8 to avoid unicode error
-    # and recreate it once encoding is settled
-    items = os.environ.items()  # re-exports
-    environ = dict((k.encode(u"utf-8"), v.encode(u"utf-8")) for k, v in items)
+def setfromenviron():
+    """Reset encoding states from environment variables"""
+    global encoding, encodingmode, environ, _wide
+    # encoding.environ is provided read-only, which may not be used to modify
+    # the process environment
+    _nativeenviron = not pycompat.ispy3 or os.supports_bytes_environ
+    if not pycompat.ispy3:
+        environ = os.environ  # re-exports
+    elif _nativeenviron:
+        environ = os.environb  # re-exports
+    else:
+        # preferred encoding isn't known yet; use utf-8 to avoid unicode error
+        # and recreate it once encoding is settled
+        items = os.environ.items()  # re-exports
+        environ = dict((k.encode(u"utf-8"), v.encode(u"utf-8")) for k, v in items)
+    try:
+        encoding = environ.get("HGENCODING") or "ascii"
+        if not encoding:
+            encoding = locale.getpreferredencoding().encode("ascii") or "ascii"
+            encoding = _encodingfixers.get(encoding, lambda: encoding)()
+    except locale.Error:
+        encoding = "ascii"
+    encodingmode = environ.get("HGENCODINGMODE", "strict")
+
+    if not _nativeenviron:
+        # now encoding and helper functions are available, recreate the environ
+        # dict to be exported to other modules
+        items = os.environ.items()  # re-exports
+        environ = dict(
+            (tolocal(k.encode(u"utf-8")), tolocal(v.encode(u"utf-8"))) for k, v in items
+        )
+
+    # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
+    _wide = _sysstr(
+        environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide" and "WFA" or "WF"
+    )
+
 
 _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 
@@ -80,14 +105,8 @@ _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 if pycompat.iswindows and not pycompat.ispy3:
     _encodingfixers["cp65001"] = lambda: "utf-8"
 
-try:
-    encoding = environ.get("HGENCODING")
-    if not encoding:
-        encoding = locale.getpreferredencoding().encode("ascii") or "ascii"
-        encoding = _encodingfixers.get(encoding, lambda: encoding)()
-except locale.Error:
-    encoding = "ascii"
-encodingmode = environ.get("HGENCODINGMODE", "strict")
+environ = encoding = encodingmode = _wide = None
+setfromenviron()
 fallbackencoding = "ISO-8859-1"
 
 
@@ -228,19 +247,6 @@ else:
     strtolocal = pycompat.identity
     strfromlocal = pycompat.identity
     strmethod = pycompat.identity
-
-if not _nativeenviron:
-    # now encoding and helper functions are available, recreate the environ
-    # dict to be exported to other modules
-    items = os.environ.items()  # re-exports
-    environ = dict(
-        (tolocal(k.encode(u"utf-8")), tolocal(v.encode(u"utf-8"))) for k, v in items
-    )
-
-# How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
-_wide = _sysstr(
-    environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide" and "WFA" or "WF"
-)
 
 
 def colwidth(s):

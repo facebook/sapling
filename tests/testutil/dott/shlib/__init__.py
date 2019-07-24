@@ -64,7 +64,7 @@ else:
 
 
 try:
-    from edenscm.mercurial import dispatch, ui as uimod, util
+    from edenscm.mercurial import dispatch, encoding, ui as uimod, util
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
 
@@ -231,6 +231,7 @@ globals()["."] = source
 def hg(*args, **kwargs):
     stdin = kwargs.get("stdin")
     ui = uimod.ui()
+    encoding.setfromenviron()
     if "HGRCPATH" in os.environ:
         ui.readconfig(os.environ["HGRCPATH"])
     fout = util.stringio()
