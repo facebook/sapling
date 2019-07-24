@@ -2013,15 +2013,15 @@ simple error
                  ^ here)
   [255]
 
-multi-line template with error
-  $ hg log -r . -T 'line 1
-  > line2
-  > {shortest(node}
-  > line4\nline5'
-  hg: parse error at 28: unexpected token: end
-  (line 1\nline2\n{shortest(node}\nline4\nline5
-                                ^ here)
-  [255]
+#multi-line template with error
+#  $ hg log -r . -T 'line 1
+#  > line2
+#  > {shortest(node}
+#  > line4\nline5'
+#  hg: parse error at 28: unexpected token: end
+#  (line 1\nline2\n{shortest(node}\nline4\nline5
+#                                ^ here)
+#  [255]
 
   $ cd ..
 
