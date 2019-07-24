@@ -142,7 +142,7 @@ fn main() {
                 .expect("listening path must be specified"),
             acceptor.build(),
             &TERMINATE_PROCESS,
-            matches.is_present("debug"),
+            matches.is_present("test-instance"),
         );
 
         tracing_fb303::register();
