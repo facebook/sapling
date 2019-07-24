@@ -4331,15 +4331,15 @@ Test word for out of range
 
 Test indent and not adding to empty lines
 
-  $ hg log -T "-----\n{indent(desc, '>> ', ' > ')}\n" -r 0:1 -R a
+  $ hg log -T "-----\n{indent(desc, '.. ', ' . ')}\n" -r 0:1 -R a
   -----
-   > line 1
-  >> line 2
+   . line 1
+  .. line 2
   -----
-   > other 1
-  >> other 2
+   . other 1
+  .. other 2
   
-  >> other 3
+  .. other 3
 
 Test with non-strings like dates
 
