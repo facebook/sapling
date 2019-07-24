@@ -41,7 +41,7 @@ def parsecmd(line):
         cmd[:] = []
 
     def result():
-        return " ".join(map(util.shellquote, cmd)), opts
+        return " ".join(map(util.shellquote, cmd)), opts.copy()
 
     reset()
 
