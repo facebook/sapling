@@ -29,7 +29,11 @@ class LazyCommand(object):
 
     @property
     def output(self):
-        """Emulate the command. Return its output."""
+        """Emulate the command. Return its output.
+
+        Currently the output is a string. i.e. infinite stream (ex. `yes` from
+        coreutils) cannot be expressed using this API.
+        """
         if self._output is None:
             if isinstance(self._command, str):
                 args = shlex.split(self._command)
