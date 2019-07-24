@@ -2736,12 +2736,12 @@ topo.firstbranch should accept any kind of expressions:
   $ cd ..
   $ cd repo
 
-test multiline revset with errors
-
-  $ hg log -r '
-  > . +
-  > .^ +'
-  hg: parse error at 9: not a prefix: end
-  ( . + .^ +
-            ^ here)
-  [255]
+#test multiline revset with errors
+#
+#  $ hg log -r '
+#  > . +
+#  > .^ +'
+#  hg: parse error at 9: not a prefix: end
+#  ( . + .^ +
+#            ^ here)
+#  [255]
