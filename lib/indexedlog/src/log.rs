@@ -608,6 +608,79 @@ impl Log {
         Ok(())
     }
 
+    /// Try to repair the [`Log`] by truncating entries.
+    ///
+    /// This is a destructive operation and should only be used as a last resort.
+    ///
+    /// Other [`Log`] instances backed by the same file might *crash* with SIGBUS.
+    ///
+    /// The function consumes the [`Log`] object, since it is hard to recover
+    /// from an error case.
+    pub unsafe fn repair(mut self) -> Fallible<()> {
+        assert!(
+            self.mem_buf.is_empty(),
+            "programming error: calling 'repair' with dirty entries is unsupported"
+        );
+
+        if let Some(ref dir) = self.dir {
+            let mut dir_file = open_dir(dir)?;
+            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
+            let mut iter = self.iter();
+
+            // Read entries until hitting a (checksum) error.
+            while let Some(Ok(_)) = iter.next() {}
+
+            let valid_len = iter.next_offset;
+            if valid_len != self.meta.primary_len {
+                assert!(valid_len < self.meta.primary_len);
+
+                // Truncate primary log to valid_len.
+                // Drop memory maps so file truncation can work on Windows.
+                self.indexes.clear();
+                self.disk_buf = Arc::new(mmap_empty()?);
+
+                let primary_path = dir.join(PRIMARY_FILE);
+                let mut primary_file = fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(&primary_path)?;
+
+                // Backup the part to be truncated.
+                {
+                    let backup_path = dir.join(format!("log.truncate-{}", valid_len));
+                    let mut backup_file = fs::OpenOptions::new()
+                        .create_new(true)
+                        .write(true)
+                        .open(&backup_path)?;
+
+                    primary_file.seek(SeekFrom::Start(valid_len))?;
+
+                    let mut buf = Vec::with_capacity(1 << 22);
+                    buf.set_len(buf.capacity());
+                    loop {
+                        let size = primary_file.read(&mut buf[..])?;
+                        if size == 0 {
+                            break;
+                        }
+                        backup_file.write_all(&buf[..size])?;
+                    }
+                }
+
+                // Update metadata. Invalidate indexes.
+                self.meta.primary_len = valid_len;
+                self.meta.indexes.clear();
+                self.meta.write_file(dir.join(META_FILE))?;
+
+                // Truncate the file!
+                primary_file.seek(SeekFrom::Start(0))?;
+                primary_file.set_len(valid_len)?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` passed to [`Log::open`].
     ///
@@ -2131,6 +2204,74 @@ mod tests {
         assert_eq!(log.lookup(0, b"abc").unwrap().count(), 1);
         assert_eq!(log.lookup(0, b"def").unwrap().count(), 1);
         assert_eq!(log.lookup(0, b"xyz").unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_repair() {
+        let dir = tempdir().unwrap();
+        {
+            let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+            log.append(b"abc").unwrap();
+            log.append(b"def").unwrap();
+            log.append(b"ghi").unwrap();
+            log.flush().unwrap();
+        }
+
+        // Corrupt the log by changing the last byte.
+        {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .read(true)
+                .open(dir.path().join(PRIMARY_FILE))
+                .unwrap();
+            file.seek(SeekFrom::End(-1)).unwrap();
+            file.write_all(b"x").unwrap();
+        }
+
+        // Reading entries would error out.
+        {
+            let log = Log::open(dir.path(), Vec::new()).unwrap();
+            assert!(log.iter().nth(2).unwrap().is_err());
+        }
+
+        // Repair.
+        {
+            let log = Log::open(dir.path(), Vec::new()).unwrap();
+            unsafe { log.repair() }.unwrap();
+        }
+
+        // Reading entries is recovered. But we lost one entry.
+        let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+        assert_eq!(
+            log.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![b"abc", b"def"]
+        );
+
+        // Writing is recovered.
+        log.append(b"pqr").unwrap();
+        log.flush().unwrap();
+
+        let log = Log::open(dir.path(), Vec::new()).unwrap();
+        assert_eq!(
+            log.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![b"abc", b"def", b"pqr"]
+        );
+    }
+
+    #[test]
+    fn test_repair_noop() {
+        // Repair does nothing if the Log can be read out without issues.
+        let dir = tempdir().unwrap();
+        let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+        log.append(b"abc").unwrap();
+        log.append(b"def").unwrap();
+        log.append(b"ghi").unwrap();
+        log.flush().unwrap();
+
+        let meta_before = LogMetadata::read_file(dir.path().join(META_FILE)).unwrap();
+        unsafe { log.repair() }.unwrap();
+        let meta_after = LogMetadata::read_file(dir.path().join(META_FILE)).unwrap();
+        assert_eq!(meta_before, meta_after);
     }
 
     quickcheck! {
