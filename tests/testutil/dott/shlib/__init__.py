@@ -180,7 +180,9 @@ def test(*args):
             result = func(arg)
             if neg:
                 result = not result
-            if not result:
+            if result:
+                return ""
+            else:
                 return "[1]"
     raise NotImplementedError("test not fully implemented")
 
