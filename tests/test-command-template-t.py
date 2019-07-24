@@ -3,15 +3,19 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+# isort:skip_file
 
 from __future__ import absolute_import
 
 import datetime
+import os
 
+from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
+from edenscm.mercurial import namespaces
 
-feature.require("false")  # test not passing
+
 sh % "setconfig 'extensions.treemanifest=!'"
 sh % ". helpers-usechg.sh"
 
@@ -48,7 +52,7 @@ sh % "hg commit -m 'new head' -d '1500000 0' -u person"
 sh % "hg merge -q foo"
 sh % "hg commit -m merge -d '1500001 0' -u person"
 
-sh % "hg log -r . -T '{username}'" == "test (no-eol)"
+sh % "hg log -r . -T '{username}'" == "test"
 
 # Test arithmetic operators have the right precedence:
 
@@ -254,9 +258,9 @@ sh % "hg log -l1 --style ./tmpl" == "nothing expanded:"
 
 sh % "echo '{rev}'" > "tmpl"
 sh % "hg log -l1 -T./tmpl" == "8"
-sh % "hg log -l1 -Tblah/blah" == "blah/blah (no-eol)"
+sh % "hg log -l1 -Tblah/blah" == "blah/blah"
 
-sh % "printf 'changeset = \"{rev}\\\\n\"\\n'" > "map-simple"
+sh % "echo 'changeset = \"{rev}\\n\"'" > "map-simple"
 sh % "hg log -l1 -T./map-simple" == "8"
 
 #  a map file may have [templates] and [templatealias] sections:
@@ -282,7 +286,7 @@ sh % "'HGRCPATH=./myhgrc' hg log -l1 '-T{a}\\n'" == "8"
 # Test template map inheritance
 
 sh % "echo '__base__ = map-cmdline.default'" > "map-simple"
-sh % "printf 'cset = \"changeset: ***{rev}***\\\\n\"\\n'" >> "map-simple"
+sh % "echo 'cset = \"changeset: ***{rev}***\\n\"'" >> "map-simple"
 sh % "hg log -l1 -T./map-simple" == r"""
     changeset: ***8***
     tag:         tip
@@ -332,125 +336,6 @@ sh % "echo c" >> "c"
 sh % "hg add c"
 sh % "hg commit -qm ' '"
 
-# Default style is like normal output. Phases style should be the same
-# as default style, except for extra phase lines.
-
-sh % "hg log" > "log.out"
-sh % "hg log --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg log -T phases" > "phases.out"
-sh % "diff -U 0 log.out phases.out '|' egrep -v '^---|^\\+\\+\\+|^@@'" == r"""
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft"""
-
-sh % "hg log -v" > "log.out"
-sh % "hg log -v --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg log -v -T phases" > "phases.out"
-sh % "diff -U 0 log.out phases.out '|' egrep -v '^---|^\\+\\+\\+|^@@'" == r"""
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft
-    +phase:       draft"""
-
-sh % "hg log -q" > "log.out"
-sh % "hg log -q --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg log -q -T phases" > "phases.out"
-sh % "cmp log.out phases.out '||' diff -u log.out phases.out"
-
-sh % "hg log --debug" > "log.out"
-sh % "hg log --debug --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg log --debug -T phases" > "phases.out"
-sh % "cmp log.out phases.out '||' diff -u log.out phases.out"
-
-# Default style of working-directory revision should also be the same (but
-# date may change while running tests):
-
-sh % "hg log -r 'wdir()' '|' sed 's|^date:.*|date:|'" > "log.out"
-sh % "hg log -r 'wdir()' --style default '|' sed 's|^date:.*|date:|'" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-
-sh % "hg log -r 'wdir()' -v '|' sed 's|^date:.*|date:|'" > "log.out"
-sh % "hg log -r 'wdir()' -v --style default '|' sed 's|^date:.*|date:|'" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-
-sh % "hg log -r 'wdir()' -q" > "log.out"
-sh % "hg log -r 'wdir()' -q --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-
-sh % "hg log -r 'wdir()' --debug '|' sed 's|^date:.*|date:|'" > "log.out"
-sh % "hg log -r 'wdir()' --debug --style default '|' sed 's|^date:.*|date:|'" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-
-# Default style should also preserve color information (issue2866):
-
-sh % "cp '$HGRCPATH' '$HGRCPATH-bak'"
-sh % "cat" << r"""
-[extensions]
-color=
-""" >> "$HGRCPATH"
-
-sh % "hg '--color=debug' log" > "log.out"
-sh % "hg '--color=debug' log --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg '--color=debug' log -T phases" > "phases.out"
-sh % "diff -U 0 log.out phases.out '|' egrep -v '^---|^\\+\\+\\+|^@@'" == r"""
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]"""
-
-sh % "hg '--color=debug' -v log" > "log.out"
-sh % "hg '--color=debug' -v log --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg '--color=debug' -v log -T phases" > "phases.out"
-sh % "diff -U 0 log.out phases.out '|' egrep -v '^---|^\\+\\+\\+|^@@'" == r"""
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]
-    +[log.phase|phase:       draft]"""
-
-sh % "hg '--color=debug' -q log" > "log.out"
-sh % "hg '--color=debug' -q log --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg '--color=debug' -q log -T phases" > "phases.out"
-sh % "cmp log.out phases.out '||' diff -u log.out phases.out"
-
-sh % "hg '--color=debug' --debug log" > "log.out"
-sh % "hg '--color=debug' --debug log --style default" > "style.out"
-sh % "cmp log.out style.out '||' diff -u log.out style.out"
-sh % "hg '--color=debug' --debug log -T phases" > "phases.out"
-sh % "cmp log.out phases.out '||' diff -u log.out phases.out"
-
-sh % "mv '$HGRCPATH-bak' '$HGRCPATH'"
 # Remove commit with empty commit message, so as to not pollute further
 # tests.
 
@@ -1178,7 +1063,7 @@ sh % "hg log --debug -Tjson" == r"""
 
 if feature.check(["unix-permissions", "no-root"]):
     sh % "touch q"
-    sh % "chmod 0 q"
+    os.chmod("q", 0)
     sh % "hg log --style ./q" == r"""
         abort: Permission denied: ./q
         [255]"""
@@ -1410,11 +1295,17 @@ sh % "hg heads --style changelog" == r"""
 
 # Keys work:
 
-sh % "for key in author branch branches date desc file_adds file_dels file_mods file_copies file_copies_switch files manifest node parents rev tags diffstat extras p1rev p2rev p1node 'p2node;' do" == r"""
-    >     for mode in '' --verbose --debug; do
-    >         hg log $mode --template "$key$mode: {$key}\n"
-    >     done
-    > done
+out = []
+for (
+    key
+) in "author branch branches date desc file_adds file_dels file_mods file_copies file_copies_switch files manifest node parents rev tags diffstat extras p1rev p2rev p1node p2node".split():
+    for mode in ["", "--verbose", "--debug"]:
+        args = ["log", mode, "-T", "%s%s: {%s}\\n" % (key, mode, key)]
+        out += [l.strip() for l in sh.hg(*args).splitlines()]
+
+eq(
+    "\n".join(out),
+    r"""
     author: test
     author: User Name <user@hostname>
     author: person
@@ -1469,33 +1360,33 @@ sh % "for key in author branch branches date desc file_adds file_dels file_mods 
     branch--debug: default
     branch--debug: default
     branch--debug: default
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--verbose:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
-    branches--debug:  (trailing space)
+    branches:
+    branches:
+    branches:
+    branches:
+    branches:
+    branches:
+    branches:
+    branches:
+    branches:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--verbose:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
+    branches--debug:
     date: 1577872860.00
     date: 1000000.00
     date: 1500001.00
@@ -1564,162 +1455,162 @@ sh % "for key in author branch branches date desc file_adds file_dels file_mods 
     line 2
     file_adds: fourth third
     file_adds: second
-    file_adds:  (trailing space)
+    file_adds:
     file_adds: d
-    file_adds:  (trailing space)
-    file_adds:  (trailing space)
+    file_adds:
+    file_adds:
     file_adds: c
     file_adds: b
     file_adds: a
     file_adds--verbose: fourth third
     file_adds--verbose: second
-    file_adds--verbose:  (trailing space)
+    file_adds--verbose:
     file_adds--verbose: d
-    file_adds--verbose:  (trailing space)
-    file_adds--verbose:  (trailing space)
+    file_adds--verbose:
+    file_adds--verbose:
     file_adds--verbose: c
     file_adds--verbose: b
     file_adds--verbose: a
     file_adds--debug: fourth third
     file_adds--debug: second
-    file_adds--debug:  (trailing space)
+    file_adds--debug:
     file_adds--debug: d
-    file_adds--debug:  (trailing space)
-    file_adds--debug:  (trailing space)
+    file_adds--debug:
+    file_adds--debug:
     file_adds--debug: c
     file_adds--debug: b
     file_adds--debug: a
     file_dels: second
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
-    file_dels:  (trailing space)
+    file_dels:
+    file_dels:
+    file_dels:
+    file_dels:
+    file_dels:
+    file_dels:
+    file_dels:
+    file_dels:
     file_dels--verbose: second
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
-    file_dels--verbose:  (trailing space)
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
+    file_dels--verbose:
     file_dels--debug: second
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_dels--debug:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_dels--debug:
+    file_mods:
+    file_mods:
+    file_mods:
+    file_mods:
+    file_mods:
     file_mods: c
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
+    file_mods:
+    file_mods:
+    file_mods:
+    file_mods--verbose:
+    file_mods--verbose:
+    file_mods--verbose:
+    file_mods--verbose:
+    file_mods--verbose:
     file_mods--verbose: c
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--verbose:  (trailing space)
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
+    file_mods--verbose:
+    file_mods--verbose:
+    file_mods--verbose:
+    file_mods--debug:
+    file_mods--debug:
+    file_mods--debug:
+    file_mods--debug:
+    file_mods--debug:
     file_mods--debug: c
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
-    file_mods--debug:  (trailing space)
+    file_mods--debug:
+    file_mods--debug:
+    file_mods--debug:
     file_copies: fourth (second)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
-    file_copies:  (trailing space)
+    file_copies:
+    file_copies:
+    file_copies:
+    file_copies:
+    file_copies:
+    file_copies:
+    file_copies:
+    file_copies:
     file_copies--verbose: fourth (second)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
-    file_copies--verbose:  (trailing space)
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
+    file_copies--verbose:
     file_copies--debug: fourth (second)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies--debug:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--verbose:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
-    file_copies_switch--debug:  (trailing space)
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies--debug:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--verbose:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
+    file_copies_switch--debug:
     files: fourth second third
     files: second
-    files:  (trailing space)
+    files:
     files: d
-    files:  (trailing space)
+    files:
     files: c
     files: c
     files: b
     files: a
     files--verbose: fourth second third
     files--verbose: second
-    files--verbose:  (trailing space)
+    files--verbose:
     files--verbose: d
-    files--verbose:  (trailing space)
+    files--verbose:
     files--verbose: c
     files--verbose: c
     files--verbose: b
     files--verbose: a
     files--debug: fourth second third
     files--debug: second
-    files--debug:  (trailing space)
+    files--debug:
     files--debug: d
-    files--debug:  (trailing space)
+    files--debug:
     files--debug: c
     files--debug: c
     files--debug: b
@@ -1778,33 +1669,33 @@ sh % "for key in author branch branches date desc file_adds file_dels file_mods 
     node--debug: 97054abb4ab824450e9164180baf491ae0078465
     node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    parents:  (trailing space)
-    parents: -1:000000000000  (trailing space)
-    parents: 5:13207e5a10d9 4:07fa1db10648  (trailing space)
-    parents: 3:10e46f2dcbf4  (trailing space)
-    parents:  (trailing space)
-    parents:  (trailing space)
-    parents:  (trailing space)
-    parents:  (trailing space)
-    parents:  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--verbose: -1:000000000000  (trailing space)
-    parents--verbose: 5:13207e5a10d9 4:07fa1db10648  (trailing space)
-    parents--verbose: 3:10e46f2dcbf4  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--verbose:  (trailing space)
-    parents--debug: 7:29114dbae42b9f078cf2714dbe3a86bba8ec7453 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:07fa1db1064879a32157227401eb44b322ae53ce  (trailing space)
-    parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: 1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965 -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: 0:1e4e1b8f71e05681d422154f5421e385fec3454f -1:0000000000000000000000000000000000000000  (trailing space)
-    parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000  (trailing space)
+    parents:
+    parents: -1:000000000000
+    parents: 5:13207e5a10d9 4:07fa1db10648
+    parents: 3:10e46f2dcbf4
+    parents:
+    parents:
+    parents:
+    parents:
+    parents:
+    parents--verbose:
+    parents--verbose: -1:000000000000
+    parents--verbose: 5:13207e5a10d9 4:07fa1db10648
+    parents--verbose: 3:10e46f2dcbf4
+    parents--verbose:
+    parents--verbose:
+    parents--verbose:
+    parents--verbose:
+    parents--verbose:
+    parents--debug: 7:29114dbae42b9f078cf2714dbe3a86bba8ec7453 -1:0000000000000000000000000000000000000000
+    parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000
+    parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:07fa1db1064879a32157227401eb44b322ae53ce
+    parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000
+    parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000
+    parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:0000000000000000000000000000000000000000
+    parents--debug: 1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965 -1:0000000000000000000000000000000000000000
+    parents--debug: 0:1e4e1b8f71e05681d422154f5421e385fec3454f -1:0000000000000000000000000000000000000000
+    parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000
     rev: 8
     rev: 7
     rev: 6
@@ -1833,32 +1724,32 @@ sh % "for key in author branch branches date desc file_adds file_dels file_mods 
     rev--debug: 1
     rev--debug: 0
     tags: tip
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
-    tags:  (trailing space)
+    tags:
+    tags:
+    tags:
+    tags:
+    tags:
+    tags:
+    tags:
+    tags:
     tags--verbose: tip
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
-    tags--verbose:  (trailing space)
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
+    tags--verbose:
     tags--debug: tip
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
-    tags--debug:  (trailing space)
+    tags--debug:
+    tags--debug:
+    tags--debug:
+    tags--debug:
+    tags--debug:
+    tags--debug:
+    tags--debug:
+    tags--debug:
     diffstat: 3: +2/-1
     diffstat: 1: +1/-0
     diffstat: 0: +0/-0
@@ -2020,7 +1911,8 @@ sh % "for key in author branch branches date desc file_adds file_dels file_mods 
     p2node--debug: 0000000000000000000000000000000000000000
     p2node--debug: 0000000000000000000000000000000000000000
     p2node--debug: 0000000000000000000000000000000000000000
-    p2node--debug: 0000000000000000000000000000000000000000"""
+    p2node--debug: 0000000000000000000000000000000000000000""",
+)
 
 # Filters work:
 
@@ -2123,9 +2015,7 @@ sh % "hg log --template '{node|short}\\n'" == r"""
     b608e9d1a3f0
     1e4e1b8f71e0"""
 
-sh % "hg log --template" << open(
-    'changeset author="{author|xmlescape}"/>\\n'
-).read() == r"""
+sh % "hg log --template '<changeset author=\"{author|xmlescape}\"/>\n'" == r"""
     <changeset author="test"/>
     <changeset author="User Name &lt;user@hostname&gt;"/>
     <changeset author="person"/>
@@ -2164,12 +2054,12 @@ sh % "cd unstable-hash"
 sh % "hg log --template '{date|age}\\n' '||' exit 1" > "/dev/null"
 
 
-fp = open("a", "w")
 n = datetime.datetime.now() + datetime.timedelta(366 * 7)
-fp.write("%d-%d-%d 00:00" % (n.year, n.month, n.day))
-fp.close()
+s = "%d-%d-%d 00:00" % (n.year, n.month, n.day)
+open("a", "wb").write(s)
+
 sh % "hg add a"
-sh % "hg commit -m future -d '`cat a`'"
+sh % ("hg commit -m future -d '%s'" % s)
 
 sh % "hg log -l1 --template '{date|age}\\n'" == "7 years from now"
 
@@ -3025,17 +2915,15 @@ sh % "cd .."
 # Style path expansion: issue1948 - ui.style option doesn't work on OSX
 # if it is a relative path
 
-sh % "mkdir -p home/styles"
+sh % "mkdir -p $TESTTMP/home/styles"
 
 sh % "cat" << r"""
 changeset = 'test {rev}:{node|short}\n'
-""" > "home/styles/teststyle"
-
-sh % "'HOME=`pwd`/home;' export HOME"
+""" > "$TESTTMP/home/styles/teststyle"
 
 sh % "cat" << r"""
 [ui]
-style = ~/styles/teststyle
+style = $TESTTMP/home/styles/teststyle
 """ > "latesttag/.hg/hgrc"
 
 sh % "hg -R latesttag tip" == "test 11:97e5943b523a"
@@ -3103,7 +2991,7 @@ sh % "hg debugtemplate -R latesttag -r0 -v '{manifest.node|short}\\n'" == r"""
 
 #  (the following examples are invalid, but seem natural in parsing POV)
 
-sh % "hg debugtemplate -R latesttag -r0 -v '{foo|bar.baz}\\n' '2>' /dev/null" == r"""
+sh % "hg debugtemplate -R latesttag -r0 -v '{foo|bar.baz}\\n'" == r"""
     (template
       (|
         (symbol 'foo')
@@ -3111,8 +2999,9 @@ sh % "hg debugtemplate -R latesttag -r0 -v '{foo|bar.baz}\\n' '2>' /dev/null" ==
           (symbol 'bar')
           (symbol 'baz')))
       (string '\n'))
+    hg: parse error: expected a symbol, got '.'
     [255]"""
-sh % "hg debugtemplate -R latesttag -r0 -v '{foo.bar()}\\n' '2>' /dev/null" == r"""
+sh % "hg debugtemplate -R latesttag -r0 -v '{foo.bar()}\\n'" == r"""
     (template
       (.
         (symbol 'foo')
@@ -3120,6 +3009,7 @@ sh % "hg debugtemplate -R latesttag -r0 -v '{foo.bar()}\\n' '2>' /dev/null" == r
           (symbol 'bar')
           None))
       (string '\n'))
+    hg: parse error: expected a symbol, got 'func'
     [255]"""
 
 # Test evaluation of dot operator:
@@ -3476,12 +3366,12 @@ sh % "hg log -l1 --template '{fill(desc, \"20\", author, bookmarks)}'" == r"""
     {node|short}desc to
     text.{rev}be wrapped
     text.{rev}desc to be
-    text.{rev}wrapped (no-eol)"""
+    text.{rev}wrapped"""
 sh % 'hg log -l1 --template \'{fill(desc, "20", "{node|short}:", "text.{rev}:")}\'' == r"""
     ea4c0948489d:desc to
     text.1:be wrapped
     text.1:desc to be
-    text.1:wrapped (no-eol)"""
+    text.1:wrapped"""
 sh % 'hg log -l1 -T \'{fill(desc, date, "", "")}\\n\'' == r"""
     hg: parse error: fill expects an integer width
     [255]"""
@@ -3489,10 +3379,10 @@ sh % 'hg log -l1 -T \'{fill(desc, date, "", "")}\\n\'' == r"""
 sh % "'COLUMNS=25' hg log -l1 --template '{fill(desc, termwidth, \"{node|short}:\", \"termwidth.{rev}:\")}'" == r"""
     ea4c0948489d:desc to be
     termwidth.1:wrapped desc
-    termwidth.1:to be wrapped (no-eol)"""
+    termwidth.1:to be wrapped"""
 
-sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", author)}\'' == "{node|short} (no-eol)"
-sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", "{node|short}")}\'' == "ea-c-------d (no-eol)"
+sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", author)}\'' == "{node|short}"
+sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", "{node|short}")}\'' == "ea-c-------d"
 
 sh % "cat" << r"""
 [extensions]
@@ -3611,11 +3501,12 @@ evolution.createmarkers=True
 """ >> ".hg/hgrc"
 sh % "echo 0" > "a"
 sh % "hg ci -qAm 0"
-sh % "for i in 17 129 248 242 480 580 617 1057 2857 '4025;' do" == r"""
-    >   hg up -q 0
-    >   echo $i > a
-    >   hg ci -qm $i
-    > done"""
+
+for i in [17, 129, 248, 242, 480, 580, 617, 1057, 2857, 4025]:
+    sh.hg("up", "-q", "0")
+    open("a", "wb").write("%s\n" % i)
+    sh.hg("ci", "-qm", "%s" % i)
+
 sh % "hg up -q null"
 sh % "hg log '-r0:' -T '{rev}:{node}\\n'" == r"""
     0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a
@@ -3783,7 +3674,7 @@ sh % "hg log --template '{rev} Parents: {revset(\"parents(%s)\", rev)}\\n'" == r
 
 sh % "cat" << r"""
 [revsetalias]
-myparents(\$1) = parents(\$1)
+myparents(x) = parents(x)
 """ >> ".hg/hgrc"
 sh % "hg log --template '{rev} Parents: {revset(\"myparents(%s)\", rev)}\\n'" == r"""
     2 Parents: 1
@@ -3939,6 +3830,12 @@ sh % "hg --config 'extensions.revnamesext=$TESTDIR/revnamesext.py' log -T '{rev}
       default
      revnames color=revname builtin=False
       r0"""
+
+# revert side effect of loading the revnames extension
+
+
+del namespaces.namespacetable["revnames"]
+
 sh % "hg log -r2 -T '{namespaces % \"{namespace}: {names}\\n\"}'" == r"""
     bookmarks: bar foo text.{rev}
     tags: tip
@@ -4259,12 +4156,12 @@ sh % "cd .."
 
 sh % "hg init nonascii"
 sh % "cd nonascii"
-sh % "'$PYTHON'" << r"""
-open('latin1', 'w').write('\xe9')
-open('utf-8', 'w').write('\xc3\xa9')
-"""
-sh % "'HGENCODING=utf-8' hg bookmark -q '`cat' 'utf-8`'"
-sh % "'HGENCODING=utf-8' hg ci -qAm 'non-ascii branch: `cat utf-8`' utf-8"
+latin1 = "\xe9"
+utf8 = "\xc3\xa9"
+open("utf-8", "wb").write(utf8)
+
+sh % ("'HGENCODING=utf-8' hg bookmark -q '%s'" % utf8)
+sh % ("'HGENCODING=utf-8' hg ci -qAm 'non-ascii branch: %s' utf-8" % utf8)
 
 # json filter should try round-trip conversion to utf-8:
 
@@ -4273,27 +4170,30 @@ sh % "'HGENCODING=ascii' hg log -T '{desc|json}\\n' -r0" == '"non-ascii branch: 
 
 # json filter takes input as utf-8b:
 
-sh % "'HGENCODING=ascii' hg log -T '{'\\''`cat utf-8`'\\''|json}\\n' -l1" == '"\\u00e9"'
-sh % "'HGENCODING=ascii' hg log -T '{'\\''`cat latin1`'\\''|json}\\n' -l1" == r"""
-    abort: cannot decode command line arguments
-    [255]"""
+sh % ("'HGENCODING=ascii' hg log -T '{'\\''%s'\\''|json}\\n' -l1" % utf8) == '"\\u00e9"'
+sh % (
+    "'HGENCODING=ascii' hg log -T '{'\\''%s'\\''|json}\\n' -l1" % latin1
+) == "abort: cannot decode command line arguments\n[255]"
 
 # utf8 filter:
 
 sh % "'HGENCODING=ascii' hg log -T 'round-trip: {bookmarks % '\\''{bookmark|utf8|hex}'\\''}\\n' -r0" == "round-trip: c3a9"
-sh % "'HGENCODING=latin1' hg log -T 'decoded: {'\\''`cat latin1`'\\''|utf8|hex}\\n' -l1" == r"""
-    abort: cannot decode command line arguments
-    [255]"""
-sh % "'HGENCODING=ascii' hg log -T 'replaced: {'\\''`cat latin1`'\\''|utf8|hex}\\n' -l1" == r"""
-    abort: cannot decode command line arguments
-    [255]"""
+sh % (
+    "'HGENCODING=latin1' hg log -T 'decoded: {'\\''%s'\\''|utf8|hex}\\n' -l1" % latin1
+) == "abort: cannot decode command line arguments\n[255]"
+sh % (
+    "'HGENCODING=ascii' hg log -T 'replaced: {'\\''%s'\\''|utf8|hex}\\n' -l1" % latin1
+) == "abort: cannot decode command line arguments\n[255]"
 sh % "hg log -T 'invalid type: {rev|utf8}\\n' -r0" == r"""
     abort: template filter 'utf8' is not compatible with keyword 'rev'
     [255]"""
 
 # pad width:
 
-sh % "'HGENCODING=utf-8' hg debugtemplate '{pad('\\''`cat utf-8`'\\'', 2, '\\''-'\\'')}\\n'" == "\\xc3\\xa9- (esc)"
+sh % (
+    "'HGENCODING=utf-8' hg debugtemplate '{pad('\\''%s'\\'', 2, '\\''-'\\'')}\\n'"
+    % utf8
+) == "\\xc3\\xa9- (esc)"
 
 sh % "cd .."
 
