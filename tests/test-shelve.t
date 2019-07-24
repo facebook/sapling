@@ -641,7 +641,7 @@ Unshelve should leave unknown files alone (issue4113)
   g
   =======
   f
-  >>>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff
+  ??>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff (glob)
   $ cat f.orig
   g
   $ hg unshelve --abort -t false
@@ -686,7 +686,7 @@ Unshelve should leave unknown files alone (issue4113)
   g
   =======
   f
-  >>>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff
+  ??>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff (glob)
   $ cat f.orig
   g
   $ hg unshelve --abort
