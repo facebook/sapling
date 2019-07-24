@@ -119,6 +119,14 @@ class LazyCommand(object):
         self._stdoutappend = True
         return self
 
+    def __or__(self, cmd):
+        """| cmd, pipe through another command"""
+        if isinstance(cmd, str):
+            cmd = LazyCommand(cmd)
+        assert isinstance(cmd, LazyCommand)
+        out = self.output
+        return cmd << out
+
     def __repr__(self):
         redirects = ""
         if self._stdoutpath is not None:

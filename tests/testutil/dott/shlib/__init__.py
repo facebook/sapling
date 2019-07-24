@@ -113,6 +113,11 @@ def echo(*args):
     return " ".join(args) + "\n"
 
 
+def head(*args, **kwargs):
+    n, lines = _lines(*args, **kwargs)
+    return "".join(lines[:n])
+
+
 def ln(*args):
     if len(args) == 3:
         assert args[0] == "-s"
@@ -173,6 +178,11 @@ def seq(*args):
     elif len(args) == 2:
         values = range(args[0], args[1] + 1)
     return "".join("%s\n" % v for v in values)
+
+
+def tail(*args, **kwargs):
+    n, lines = _lines(*args, **kwargs)
+    return "".join(lines[-n:])
 
 
 def test(*args):
@@ -361,3 +371,19 @@ def expandpath(path):
     pwd = os.getcwd()
     path = path.replace("`pwd`", pwd).replace("$PWD", pwd)
     return util.expandpath(path)
+
+
+def _lines(*args, **kwargs):
+    """Shared logic for head and tail"""
+    n = None
+    content = ""
+    for arg in args:
+        if arg.startswith("-"):
+            n = int(arg[1:])
+        else:
+            content += cat(arg)
+    stdin = kwargs.get("stdin")
+    if stdin is not None:
+        content += stdin
+    assert n is not None
+    return n, content.splitlines(True)
