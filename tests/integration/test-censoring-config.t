@@ -8,7 +8,6 @@ setup configuration
   $ cd $TESTTMP
 
 setup hg server repo
-
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
   $ touch a && hg ci -A -q -m 'add a'
@@ -80,7 +79,6 @@ Restart mononoke
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-
   $ echo "test" > b
   $ hg ci -q -m "up b"
 
@@ -92,7 +90,6 @@ Restart mononoke
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-
 Should not succeed since the commit modifies a blacklisted file
   $ hgmn push -q -r .  --to master_bookmark
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -100,6 +97,35 @@ Should not succeed since the commit modifies a blacklisted file
 
   $ tglogpnr
   @  0269a088f56a draft 'up b'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  
+
+Restart mononoke and disable censorship verification
+  $ kill $MONONOKE_PID
+  $ rm -rf $TESTTMP/mononoke-config
+  $ export CENSORING_DISABLED=1
+  $ setup_common_config blob:files
+  $ mononoke
+  $ wait_for_mononoke $TESTTMP/repo
+
+  $ cd "$TESTTMP/repo-pull"
+
+  $ tglogpnr
+  @  0269a088f56a draft 'up b'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  
+
+Even is file b is blacklisted, push won't fail because censorship verification is disabled
+  $ hgmn push -q -r .  --to master_bookmark
+
+  $ tglogpnr
+  @  0269a088f56a public 'up b'
   |
   o  14961831bd3a public 'add b'
   |
