@@ -313,6 +313,7 @@ fn convert_unode(unode_entry: &UnodeEntry) -> Entry<Id<ManifestUnodeId>, FileUno
 mod tests {
     use super::*;
     use blobrepo::{save_bonsai_changesets, BlobManifest};
+    use blobrepo_factory::new_memblob_empty;
     use bytes::Bytes;
     use failure_ext::Result;
     use fixtures::linear;
@@ -507,6 +508,88 @@ mod tests {
             btreemap! {},
         )
         .is_err());
+    }
+
+    #[test]
+    fn test_parent_order() {
+        let repo = new_memblob_empty(None).unwrap();
+        let mut runtime = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock();
+
+        let p1_root_unode_id = create_changeset_and_derive_unode(
+            ctx.clone(),
+            repo.clone(),
+            &mut runtime,
+            btreemap! {"A" => Some(("A", FileType::Regular))},
+        );
+
+        let p2_root_unode_id = create_changeset_and_derive_unode(
+            ctx.clone(),
+            repo.clone(),
+            &mut runtime,
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+        );
+
+        let file_changes = store_files(
+            ctx.clone(),
+            &mut runtime,
+            btreemap! { "A" => Some(("C", FileType::Regular)) },
+            repo.clone(),
+        );
+        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+        let bcs_id = bcs.get_changeset_id();
+
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            bcs_id,
+            vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
+            get_changes(&bcs),
+        );
+        let root_unode = runtime.block_on(f).unwrap();
+
+        // Make sure hash is the same if nothing was changed
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            bcs_id,
+            vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
+            get_changes(&bcs),
+        );
+        let same_root_unode = runtime.block_on(f).unwrap();
+        assert_eq!(root_unode, same_root_unode);
+
+        // Now change parent order, make sure hashes are different
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            bcs_id,
+            vec![p2_root_unode_id, p1_root_unode_id].into_iter(),
+            get_changes(&bcs),
+        );
+        let reverse_root_unode = runtime.block_on(f).unwrap();
+
+        assert_ne!(root_unode, reverse_root_unode);
+    }
+
+    fn create_changeset_and_derive_unode(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        mut runtime: &mut Runtime,
+        file_changes: BTreeMap<&str, Option<(&str, FileType)>>,
+    ) -> ManifestUnodeId {
+        let file_changes = store_files(ctx.clone(), &mut runtime, file_changes, repo.clone());
+        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+
+        let bcs_id = bcs.get_changeset_id();
+        let f = derive_unode_manifest(
+            ctx.clone(),
+            repo.clone(),
+            bcs_id,
+            vec![].into_iter(),
+            get_changes(&bcs),
+        );
+        runtime.block_on(f).unwrap()
     }
 
     fn iterate_all_unodes(
