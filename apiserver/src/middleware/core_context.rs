@@ -8,7 +8,8 @@ use std::time::Instant;
 
 use actix_web::{
     error::Result,
-    middleware::{Finished, Middleware, Started},
+    http::header::HeaderValue,
+    middleware::{Finished, Middleware, Response, Started},
     HttpRequest, HttpResponse,
 };
 use context::CoreContext;
@@ -116,6 +117,16 @@ impl<S> Middleware<S> for CoreContextMiddleware {
         self.start_timer(req);
 
         Ok(Started::Done)
+    }
+
+    fn response(&self, req: &HttpRequest<S>, mut resp: HttpResponse) -> Result<Response> {
+        if let Some(ctx) = req.extensions_mut().get_mut::<CoreContext>() {
+            if let Ok(session_header) = HeaderValue::from_str(&ctx.session().to_string()) {
+                resp.headers_mut().insert("X-Session-ID", session_header);
+            }
+        }
+
+        Ok(Response::Done(resp))
     }
 
     fn finish(&self, req: &HttpRequest<S>, resp: &HttpResponse) -> Finished {
