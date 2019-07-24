@@ -224,7 +224,16 @@ impl DataStore for MutableDataPack {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
         while let Some(key) = next_key {
-            let (delta, _metadata) = self.inner.read_entry(&key)?;
+            let (delta, _metadata) = match self.inner.read_entry(&key) {
+                Ok(entry) => entry,
+                Err(e) => {
+                    if chain.is_empty() {
+                        return Err(e);
+                    } else {
+                        return Ok(chain);
+                    }
+                }
+            };
             next_key = delta.base.clone();
             chain.push(delta);
         }
@@ -333,6 +342,25 @@ mod tests {
 
         let chain = mutdatapack.get_delta_chain(&delta2.key).unwrap();
         assert_eq!(&vec![delta2.clone(), delta.clone()], &chain);
+    }
+
+    #[test]
+    fn test_get_partial_delta_chain() -> Fallible<()> {
+        let tempdir = tempdir()?;
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One)?;
+
+        let delta = Delta {
+            data: Bytes::from(&[0, 1, 2][..]),
+            base: Some(key("a", "1")),
+            key: key("a", "2"),
+        };
+
+        mutdatapack.add(&delta, &Default::default())?;
+        let chain = mutdatapack.get_delta_chain(&delta.key)?;
+        assert_eq!(chain.len(), 1);
+        assert_eq!(chain.get(0), Some(&delta));
+
+        Ok(())
     }
 
     #[test]
