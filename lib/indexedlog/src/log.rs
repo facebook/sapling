@@ -513,7 +513,7 @@ impl Log {
                 // "always-up-to-date", and the on-disk log does not have anything new.
                 // Update "meta" so "update_indexes_for_on_disk_entries" below won't
                 // re-index entries.
-                Self::set_index_log_len(&mut indexes, meta.primary_len);
+                Self::set_index_log_len(indexes.iter_mut(), meta.primary_len);
                 Some(indexes)
             },
         )?;
@@ -739,7 +739,8 @@ impl Log {
             }
         }
         // The index now contains all entries. Write "next_offset" as the index meta.
-        Self::set_index_log_len(&mut self.indexes, self.meta.primary_len);
+        Self::set_index_log_len(self.indexes.iter_mut(), self.meta.primary_len);
+
         Ok(())
     }
 
@@ -990,10 +991,10 @@ impl Log {
     /// Update the log length (in bytes) covered by the given indexes.
     ///
     /// `len` is usually `meta.primary_len`.
-    fn set_index_log_len(indexes: &mut [Index], len: u64) {
+    fn set_index_log_len<'a>(indexes: impl Iterator<Item = &'a mut Index>, len: u64) {
         let mut index_meta = Vec::new();
-        for index in indexes.iter_mut() {
-            index_meta.write_vlq(len).unwrap();
+        index_meta.write_vlq(len).unwrap();
+        for index in indexes {
             index.set_meta(&index_meta);
         }
     }
