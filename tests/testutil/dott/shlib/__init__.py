@@ -83,6 +83,17 @@ def cat(*args, **kwargs):
 cd = os.chdir
 
 
+def chmod(*args):
+    mode = 0
+    for arg in args:
+        if arg == "+x":
+            mode = 0o777
+        elif arg[:1] in {"+", "-"}:
+            raise NotImplementedError("chmod %s is unsupported" % arg)
+        else:
+            os.chmod(arg, mode)
+
+
 def cp(*args):
     copydir = args[0] == "-R"
     if copydir:
