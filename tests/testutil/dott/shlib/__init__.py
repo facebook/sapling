@@ -240,7 +240,12 @@ def hg(*args, **kwargs):
     req = dispatch.request(
         list(args), ui=ui, fin=util.stringio(stdin or ""), fout=fout, ferr=fout
     )
+    cwdbefore = os.getcwd()
     status = (dispatch.dispatch(req) or 0) & 255
+    cwdafter = os.getcwd()
+    if cwdafter != cwdbefore:
+        # Revert side effect of --cwd
+        os.chdir(cwdbefore)
     buf = fout.getvalue().rstrip()
     if status:
         if not buf.endswith("\n") and buf:
