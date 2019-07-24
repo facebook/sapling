@@ -12,7 +12,6 @@ import unittest
 
 import silenttestrunner
 from edenscm.hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
-from edenscm.hgext.remotefilelog.historypack import mutablehistorypack
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
