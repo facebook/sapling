@@ -39,6 +39,13 @@ start mononoke
   > remotenames =
   > EOF
 
+  $ cd ../repo-pull
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > remotenames =
+  > EOF
+
   $ cd ../repo-push
 
   $ hgmn up -q 0
@@ -52,14 +59,8 @@ start mononoke
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90
 
   $ cd "$TESTTMP/repo-pull"
-
   $ hgmn pull -q
-  $ tglogpnr
-  o  14961831bd3a public 'add b' master_bookmark
-  |
-  o  ac82d8b1f7c4 public 'add a'
-  
-
+  $ hgmn up -q 14961831bd3a
 
 Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
   $ mononoke_admin blacklist --hash 14961831bd3af3a6331fef7e63367d61cb6c9f6b --task "my_task" b
@@ -74,26 +75,33 @@ Restart mononoke
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  14961831bd3a public 'add b' master_bookmark
+  @  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a'
+  o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
 
-  $ hgmn up master_bookmark
-  remote: Command failed
-  remote:   Error:
-  remote:     Error while deserializing file contents retrieved from key 'content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9'
-  remote:   Root cause:
-  remote:     Censored(
-  remote:         "content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9",
-  remote:         "my_task",
-  remote:     )
-  remote:   Caused by:
-  remote:     While fetching content blob
-  remote:   Caused by:
-  remote:     The blob content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 is censored. 
-  remote:      Task/Sev: my_task
-  abort: error downloading file contents:
-  'connection closed early for filename * and node *' (glob)
+  $ echo "test" > b
+  $ hg ci -q -m "up b"
+
+  $ tglogpnr
+  @  0269a088f56a draft 'up b'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  
+
+
+Should not succeed since the commit modifies a blacklisted file
+  $ hgmn push -q -r .  --to master_bookmark
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+  $ tglogpnr
+  @  0269a088f56a draft 'up b'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  

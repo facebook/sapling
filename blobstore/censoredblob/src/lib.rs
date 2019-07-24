@@ -18,7 +18,7 @@ use std::collections::HashMap;
 mod errors;
 use cloned::cloned;
 
-use crate::errors::ErrorKind;
+pub use crate::errors::ErrorKind;
 use std::sync::{
     atomic::{AtomicI64, Ordering},
     Arc,

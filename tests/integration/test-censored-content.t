@@ -167,32 +167,25 @@ Restart mononoke
   o  ac82d8b1f7c4 public 'add a'
   
 
-Expect error with a suggestive explanation (the last commit contains a censored blob) in repo-pull
   $ hgmn up master_bookmark
-  remote: Command failed
-  remote:   Error:
-  remote:     Error while deserializing file contents retrieved from key 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2'
-  remote:   Root cause:
-  remote:     Censored(
-  remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
-  remote:         "my_task",
-  remote:     )
-  remote:   Caused by:
-  remote:     While fetching content blob
-  remote:   Caused by:
-  remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
-  remote:      Task/Sev: my_task
-  abort: error downloading file contents:
-  'connection closed early for filename * and node *' (glob)
-  [255]
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master_bookmark)
 
   $ tglogpnr
-  o  064d994d0240 public 'add censored c' master_bookmark
+  @  064d994d0240 public 'add censored c' master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
   o  ac82d8b1f7c4 public 'add a'
   
+
+The content of the blacklisted file is replaced by a string
+  $ cat c
+  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+
+Diff and Status should not see any change made to file c, even if it contains the magic string
+  $ hgmn status
+  $ hgmn diff
 
 Try push a new version of a blacklisted blob
   $ cd "$TESTTMP/repo-push2"
@@ -209,7 +202,7 @@ Try push a new version of a blacklisted blob
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Should send an error since the blob is blacklisted
+As of the time of writing, updating blacklisted files throws an error - artifact of the existing implementation.
   $ hgmn push -r . --to master_bookmark
   pushing rev bb65510879c8 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
@@ -249,7 +242,7 @@ Should send an error since the blob is blacklisted
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  064d994d0240 public 'add censored c' master_bookmark
+  @  064d994d0240 public 'add censored c' master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -261,35 +254,20 @@ Should send an error since the blob is blacklisted
   $ tglogpnr
   o  bbb84cdc8ec0 public 'uncensore c' master_bookmark
   |
-  o  064d994d0240 public 'add censored c'
+  @  064d994d0240 public 'add censored c'
   |
   o  14961831bd3a public 'add b'
   |
   o  ac82d8b1f7c4 public 'add a'
   
 
-Expect error with a suggestive explanation (the commit contains a censored file)
   $ hgmn up 064d994d0240
-  remote: Command failed
-  remote:   Error:
-  remote:     Error while deserializing file contents retrieved from key 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2'
-  remote:   Root cause:
-  remote:     Censored(
-  remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
-  remote:         "my_task",
-  remote:     )
-  remote:   Caused by:
-  remote:     While fetching content blob
-  remote:   Caused by:
-  remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
-  remote:      Task/Sev: my_task
-  abort: error downloading file contents:
-  'connection closed early for filename * and node *' (glob)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark master_bookmark)
 
 Expect success (no blob in this commit is blacklisted)
   $ hgmn up bbb84cdc8ec0
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglogpnr
   @  bbb84cdc8ec0 public 'uncensore c' master_bookmark
@@ -343,3 +321,37 @@ Should be successful
   |
   o  ac82d8b1f7c4 public 'add a'
   
+
+  $ hgmn up -q 064d994d0240
+  $ echo "bb" > b
+
+  $ tglogpnr
+  o  d967612e0cc1 draft 'update a' master_bookmark
+  |
+  o  bbb84cdc8ec0 public 'uncensore c'
+  |
+  @  064d994d0240 public 'add censored c'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a'
+  
+
+Updating from a commit that contains a blacklisted file to another commit should succeed
+  $ hgmn up -q bbb84cdc8ec0
+
+  $ tglogpnr
+  o  d967612e0cc1 draft 'update a' master_bookmark
+  |
+  @  bbb84cdc8ec0 public 'uncensore c'
+  |
+  o  064d994d0240 public 'add censored c'
+  |
+  o  14961831bd3a public 'add b'
+  |
+  o  ac82d8b1f7c4 public 'add a'
+  
+
+File should contain the uncommited change: bb
+  $ cat b
+  bb
