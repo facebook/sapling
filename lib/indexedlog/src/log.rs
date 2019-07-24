@@ -31,6 +31,7 @@
 // Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
 // LittleEndian encoding.
 
+use crate::checksum_table::ChecksumTable;
 use crate::errors::{data_error, parameter_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedFileLock;
@@ -58,6 +59,10 @@ const INDEX_FILE_PREFIX: &str = "index-";
 
 const ENTRY_FLAG_HAS_XXHASH64: u32 = 1;
 const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
+
+// 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
+const INDEX_CHECKSUM_CHUNK_SIZE_LOG: u32 = 20;
+const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 1u64 << INDEX_CHECKSUM_CHUNK_SIZE_LOG;
 
 /// An append-only storage with indexes and integrity checks.
 ///
@@ -543,6 +548,66 @@ impl Log {
         self.sync()
     }
 
+    /// Rebuild indexes.
+    ///
+    /// This is an expensive operation. It can be useful for repairing a broken
+    /// index, or deleting unused indexes, or making indexes smaller.
+    ///
+    /// The function consumes the [`Log`] object, since it is hard to recover
+    /// from an error case.
+    pub fn rebuild_indexes(mut self) -> Fallible<()> {
+        if let Some(ref dir) = self.dir {
+            let mut dir_file = open_dir(dir)?;
+            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
+            let primary_file = fs::OpenOptions::new()
+                .read(true)
+                .open(dir.join(PRIMARY_FILE))?;
+            let key_buf = Arc::new(mmap_readonly(&primary_file, self.meta.primary_len.into())?.0);
+
+            // Drop indexes. This will munmap index files, which is required on
+            // Windows to rewrite the index files. It's also the reason why it's
+            // hard to recover from an error state.
+            self.indexes.clear();
+
+            for def in self.open_options.index_defs.iter() {
+                let name = def.name;
+
+                let tmp = tempfile::NamedTempFile::new_in(dir)?;
+                let index_len = {
+                    let mut index = index::OpenOptions::new()
+                        .key_buf(Some(key_buf.clone()))
+                        .open(&tmp.path())?;
+                    Self::update_index_for_on_disk_entry_unchecked(
+                        &mut index,
+                        def,
+                        &self.disk_buf,
+                        self.meta.primary_len,
+                    )?;
+                    index.flush()?
+                };
+
+                // Before replacing the index, set its "logic length" to 0 so
+                // readers won't get inconsistent view about index length and data.
+                self.meta.indexes.insert(name.to_string(), 0);
+                self.meta.write_file(dir.join(META_FILE))?;
+
+                let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+                tmp.persist(&path)?;
+
+                // Update checksum table.
+                let mut table = ChecksumTable::new(&path)?;
+                table.clear();
+                table.update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))?;
+
+                self.meta.indexes.insert(name.to_string(), index_len);
+                self.meta.write_file(dir.join(META_FILE))?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` passed to [`Log::open`].
     ///
@@ -861,8 +926,6 @@ impl Log {
     ) -> Fallible<Index> {
         match dir {
             Some(dir) => {
-                // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
-                const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
                 let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                 index::OpenOptions::new()
                     .checksum_chunk_size(INDEX_CHECKSUM_CHUNK_SIZE)
@@ -2006,6 +2069,68 @@ mod tests {
                 assert_eq!(log2.iter().count(), count, "log2 log is incomplete {}", s);
             }
         }
+    }
+
+    fn test_rebuild_indexes() {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .index_defs(vec![IndexDef::new("key", |data| {
+                vec![IndexOutput::Reference(0..data.len() as u64)]
+            })
+            .lag_threshold(1)]);
+        let mut log = open_opts.clone().open(dir.path()).unwrap();
+
+        log.append(b"abc").unwrap();
+        log.flush().unwrap();
+
+        log.append(b"def").unwrap();
+        log.flush().unwrap();
+
+        let dump_index = || {
+            let index = index::OpenOptions::new()
+                .open(dir.path().join("index-key"))
+                .unwrap();
+            format!("{:?}", index)
+        };
+
+        assert_eq!(
+            dump_index(),
+            "Index { len: 53, root: Disk[40] }\n\
+             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
+             Disk[2]: ExtKey { start: 18, len: 3 }\n\
+             Disk[5]: Link { value: 12, next: None }\n\
+             Disk[8]: Radix { link: None, 6: Disk[1] }\n\
+             Disk[16]: Root { radix: Disk[8], meta: [21] }\n\
+             Disk[21]: InlineLeaf { key: Disk[22], link: Disk[25] }\n\
+             Disk[22]: ExtKey { start: 27, len: 3 }\n\
+             Disk[25]: Link { value: 21, next: None }\n\
+             Disk[28]: Radix { link: None, 1: Disk[1], 4: Disk[21] }\n\
+             Disk[40]: Radix { link: None, 6: Disk[28] }\n\
+             Disk[48]: Root { radix: Disk[40], meta: [30] }\n"
+        );
+
+        log.rebuild_indexes().unwrap();
+        // The rebuilt index only contains one Root.
+        assert_eq!(
+            dump_index(),
+            "Index { len: 40, root: Disk[27] }\n\
+             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
+             Disk[2]: ExtKey { start: 18, len: 3 }\n\
+             Disk[5]: Link { value: 12, next: None }\n\
+             Disk[8]: InlineLeaf { key: Disk[9], link: Disk[12] }\n\
+             Disk[9]: ExtKey { start: 27, len: 3 }\n\
+             Disk[12]: Link { value: 21, next: None }\n\
+             Disk[15]: Radix { link: None, 1: Disk[1], 4: Disk[8] }\n\
+             Disk[27]: Radix { link: None, 6: Disk[15] }\n\
+             Disk[35]: Root { radix: Disk[27], meta: [30] }\n"
+        );
+
+        // The index actually works (checksum table is consistent).
+        let log = open_opts.open(dir.path()).unwrap();
+        assert_eq!(log.lookup(0, b"abc").unwrap().count(), 1);
+        assert_eq!(log.lookup(0, b"def").unwrap().count(), 1);
+        assert_eq!(log.lookup(0, b"xyz").unwrap().count(), 0);
     }
 
     quickcheck! {
