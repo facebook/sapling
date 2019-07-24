@@ -13,13 +13,14 @@ import stat
 import struct
 import tempfile
 from collections import defaultdict
+from enum import Enum
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
 
-from . import constants
 from ..lfs import pointer
+from . import constants
 
 
 try:
@@ -29,6 +30,10 @@ except NameError:
 
 if not pycompat.iswindows:
     import grp
+
+
+# An enum representing the result of file data validation
+ValidationResult = Enum("ValidationResult", "Valid Invalid Censored", module=__name__)
 
 
 def interposeclass(container, classname):
@@ -323,12 +328,15 @@ def buildfileblobheader(size, flags, version=1):
     return header
 
 
-def verifyfilenode(ui, raw, hexexpectedfilenode):
+def verifyfilenode(ui, raw, hexexpectedfilenode, validatehashes):
     offset, size, flags = parsesizeflags(raw)
     text = raw[offset : offset + size]
 
+    if verifycensoreddata(text):
+        return ValidationResult.Censored
+
     # Do not check lfs data since hash verification would fail
-    if flags == 0:
+    if validatehashes and flags == 0:
         ancestors = ancestormap(raw)
         p1, p2, _, copyfrom = ancestors[bin(hexexpectedfilenode)]
         if copyfrom:
@@ -354,8 +362,21 @@ def verifyfilenode(ui, raw, hexexpectedfilenode):
                 actual_hash=actualhash,
                 expected_hash=hexexpectedfilenode,
             )
-            return False
-    return True
+            return ValidationResult.Invalid
+    return ValidationResult.Valid
+
+
+def verifycensoreddata(data):
+    # Check if text is the same as the magic string used
+    # in blacklisted files. When a file is blacklisted,
+    # it's content is replaced by a default string.
+    if (
+        len(data) == len(constants.BLACKLISTED_CONTENT)
+        and data == constants.BLACKLISTED_CONTENT
+    ):
+        return True
+
+    return False
 
 
 def ancestormap(raw):

@@ -396,18 +396,45 @@ class basestore(object):
                     shallowutil.writefile(filenamepath, name, readonly=True)
                 except Exception:
                     pass
-            if self._validatecache and not self._validatedata(data, filepath):
-                if self._validatecachelog:
-                    with util.posixfile(self._validatecachelog, "a+") as f:
-                        f.write("corrupt %s during read\n" % filepath)
-                os.rename(filepath, filepath + ".corrupt")
-                raise KeyError("corrupt local cache file %s" % filepath)
+            if self._validatecache:
+                validationresult = self._validatedata(data, filepath)
+
+                if validationresult == shallowutil.ValidationResult.Invalid:
+                    if self._validatecachelog:
+                        with util.posixfile(self._validatecachelog, "a+") as f:
+                            f.write("corrupt %s during read\n" % filepath)
+                    os.rename(filepath, filepath + ".corrupt")
+                    raise KeyError("corrupt local cache file %s" % filepath)
+            else:
+                # only check if the content is censored
+                offset, size, flags = shallowutil.parsesizeflags(data)
+                text = data[offset : offset + size]
+                validationresult = (
+                    shallowutil.ValidationResult.Censored
+                    if shallowutil.verifycensoreddata(text)
+                    else shallowutil.ValidationResult.Valid
+                )
+
+            if validationresult == shallowutil.ValidationResult.Censored:
+                data = self.createcensoredfileblob(data)
         except IOError:
             raise KeyError(
                 "no file found at %s for %s:%s" % (filepath, name, hex(node))
             )
 
         return data
+
+    def createcensoredfileblob(self, raw):
+        """Creates a fileblob that contains a default message when
+        the file is blacklisted and the actual content cannot be accessed.
+        """
+        offset, size, flags = shallowutil.parsesizeflags(raw)
+        ancestortext = raw[offset + size :]
+        text = constants.BLACKLISTED_MESSAGE
+        revlogflags = revlog.REVIDX_DEFAULT_FLAGS
+        header = shallowutil.buildfileblobheader(len(text), revlogflags)
+
+        return "%s\0%s%s" % (header, text, ancestortext)
 
     def addremotefilelognode(self, name, node, data):
         filepath = self._getfilepath(name, node)
@@ -464,7 +491,8 @@ class basestore(object):
         with util.posixfile(path, "rb") as f:
             data = f.read()
 
-        if self._validatedata(data, path):
+        validationresult = self._validatedata(data, path)
+        if validationresult != shallowutil.ValidationResult.Invalid:
             return True
 
         if self._validatecachelog:
@@ -481,26 +509,30 @@ class basestore(object):
                 offset, size, flags = shallowutil.parsesizeflags(data)
                 if len(data) <= size:
                     # it is truncated
-                    return False
+                    return shallowutil.ValidationResult.Invalid
 
                 # extract the node from the metadata
                 offset += size
                 datanode = data[offset : offset + 20]
 
                 hexdatanode = hex(datanode)
-                if self._validatehashes:
-                    if not shallowutil.verifyfilenode(self.ui, data, hexdatanode):
-                        return False
+                validationresult = shallowutil.verifyfilenode(
+                    self.ui, data, hexdatanode, self._validatehashes
+                )
+
+                if validationresult == shallowutil.ValidationResult.Invalid:
+                    return validationresult
 
                 # and compare against the path
                 if os.path.basename(path) == hexdatanode:
                     # Content matches the intended path
-                    return True
-                return False
+                    return validationresult
+
+                return shallowutil.ValidationResult.Invalid
         except (ValueError, RuntimeError):
             pass
 
-        return False
+        return shallowutil.ValidationResult.Invalid
 
     def gc(self, keepkeys):
         ui = self.ui
