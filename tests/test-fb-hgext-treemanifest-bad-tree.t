@@ -39,6 +39,5 @@ Create an empty commit with a misconstructed memctx in the same transaction as a
   >             user="author",  # commit author
   >         ).commit()
   > EOF
-  $ hg repro --config extensions.repro="$TESTTMP/repro.py" 2>&1 | grep ProgrammingError
-  ** ProgrammingError: cannot add a node that is also its parent: 57faf8a737ae7faf490582941a82319ba6529dca
-  edenscm.mercurial.error.ProgrammingError: cannot add a node that is also its parent: 57faf8a737ae7faf490582941a82319ba6529dca
+  $ hg repro --config extensions.repro="$TESTTMP/repro.py" 2>&1 | grep SystemError
+  SystemError: Rust panic

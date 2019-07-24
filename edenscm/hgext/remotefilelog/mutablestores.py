@@ -30,7 +30,7 @@ class mutablebasestore(object):
 class mutabledatastore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
-        if repo.ui.configbool("format", "userustmutablestore"):
+        if repo.ui.configbool("format", "userustmutablestore", True):
             shallowutil.mkstickygroupdir(repo.ui, path)
             return revisionstore.mutabledeltastore(packfilepath=path)
         else:
@@ -45,7 +45,7 @@ class mutabledatastore(mutablebasestore):
 class mutablehistorystore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
-        if repo.ui.configbool("format", "userustmutablestore"):
+        if repo.ui.configbool("format", "userustmutablestore", True):
             shallowutil.mkstickygroupdir(repo.ui, path)
             return revisionstore.mutablehistorystore(packfilepath=path)
         else:
