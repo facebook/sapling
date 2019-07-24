@@ -11,7 +11,7 @@ import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.contentstore import unioncontentstore
-from edenscm.hgext.remotefilelog.datapack import datapackstore, mutabledatapack
+from edenscm.hgext.remotefilelog.datapack import datapackstore
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
 
@@ -40,12 +40,12 @@ class datastoretests(unittest.TestCase):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(uimod.ui(), packdir, version=1)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         for filename, node, base, content, meta in revisions:
             packer.add(filename, node, base, content, metadata=meta)
 
-        path = packer.close()
+        path = packer.flush()
         return revisionstore.datapack(path)
 
     def testGet(self):

@@ -9,7 +9,6 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from edenscm.hgext.remotefilelog.datapack import mutabledatapack
 from edenscm.mercurial import mdiff
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
@@ -40,12 +39,12 @@ class uniondatapackstoretests(unittest.TestCase):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(uimod.ui(), packdir)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
 
-        packer.close()
+        packer.flush()
         return datapackstore(packdir)
 
     def testGetFromSingleDelta(self):
@@ -182,12 +181,12 @@ class uniondatastorepythontests(uniondatapackstoretests):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(uimod.ui(), packdir)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
 
-        path = packer.close()
+        path = packer.flush()
         return revisionstore.datapack(path)
 
     def testGetDeltaChainMultiPack(self):

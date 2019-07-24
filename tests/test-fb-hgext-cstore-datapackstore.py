@@ -10,8 +10,9 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from edenscm.hgext.remotefilelog.datapack import fastdatapack, mutabledatapack
+from edenscm.hgext.remotefilelog.datapack import fastdatapack
 from edenscm.mercurial.node import bin, nullid
+from edenscmnative.bindings import revisionstore
 from edenscmnative.cstore import datapackstore
 
 
@@ -39,12 +40,12 @@ class datapackstoretests(unittest.TestCase):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(uimod.ui(), packdir)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
 
-        path = packer.close()
+        path = packer.flush()
         return fastdatapack(path)
 
     def testGetDeltaChainSingleRev(self):
@@ -74,11 +75,11 @@ class datapackstoretests(unittest.TestCase):
         node2 = bin("c4beede6a252041e1d8c0e8410c5c37eb6568c49")
         node3 = bin("c4beed4045e49bf0c18e6aa3a4bdd00ff72ed99e")
 
-        packer = mutabledatapack(uimod.ui(), packdir)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
         packer.add("foo.c", node1, nullid, "stuff")
         packer.add("bar.c", node2, nullid, "other stuff")
         packer.add("test", node3, nullid, "things")
-        path = packer.close()
+        path = packer.flush()
 
         # We use fastdatapack.getmissing() to exercise the cdatapack find()
         # function

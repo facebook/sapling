@@ -19,7 +19,7 @@ from edenscm.hgext.remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
     SMALLFANOUTPREFIX,
 )
-from edenscm.hgext.remotefilelog.datapack import datapackstore, mutabledatapack
+from edenscm.hgext.remotefilelog.datapack import datapackstore
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
 
@@ -427,7 +427,7 @@ class datapacktestsbase(object):
         """Tests that the data written into a mutabledatapack can be read out
         before it has been finalized."""
         packdir = self.makeTempDir()
-        packer = mutabledatapack(uimod.ui(), packdir, version=1)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         # Add some unused first revision for noise
         packer.add("qwert", self.getFakeHash(), self.getFakeHash(), "qwertcontent")
@@ -436,12 +436,7 @@ class datapacktestsbase(object):
         node = self.getFakeHash()
         base = self.getFakeHash()
         content = "asdf"
-        meta = {
-            constants.METAKEYFLAG: 1,
-            constants.METAKEYSIZE: len(content),
-            "Z": "random_string",
-            "_": "\0" * 40,
-        }
+        meta = {constants.METAKEYFLAG: 1, constants.METAKEYSIZE: len(content)}
         packer.add(filename, node, base, content, metadata=meta)
 
         # Add some unused third revision for noise
