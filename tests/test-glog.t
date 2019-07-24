@@ -1428,34 +1428,12 @@ Do not crash or produce strange graphs if history is buggy
 
 Test log -G options
 
-  $ testlog() {
-  >   hg log -G --print-revset "$@"
-  >   hg log --template 'nodetag {rev}\n' "$@" | grep nodetag \
-  >     | sed 's/.*nodetag/nodetag/' > log.nodes
-  >   hg log -G --template 'nodetag {rev}\n' "$@" | grep nodetag \
-  >     | sed 's/.*nodetag/nodetag/' > glog.nodes
-  >   (cmp log.nodes glog.nodes || diff -u log.nodes glog.nodes) \
-  >     | grep '^[-+@ ]' || :
-  > }
-
 glog always reorders nodes which explains the difference with log
 
-  $ testlog -r 27 -r 25 -r 21 -r 34 -r 32 -r 31
+  $ hg log -G --print-revset -r 27 -r 25 -r 21 -r 34 -r 32 -r 31
   ['27', '25', '21', '34', '32', '31']
   []
-  --- log.nodes	* (glob)
-  +++ glog.nodes	* (glob)
-  @@ -1,6 +1,6 @@
-  -nodetag 27
-  -nodetag 25
-  -nodetag 21
-   nodetag 34
-   nodetag 32
-   nodetag 31
-  +nodetag 27
-  +nodetag 25
-  +nodetag 21
-  $ testlog -u test -u not-a-user
+  $ hg log -G --print-revset -u test -u not-a-user
   []
   (group
     (group
@@ -1467,7 +1445,7 @@ glog always reorders nodes which explains the difference with log
           (func
             (symbol 'user')
             (string 'not-a-user'))))))
-  $ testlog -k expand -k merge
+  $ hg log -G --print-revset -k expand -k merge
   []
   (group
     (group
@@ -1479,20 +1457,20 @@ glog always reorders nodes which explains the difference with log
           (func
             (symbol 'keyword')
             (string 'merge'))))))
-  $ testlog --only-merges
+  $ hg log -G --print-revset --only-merges
   []
   (group
     (func
       (symbol 'merge')
       None))
-  $ testlog --no-merges
+  $ hg log -G --print-revset --no-merges
   []
   (group
     (not
       (func
         (symbol 'merge')
         None)))
-  $ testlog --date '2 0 to 4 0'
+  $ hg log -G --print-revset --date '2 0 to 4 0'
   []
   (group
     (func
@@ -1501,7 +1479,7 @@ glog always reorders nodes which explains the difference with log
   $ hg log -G -d 'brace ) in a date'
   hg: parse error: invalid date: 'brace ) in a date'
   [255]
-  $ testlog --prune 31 --prune 32
+  $ hg log -G --print-revset --prune 31 --prune 32
   []
   (group
     (group
@@ -1529,10 +1507,10 @@ have 2 filelog topological heads in a linear changeset graph.
   $ cd ..
   $ hg init follow
   $ cd follow
-  $ testlog --follow
+  $ hg log -G --print-revset --follow
   []
   []
-  $ testlog -rnull
+  $ hg log -G --print-revset -rnull
   ['null']
   []
   $ echo a > a
@@ -1566,14 +1544,14 @@ have 2 filelog topological heads in a linear changeset graph.
   o  (0) add a
   
 
-  $ testlog a
+  $ hg log -G --print-revset a
   []
   (group
     (group
       (func
         (symbol 'filelog')
         (string 'a'))))
-  $ testlog a b
+  $ hg log -G --print-revset a b
   []
   (group
     (group
@@ -1588,7 +1566,7 @@ have 2 filelog topological heads in a linear changeset graph.
 
 Test falling back to slow path for non-existing files
 
-  $ testlog a c
+  $ hg log -G --print-revset a c
   []
   (group
     (func
@@ -1601,7 +1579,7 @@ Test falling back to slow path for non-existing files
 
 Test multiple --include/--exclude/paths
 
-  $ testlog --include a --include e --exclude b --exclude e a e
+  $ hg log -G --print-revset --include a --include e --exclude b --exclude e a e
   []
   (group
     (func
@@ -1621,9 +1599,9 @@ Test glob expansion of pats
   $ expandglobs=`$PYTHON -c "import edenscm.mercurial.util; \
   >   print(edenscm.mercurial.util.expandglobs and 'true' or 'false')"`
   $ if [ $expandglobs = "true" ]; then
-  >    testlog 'a*';
+  >    hg log -G --print-revset 'a*';
   > else
-  >    testlog a*;
+  >    hg log -G --print-revset a*;
   > fi;
   []
   (group
@@ -1634,15 +1612,14 @@ Test glob expansion of pats
 
 Test --follow on a non-existent directory
 
-  $ testlog -f dir
+  $ hg log -G --print-revset -f dir
   abort: cannot follow file not in parent revision: "dir"
-  abort: cannot follow file not in parent revision: "dir"
-  abort: cannot follow file not in parent revision: "dir"
+  [255]
 
 Test --follow on a directory
 
   $ hg up -q '.^'
-  $ testlog -f dir
+  $ hg log -G --print-revset -f dir
   []
   (group
     (group
@@ -1653,14 +1630,13 @@ Test --follow on a directory
 
 Test --follow on file not in parent revision
 
-  $ testlog -f a
+  $ hg log -G --print-revset -f a
   abort: cannot follow file not in parent revision: "a"
-  abort: cannot follow file not in parent revision: "a"
-  abort: cannot follow file not in parent revision: "a"
+  [255]
 
 Test --follow and patterns
 
-  $ testlog -f 'glob:*'
+  $ hg log -G --print-revset -f 'glob:*'
   []
   (group
     (and
@@ -1677,7 +1653,7 @@ Test --follow and patterns
 Test --follow on a single rename
 
   $ hg up -q 2
-  $ testlog -f a
+  $ hg log -G --print-revset -f a
   []
   (group
     (group
@@ -1688,7 +1664,7 @@ Test --follow on a single rename
 Test --follow and multiple renames
 
   $ hg up -q tip
-  $ testlog -f e
+  $ hg log -G --print-revset -f e
   []
   (group
     (group
@@ -1699,33 +1675,25 @@ Test --follow and multiple renames
 Test --follow and multiple filelog heads
 
   $ hg up -q 2
-  $ testlog -f g
+  $ hg log -G --print-revset -f g
   []
   (group
     (group
       (func
         (symbol 'follow')
         (string 'g'))))
-  $ cat log.nodes
-  nodetag 2
-  nodetag 1
-  nodetag 0
   $ hg up -q tip
-  $ testlog -f g
+  $ hg log -G --print-revset -f g
   []
   (group
     (group
       (func
         (symbol 'follow')
         (string 'g'))))
-  $ cat log.nodes
-  nodetag 3
-  nodetag 2
-  nodetag 0
 
 Test --follow and multiple files
 
-  $ testlog -f g e
+  $ hg log -G --print-revset -f g e
   []
   (group
     (group
@@ -1737,17 +1705,11 @@ Test --follow and multiple files
           (func
             (symbol 'follow')
             (string 'e'))))))
-  $ cat log.nodes
-  nodetag 4
-  nodetag 3
-  nodetag 2
-  nodetag 1
-  nodetag 0
 
 Test --follow null parent
 
   $ hg up -q null
-  $ testlog -f
+  $ hg log -G --print-revset -f
   []
   []
 
@@ -1761,7 +1723,7 @@ Test --follow-first
   (branch merge, don't forget to commit)
   $ echo merge > e
   $ hg ci -m "merge 5 and 4"
-  $ testlog --follow-first
+  $ hg log -G --print-revset --follow-first
   []
   (group
     (func
@@ -1808,7 +1770,7 @@ Test --copies
 Test "set:..." and parent revision
 
   $ hg up -q 4
-  $ testlog "set:copied()"
+  $ hg log -G --print-revset "set:copied()"
   []
   (group
     (func
@@ -1817,7 +1779,7 @@ Test "set:..." and parent revision
         (string 'r:')
         (string 'd:relpath')
         (string 'p:set:copied()'))))
-  $ testlog --include "set:copied()"
+  $ hg log -G --print-revset --include "set:copied()"
   []
   (group
     (func
@@ -1826,16 +1788,16 @@ Test "set:..." and parent revision
         (string 'r:')
         (string 'd:relpath')
         (string 'i:set:copied()'))))
-  $ testlog -r "sort(file('set:copied()'), -rev)"
+  $ hg log -G --print-revset -r "sort(file('set:copied()'), -rev)"
   ["sort(file('set:copied()'), -rev)"]
   []
 
 Test --removed
 
-  $ testlog --removed
+  $ hg log -G --print-revset --removed
   []
   []
-  $ testlog --removed a
+  $ hg log -G --print-revset --removed a
   []
   (group
     (func
@@ -1844,7 +1806,7 @@ Test --removed
         (string 'r:')
         (string 'd:relpath')
         (string 'p:a'))))
-  $ testlog --removed --follow a
+  $ hg log -G --print-revset --removed --follow a
   []
   (group
     (and
@@ -1957,7 +1919,7 @@ Test --patch and --stat with --follow and --follow-first
 Test old-style --rev
 
   $ hg tag 'foo-bar'
-  $ testlog -r 'foo-bar'
+  $ hg log -G --print-revset -r 'foo-bar'
   ['foo-bar']
   []
 
@@ -2177,7 +2139,7 @@ changessincelatesttag with no prior tag
   -f
   -f
   +g
-  $ testlog --follow -r6 -r8 -r5 -r7 -r4
+  $ hg log -G --print-revset --follow -r6 -r8 -r5 -r7 -r4
   ['6', '8', '5', '7', '4']
   (group
     (func
@@ -2188,7 +2150,7 @@ changessincelatesttag with no prior tag
 
 Test --follow-first and forward --rev
 
-  $ testlog --follow-first -r6 -r8 -r5 -r7 -r4
+  $ hg log -G --print-revset --follow-first -r6 -r8 -r5 -r7 -r4
   ['6', '8', '5', '7', '4']
   (group
     (func
@@ -2196,17 +2158,10 @@ Test --follow-first and forward --rev
       (func
         (symbol 'rev')
         (symbol '6'))))
-  --- log.nodes	* (glob)
-  +++ glog.nodes	* (glob)
-  @@ -1,3 +1,3 @@
-  -nodetag 6
-   nodetag 8
-   nodetag 7
-  +nodetag 6
 
 Test --follow and backward --rev
 
-  $ testlog --follow -r6 -r5 -r7 -r8 -r4
+  $ hg log -G --print-revset --follow -r6 -r5 -r7 -r8 -r4
   ['6', '5', '7', '8', '4']
   (group
     (func
@@ -2217,7 +2172,7 @@ Test --follow and backward --rev
 
 Test --follow-first and backward --rev
 
-  $ testlog --follow-first -r6 -r5 -r7 -r8 -r4
+  $ hg log -G --print-revset --follow-first -r6 -r5 -r7 -r8 -r4
   ['6', '5', '7', '8', '4']
   (group
     (func
@@ -2230,7 +2185,7 @@ Test subdir
 
   $ hg up -q 3
   $ cd dir
-  $ testlog .
+  $ hg log -G --print-revset .
   []
   (group
     (func
@@ -2239,14 +2194,14 @@ Test subdir
         (string 'r:')
         (string 'd:relpath')
         (string 'p:.'))))
-  $ testlog ../b
+  $ hg log -G --print-revset ../b
   []
   (group
     (group
       (func
         (symbol 'filelog')
         (string '../b'))))
-  $ testlog -f ../b
+  $ hg log -G --print-revset -f ../b
   []
   (group
     (group
@@ -2265,10 +2220,10 @@ Test --hidden
 
   $ hg debugobsolete `hg id --debug -i -r 8`
   obsoleted 1 changesets
-  $ testlog
+  $ hg log -G --print-revset
   []
   []
-  $ testlog --hidden
+  $ hg log -G --print-revset --hidden
   []
   []
   $ hg log -G --template '{rev} {desc}\n'
