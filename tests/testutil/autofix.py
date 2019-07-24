@@ -135,7 +135,13 @@ def _removeindent(text):
         except ValueError:
             pass
         else:
-            text = "".join(l[indent:] for l in text.splitlines(True))
+            newtext = ""
+            for line in text.splitlines(True):
+                if line in {"\n", ""}:
+                    newtext += line
+                else:
+                    newtext += line[indent:]
+            text = newtext
     return text
 
 
