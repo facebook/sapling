@@ -714,32 +714,47 @@ impl Log {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
-            // The index meta is used to store the next offset the index should be built.
-            let mut offset = Self::get_index_log_len(index)?;
-            // PERF: might be worthwhile to cache xxhash verification result.
-            while let Some(entry_result) = Self::read_entry_from_buf(&self.disk_buf, offset)? {
-                let data = entry_result.data;
-                for index_output in (def.func)(data) {
-                    match index_output {
-                        IndexOutput::Reference(range) => {
-                            assert!(range.start <= range.end && range.end <= data.len() as u64);
-                            let start = range.start + entry_result.data_offset;
-                            let end = range.end + entry_result.data_offset;
-                            let key = InsertKey::Reference((start, end - start));
+            Self::update_index_for_on_disk_entry_unchecked(
+                index,
+                def,
+                &self.disk_buf,
+                self.meta.primary_len,
+            )?;
+        }
+        Ok(())
+    }
 
-                            index.insert_advanced(key, offset, None)?;
-                        }
-                        IndexOutput::Owned(key) => {
-                            let key = InsertKey::Embed(&key);
-                            index.insert_advanced(key, offset, None)?;
-                        }
+    fn update_index_for_on_disk_entry_unchecked(
+        index: &mut Index,
+        def: &IndexDef,
+        disk_buf: &Mmap,
+        primary_len: u64,
+    ) -> Fallible<()> {
+        // The index meta is used to store the next offset the index should be built.
+        let mut offset = Self::get_index_log_len(index)?;
+        // PERF: might be worthwhile to cache xxhash verification result.
+        while let Some(entry_result) = Self::read_entry_from_buf(disk_buf, offset)? {
+            let data = entry_result.data;
+            for index_output in (def.func)(data) {
+                match index_output {
+                    IndexOutput::Reference(range) => {
+                        assert!(range.start <= range.end && range.end <= data.len() as u64);
+                        let start = range.start + entry_result.data_offset;
+                        let end = range.end + entry_result.data_offset;
+                        let key = InsertKey::Reference((start, end - start));
+
+                        index.insert_advanced(key, offset, None)?;
+                    }
+                    IndexOutput::Owned(key) => {
+                        let key = InsertKey::Embed(&key);
+                        index.insert_advanced(key, offset, None)?;
                     }
                 }
-                offset = entry_result.next_offset;
             }
+            offset = entry_result.next_offset;
         }
         // The index now contains all entries. Write "next_offset" as the index meta.
-        Self::set_index_log_len(self.indexes.iter_mut(), self.meta.primary_len);
+        Self::set_index_log_len(std::iter::once(index), primary_len);
 
         Ok(())
     }
