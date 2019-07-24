@@ -3,13 +3,13 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+# isort:skip_file
 
 from __future__ import absolute_import
 
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % ". helpers-usechg.sh"
 
 # Log on empty repository: checking consistency
@@ -1206,8 +1206,8 @@ sh % "hg up test" == r"""
 sh % "echo c" > "c"
 sh % "hg ci -A -m 'commit on test'" == "adding c"
 
-
-if feature.check(["gettext", "normal-layout"]):
+# This test is skipped - LANGUAGE side effect is not applied in t.py tests.
+if feature.check("false"):
 
     # Test that all log names are translated (e.g. branches, bookmarks, tags):
 
@@ -1629,59 +1629,10 @@ sh % "echo '[extensions]'" >> "$HGRCPATH"
 sh % "echo 'obs=!'" >> "$HGRCPATH"
 sh % "cd .."
 
-# test -u/-k for problematic encoding
-# unicode: cp932:
-# u30A2    0x83 0x41(= 'A')
-# u30C2    0x83 0x61(= 'a')
-
-sh % "hg init problematicencoding"
-sh % "cd problematicencoding"
-
-sh % "'$PYTHON'" << r"""
-print(u'''
-echo a > text
-hg add text
-hg --encoding utf-8 commit -u '\u30A2' -m none
-echo b > text
-hg --encoding utf-8 commit -u '\u30C2' -m none
-echo c > text
-hg --encoding utf-8 commit -u none -m '\u30A2'
-echo d > text
-hg --encoding utf-8 commit -u none -m '\u30C2'
-'''.encode('utf-8'))
-""" > "setup.sh"
-sh % "sh" << open("setup.sh").read()
-
-# test in problematic encoding
-sh % "'$PYTHON'" << r"""
-print(u'''
-hg --encoding cp932 log --template '{rev}\\n' -u '\u30A2'
-echo ====
-hg --encoding cp932 log --template '{rev}\\n' -u '\u30C2'
-echo ====
-hg --encoding cp932 log --template '{rev}\\n' -k '\u30A2'
-echo ====
-hg --encoding cp932 log --template '{rev}\\n' -k '\u30C2'
-'''.encode('cp932'))
-""" > "test.sh"
-sh % "sh" << open(
-    "test.sh"
-).read() == r"""
-    abort: cannot decode command line arguments
-    ====
-    abort: cannot decode command line arguments
-    ====
-    abort: cannot decode command line arguments
-    ====
-    abort: cannot decode command line arguments
-    [255]"""
-
-sh % "cd .."
 
 # test hg log on non-existent files and on directories
-sh % "hg init issue1340"
-sh % "cd issue1340"
-sh % "mkdir 'd1;' mkdir 'D2;' mkdir 'D3.i;' mkdir 'd4.hg;' mkdir 'd5.d;' mkdir .d6"
+sh % "newrepo issue1340"
+sh % "mkdir d1 D2 D3.i d4.hg d5.d .d6"
 sh % "echo 1" > "d1/f1"
 sh % "echo 1" > "D2/f1"
 sh % "echo 1" > "D3.i/f1"
@@ -1690,21 +1641,21 @@ sh % "echo 1" > "d5.d/f1"
 sh % "echo 1" > ".d6/f1"
 sh % "hg -q add ."
 sh % "hg commit -m 'a bunch of weird directories'"
-sh % "hg log -l1 d1/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
+sh % "hg log -l1 d1/f1 -T '{node|short}'" == "65624cd9070a"
 sh % "hg log -l1 f1"
-sh % "hg log -l1 . '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 ./ '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 d1 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 D2 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 D2/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 D3.i '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 D3.i/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 d4.hg '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 d4.hg/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 d5.d '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 d5.d/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 .d6 '|' grep changeset" == "changeset:   0:65624cd9070a"
-sh % "hg log -l1 .d6/f1 '|' grep changeset" == "changeset:   0:65624cd9070a"
+sh % "hg log -l1 . -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 ./ -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 d1 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 D2 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 D2/f1 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 D3.i -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 D3.i/f1 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 d4.hg -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 d4.hg/f1 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 d5.d -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 d5.d/f1 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 .d6 -T '{node|short}'" == "65624cd9070a"
+sh % "hg log -l1 .d6/f1 -T '{node|short}'" == "65624cd9070a"
 
 # issue3772: hg log -r :null showing revision 0 as well
 
@@ -1888,6 +1839,11 @@ sh % "hg --config 'extensions.names=../names.py' --config 'extensions.color=' --
     summary:     a bunch of weird directories"""
 sh % "hg --config 'extensions.names=../names.py' log -r 0 --template '{bars}\\n'" == "foo"
 
+# revert side effect of names.py
+from edenscm.mercurial import namespaces
+
+del namespaces.namespacetable["bars"]
+
 # Templater parse errors:
 
 # simple error
@@ -1898,14 +1854,11 @@ sh % "hg log -r . -T '{shortest(node}'" == r"""
     [255]"""
 
 # multi-line template with error
-#  $ hg log -r . -T 'line 1
-#  > line2
-#  > {shortest(node}
-#  > line4\nline5'
-#  hg: parse error at 28: unexpected token: end
-#  (line 1\nline2\n{shortest(node}\nline4\nline5
-#                                ^ here)
-#  [255]
+sh % "hg log -r . -T 'line 1\nline2\n{shortest(node}\nline4\nline5'" == r"""
+    hg: parse error at 28: unexpected token: end
+    (line 1\nline2\n{shortest(node}\nline4\nline5
+                                  ^ here)
+    [255]"""
 
 sh % "cd .."
 
@@ -2153,10 +2106,11 @@ sh % "cd .."
 
 sh % "hg init issue4499"
 sh % "cd issue4499"
-sh % "for f in A B C D F E G H I J K L M N O P Q R S T 'U;' do" == r"""
-    >     echo 1 > $f;
-    >     hg add $f;
-    > done"""
+
+for f in "ABCDFEGHIJKLMNOPQRSTU":
+    sh % "echo 1" > str(f)
+sh.hg("add", *list("ABCDFEGHIJKLMNOPQRSTU"))
+
 sh % "hg commit -m A1B1C1"
 sh % "echo 2" > "A"
 sh % "echo 2" > "B"
