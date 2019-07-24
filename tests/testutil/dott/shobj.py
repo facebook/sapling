@@ -203,8 +203,8 @@ def _normalizeerr(out, _errors=_errors):
 
 
 def _removetrailingspacesmark(out):
-    """Remove '(trailing spaces)'"""
-    return out.replace(" (trailing spaces)", "")
+    """Remove '(trailing space)'"""
+    return out.replace(" (trailing space)", "")
 
 
 def eqglob(a, b):
@@ -232,7 +232,7 @@ def eqglob(a, b):
             if bline != aline:
                 return False
         elif bline.endswith(" (re)"):
-            if not re.match(bline[:-5] + r"\Z").match(aline):
+            if not re.match(bline[:-5] + r"\Z", aline):
                 return False
         elif aline != bline:
             return False
