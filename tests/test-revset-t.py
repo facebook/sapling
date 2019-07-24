@@ -6,17 +6,16 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % ". helpers-usechg.sh"
 
 sh % "enable commitextras"
 sh % "setconfig 'ui.allowemptycommit=1'"
 
-sh % "'HGENCODING=utf-8'"
-sh % "export HGENCODING"
+sh % "HGENCODING=utf-8"
+
 sh % "cat" << r'''
 import edenscm.mercurial.revset
 
@@ -40,29 +39,47 @@ sh % "cat" << r"""
 testrevset=$TESTTMP/testrevset.py
 """ >> "$HGRCPATH"
 
-sh % "'try()' '{'" == r"""
-    >   hg debugrevspec --debug "$@"
-    > }"""
 
-sh % "'log()' '{'" == r"""
-    >   hg log --template '{rev}\n' -r "$1"
-    > }"""
+def _try(*args):
+    return sh.hg("debugrevspec", "--debug", *args)
 
-sh % "'setbranch()' '{'" == r"""
-    >   BRANCH="$1"
-    >   # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
-    >   echo "$1" > .hg/branch
-    > }"""
 
-sh % "'commit()' '{'" == r"""
-    >   if [ -n "$BRANCH" ]; then
-    >     hg commit --extra "branch=$BRANCH" "$@"
-    >     # silent warnings about conflicted names
-    >     hg tag -q --local -- "$BRANCH" 2>/dev/null
-    >   else
-    >     hg commit "$@"
-    >   fi
-    > }"""
+def trylist(*args):
+    return sh.hg("debugrevlistspec", "--debug", *args)
+
+
+def log(arg):
+    return sh.hg("log", "-T", "{rev}\n", "-r", arg)
+
+
+_currentbranch = None
+
+
+def setbranch(branch):
+    global _currentbranch
+    _currentbranch = branch
+    # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
+    open(".hg/branch", "wb").write("%s\n" % branch)
+
+
+def commit(*args):
+    if _currentbranch:
+        sh.hg("commit", "--extra=branch=%s" % _currentbranch, *args)
+        # silent warnings about conflicted names
+        sh.hg("tag", "-q", "--local", "--", _currentbranch)
+    else:
+        sh.hg("commit", *args)
+
+
+shlib.__dict__.update(
+    {
+        "try": _try,
+        "trylist": trylist,
+        "log": log,
+        "setbranch": setbranch,
+        "commit": commit,
+    }
+)
 
 # extension to build '_intlist()' and '_hexlist()', which is necessary because
 # these predicates use '\0' as a separator:
@@ -103,9 +120,6 @@ sh % "cat" << r"""
 [extensions]
 debugrevlistspec = $TESTTMP/debugrevlistspec.py
 """ >> "$HGRCPATH"
-sh % "'trylist()' '{'" == r"""
-    >   hg debugrevlistspec --debug "$@"
-    > }"""
 
 sh % "hg init repo"
 sh % "cd repo"
@@ -1655,18 +1669,18 @@ sh % "log 'null::0'" == r"""
     -1
     0"""
 sh % "log 'null:tip - 0:'" == "-1"
-sh % "log 'null: and null::' '|' head -1" == "-1"
-sh % "log 'null: or 0:' '|' head -2" == r"""
+sh % "log 'null: and null::'" | "head -1" == "-1"
+sh % "log 'null: or 0:'" | "head -2" == r"""
     -1
     0"""
 sh % "log 'ancestors(null)'" == "-1"
-sh % "log 'reverse(null:)' '|' tail -2" == r"""
+sh % "log 'reverse(null:)'" | "tail -2" == r"""
     0
     -1"""
 sh % "log 'first(null:)'" == "-1"
 sh % "log 'min(null:)'"
 # BROKEN: should be '-1'
-sh % "log 'tip:null and all()' '|' tail -2" == r"""
+sh % "log 'tip:null and all()'" | "tail -2" == r"""
     1
     0"""
 
@@ -1726,11 +1740,11 @@ sh % "hg debugrevspec 'tip or wdir()'" == r"""
     9
     2147483647"""
 sh % "hg debugrevspec '0:tip and wdir()'"
-sh % "log '0:wdir()' '|' tail -3" == r"""
+sh % "log '0:wdir()'" | "tail -3" == r"""
     8
     9
     2147483647"""
-sh % "log 'wdir():0' '|' head -3" == r"""
+sh % "log 'wdir():0'" | "head -3" == r"""
     2147483647
     9
     8"""
@@ -1763,11 +1777,11 @@ evolution.createmarkers=True
 """ >> ".hg/hgrc"
 sh % "echo 0" > "a"
 sh % "hg ci -qAm 0"
-sh % "for i in 2463 2961 6726 '78127;' do" == r"""
-    >   hg up -q 0
-    >   echo $i > a
-    >   hg ci -qm $i
-    > done"""
+
+for i in [2463, 2961, 6726, 78127]:
+    sh.hg("up", "-q", "0")
+    open("a", "wb").write("%s\n" % i)
+    sh.hg("ci", "-qm", "%s" % i)
 sh % "hg up -q null"
 sh % "hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\\n'" == r"""
     0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a b4e
@@ -2038,7 +2052,10 @@ sh % "trylist --optimize '%ld & 2:0' 0 2 1" == r"""
 
 #  '_hexlist(a b)' should behave like 'a + b':
 
-sh % "trylist --optimize --bin '2:0 & %ln' '`hg' log -T '{node} ' '-r0:2`'" == r"""
+args = sh.hg("log", "-T", "{node} ", "-r0:2")
+sh % (
+    "trylist --optimize --bin '2:0 & %%ln' %s" % args
+) == r"""
     (and
       (range
         (symbol '2')
@@ -2062,7 +2079,10 @@ sh % "trylist --optimize --bin '2:0 & %ln' '`hg' log -T '{node} ' '-r0:2`'" == r
     1
     0"""
 
-sh % "trylist --optimize --bin '%ln & 2:0' '`hg' log -T '{node} ' '-r0+2+1`'" == r"""
+args = sh.hg("log", "-T", "{node} ", "-r0+2+1")
+sh % (
+    "trylist --optimize --bin '%%ln & 2:0' %s" % args
+) == r"""
     (and
       (func
         (symbol '_hexlist')
@@ -2654,11 +2674,9 @@ sh % "cd .."
 sh % "cd repo"
 
 # test multiline revset with errors
-#
-#  $ hg log -r '
-#  > . +
-#  > .^ +'
-#  hg: parse error at 9: not a prefix: end
-#  ( . + .^ +
-#            ^ here)
-#  [255]
+
+sh % "hg log -r '\n. +\n.^ +'" == r"""
+    hg: parse error at 9: not a prefix: end
+    ( . + .^ +
+              ^ here)
+    [255]"""
