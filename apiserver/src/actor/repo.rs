@@ -24,13 +24,17 @@ use futures::{
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_stats::{FutureStats, Timed};
 use http::uri::Uri;
 use mononoke_api;
 use repo_client::gettreepack_entries;
+use serde_json;
 use slog::{debug, Logger};
+use time_ext::DurationExt;
 
 use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommonConfig, RepoConfig};
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
@@ -554,7 +558,10 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use crate::MononokeRepoQuery::*;
 
-        match msg {
+        let context = ctx.clone();
+        let query = serde_json::to_value(&msg).unwrap_or(serde_json::json!(null));
+
+        let query_fut = match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
@@ -586,6 +593,43 @@ impl MononokeRepo {
                 stream,
             } => self.eden_get_trees(ctx, keys, stream),
             EdenPrefetchTrees { request, stream } => self.eden_prefetch_trees(ctx, request, stream),
-        }
+        };
+
+        query_fut.timed({
+            move |stats, resp| {
+                log_result(context.scuba().clone(), resp, &stats, &query);
+
+                Ok(())
+            }
+        })
     }
+}
+
+fn log_result(
+    mut scuba: ScubaSampleBuilder,
+    resp: Result<&MononokeRepoResponse, &ErrorKind>,
+    stats: &FutureStats,
+    query: &serde_json::value::Value,
+) {
+    scuba
+        .add_future_stats(&stats)
+        .add("response_time", stats.completion_time.as_micros_unchecked())
+        .add(
+            "params",
+            query
+                .get("params")
+                .unwrap_or(&serde_json::json!("unknown"))
+                .to_string(),
+        )
+        .add(
+            "method",
+            query
+                .get("method")
+                .unwrap_or(&serde_json::json!("unknown"))
+                .to_string(),
+        )
+        .add("log_tag", "Finished processing")
+        .add("success", resp.is_ok());
+
+    scuba.log();
 }

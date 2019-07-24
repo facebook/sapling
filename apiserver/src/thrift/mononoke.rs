@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{convert::TryInto, mem::size_of, sync::Arc};
+use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
 use apiserver_thrift::server::MononokeApiservice;
@@ -20,19 +20,16 @@ use apiserver_thrift::types::{
 use apiserver_thrift::MononokeRevision::UnknownField;
 use cloned::cloned;
 use context::CoreContext;
-use failure::err_msg;
+use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
-use futures_ext::BoxFuture;
-use futures_stats::{FutureStats, Timed};
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use serde::Serialize;
+use futures_ext::{BoxFuture, FutureExt};
+use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sshrelay::SshEnvVars;
-use time_ext::DurationExt;
 use tracing::TraceContext;
 use uuid::Uuid;
 
-use super::super::actor::{Mononoke, MononokeRepoResponse};
+use super::super::actor::{Mononoke, MononokeQuery, MononokeRepoResponse};
 
 #[derive(Clone)]
 pub struct MononokeAPIServiceImpl {
@@ -50,10 +47,8 @@ impl MononokeAPIServiceImpl {
         }
     }
 
-    fn create_scuba_logger<K: Serialize>(
+    fn create_scuba_logger(
         &self,
-        method: &str,
-        params_json: &K,
         path: Option<Vec<u8>>,
         revision: Option<MononokeRevision>,
         reponame: String,
@@ -62,12 +57,6 @@ impl MononokeAPIServiceImpl {
         scuba
             .add_common_server_data()
             .add("type", "thrift")
-            .add("method", method)
-            .add(
-                "params",
-                serde_json::to_string(params_json)
-                    .unwrap_or_else(|_| "Error converting request to json".to_string()),
-            )
             .add("reponame", reponame);
 
         if let Some(path) = path {
@@ -90,6 +79,27 @@ impl MononokeAPIServiceImpl {
         scuba
     }
 
+    fn convert_and_call<F, P, Ret>(
+        &self,
+        ctx: CoreContext,
+        params: P,
+        mapper: F,
+    ) -> impl Future<Item = Ret, Error = ErrorKind>
+    where
+        F: FnMut(MononokeRepoResponse) -> Result<Ret, ErrorKind>,
+        MononokeQuery: TryFrom<P, Error = Error>,
+    {
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr, ctx);
+                move |param| addr.send_query(ctx, param)
+            })
+            .and_then(mapper)
+    }
+
     fn create_ctx(&self, scuba: ScubaSampleBuilder) -> CoreContext {
         CoreContext::new(
             Uuid::new_v4(),
@@ -104,161 +114,109 @@ impl MononokeAPIServiceImpl {
     }
 }
 
-fn log_time<T, U>(
-    scuba: &mut ScubaSampleBuilder,
-    stats: &FutureStats,
-    resp: Result<T, U>,
-    response_size: usize,
-) {
-    scuba
-        .add_future_stats(&stats)
-        .add("response_time", stats.completion_time.as_micros_unchecked())
-        .add("response_size", response_size)
-        .add(
-            "success",
-            match resp {
-                Ok(_) => 1,
-                Err(_) => 0,
-            },
-        );
-
-    scuba.log();
+fn log_response_size(mut scuba: ScubaSampleBuilder, size: usize) {
+    scuba.add("response_size", size);
+    scuba.add("log_tag", "Thrift request finished");
+    scuba.log()
 }
 
 impl MononokeApiservice for MononokeAPIServiceImpl {
     fn get_raw(&self, params: MononokeGetRawParams) -> BoxFuture<Vec<u8>, GetRawExn> {
         let scuba = self.create_scuba_logger(
-            "get_raw",
-            &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
             params.repo.clone(),
         );
-
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::GetRawFile { content } => Ok(content.to_vec()),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| GetRawExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|vec| vec.len()).unwrap_or(0),
-                    );
-
-                    Ok(())
-                }
-            })
+            },
+        )
+        .map_err(move |e| GetRawExn::e(e.into()))
+        .inspect_result({
+            move |resp| {
+                log_response_size(ctx.scuba().clone(), resp.map(|vec| vec.len()).unwrap_or(0));
+            }
+        })
+        .boxify()
     }
 
     fn get_changeset(
         &self,
         params: MononokeGetChangesetParams,
     ) -> BoxFuture<MononokeChangeset, GetChangesetExn> {
-        let scuba = self.create_scuba_logger(
-            "get_changeset",
-            &params,
-            None,
-            Some(params.revision.clone()),
-            params.repo.clone(),
-        );
-
+        let scuba =
+            self.create_scuba_logger(None, Some(params.revision.clone()), params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::GetChangeset { changeset } => {
                     Ok(MononokeChangeset::from(changeset))
                 }
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| GetChangesetExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|resp| {
-                            resp.commit_hash.as_bytes().len()
-                                + resp.message.len()
-                                + resp.author.as_bytes().len()
-                                + 8 // 8 bytes for the date as i64
-                        })
-                        .unwrap_or(0),
-                    );
-
-                    Ok(())
-                }
-            })
+            },
+        )
+        .map_err(move |e| GetChangesetExn::e(e.into()))
+        .inspect_result({
+            move |resp| {
+                log_response_size(
+                    ctx.scuba().clone(),
+                    resp.map(|resp| {
+                        resp.commit_hash.as_bytes().len()
+                            + resp.message.len()
+                            + resp.author.as_bytes().len()
+                            + size_of::<i64>()
+                    })
+                    .unwrap_or(0),
+                );
+            }
+        })
+        .boxify()
     }
 
     fn get_branches(
         &self,
         params: MononokeGetBranchesParams,
     ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
-        let scuba =
-            self.create_scuba_logger("get_branches", &params, None, None, params.repo.clone());
-
+        let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::GetBranches { branches } => Ok(MononokeBranches { branches }),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| GetBranchesExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|resp| {
-                            resp.branches
-                                .iter()
-                                .map(|(bookmark, hash)| bookmark.len() + hash.len())
-                                .sum()
-                        })
-                        .unwrap_or(0),
-                    );
-
-                    Ok(())
-                }
-            })
+            },
+        )
+        .map_err(move |e| GetBranchesExn::e(e.into()))
+        .inspect_result(move |resp| {
+            log_response_size(
+                ctx.scuba().clone(),
+                resp.map(|resp| {
+                    resp.branches
+                        .iter()
+                        .map(|(bookmark, hash)| bookmark.len() + hash.len())
+                        .sum()
+                })
+                .unwrap_or(0),
+            );
+        })
+        .boxify()
     }
 
     fn list_directory(
@@ -266,62 +224,45 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         params: MononokeListDirectoryParams,
     ) -> BoxFuture<MononokeDirectory, ListDirectoryExn> {
         let scuba = self.create_scuba_logger(
-            "list_directory",
-            &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
             params.repo.clone(),
         );
-
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
                     files: files.into_iter().map(|f| f.into()).collect(),
                 }),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| ListDirectoryExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|resp| {
-                            resp.files
-                                .iter()
-                                .map(
-                                    |file| file.name.len() + 1, // 1 byte for the filetype
-                                )
-                                .sum()
-                        })
-                        .unwrap_or(0),
-                    );
-
-                    Ok(())
-                }
-            })
+            },
+        )
+        .map_err(move |e| ListDirectoryExn::e(e.into()))
+        .inspect_result(move |resp| {
+            log_response_size(
+                ctx.scuba().clone(),
+                resp.map(|resp| {
+                    resp.files
+                        .iter()
+                        .map(
+                            |file| file.name.len() + 1, // 1 byte for the filetype
+                        )
+                        .sum()
+                })
+                .unwrap_or(0),
+            );
+        })
+        .boxify()
     }
 
     fn is_ancestor(&self, params: MononokeIsAncestorParams) -> BoxFuture<bool, IsAncestorExn> {
-        let mut scuba = self.create_scuba_logger(
-            "is_ancestor",
-            &params,
-            None,
-            Some(params.descendant.clone()),
-            params.repo.clone(),
-        );
+        let mut scuba =
+            self.create_scuba_logger(None, Some(params.descendant.clone()), params.repo.clone());
 
         let ancestor = match params.ancestor.clone() {
             MononokeRevision::commit_hash(hash) => hash,
@@ -330,87 +271,64 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         };
 
         scuba.add("ancestor", ancestor);
-
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::IsAncestor { answer } => Ok(answer),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| IsAncestorExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    let mut scuba = ctx.scuba().clone();
-                    if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-                        scuba.add("extra_context", counters);
-                    };
-                    log_time(&mut scuba, &stats, resp, resp.map(|_| 0).unwrap_or(0));
+            },
+        )
+        .map_err(move |e| IsAncestorExn::e(e.into()))
+        .inspect_result({
+            move |resp| {
+                let mut scuba = ctx.scuba().clone();
 
-                    Ok(())
-                }
-            })
+                if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+                    scuba.add("extra_context", counters);
+                };
+
+                log_response_size(scuba, resp.map(|_| 0).unwrap_or(0));
+            }
+        })
+        .boxify()
     }
 
     fn get_blob(&self, params: MononokeGetBlobParams) -> BoxFuture<MononokeBlob, GetBlobExn> {
-        let scuba = self.create_scuba_logger("get_blob", &params, None, None, params.repo.clone());
-
+        let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(
+            ctx.clone(),
+            params,
+            |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::GetBlobContent { content } => Ok(MononokeBlob {
                     content: content.to_vec(),
                 }),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),
                 ))),
-            })
-            .map_err(move |e| GetBlobExn::e(e.into()))
-            .timed({
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|resp| resp.content.len()).unwrap_or(0),
-                    );
-
-                    Ok(())
-                }
-            })
+            },
+        )
+        .map_err(move |e| GetBlobExn::e(e.into()))
+        .inspect_result(move |resp| {
+            log_response_size(
+                ctx.scuba().clone(),
+                resp.map(|resp| resp.content.len()).unwrap_or(0),
+            );
+        })
+        .boxify()
     }
 
     fn get_tree(&self, params: MononokeGetTreeParams) -> BoxFuture<MononokeDirectory, GetTreeExn> {
-        let scuba = self.create_scuba_logger("get_tree", &params, None, None, params.repo.clone());
-
+        let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        params
-            .try_into()
-            .into_future()
-            .from_err()
-            .and_then({
-                cloned!(self.addr, ctx);
-                move |param| addr.send_query(ctx, param)
-            })
-            .and_then(|resp: MononokeRepoResponse| match resp {
+        self.convert_and_call(ctx.clone(), params, |resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::GetTree { files } => Ok(MononokeDirectory {
                     files: files.into_iter().map(|f| f.into()).collect(),
                 }),
@@ -419,14 +337,8 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                 ))),
             })
             .map_err(move |e| GetTreeExn::e(e.into()))
-            .timed(
-                {
-                move |stats, resp| {
-                    log_time(
-                        &mut ctx.scuba().clone(),
-                        &stats,
-                        resp,
-                        resp.map(|resp| {
+            .inspect_result(move |resp| {
+                log_response_size(ctx.scuba().clone(), resp.map(|resp| {
                             resp.files
                                 .iter()
                                 .map(|file| {
@@ -437,12 +349,10 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                                         + file.content_sha1.as_ref().map(|sha1| sha1.len()).unwrap_or(0)
                                 })
                                 .sum()
-                        })
-                        .unwrap_or(0),
-                    );
+                        }).unwrap_or(0)
 
-                    Ok(())
-                }
+                );
             })
+            .boxify()
     }
 }

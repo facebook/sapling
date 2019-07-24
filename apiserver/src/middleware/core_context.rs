@@ -91,13 +91,18 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             }
         }
 
+        let session_uuid = Uuid::new_v4();
+        let repo_name = req.path().split("/").nth(1).unwrap_or("unknown");
+
         scuba
             .add("type", "http")
             .add("method", req.method().to_string())
-            .add("path", req.path());
+            .add("path", req.path())
+            .add("reponame", repo_name)
+            .add("session_uuid", session_uuid.to_string());
 
         let ctx = CoreContext::new(
-            Uuid::new_v4(),
+            session_uuid,
             self.logger.clone(),
             scuba,
             None,
@@ -120,6 +125,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             let mut scuba = ctx.scuba().clone();
             scuba.add("status_code", resp.status().as_u16());
             scuba.add("response_size", resp.response_size());
+            scuba.add("log_tag", "HTTP request finished");
 
             if let Some(time) = response_time {
                 scuba.add("response_time", time);
