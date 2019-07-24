@@ -5,10 +5,12 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+import os
+
+from edenscm.mercurial import extensions, hg, obsolete
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
 sh % ". helpers-usechg.sh"
@@ -157,10 +159,11 @@ sh % "rm a/a.orig b.rename/b c.copy"
 # Apply it and make sure our state is as expected
 # (this also tests that same timestamp prevents backups from being
 # removed, even though there are more than 'maxbackups' backups)
-sh % "f -t .hg/shelve-backup/default.patch" == ".hg/shelve-backup/default.patch: file"
-sh % "touch -t 200001010000 .hg/shelve-backup/default.patch"
-sh % "f -t .hg/shelve-backup/default-1.patch" == ".hg/shelve-backup/default-1.patch: file"
-sh % "touch -t 200001010000 .hg/shelve-backup/default-1.patch"
+sh % "test -f .hg/shelve-backup/default.patch"
+sh % "test -f .hg/shelve-backup/default-1.patch"
+for name in ["default.patch", "default-1.patch"]:
+    path = ".hg/shelve-backup/%s" % name
+    os.utime(path, (0, 0))
 
 sh % "hg unshelve" == "unshelving change 'default-01'"
 sh % "hg status -C" == r"""
@@ -241,7 +244,7 @@ sh % "ls .hg/shelve-backup/" == r"""
 
 # Cause unshelving to result in a merge with 'a' conflicting
 sh % "hg shelve -q"
-sh % "echo 'c>>a/a'"
+sh % "echo 'c'" >> "a/a"
 sh % "hg commit -m second"
 sh % "hg tip --template '{files}\\n'" == "a/a"
 
@@ -309,7 +312,7 @@ sh % "hg unshelve -a" == r"""
     rebase aborted
     unshelve of 'default' aborted"""
 sh % "hg heads -q" == "10:ceefc37abe1e"
-sh % "hg parents '|' grep changeset" == "changeset:   10:ceefc37abe1e"
+sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
 sh % "hg resolve -l"
 sh % "hg status" == r"""
     A foo/foo
@@ -351,7 +354,7 @@ sh % "hg unshelve -c --trace" == r"""
     unshelve of 'default' complete"""
 
 # Ensure the repo is as we hope
-sh % "hg parents '|' grep changeset" == "changeset:   10:ceefc37abe1e"
+sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
 sh % "hg heads -q" == "11:83ed350dc2d6"
 sh % "hg status -C" == r"""
     A b.rename/b
@@ -367,7 +370,7 @@ sh % "hg shelve -l"
 
 if feature.check(["execbit"]):
     # Ensure that metadata-only changes are shelved
-    sh % "chmod +x a/a"
+    os.chmod("a/a", 0o777)
     sh % "hg shelve -q -n execbit a/a"
     sh % "hg status a/a"
     sh % "hg unshelve -q execbit"
@@ -415,7 +418,6 @@ a
 c
 x
 """ > "a/a"
-sh % "sleep 1"
 sh % "'HGMERGE=true' hg unshelve" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
@@ -442,13 +444,13 @@ sh % "hg shelve --list"
 
 # Test bookmarks
 sh % "hg bookmark test"
-sh % "hg bookmark" == " \\* test                      * (glob)"
+sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg shelve" == r"""
     shelved as test
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
-sh % "hg bookmark" == " \\* test                      * (glob)"
+sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg unshelve" == "unshelving change 'test'"
-sh % "hg bookmark" == " \\* test                      * (glob)"
+sh % "hg bookmark" == " * test                      * (glob)"
 
 # Shelve should still work even if mq is disabled
 sh % "hg --config 'extensions.mq=!' shelve" == r"""
@@ -522,7 +524,8 @@ sh % "hg status" == "A d"
 sh % "hg shelve" == r"""
     shelved as default
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
-sh % "hg debugobsolete '`hg' --debug id -i -r '1`'" == "obsoleted 1 changesets"
+arg = sh.hg("--debug", "id", "-i", "-r", "1")
+sh % ("hg debugobsolete %s" % arg) == "obsoleted 1 changesets"
 sh % "hg unshelve" == "unshelving change 'default'"
 
 # Unshelve should leave unknown files alone (issue4113)
@@ -552,7 +555,7 @@ sh % "cat e.orig" == "z"
 
 #  preparing:
 
-sh % "rm '*.orig'"
+sh % "rm 'e.orig'"
 sh % "hg ci -qm 'commit stuff'"
 sh % "hg phase -p 'null:'"
 
@@ -596,7 +599,7 @@ sh % "hg unshelve --date '1073741824 0'" == r"""
     warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
     [1]"""
-sh % "hg parents -T '{desc|firstline}\\n' '|' sort" == r"""
+sh % "hg parents -T '{desc|firstline}\\n'" == r"""
     pending changes temporary commit
     shelve changes to: commit stuff"""
 
@@ -608,7 +611,7 @@ sh % "cat f" == r"""
     g
     =======
     f
-    ??>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff (glob)"""
+    >>>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff"""
 sh % "cat f.orig" == "g"
 sh % "hg unshelve --abort -t false" == r"""
     tool option will be ignored
@@ -651,7 +654,7 @@ sh % "cat f" == r"""
     g
     =======
     f
-    ??>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff (glob)"""
+    >>>>>>> source: a0cc43106cdd - test: shelve changes to: commit stuff"""
 sh % "cat f.orig" == "g"
 sh % "hg unshelve --abort" == r"""
     rebase aborted
@@ -699,9 +702,6 @@ sh % "hg diff"
 sh % "hg status" == r"""
     ? a/a.orig
     ? foo/foo"""
-sh % "hg summary '|' egrep '(bookmarks|commit)'" == r"""
-    bookmarks: *test
-    commit: 2 unknown (clean)"""
 
 sh % "hg shelve --delete --stat" == r"""
     abort: options '--delete' and '--stat' may not be used together
@@ -839,7 +839,7 @@ sh % "hg shelve --patch default" == r"""
     +patch a"""
 # No-argument --patch should also work
 sh % "hg shelve --patch" == r"""
-    default-01 * (* ago)    shelve changes to: create conflict (glob)
+    default-01      (*s ago)    shelve changes to: create conflict (glob)
 
     diff --git a/shelf-patch-b b/shelf-patch-b
     new file mode 100644
@@ -862,127 +862,129 @@ sh % "hg shelve --stat nonexistentshelf" == r"""
 # ------------------------------------------------------------------------
 sh % "echo xxxx" >> "x"
 sh % "hg commit -m 'shelve changes to invoke rebase'"
-sh % "hg bookmark unshelvedest"
 
-sh % "cat" << r"""
-echo "==== \$1:"
-hg parents --template "VISIBLE {node|short}\n"
-# test that pending changes are hidden
-unset HG_PENDING
-unset HG_SHAREDPENDING
-hg parents --template "ACTUAL  {node|short}\n"
-echo "===="
-""" > "$TESTTMP/checkvisibility.sh"
+# Unsupport by t.py: no external shell scripts
+if feature.check("false"):
+    sh % "hg bookmark unshelvedest"
 
-sh % "cat" << r"""
-[defaults]
-# to fix hash id of temporary revisions
-unshelve = --date '0 0'
-""" >> ".hg/hgrc"
+    sh % "cat" << r"""
+    echo "==== \$1:"
+    hg parents --template "VISIBLE {node|short}\n"
+    # test that pending changes are hidden
+    unset HG_PENDING
+    unset HG_SHAREDPENDING
+    hg parents --template "ACTUAL  {node|short}\n"
+    echo "===="
+    """ > "$TESTTMP/checkvisibility.sh"
 
-# "hg unshelve"implies steps below:
-# (1) commit changes in the working directory
-# (2) note shelved revision
-# (3) rebase: merge shelved revision into temporary wc changes
-# (4) rebase: commit merged revision
-# (5) rebase: update to a new commit
-# (6) update to original working copy parent
+    sh % "cat" << r"""
+    [defaults]
+    # to fix hash id of temporary revisions
+    unshelve = --date '0 0'
+    """ >> ".hg/hgrc"
 
-# == test visibility to external preupdate hook
+    # "hg unshelve"implies steps below:
+    # (1) commit changes in the working directory
+    # (2) note shelved revision
+    # (3) rebase: merge shelved revision into temporary wc changes
+    # (4) rebase: commit merged revision
+    # (5) rebase: update to a new commit
+    # (6) update to original working copy parent
 
-sh % "cat" << r"""
-[hooks]
-preupdate.visibility = sh $TESTTMP/checkvisibility.sh preupdate
-""" >> ".hg/hgrc"
+    # == test visibility to external preupdate hook
 
-sh % "echo nnnn" >> "n"
+    sh % "cat" << r"""
+    [hooks]
+    preupdate.visibility = sh $TESTTMP/checkvisibility.sh preupdate
+    """ >> ".hg/hgrc"
 
-sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
-    ==== before-unshelving:
-    VISIBLE 47f190a8b2e0
-    ACTUAL  47f190a8b2e0
-    ===="""
+    sh % "echo nnnn" >> "n"
 
-sh % "hg unshelve --keep default" == r"""
-    temporarily committing pending changes (restore with 'hg unshelve --abort')
-    rebasing shelved changes
-    rebasing 27:80096f006bb2 "shelve changes to: create conflict"
-    ==== preupdate:
-    VISIBLE (?!f77bf047d4c5).* (re)
-    ACTUAL  47f190a8b2e0
-    ====
-    ==== preupdate:
-    VISIBLE (?!f77bf047d4c5).* (re)
-    ACTUAL  47f190a8b2e0
-    ====
-    ==== preupdate:
-    VISIBLE (?!f77bf047d4c5).* (re)
-    ACTUAL  47f190a8b2e0
-    ===="""
+    sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
+        ==== before-unshelving:
+        VISIBLE 47f190a8b2e0
+        ACTUAL  47f190a8b2e0
+        ===="""
 
-sh % "cat" << r"""
-[hooks]
-preupdate.visibility =
-""" >> ".hg/hgrc"
+    sh % "hg unshelve --keep default" == r"""
+        temporarily committing pending changes (restore with 'hg unshelve --abort')
+        rebasing shelved changes
+        rebasing 27:80096f006bb2 "shelve changes to: create conflict"
+        ==== preupdate:
+        VISIBLE (?!f77bf047d4c5).* (re)
+        ACTUAL  47f190a8b2e0
+        ====
+        ==== preupdate:
+        VISIBLE (?!f77bf047d4c5).* (re)
+        ACTUAL  47f190a8b2e0
+        ====
+        ==== preupdate:
+        VISIBLE (?!f77bf047d4c5).* (re)
+        ACTUAL  47f190a8b2e0
+        ===="""
 
-sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
-    ==== after-unshelving:
-    VISIBLE 47f190a8b2e0
-    ACTUAL  47f190a8b2e0
-    ===="""
+    sh % "cat" << r"""
+    [hooks]
+    preupdate.visibility =
+    """ >> ".hg/hgrc"
 
-# == test visibility to external update hook
+    sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
+        ==== after-unshelving:
+        VISIBLE 47f190a8b2e0
+        ACTUAL  47f190a8b2e0
+        ===="""
 
-sh % "hg update -q -C unshelvedest"
+    # == test visibility to external update hook
 
-sh % "cat" << r"""
-[hooks]
-update.visibility = sh $TESTTMP/checkvisibility.sh update
-""" >> ".hg/hgrc"
+    sh % "hg update -q -C unshelvedest"
 
-sh % "echo nnnn" >> "n"
+    sh % "cat" << r"""
+    [hooks]
+    update.visibility = sh $TESTTMP/checkvisibility.sh update
+    """ >> ".hg/hgrc"
 
-sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
-    ==== before-unshelving:
-    VISIBLE 47f190a8b2e0
-    ACTUAL  47f190a8b2e0
-    ===="""
+    sh % "echo nnnn" >> "n"
 
-sh % "hg unshelve --keep default" == r"""
-    temporarily committing pending changes (restore with 'hg unshelve --abort')
-    rebasing shelved changes
-    rebasing 27:80096f006bb2 "shelve changes to: create conflict"
-    ==== update:
-    VISIBLE f08f4865d656
-    VISIBLE 80096f006bb2
-    ACTUAL  47f190a8b2e0
-    ====
-    ==== update:
-    VISIBLE f08f4865d656
-    ACTUAL  47f190a8b2e0
-    ====
-    ==== update:
-    VISIBLE 47f190a8b2e0
-    ACTUAL  47f190a8b2e0
-    ===="""
+    sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
+        ==== before-unshelving:
+        VISIBLE 47f190a8b2e0
+        ACTUAL  47f190a8b2e0
+        ===="""
 
-sh % "cat" << r"""
-[hooks]
-update.visibility =
-""" >> ".hg/hgrc"
+    sh % "hg unshelve --keep default" == r"""
+        temporarily committing pending changes (restore with 'hg unshelve --abort')
+        rebasing shelved changes
+        rebasing 27:80096f006bb2 "shelve changes to: create conflict"
+        ==== update:
+        VISIBLE f08f4865d656
+        VISIBLE 80096f006bb2
+        ACTUAL  47f190a8b2e0
+        ====
+        ==== update:
+        VISIBLE f08f4865d656
+        ACTUAL  47f190a8b2e0
+        ====
+        ==== update:
+        VISIBLE 47f190a8b2e0
+        ACTUAL  47f190a8b2e0
+        ===="""
 
-sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
-    ==== after-unshelving:
-    VISIBLE 47f190a8b2e0
-    ACTUAL  47f190a8b2e0
-    ===="""
-sh % "hg bookmark -d unshelvedest"
-sh % "cd .."
+    sh % "cat" << r"""
+    [hooks]
+    update.visibility =
+    """ >> ".hg/hgrc"
+
+    sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
+        ==== after-unshelving:
+        VISIBLE 47f190a8b2e0
+        ACTUAL  47f190a8b2e0
+        ===="""
+    sh % "hg bookmark -d unshelvedest"
+    sh % "cd .."
 
 # Test .orig files go where the user wants them to
 # ---------------------------------------------------------------
-sh % "hg init obssh-salvage"
-sh % "cd obssh-salvage"
+sh % "newrepo obssh-salvage"
 sh % "echo content" > "root"
 sh % "hg commit -A -m root -q"
 sh % "echo ''" > "root"
@@ -1015,9 +1017,11 @@ sh % "hg unshelve -q" == r"""
     warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
     [1]"""
-sh % "sed s/ae8c668541e8/123456789012/ .hg/shelvedstate" > "../corrupt-shelvedstate"
-sh % "mv ../corrupt-shelvedstate .hg/histedit-state"
-sh % "hg unshelve --abort '2>&1' '|' grep 'rebase aborted'" == "rebase aborted"
+
+with open(".hg/histedit-state", "w") as f:
+    f.write(open(".hg/shelvedstate").read().replace("ae8c668541e8", "123456789012"))
+
+sh % "hg unshelve --abort" | sh % "head -1" == "rebase aborted"
 sh % "hg up -C ." == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "cd .."
 
@@ -1159,7 +1163,7 @@ sh % "echo 2" >> "file"
 sh % "hg shelve" == r"""
     shelved as default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "echo 3" >> "file"
+sh % "echo 3" > "file"
 sh % "hg ci -Am 13"
 sh % "hg shelve --list" == "default * shelve changes to: 1 (glob)"
 sh % "hg unshelve --keep" == r"""
@@ -1201,17 +1205,22 @@ sh % "cd .."
 # For this test enabled shelve extension is enough, and it is enabled at the top of the file
 sh % "hg init test-log-shelved"
 sh % "cd test-log-shelved"
-sh % "'testshelvedcount()' '{'" == r"""
-    >   hg log --hidden -r "shelved()" --template "{node}\n" | wc -l | grep -v $1 | cat
-    > }"""
+
+
+def testshelvedcount(n):
+    sh % 'hg log --hidden -r "shelved()" --template "."' == "." * int(n)
+
+
+shlib.__dict__["testshelvedcount"] = testshelvedcount
+
 sh % "touch file1"
 sh % "touch file2"
 sh % "touch file3"
-sh % "hg addremove"
-sh % "hg commit -m 'Add test files'" == r"""
+sh % "hg addremove" == r"""
     adding file1
     adding file2
     adding file3"""
+sh % "hg commit -m 'Add test files'"
 sh % "echo 1" >> "file1"
 sh % "hg shelve" == r"""
     shelved as default
@@ -1246,45 +1255,48 @@ sh % "echo 1" > "file1"
 sh % "echo 1" > "file2"
 sh % "hg commit -Aqm commit1"
 sh % "echo 2" > "file2"
-sh % "cat" << r"""
-from edenscm.mercurial import extensions, obsolete
+
+
 def createmarkers(orig, *args, **kwargs):
     orig(*args, **kwargs)
     raise KeyboardInterrupt
-def extsetup(ui):
-    extensions.wrapfunction(obsolete, "createmarkers", createmarkers)
-""" >> "$TESTTMP/abortcreatemarkers.py"
-sh % "cat" << r"""
-from edenscm.mercurial import extensions, hg
+
+
+with extensions.wrappedfunction(obsolete, "createmarkers", createmarkers):
+    sh % "hg shelve" == r"""
+        transaction abort!
+        rollback completed
+        interrupted!
+        [255]"""
+
+sh % "cat file2" == "2"
+sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
+
+
 def update(orig, repo, *args, **kwargs):
     if repo.ui.configbool("abortupdate", "after"):
         orig(repo, *args, **kwargs)
     raise KeyboardInterrupt
-def extsetup(ui):
-    extensions.wrapfunction(hg, "update", update)
-""" >> "$TESTTMP/abortupdate.py"
-sh % "hg shelve --config 'extensions.abortcreatemarkers=$TESTTMP/abortcreatemarkers.py'" == r"""
-    transaction abort!
-    rollback completed
-    interrupted!
-    [255]"""
-sh % "cat file2" == "2"
-sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
-sh % "hg shelve --config 'extensions.abortupdate=$TESTTMP/abortupdate.py'" == r"""
-    shelved as default
-    interrupted!
-    [255]"""
+
+
+with extensions.wrappedfunction(hg, "update", update):
+    sh % "hg shelve" == r"""
+        shelved as default
+        interrupted!
+        [255]"""
+
 sh % "cat file2" == "2"
 sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
 sh % "hg update --clean --quiet ."
 sh % "hg shelve --list" == "default * shelve changes to: commit1 (glob)"
 sh % "hg unshelve" == "unshelving change 'default'"
 sh % "cat file2" == "2"
-sh % "hg shelve --config 'extensions.abortupdate=$TESTTMP/abortupdate.py' --config 'abortupdate.after=true'" == r"""
-    shelved as default
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    interrupted!
-    [255]"""
+with extensions.wrappedfunction(hg, "update", update):
+    sh % "hg shelve --config 'abortupdate.after=true'" == r"""
+        shelved as default
+        1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+        interrupted!
+        [255]"""
 sh % "cat file2" == "1"
 sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
 sh % "hg shelve --list" == "default * shelve changes to: commit1 (glob)"
