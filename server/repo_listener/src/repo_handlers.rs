@@ -203,17 +203,25 @@ pub fn repo_handlers(
                                 Some(skiplist_index_blobstore_key) => {
                                     let blobstore = repo.blobrepo().get_blobstore();
                                     cloned!(logger);
+                                    info!(logger, "Fetching and initializing skiplist");
                                     blobstore
                                         .get(ctx.clone(), skiplist_index_blobstore_key)
-                                        .and_then(|maybebytes| {
+                                        .and_then(move |maybebytes| {
                                             let slg = match maybebytes {
                                                 Some(bytes) => {
                                                     let bytes = bytes.into_bytes();
-                                                    try_boxfuture!(deserialize_skiplist_index(
-                                                        logger, bytes
-                                                    ))
+                                                    let skiplist =
+                                                        try_boxfuture!(deserialize_skiplist_index(
+                                                            logger.clone(),
+                                                            bytes
+                                                        ));
+                                                    info!(logger, "Built skiplist");
+                                                    skiplist
                                                 }
-                                                None => SkiplistIndex::new(),
+                                                None => {
+                                                    info!(logger, "Skiplist is empty!");
+                                                    SkiplistIndex::new()
+                                                }
                                             };
                                             ok(Arc::new(slg)).boxify()
                                         })
