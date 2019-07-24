@@ -1051,7 +1051,7 @@ impl MemLeaf {
         }
     }
 
-    /// If the entry is suitable for writing inline, write a inline entry, mark dependent
+    /// If the entry is suitable for writing inline, write an inline entry, mark dependent
     /// entries as "unused", and return `true`. Otherwise do nothing and return `false`.
     ///
     /// The caller probably wants to set this entry to "unused" to prevent writing twice,
@@ -1069,10 +1069,10 @@ impl MemLeaf {
 
         // Conditions to be inlined:
         // - Both Key and Link are dirty (in-memory). Otherwise this might waste space.
-        // - Key is ExtKey. This is just to make implemenation easier. Owned key support might be
+        // - Key is ExtKey. This is just to make implementation easier. Owned key support might be
         // added in the future.
         // - Link does not refer to another in-memory link that hasn't been written yet (i.e.
-        //   does not exist in offset_map). This is just to make implemenation easier.
+        //   does not exist in offset_map). This is just to make implementation easier.
 
         let are_dependencies_dirty = self.key_offset.is_dirty() && self.link_offset.is_dirty();
 
