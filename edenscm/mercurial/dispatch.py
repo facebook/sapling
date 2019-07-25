@@ -653,10 +653,18 @@ def _callcatch(ui, func):
     try:
         return scmutil.callcatch(ui, func)
     except error.AmbiguousCommand as inst:
-        ui.warn(
-            _("hg: command '%s' is ambiguous:\n\t%s\n")
-            % (inst.args[0], "\n\t".join(inst.args[1]))
-        )
+
+        ui.warn(_("hg: command '%s' is ambiguous:\n") % inst.args[0])
+
+        for match in inst.args[1]:
+            cmds = match.split(" or ")
+            parts = [cmd.partition(inst.args[0]) for cmd in cmds]
+            msg = " or ".join(
+                ui.label(part[1], "ui.prefix.component") + part[2] for part in parts
+            )
+
+            ui.write("\t%s\n" % msg)
+
     except error.CommandError as inst:
         if inst.args[0]:
             msgbytes = pycompat.bytestr(inst.args[1])
@@ -1315,6 +1323,14 @@ def _dispatch(req):
         # Propagate any changes to lui.__class__ by extensions
         ui.__class__ = lui.__class__
 
+        # setup color handling before pager, because setting up pager
+        # might cause incorrect console information
+        coloropt = req.earlyoptions.get("color", False)
+        for ui_ in uis:
+            if coloropt:
+                ui_.setconfig("ui", "color", coloropt, "--color")
+            color.setup(ui_)
+
         # (uisetup and extsetup are handled in extensions.loadall)
 
         # (reposetup is handled in hg.repository)
@@ -1404,14 +1420,6 @@ def _dispatch(req):
         if cmdoptions.get("insecure", False):
             for ui_ in uis:
                 ui_.insecureconnections = True
-
-        # setup color handling before pager, because setting up pager
-        # might cause incorrect console information
-        coloropt = options["color"]
-        for ui_ in uis:
-            if coloropt:
-                ui_.setconfig("ui", "color", coloropt, "--color")
-            color.setup(ui_)
 
         if util.parsebool(options["pager"]):
             # ui.pager() expects 'internal-always-' prefix in this case
