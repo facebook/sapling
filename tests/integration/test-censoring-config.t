@@ -29,7 +29,7 @@ blobimport
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke "$TESTTMP/repo"
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -67,10 +67,10 @@ Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d6
 
 Restart mononoke
   $ kill $MONONOKE_PID
-  $ rm -rf $TESTTMP/mononoke-config
+  $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob:files
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke "$TESTTMP/repo"
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
@@ -105,11 +105,11 @@ Should not succeed since the commit modifies a blacklisted file
 
 Restart mononoke and disable censorship verification
   $ kill $MONONOKE_PID
-  $ rm -rf $TESTTMP/mononoke-config
+  $ rm -rf "$TESTTMP/mononoke-config"
   $ export CENSORING_DISABLED=1
   $ setup_common_config blob:files
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke "$TESTTMP/repo"
 
   $ cd "$TESTTMP/repo-pull"
 

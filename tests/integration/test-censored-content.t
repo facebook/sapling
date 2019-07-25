@@ -32,7 +32,7 @@ blobimport
 
 start mononoke
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke "$TESTTMP/repo"
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -153,10 +153,10 @@ Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a
 
 Restart mononoke
   $ kill $MONONOKE_PID
-  $ rm -rf $TESTTMP/mononoke-config
+  $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob:files
   $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ wait_for_mononoke "$TESTTMP/repo"
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
