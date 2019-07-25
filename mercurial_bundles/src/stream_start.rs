@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
+use percent_encoding;
 use tokio_io::codec::Decoder;
-use url::percent_encoding;
 
 use crate::errors::*;
 use crate::types::StreamHeader;

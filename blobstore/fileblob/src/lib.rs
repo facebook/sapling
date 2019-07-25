@@ -14,7 +14,7 @@ use failure_ext::{bail_msg, Error, Result};
 use futures::future::{poll_fn, Future};
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
-use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -22,6 +22,10 @@ use mononoke_types::BlobstoreBytes;
 use tempfile::NamedTempFile;
 
 const PREFIX: &str = "blob";
+/// https://url.spec.whatwg.org/#fragment-percent-encode-set
+const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
+/// https://url.spec.whatwg.org/#path-percent-encode-set
+const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
 
 #[derive(Debug, Clone)]
 pub struct Fileblob {
@@ -48,7 +52,7 @@ impl Fileblob {
     }
 
     fn path(&self, key: &String) -> PathBuf {
-        let key = percent_encode(key.as_bytes(), DEFAULT_ENCODE_SET);
+        let key = percent_encode(key.as_bytes(), PATH);
         self.base.join(format!("{}-{}", PREFIX, key))
     }
 }

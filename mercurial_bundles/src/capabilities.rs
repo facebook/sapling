@@ -10,8 +10,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use bytes::BytesMut;
+use percent_encoding::percent_decode;
 use tokio_io::codec::Decoder;
-use url::percent_encoding::percent_decode;
 
 use crate::errors::*;
 
