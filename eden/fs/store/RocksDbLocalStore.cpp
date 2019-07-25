@@ -8,6 +8,7 @@
 
 #include <array>
 
+#include <fb303/ServiceData.h>
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/container/Enumerate.h>
@@ -21,7 +22,6 @@
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
 
-#include "common/stats/ServiceData.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
@@ -584,7 +584,7 @@ size_t RocksDbLocalStore::publishStats() {
   for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
     auto size =
         getApproximateSize(static_cast<LocalStore::KeySpace>(iter.index));
-    fbData->setCounter(
+    fb303::fbData->setCounter(
         folly::to<string>(statsPrefix_, iter->name, ".size"), size);
     if (iter->persistence == Persistence::Ephemeral) {
       ephemeralSize += size;
@@ -593,9 +593,9 @@ size_t RocksDbLocalStore::publishStats() {
     }
   }
 
-  fbData->setCounter(
+  fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "ephemeral.total_size"), ephemeralSize);
-  fbData->setCounter(
+  fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "persistent.total_size"), persistentSize);
 
   return ephemeralSize;
@@ -614,13 +614,14 @@ void RocksDbLocalStore::triggerAutoGC() {
     if (state->inProgress_) {
       XLOG(WARN) << "skipping local store garbage collection: "
                     "another GC job is still running";
-      fbData->incrementCounter(
+      fb303::fbData->incrementCounter(
           folly::to<string>(statsPrefix_, "auto_gc.schedule_failure"));
       return;
     }
-    fbData->setCounter(folly::to<string>(statsPrefix_, "auto_gc.running"), 1);
+    fb303::fbData->setCounter(
+        folly::to<string>(statsPrefix_, "auto_gc.running"), 1);
 
-    fbData->incrementCounter(
+    fb303::fbData->incrementCounter(
         folly::to<string>(statsPrefix_, "auto_gc.schedule_count"));
     state->startTime_ = std::chrono::steady_clock::now();
     state->inProgress_ = true;
@@ -648,20 +649,21 @@ void RocksDbLocalStore::autoGCFinished(bool successful) {
   auto durationMS =
       std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 
-  fbData->setCounter(folly::to<string>(statsPrefix_, "auto_gc.running"), 0);
-  fbData->setCounter(
+  fb303::fbData->setCounter(
+      folly::to<string>(statsPrefix_, "auto_gc.running"), 0);
+  fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "auto_gc.last_run"), time(nullptr));
-  fbData->setCounter(
+  fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "auto_gc.last_run_succeeded"),
       successful ? 1 : 0);
-  fbData->setCounter(
+  fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "auto_gc.last_duration_ms"), durationMS);
 
   if (successful) {
-    fbData->incrementCounter(
+    fb303::fbData->incrementCounter(
         folly::to<string>(statsPrefix_, "auto_gc.success"));
   } else {
-    fbData->incrementCounter(
+    fb303::fbData->incrementCounter(
         folly::to<string>(statsPrefix_, "auto_gc.failure"));
   }
 }

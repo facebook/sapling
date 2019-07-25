@@ -20,7 +20,7 @@ from typing import Any, Callable, List, Optional, TypeVar, Union
 
 import eden.thrift
 import thrift.transport
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
 
@@ -48,17 +48,17 @@ class NotAnEdenMountError(Exception):
 
 
 class HealthStatus(object):
-    def __init__(self, status: fb_status, pid: Optional[int], detail: str) -> None:
+    def __init__(self, status: fb303_status, pid: Optional[int], detail: str) -> None:
         self.status = status
         self.pid = pid  # The process ID, or None if not running
         self.detail = detail  # a human-readable message
 
     def is_healthy(self) -> bool:
-        return self.status == fb_status.ALIVE
+        return self.status == fb303_status.ALIVE
 
     def __str__(self) -> str:
         return "(%s, pid=%s, detail=%r)" % (
-            fb_status._VALUES_TO_NAMES.get(self.status, str(self.status)),
+            fb303_status._VALUES_TO_NAMES.get(self.status, str(self.status)),
             self.pid,
             self.detail,
         )
@@ -134,7 +134,7 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
     # works out fine either way.
     if os.path.basename(comm) in ("edenfs", "fake_edenfs"):
         return HealthStatus(
-            fb_status.STOPPED,
+            fb303_status.STOPPED,
             pid,
             "Eden's Thrift server does not appear to be "
             "running, but the process is still alive ("
@@ -145,7 +145,7 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
 
 
 def _create_dead_health_status() -> HealthStatus:
-    return HealthStatus(fb_status.DEAD, pid=None, detail="edenfs not running")
+    return HealthStatus(fb303_status.DEAD, pid=None, detail="edenfs not running")
 
 
 def check_health(
@@ -159,7 +159,7 @@ def check_health(
     Returns a HealthStatus object containing health information.
     """
     pid = None
-    status = fb_status.DEAD
+    status = fb303_status.DEAD
     try:
         with get_client() as client:
             client.set_timeout(timeout)
@@ -180,7 +180,7 @@ def check_health(
         detail = "error talking to edenfs: " + str(ex)
         return HealthStatus(status, pid, detail)
 
-    status_name = fb_status._VALUES_TO_NAMES.get(status)
+    status_name = fb303_status._VALUES_TO_NAMES.get(status)
     detail = "edenfs running (pid {}); status is {}".format(pid, status_name)
     return HealthStatus(status, pid, detail)
 

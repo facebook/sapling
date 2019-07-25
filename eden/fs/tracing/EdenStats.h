@@ -6,10 +6,10 @@
  */
 #pragma once
 
+#include <fb303/ThreadLocalStats.h>
 #include <folly/ThreadLocal.h>
 #include <memory>
 
-#include "common/stats/ThreadLocalStats.h"
 #include "eden/fs/eden-config.h"
 
 namespace facebook {
@@ -79,8 +79,8 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
  * EdenStats object should be used to maintain one EdenThreadStatsBase object
  * for each thread that needs to access/update the stats.
  */
-class EdenThreadStatsBase : public facebook::stats::ThreadLocalStatsT<
-                                facebook::stats::TLStatsThreadSafe> {
+class EdenThreadStatsBase
+    : public fb303::ThreadLocalStatsT<fb303::TLStatsThreadSafe> {
  public:
   using Histogram = TLHistogram;
 #if defined(EDEN_HAVE_STATS)

@@ -16,7 +16,6 @@ target_link_libraries(
   eden_fuse
   PUBLIC
     eden_fuse_privhelper
-    common_stats
     Folly::folly
 )
 

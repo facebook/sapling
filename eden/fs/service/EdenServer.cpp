@@ -6,6 +6,7 @@
  */
 #include "eden/fs/service/EdenServer.h"
 
+#include <fb303/ServiceData.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
@@ -20,7 +21,6 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
-#include "common/stats/ServiceData.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef _WIN32
@@ -206,14 +206,14 @@ EdenServer::EdenServer(
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
           edenConfig)} {
-  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
 }
 
 EdenServer::~EdenServer() {
-  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
 }
 
@@ -377,7 +377,7 @@ void EdenServer::unloadInodes() {
   }
 
   if (!roots.empty()) {
-    auto serviceData = stats::ServiceData::get();
+    auto serviceData = fb303::ServiceData::get();
 
     uint64_t totalUnloaded = serviceData->getCounter(kPeriodicUnloadCounterKey);
     auto cutoff = std::chrono::system_clock::now() -
@@ -449,7 +449,7 @@ Future<Unit> EdenServer::prepareImpl(
 
   // Set the ServiceData counter for tracking number of inodes unloaded by
   // periodic job for unloading inodes to zero on EdenServer start.
-  stats::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
+  fb303::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
 
   startPeriodicTasks();
 
@@ -751,7 +751,7 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
 
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 #ifndef _WIN32
-  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
   // Register callback for getting Loaded inodes in the memory
   // for a mountPoint.
   counters->registerCallback(
@@ -785,7 +785,7 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 
 void EdenServer::unregisterStats(EdenMount* edenMount) {
 #ifndef _WIN32
-  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(edenMount->getCounterName(CounterName::LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::UNLOADED));
@@ -1236,8 +1236,8 @@ void EdenServer::reportMemoryStats() {
     // last 60-second timeseries level.  Since we only update this once every
     // 30 seconds we are basically just reporting an average of the last 2
     // data points.
-    stats::ServiceData::get()->addStatValue(
-        kRssBytes, memoryStats->resident, stats::AVG);
+    fb303::ServiceData::get()->addStatValue(
+        kRssBytes, memoryStats->resident, fb303::AVG);
   }
 #else
   NOT_IMPLEMENTED();

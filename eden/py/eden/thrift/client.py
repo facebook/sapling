@@ -96,13 +96,6 @@ class EdenClient(EdenService.Client):
             self._transport.close()
             self._transport = None
 
-    def shutdown(self):
-        # type: () -> None
-        self.initiateShutdown(
-            "EdenClient.shutdown() invoked with no reason by pid=%s uid=%s"
-            % (os.getpid(), os.getuid())
-        )
-
     def getPid(self):
         # type: () -> int
         try:
@@ -112,24 +105,6 @@ class EdenClient(EdenService.Client):
                 # Running on an older server build, fall back to the
                 # old getPid() method.
                 return super().getPid()
-            else:
-                raise
-
-    def initiateShutdown(self, reason):
-        # type: (str) -> None
-        """Helper for stopping the server.
-        To swing through the transition from calling the base shutdown() method
-        with context to the initiateShutdown() method with a reason, we want to
-        try the latter method first, falling back to the old way to handle the
-        case where we deploy a newer client while an older server is still
-        running on the local system."""
-        try:
-            super().initiateShutdown(reason)
-        except TApplicationException as ex:
-            if ex.type == TApplicationException.UNKNOWN_METHOD:
-                # Running an older server build, fall back to the old shutdown
-                # method with no context
-                super().shutdown()
             else:
                 raise
 

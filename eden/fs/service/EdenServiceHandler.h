@@ -7,9 +7,9 @@
 #pragma once
 
 #include <optional>
-#include "common/fb303/cpp/FacebookBase2.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "fb303/BaseService.h"
 
 namespace folly {
 template <typename T>
@@ -28,7 +28,7 @@ class TreeInode;
  * Handler for the EdenService thrift interface
  */
 class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
-                           public facebook::fb303::FacebookBase2 {
+                           public fb303::BaseService {
  public:
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,
@@ -37,7 +37,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
 
-  facebook::fb303::cpp2::fb_status getStatus() override;
+  fb303::cpp2::fb303_status getStatus() override;
 
   void mount(std::unique_ptr<MountArgument> mount) override;
 
@@ -199,6 +199,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void reloadConfig() override;
 
   void getDaemonInfo(DaemonInfo& result) override;
+
+  int getPid() override;
 
   /**
    * A thrift client has requested that we shutdown.

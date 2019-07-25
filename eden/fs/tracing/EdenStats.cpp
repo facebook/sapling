@@ -67,10 +67,10 @@ EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
     const std::string& name) {
   return Histogram{this,
                    name,
-                   static_cast<size_t>(kBucketSize.count()),
+                   static_cast<int64_t>(kBucketSize.count()),
                    kMinValue.count(),
                    kMaxValue.count(),
-                   facebook::stats::COUNT,
+                   fb303::COUNT,
                    50,
                    90,
                    99};
@@ -80,8 +80,8 @@ EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
 EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
     const std::string& name) {
   auto timeseries = Timeseries{this, name};
-  timeseries.exportStat(facebook::stats::COUNT);
-  timeseries.exportStat(facebook::stats::PERCENT);
+  timeseries.exportStat(fb303::COUNT);
+  timeseries.exportStat(fb303::PERCENT);
   return timeseries;
 }
 #endif

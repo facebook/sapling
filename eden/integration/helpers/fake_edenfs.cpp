@@ -33,7 +33,7 @@
 using namespace std::literals::chrono_literals;
 using namespace folly::literals::string_piece_literals;
 using apache::thrift::ThriftServer;
-using facebook::fb303::cpp2::fb_status;
+using facebook::fb303::cpp2::fb303_status;
 using folly::EventBase;
 using folly::StringPiece;
 using std::make_shared;
@@ -176,7 +176,7 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
  public:
   explicit FakeEdenServiceHandler(FakeEdenServer* server) : server_{server} {}
 
-  fb_status getStatus() override {
+  fb303_status getStatus() override {
     return status_;
   }
 
@@ -199,11 +199,11 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
                             : StopBehavior::DoNothing);
     } else if (*name == "status") {
       if (*value == "starting") {
-        status_ = fb_status::STARTING;
+        status_ = fb303_status::STARTING;
       } else if (*value == "alive") {
-        status_ = fb_status::ALIVE;
+        status_ = fb303_status::ALIVE;
       } else if (*value == "stopping") {
-        status_ = fb_status::STOPPING;
+        status_ = fb303_status::STOPPING;
       } else {
         badOption();
       }
@@ -225,7 +225,7 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
 
  private:
   FakeEdenServer* server_{nullptr};
-  fb_status status_{fb_status::ALIVE};
+  fb303_status status_{fb303_status::ALIVE};
 };
 
 class SignalHandler : public folly::AsyncSignalHandler {

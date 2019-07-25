@@ -17,7 +17,7 @@ import pexpect
 from eden.cli.config import EdenInstance
 from eden.cli.util import HealthStatus
 from eden.test_support.environment_variable import EnvironmentVariableMixin
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 
 from .lib import testcase
 from .lib.edenfs_systemd import EdenFSSystemdMixin
@@ -196,7 +196,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
         ).check_health()
         self.assertEqual(
             instance_1_health.status,
-            fb_status.ALIVE,
+            fb303_status.ALIVE,
             f"First edenfs process should be healthy, but it isn't: "
             f"{instance_1_health}",
         )
@@ -206,7 +206,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
         ).check_health()
         self.assertEqual(
             instance_2_health.status,
-            fb_status.ALIVE,
+            fb303_status.ALIVE,
             f"Second edenfs process should be healthy, but it isn't: "
             f"{instance_2_health}",
         )
@@ -344,7 +344,7 @@ class StartWithSystemdTest(StartFakeEdenFSTestBase, SystemdServiceTestCaseMarker
             health: HealthStatus = EdenInstance(
                 str(self.eden_dir), etc_eden_dir=None, home_dir=None
             ).check_health()
-            self.assertEqual(health.status, fb_status.DEAD)
+            self.assertEqual(health.status, fb303_status.DEAD)
             service = self.get_edenfs_systemd_service(eden_dir=self.eden_dir)
             self.assertEqual(service.query_active_state(), "active")
 

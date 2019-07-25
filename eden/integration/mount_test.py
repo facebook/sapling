@@ -20,7 +20,7 @@ from facebook.eden.ttypes import (
     UnblockFaultArg,
     WorkingDirectoryParents,
 )
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 from thrift.Thrift import TException
 
 from .lib import testcase
@@ -196,12 +196,12 @@ class MountTest(testcase.EdenRepoTest):
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
-            self.assertEqual(fb_status.STARTING, client.getStatus())
+            self.assertEqual(fb303_status.STARTING, client.getStatus())
 
             # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
             self._wait_for_mount_running(client)
-            self.assertEqual(fb_status.ALIVE, client.getStatus())
+            self.assertEqual(fb303_status.ALIVE, client.getStatus())
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
@@ -218,7 +218,7 @@ class MountTest(testcase.EdenRepoTest):
 
         # Unblock mounting and wait for the mount to transition to running
         with self.eden.get_thrift_client() as client:
-            self.assertEqual(fb_status.ALIVE, client.getStatus())
+            self.assertEqual(fb303_status.ALIVE, client.getStatus())
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
             self._wait_for_mount_running(client)
 

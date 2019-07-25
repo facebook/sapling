@@ -27,6 +27,9 @@ find_package(fmt CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
 include_directories(${FOLLY_INCLUDE_DIR})
 
+find_package(fb303 CONFIG REQUIRED)
+include_directories(${FB303_INCLUDE_DIR})
+
 find_package(fizz CONFIG REQUIRED)
 include_directories(${FIZZ_INCLUDE_DIR})
 

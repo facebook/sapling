@@ -6,6 +6,7 @@
  */
 #include "eden/fs/service/EdenServiceHandler.h"
 
+#include <fb303/ServiceData.h>
 #include <folly/Conv.h>
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
@@ -40,7 +41,6 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
 
-#include "common/stats/ServiceData.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -219,7 +219,7 @@ namespace eden {
 EdenServiceHandler::EdenServiceHandler(
     std::vector<std::string> originalCommandLine,
     EdenServer* server)
-    : FacebookBase2{"Eden"},
+    : BaseService{"Eden"},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server} {
 #ifndef _WIN32
@@ -252,6 +252,7 @@ EdenServiceHandler::EdenServiceHandler(
       std::make_tuple("invalidateKernelInodeCache", HistConfig{}),
       std::make_tuple("getStatInfo", HistConfig{}),
       std::make_tuple("getDaemonInfo", HistConfig{}),
+      std::make_tuple("getPid", HistConfig{}),
       std::make_tuple("initiateShutdown", HistConfig{}),
       std::make_tuple("reloadConfig", HistConfig{200, 0, 10000}),
   };
@@ -269,19 +270,19 @@ EdenServiceHandler::EdenServiceHandler(
 #endif
 }
 
-facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
+facebook::fb303::cpp2::fb303_status EdenServiceHandler::getStatus() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
   auto status = server_->getStatus();
   switch (status) {
     case EdenServer::RunState::STARTING:
-      return facebook::fb303::cpp2::fb_status::STARTING;
+      return facebook::fb303::cpp2::fb303_status::STARTING;
     case EdenServer::RunState::RUNNING:
-      return facebook::fb303::cpp2::fb_status::ALIVE;
+      return facebook::fb303::cpp2::fb303_status::ALIVE;
     case EdenServer::RunState::SHUTTING_DOWN:
-      return facebook::fb303::cpp2::fb_status::STOPPING;
+      return facebook::fb303::cpp2::fb303_status::STOPPING;
   }
   EDEN_BUG() << "unexpected EdenServer status " << static_cast<int>(status);
-  return facebook::fb303::cpp2::fb_status::WARNING;
+  return facebook::fb303::cpp2::fb303_status::WARNING;
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
@@ -1261,7 +1262,7 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
         mountInodeInfo;
   }
   // Get the counters and set number of inodes unloaded by periodic unload job.
-  result.counters = stats::ServiceData::get()->getCounters();
+  result.counters = fb303::ServiceData::get()->getCounters();
   result.periodicUnloadCount =
       result.counters[kPeriodicUnloadCounterKey.toString()];
 
@@ -1453,6 +1454,10 @@ void EdenServiceHandler::reloadConfig() {
 void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.pid = getpid();
   result.commandLine = originalCommandLine_;
+}
+
+int EdenServiceHandler::getPid() {
+  return getpid();
 }
 
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
