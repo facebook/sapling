@@ -13,7 +13,6 @@ import stat
 import struct
 import tempfile
 from collections import defaultdict
-from enum import Enum
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
@@ -33,7 +32,9 @@ if not pycompat.iswindows:
 
 
 # An enum representing the result of file data validation
-ValidationResult = Enum("ValidationResult", "Valid Invalid Censored", module=__name__)
+ValidationResult = util.Enum(
+    "ValidationResult", "Valid Invalid Censored", module=__name__
+)
 
 
 def interposeclass(container, classname):

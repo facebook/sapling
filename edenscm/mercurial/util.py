@@ -637,6 +637,16 @@ def cachefunc(func):
     return f
 
 
+def Enum(clsname, names, module=None):
+    """Returns an enum like type
+
+    >>> e = Enum("EnumName", "Val1 Val2 Val3", module=__name__)
+    """
+    namespace = {n: i for i, n in enumerate(names.split(), 1)}
+    namespace["__module__"] = module or __name__
+    return type(clsname.encode("ascii"), (object,), namespace)
+
+
 class cow(object):
     """helper class to make copy-on-write easier
 
