@@ -88,20 +88,47 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
       delta->toHash = delta->fromHash;
     }
 
-    if (deltaState->stats) {
-      ++(deltaState->stats->entryCount);
-      deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
-    } else {
-      deltaState->stats = JournalStats();
-      deltaState->stats->entryCount = 1;
-      deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
+    // Check memory before adding the new delta to make sure we always
+    // have at least one delta (other than when the journal starts up)
+    while (!deltaState->deltas.empty() && deltaState->stats &&
+           deltaState->stats->memoryUsage > deltaState->memoryLimit) {
+      deltaState->stats->entryCount--;
+      deltaState->stats->memoryUsage -=
+          deltaState->deltas.front().estimateMemoryUsage();
+      deltaState->deltas.pop_front();
     }
-    deltaState->stats->latestTimestamp = delta->time;
-
     truncateIfNecessary(deltaState);
 
-    // emplace after memory check to make sure we have at least one entry
-    deltaState->deltas.emplace_back(std::move(*delta));
+    // We will compact the delta if possible. We can compact the delta if it is
+    // a modification to a single file and matches the last delta added to the
+    // Journal. For a consumer the only differences seen due to compaction are
+    // that:
+    // - getDebugRawJournalInfo will skip entries in its list
+    // - The stats should show a different memory usage and number of entries
+    // - accumulateRange will return a different fromSequence and fromTime than
+    // what would happen if the deltas were not compacted [e.g. JournalDelta 3
+    // and 4 are the same modification, accumulateRange(3) would have a
+    // fromSequence of 3 without compaction and a fromSequence of 4 with
+    // compaction]
+    if (!deltaState->deltas.empty() && delta->isModification() &&
+        delta->isSameAction(deltaState->deltas.back())) {
+      deltaState->stats->latestTimestamp = delta->time;
+      deltaState->stats->memoryUsage -=
+          deltaState->deltas.back().estimateMemoryUsage();
+      deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
+      deltaState->deltas.back() = std::move(*delta);
+    } else {
+      if (deltaState->stats) {
+        ++(deltaState->stats->entryCount);
+        deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
+      } else {
+        deltaState->stats = JournalStats();
+        deltaState->stats->entryCount = 1;
+        deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
+      }
+      deltaState->stats->latestTimestamp = delta->time;
+      deltaState->deltas.emplace_back(std::move(*delta));
+    }
 
     deltaState->stats->earliestTimestamp = deltaState->deltas.front().time;
   }

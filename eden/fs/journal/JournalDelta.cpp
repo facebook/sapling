@@ -91,6 +91,19 @@ JournalDelta::getChangedFilesInOverlay() const {
   return changedFilesInOverlay;
 }
 
+bool JournalDelta::isModification() const {
+  return isPath1Valid && !isPath2Valid && info1.existedBefore &&
+      info1.existedAfter;
+}
+
+bool JournalDelta::isSameAction(const JournalDelta& other) const {
+  return fromHash == other.fromHash && toHash == other.toHash &&
+      isPath1Valid == other.isPath1Valid && info1 == other.info1 &&
+      path1 == other.path1 && isPath2Valid == other.isPath2Valid &&
+      info2 == other.info2 && path2 == other.path2 &&
+      uncleanPaths == other.uncleanPaths;
+}
+
 } // namespace eden
 
 } // namespace facebook

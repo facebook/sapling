@@ -310,3 +310,44 @@ TEST(Journal, truncation_nonzero) {
     }
   } while (rememberedEntries + 5 > totalEntries);
 }
+
+TEST(Journal, compaction) {
+  Journal journal;
+
+  journal.recordCreated("file1.txt"_relpath);
+  auto stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(1, stats->entryCount);
+  auto latest = journal.getLatest();
+  ASSERT_TRUE(latest);
+  ASSERT_EQ(1, latest->sequenceID);
+
+  journal.recordChanged("file1.txt"_relpath);
+  stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(2, stats->entryCount);
+  latest = journal.getLatest();
+  ASSERT_TRUE(latest);
+  ASSERT_EQ(2, latest->sequenceID);
+  auto summed = journal.accumulateRange(2);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(2, summed->fromSequence);
+  EXPECT_EQ(2, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+
+  // Changing file1.txt again should just change the sequenceID of the last
+  // delta to be 3
+  journal.recordChanged("file1.txt"_relpath);
+  stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(2, stats->entryCount);
+  latest = journal.getLatest();
+  ASSERT_TRUE(latest);
+  ASSERT_EQ(3, latest->sequenceID);
+  summed = journal.accumulateRange(2);
+  ASSERT_NE(nullptr, summed);
+  // We expect from to be 3 since there is no delta with sequence ID = 2
+  EXPECT_EQ(3, summed->fromSequence);
+  EXPECT_EQ(3, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+}

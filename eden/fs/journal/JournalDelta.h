@@ -24,6 +24,15 @@ struct PathChangeInfo {
     return !existedBefore && existedAfter;
   }
 
+  bool operator==(const PathChangeInfo& other) const {
+    return existedBefore == other.existedBefore &&
+        existedAfter == other.existedAfter;
+  }
+
+  bool operator!=(const PathChangeInfo& other) const {
+    return !(*this == other);
+  }
+
   /// Whether this path existed at the start of this delta.
   bool existedBefore : 1;
 
@@ -97,6 +106,12 @@ class JournalDelta {
   /** Get memory used (in bytes) by this Delta */
   size_t estimateMemoryUsage() const;
 
+  /** Checks whether this delta is a modification */
+  bool isModification() const;
+
+  /** Checks whether this delta and other are the same disregarding time and
+   * sequenceID [whether they do the same action] */
+  bool isSameAction(const JournalDelta& other) const;
 };
 
 struct JournalDeltaRange {
