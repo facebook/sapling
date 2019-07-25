@@ -9,7 +9,7 @@
 #ifdef __linux__
 #include "eden/third-party/fuse_kernel_linux.h" // @manual=//eden/third-party:fuse_kernel
 #elif defined(__APPLE__)
-#include "eden/third-party/fuse_kernel_osxfuse.h" // @manual
+#include "eden/third-party/fuse_kernel_osxfuse.h" // @manual=//eden/third-party:fuse_kernel
 #else
 #error need a fuse kernel header to be included for your OS!
 #endif
