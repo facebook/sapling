@@ -31,6 +31,8 @@ const PRESERVE_STATE_RATIO: usize = 10_000;
 const CHUNK_SIZE: usize = 5000;
 const INIT_COUNT_VALUE: usize = 0;
 
+const FLAT_NAMESPACE_PREFIX: &str = "flat/";
+
 #[derive(Debug)]
 struct ManifoldArgs {
     bucket: String,
@@ -250,12 +252,14 @@ fn get_resume_state(
 
     let init_state = {
         let start = format!(
-            "flat/repo{:04}.{}",
+            "{}repo{:04}.{}",
+            FLAT_NAMESPACE_PREFIX,
             config.repo_id.id(),
             config.start_key.clone().unwrap_or_else(|| "".to_string())
         );
         let end = format!(
-            "flat/repo{:04}.{}",
+            "{}repo{:04}.{}",
+            FLAT_NAMESPACE_PREFIX,
             config.repo_id.id(),
             config.end_key.clone().unwrap_or_else(|| "\x7f".to_string()),
         );
@@ -311,6 +315,22 @@ fn populate_healer_queue(
     get_resume_state(&manifold, &config).and_then(move |state| {
         manifold
             .enumerate((*state.current_range).clone())
+            .and_then(|mut entry| {
+                // We are enumerating Manifold's flat/ namespace
+                // and all the keys contain the flat/ prefix, which
+                // we need to strip
+                if !entry.key.starts_with(FLAT_NAMESPACE_PREFIX) {
+                    future::err(format_err!(
+                        "Key {} is expected to start with {}, but does not",
+                        entry.key,
+                        FLAT_NAMESPACE_PREFIX
+                    ))
+                } else {
+                    // safe to unwrap here, since we know exactly how the string starts
+                    entry.key = entry.key.get(FLAT_NAMESPACE_PREFIX.len()..).unwrap().into();
+                    future::ok(entry)
+                }
+            })
             .chunks(CHUNK_SIZE)
             .fold(state, move |state, entries| {
                 let range = entries[0].range.clone();
