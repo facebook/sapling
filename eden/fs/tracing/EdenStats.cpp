@@ -76,7 +76,6 @@ EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
                    99};
 }
 
-#if defined(EDEN_HAVE_STATS)
 EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
     const std::string& name) {
   auto timeseries = Timeseries{this, name};
@@ -84,7 +83,6 @@ EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
   timeseries.exportStat(fb303::PERCENT);
   return timeseries;
 }
-#endif
 
 void FuseThreadStats::recordLatency(
     HistogramPtr item,

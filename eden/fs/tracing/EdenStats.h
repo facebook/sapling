@@ -83,17 +83,13 @@ class EdenThreadStatsBase
     : public fb303::ThreadLocalStatsT<fb303::TLStatsThreadSafe> {
  public:
   using Histogram = TLHistogram;
-#if defined(EDEN_HAVE_STATS)
   using Timeseries = TLTimeseries;
-#endif
 
   explicit EdenThreadStatsBase();
 
  protected:
   Histogram createHistogram(const std::string& name);
-#if defined(EDEN_HAVE_STATS)
   Timeseries createTimeseries(const std::string& name);
-#endif
 };
 
 class FuseThreadStats : public EdenThreadStatsBase {
@@ -159,7 +155,6 @@ class FuseThreadStats : public EdenThreadStatsBase {
  */
 class ObjectStoreThreadStats : public EdenThreadStatsBase {
  public:
-#if defined(EDEN_HAVE_STATS)
   Timeseries getBlobFromLocalStore{
       createTimeseries("object_store.get_blob.local_store")};
   Timeseries getBlobFromBackingStore{
@@ -176,7 +171,6 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
       createTimeseries("object_store.get_blob_size.local_store")};
   Timeseries getBlobSizeFromBackingStore{
       createTimeseries("object_store.get_blob_size.backing_store")};
-#endif
 };
 
 /**
@@ -198,14 +192,12 @@ class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgImporterThreadStats : public EdenThreadStatsBase {
  public:
-#if defined(EDEN_HAVE_STATS)
   Timeseries catFile{createTimeseries("hg_importer.cat_file")};
   Timeseries fetchTree{createTimeseries("hg_importer.fetch_tree")};
   Timeseries manifest{createTimeseries("hg_importer.manifest")};
   Timeseries manifestNodeForCommit{
       createTimeseries("hg_importer.manifest_node_for_commit")};
   Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
-#endif
 };
 
 } // namespace eden

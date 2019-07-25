@@ -159,11 +159,9 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
 }
 
 void ObjectStore::updateBlobStats(bool local, bool backing) const {
-#if defined(EDEN_HAVE_STATS)
   ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
   stats.getBlobFromLocalStore.addValue(local);
   stats.getBlobFromBackingStore.addValue(backing);
-#endif
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
@@ -214,12 +212,10 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
 
 void ObjectStore::updateBlobMetadataStats(bool memory, bool local, bool backing)
     const {
-#if defined(EDEN_HAVE_STATS)
   ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
   stats.getBlobMetadataFromMemory.addValue(memory);
   stats.getBlobMetadataFromLocalStore.addValue(local);
   stats.getBlobMetadataFromBackingStore.addValue(backing);
-#endif
 }
 
 Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {
@@ -260,11 +256,9 @@ Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
 }
 
 void ObjectStore::updateBlobSizeStats(bool local, bool backing) const {
-#if defined(EDEN_HAVE_STATS)
   ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
   stats.getBlobSizeFromLocalStore.addValue(local);
   stats.getBlobSizeFromBackingStore.addValue(backing);
-#endif
 }
 
 } // namespace eden
