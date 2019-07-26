@@ -1,8 +1,0 @@
-[package]
-name = "url-ext"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-http = "0.1.14"
-url = "1.7.2"

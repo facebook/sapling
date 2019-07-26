@@ -30,7 +30,6 @@ members = [
     "shlex",
     "treestate",
     "types",
-    "url-ext",
     "vlqencoding",
     "watchman_client",
     "zstdelta",
