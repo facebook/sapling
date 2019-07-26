@@ -14,6 +14,7 @@ pub mod configparser;
 pub mod dag;
 pub mod edenapi;
 mod init;
+pub mod io;
 pub mod lz4;
 pub mod manifest;
 pub mod mutationstore;
