@@ -80,7 +80,7 @@ impl Future for PutBlob {
     }
 }
 
-impl Blobstore for Rocksblob where {
+impl Blobstore for Rocksblob {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let db = self.db.clone();
 

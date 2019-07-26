@@ -250,26 +250,23 @@ impl ChunkSqlStore {
         let shard_id = self.shard(&key, chunk_id);
         let read_master_connection = self.read_master_connection[shard_id - 1].clone();
 
-        SelectChunk::query(
-            &self.read_connection[shard_id - 1],
-            &key,
-            &chunk_id,
+        SelectChunk::query(&self.read_connection[shard_id - 1], &key, &chunk_id).and_then(
+            move |rows| match rows.into_iter().next() {
+                Some((value,)) => Ok(BlobstoreBytes::from_bytes(value))
+                    .into_future()
+                    .left_future(),
+                None => SelectChunk::query(&read_master_connection, &key, &chunk_id)
+                    .and_then(move |rows| match rows.into_iter().next() {
+                        Some((value,)) => Ok(BlobstoreBytes::from_bytes(value)),
+                        None => Err(format_err!(
+                            "Missing chunk with id {} shard {}",
+                            chunk_id,
+                            shard_id
+                        )),
+                    })
+                    .right_future(),
+            },
         )
-        .and_then(move |rows| match rows.into_iter().next() {
-            Some((value,)) => Ok(BlobstoreBytes::from_bytes(value))
-                .into_future()
-                .left_future(),
-            None => SelectChunk::query(&read_master_connection, &key, &chunk_id)
-                .and_then(move |rows| match rows.into_iter().next() {
-                    Some((value,)) => Ok(BlobstoreBytes::from_bytes(value)),
-                    None => Err(format_err!(
-                        "Missing chunk with id {} shard {}",
-                        chunk_id,
-                        shard_id
-                    )),
-                })
-                .right_future(),
-        })
     }
 
     pub(crate) fn put(
