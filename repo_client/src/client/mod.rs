@@ -68,6 +68,8 @@ define_stats! {
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getfiles_ms:
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    getpack_ms:
+        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     total_tree_count: timeseries(RATE, SUM),
     quicksand_tree_count: timeseries(RATE, SUM),
     total_tree_size: timeseries(RATE, SUM),
@@ -628,6 +630,7 @@ impl RepoClient {
             .timed({
                 cloned!(self.ctx);
                 move |stats, _| {
+                    STATS::getpack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                     let encoded_params = {
                         let getpack_params = getpack_params.lock().unwrap();
                         let mut encoded_params = vec![];
