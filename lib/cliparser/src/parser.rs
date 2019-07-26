@@ -1434,4 +1434,26 @@ mod tests {
         assert_eq!(parsed_args, vec!["--", "-1", "4"]);
     }
 
+    #[test]
+    fn test_parse_flag_starting_with_no_behaves_crazily() {
+        let definitions = vec![(
+            ' ',
+            "no-commit".into(),
+            "leaves the changes in the working copy".into(),
+            Value::Bool(false),
+        )];
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec!["--commit"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        if let Value::Bool(no_commit) = result.get("no-commit").unwrap() {
+            assert!(no_commit);
+        } else {
+            assert!(false);
+        }
+    }
+
 }

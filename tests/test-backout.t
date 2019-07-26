@@ -713,3 +713,7 @@ Test usage of `hg resolve` in case of conflict
   $ hg backout --merge --no-commit 2
   abort: cannot use --merge with --no-commit
   [255]
+
+  $ hg backout --commit 2
+  removing 3
+  changeset cccc23d9d68f backed out, don't forget to commit.
