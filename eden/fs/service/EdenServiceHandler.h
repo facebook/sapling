@@ -200,7 +200,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void getDaemonInfo(DaemonInfo& result) override;
 
-  int getPid() override;
+  int64_t getPid() override;
 
   /**
    * A thrift client has requested that we shutdown.

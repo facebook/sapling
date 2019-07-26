@@ -1457,7 +1457,7 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.commandLine = originalCommandLine_;
 }
 
-int EdenServiceHandler::getPid() {
+int64_t EdenServiceHandler::getPid() {
   return getpid();
 }
 
