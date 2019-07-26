@@ -1687,7 +1687,6 @@ extmodules = [
             "edenscm/hgext/extlib/cstore/deltachain.h",
             "edenscm/hgext/extlib/cstore/key.h",
             "edenscm/hgext/extlib/cstore/match.h",
-            "edenscm/hgext/extlib/cstore/py-cdatapack.h",
             "edenscm/hgext/extlib/cstore/py-datapackstore.h",
             "edenscm/hgext/extlib/cstore/py-structs.h",
             "edenscm/hgext/extlib/cstore/py-treemanifest.h",

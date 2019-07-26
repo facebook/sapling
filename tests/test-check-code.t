@@ -55,7 +55,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/hgext/extlib/cstore/deltachain.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/key.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/match.h it has no-che?k-code (glob)
-  Skipping edenscm/hgext/extlib/cstore/py-cdatapack.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/py-cstore.cpp it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/py-datapackstore.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/py-structs.h it has no-che?k-code (glob)

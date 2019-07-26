@@ -13,7 +13,6 @@
 
 #include <Python.h>
 
-#include "edenscm/hgext/extlib/cstore/py-cdatapack.h"
 #include "edenscm/hgext/extlib/cstore/py-datapackstore.h"
 #include "edenscm/hgext/extlib/cstore/py-treemanifest.h"
 
@@ -26,14 +25,6 @@ PyMODINIT_FUNC initcstore(void) {
   PyObject* mod;
 
   mod = Py_InitModule3("cstore", mod_methods, mod_description);
-
-  // Init cdatapack
-  cdatapack_type.tp_new = PyType_GenericNew;
-  if (PyType_Ready(&cdatapack_type) < 0) {
-    return;
-  }
-  Py_INCREF(&cdatapack_type);
-  PyModule_AddObject(mod, "datapack", (PyObject*)&cdatapack_type);
 
   // Init treemanifest
   treemanifestType.tp_new = PyType_GenericNew;
