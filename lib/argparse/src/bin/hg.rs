@@ -14,7 +14,7 @@ use std::env;
 trait Command {
     // canonical name of the command, should be consistent with the one in argument parser
     fn name(&self) -> String;
-    fn run(&self, &ParsedArgs) -> ();
+    fn run(&self, _: &ParsedArgs);
     fn argparser(&self) -> ArgParseCommand;
 }
 
