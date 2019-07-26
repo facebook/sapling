@@ -248,3 +248,40 @@ Test --towards flag.
   $ hg next --towards other
   abort: the current changeset is not an ancestor of 'other'
   [255]
+
+Test next prefer draft commit.
+  $ hg up 3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ showgraph
+  o  6 other test
+  |
+  | o  5 top r5
+  | |
+  | o  4  r4
+  |/
+  @  3 bookmark r3
+  |
+  o  2  r2
+  |
+  o  1  r1
+  |
+  o  0 bottom r0
+Here we have 2 draft children.
+  $ hg next
+  changeset * has multiple children, namely: (glob)
+  [*] r4 (glob)
+  [*] (other) test (glob)
+  abort: ambiguous next changeset
+  (use the --newest or --towards flags to specify which child to pick)
+  [255]
+Let's make one of child commits public.
+  $ hg phase -p top
+Now we have only 1 draft child.
+  $ hg next
+  changeset * has multiple children, namely: (glob)
+  [*] r4 (glob)
+  [*] (other) test (glob)
+  choosing the only draft child: * (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [*] (other) test (glob)
+  (activating bookmark other)

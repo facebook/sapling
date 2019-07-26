@@ -41,6 +41,10 @@ following advice for resolution will be shown::
     [split]
     phabricatoradvice = edit the commit messages to remove the association
 
+    To make `hg next` prefer draft commits in case of ambiguity, enable the following config option:
+
+    [update]
+    nextpreferdraft = true
 """
 
 from __future__ import absolute_import
@@ -62,6 +66,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, short
 
+from .. import histedit, rebase as rebasemod
 from . import (
     common,
     fold,
@@ -75,7 +80,6 @@ from . import (
     split,
     unamend,
 )
-from .. import histedit, rebase as rebasemod
 
 
 revsetpredicate = revsets.revsetpredicate
@@ -99,6 +103,7 @@ configitem("amend", "alwaysnewest", default=False)
 configitem("amend", "date", default=None)
 configitem("amend", "education", default=None)
 configitem("commands", "amend.autorebase", default=True)
+configitem("update", "nextpreferdraft", default=True)
 
 testedwith = "ships-with-fb-hgext"
 

@@ -199,6 +199,7 @@ def _findtarget(ui, repo, n, opts, reverse):
     rebase = opts.get("rebase", False)
     top = opts.get("top", False)
     bottom = opts.get("bottom", False)
+    nextpreferdraft = ui.configbool("update", "nextpreferdraft")
 
     if top and not rebase:
         # If we're not rebasing, jump directly to the top instead of
@@ -209,7 +210,9 @@ def _findtarget(ui, repo, n, opts, reverse):
     elif reverse:
         return _findprevtarget(ui, repo, n, bookmark, newest)
     else:
-        return _findnexttarget(ui, repo, n, bookmark, newest, rebase, top, towards)
+        return _findnexttarget(
+            ui, repo, n, bookmark, newest, rebase, top, towards, nextpreferdraft
+        )
 
 
 def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
@@ -271,6 +274,7 @@ def _findnexttarget(
     rebase=False,
     top=False,
     towards=None,
+    preferdraft=False,
 ):
     """Get the revision n levels up the stack from the current revision.
        If newest is True, if a changeset has multiple children the newest
@@ -340,11 +344,17 @@ def _findnexttarget(
             _showchangesets(ui, repo, revs=children)
             # if theres only one nonobsolete we're guessing it's the one
             nonobschildren = filter(lambda c: not repo[c].obsolete(), children)
+            draftchildren = filter(lambda c: repo[c].mutable(), children)
             if len(nonobschildren) == 1:
                 rev = nonobschildren[0]
                 ui.status(
                     _("choosing the only non-obsolete child: %s\n")
                     % short(repo[rev].node())
+                )
+            elif preferdraft and len(draftchildren) == 1:
+                rev = draftchildren[0]
+                ui.status(
+                    _("choosing the only draft child: %s\n") % short(repo[rev].node())
                 )
             else:
                 raise error.Abort(
