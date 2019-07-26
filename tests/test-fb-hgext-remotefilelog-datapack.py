@@ -14,15 +14,12 @@ import unittest
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from edenscm.hgext.remotefilelog import constants
-from edenscm.hgext.remotefilelog.basepack import (
-    LARGEFANOUTPREFIX,
-    SMALLFANOUTCUTOFF,
-    SMALLFANOUTPREFIX,
-)
 from edenscm.hgext.remotefilelog.datapack import datapackstore
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
 
+
+SMALLFANOUTCUTOFF = 2 ** 16 / 8
 
 try:
     xrange(0)
