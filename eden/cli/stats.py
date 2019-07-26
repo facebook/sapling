@@ -94,11 +94,17 @@ def do_stats_general(
             entries = journal.entryCount
             mem = journal.memoryUsage
             duration = journal.durationSeconds
-            journalLine = (
-                f"- Journal: {entries} entries over "
-                f"{stats_print.format_time(duration)} "
-                f"({stats_print.format_size(mem)})\n"
-            )
+            if duration is None:
+                journalLine = (
+                    f"- Journal: {entries} entries "
+                    f"({stats_print.format_size(mem)})\n"
+                )
+            else:
+                journalLine = (
+                    f"- Journal: {entries} entries over "
+                    f"{stats_print.format_time(duration)} "
+                    f"({stats_print.format_size(mem)})\n"
+                )
         out.write(
             textwrap.dedent(
                 f"""\
