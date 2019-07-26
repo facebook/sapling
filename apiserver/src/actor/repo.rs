@@ -626,7 +626,8 @@ fn log_result(
             query
                 .get("method")
                 .unwrap_or(&serde_json::json!("unknown"))
-                .to_string(),
+                .to_string()
+                .trim_matches('"'),
         )
         .add("log_tag", "Finished processing")
         .add("success", resp.is_ok());
