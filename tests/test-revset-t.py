@@ -152,7 +152,7 @@ sh % "commit -Aqm3"
 sh % "hg co -C 2" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "echo bb" > "b"
 sh % "setbranch -a-b-c-"
-sh % "commit -Aqm4 -d 'May 12 2005'"
+sh % "commit -Aqm4 -d 'May 12 2005 UTC'"
 
 sh % "hg co -C 3" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "setbranch '!a/b/c/'"
