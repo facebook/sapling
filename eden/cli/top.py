@@ -11,6 +11,7 @@ import copy
 import datetime
 import os
 import socket
+import time
 from typing import Dict, List, Tuple
 
 from facebook.eden.ttypes import AccessCounts
@@ -33,7 +34,7 @@ class Top:
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[int, bytes, bytes, int, int, int, bool]] = []
+        self.rows: List[Tuple[int, bytes, bytes, int, int, int, int, bool]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -82,6 +83,7 @@ class Top:
                     self.processes[pid] = Process(pid, cmd, mount)
 
                 self.processes[pid].increment_counts(access_counts)
+                self.processes[pid].last_access = time.monotonic()
 
         for pid in self.processes.keys():
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
@@ -118,6 +120,7 @@ class Top:
             "FUSE READS",
             "FUSE WRITES",
             "FUSE TOTAL",
+            "LST",
         )
         self.render_row(stdscr, LINE, TITLES, self.curses.A_REVERSE)
 
@@ -140,7 +143,7 @@ class Top:
             self.render_row(stdscr, line, row, style)
 
     def render_row(self, stdscr, y, data, style):
-        SPACING = (7, 25, 15, 10, 11, 10)
+        SPACING = (7, 25, 15, 10, 11, 10, 3)
         text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
 
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
@@ -161,6 +164,7 @@ class Process:
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
         self.access_counts = AccessCounts(0, 0, 0)
+        self.last_access = time.monotonic()
         self.is_running = True
 
     def get_key(self):
@@ -171,6 +175,7 @@ class Process:
         if other.is_running:
             self.pid = other.pid
             self.is_running = True
+        self.last_access = max(self.last_access, other.last_access)
 
     def increment_counts(self, access_counts):
         self.access_counts.reads += access_counts.reads
@@ -185,6 +190,7 @@ class Process:
             self.access_counts.reads,
             self.access_counts.writes,
             self.access_counts.total,
+            format_last_access(self.last_access),
         )
 
 
@@ -204,3 +210,21 @@ def format_cmd(cmd):
 
 def format_mount(mount):
     return os.fsdecode(os.path.basename(mount))
+
+
+def format_last_access(last_access):
+    elapsed = int(time.monotonic() - last_access)
+    return format_time(elapsed)
+
+
+def format_time(elapsed):
+    modulos = (60, 60, 24)
+    suffixes = ("s", "m", "h", "d")
+
+    for modulo, suffix in zip(modulos, suffixes):
+        if elapsed < modulo:
+            return f"{elapsed}{suffix}"
+        elapsed //= modulo
+
+    last_suffix = suffixes[-1]
+    return f"{elapsed}{last_suffix}"

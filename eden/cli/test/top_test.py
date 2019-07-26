@@ -9,7 +9,7 @@ import unittest
 
 from facebook.eden.ttypes import AccessCounts
 
-from ..top import Process, format_cmd, format_mount
+from ..top import Process, format_cmd, format_mount, format_time
 
 
 class TopTest(unittest.TestCase):
@@ -22,7 +22,7 @@ class TopTest(unittest.TestCase):
         self.assertEqual(self.process.access_counts, AccessCounts(42, 42, 42))
 
     def test_get_tuple(self):
-        expected_tuple = (42, "ls", "fbsource", 0, 0, 0)
+        expected_tuple = (42, "ls", "fbsource", 0, 0, 0, "0s")
         self.assertEqual(self.process.get_tuple(), expected_tuple)
 
     def test_format_cmd(self):
@@ -33,3 +33,9 @@ class TopTest(unittest.TestCase):
 
     def test_format_mount(self):
         self.assertEqual(format_mount("/data/users/zuck/fbsource"), "fbsource")
+
+    def test_format_time(self):
+        self.assertEqual(format_time(1), "1s")
+        self.assertEqual(format_time(60), "1m")
+        self.assertEqual(format_time(60 * 60), "1h")
+        self.assertEqual(format_time(60 * 60 * 24), "1d")
