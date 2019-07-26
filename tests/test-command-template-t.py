@@ -202,7 +202,7 @@ sh % "hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'"
 sh % "echo third" > "third"
 sh % "hg add third"
 sh % "hg mv second fourth"
-sh % "hg commit -m third -d '2020-01-01 10:01'"
+sh % "hg commit -m third -d '2020-01-01 10:01 UTC'"
 
 sh % "hg log --template '{join(file_copies, \",\\n\")}\\n' -r ." == "fourth (second)"
 sh % "hg log -T '{file_copies % \"{source} -> {name}\\n\"}' -r ." == "second -> fourth"
@@ -2059,12 +2059,15 @@ s = "%d-%d-%d 00:00" % (n.year, n.month, n.day)
 open("a", "wb").write(s)
 
 sh % "hg add a"
-sh % ("hg commit -m future -d '%s'" % s)
+sh % ("hg commit -m future -d '%s UTC'" % s)
 
 sh % "hg log -l1 --template '{date|age}\\n'" == "7 years from now"
 
 sh % "cd .."
-sh % "rm -rf unstable-hash"
+
+if os.name != "nt":
+    # FIXME: Windows has difficulity deleting 'unstable-hash\\.hg\\blackbox\\v1\\0\\index-session_id'
+    sh % "rm -rf unstable-hash"
 
 # Add a dummy commit to make up for the instability of the above:
 
@@ -3180,7 +3183,7 @@ sh % "hg debugtemplate -Ra -r0 -v '{files % r\"rawstring: {file}\"}\\n'" == r"""
 
 # Test string escaping:
 
-sh % "hg log -R latesttag -r 0 --template" > '\\n<>\\\\n<{if(rev, "[>\\n<>\\\\n<]")}>\\n<>\\\\n<\\n' == r"""
+sh % "hg log -R latesttag -r 0 --template '>\\n<>\\\\n<{if(rev, \"[>\\n<>\\\\n<]\")}>\\n<>\\\\n<\\n'" == r"""
     >
     <>\n<[>
     <>\n<]>
@@ -3453,14 +3456,17 @@ sh % "hg log -r0 -T '{extras|json}\\n'" == '{"branch": "default"}'
 
 # Test localdate(date, tz) function:
 
-sh % "'TZ=JST-09' hg log -r0 -T '{date|localdate|isodate}\\n'" == "1970-01-01 09:00 +0900"
-sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"UTC\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
-sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"blahUTC\")|isodate}\\n'" == r"""
-    hg: parse error: localdate expects a timezone
-    [255]"""
-sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"+0200\")|isodate}\\n'" == "1970-01-01 02:00 +0200"
-sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"0\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
-sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, 0)|isodate}\\n'" == "1970-01-01 00:00 +0000"
+if os.name != "nt":
+    # TZ= does not override the global timezone state on Windows.
+    sh % "'TZ=JST-09' hg log -r0 -T '{date|localdate|isodate}\\n'" == "1970-01-01 09:00 +0900"
+    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"UTC\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"blahUTC\")|isodate}\\n'" == r"""
+        hg: parse error: localdate expects a timezone
+        [255]"""
+    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"+0200\")|isodate}\\n'" == "1970-01-01 02:00 +0200"
+    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"0\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, 0)|isodate}\\n'" == "1970-01-01 00:00 +0000"
+
 sh % "hg log -r0 -T '{localdate(date, \"invalid\")|isodate}\\n'" == r"""
     hg: parse error: localdate expects a timezone
     [255]"""
@@ -4136,8 +4142,12 @@ sh % "hg bookmarks -T '{pad(bookmark, 7)} {rn}\\n'" == "foo     4:07fa1db10648"
 
 # Aliases should honor HGPLAIN:
 
-sh % "'HGPLAIN=' hg log -r0 -T 'nothing expanded:{rn}\\n'" == "nothing expanded:"
-sh % "'HGPLAINEXCEPT=templatealias' hg log -r0 -T '{rn}\\n'" == "0:1e4e1b8f71e0"
+if os.name != "nt":
+    # Environment override does not work well across Python/Rust boundry on
+    # Windows. A solution will be changing the config parser take an environ
+    # instead of using hardcoded system env.
+    sh % "'HGPLAIN=' hg log -r0 -T 'nothing expanded:{rn}\\n'" == "nothing expanded:"
+    sh % "'HGPLAINEXCEPT=templatealias' hg log -r0 -T '{rn}\\n'" == "0:1e4e1b8f71e0"
 
 # Unparsable alias:
 
