@@ -31,11 +31,7 @@ def editsyspath(modname, relpaths):
         path = os.path.abspath(path)
         for relpath in relpaths:
             candidate = os.path.realpath(os.path.join(path, relpath))
-            if (
-                candidate.endswith("zip")
-                and os.path.exists(candidate)
-                or os.path.exists(os.path.join(candidate, modname, "__init__.py"))
-            ):
+            if os.path.exists(os.path.join(candidate, modname, "__init__.py")):
                 if candidate not in sys.path:
                     sys.path.insert(0, candidate)
                 return
@@ -48,11 +44,9 @@ def editsyspath(modname, relpaths):
 # - sys.path includes "$TESTDIR" (because run-tests.py path is in $TESTDIR)
 # - "$TESTDIR/.." has the desired modules (in-place local build)
 #
-# "../../.." and "../python27.zip" works when:
+# "../../.." works when:
 # - `fb/packaging/build_nupkg.py --test` copies `tests/` to `build/embedded`
-# - `build/embedded/python27.zip` includes `edenscm` packages.
-editsyspath("edenscmnative", ["..", "../../.."])
-editsyspath("edenscm", ["..", "../python27.zip"])
+editsyspath("edenscm", ["..", "../../.."])
 
 
 for candidate in sys.path:

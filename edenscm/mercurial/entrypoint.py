@@ -13,10 +13,6 @@ import sys
 
 
 def run():
-    # Do not follow symlinks (ex. do not use "realpath"). It breaks buck build.
-    filedir = os.path.dirname(os.path.abspath(__file__))
-    libdir = os.path.dirname(os.path.dirname(filedir))
-
     from edenscm import hgdemandimport
     from edenscm.mercurial import encoding
 
@@ -26,21 +22,6 @@ def run():
             sys.setdefaultencoding("undefined")
         except NameError:
             pass
-
-    # Make available various deps that are either not new enough on the system
-    # or not provided by the system.  These include a newer version of IPython
-    # for `hg dbsh` and the thrift runtime for the eden extension
-    import edenscm
-
-    depspath = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(edenscm.__file__))),
-        "edenscmdeps.zip",
-    )
-    if not os.path.exists(depspath):
-        # we keep the edenscmdeps.zip in different location in case of dev builds
-        depspath = os.path.join(libdir, "build", "edenscmdeps.zip")
-    if depspath not in sys.path and os.path.exists(depspath):
-        sys.path.insert(0, depspath)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]
