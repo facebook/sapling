@@ -22,13 +22,6 @@ try:
 except NameError:
     xrange = range
 
-try:
-    from edenscmnative import cstore
-
-    cstore.datapack
-except ImportError:
-    cstore = None
-
 NODELENGTH = 20
 
 # The indicator value in the index for a fulltext entry.
@@ -87,78 +80,6 @@ class datapackstore(basepack.basepackstore):
     def repackstore(self, incremental=True):
         if self.fetchpacksenabled:
             revisionstore.repackincrementaldatapacks(self.path, self.path)
-
-
-class fastdatapack(basepack.basepack):
-    INDEXSUFFIX = INDEXSUFFIX
-    PACKSUFFIX = PACKSUFFIX
-
-    def __init__(self, path):
-        self._path = path
-        self._packpath = path + self.PACKSUFFIX
-        self._indexpath = path + self.INDEXSUFFIX
-        self.datapack = cstore.datapack(path)
-
-    def getmissing(self, keys):
-        missing = []
-        for name, node in keys:
-            value = self.datapack._find(node)
-            if not value:
-                missing.append((name, node))
-
-        return missing
-
-    def get(self, name, node):
-        raise RuntimeError(
-            "must use getdeltachain with datapack (%s:%s)" % (name, hex(node))
-        )
-
-    def getmeta(self, name, node):
-        return self.datapack.getmeta(node)
-
-    def getdelta(self, name, node):
-        result = self.datapack.getdelta(node)
-        if result is None:
-            raise KeyError((name, hex(node)))
-
-        delta, deltabasenode, meta = result
-        return delta, name, deltabasenode, meta
-
-    def getdeltachain(self, name, node):
-        result = self.datapack.getdeltachain(node)
-        if result is None:
-            raise KeyError((name, hex(node)))
-
-        return result
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
-
-    def markledger(self, ledger, options=None):
-        if options and options.get(constants.OPTION_LOOSEONLY):
-            return
-
-        with ledger.location(self._path):
-            for filename, node in self:
-                ledger.markdataentry(self, filename, node)
-
-    def cleanup(self, ledger):
-        entries = ledger.sources.get(self, [])
-        allkeys = set(self)
-        repackedkeys = set(
-            (e.filename, e.node) for e in entries if e.datarepacked or e.gced
-        )
-
-        if len(allkeys - repackedkeys) == 0:
-            if self._path not in ledger.created:
-                util.unlinkpath(self.indexpath(), ignoremissing=True)
-                util.unlinkpath(self.packpath(), ignoremissing=True)
-
-    def __iter__(self):
-        return self.datapack.__iter__()
-
-    def iterentries(self):
-        return self.datapack.iterentries()
 
 
 class memdatapack(object):
