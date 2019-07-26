@@ -1168,14 +1168,15 @@ void EdenServiceHandler::getAccessCounts(
   result.exeNamesByPid =
       server_->getServerState()->getProcessNameCache()->getAllProcessNames();
 
-  auto mountList = server_->getMountPoints();
-  for (auto& mount : mountList) {
-    FuseMountAccesses& fma =
-        result.fuseAccessesByMount[mount->getPath().value()];
-    for (auto& [pid, count] :
-         mount->getFuseChannel()->getProcessAccessLog().getAllAccesses(
-             std::chrono::seconds{duration})) {
-      fma.fuseAccesses[pid].count = count;
+  auto seconds = std::chrono::seconds{duration};
+
+  for (auto& mount : server_->getMountPoints()) {
+    auto& mountStr = mount->getPath().value();
+    auto& pal = mount->getFuseChannel()->getProcessAccessLog();
+
+    FuseMountAccesses& fma = result.fuseAccessesByMount[mountStr];
+    for (auto& [pid, accessCount] : pal.getAccessCounts(seconds)) {
+      fma.fuseAccesses[pid] = accessCount;
     }
   }
 #else

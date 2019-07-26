@@ -17,8 +17,13 @@ from . import cmd_util
 
 NAME_WIDTH = 20
 MOUNT_WIDTH = 15
-CALLS_WIDTH = 10
+READS_WIDTH = 10
+WRITES_WIDTH = 11
+TOTAL_WIDTH = 10
 PIDS_WIDTH = 25
+
+TITLES = ("PROCESS", "MOUNT", "FUSE READS", "FUSE WRITES", "FUSE TOTAL", "PIDS")
+SPACING = (NAME_WIDTH, MOUNT_WIDTH, READS_WIDTH, WRITES_WIDTH, TOTAL_WIDTH, PIDS_WIDTH)
 
 
 class Top:
@@ -26,6 +31,7 @@ class Top:
         import curses
 
         self.curses = curses
+
         self.running = False
         self.ephemeral = False
         self.refresh_rate = 1
@@ -33,12 +39,14 @@ class Top:
         # Maps (mount, name) pairs to another dictionary,
         # which tracks the # of FUSE calls per PID
         self.processes: DefaultDict[
-            Tuple[bytes, bytes], DefaultDict[int, int]
-        ] = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
+            Tuple[bytes, bytes], DefaultDict[int, AccessCounts]
+        ] = collections.defaultdict(
+            lambda: collections.defaultdict(lambda: AccessCounts(0, 0, 0))
+        )
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[bytes, bytes, int, bytes]] = []
+        self.rows: List[Tuple[bytes, bytes, int, int, int, bytes]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -81,32 +89,38 @@ class Top:
         names_by_pid = counts.exeNamesByPid
 
         for mount, accesses in counts.fuseAccessesByMount.items():
-            for pid, calls in accesses.fuseAccesses.items():
+            for pid, access_counts in accesses.fuseAccesses.items():
                 mount = os.path.basename(mount)
                 name = names_by_pid.get(pid, b"<unknown>")
                 process = (mount, name)
 
-                calls_by_pid = self.processes[process]
+                access_counts_by_pid = self.processes[process]
                 # Delete, increment, and re-add to end of OrderedDict
                 del self.processes[process]
-                calls_by_pid[pid] += calls.count
-                self.processes[process] = calls_by_pid
+                access_counts_by_pid[pid] += access_counts
+                self.processes[process] = access_counts_by_pid
 
     def update_rows(self):
         self.rows = []
 
         ordered_processes = reversed(list(self.processes.items()))
-        for (mount, name), calls_per_pid in ordered_processes:
+        for (mount, name), access_counts_by_pid in ordered_processes:
             name = format_name(name)
             mount = format_mount(mount)
-            calls = sum(calls_per_pid.values())
+
+            access_counts_list = access_counts_by_pid.values()
+            reads = sum(ac.reads for ac in access_counts_list)
+            writes = sum(ac.writes for ac in access_counts_list)
+            total = sum(ac.total for ac in access_counts_list)
 
             # Sort PIDs by fuse calls
-            sorted_pairs = sorted(calls_per_pid.items(), key=lambda kv: kv[1])
+            sorted_pairs = sorted(
+                access_counts_by_pid.items(), key=lambda kv: kv[1].total
+            )
             pids = [pid for pid, _ in reversed(sorted_pairs)]
             pids = format_pids(pids)
 
-            row = (name, mount, calls, pids)
+            row = (name, mount, reads, writes, total, pids)
             self.rows.append(row)
 
     def compute_total(self, ls):
@@ -137,22 +151,17 @@ class Top:
 
     def render_column_titles(self, stdscr):
         LINE = 2
-        ROW = ("PROCESS", "MOUNT", "FUSE CALLS", "TOP PIDS")
-        self.render_row(stdscr, LINE, ROW, self.curses.A_REVERSE)
+        self.render_row(stdscr, LINE, TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
         START_LINE = 3
         line_numbers = range(START_LINE, self.height - 1)
 
         for line, row in zip(line_numbers, self.rows):
-            self.render_row(stdscr, line, row)
+            self.render_row(stdscr, line, row, self.curses.A_NORMAL)
 
-    def render_row(self, stdscr, y, data, style=None):
-        if style is None:
-            style = self.curses.A_NORMAL
-        SPACING = (NAME_WIDTH, MOUNT_WIDTH, CALLS_WIDTH, PIDS_WIDTH)
+    def render_row(self, stdscr, y, data, style):
         text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
-
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
 
     def get_keypress(self, stdscr):
@@ -196,3 +205,16 @@ def format_pids(pids):
         if len(new_str) <= PIDS_WIDTH:
             pids_str = new_str
     return pids_str
+
+
+class AccessCounts:
+    def __init__(self, total, reads, writes):
+        self.total = total
+        self.reads = reads
+        self.writes = writes
+
+    def __iadd__(self, other):
+        self.total += other.total
+        self.reads += other.reads
+        self.writes += other.writes
+        return self

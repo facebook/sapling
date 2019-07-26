@@ -10,6 +10,7 @@
 #include <folly/MapUtil.h>
 #include <folly/MicroLock.h>
 #include <folly/ThreadLocal.h>
+
 #include "eden/fs/utils/ProcessNameCache.h"
 
 namespace facebook {
@@ -27,14 +28,17 @@ struct ThreadLocalBucket {
   /**
    * Returns whether the pid was newly-recorded in this thread-second or not.
    */
-  bool add(uint64_t secondsSinceStart, pid_t pid) {
+  bool add(
+      uint64_t secondsSinceStart,
+      pid_t pid,
+      ProcessAccessLog::AccessType type) {
     auto state = state_.lock();
 
     // isNewPid must be initialized because BucketedLog::add will not call
     // Bucket::add if secondsSinceStart is too old and the sample is dropped.
     // (In that case, it's unnecessary to record the process name.)
     bool isNewPid = false;
-    state->buckets.add(secondsSinceStart, pid, isNewPid);
+    state->buckets.add(secondsSinceStart, pid, isNewPid, type);
     return isNewPid;
   }
 
@@ -88,20 +92,23 @@ folly::ThreadLocalPtr<ThreadLocalBucket, BucketTag> threadLocalBucketPtr;
 } // namespace
 
 void ProcessAccessLog::Bucket::clear() {
-  accessCounts.clear();
+  accessCountsByPid.clear();
 }
 
-void ProcessAccessLog::Bucket::add(pid_t pid, bool& isNew) {
-  auto [iter, inserted] = accessCounts.emplace(pid, 1);
-  if (!inserted) {
-    ++iter->second;
-  }
-  isNew = inserted;
+void ProcessAccessLog::Bucket::add(
+    pid_t pid,
+    bool& isNewPid,
+    ProcessAccessLog::AccessType type) {
+  auto [it, contains] = accessCountsByPid.emplace(pid, PerBucketAccessCounts{});
+  it->second.counts[type]++;
+  isNewPid = contains;
 }
 
 void ProcessAccessLog::Bucket::merge(const Bucket& other) {
-  for (auto& [pid, otherCount] : other.accessCounts) {
-    accessCounts[pid] += otherCount;
+  for (auto [pid, otherAccessCounts] : other.accessCountsByPid) {
+    for (int type = 0; type != LAST; type++) {
+      accessCountsByPid[pid].counts[type] += otherAccessCounts.counts[type];
+    }
   }
 }
 
@@ -117,7 +124,9 @@ ProcessAccessLog::~ProcessAccessLog() {
   }
 }
 
-void ProcessAccessLog::recordAccess(pid_t pid) {
+void ProcessAccessLog::recordAccess(
+    pid_t pid,
+    ProcessAccessLog::AccessType type) {
   // This function is called very frequently from different threads. It's a
   // write-often, read-rarely use case, so, to avoid synchronization overhead,
   // record to thread-local storage and only merge into the access log when the
@@ -134,7 +143,7 @@ void ProcessAccessLog::recordAccess(pid_t pid) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count();
 
-  bool isNewPid = tlb->add(secondsSinceEpoch, pid);
+  bool isNewPid = tlb->add(secondsSinceEpoch, pid, type);
 
   // Many processes are short-lived, so grab the executable name during the
   // access. We could potentially get away with grabbing executable names a
@@ -154,7 +163,7 @@ void ProcessAccessLog::recordAccess(pid_t pid) {
   }
 }
 
-std::unordered_map<pid_t, size_t> ProcessAccessLog::getAllAccesses(
+std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
     std::chrono::seconds lastNSeconds) {
   auto secondCount = lastNSeconds.count();
   // First, merge all the thread-local buckets into their owners, including us.
@@ -182,7 +191,17 @@ std::unordered_map<pid_t, size_t> ProcessAccessLog::getAllAccesses(
   for (auto iter = allBuckets.end() - count; iter != allBuckets.end(); ++iter) {
     bucket.merge(*iter);
   }
-  return bucket.accessCounts;
+
+  // Transfer to a Thrift map
+  std::unordered_map<pid_t, AccessCounts> accessCountsByPid;
+  for (auto& [pid, accessCounts] : bucket.accessCountsByPid) {
+    accessCountsByPid[pid] = AccessCounts{};
+    auto counts = accessCounts.counts;
+    accessCountsByPid[pid].reads = counts[READ];
+    accessCountsByPid[pid].writes = counts[WRITE];
+    accessCountsByPid[pid].total = counts[READ] + counts[WRITE] + counts[OTHER];
+  }
+  return accessCountsByPid;
 }
 
 } // namespace eden

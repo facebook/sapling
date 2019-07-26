@@ -375,6 +375,9 @@ class FuseChannel {
    */
   ~FuseChannel();
 
+  bool isReadOperation(FuseOpcode opcode);
+  bool isWriteOperation(FuseOpcode opcode);
+
   folly::Future<folly::Unit> fuseRead(
       const fuse_in_header* header,
       const uint8_t* arg);

@@ -8,7 +8,8 @@
 
 #include <folly/Synchronized.h>
 #include <unistd.h>
-#include <chrono>
+
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/BucketedLog.h"
 
 namespace facebook {
@@ -27,6 +28,13 @@ class ProcessNameCache;
  */
 class ProcessAccessLog {
  public:
+  enum AccessType : unsigned int {
+    READ,
+    WRITE,
+    OTHER,
+    LAST,
+  };
+
   explicit ProcessAccessLog(std::shared_ptr<ProcessNameCache> processNameCache);
   ~ProcessAccessLog();
 
@@ -38,7 +46,7 @@ class ProcessAccessLog {
    * Process IDs passed to recordAccess are also inserted into the
    * ProcessNameCache.
    */
-  void recordAccess(pid_t pid);
+  void recordAccess(pid_t pid, AccessType type);
 
   /**
    * Returns the number of times each pid was passed to recordAccess() in
@@ -47,23 +55,26 @@ class ProcessAccessLog {
    * Note: ProcessAccessLog buckets by whole seconds, so this number should be
    * considered an approximation.
    */
-  std::unordered_map<pid_t, size_t> getAllAccesses(
+  std::unordered_map<pid_t, AccessCounts> getAccessCounts(
       std::chrono::seconds lastNSeconds);
 
  private:
+  struct PerBucketAccessCounts {
+    size_t counts[AccessType::LAST];
+
+    size_t& operator[](AccessType idx) {
+      CHECK_LT(idx, AccessType::LAST);
+      return counts[idx];
+    }
+  };
+
   // Data for one second.
   struct Bucket {
     void clear();
-
-    /**
-     * Returns whether the added pid is newly observed or not in the `isNew` out
-     * parameter.
-     */
-    void add(pid_t pid, bool& isNew);
-
+    void add(pid_t pid, bool& isNew, AccessType type);
     void merge(const Bucket& other);
 
-    std::unordered_map<pid_t, size_t> accessCounts;
+    std::unordered_map<pid_t, PerBucketAccessCounts> accessCountsByPid;
   };
 
   // Keep up to ten seconds of data, but use a power of two so BucketedLog

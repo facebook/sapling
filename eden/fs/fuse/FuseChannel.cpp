@@ -1158,7 +1158,16 @@ void FuseChannel::processSession() {
       continue;
     }
 
-    processAccessLog_.recordAccess(header->pid);
+    ProcessAccessLog::AccessType type;
+    if (isReadOperation(header->opcode)) {
+      type = ProcessAccessLog::READ;
+    } else if (isWriteOperation(header->opcode)) {
+      type = ProcessAccessLog::WRITE;
+    } else {
+      type = ProcessAccessLog::OTHER;
+    }
+
+    processAccessLog_.recordAccess(header->pid, type);
 
     switch (header->opcode) {
       case FUSE_INIT:
@@ -1294,6 +1303,56 @@ void FuseChannel::processSession() {
       }
     }
   }
+}
+
+bool FuseChannel::isReadOperation(FuseOpcode op) {
+  static constexpr FuseOpcode READ_OPS[] = {
+      FUSE_GETATTR,
+      FUSE_GETXATTR,
+      FUSE_LOOKUP,
+      FUSE_READ,
+      FUSE_READDIR,
+      FUSE_READLINK,
+      FUSE_STATFS,
+      FUSE_OPENDIR,
+      FUSE_RELEASEDIR,
+      FUSE_LISTXATTR,
+#ifdef __linux__
+      FUSE_READDIRPLUS,
+#endif
+#ifdef __APPLE__
+      FUSE_GETXTIMES,
+#endif
+  };
+
+  auto it = std::find(std::begin(READ_OPS), std::end(READ_OPS), op);
+  return it != std::end(READ_OPS);
+}
+
+bool FuseChannel::isWriteOperation(FuseOpcode op) {
+  static constexpr FuseOpcode WRITE_OPS[] = {
+      FUSE_CREATE,
+      FUSE_MKDIR,
+      FUSE_RENAME,
+      FUSE_RMDIR,
+      FUSE_SETATTR,
+      FUSE_SETXATTR,
+      FUSE_UNLINK,
+      FUSE_WRITE,
+      FUSE_FSYNCDIR,
+      FUSE_FSYNC,
+      FUSE_SYMLINK,
+      FUSE_MKNOD,
+      FUSE_LINK,
+      FUSE_REMOVEXATTR,
+      FUSE_FALLOCATE,
+#ifdef __linux__
+      FUSE_RENAME2,
+#endif
+  };
+
+  auto it = std::find(std::begin(WRITE_OPS), std::end(WRITE_OPS), op);
+  return it != std::end(WRITE_OPS);
 }
 
 void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
