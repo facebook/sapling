@@ -22,6 +22,9 @@ Config::
   # Append 'REVERSE_SYNC_ONLY_HG_NODE: {hghash}' to the commit message when
   # committing to SVN. The hghash here is the original hash, before any rebase.
   rewritesvncommitwithhghash = False
+  # Skip the post-push pull and rebase. This only works in single-writer
+  # scenario and should only be used in HG -> SVN reverse sync.
+  skippostpushpulls = False
 """
 
 from __future__ import absolute_import
@@ -429,6 +432,10 @@ configitem("hgsubversion", "repouuid", default="")
 # write the hg hash in the svn commit message when pushing to svn.
 # only used for HG -> SVN reverse sync.
 configitem("hgsubversion", "rewritesvncommitwithhghash", default=False)
+# skip the pulls and potential rebases after pushing each commits.
+# this significantly speed up the push but is not usable in multi-writer case.
+# only used for HG -> SVN reverse sync.
+configitem("hgsubversion", "skippostpushpulls", default=False)
 
 
 @templatekeyword("svnrev")

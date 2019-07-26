@@ -253,6 +253,7 @@ def push(repo, dest, force, revs):
         tip_ctx = repo[outgoing[-1]].p1()
         svnbranch = tip_ctx.branch()
         modified_files = {}
+        pushedrev = None
         for i in range(len(outgoing) - 1, -1, -1):
             # 2. Pick the oldest changeset that needs to be pushed
             current_ctx = repo[outgoing[i]]
@@ -266,46 +267,51 @@ def push(repo, dest, force, revs):
                 # results in nonzero exit status, see hg's commands.py
                 return 0
 
-            # 3. Move the changeset to the tip of the branch if necessary
-            conflicts = False
-            for file in current_ctx.files():
-                if file in modified_files:
-                    conflicts = True
-                    break
-
-            if conflicts or current_ctx.branch() != svnbranch:
-                util.swap_out_encoding(old_encoding)
-                try:
-
-                    def extrafn(ctx, extra):
-                        extra["branch"] = ctx.branch()
-
-                    ui.note("rebasing %s onto %s \n" % (current_ctx, tip_ctx))
-                    hgrebase.rebase(
-                        ui,
-                        repo,
-                        dest=node.hex(tip_ctx.node()),
-                        rev=[node.hex(current_ctx.node())],
-                        extrafn=extrafn,
-                        keep=True,
-                    )
-                finally:
-                    util.swap_out_encoding()
-
-                # Don't trust the pre-rebase repo and context.
-                repo = getlocalpeer(ui, {}, meta.path)
-                meta = repo.svnmeta(svn.uuid, svn.subdir)
-                hashes = meta.revmap.hashes()
-                tip_ctx = repo[tip_ctx.node()]
-                for c in tip_ctx.descendants():
-                    rebasesrc = c.extra().get("rebase_source")
-                    if rebasesrc and node.bin(rebasesrc) == current_ctx.node():
-                        current_ctx = c
-                        temporary_commits.append(c.node())
+            if ui.configbool("hgsubversion", "skippostpushpulls"):
+                # We use the revmap for the first commit.
+                # After that, we use what we received from svn.
+                tip_hash = pushedrev.revnum if pushedrev else hashes[tip_ctx.node()][0]
+            else:
+                # 3. Move the changeset to the tip of the branch if necessary
+                conflicts = False
+                for file in current_ctx.files():
+                    if file in modified_files:
+                        conflicts = True
                         break
 
+                if conflicts or current_ctx.branch() != svnbranch:
+                    util.swap_out_encoding(old_encoding)
+                    try:
+
+                        def extrafn(ctx, extra):
+                            extra["branch"] = ctx.branch()
+
+                        ui.note("rebasing %s onto %s \n" % (current_ctx, tip_ctx))
+                        hgrebase.rebase(
+                            ui,
+                            repo,
+                            dest=node.hex(tip_ctx.node()),
+                            rev=[node.hex(current_ctx.node())],
+                            extrafn=extrafn,
+                            keep=True,
+                        )
+                    finally:
+                        util.swap_out_encoding()
+
+                    # Don't trust the pre-rebase repo and context.
+                    repo = getlocalpeer(ui, {}, meta.path)
+                    meta = repo.svnmeta(svn.uuid, svn.subdir)
+                    hashes = meta.revmap.hashes()
+                    tip_ctx = repo[tip_ctx.node()]
+                    for c in tip_ctx.descendants():
+                        rebasesrc = c.extra().get("rebase_source")
+                        if rebasesrc and node.bin(rebasesrc) == current_ctx.node():
+                            current_ctx = c
+                            temporary_commits.append(c.node())
+                            break
+                tip_hash = hashes[tip_ctx.node()][0]
+
             # 4. Push the changeset to subversion
-            tip_hash = hashes[tip_ctx.node()][0]
             try:
                 ui.status("committing %s\n" % current_ctx)
                 pushedrev = pushmod.commit(
@@ -324,6 +330,9 @@ def push(repo, dest, force, revs):
             # trigger another revision landing between the time we
             # push a revision and pull it back.
             repo.hook("debug-hgsubversion-between-push-and-pull-for-tests")
+
+            if ui.configbool("hgsubversion", "skippostpushpulls"):
+                continue
 
             # 5. Pull the latest changesets from subversion, which will
             # include the one we just committed (and possibly others).

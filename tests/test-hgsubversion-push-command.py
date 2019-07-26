@@ -854,6 +854,29 @@ class PushTests(test_hgsubversion_util.TestBase):
             "automated test\nREVERSE_SYNC_ONLY_HG_NODE: " + old_tip_hex,
         )
 
+    def test_push_with_skip_postpush_pull_config(self):
+        """
+        Push performs a pull after each push. With a config, that is disabled.
+        Lets ensure that code path works
+        """
+
+        changes = [("gamma", "gamma", "sometext")]
+        self.commitchanges(changes)
+        changes = [("gamma", "gamma", "someothertext")]
+        newhash = self.commitchanges(changes)
+
+        repo = self.repo
+        old_tip = self.repo["tip"].hex()
+        hg.update(repo, newhash)
+        self.pushrevisionswithconfigs(
+            configs=[("hgsubversion", "skippostpushpulls", True)]
+        )
+
+        # verify that we didn't pull new commits
+        new_tip = self.repo["tip"].hex()
+        self.assertEqual(old_tip, new_tip)
+
+
 
 if __name__ == "__main__":
     import silenttestrunner
