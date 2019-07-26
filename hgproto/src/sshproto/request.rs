@@ -558,7 +558,7 @@ fn parse_with_params(
             }))
         | call!(parse_command, "clienttelemetry", parse_params, 0+1,
             |kv| Ok(ClientTelemetry{
-                args: parseval_default(&kv, "args", param_kv)?,
+                args: kv,
             }))
         | call!(parse_command, "getbundle", parse_params, 0+1,
             |kv| Ok(Getbundle(GetbundleArgs {

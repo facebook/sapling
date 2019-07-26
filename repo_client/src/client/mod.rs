@@ -768,7 +768,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('clienttelemetry')
-    fn clienttelemetry(&self, _args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
+    fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
         info!(self.ctx.logger(), "clienttelemetry");
 
         let fallback_hostname = "<no hostname found>";
@@ -781,6 +781,20 @@ impl HgCommands for RepoClient {
             .prepared_ctx(ops::CLIENTTELEMETRY, None)
             .scuba()
             .clone();
+
+        if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
+            scuba_logger.add(
+                "client_correlator",
+                String::from_utf8_lossy(client_correlator).into_owned(),
+            );
+        }
+
+        if let Some(command) = args.get(b"command" as &[u8]) {
+            scuba_logger.add(
+                "hg_short_command",
+                String::from_utf8_lossy(command).into_owned(),
+            );
+        }
 
         future::ok(hostname)
             .timeout(timeout_duration())
