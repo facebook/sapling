@@ -21,6 +21,10 @@ use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
 use std::collections::BTreeMap;
 
+pub mod derived_data_unodes;
+#[cfg(test)]
+mod test_utils;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "cannot fetch FileUnode: {}", _0)]
@@ -171,9 +175,6 @@ fn create_unode_manifest(
             }
         }
     }
-    // TODO(stash): handle merges correctly
-    // In particular if one parent is ancestor of another parent then it should not be
-    // a parent of this manifest unode
     let parents: Vec<_> = tree_info.parents.into_iter().map(|id| id.0).collect();
     let mf_unode = ManifestUnode::new(parents, subentries, linknode);
     let mf_unode_id = mf_unode.get_unode_id();
@@ -285,8 +286,6 @@ fn create_unode_file(
         )
         .boxify()
     }
-
-    // TODO(stash): filter out unode parents if one of them is ancestor of another
 }
 
 // If all elements in `unodes` are the same than this element is returned, otherwise None is returned
@@ -312,21 +311,21 @@ fn convert_unode(unode_entry: &UnodeEntry) -> Entry<Id<ManifestUnodeId>, FileUno
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::{get_bonsai_changeset, iterate_all_entries};
     use blobrepo::{save_bonsai_changesets, BlobManifest};
     use blobrepo_factory::new_memblob_empty;
     use bytes::Bytes;
+    use derived_data_unodes::get_file_changes;
     use failure_ext::Result;
     use fixtures::linear;
-    use futures::stream::{self, Stream};
-    use futures_ext::bounded_traversal::bounded_traversal_stream;
+    use futures::Stream;
     use manifest::Manifest;
     use maplit::btreemap;
-    use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, HgManifestId};
+    use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
     use mononoke_types::{
         BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents, RepoPath,
     };
     use std::collections::{HashSet, VecDeque};
-    use std::str::FromStr;
     use tokio::runtime::Runtime;
 
     #[test]
@@ -344,7 +343,7 @@ mod tests {
                 repo.clone(),
                 bcs_id,
                 vec![].into_iter(),
-                get_changes(&bcs),
+                get_file_changes(&bcs),
             );
 
             let unode_id = runtime.block_on(f).unwrap();
@@ -352,12 +351,12 @@ mod tests {
             runtime
                 .block_on(Id(unode_id).load(ctx.clone(), repo.get_blobstore()))
                 .unwrap();
-            let all_unodes = iterate_all_unodes(
-                ctx.clone(),
-                repo.clone(),
-                &mut runtime,
-                UnodeEntry::Directory(unode_id),
-            );
+            let all_unodes = runtime
+                .block_on(
+                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(Id(unode_id)))
+                        .collect(),
+                )
+                .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
             paths.sort();
             assert_eq!(
@@ -381,7 +380,7 @@ mod tests {
                 repo.clone(),
                 bcs_id,
                 vec![parent_unode_id.clone()].into_iter(),
-                get_changes(&bcs),
+                get_file_changes(&bcs),
             );
 
             let unode_id = runtime.block_on(f).unwrap();
@@ -397,12 +396,12 @@ mod tests {
                 find_filenode_history(&mut runtime, repo.clone(), root_filenode_id),
             );
 
-            let all_unodes = iterate_all_unodes(
-                ctx.clone(),
-                repo.clone(),
-                &mut runtime,
-                UnodeEntry::Directory(unode_id),
-            );
+            let all_unodes = runtime
+                .block_on(
+                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(Id(unode_id)))
+                        .collect(),
+                )
+                .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
             paths.sort();
             assert_eq!(
@@ -437,7 +436,7 @@ mod tests {
                 repo.clone(),
                 bcs_id,
                 vec![].into_iter(),
-                get_changes(&bcs),
+                get_file_changes(&bcs),
             );
             let unode_id = runtime.block_on(f).unwrap();
 
@@ -544,7 +543,7 @@ mod tests {
             repo.clone(),
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
-            get_changes(&bcs),
+            get_file_changes(&bcs),
         );
         let root_unode = runtime.block_on(f).unwrap();
 
@@ -554,7 +553,7 @@ mod tests {
             repo.clone(),
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
-            get_changes(&bcs),
+            get_file_changes(&bcs),
         );
         let same_root_unode = runtime.block_on(f).unwrap();
         assert_eq!(root_unode, same_root_unode);
@@ -565,7 +564,7 @@ mod tests {
             repo.clone(),
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id].into_iter(),
-            get_changes(&bcs),
+            get_file_changes(&bcs),
         );
         let reverse_root_unode = runtime.block_on(f).unwrap();
 
@@ -587,47 +586,9 @@ mod tests {
             repo.clone(),
             bcs_id,
             vec![].into_iter(),
-            get_changes(&bcs),
+            get_file_changes(&bcs),
         );
         runtime.block_on(f).unwrap()
-    }
-
-    fn iterate_all_unodes(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        runtime: &mut Runtime,
-        unode_entry: UnodeEntry,
-    ) -> Vec<(Option<MPath>, UnodeEntry)> {
-        let blobstore = repo.get_blobstore();
-        let walk_future: BoxFuture<_, Error> =
-            bounded_traversal_stream(256, (None, unode_entry), move |(path, unode_entry)| {
-                match unode_entry {
-                    UnodeEntry::File(unode_file_id) => Id(unode_file_id)
-                        .load(ctx.clone(), blobstore.clone())
-                        .map(move |_| (vec![(path, unode_entry)], vec![]))
-                        .left_future(),
-                    UnodeEntry::Directory(unode_mf_id) => Id(unode_mf_id)
-                        .load(ctx.clone(), blobstore.clone())
-                        .map(move |mf| {
-                            let recurse = mf
-                                .0
-                                .list()
-                                .map(|(basename, entry)| {
-                                    let path = MPath::join_opt_element(path.as_ref(), &basename);
-                                    (Some(path), entry.clone())
-                                })
-                                .collect();
-                            (vec![(path, unode_entry)], recurse)
-                        })
-                        .right_future(),
-                }
-            })
-            .map(|entries| stream::iter_ok(entries))
-            .flatten()
-            .collect()
-            .boxify();
-
-        runtime.block_on(walk_future).unwrap()
     }
 
     fn build_diamond_graph(
@@ -649,7 +610,7 @@ mod tests {
             repo.clone(),
             first_bcs_id,
             vec![].into_iter(),
-            get_changes(&bcs),
+            get_file_changes(&bcs),
         );
         let first_unode_id = runtime.block_on(f).unwrap();
 
@@ -669,7 +630,7 @@ mod tests {
                 repo.clone(),
                 merge_p1_id,
                 vec![first_unode_id.clone()].into_iter(),
-                get_changes(&merge_p1),
+                get_file_changes(&merge_p1),
             );
             let merge_p1_unode_id = runtime.block_on(f).unwrap();
             (merge_p1, merge_p1_unode_id)
@@ -692,7 +653,7 @@ mod tests {
                 repo.clone(),
                 merge_p2_id,
                 vec![first_unode_id.clone()].into_iter(),
-                get_changes(&merge_p2),
+                get_file_changes(&merge_p2),
             );
             let merge_p2_unode_id = runtime.block_on(f).unwrap();
             (merge_p2, merge_p2_unode_id)
@@ -712,7 +673,7 @@ mod tests {
             repo.clone(),
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id].into_iter(),
-            get_changes(&merge),
+            get_file_changes(&merge),
         );
         runtime.block_on(f)
     }
@@ -782,40 +743,6 @@ mod tests {
             }
         }
         res
-    }
-
-    fn get_changes(
-        bcs: &BonsaiChangeset,
-    ) -> impl IntoIterator<Item = (MPath, Option<(ContentId, FileType)>)> {
-        let v: Vec<_> = bcs
-            .file_changes()
-            .map(|(mpath, maybe_file_change)| {
-                let content_file_type = match maybe_file_change {
-                    Some(file_change) => Some((file_change.content_id(), file_change.file_type())),
-                    None => None,
-                };
-                (mpath.clone(), content_file_type)
-            })
-            .collect();
-        v.into_iter()
-    }
-
-    fn get_bonsai_changeset(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        runtime: &mut Runtime,
-        s: &str,
-    ) -> (ChangesetId, BonsaiChangeset) {
-        let hg_cs_id = HgChangesetId::from_str(s).unwrap();
-
-        let bcs_id = runtime
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))
-            .unwrap()
-            .unwrap();
-        let bcs = runtime
-            .block_on(repo.get_bonsai_changeset(ctx.clone(), bcs_id))
-            .unwrap();
-        (bcs_id, bcs)
     }
 
     trait UnodeHistory {

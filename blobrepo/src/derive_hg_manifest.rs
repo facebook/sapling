@@ -29,6 +29,12 @@ use std::io::Write;
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct Id<T>(T);
 
+impl<T> Id<T> {
+    pub fn new(t: T) -> Self {
+        Self(t)
+    }
+}
+
 impl Loadable for Id<HgManifestId> {
     type Value = ManifestContent;
 
