@@ -169,11 +169,13 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
-    std::shared_ptr<ServerState> serverState) {
+    std::shared_ptr<ServerState> serverState,
+    std::unique_ptr<Journal> journal) {
   return std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
                                                   std::move(objectStore),
                                                   std::move(blobCache),
-                                                  std::move(serverState)},
+                                                  std::move(serverState),
+                                                  std::move(journal)},
                                     EdenMountDeleter{}};
 }
 
@@ -181,7 +183,8 @@ EdenMount::EdenMount(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
-    std::shared_ptr<ServerState> serverState)
+    std::shared_ptr<ServerState> serverState,
+    std::unique_ptr<Journal> journal)
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
@@ -192,6 +195,7 @@ EdenMount::EdenMount(
       overlay_{std::make_unique<Overlay>(config_->getOverlayPath())},
       overlayFileAccess_{overlay_.get()},
       bindMounts_{config_->getBindMounts()},
+      journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{serverState_->getClock()->getRealtime()},
@@ -212,7 +216,7 @@ folly::Future<folly::Unit> EdenMount::initialize(
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
         // snapshot id forward through subsequent journal entries.
-        journal_.recordHashUpdate(parents.parent1());
+        journal_->recordHashUpdate(parents.parent1());
 
         // Initialize the overlay.
         // This must be performed before we do any operations that may allocate
@@ -520,7 +524,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
 }
 
 folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
-  journal_.cancelAllSubscribers();
+  journal_->cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
 
   return inodeMap_->shutdown(doTakeover)
@@ -784,7 +788,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // two trees.  Therefore the JournalDelta already includes information
         // that these files changed.
         auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
-        journal_.recordUncleanPaths(
+        journal_->recordUncleanPaths(
             oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
 
         return std::move(conflicts);
@@ -868,7 +872,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   config_->setParentCommits(parents);
   parentsLock->parents.setParents(parents);
 
-  journal_.recordHashUpdate(oldParents.parent1(), parents.parent1());
+  journal_->recordHashUpdate(oldParents.parent1(), parents.parent1());
 }
 
 struct timespec EdenMount::getLastCheckoutTime() const {

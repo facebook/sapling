@@ -180,8 +180,13 @@ void TestMount::createMountWithoutInitializing(
 void TestMount::createMount() {
   shared_ptr<ObjectStore> objectStore =
       ObjectStore::create(localStore_, backingStore_, stats_);
+  auto journal = std::make_unique<Journal>(stats_);
   edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), blobCache_, serverState_);
+      std::move(config_),
+      std::move(objectStore),
+      blobCache_,
+      serverState_,
+      std::move(journal));
 }
 
 void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {
@@ -250,6 +255,8 @@ void TestMount::remount() {
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(localStore_, backingStore_, stats_);
 
+  auto journal = std::make_unique<Journal>(stats_);
+
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
   //
@@ -263,7 +270,11 @@ void TestMount::remount() {
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
-      std::move(config), std::move(objectStore), blobCache_, serverState_);
+      std::move(config),
+      std::move(objectStore),
+      blobCache_,
+      serverState_,
+      std::move(journal));
   edenMount_->initialize().getVia(serverExecutor_.get());
 }
 
@@ -272,6 +283,8 @@ void TestMount::remountGracefully() {
   auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(localStore_, backingStore_, stats_);
+
+  auto journal = std::make_unique<Journal>(stats_);
 
   auto takeoverData =
       edenMount_->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)
@@ -293,7 +306,11 @@ void TestMount::remountGracefully() {
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
-      std::move(config), std::move(objectStore), blobCache_, serverState_);
+      std::move(config),
+      std::move(objectStore),
+      blobCache_,
+      serverState_,
+      std::move(journal));
   edenMount_->initialize(takeoverData).getVia(serverExecutor_.get());
 }
 

@@ -126,7 +126,8 @@ class EdenMount {
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<BlobCache> blobCache,
-      std::shared_ptr<ServerState> serverState);
+      std::shared_ptr<ServerState> serverState,
+      std::unique_ptr<Journal> journal);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -301,8 +302,13 @@ class EdenMount {
 
   InodeMetadataTable* getInodeMetadataTable() const;
 
+  /**
+   * Return the Journal used by this mount point.
+   *
+   * The Journal is guaranteed to be valid for the lifetime of the EdenMount.
+   */
   Journal& getJournal() {
-    return journal_;
+    return *journal_;
   }
 
   uint64_t getMountGeneration() const {
@@ -605,7 +611,8 @@ class EdenMount {
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<BlobCache> blobCache,
-      std::shared_ptr<ServerState> serverState);
+      std::shared_ptr<ServerState> serverState,
+      std::unique_ptr<Journal> journal);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -716,7 +723,7 @@ class EdenMount {
    */
   folly::Synchronized<std::vector<BindMount>> bindMounts_;
 
-  Journal journal_;
+  std::unique_ptr<Journal> journal_;
 
   /**
    * A number to uniquely identify this particular incarnation of this mount.

@@ -845,9 +845,11 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore =
       ObjectStore::create(getLocalStore(), backingStore, getSharedStats());
+  auto journal = std::make_unique<Journal>(getSharedStats());
 
 #if _WIN32
-  // Create the EdenMount object and insert the mount into the mountPoints_ map.
+  // Create the EdenMount object and insert the mount into the mountPoints_
+  // map.
   auto edenMount = EdenMount::create(
       std::move(initialConfig), std::move(objectStore), serverState_);
   addToMountPoints(edenMount);
@@ -860,7 +862,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       std::move(initialConfig),
       std::move(objectStore),
       blobCache_,
-      serverState_);
+      serverState_,
+      std::move(journal));
   addToMountPoints(edenMount);
 
   // Now actually begin starting the mount point
@@ -1015,8 +1018,8 @@ EdenServer::MountList EdenServer::getMountPoints() const {
     const auto mountPoints = mountPoints_.rlock();
     for (const auto& entry : *mountPoints) {
       const auto& mount = entry.second.edenMount;
-      // Avoid returning mount points that are still initializing and are not
-      // ready to perform inode operations yet.
+      // Avoid returning mount points that are still initializing and are
+      // not ready to perform inode operations yet.
       if (!mount->isSafeForInodeAccess()) {
         continue;
       }
@@ -1177,10 +1180,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     state->takeoverShutdown = true;
 
     // Make a copy of the thrift server socket so we can transfer it to the
-    // new edenfs process.  Our local thrift will close its own socket when we
-    // stop the server.  The easiest way to avoid completely closing the
-    // server socket for now is simply by duplicating the socket to a new fd.
-    // We will transfer this duplicated FD to the new edenfs process.
+    // new edenfs process.  Our local thrift will close its own socket when
+    // we stop the server.  The easiest way to avoid completely closing the
+    // server socket for now is simply by duplicating the socket to a new
+    // fd. We will transfer this duplicated FD to the new edenfs process.
     const int takeoverThriftSocket = dup(server_->getListenSocket());
     folly::checkUnixError(
         takeoverThriftSocket,
@@ -1191,7 +1194,8 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
   shutdownSubscribers();
 
-  // Stop the thrift server.  We will fulfill takeoverPromise_ once it stops.
+  // Stop the thrift server.  We will fulfill takeoverPromise_ once it
+  // stops.
   server_->stop();
   return takeoverPromise_.getFuture();
 #else
@@ -1233,9 +1237,9 @@ void EdenServer::reportMemoryStats() {
     //
     // It's not really even clear to me that it's worth exporting this a
     // timeseries vs a simple counter.  We mainly only care about the
-    // last 60-second timeseries level.  Since we only update this once every
-    // 30 seconds we are basically just reporting an average of the last 2
-    // data points.
+    // last 60-second timeseries level.  Since we only update this once
+    // every 30 seconds we are basically just reporting an average of the
+    // last 2 data points.
     fb303::ServiceData::get()->addStatValue(
         kRssBytes, memoryStats->resident, fb303::AVG);
   }

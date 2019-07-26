@@ -19,6 +19,7 @@ class FuseThreadStats;
 class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
+class JournalThreadStats;
 
 class EdenStats {
  public:
@@ -52,6 +53,13 @@ class EdenStats {
 
   /**
    * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  JournalThreadStats& getJournalStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
    */
   void aggregate();
 
@@ -66,6 +74,8 @@ class EdenStats {
       threadLocalHgBackingStoreStats_;
   folly::ThreadLocal<HgImporterThreadStats, ThreadLocalTag, void>
       threadLocalHgImporterStats_;
+  folly::ThreadLocal<JournalThreadStats, ThreadLocalTag, void>
+      threadLocalJournalStats_;
 };
 
 std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
@@ -199,6 +209,8 @@ class HgImporterThreadStats : public EdenThreadStatsBase {
       createTimeseries("hg_importer.manifest_node_for_commit")};
   Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
 };
+
+class JournalThreadStats : public EdenThreadStatsBase {};
 
 } // namespace eden
 } // namespace facebook

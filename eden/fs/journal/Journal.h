@@ -16,6 +16,7 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 namespace facebook {
 namespace eden {
@@ -58,7 +59,8 @@ struct JournalDeltaInfo {
  */
 class Journal {
  public:
-  Journal() = default;
+  explicit Journal(std::shared_ptr<EdenStats> edenStats)
+      : edenStats_{std::move(edenStats)} {}
 
   /// It is almost always a mistake to copy a Journal.
   Journal(const Journal&) = delete;
@@ -197,6 +199,8 @@ class Journal {
       Func&& deltaCallback) const;
 
   folly::Synchronized<SubscriberState> subscriberState_;
+
+  std::shared_ptr<EdenStats> edenStats_;
 };
 } // namespace eden
 } // namespace facebook

@@ -40,6 +40,10 @@ HgImporterThreadStats& EdenStats::getHgImporterStatsForCurrentThread() {
   return *threadLocalHgImporterStats_.get();
 }
 
+JournalThreadStats& EdenStats::getJournalStatsForCurrentThread() {
+  return *threadLocalJournalStats_.get();
+}
+
 void EdenStats::aggregate() {
   for (auto& stats : threadLocalFuseStats_.accessAllThreads()) {
     stats.aggregate();
@@ -51,6 +55,9 @@ void EdenStats::aggregate() {
     stats.aggregate();
   }
   for (auto& stats : threadLocalHgImporterStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
+  for (auto& stats : threadLocalJournalStats_.accessAllThreads()) {
     stats.aggregate();
   }
 }
