@@ -18,17 +18,6 @@ from facebook.eden.ttypes import AccessCounts
 from . import cmd_util
 
 
-PID_WIDTH = 7
-CMD_WIDTH = 25
-MOUNT_WIDTH = 15
-READS_WIDTH = 10
-WRITES_WIDTH = 11
-TOTAL_WIDTH = 10
-
-TITLES = ("TOP PID", "COMMAND", "MOUNT", "FUSE READS", "FUSE WRITES", "FUSE TOTAL")
-SPACING = (PID_WIDTH, CMD_WIDTH, MOUNT_WIDTH, READS_WIDTH, WRITES_WIDTH, TOTAL_WIDTH)
-
-
 class Top:
     def __init__(self):
         import curses
@@ -137,6 +126,14 @@ class Top:
 
     def render_column_titles(self, stdscr):
         LINE = 2
+        TITLES = (
+            "TOP PID",
+            "COMMAND",
+            "MOUNT",
+            "FUSE READS",
+            "FUSE WRITES",
+            "FUSE TOTAL",
+        )
         self.render_row(stdscr, LINE, TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
@@ -147,7 +144,9 @@ class Top:
             self.render_row(stdscr, line, row, self.curses.A_NORMAL)
 
     def render_row(self, stdscr, y, data, style):
+        SPACING = (7, 25, 15, 10, 11, 10)
         text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
+
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
 
     def get_keypress(self, stdscr):
@@ -201,10 +200,8 @@ def format_cmd(cmd):
         arg_str = args[1].replace("\x00", " ")
         cmd += f" {arg_str}"
 
-    return cmd[:CMD_WIDTH]
+    return cmd
 
 
 def format_mount(mount):
-    mount = os.path.basename(mount)
-    mount = os.fsdecode(mount)
-    return mount[:MOUNT_WIDTH]
+    return os.fsdecode(os.path.basename(mount))
