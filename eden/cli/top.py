@@ -7,23 +7,26 @@
 
 import argparse
 import collections
+import copy
 import datetime
 import os
 import socket
-from typing import DefaultDict, List, Tuple
+from typing import Dict, List, Tuple
+
+from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
 
 
-NAME_WIDTH = 20
+PID_WIDTH = 7
+CMD_WIDTH = 20
 MOUNT_WIDTH = 15
 READS_WIDTH = 10
 WRITES_WIDTH = 11
 TOTAL_WIDTH = 10
-PIDS_WIDTH = 25
 
-TITLES = ("PROCESS", "MOUNT", "FUSE READS", "FUSE WRITES", "FUSE TOTAL", "PIDS")
-SPACING = (NAME_WIDTH, MOUNT_WIDTH, READS_WIDTH, WRITES_WIDTH, TOTAL_WIDTH, PIDS_WIDTH)
+TITLES = ("TOP PID", "COMMAND", "MOUNT", "FUSE READS", "FUSE WRITES", "FUSE TOTAL")
+SPACING = (PID_WIDTH, CMD_WIDTH, MOUNT_WIDTH, READS_WIDTH, WRITES_WIDTH, TOTAL_WIDTH)
 
 
 class Top:
@@ -36,17 +39,12 @@ class Top:
         self.ephemeral = False
         self.refresh_rate = 1
 
-        # Maps (mount, name) pairs to another dictionary,
-        # which tracks the # of FUSE calls per PID
-        self.processes: DefaultDict[
-            Tuple[bytes, bytes], DefaultDict[int, AccessCounts]
-        ] = collections.defaultdict(
-            lambda: collections.defaultdict(lambda: AccessCounts(0, 0, 0))
-        )
+        # Processes are stored by PID
+        self.processes: Dict[int, Process] = collections.OrderedDict()
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[bytes, bytes, int, int, int, bytes]] = []
+        self.rows: List[Tuple[int, bytes, bytes, int, int, int]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -86,45 +84,46 @@ class Top:
             self.processes.clear()
 
         counts = client.getAccessCounts(self.refresh_rate)
-        names_by_pid = counts.exeNamesByPid
 
         for mount, accesses in counts.fuseAccessesByMount.items():
             for pid, access_counts in accesses.fuseAccesses.items():
-                mount = os.path.basename(mount)
-                name = names_by_pid.get(pid, b"<unknown>")
-                process = (mount, name)
+                if pid in self.processes:
+                    # Has accessed FUSE again, so move to end of OrderedDict.
+                    temp = self.processes[pid]
+                    del self.processes[pid]
+                    self.processes[pid] = temp
+                else:
+                    cmd = counts.exeNamesByPid.get(pid, b"<unknown>")
+                    mount = os.path.basename(mount)
+                    self.processes[pid] = Process(pid, cmd, mount)
 
-                access_counts_by_pid = self.processes[process]
-                # Delete, increment, and re-add to end of OrderedDict
-                del self.processes[process]
-                access_counts_by_pid[pid] += access_counts
-                self.processes[process] = access_counts_by_pid
+                self.processes[pid].access_counts.reads += access_counts.reads
+                self.processes[pid].access_counts.writes += access_counts.writes
+                self.processes[pid].access_counts.total += access_counts.total
 
     def update_rows(self):
+        ordered_processes = reversed(list(self.processes.values()))
+
+        # Group same-named processes
+        aggregated_processes = collections.OrderedDict()
+        for process in ordered_processes:
+            key = process.get_key()
+            if key in aggregated_processes:
+                aggregated_processes[key].aggregate(process)
+            else:
+                aggregated_processes[key] = copy.deepcopy(process)
+
         self.rows = []
-
-        ordered_processes = reversed(list(self.processes.items()))
-        for (mount, name), access_counts_by_pid in ordered_processes:
-            name = format_name(name)
-            mount = format_mount(mount)
-
-            access_counts_list = access_counts_by_pid.values()
-            reads = sum(ac.reads for ac in access_counts_list)
-            writes = sum(ac.writes for ac in access_counts_list)
-            total = sum(ac.total for ac in access_counts_list)
-
-            # Sort PIDs by fuse calls
-            sorted_pairs = sorted(
-                access_counts_by_pid.items(), key=lambda kv: kv[1].total
+        for process in aggregated_processes.values():
+            row = (
+                process.pid,
+                format_cmd(process.cmd),
+                format_mount(process.mount),
+                process.access_counts.reads,
+                process.access_counts.writes,
+                process.access_counts.total,
             )
-            pids = [pid for pid, _ in reversed(sorted_pairs)]
-            pids = format_pids(pids)
-
-            row = (name, mount, reads, writes, total, pids)
             self.rows.append(row)
-
-    def compute_total(self, ls):
-        return sum(c[0] for c in ls)
 
     def render(self, stdscr):
         stdscr.clear()
@@ -174,47 +173,38 @@ class Top:
             self.running = False
 
 
-def format_name(name):
-    name = os.fsdecode(name)
-    args = name.split("\x00", 2)
+class Process:
+    def __init__(self, pid, cmd, mount):
+        self.pid = pid
+        self.cmd = cmd
+        self.mount = mount
+        self.access_counts = AccessCounts(0, 0, 0)
+
+    def get_key(self):
+        return (self.cmd, self.mount)
+
+    def aggregate(self, other):
+        self.pid = other.pid
+
+        self.access_counts.reads += other.access_counts.reads
+        self.access_counts.writes += other.access_counts.writes
+        self.access_counts.total += other.access_counts.total
+
+
+def format_cmd(cmd):
+    args = os.fsdecode(cmd).split("\x00", 2)
 
     # Focus on just the basename as the paths can be quite long
-    cmd = args[0]
-    name = os.path.basename(cmd)[:NAME_WIDTH]
+    cmd = os.path.basename(args[0])[:CMD_WIDTH]
 
     # Show cmdline args too, provided they fit in the remaining space
-    remaining_space = NAME_WIDTH - len(name) - len(" ")
+    remaining_space = CMD_WIDTH - len(cmd) - len(" ")
     if len(args) > 1 and remaining_space > 0:
         arg_str = args[1].replace("\x00", " ")[:remaining_space]
-        name += f" {arg_str}"
+        cmd += f" {arg_str}"
 
-    return name
+    return cmd
 
 
 def format_mount(mount):
     return os.fsdecode(mount)[:MOUNT_WIDTH]
-
-
-def format_pids(pids):
-    if not pids:
-        return ""
-
-    pids_str = str(pids[0])
-    for pid in pids[1:]:
-        new_str = f"{pids_str}, {pid}"
-        if len(new_str) <= PIDS_WIDTH:
-            pids_str = new_str
-    return pids_str
-
-
-class AccessCounts:
-    def __init__(self, total, reads, writes):
-        self.total = total
-        self.reads = reads
-        self.writes = writes
-
-    def __iadd__(self, other):
-        self.total += other.total
-        self.reads += other.reads
-        self.writes += other.writes
-        return self
