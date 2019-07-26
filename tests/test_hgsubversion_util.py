@@ -746,12 +746,14 @@ class TestBase(unittest.TestCase):
         return self.pushrevisionswithconfigs(expected_extra_back)
 
     def pushrevisionswithconfigs(self, expected_extra_back=0, configs=None):
+        repo = self.repo
+        ui = repo.ui
         before = repolen(self.repo)
-        self.repo.ui.setconfig("hgsubversion", "stupid", str(self.stupid))
+        ui.setconfig("hgsubversion", "stupid", str(self.stupid))
         if configs:
             for sec, name, val in configs:
-                self.repo.ui.setconfig(sec, name, val)
-        res = commands.push(self.repo.ui, self.repo)
+                ui.setconfig(sec, name, val)
+        res = commands.push(ui, repo)
         after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
         return res
