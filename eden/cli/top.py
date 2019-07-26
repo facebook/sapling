@@ -33,7 +33,7 @@ class Top:
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[int, bytes, bytes, int, int, int]] = []
+        self.rows: List[Tuple[int, bytes, bytes, int, int, int, bool]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -65,10 +65,6 @@ class Top:
         return mainloop
 
     def update(self, client):
-        self.update_processes(client)
-        self.update_rows()
-
-    def update_processes(self, client):
         if self.ephemeral:
             self.processes.clear()
 
@@ -87,19 +83,8 @@ class Top:
 
                 self.processes[pid].increment_counts(access_counts)
 
-    def update_rows(self):
-        ordered_processes = reversed(list(self.processes.values()))
-
-        # Group same-named processes
-        aggregated_processes = collections.OrderedDict()
-        for process in ordered_processes:
-            key = process.get_key()
-            if key in aggregated_processes:
-                aggregated_processes[key].aggregate(process)
-            else:
-                aggregated_processes[key] = copy.deepcopy(process)
-
-        self.rows = [process.get_tuple() for process in aggregated_processes.values()]
+        for pid in self.processes.keys():
+            self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
     def render(self, stdscr):
         stdscr.clear()
@@ -140,8 +125,19 @@ class Top:
         START_LINE = 3
         line_numbers = range(START_LINE, self.height - 1)
 
-        for line, row in zip(line_numbers, self.rows):
-            self.render_row(stdscr, line, row, self.curses.A_NORMAL)
+        # Group same-named processes
+        aggregated_processes = collections.OrderedDict()
+        for process in reversed(list(self.processes.values())):
+            key = process.get_key()
+            if key in aggregated_processes:
+                aggregated_processes[key].aggregate(process)
+            else:
+                aggregated_processes[key] = copy.deepcopy(process)
+
+        for line, process in zip(line_numbers, aggregated_processes.values()):
+            row = process.get_tuple()
+            style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
+            self.render_row(stdscr, line, row, style)
 
     def render_row(self, stdscr, y, data, style):
         SPACING = (7, 25, 15, 10, 11, 10)
@@ -165,13 +161,16 @@ class Process:
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
         self.access_counts = AccessCounts(0, 0, 0)
+        self.is_running = True
 
     def get_key(self):
         return (self.cmd, self.mount)
 
     def aggregate(self, other):
-        self.pid = other.pid
         self.increment_counts(other.access_counts)
+        if other.is_running:
+            self.pid = other.pid
+            self.is_running = True
 
     def increment_counts(self, access_counts):
         self.access_counts.reads += access_counts.reads

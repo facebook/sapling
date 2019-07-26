@@ -9,18 +9,12 @@ import unittest
 
 from facebook.eden.ttypes import AccessCounts
 
-from ..top import Process, Top, format_cmd, format_mount
+from ..top import Process, format_cmd, format_mount
 
 
 class TopTest(unittest.TestCase):
     def setUp(self) -> None:
         self.process = Process(42, "ls", "fbsource")
-
-    def test_update_rows(self):
-        top = Top()
-        top.processes = {42: self.process}
-        top.update_rows()
-        self.assertEqual(top.rows, [(42, "ls", "fbsource", 0, 0, 0)])
 
     def test_increment_counts(self):
         self.assertEqual(self.process.access_counts, AccessCounts(0, 0, 0))
@@ -28,7 +22,8 @@ class TopTest(unittest.TestCase):
         self.assertEqual(self.process.access_counts, AccessCounts(42, 42, 42))
 
     def test_get_tuple(self):
-        self.assertEqual(self.process.get_tuple(), (42, "ls", "fbsource", 0, 0, 0))
+        expected_tuple = (42, "ls", "fbsource", 0, 0, 0)
+        self.assertEqual(self.process.get_tuple(), expected_tuple)
 
     def test_format_cmd(self):
         self.assertEqual(format_cmd(b"/bin/ls"), "ls")
