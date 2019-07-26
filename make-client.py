@@ -55,9 +55,10 @@ def run_cmd(cmd, env=None, cwd=None):
 def generate_thrift_code(thrift_compiler, oss_dir, thrift_dep_dir, gen_dir):
     """ Generate python thrift clients for a couple of things """
     thrift_files = [
-        "eden/fs/config/eden_config.thrift",
-        "eden/fs/service/eden.thrift",
-        "eden/fs/inodes/overlay/overlay.thrift",
+        os.path.join(oss_dir, "eden/fs/config/eden_config.thrift"),
+        os.path.join(oss_dir, "eden/fs/service/eden.thrift"),
+        os.path.join(thrift_dep_dir, "fb303/thrift/fb303_core.thrift"),
+        os.path.join(oss_dir, "eden/fs/inodes/overlay/overlay.thrift"),
     ]
     for t in thrift_files:
         run_cmd(
@@ -71,7 +72,7 @@ def generate_thrift_code(thrift_compiler, oss_dir, thrift_dep_dir, gen_dir):
                 "py:new_style",
                 "-out",
                 gen_dir,
-                os.path.join(oss_dir, t),
+                t,
             ]
         )
 
@@ -139,7 +140,9 @@ parser.add_argument(
 args = parser.parse_args()
 
 with tempfile.TemporaryDirectory() as instdir:
-    generate_thrift_code(args.thrift_compiler, args.oss_dir, args.thrift_dep_dir, instdir)
+    generate_thrift_code(
+        args.thrift_compiler, args.oss_dir, args.thrift_dep_dir, instdir
+    )
 
     for src_dir, dest_prefix in MODULES:
         copy_py(os.path.join(args.oss_dir, src_dir), instdir, dest_prefix)

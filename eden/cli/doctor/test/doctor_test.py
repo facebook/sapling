@@ -20,7 +20,7 @@ from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.cli.test.lib.output import TestOutput
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 
 
 class DoctorTest(DoctorTestBase):
@@ -198,7 +198,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
-            self.make_temporary_directory(), status=fb_status.DEAD
+            self.make_temporary_directory(), status=fb303_status.DEAD
         )
 
         out = TestOutput()
@@ -219,7 +219,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
-            self.make_temporary_directory(), status=fb_status.DEAD
+            self.make_temporary_directory(), status=fb303_status.DEAD
         )
         instance.create_test_mount("eden-mount")
 
@@ -254,7 +254,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
-            self.make_temporary_directory(), status=fb_status.STARTING
+            self.make_temporary_directory(), status=fb303_status.STARTING
         )
         instance.create_test_mount("eden-mount")
 
@@ -289,7 +289,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
-            self.make_temporary_directory(), status=fb_status.STOPPING
+            self.make_temporary_directory(), status=fb303_status.STOPPING
         )
         instance.create_test_mount("eden-mount")
 

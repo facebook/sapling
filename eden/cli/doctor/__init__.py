@@ -14,7 +14,7 @@ from typing import Dict, Optional
 from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
 from eden.cli.config import EdenCheckout, EdenInstance
 from facebook.eden.ttypes import MountState
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 
 from . import (
     check_bind_mounts,
@@ -65,13 +65,13 @@ def cure_what_ails_you(
     check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
 
     status = instance.check_health()
-    if status.status == fb_status.ALIVE:
+    if status.status == fb303_status.ALIVE:
         run_normal_checks(fixer, instance, out, mount_table, fs_util)
-    elif status.status == fb_status.STARTING:
+    elif status.status == fb303_status.STARTING:
         fixer.add_problem(EdenfsStarting())
-    elif status.status == fb_status.STOPPING:
+    elif status.status == fb303_status.STOPPING:
         fixer.add_problem(EdenfsStopping())
-    elif status.status == fb_status.DEAD:
+    elif status.status == fb303_status.DEAD:
         run_edenfs_not_healthy_checks(
             fixer, instance, out, status, mount_table, fs_util
         )

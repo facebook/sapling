@@ -22,7 +22,7 @@ from eden.cli.util import EdenStartError, check_health_using_lockfile
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 
 from . import (
     buck,
@@ -1146,14 +1146,14 @@ class RestartCmd(Subcmd):
             # The daemon is not running
             return self._start(instance)
         else:
-            if health.status == fb_status.STARTING:
+            if health.status == fb303_status.STARTING:
                 print(
                     f"The current edenfs daemon (pid {health.pid}) is still starting."
                 )
                 # Give the daemon a little extra time to hopefully finish starting
                 # before we time out and kill it.
                 stop_timeout = 30
-            elif health.status == fb_status.STOPPING:
+            elif health.status == fb303_status.STOPPING:
                 print(
                     f"The current edenfs daemon (pid {health.pid}) is in the middle "
                     "of stopping."
@@ -1164,7 +1164,7 @@ class RestartCmd(Subcmd):
                 stop_timeout = 5
             else:
                 # The only other status value we generally expect to receive here is
-                # fb_status.STOPPED.  This is returned if we found an existing edenfs
+                # fb303_status.STOPPED.  This is returned if we found an existing edenfs
                 # process but it is not responding to thrift calls.
                 print(
                     f"Found an existing edenfs daemon (pid {health.pid} that does not "

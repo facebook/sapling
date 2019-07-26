@@ -18,7 +18,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import mtab
 from eden.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
-from fb303.ttypes import fb_status
+from fb303_core.ttypes import fb303_status
 
 from .fake_client import FakeClient
 from .fake_mount_table import FakeMountTable
@@ -36,7 +36,7 @@ class FakeEdenInstance:
     def __init__(
         self,
         tmp_dir: str,
-        status: fb_status = fb_status.ALIVE,
+        status: fb303_status = fb303_status.ALIVE,
         build_info: Optional[Dict[str, str]] = None,
         config: Optional[Dict[str, str]] = None,
     ) -> None:
@@ -122,7 +122,7 @@ class FakeEdenInstance:
         eden_checkout.save_config(config)
         eden_checkout.save_snapshot(snapshot)
 
-        if active and self._status == fb_status.ALIVE:
+        if active and self._status == fb303_status.ALIVE:
             # Report the mount in /proc/mounts
             dev_id = self._next_dev_id
             self._next_dev_id += 1
@@ -196,7 +196,11 @@ class FakeEdenInstance:
         return self._checkouts_by_path.keys()
 
     def mount(self, path: str) -> int:
-        assert self._status in (fb_status.ALIVE, fb_status.STARTING, fb_status.STOPPING)
+        assert self._status in (
+            fb303_status.ALIVE,
+            fb303_status.STARTING,
+            fb303_status.STOPPING,
+        )
         assert path in self._checkouts_by_path
         return 0
 
