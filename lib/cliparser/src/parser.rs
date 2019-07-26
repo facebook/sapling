@@ -484,9 +484,12 @@ impl<'a> Parser<'a> {
         if let Some(known_flag) = self.long_map.get(&flag_with_no) {
             match opts.get_mut(known_flag.long_name) {
                 Some(Value::OptBool()) => {
-                    opts.insert(known_flag.long_name.to_string(), Value::Bool(true));
+                    opts.insert(
+                        known_flag.long_name.to_string(),
+                        Value::Bool(!positive_flag),
+                    );
                 }
-                Some(Value::Bool(ref mut b)) => *b = true,
+                Some(Value::Bool(ref mut b)) => *b = !positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next());
                     value
@@ -1435,7 +1438,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_flag_starting_with_no_behaves_crazily() {
+    fn test_parse_flag_starting_with_no_with_positive_arg() {
         let definitions = vec![(
             ' ',
             "no-commit".into(),
@@ -1446,6 +1449,28 @@ mod tests {
         let parser = Parser::new(&flags);
 
         let args = create_args(vec!["--commit"]);
+
+        let result = parser.parse_args(&args).unwrap();
+
+        if let Value::Bool(no_commit) = result.get("no-commit").unwrap() {
+            assert!(!no_commit);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_parse_flag_starting_with_no_with_negative_arg() {
+        let definitions = vec![(
+            ' ',
+            "no-commit".into(),
+            "leaves the changes in the working copy".into(),
+            Value::Bool(false),
+        )];
+        let flags = Flag::from_flags(&definitions);
+        let parser = Parser::new(&flags);
+
+        let args = create_args(vec!["--no-commit"]);
 
         let result = parser.parse_args(&args).unwrap();
 

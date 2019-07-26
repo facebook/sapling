@@ -716,4 +716,4 @@ Test usage of `hg resolve` in case of conflict
 
   $ hg backout --commit 2
   removing 3
-  changeset cccc23d9d68f backed out, don't forget to commit.
+  changeset 3:a1896342fd6a backs out changeset 2:cccc23d9d68f
