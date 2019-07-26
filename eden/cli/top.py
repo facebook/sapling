@@ -94,12 +94,9 @@ class Top:
                     self.processes[pid] = temp
                 else:
                     cmd = counts.exeNamesByPid.get(pid, b"<unknown>")
-                    mount = os.path.basename(mount)
                     self.processes[pid] = Process(pid, cmd, mount)
 
-                self.processes[pid].access_counts.reads += access_counts.reads
-                self.processes[pid].access_counts.writes += access_counts.writes
-                self.processes[pid].access_counts.total += access_counts.total
+                self.processes[pid].increment_counts(access_counts)
 
     def update_rows(self):
         ordered_processes = reversed(list(self.processes.values()))
@@ -113,17 +110,7 @@ class Top:
             else:
                 aggregated_processes[key] = copy.deepcopy(process)
 
-        self.rows = []
-        for process in aggregated_processes.values():
-            row = (
-                process.pid,
-                format_cmd(process.cmd),
-                format_mount(process.mount),
-                process.access_counts.reads,
-                process.access_counts.writes,
-                process.access_counts.total,
-            )
-            self.rows.append(row)
+        self.rows = [process.get_tuple() for process in aggregated_processes.values()]
 
     def render(self, stdscr):
         stdscr.clear()
@@ -176,8 +163,8 @@ class Top:
 class Process:
     def __init__(self, pid, cmd, mount):
         self.pid = pid
-        self.cmd = cmd
-        self.mount = mount
+        self.cmd = format_cmd(cmd)
+        self.mount = format_mount(mount)
         self.access_counts = AccessCounts(0, 0, 0)
 
     def get_key(self):
@@ -185,10 +172,22 @@ class Process:
 
     def aggregate(self, other):
         self.pid = other.pid
+        self.increment_counts(other.access_counts)
 
-        self.access_counts.reads += other.access_counts.reads
-        self.access_counts.writes += other.access_counts.writes
-        self.access_counts.total += other.access_counts.total
+    def increment_counts(self, access_counts):
+        self.access_counts.reads += access_counts.reads
+        self.access_counts.writes += access_counts.writes
+        self.access_counts.total += access_counts.total
+
+    def get_tuple(self):
+        return (
+            self.pid,
+            self.cmd,
+            self.mount,
+            self.access_counts.reads,
+            self.access_counts.writes,
+            self.access_counts.total,
+        )
 
 
 def format_cmd(cmd):
@@ -207,4 +206,6 @@ def format_cmd(cmd):
 
 
 def format_mount(mount):
-    return os.fsdecode(mount)[:MOUNT_WIDTH]
+    mount = os.path.basename(mount)
+    mount = os.fsdecode(mount)
+    return mount[:MOUNT_WIDTH]
