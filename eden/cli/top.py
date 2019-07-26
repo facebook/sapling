@@ -19,7 +19,7 @@ from . import cmd_util
 
 
 PID_WIDTH = 7
-CMD_WIDTH = 20
+CMD_WIDTH = 25
 MOUNT_WIDTH = 15
 READS_WIDTH = 10
 WRITES_WIDTH = 11
@@ -191,18 +191,17 @@ class Process:
 
 
 def format_cmd(cmd):
-    args = os.fsdecode(cmd).split("\x00", 2)
+    args = os.fsdecode(cmd).split("\x00", 1)
 
     # Focus on just the basename as the paths can be quite long
-    cmd = os.path.basename(args[0])[:CMD_WIDTH]
+    cmd = os.path.basename(args[0])
 
-    # Show cmdline args too, provided they fit in the remaining space
-    remaining_space = CMD_WIDTH - len(cmd) - len(" ")
-    if len(args) > 1 and remaining_space > 0:
-        arg_str = args[1].replace("\x00", " ")[:remaining_space]
+    # Show cmdline args too, if they exist
+    if len(args) > 1:
+        arg_str = args[1].replace("\x00", " ")
         cmd += f" {arg_str}"
 
-    return cmd
+    return cmd[:CMD_WIDTH]
 
 
 def format_mount(mount):
