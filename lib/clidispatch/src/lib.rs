@@ -5,4 +5,8 @@
 
 #![allow(dead_code)]
 
+pub mod command;
 pub mod dispatch;
+pub mod errors;
+pub mod io;
+pub mod repo;
