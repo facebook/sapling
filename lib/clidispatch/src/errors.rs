@@ -37,9 +37,9 @@ pub enum DispatchError {
     ProfileFlagNotSupported,
     #[fail(display = "Programmer error occured:  {}", root_cause)]
     ProgrammingError { root_cause: String },
-    #[fail(display = "repository {} not found!", path)]
+    #[fail(display = "abort: repository {} not found!", path)]
     RepoNotFound { path: String },
-    #[fail(display = "no repository found in '{}' (.hg not found)!", cwd)]
+    #[fail(display = "abort: no repository found in '{}' (.hg not found)!", cwd)]
     RepoRequired { cwd: String },
     #[fail(
         display = "abort: .hg/sharedpath points to nonexistent directory {}!",

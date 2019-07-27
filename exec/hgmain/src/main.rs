@@ -14,6 +14,11 @@ mod chg;
 #[cfg(feature = "with_chg")]
 use chg::maybe_call_chg;
 
+mod commands;
+use commands::{create_dispatcher, dispatch};
+
+use std::env;
+
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -47,7 +52,21 @@ fn main() {
     #[cfg(windows)]
     disable_standard_handle_inheritability().unwrap();
 
-    #[cfg(feature = "with_chg")]
-    maybe_call_chg();
-    call_embedded_python();
+    let cwd = env::current_dir().unwrap();
+
+    let mut dispatcher = create_dispatcher();
+
+    match dispatch(&mut dispatcher) {
+        Ok(ret) => std::process::exit(ret as i32),
+        Err(_) => {
+            // Change the current dir back to the original so it is not surprising to the Python
+            // code.
+            env::set_current_dir(cwd).ok();
+
+            #[cfg(feature = "with_chg")]
+            maybe_call_chg();
+
+            call_embedded_python();
+        }
+    }
 }

@@ -118,7 +118,9 @@ impl Dispatcher {
 
     pub fn add_command(&mut self, command: CommandDefinition) {
         let name = command.name();
-        self.commands.insert(name.to_string(), command);
+        if !self.commands.contains_key(name) {
+            self.commands.insert(name.to_string(), command);
+        }
     }
 
     pub fn get_command_table(&self) -> Vec<&CommandDefinition> {
@@ -236,7 +238,6 @@ impl Dispatcher {
     }
 
     fn load_python_commands(&mut self, cfg: &ConfigSet) -> Result<(), DispatchError> {
-        println!("{:?}", cfg.get("commands", "names"));
         let config_commands = parse_list(
             cfg.get("commands", "names")
                 .ok_or_else(|| DispatchError::ConfigIssue)?,
@@ -367,7 +368,6 @@ impl Dispatcher {
 
     pub fn _dispatch(&mut self, args: Vec<String>, io: &mut IO) -> Result<u8, DispatchError> {
         let early_result = self.early_parse(&args)?;
-        println!("hi");
 
         let early_opts = early_result.opts();
 

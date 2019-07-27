@@ -7,6 +7,9 @@ build = "build.rs"
 [dependencies]
 libc = "0.2"
 dirs = "1.0"
+clidispatch = { path = "../../lib/clidispatch" }
+cliparser = { path = "../../lib/cliparser" }
+configparser = { path = "../../lib/configparser" }
 
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}

@@ -113,7 +113,6 @@ fn parse_command(
 
     Ok((arguments, options))
 }
-
 fn expand_args(
     py: Python,
     config: config,

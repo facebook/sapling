@@ -147,18 +147,18 @@ profiler extension could be loaded before other extensions
   otherextension: loaded
   fooprof: loaded
   foo
-  $ HGPROF=fooprof hg root --profile
+  $ HGPROF=fooprof hg log -r null -T "foo\n" --profile
   fooprof: loaded
   fooprof: start profile
   otherextension: loaded
-  $TESTTMP/b
+  foo
   fooprof: end profile
 
-  $ HGPROF=other hg root --profile 2>&1 | head -n 2
+  $ HGPROF=other hg log -r null -T "foo\n" --profile 2>&1 | head -n 2
   otherextension: loaded
   unrecognized profiler 'other' - ignored
 
-  $ HGPROF=unknown hg root --profile 2>&1 | head -n 1
+  $ HGPROF=unknown hg log -r null -T "foo\n" --profile 2>&1 | head -n 1
   unrecognized profiler 'unknown' - ignored
 
   $ cd ..

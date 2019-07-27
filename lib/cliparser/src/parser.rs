@@ -3,10 +3,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 use crate::utils::get_prefix_bounds;
+
+#[cfg(feature = "python")]
 use cpython::{
     FromPyObject, PyBool, PyInt, PyList, PyObject, PyResult, PyString, Python, PythonObject,
     ToPyObject,
 };
+#[cfg(feature = "python")]
+use cpython_ext::Bytes;
 use failure::Fail;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
@@ -110,8 +114,7 @@ impl Value {
     }
 }
 
-use cpython_ext::Bytes;
-
+#[cfg(feature = "python")]
 impl ToPyObject for Value {
     type ObjectType = PyObject;
 
@@ -132,6 +135,7 @@ impl ToPyObject for Value {
     }
 }
 
+#[cfg(feature = "python")]
 impl<'source> FromPyObject<'source> for Value {
     fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
         if let Ok(b) = obj.cast_as::<PyBool>(py) {
@@ -141,7 +145,6 @@ impl<'source> FromPyObject<'source> for Value {
         if let Ok(_l) = obj.cast_as::<PyList>(py) {
             return Ok(Value::List(Vec::new()));
         }
-
         if let Ok(s) = obj.cast_as::<PyString>(py) {
             return Ok(Value::Str(s.to_string(py).unwrap().to_string()));
         }
@@ -154,20 +157,20 @@ impl<'source> FromPyObject<'source> for Value {
     }
 }
 
-impl From<Value> for String {
-    fn from(v: Value) -> Self {
-        match v {
-            Value::Str(s) => s,
-            _ => panic!("programming error:  {:?} was converted to String", v),
-        }
-    }
-}
-
 impl From<Value> for i64 {
     fn from(v: Value) -> Self {
         match v {
             Value::Int(i) => i,
             _ => panic!("programming error:  {:?} was converted to i64", v),
+        }
+    }
+}
+
+impl From<Value> for String {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Str(s) => s,
+            _ => panic!("programming error:  {:?} was converted to String", v),
         }
     }
 }
