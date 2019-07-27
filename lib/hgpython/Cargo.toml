@@ -5,6 +5,8 @@ edition = "2018"
 
 [dependencies]
 libc = "0.2"
+clidispatch = { path = "../clidispatch" }
+cliparser = { path = "../cliparser" }
 
 [dependencies.encoding]
 path = "../encoding"

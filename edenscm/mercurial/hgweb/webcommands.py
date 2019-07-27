@@ -12,7 +12,6 @@ import mimetypes
 import os
 import re
 
-from . import webutil
 from .. import (
     archival,
     dagop,
@@ -29,6 +28,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import hex, short
+from . import webutil
 from .common import (
     HTTP_FORBIDDEN,
     HTTP_NOT_FOUND,
@@ -1416,7 +1416,10 @@ def graph(web, req, tmpl):
 
 
 def _getdoc(e):
-    doc = e[0].__doc__
+    if isinstance(e[0], str):
+        doc = e[0]
+    else:
+        doc = e[0].__doc__
     if doc:
         doc = _(doc).partition("\n")[0]
     else:

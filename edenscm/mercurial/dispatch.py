@@ -852,9 +852,16 @@ class cmdalias(object):
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd) :]
-            self.cmdtemplate = self.fn.cmdtemplate
-            self.norepo = self.fn.norepo
-            self.__doc__ = self.fn.__doc__
+            if self.fn:
+                if util.safehasattr(self.fn, "cmdtemplate"):
+                    self.cmdtemplate = self.fn.cmdtemplate
+                if util.safehasattr(self.fn, "norepo"):
+                    self.norepo = self.fn.norepo
+                if util.safehasattr(self.fn, "__doc__"):
+                    if isinstance(self.fn, str):
+                        self.__doc__ = self.fn
+                    else:
+                        self.__doc__ = self.fn.__doc__
 
         except error.UnknownCommand:
             self.badalias = _("alias '%s' resolves to unknown command '%s'") % (

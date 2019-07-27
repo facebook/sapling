@@ -2,7 +2,12 @@
 use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
-use cpython::{exc, NoArgs, ObjectProtocol, PyResult, Python, PythonObject};
+use clidispatch::dispatch::Dispatcher;
+use cliparser::parser::Value;
+use cpython::{
+    exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyObject, PyResult, PyTuple, Python,
+    PythonObject, ToPyObject,
+};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
@@ -47,16 +52,88 @@ impl HgPython {
             .collect()
     }
 
-    pub fn run_py(&self, py: Python<'_>) -> PyResult<()> {
+    pub fn run_py(&self, py: Python<'_>, dispatcher: Dispatcher) -> PyResult<()> {
+        self.set_command_table(py, dispatcher)?;
         let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
         entry_point_mod.call(py, "run", NoArgs, None)?;
         Ok(())
     }
 
-    pub fn run(&self) -> i32 {
+    pub fn set_command_table(&self, py: Python<'_>, dispatcher: Dispatcher) -> PyResult<()> {
+        let table_mod = py.import("edenscm.mercurial.commands")?;
+        let table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
+
+        let rust_commands = dispatcher.get_command_table();
+
+        for cmd in rust_commands {
+            let command = cmd.clone();
+            let command_name = command.name().clone();
+            let name = PyBytes::new(py, command_name.as_bytes()).into_object();
+
+            if command.is_python() {
+                continue;
+            }
+
+            // If there is an entry in the table already,
+            // the command exists in both Rust and Python.
+            // We do not want to overwrite the Python command
+            match table.get_item(py, &name) {
+                Some(_) => continue,
+                None => (),
+            }
+
+            let mut vec = Vec::new();
+            for flagdef in command.flags() {
+                let flag = flagdef.clone();
+
+                let short = if flag.0 == ' ' {
+                    PyBytes::new(py, "".to_string().as_bytes()).into_object()
+                } else {
+                    PyBytes::new(py, flag.0.to_string().as_bytes()).into_object()
+                };
+
+                let long = PyBytes::new(py, flag.1.clone().as_bytes()).into_object();
+
+                let desc = PyBytes::new(py, flag.2.clone().as_bytes()).into_object();
+
+                let val: PyObject = match flag.3 {
+                    Value::OptBool() => py.None().into_object(),
+                    Value::Bool(b) => b.to_py_object(py).into_object(),
+                    Value::Str(s) => PyBytes::new(py, s.as_bytes()).into_object(),
+                    Value::Int(i) => i.to_py_object(py).into_object(),
+                    Value::List(vec) => {
+                        let converted: Vec<PyBytes> = vec
+                            .into_iter()
+                            .map(|s| PyBytes::new(py, s.as_bytes()))
+                            .collect();
+                        converted.to_py_object(py).into_object()
+                    }
+                };
+
+                vec.push(PyTuple::new(py, &[short, long, val, desc]));
+            }
+            let doc_opt = command.doc().clone();
+            let doc: PyObject = match doc_opt {
+                Some(doc_string) => PyBytes::new(py, doc_string.as_bytes())
+                    .to_py_object(py)
+                    .into_object(),
+                None => py.None().into_object(),
+            };
+
+            table.set_item(
+                py,
+                name,
+                PyTuple::new(py, &[doc, vec.to_py_object(py).into_object()]),
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn run(&self, dispatcher: Dispatcher) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_py(py) {
+        match self.run_py(py, dispatcher) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an

@@ -37,6 +37,8 @@ pub fn expand_aliases(
         arg = replace_prefix(command_map, arg)?;
     }
 
+    let original_arg = arg.clone();
+
     let mut visited: HashMap<_, usize> = HashMap::new();
     let mut expanded = Vec::new();
 
@@ -69,6 +71,10 @@ pub fn expand_aliases(
 
                 if parts.len() == 0 {
                     break;
+                }
+
+                if parts[0].starts_with("!") {
+                    return Ok((vec![original_arg], Vec::new()));
                 }
                 let len = parts.len() - 1;
 

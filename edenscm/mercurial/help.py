@@ -467,6 +467,7 @@ class _helpdispatch(object):
 
         # description
         doc = gettext(pycompat.getdoc(entry[0]))
+
         if not doc:
             doc = _("(no help text available)")
         if util.safehasattr(entry[0], "definition"):  # aliased command
@@ -522,7 +523,7 @@ class _helpdispatch(object):
             )
 
         # subcommands
-        if entry[0].subcommands:
+        if util.safehasattr(entry[0], "subcommands") and entry[0].subcommands:
             rst.extend(
                 makesubcmdlist(
                     cmd,

@@ -195,6 +195,8 @@ if ispy3:
     def getdoc(obj):
         """Get docstring as bytes; may be None so gettext() won't confuse it
         with _('')"""
+        if isinstance(obj, str):
+            return obj
         doc = getattr(obj, u"__doc__", None)
         if doc is None:
             return doc
@@ -291,6 +293,8 @@ else:
     fsdecode = identity
 
     def getdoc(obj):
+        if isinstance(obj, str):
+            return obj
         return getattr(obj, "__doc__", None)
 
     def _getoptbwrapper(orig, args, shortlist, namelist):

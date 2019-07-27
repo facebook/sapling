@@ -515,6 +515,44 @@ Test the textwidth config option
   
   (some details hidden, use --verbose to show
   complete help)
+Test help on a self-referencing alias that is a rust command
+
+  $ hg --config "alias.root=root --shared" help root
+  hg root
+  
+  alias for: hg root --shared
+  
+  print the root (top) of the current working directory
+  
+      Print the root directory of the current repository.
+  
+      Returns 0 on success.
+  
+  defined by: --config
+  
+  Options:
+  
+    --shared show root of the shared repo
+  
+  (some details hidden, use --verbose to show complete help)
+  $ hg --config "alias.root=root --shared" root -h
+  hg root
+  
+  alias for: hg root --shared
+  
+  print the root (top) of the current working directory
+  
+      Print the root directory of the current repository.
+  
+      Returns 0 on success.
+  
+  defined by: --config
+  
+  Options:
+  
+    --shared show root of the shared repo
+  
+  (some details hidden, use --verbose to show complete help)
 
 Test help option with version option
 

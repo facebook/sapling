@@ -1,11 +1,13 @@
 // Copyright Facebook, Inc. 2018
 
+extern crate clidispatch;
 #[cfg(feature = "with_chg")]
 extern crate dirs;
 extern crate encoding;
 extern crate hgpython;
 #[cfg(feature = "with_chg")]
 extern crate libc;
+use clidispatch::dispatch::Dispatcher;
 use hgpython::HgPython;
 
 mod buildinfo;
@@ -26,10 +28,10 @@ use windows::disable_standard_handle_inheritability;
 
 /// Execute a command, using an embedded interpreter
 /// This function does not return
-fn call_embedded_python() {
+fn call_embedded_python(dispatcher: Dispatcher) {
     let code = {
         let hgpython = HgPython::new();
-        hgpython.run()
+        hgpython.run(dispatcher)
     };
     std::process::exit(code);
 }
@@ -58,7 +60,7 @@ fn main() {
 
     match dispatch(&mut dispatcher) {
         Ok(ret) => std::process::exit(ret as i32),
-        Err(_) => {
+        Err(_e) => {
             // Change the current dir back to the original so it is not surprising to the Python
             // code.
             env::set_current_dir(cwd).ok();
@@ -66,7 +68,7 @@ fn main() {
             #[cfg(feature = "with_chg")]
             maybe_call_chg();
 
-            call_embedded_python();
+            call_embedded_python(dispatcher);
         }
     }
 }
