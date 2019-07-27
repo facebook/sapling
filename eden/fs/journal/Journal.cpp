@@ -90,13 +90,6 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
 
     // Check memory before adding the new delta to make sure we always
     // have at least one delta (other than when the journal starts up)
-    while (!deltaState->deltas.empty() && deltaState->stats &&
-           deltaState->stats->memoryUsage > deltaState->memoryLimit) {
-      deltaState->stats->entryCount--;
-      deltaState->stats->memoryUsage -=
-          deltaState->deltas.front().estimateMemoryUsage();
-      deltaState->deltas.pop_front();
-    }
     truncateIfNecessary(deltaState);
 
     // We will compact the delta if possible. We can compact the delta if it is
