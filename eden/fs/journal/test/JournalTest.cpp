@@ -240,6 +240,35 @@ TEST(Journal, truncated_read_stats) {
       2, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
 }
 
+TEST(Journal, files_accumulated_stats) {
+  // Since each test is run on a single thread we can check that the stats of
+  // this thread match up with what we would expect.
+  auto edenStats = std::make_shared<EdenStats>();
+  Journal journal(edenStats);
+  journal.recordCreated("test1.txt"_relpath);
+  journal.recordRemoved("test1.txt"_relpath);
+  ASSERT_EQ(
+      0, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  ASSERT_EQ(0, journal.getStats()->maxFilesAccumulated);
+  // Empty Accumulate range, should be 0 files accumulated
+  journal.accumulateRange(3);
+  ASSERT_EQ(
+      0, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  ASSERT_EQ(0, journal.getStats()->maxFilesAccumulated);
+  journal.accumulateRange(2);
+  ASSERT_EQ(
+      1, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  ASSERT_EQ(1, journal.getStats()->maxFilesAccumulated);
+  journal.accumulateRange(1);
+  ASSERT_EQ(
+      3, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  ASSERT_EQ(2, journal.getStats()->maxFilesAccumulated);
+  journal.accumulateRange(2);
+  ASSERT_EQ(
+      4, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  ASSERT_EQ(2, journal.getStats()->maxFilesAccumulated);
+}
+
 TEST(Journal, memory_usage) {
   Journal journal(std::make_shared<EdenStats>());
   auto stats = journal.getStats();

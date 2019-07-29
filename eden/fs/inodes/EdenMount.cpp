@@ -909,6 +909,8 @@ std::string EdenMount::getCounterName(CounterName name) {
       return "journal." + base + ".count";
     case CounterName::JOURNAL_DURATION:
       return "journal." + base + ".duration_secs";
+    case CounterName::JOURNAL_MAX_FILES_ACCUMULATED:
+      return "journal." + base + ".files_accumulated.max";
   }
   EDEN_BUG() << "unknown counter name " << static_cast<int>(name);
   folly::assume_unreachable();

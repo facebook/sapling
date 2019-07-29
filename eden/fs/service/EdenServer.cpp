@@ -778,6 +778,12 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         auto stats = edenMount->getJournal().getStats();
         return stats ? stats->getDurationInSeconds() : 0;
       });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED),
+      [edenMount] {
+        auto stats = edenMount->getJournal().getStats();
+        return stats ? stats->maxFilesAccumulated : 0;
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -795,6 +801,8 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::JOURNAL_ENTRIES));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_DURATION));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

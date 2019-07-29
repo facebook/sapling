@@ -208,16 +208,17 @@ size_t Journal::getMemoryLimit() const {
   return deltaState->memoryLimit;
 }
 
-std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() const {
+std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() {
   return accumulateRange(1);
 }
 
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
-    SequenceNumber from) const {
+    SequenceNumber from) {
   DCHECK(from > 0);
   std::unique_ptr<JournalDeltaRange> result = nullptr;
 
-  auto deltaState = deltaState_.rlock();
+  size_t filesAccumulated = 0;
+  auto deltaState = deltaState_.ulock();
   // If this is going to be truncated handle it before iterating.
   if (!deltaState->deltas.empty() &&
       deltaState->deltas.front().sequenceID > from) {
@@ -228,7 +229,8 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
         deltaState->deltas,
         from,
         std::nullopt,
-        [&result](const JournalDelta& current) -> void {
+        [&result, &filesAccumulated](const JournalDelta& current) -> void {
+          ++filesAccumulated;
           if (!result) {
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
@@ -265,9 +267,19 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
         });
   }
 
-  if (result && result->isTruncated) {
+  if (result) {
     if (edenStats_) {
-      edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(1);
+      if (result->isTruncated) {
+        edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(
+            1);
+      }
+      edenStats_->getJournalStatsForCurrentThread().filesAccumulated.addValue(
+          filesAccumulated);
+    }
+    auto deltaStateWriter = deltaState.moveFromUpgradeToWrite();
+    if (deltaStateWriter->stats) {
+      deltaStateWriter->stats->maxFilesAccumulated = std::max(
+          deltaStateWriter->stats->maxFilesAccumulated, filesAccumulated);
     }
   }
 

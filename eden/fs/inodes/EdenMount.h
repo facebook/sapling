@@ -92,6 +92,10 @@ enum class CounterName {
    * Represents the duration of the journal in seconds end to end
    */
   JOURNAL_DURATION,
+  /**
+   * Represents the maximum deltas iterated over in the Journal's forEachDelta
+   */
+  JOURNAL_MAX_FILES_ACCUMULATED
 };
 
 /**

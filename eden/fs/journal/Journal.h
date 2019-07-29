@@ -27,6 +27,7 @@ struct JournalStats {
   size_t memoryUsage = 0;
   std::chrono::steady_clock::time_point earliestTimestamp;
   std::chrono::steady_clock::time_point latestTimestamp;
+  size_t maxFilesAccumulated = 0;
   uint64_t getDurationInSeconds() {
     return std::chrono::duration_cast<std::chrono::seconds>(
                std::chrono::steady_clock::now() - earliestTimestamp)
@@ -140,8 +141,8 @@ class Journal {
    * If the limitSequence means that no deltas will match, returns nullptr.
    * */
   std::unique_ptr<JournalDeltaRange> accumulateRange(
-      SequenceNumber limitSequence) const;
-  std::unique_ptr<JournalDeltaRange> accumulateRange() const;
+      SequenceNumber limitSequence);
+  std::unique_ptr<JournalDeltaRange> accumulateRange();
 
   /** Gets a vector of the modifications (newer deltas having lower indices)
    * done by the latest 'limit' deltas, if the
