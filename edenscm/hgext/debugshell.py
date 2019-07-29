@@ -9,16 +9,15 @@
 from __future__ import absolute_import
 
 import code
-import edenscm
-import edenscmnative
 import os
 import sys
 
+import edenscm
+import edenscmnative
 from edenscm import hgext, mercurial
-from edenscm.mercurial import demandimport, registrar, thirdparty
+from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
 
-from edenscmnative import bindings
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -30,7 +29,7 @@ def _assignobjects(objects, repo):
             "m": mercurial,
             "e": edenscm,
             "n": edenscmnative,
-            "b": bindings,
+            "b": edenscmnative.bindings,
             "x": hgext,
             "mercurial": mercurial,
         }
@@ -74,9 +73,6 @@ def debugshell(ui, repo, **opts):
 
     _assignobjects(locals(), repo)
 
-    # demandimport is incompatible with many IPython dependencies, both at
-    # import time and at runtime.
-    with demandimport.deactivated():
-        import IPython
+    import IPython
 
-        IPython.embed(header=bannermsg)
+    IPython.embed(header=bannermsg)

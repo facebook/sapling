@@ -59,6 +59,8 @@ ignore = [
     "builtins",
     "urwid.command_map",  # for pudb
     "_thread",  # For RLock
+    "_scandir",  # for IPython
+    "collections.abc",  # for IPython - pickleshare
 ]
 
 _pypy = "__pypy__" in sys.builtin_module_names
