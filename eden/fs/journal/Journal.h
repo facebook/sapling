@@ -60,7 +60,10 @@ struct JournalDeltaInfo {
 class Journal {
  public:
   explicit Journal(std::shared_ptr<EdenStats> edenStats)
-      : edenStats_{std::move(edenStats)} {}
+      : edenStats_{std::move(edenStats)} {
+    /** Add 0 so that this counter shows up in ODS */
+    edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(0);
+  }
 
   /// It is almost always a mistake to copy a Journal.
   Journal(const Journal&) = delete;

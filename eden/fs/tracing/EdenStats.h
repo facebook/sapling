@@ -210,7 +210,10 @@ class HgImporterThreadStats : public EdenThreadStatsBase {
   Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
 };
 
-class JournalThreadStats : public EdenThreadStatsBase {};
+class JournalThreadStats : public EdenThreadStatsBase {
+ public:
+  Timeseries truncatedReads{this, "journal.truncated_reads", fb303::SUM};
+};
 
 } // namespace eden
 } // namespace facebook

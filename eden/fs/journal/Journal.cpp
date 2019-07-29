@@ -216,53 +216,61 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber from) const {
   DCHECK(from > 0);
   std::unique_ptr<JournalDeltaRange> result = nullptr;
+
   auto deltaState = deltaState_.rlock();
   // If this is going to be truncated handle it before iterating.
   if (!deltaState->deltas.empty() &&
       deltaState->deltas.front().sequenceID > from) {
     result = std::make_unique<JournalDeltaRange>();
     result->isTruncated = true;
-    return result;
-  }
-  forEachDelta(
-      deltaState->deltas,
-      from,
-      std::nullopt,
-      [&result](const JournalDelta& current) -> void {
-        if (!result) {
-          result = std::make_unique<JournalDeltaRange>();
-          result->toSequence = current.sequenceID;
-          result->toTime = current.time;
-          result->toHash = current.toHash;
-        }
-        // Capture the lower bound.
-        result->fromSequence = current.sequenceID;
-        result->fromTime = current.time;
-        result->fromHash = current.fromHash;
-
-        // Merge the unclean status list
-        result->uncleanPaths.insert(
-            current.uncleanPaths.begin(), current.uncleanPaths.end());
-
-        for (auto& entry : current.getChangedFilesInOverlay()) {
-          auto& name = entry.first;
-          auto& currentInfo = entry.second;
-          auto* resultInfo =
-              folly::get_ptr(result->changedFilesInOverlay, name);
-          if (!resultInfo) {
-            result->changedFilesInOverlay.emplace(name, currentInfo);
-          } else {
-            if (resultInfo->existedBefore != currentInfo.existedAfter) {
-              auto event1 = eventCharacterizationFor(currentInfo);
-              auto event2 = eventCharacterizationFor(*resultInfo);
-              XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
-                        << ", " << event2 << " sequence";
-            }
-
-            resultInfo->existedBefore = currentInfo.existedBefore;
+  } else {
+    forEachDelta(
+        deltaState->deltas,
+        from,
+        std::nullopt,
+        [&result](const JournalDelta& current) -> void {
+          if (!result) {
+            result = std::make_unique<JournalDeltaRange>();
+            result->toSequence = current.sequenceID;
+            result->toTime = current.time;
+            result->toHash = current.toHash;
           }
-        }
-      });
+          // Capture the lower bound.
+          result->fromSequence = current.sequenceID;
+          result->fromTime = current.time;
+          result->fromHash = current.fromHash;
+
+          // Merge the unclean status list
+          result->uncleanPaths.insert(
+              current.uncleanPaths.begin(), current.uncleanPaths.end());
+
+          for (auto& entry : current.getChangedFilesInOverlay()) {
+            auto& name = entry.first;
+            auto& currentInfo = entry.second;
+            auto* resultInfo =
+                folly::get_ptr(result->changedFilesInOverlay, name);
+            if (!resultInfo) {
+              result->changedFilesInOverlay.emplace(name, currentInfo);
+            } else {
+              if (resultInfo->existedBefore != currentInfo.existedAfter) {
+                auto event1 = eventCharacterizationFor(currentInfo);
+                auto event2 = eventCharacterizationFor(*resultInfo);
+                XLOG(ERR) << "Journal for " << name << " holds invalid "
+                          << event1 << ", " << event2 << " sequence";
+              }
+
+              resultInfo->existedBefore = currentInfo.existedBefore;
+            }
+          }
+        });
+  }
+
+  if (result && result->isTruncated) {
+    if (edenStats_) {
+      edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(1);
+    }
+  }
+
   return result;
 }
 
