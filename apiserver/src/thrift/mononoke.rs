@@ -286,13 +286,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         .map_err(move |e| IsAncestorExn::e(e.into()))
         .inspect_result({
             move |resp| {
-                let mut scuba = ctx.scuba().clone();
-
-                if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-                    scuba.add("extra_context", counters);
-                };
-
-                log_response_size(scuba, resp.map(|_| 0).unwrap_or(0));
+                log_response_size(ctx.scuba().clone(), resp.map(|_| 0).unwrap_or(0));
             }
         })
         .boxify()

@@ -597,7 +597,7 @@ impl MononokeRepo {
 
         query_fut.timed({
             move |stats, resp| {
-                log_result(context.scuba().clone(), resp, &stats, &query);
+                log_result(&context, context.scuba().clone(), resp, &stats, &query);
 
                 Ok(())
             }
@@ -606,11 +606,16 @@ impl MononokeRepo {
 }
 
 fn log_result(
+    ctx: &CoreContext,
     mut scuba: ScubaSampleBuilder,
     resp: Result<&MononokeRepoResponse, &ErrorKind>,
     stats: &FutureStats,
     query: &serde_json::value::Value,
 ) {
+    if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+        scuba.add("extra_context", counters);
+    };
+
     scuba
         .add_future_stats(&stats)
         .add("response_time", stats.completion_time.as_micros_unchecked())
