@@ -73,7 +73,14 @@ def showhistory(ui, repo, **opts):
 
             displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
             cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
-            repo.ui.status(_("<-: newer  " "->: older  " "q: abort  \n"))
+            repo.ui.status(
+                _(
+                    "<-: newer  "
+                    "->: older  "
+                    "q: abort  \n"
+                    "a: 1 day forward  d: 1 day back \n"
+                )
+            )
             return ui.popbuffer()
 
         def rightarrow(self):
@@ -81,6 +88,31 @@ def showhistory(ui, repo, **opts):
 
         def leftarrow(self):
             self.index -= 1
+
+        def apress(self):
+            if self.index == -1:
+                return
+            else:
+                mintimestamp = self.versions[self.index]["timestamp"] + 86400
+            while True:
+                self.index -= 1
+                if self.index <= -1:
+                    break
+                if self.versions[self.index]["timestamp"] >= mintimestamp:
+                    break
+
+        def dpress(self):
+            if self.index == -1:
+                maxtimestamp = int(time.time()) - 86400
+            else:
+                maxtimestamp = self.versions[self.index]["timestamp"] - 86400
+            while True:
+                self.index += 1
+                if (
+                    self.index == len(self.versions)
+                    or self.versions[self.index]["timestamp"] <= maxtimestamp
+                ):
+                    break
 
         def enter(self):
             return

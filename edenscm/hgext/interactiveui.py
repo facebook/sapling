@@ -126,6 +126,14 @@ class viewframe(object):
         # handle user keypress right arrow
         pass
 
+    def apress():
+        # handle user keypress 'a'
+        pass
+
+    def dpress():
+        # handle user keypress 'b'
+        pass
+
 
 def view(viewobj):
     done = False
@@ -150,6 +158,10 @@ def view(viewobj):
             viewobj.rightarrow()
         if repr(output) == "'\\x1b[D'":
             viewobj.leftarrow()
+        if repr(output) == "'a'":
+            viewobj.apress()
+        if repr(output) == "'d'":
+            viewobj.dpress()
         linecount = s.count("\n")
         s = viewobj.render()
         newlinecount = s.count("\n")
