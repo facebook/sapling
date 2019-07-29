@@ -436,12 +436,16 @@ configitem("hgsubversion", "rewritesvncommitwithhghash", default=False)
 # this significantly speed up the push but is not usable in multi-writer case.
 # only used for HG -> SVN reverse sync.
 configitem("hgsubversion", "skippostpushpulls", default=False)
+# If this configuration is true, the `svnrev` template keyword would be
+# effectively disabled and querying for it would return nothing.
+configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
 
 
 @templatekeyword("svnrev")
 def svnrevkw(repo, ctx, **kwargs):
     """:svnrev: String. Converted subversion revision number."""
-    return _svnrevkw(repo, ctx, **kwargs)
+    if not repo.ui.configbool("hgsubversion", "disablesvnrevkeyword"):
+        return _svnrevkw(repo, ctx, **kwargs)
 
 
 def _svnrevkw(repo, ctx, **kwargs):

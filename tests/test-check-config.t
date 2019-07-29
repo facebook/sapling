@@ -85,6 +85,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsql.user (str)
   undocumented: hgsql.verbose (bool)
   undocumented: hgsql.verifybatchsize (int)
+  undocumented: hgsubversion.disablesvnrevkeyword (bool)
   undocumented: hgsubversion.externals (str) ["svnexternals"]
   undocumented: hgsubversion.failoninvalidreplayfile (bool)
   undocumented: hgsubversion.failonmissing (bool)
