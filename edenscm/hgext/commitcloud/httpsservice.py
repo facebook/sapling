@@ -327,7 +327,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         return True, baseservice.References(newversion, None, None, None, None, None)
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
-    def getsmartlog(self, reponame, workspace, repo):
+    def getsmartlog(self, reponame, workspace, repo, limit):
         self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
 
         path = "/commit_cloud/get_smartlog"
@@ -349,7 +349,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
         #   "smartlog": <thrift structure SmartlogData serialized to json using Thrift JSON serialization>
         # }
         smartlog = response["smartlog"]
-
+        if limit != 0:
+            cutoff = int(time.time()) - limit
+            smartlog["nodes"] = list(
+                filter(lambda x: x["date"] >= cutoff, smartlog["nodes"])
+            )
         self.ui.debug(
             "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
             component="commitcloud",
@@ -362,7 +366,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise ccerror.UnexpectedError(self.ui, e)
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog By Version")
-    def getsmartlogbyversion(self, reponame, workspace, repo, date, version):
+    def getsmartlogbyversion(self, reponame, workspace, repo, date, version, limit):
         self.ui.debug("sending 'get_old_smartlog' request\n", component="commitcloud")
         path = "/commit_cloud/get_smartlog_by_version"
         if date:
@@ -386,6 +390,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
         #   "smartlog": <thrift structure SmartlogData serialized to json using Thrift JSON serialization>
         # }
         smartlog = response["smartlog"]
+        if limit != 0:
+            cutoff = smartlog["timestamp"] - limit
+            smartlog["nodes"] = list(
+                filter(lambda x: x["date"] >= cutoff, smartlog["nodes"])
+            )
 
         self.ui.debug(
             "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),

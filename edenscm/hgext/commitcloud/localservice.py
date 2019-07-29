@@ -133,7 +133,7 @@ class LocalService(baseservice.BaseService):
         self._save(data)
         return True, baseservice.References(newversion, None, None, None, None, None)
 
-    def getsmartlog(self, reponame, workspace, repo):
+    def getsmartlog(self, reponame, workspace, repo, limit):
         filename = os.path.join(self.path, "usersmartlogdata")
         if not os.path.exists(filename):
             nodes = {}
@@ -146,7 +146,7 @@ class LocalService(baseservice.BaseService):
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 
-    def getsmartlogbyversion(self, reponame, workspace, repo, date, version):
+    def getsmartlogbyversion(self, reponame, workspace, repo, date, version, limit):
         filename = os.path.join(self.path, "usersmartlogbyversiondata")
         if not os.path.exists(filename):
             nodes = {}

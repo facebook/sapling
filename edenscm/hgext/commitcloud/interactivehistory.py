@@ -32,13 +32,17 @@ def showhistory(ui, repo, **opts):
             ui = self.ui
             ui.pushbuffer()
             ui.status(_("Interactive Smartlog History\n\n"))
+            if opts.get("all"):
+                limit = 0
+            else:
+                limit = 2 * 604800  # two weeks
             if self.index == len(self.versions):
                 self.index = -1
             if self.index == -2:
                 self.index = len(self.versions) - 1
             if self.index == -1:
                 with progress.spinner(ui, _("fetching")):
-                    revdag = serv.getsmartlog(reponame, workspacename, repo)
+                    revdag = serv.getsmartlog(reponame, workspacename, repo, limit)
                 ui.status(_("Current Smartlog:\n\n"))
             else:
                 with progress.spinner(ui, _("fetching")):
@@ -48,6 +52,7 @@ def showhistory(ui, repo, **opts):
                         repo,
                         None,
                         self.versions[self.index]["version_number"],
+                        limit,
                     )
                 formatteddate = time.strftime(
                     "%Y-%m-%d %H:%M:%S", time.localtime(sltimestamp)
@@ -56,7 +61,6 @@ def showhistory(ui, repo, **opts):
                     _("Smartlog version %d \nsynced at %s\n\n")
                     % (slversion, formatteddate)
                 )
-
             template = "sl_cloud"
             smartlogstyle = ui.config("templatealias", template)
             if smartlogstyle:

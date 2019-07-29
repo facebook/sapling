@@ -259,6 +259,7 @@ def cloudauth(ui, repo, **opts):
             None,
             "show interactive view for historical versions of smartlog",
         ),
+        ("", "all", None, "show all history in interactive history view"),
     ]
     + workspace.workspaceopts,
 )
@@ -294,11 +295,11 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
-            revdag = serv.getsmartlog(reponame, workspacename, repo)
+            revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
     else:
         with progress.spinner(ui, _("fetching")):
             revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
-                reponame, workspacename, repo, parseddate, version
+                reponame, workspacename, repo, parseddate, version, 0
             )
     if parseddate or version:
         formatteddate = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(sltimestamp))
