@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Expands all aliases accounting for circular references and prefix matching.
 ///
-/// * `cfg` - The alias mapping of alias name ( key ) -> alias value ( val ).
+/// * `lookup` - A function to expand a command name to another shell-like command.
 ///
 /// * `args` - The original arguments to resolve aliases from.
 /// The first argument should be the command name.
@@ -18,8 +18,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// is the in-order replacements that were made to get to the expanded arguments.  If the second
 /// vector is empty, no replacements were made.  If the second vector has arguments, the 0th index
 /// is what the user originally typed.
-pub fn expand_aliases(
-    cfg: &BTreeMap<String, String>,
+pub fn expand_aliases<S: ToString>(
+    lookup: impl Fn(&str) -> Option<S>,
     args: &[impl ToString],
 ) -> Result<(Vec<String>, Vec<String>), ParseError> {
     let mut replaced = Vec::new(); // keep track of what is replaced in-order
@@ -31,7 +31,8 @@ pub fn expand_aliases(
 
     let mut visited = HashSet::new();
 
-    while let Some(alias) = cfg.get(&command_name) {
+    while let Some(alias) = lookup(&command_name) {
+        let alias = alias.to_string();
         let bad_alias = || ParseError::IllformedAlias {
             name: command_name.clone(),
             value: alias.to_string(),
@@ -41,7 +42,7 @@ pub fn expand_aliases(
             return Err(ParseError::CircularReference { command_name });
         }
 
-        let parts: Vec<String> = split(alias).ok_or_else(bad_alias)?;
+        let parts: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
         let (next_command_name, next_args) = parts.split_first().ok_or_else(bad_alias)?;
         let next_command_name = next_command_name.to_string();
         replaced.push(command_name.clone());
@@ -136,8 +137,8 @@ mod tests {
 
     #[test]
     fn test_no_alias() {
-        let cfg = BTreeMap::new();
-        let (_expanded, replaced) = expand_aliases(&cfg, &["log"]).unwrap();
+        let cfg: BTreeMap<&'static str, &'static str> = BTreeMap::new();
+        let (_expanded, replaced) = expand_aliases(|x| cfg.get(x), &["log"]).unwrap();
         assert!(replaced.len() == 0);
     }
 
@@ -146,7 +147,7 @@ mod tests {
         let mut cfg = BTreeMap::new();
         cfg.insert("log".to_string(), "log -v".to_string());
 
-        let (expanded, replaced) = expand_aliases(&cfg, &["log"]).unwrap();
+        let (expanded, replaced) = expand_aliases(|x| cfg.get(x), &["log"]).unwrap();
         assert_eq!(expanded, vec!["log", "-v"]);
         assert_eq!(replaced, vec!["log"]);
     }
@@ -209,7 +210,7 @@ mod tests {
         cfg.insert("foo".to_string(), "log".to_string());
         cfg.insert("log".to_string(), "foo".to_string());
 
-        if let Err(err) = expand_aliases(&cfg, &["foo"]) {
+        if let Err(err) = expand_aliases(|x| cfg.get(x), &["foo"]) {
             let msg = format!("{}", err);
             assert_eq!(msg, "Alias foo resulted in a circular reference");
         } else {
@@ -224,7 +225,7 @@ mod tests {
         cfg.insert("b".to_string(), "c 2".to_string());
         cfg.insert("c".to_string(), "d 3".to_string());
 
-        let (expanded, _replaced) = expand_aliases(&cfg, &["a"]).unwrap();
+        let (expanded, _replaced) = expand_aliases(|x| cfg.get(x), &["a"]).unwrap();
 
         assert_eq!(expanded, vec!["d", "3", "2", "1"]);
     }
@@ -238,7 +239,7 @@ mod tests {
         cfg.insert("bar".to_string(), "oops".to_string());
         cfg.insert("log".to_string(), "log -v".to_string());
 
-        let (expanded, replaced) = expand_aliases(&cfg, &["foo"]).unwrap();
+        let (expanded, replaced) = expand_aliases(|x| cfg.get(x), &["foo"]).unwrap();
 
         assert_eq!(expanded, vec!["log", "-v", "bar"]);
         assert_eq!(replaced, vec!["foo", "log"]);
@@ -252,7 +253,7 @@ mod tests {
         cfg.insert("foo".to_string(), "foo -r foo -v foo foo".to_string());
         cfg.insert("bar".to_string(), "foo".to_string());
 
-        let (expanded, replaced) = expand_aliases(&cfg, &["bar"]).unwrap();
+        let (expanded, replaced) = expand_aliases(|x| cfg.get(x), &["bar"]).unwrap();
 
         assert_eq!(expanded, vec!["foo", "-r", "foo", "-v", "foo", "foo"]);
         assert_eq!(replaced, vec!["bar", "foo"]);
@@ -263,7 +264,7 @@ mod tests {
         let mut cfg = BTreeMap::new();
         cfg.insert("nodef".to_string(), "".to_string());
 
-        expand_aliases(&cfg, &["nodef"]).unwrap_err();
+        expand_aliases(|x| cfg.get(x), &["nodef"]).unwrap_err();
     }
 
 }

@@ -257,28 +257,7 @@ impl Dispatcher {
         Ok(())
     }
 
-    fn aliases(cfg: &ConfigSet) -> Result<BTreeMap<String, String>, DispatchError> {
-        let mut alias_map = BTreeMap::new();
-
-        let alias_keys = cfg.keys("alias");
-
-        for alias_key in alias_keys {
-            let key = String::from_utf8(alias_key.to_vec())
-                .map_err(|_| DispatchError::InvalidConfigEncoding)?;
-
-            let alias_val = cfg
-                .get("alias", alias_key)
-                .ok_or(DispatchError::InvalidConfigEncoding)?;
-
-            let val = String::from_utf8(alias_val.to_vec())
-                .map_err(|_| DispatchError::InvalidConfigEncoding)?;;
-            alias_map.insert(key, val);
-        }
-
-        Ok(alias_map)
-    }
-
-    fn command_map(&self, aliases: &BTreeMap<String, String>) -> BTreeMap<String, usize> {
+    fn command_map(&self, cfg: &ConfigSet) -> BTreeMap<String, usize> {
         let mut command_map = BTreeMap::new();
         let mut i = 0;
 
@@ -288,9 +267,11 @@ impl Dispatcher {
         }
         // adding aliases into the command map is what Python does, so copying this behavior
         // allows alias expansion to not behave differently for Rust or Python.
-        for (alias, _) in aliases {
-            command_map.insert(alias.to_string(), i);
-            i = i + 1
+        for name in cfg.keys("alias") {
+            if let Ok(name) = String::from_utf8(name.to_vec()) {
+                command_map.insert(name, i);
+                i = i + 1;
+            }
         }
 
         command_map
@@ -394,9 +375,12 @@ impl Dispatcher {
 
         self.load_python_commands(&config_set)?;
 
-        let alias_map = Dispatcher::aliases(&config_set)?;
+        let alias_lookup = |name: &str| {
+            let value = config_set.get("alias", name);
+            value.and_then(|v| String::from_utf8(v.to_vec()).ok())
+        };
 
-        let command_map = self.command_map(&alias_map);
+        let command_map = self.command_map(&config_set);
 
         let early_args = early_result.args();
 
@@ -417,7 +401,7 @@ impl Dispatcher {
             }
         }
 
-        let (expanded, replaced) = expand_aliases(&alias_map, &vec![first_arg.to_string()])
+        let (expanded, replaced) = expand_aliases(alias_lookup, &vec![first_arg.to_string()])
             .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
         let mut new_args = Vec::new();

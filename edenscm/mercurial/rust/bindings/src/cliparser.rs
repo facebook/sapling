@@ -122,16 +122,7 @@ fn expand_args(
     mut args: Vec<String>,
     strict: bool,
 ) -> PyResult<(Vec<PyBytes>, Vec<PyBytes>)> {
-    let mut alias_map = BTreeMap::new();
     let cfg = &config.get_cfg(py);
-    let alias_keys = cfg.keys("alias");
-
-    for alias_key in alias_keys {
-        let key = String::from_utf8(alias_key.to_vec()).unwrap();
-        let alias_val = cfg.get("alias", alias_key).unwrap();
-        let val = String::from_utf8(alias_val.to_vec()).unwrap();
-        alias_map.insert(key, val);
-    }
 
     if !strict && !args.is_empty() {
         // Expand args[0] from a prefix to a full command name
@@ -146,8 +137,13 @@ fn expand_args(
             expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }
 
+    let lookup = move |name: &str| {
+        let value = cfg.get("alias", name);
+        value.and_then(|v| String::from_utf8(v.to_vec()).ok())
+    };
+
     let (expanded_args, replaced_aliases) =
-        expand_aliases(&alias_map, &args).map_err(|e| map_to_python_err(py, e))?;
+        expand_aliases(lookup, &args).map_err(|e| map_to_python_err(py, e))?;
 
     let expanded_args: Vec<PyBytes> = expanded_args
         .into_iter()
