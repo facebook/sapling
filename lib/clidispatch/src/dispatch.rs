@@ -387,18 +387,18 @@ impl Dispatcher {
             .get(0)
             .ok_or_else(|| DispatchError::NoCommandFound)?;
 
-        let mut replace = 0;
-        for (idx, arg) in args.iter_mut().enumerate() {
-            if arg == first_arg {
-                // FIXME: DispatchError::AliasExpansionFailed should contain information about
-                // ambiguous commands.
-                let expanded = expand_prefix(&command_map, first_arg)
-                    .map_err(|_| DispatchError::AliasExpansionFailed)?;
-                *arg = expanded;
-                replace = idx;
-                break;
-            }
-        }
+        let replace = early_result.first_arg_index();
+
+        // This should hold true since `first_arg` is not empty (tested above).
+        // Therefore positional args is non-empty and first_arg_index should be
+        // an index in args.
+        debug_assert!(replace < args.len());
+        debug_assert_eq!(&args[replace], first_arg);
+        // FIXME: DispatchError::AliasExpansionFailed should contain information about
+        // ambiguous commands.
+        let command_name = expand_prefix(&command_map, first_arg)
+            .map_err(|_| DispatchError::AliasExpansionFailed)?;
+        args[replace] = command_name;
 
         let (expanded, _replaced) = expand_aliases(alias_lookup, &args[replace..])
             .map_err(|_| DispatchError::AliasExpansionFailed)?;

@@ -209,7 +209,11 @@ fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
     Ok(arguments)
 }
 
-fn parse(py: Python, args: Vec<String>, keep_sep: bool) -> PyResult<PyTuple> {
+fn parse(
+    py: Python,
+    args: Vec<String>,
+    keep_sep: bool,
+) -> PyResult<(Vec<Bytes>, HashMap<Bytes, PyObject>, usize)> {
     let parsing_options = OpenOptions::new()
         .flag_alias("repo", "repository")
         .keep_sep(keep_sep);
@@ -218,19 +222,14 @@ fn parse(py: Python, args: Vec<String>, keep_sep: bool) -> PyResult<PyTuple> {
     let parser = Parser::new(&flags).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
 
-    let arguments = result.args().clone().to_py_object(py).into_object();
-    let rust_opts = result.opts().clone();
-    let mut opts = HashMap::new();
+    let arguments = result.args().iter().cloned().map(Bytes::from).collect();
+    let opts = result
+        .opts()
+        .iter()
+        .map(|(k, v)| (Bytes::from(k.clone()), v.to_py_object(py).into_object()))
+        .collect();
 
-    for (key, value) in rust_opts {
-        let val: PyObject = value.to_py_object(py).into_object();
-        opts.insert(key, val);
-    }
-
-    Ok(PyTuple::new(
-        py,
-        &[arguments, opts.to_py_object(py).into_object()],
-    ))
+    Ok((arguments, opts, result.first_arg_index()))
 }
 
 fn map_to_python_err(py: Python, err: ParseError) -> PyErr {

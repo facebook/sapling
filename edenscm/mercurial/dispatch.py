@@ -1044,7 +1044,7 @@ def _parse(ui, args):
     fullargs = list(args)
     commandnames = [command for command in commands.table]
 
-    args, options = cliparser.parse(args, True)
+    args, options, replace = cliparser.parse(args, True)
     strict = ui.configbool("ui", "strict")
     if args:
         try:
@@ -1066,13 +1066,6 @@ def _parse(ui, args):
         replacement = []
 
     if len(replacement) > 0:
-
-        replace = 0
-        for idx, arg in enumerate(fullargs):
-            if arg == args[0]:
-                replace = idx
-                break
-
         # FIXME: Find a way to avoid calling expandargs twice.
         fullargs = (
             fullargs[:replace]

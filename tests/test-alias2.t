@@ -12,15 +12,11 @@ command name matches global flag values
 
   $ setconfig "alias.foo=log" "alias.log=log -T {desc} -r"
 
-FIXME: "abort" output below is incorrect.
   $ hg -R foo foo tip
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
-  [255]
+  This is foo\n (no-eol)
   $ hg -R log foo tip
   This is log\n (no-eol)
   $ hg -R foo log tip
   This is foo\n (no-eol)
   $ hg -R log log tip
-  abort: unknown revision 'log'!
-  (if log is a remote bookmark or commit, try to 'hg pull' it first)
-  [255]
+  This is log\n (no-eol)
