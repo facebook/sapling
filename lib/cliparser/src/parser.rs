@@ -400,20 +400,28 @@ impl<'a> Parser<'a> {
         self._parse(arg_vec)
     }
 
-    pub fn _parse(&self, args: Vec<&'a str>) -> Result<ParseOutput, ParseError> {
+    fn _parse(&self, args: Vec<&'a str>) -> Result<ParseOutput, ParseError> {
+        let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
-        let mut iter = args.into_iter().peekable();
+        let mut iter = args.into_iter().enumerate().peekable();
         let mut positional_args = Vec::new();
-        //let mut unknown_args = Vec::new();
 
-        while let Some(&arg) = iter.peek() {
+        let mut set_first_arg_index = |positional_args: &Vec<&str>, i| {
+            if positional_args.is_empty() {
+                first_arg_index = i;
+            }
+        };
+
+        while let Some(&(i, arg)) = iter.peek() {
             if arg.eq("--") {
                 if !self.parsing_options.keep_sep {
                     let _ = iter.next(); // don't care about -- it's just a separator
                 }
-                positional_args.extend(iter);
+                set_first_arg_index(&positional_args, i);
+                positional_args.extend(iter.map(|(_i, arg)| arg));
                 break;
             } else if arg.eq("-") {
+                set_first_arg_index(&positional_args, i);
                 positional_args.push(arg);
                 iter.next();
             } else if arg.starts_with("--") {
@@ -421,6 +429,7 @@ impl<'a> Parser<'a> {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
+                        set_first_arg_index(&positional_args, i);
                         positional_args.push(arg);
                     }
                 }
@@ -429,10 +438,12 @@ impl<'a> Parser<'a> {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
+                        set_first_arg_index(&positional_args, i);
                         positional_args.push(arg);
                     }
                 }
             } else {
+                set_first_arg_index(&positional_args, i);
                 positional_args.push(arg);
                 iter.next();
             }
@@ -441,15 +452,16 @@ impl<'a> Parser<'a> {
         Ok(ParseOutput::new(
             opts,
             positional_args.iter().map(|s| s.to_string()).collect(),
+            first_arg_index,
         ))
     }
 
     fn parse_double_hyphen_flag(
         &self,
-        iter: &mut dyn Iterator<Item = &'a str>,
+        iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
     ) -> Result<(), ParseError> {
-        let arg = iter.next().unwrap();
+        let arg = iter.next().unwrap().1;
         debug_assert!(arg.starts_with("--"));
         let arg = &arg[2..];
         let (arg, positive_flag) = if arg.starts_with("no-") {
@@ -474,7 +486,7 @@ impl<'a> Parser<'a> {
                 }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
-                    let next = parts.next().or_else(|| iter.next());
+                    let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
                         .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
@@ -496,7 +508,7 @@ impl<'a> Parser<'a> {
                 }
                 Some(Value::Bool(ref mut b)) => *b = !positive_flag,
                 Some(ref mut value) => {
-                    let next = parts.next().or_else(|| iter.next());
+                    let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
                         .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
@@ -538,7 +550,7 @@ impl<'a> Parser<'a> {
                 }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
-                    let next = parts.next().or_else(|| iter.next());
+                    let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
                         .map_err(|e| Parser::inject_option_name("--", matched_flag.long_name, e))?;
@@ -551,10 +563,10 @@ impl<'a> Parser<'a> {
 
     fn parse_single_hyphen_flag(
         &self,
-        iter: &mut dyn Iterator<Item = &'a str>,
+        iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
     ) -> Result<(), ParseError> {
-        let clean_arg = iter.next().unwrap().trim_start_matches("-");
+        let clean_arg = iter.next().unwrap().1.trim_start_matches("-");
 
         let mut char_iter = clean_arg.chars().peekable();
 
@@ -568,7 +580,7 @@ impl<'a> Parser<'a> {
                     Some(Value::Bool(ref mut b)) => *b = true,
                     Some(ref mut value) => {
                         if char_iter.peek().is_none() {
-                            let next = iter.next();
+                            let next = iter.next().map(|(_i, arg)| arg);
                             value.accept(next).map_err(|e| {
                                 Parser::inject_option_name("-", curr_char.to_string().as_ref(), e)
                             })?;
@@ -632,14 +644,19 @@ pub struct ParseOutput {
     opts: HashMap<String, Value>,
     /// The positional args
     args: Vec<String>,
+    first_arg_index: usize,
 }
 
 /// ParseOutput represents all of the information successfully parsed from the command-line
 /// arguments, as well as exposing a convenient API for application logic to query results
 /// parsed.
 impl ParseOutput {
-    pub fn new(opts: HashMap<String, Value>, args: Vec<String>) -> Self {
-        ParseOutput { opts, args }
+    pub fn new(opts: HashMap<String, Value>, args: Vec<String>, first_arg_index: usize) -> Self {
+        ParseOutput {
+            opts,
+            args,
+            first_arg_index,
+        }
     }
 
     pub fn get(&self, long_name: &str) -> Option<&Value> {
@@ -663,6 +680,14 @@ impl ParseOutput {
 
     pub fn args(&self) -> &Vec<String> {
         &self.args
+    }
+
+    /// The index of the first positional argument in the original arguments
+    /// passed to `Parser::parse_args`.
+    /// If there are no positional arguments, return the length of the original
+    /// arguments.
+    pub fn first_arg_index(&self) -> usize {
+        self.first_arg_index
     }
 }
 
@@ -820,7 +845,7 @@ mod tests {
         let args = vec!["-q"];
 
         let _ = parser
-            .parse_single_hyphen_flag(&mut args.into_iter().peekable(), &mut opts)
+            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
             .unwrap();
         let quiet: bool = opts.get("quiet").unwrap().clone().try_into().unwrap();
         assert!(quiet);
@@ -842,7 +867,8 @@ mod tests {
 
         let args = vec!["-c", PATH];
 
-        let _result = parser.parse_single_hyphen_flag(&mut args.into_iter().peekable(), &mut opts);
+        let _result = parser
+            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts);
     }
 
     #[test]
@@ -858,7 +884,10 @@ mod tests {
         let clustered_args = vec![CLUSTER, PATH];
 
         let _ = parser
-            .parse_single_hyphen_flag(&mut clustered_args.into_iter().peekable(), &mut opts)
+            .parse_single_hyphen_flag(
+                &mut clustered_args.into_iter().enumerate().peekable(),
+                &mut opts,
+            )
             .unwrap();
 
         //assert_eq!(v.len(), CLUSTER.len() - 1);
@@ -880,7 +909,7 @@ mod tests {
         let args = vec!["--quiet"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().peekable(), &mut opts)
+            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -903,7 +932,7 @@ mod tests {
         let args = vec!["--config", PATH];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().peekable(), &mut opts)
+            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -927,7 +956,7 @@ mod tests {
         let args = vec!["--number", "60"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().peekable(), &mut opts)
+            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -952,11 +981,15 @@ mod tests {
             "60".to_string(),
             "--number".to_string(),
             "59".to_string(),
+            "foo".to_string(),
             "--number".to_string(),
             "3".to_string(),
+            "bar".to_string(),
         ];
 
         let result = parser.parse_args(&args).unwrap();
+
+        assert_eq!(result.first_arg_index(), 4);
 
         let list: Vec<String> = result.get("number").unwrap().clone().try_into().unwrap();
 
@@ -975,9 +1008,13 @@ mod tests {
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["--number", "60", "--number", "59", "-n", "3", "-n5"]);
+        let args = create_args(vec![
+            "--number", "60", "--number", "59", "-n", "3", "-n5", "foo", "bar",
+        ]);
 
         let result = parser.parse_args(&args).unwrap();
+
+        assert_eq!(result.first_arg_index(), 7);
 
         let list: Vec<String> = result.get("number").unwrap().clone().try_into().unwrap();
 
@@ -1137,6 +1174,8 @@ mod tests {
         ]);
 
         let result = parser.parse_args(&args).unwrap();
+
+        assert_eq!(result.first_arg_index(), 0);
 
         let config_values: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
 
@@ -1350,6 +1389,8 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
+        assert_eq!(result.first_arg_index(), 5);
+
         let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
 
         let expected = vec!["", "section.key=val", "=", "section.key=val"];
@@ -1436,6 +1477,8 @@ mod tests {
         let args = create_args(vec!["--", "-1", "4"]);
 
         let result = parser.parse_args(&args).unwrap();
+
+        assert_eq!(result.first_arg_index(), 0);
 
         let parsed_args = result.args().clone();
 
