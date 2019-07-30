@@ -23,13 +23,10 @@ pub fn expand_aliases<S: ToString>(
     args: &[impl ToString],
 ) -> Result<(Vec<String>, Vec<String>), ParseError> {
     let mut replaced = Vec::new(); // keep track of what is replaced in-order
-    let (mut command_name, command_args) = args
-        .split_first()
-        .map(|(n, a)| (n.to_string(), a.iter().map(ToString::to_string).collect()))
-        .unwrap_or_else(Default::default);
-    let mut following_args = vec![command_args];
-
     let mut visited = HashSet::new();
+
+    let mut args: Vec<String> = args.iter().map(ToString::to_string).collect();
+    let mut command_name = args.first().cloned().unwrap_or_default();
 
     while let Some(alias) = lookup(&command_name) {
         let alias = alias.to_string();
@@ -41,12 +38,12 @@ pub fn expand_aliases<S: ToString>(
         if !visited.insert(command_name.clone()) {
             return Err(ParseError::CircularReference { command_name });
         }
-
-        let parts: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
-        let (next_command_name, next_args) = parts.split_first().ok_or_else(bad_alias)?;
-        let next_command_name = next_command_name.to_string();
         replaced.push(command_name.clone());
-        following_args.push(next_args.iter().cloned().collect::<Vec<String>>());
+
+        let alias_args: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
+        args = expand_alias_args(&args, alias_args);
+
+        let next_command_name = args.first().cloned().ok_or_else(bad_alias)?;
         if next_command_name == command_name {
             break;
         } else {
@@ -54,11 +51,54 @@ pub fn expand_aliases<S: ToString>(
         }
     }
 
-    let expanded = std::iter::once(command_name)
-        .chain(following_args.into_iter().rev().flatten())
+    Ok((args, replaced))
+}
+
+/// Expand a single alias.
+///
+/// The first item of both `command_args` and `alias_args` are expected to be
+/// command name.
+///
+/// Usually returns:
+///
+/// ```plain,ignore
+/// alias_args + command_args[1:]
+/// ```
+///
+/// In case there are `$1`, `$2` etc. in `alias_args`, those parts of
+/// `alias_args` will be replaced by corrosponding parts of `command_args`, and
+/// the result looks like:
+///
+/// ```plain,ignore
+/// alias_name + alias_args (with $x replaced) + command_args[n+1:]
+/// ```
+///
+/// where `n` is the maximum number occured in `$x`.
+fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<String> {
+    let mut n = 0;
+    let mut args: Vec<String> = alias_args
+        .into_iter()
+        .map(|a| {
+            if a.starts_with("$") {
+                if let Ok(i) = a[1..].parse::<usize>() {
+                    if let Some(existing_arg) = command_args.get(i) {
+                        // Found a substitution. Use it.
+                        // Also update the maximum number `n`.
+                        n = i.max(n);
+                        return existing_arg.to_string();
+                    }
+                }
+            }
+            a
+        })
         .collect();
 
-    Ok((expanded, replaced))
+    if let Some(slice) = command_args.get(n + 1..) {
+        args.extend(slice.iter().cloned());
+    } else {
+        // TODO: This might be an error case.
+    }
+    args
 }
 
 /// Prefix match commands to their full command name.  If a prefix is not unique an Error::AmbiguousCommand
@@ -267,4 +307,23 @@ mod tests {
         expand_aliases(|x| cfg.get(x), &["nodef"]).unwrap_err();
     }
 
+    #[test]
+    fn test_expand_dollar() {
+        let mut cfg = BTreeMap::new();
+        cfg.insert("a", "b $2 $1");
+        cfg.insert("b", "$1 c d $2");
+        cfg.insert("y", "Y");
+
+        // Sufficient args
+        let (expanded, _replaced) = expand_aliases(|x| cfg.get(x), &["a", "x", "y", "z"]).unwrap();
+        // Initial: a x y z
+        // Step 1: Rule: a => b $2 $1 => b y x; Result: b y x z q
+        // Step 2: Rule: b => $1 c d $2 => y c d x; Result: y c d x z
+        // Step 3: Rule: y => Y; Result: Y c d x z
+        assert_eq!(expanded, vec!["Y", "c", "d", "x", "z"]);
+
+        // Insufficient args
+        let expanded = expand_aliases(|x| cfg.get(x), &["a", "x"]).unwrap().0;
+        assert_eq!(expanded, vec!["$2", "c", "d", "x"]);
+    }
 }
