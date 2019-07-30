@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import json
 import os
 import sys
-import json
 
 from mononoke.tests.integration.lib_buck import find_buck_out
 
@@ -39,10 +39,7 @@ def main():
     # have been built on a different host so we must avoid absolute paths.
     buck_out = find_buck_out(out)
 
-    manifest = {
-        k: os.path.relpath(map_name(k), buck_out)
-        for k in sorted(names)
-    }
+    manifest = {k: os.path.relpath(map_name(k), buck_out) for k in sorted(names)}
 
     with open(out, "w") as f:
         json.dump(manifest, f, indent=2)

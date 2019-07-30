@@ -8,19 +8,18 @@
 """Runner for Mononoke/Mercurial integration tests."""
 
 import contextlib
+import json
 import multiprocessing
 import os
 import subprocess
 import sys
 import tempfile
-import json
 import xml.etree.ElementTree as ET
-from typing import NamedTuple, Dict, List, Any
+from typing import Any, Dict, List, NamedTuple
 
 import click
-
-from mononoke.tests.integration.lib_buck import find_buck_out
 from common.db.tests import DbDef
+from mononoke.tests.integration.lib_buck import find_buck_out
 
 
 ManifestEnv = Dict[str, str]
@@ -121,13 +120,15 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
     fbcode = os.path.join(fbsource, "fbcode")
     tests = os.path.join(fbcode, "scm/mononoke/tests/integration")
 
-    manifest_env.update({
-        "TEST_CERTS": os.path.join(tests, "facebook/certs"),
-        "TEST_ROOT_PUBLIC": tests,
-        "TEST_ROOT_FACEBOOK": os.path.join(tests, "facebook"),
-        "TEST_FIXTURES": tests,
-        "RUN_TESTS_LIBRARY": os.path.join(fbcode, "scm/hg/tests")
-    })
+    manifest_env.update(
+        {
+            "TEST_CERTS": os.path.join(tests, "facebook/certs"),
+            "TEST_ROOT_PUBLIC": tests,
+            "TEST_ROOT_FACEBOOK": os.path.join(tests, "facebook"),
+            "TEST_FIXTURES": tests,
+            "RUN_TESTS_LIBRARY": os.path.join(fbcode, "scm/hg/tests"),
+        }
+    )
 
 
 def _hg_runner(
@@ -137,7 +138,7 @@ def _hg_runner(
     extra_env: Env,
     blackhole: bool = False,
     interactive: bool = False,
-    quiet: bool = False
+    quiet: bool = False,
 ):
     with tempfile.TemporaryDirectory() as output_dir:
         args = [
@@ -148,7 +149,7 @@ def _hg_runner(
             manifest_env["BINARY_HG"],
             "--outputdir",
             output_dir,
-            *extra_args
+            *extra_args,
         ]
 
         # The network blackhole script breaks opt mode PAR binaries (because
@@ -167,12 +168,7 @@ def _hg_runner(
         stderr: Any = subprocess.DEVNULL if quiet else sys.stderr.buffer
 
         subprocess.check_call(
-            args,
-            cwd=root,
-            env=env,
-            stdin=stdin,
-            stdout=stderr,
-            stderr=stderr,
+            args, cwd=root, env=env, stdin=stdin, stdout=stderr, stderr=stderr
         )
 
 
@@ -202,10 +198,7 @@ def discover_tests(manifest_env: Env, mysql: bool):
 
 
 def run_discover_tests(
-    ctx: Any,
-    manifest_env: ManifestEnv,
-    xunit_output: str,
-    mysql: bool
+    ctx: Any, manifest_env: ManifestEnv, xunit_output: str, mysql: bool
 ):
     tests = discover_tests(manifest_env, mysql)
 
@@ -214,8 +207,7 @@ def run_discover_tests(
         return
 
     root = ET.Element(
-        "testsuite",
-        {"name": SUITE, "runner_capabilities": "simple_test_selector"}
+        "testsuite", {"name": SUITE, "runner_capabilities": "simple_test_selector"}
     )
     root.extend([ET.Element("testcase", {"name": t}) for t in tests])
 
@@ -234,7 +226,7 @@ def run_tests(
     xunit_output: str,
     tests: List[str],
     test_flags: TestFlags,
-    test_env: Env
+    test_env: Env,
 ):
     # If junit output has been requested, then that means testpilot is calling
     # us, and if testpilot is calling us, we shouldn't be running more than one
@@ -310,7 +302,7 @@ def run_tests(
     "--mysql",
     default=False,
     is_flag=True,
-    help="Use Ephemeral DB to run tests with MySQL"
+    help="Use Ephemeral DB to run tests with MySQL",
 )
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
@@ -341,14 +333,13 @@ def run(
         verbose,
         debug,
         keep_tmpdir,
-        blackhole=not mysql  # NOTE: We need network to talk to MySQL
+        blackhole=not mysql,  # NOTE: We need network to talk to MySQL
     )
 
     selected_tests: List[str] = []
     if simple_test_selector is not None and tests:
         raise click.BadParameter(
-            "Use either --simple-test-selector, or [...TESTS]",
-            ctx
+            "Use either --simple-test-selector, or [...TESTS]", ctx
         )
     elif simple_test_selector is not None:
         suite, test = simple_test_selector.split(",", 1)
@@ -375,7 +366,7 @@ def run(
             raise click.BadParameter(
                 "mysql tests allow at most 1 test at a time",
                 ctx,
-                param_hint="simple_test_selector"
+                param_hint="simple_test_selector",
             )
 
     with db_helper() as test_env:

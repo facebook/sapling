@@ -12,7 +12,7 @@ def find_buck_out(manifest_path):
     dir = manifest_path
     while dir:
         dir = os.path.dirname(dir)
-        if os.path.exists(os.path.join(dir, 'project_root')):
+        if os.path.exists(os.path.join(dir, "project_root")):
             return dir
     m = "%s does not appear to be in a buck-out directory" % manifest_path
     raise ValueError(m)
