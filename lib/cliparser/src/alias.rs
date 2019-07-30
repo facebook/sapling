@@ -37,19 +37,10 @@ pub fn expand_aliases(
         arg = replace_prefix(command_map, arg)?;
     }
 
-    let mut visited: HashMap<_, usize> = HashMap::new();
+    let mut visited = HashSet::new();
     let mut expanded = Vec::new();
 
     loop {
-        match visited.get(&arg) {
-            Some(amount) => {
-                if amount > &1 {
-                    return Err(ParseError::CircularReference { command_name: arg });
-                }
-            }
-            _ => (),
-        }
-
         match cfg.get(&arg) {
             Some(alias) => {
                 let parts: Vec<String> = match split(alias) {
@@ -59,7 +50,11 @@ pub fn expand_aliases(
                         break;
                     }
                 };
-                *visited.entry(arg.clone()).or_insert(0) += 1;
+
+                if !visited.insert(arg.clone()) {
+                    return Err(ParseError::CircularReference { command_name: arg });
+                }
+
                 replaced.push(arg.clone());
 
                 if parts.len() == 0 {
