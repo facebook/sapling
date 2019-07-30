@@ -118,20 +118,27 @@ impl OpenOptions {
     pub fn open(self, dir: impl AsRef<Path>) -> Fallible<RotateLog> {
         let dir = dir.as_ref();
 
-        let latest_path = dir.join(LATEST_FILE);
-        let (latest, logs) = if !self.log_open_options.create || latest_path.exists() {
-            let latest = read_latest(dir)?;
-            (latest, read_logs(dir, &self, latest)?)
-        } else {
-            fs::create_dir_all(dir)?;
-            let mut lock_file = open_dir(dir)?;
-            let _lock = ScopedFileLock::new(&mut lock_file, true)?;
-            if latest_path.exists() {
-                // Two creates raced and the other one has created basic files.
-                let latest = read_latest(dir)?;
-                (latest, read_logs(dir, &self, latest)?)
-            } else {
-                (0, vec![create_empty_log(Some(dir), &self, 0)?])
+        let latest_and_log = read_latest_and_logs(dir, &self);
+
+        let (latest, logs) = match latest_and_log {
+            Ok((latest, logs)) => (latest, logs),
+            Err(e) => {
+                if !self.log_open_options.create {
+                    return Err(e);
+                } else {
+                    fs::create_dir_all(dir)?;
+                    let mut lock_file = open_dir(dir)?;
+                    let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+
+                    let latest_and_log = read_latest_and_logs(dir, &self);
+
+                    // two creates raced and the other one has created basic files.
+                    if let Ok((latest, logs)) = latest_and_log {
+                        (latest, logs)
+                    } else {
+                        (0, vec![create_empty_log(Some(dir), &self, 0)?])
+                    }
+                }
             }
         };
 
@@ -464,6 +471,11 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
     }
 }
 
+fn read_latest_and_logs(dir: &Path, open_options: &OpenOptions) -> Fallible<(u8, Vec<Log>)> {
+    let latest = read_latest(dir)?;
+    Ok((latest, read_logs(dir, open_options, latest)?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -776,5 +788,23 @@ mod tests {
                 .collect::<Vec<Vec<u8>>>(),
             vec![a, b]
         );
+    }
+
+    #[test]
+    fn recover_from_partially_created() -> Fallible<()> {
+        let dir = tempdir().unwrap();
+        let rotate = OpenOptions::new().create(true).open(&dir)?;
+        drop(rotate);
+
+        for dirent in fs::read_dir(&dir)? {
+            let dirent = dirent?;
+            let path = dirent.path();
+            if path.is_dir() {
+                fs::remove_dir_all(path)?;
+            }
+        }
+
+        let _ = OpenOptions::new().create(true).open(&dir)?;
+        Ok(())
     }
 }
