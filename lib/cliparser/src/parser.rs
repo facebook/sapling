@@ -68,6 +68,8 @@ pub enum ParseError {
     },
     #[fail(display = "Alias {} resulted in a circular reference", command_name)]
     CircularReference { command_name: String },
+    #[fail(display = "alias definition {} = {:?} cannot be parsed", name, value)]
+    IllformedAlias { name: String, value: String },
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]

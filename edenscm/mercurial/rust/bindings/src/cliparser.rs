@@ -16,6 +16,7 @@ mod exceptions {
 
     py_exception!(cliparser, AmbiguousCommand);
     py_exception!(cliparser, CircularReference);
+    py_exception!(cliparser, IllformedAlias);
     py_exception!(cliparser, OptionNotRecognized);
     py_exception!(cliparser, OptionRequiresArgument);
     py_exception!(cliparser, OptionArgumentInvalid);
@@ -58,6 +59,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         use exceptions::*;
         m.add(py, "AmbiguousCommand", AmbiguousCommand::type_object(py))?;
         m.add(py, "CircularReference", CircularReference::type_object(py))?;
+        m.add(py, "IllformedAlias", IllformedAlias::type_object(py))?;
         m.add(
             py,
             "OptionNotRecognized",
@@ -255,6 +257,9 @@ fn map_to_python_err(py: Python, err: ParseError) -> PyErr {
         }
         ParseError::CircularReference { command_name } => {
             return PyErr::new::<exceptions::CircularReference, _>(py, (msg, command_name))
+        }
+        ParseError::IllformedAlias { name, value } => {
+            return PyErr::new::<exceptions::IllformedAlias, _>(py, (msg, name, value));
         }
     }
 }

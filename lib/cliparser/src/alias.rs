@@ -43,13 +43,11 @@ pub fn expand_aliases(
     loop {
         match cfg.get(&arg) {
             Some(alias) => {
-                let parts: Vec<String> = match split(alias) {
-                    Some(v) => v,
-                    None => {
-                        expanded.push(arg);
-                        break;
-                    }
-                };
+                let parts: Vec<String> =
+                    split(alias).ok_or_else(|| ParseError::IllformedAlias {
+                        name: arg.clone(),
+                        value: alias.to_string(),
+                    })?;
 
                 if !visited.insert(arg.clone()) {
                     return Err(ParseError::CircularReference { command_name: arg });

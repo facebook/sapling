@@ -231,7 +231,7 @@ no definition
 no closing quotation
 
   $ hg noclosing
-  abort: error in definition for alias 'noclosingquotation': No closing quotation
+  abort: alias definition noclosingquotation = "\'" cannot be parsed
   [255]
   $ hg help noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
