@@ -1,4 +1,7 @@
-import time, sys, os, random
+import os
+import random
+import sys
+import time
 
 
 def waithook(ui, repo, **kwargs):

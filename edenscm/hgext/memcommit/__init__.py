@@ -25,8 +25,8 @@ from edenscm.mercurial import bookmarks, error, registrar, scmutil
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
-from . import commitdata, serialization
 from ..pushrebase.stackpush import pushrequest
+from . import commitdata, serialization
 
 
 configtable = {}

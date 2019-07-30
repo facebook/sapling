@@ -14,9 +14,9 @@ import socket
 import sys
 import traceback
 
-from . import common
 from .. import encoding, error, pycompat, util
 from ..i18n import _
+from . import common
 
 
 httpservermod = util.httpserver

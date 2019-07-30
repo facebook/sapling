@@ -5,9 +5,8 @@
 
 from __future__ import absolute_import, print_function
 
-import sys
-
 import _lsprof
+import sys
 
 
 Profiler = _lsprof.Profiler

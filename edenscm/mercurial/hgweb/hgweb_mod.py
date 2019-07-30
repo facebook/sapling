@@ -11,7 +11,6 @@ from __future__ import absolute_import
 import contextlib
 import os
 
-from . import protocol, webcommands, webutil, wsgicgi
 from .. import (
     encoding,
     error,
@@ -25,6 +24,7 @@ from .. import (
     ui as uimod,
     util,
 )
+from . import protocol, webcommands, webutil, wsgicgi
 from .common import (
     HTTP_BAD_REQUEST,
     HTTP_NOT_FOUND,

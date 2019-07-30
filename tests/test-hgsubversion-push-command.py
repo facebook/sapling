@@ -877,7 +877,6 @@ class PushTests(test_hgsubversion_util.TestBase):
         self.assertEqual(old_tip, new_tip)
 
 
-
 if __name__ == "__main__":
     import silenttestrunner
 

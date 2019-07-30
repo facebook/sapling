@@ -27,8 +27,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import common
 from ..extlib.phabricator import diffprops
+from . import common
 
 
 cmdtable = {}

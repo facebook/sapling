@@ -12,7 +12,6 @@ import os
 import re
 import time
 
-from . import hgweb_mod, webutil, wsgicgi
 from .. import (
     configitems,
     encoding,
@@ -26,6 +25,7 @@ from .. import (
     util,
 )
 from ..i18n import _
+from . import hgweb_mod, webutil, wsgicgi
 from .common import (
     HTTP_NOT_FOUND,
     HTTP_OK,

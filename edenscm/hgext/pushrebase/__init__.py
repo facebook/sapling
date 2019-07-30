@@ -80,7 +80,6 @@ from edenscm.mercurial.extensions import unwrapfunction, wrapcommand, wrapfuncti
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, nullrev, short
 
-from . import common, recording, stackpush
 from .. import hgsql
 from ..remotefilelog import (
     contentstore,
@@ -91,6 +90,7 @@ from ..remotefilelog import (
     shallowbundle,
     wirepack,
 )
+from . import common, recording, stackpush
 from .errors import ConflictsError, StackPushUnsupportedError
 
 

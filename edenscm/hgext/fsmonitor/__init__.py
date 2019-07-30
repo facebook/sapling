@@ -170,8 +170,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import state
 from ..extlib import pywatchman, watchmanclient
+from . import state
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

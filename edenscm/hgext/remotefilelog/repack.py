@@ -26,6 +26,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
 from edenscmnative.bindings import revisionstore
 
+from ..extutil import flock, runshellcommand
 from . import (
     constants,
     contentstore,
@@ -35,7 +36,6 @@ from . import (
     mutablestores,
     shallowutil,
 )
-from ..extutil import flock, runshellcommand
 
 
 try:

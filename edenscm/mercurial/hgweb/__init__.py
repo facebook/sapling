@@ -10,9 +10,9 @@ from __future__ import absolute_import
 
 import os
 
-from . import hgweb_mod, hgwebdir_mod, server
 from .. import error, pycompat, util
 from ..i18n import _
+from . import hgweb_mod, hgwebdir_mod, server
 
 
 def hgweb(config, name=None, baseui=None):

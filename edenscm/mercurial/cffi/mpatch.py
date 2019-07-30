@@ -7,8 +7,8 @@
 
 from __future__ import absolute_import
 
-from . import _mpatch
 from ..pure.mpatch import *  # noqa: F401, F403
+from . import _mpatch
 
 
 ffi = _mpatch.ffi

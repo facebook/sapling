@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import os
 import sys
 
-
 # Allow 'from mercurial import demandimport' to keep working.
 from edenscm import hgdemandimport
 
