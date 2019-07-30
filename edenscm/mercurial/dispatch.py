@@ -1058,7 +1058,7 @@ def _parse(ui, args):
         except cliparser.CircularReference as e:
             alias = e.args[1]
             raise error.Abort(_("circular alias: %s") % alias)
-        except cliparser.IllformedAlias as e:
+        except cliparser.MalformedAlias as e:
             msg = e.args[0]
             raise error.Abort(msg)
 

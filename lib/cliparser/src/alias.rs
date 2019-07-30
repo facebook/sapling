@@ -30,7 +30,7 @@ pub fn expand_aliases<S: ToString>(
 
     while let Some(alias) = lookup(&command_name) {
         let alias = alias.to_string();
-        let bad_alias = || ParseError::IllformedAlias {
+        let bad_alias = || ParseError::MalformedAlias {
             name: command_name.clone(),
             value: alias.to_string(),
         };
