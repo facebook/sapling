@@ -100,7 +100,8 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
-      std::shared_ptr<ServerState> serverState);
+      std::shared_ptr<ServerState> serverState,
+      std::unique_ptr<Journal> journal);
 
   /**
    * Destroy the EdenMount.
@@ -150,7 +151,7 @@ class EdenMount {
   }
 
   Journal& getJournal() {
-    return journal_;
+    return *journal_;
   }
 
   uint64_t getMountGeneration() const {
@@ -355,7 +356,8 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
-      std::shared_ptr<ServerState> serverState);
+      std::shared_ptr<ServerState> serverState,
+      std::unique_ptr<Journal> journal);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -421,7 +423,7 @@ class EdenMount {
    */
   const std::vector<BindMount> bindMounts_;
 
-  Journal journal_;
+  std::unique_ptr<Journal> journal_;
 
   /**
    * A number to uniquely identify this particular incarnation of this mount.

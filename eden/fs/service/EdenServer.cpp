@@ -859,7 +859,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   // Create the EdenMount object and insert the mount into the mountPoints_
   // map.
   auto edenMount = EdenMount::create(
-      std::move(initialConfig), std::move(objectStore), serverState_);
+      std::move(initialConfig),
+      std::move(objectStore),
+      serverState_,
+      std::move(journal));
   addToMountPoints(edenMount);
   edenMount->start();
   return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));

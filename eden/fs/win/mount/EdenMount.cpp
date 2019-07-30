@@ -35,23 +35,29 @@ static uint64_t generateLuid() {
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
-    std::shared_ptr<ServerState> serverState) {
+    std::shared_ptr<ServerState> serverState,
+    std::unique_ptr<Journal> journal) {
   return std::shared_ptr<EdenMount>(
       new EdenMount(
-          std::move(config), std::move(objectStore), std::move(serverState)),
+          std::move(config),
+          std::move(objectStore),
+          std::move(serverState),
+          std::move(journal)),
       EdenMountDeleter{});
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
-    std::shared_ptr<ServerState> serverState)
+    std::shared_ptr<ServerState> serverState,
+    std::unique_ptr<Journal> journal)
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       objectStore_{std::move(objectStore)},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       dispatcher_{this},
       fsChannel_{config_->getMountPath(), this},
+      journal_{std::move(journal)},
       mountGeneration_{generateLuid()} {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
 
