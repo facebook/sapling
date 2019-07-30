@@ -265,9 +265,18 @@ mod tests {
         cfg.insert("b".to_string(), "c 2".to_string());
         cfg.insert("c".to_string(), "d 3".to_string());
 
-        let (expanded, _replaced) = expand_aliases(|x| cfg.get(x), &["a"]).unwrap();
+        let (expanded, _replaced) = expand_aliases(|x| cfg.get(x), &["a", "4"]).unwrap();
 
-        assert_eq!(expanded, vec!["d", "3", "2", "1"]);
+        assert_eq!(expanded, vec!["d", "3", "2", "1", "4"]);
+    }
+
+    #[test]
+    fn test_self_alias_chain() {
+        let mut cfg = BTreeMap::new();
+        cfg.insert("a".to_string(), "b 1".to_string());
+        cfg.insert("b".to_string(), "b 2".to_string());
+        let (expanded, _replaced) = expand_aliases(|x| cfg.get(x), &["a", "3"]).unwrap();
+        assert_eq!(expanded, vec!["b", "2", "1", "3"]);
     }
 
     // hg --config "alias.foo=log bar" --config alias.bar=oops --config "alias.log=log -v" foo
