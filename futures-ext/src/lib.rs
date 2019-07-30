@@ -32,6 +32,7 @@ mod futures_ordered;
 pub mod io;
 mod launch;
 mod select_all;
+mod split_err;
 mod stream_clone;
 mod stream_wrappers;
 mod streamfork;
@@ -40,6 +41,7 @@ pub use crate::bytes_stream::{BytesStream, BytesStreamFuture};
 pub use crate::futures_ordered::{futures_ordered, FuturesOrdered};
 pub use crate::launch::top_level_launch;
 pub use crate::select_all::{select_all, SelectAll};
+pub use crate::split_err::split_err;
 pub use crate::stream_clone::stream_clone;
 pub use crate::stream_wrappers::{
     BoxStreamWrapper, CollectNoConsume, CollectTo, StreamWrapper, TakeWhile,
