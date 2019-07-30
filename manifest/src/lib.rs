@@ -7,9 +7,11 @@
 #![deny(warnings)]
 
 pub use crate::derive::{derive_manifest, LeafInfo, TreeInfo};
+pub use crate::ops::{Diff, ManifestOps};
 pub use crate::types::{Entry, Manifest, PathTree};
 
 mod derive;
+mod ops;
 mod types;
 
 #[cfg(test)]

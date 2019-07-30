@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::{derive_manifest, Entry, Manifest, PathTree, TreeInfo};
+use crate::{derive_manifest, Diff, Entry, Manifest, ManifestOps, PathTree, TreeInfo};
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
@@ -17,7 +17,7 @@ use mononoke_types::{MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap},
+    collections::{hash_map::DefaultHasher, BTreeMap, HashSet},
     hash::{Hash, Hasher},
     iter::FromIterator,
     sync::{Arc, Mutex},
@@ -435,6 +435,161 @@ fn test_derive_manifest() -> Result<(), Error> {
             files(mf3)?,
         );
     }
+
+    Ok(())
+}
+
+fn make_paths(paths_str: &[&str]) -> Result<HashSet<MPath>, Error> {
+    paths_str.into_iter().map(MPath::new).collect()
+}
+
+#[test]
+fn test_find_entries() -> Result<(), Error> {
+    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let ctx = CoreContext::test_mock();
+
+    // derive manifest
+    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+        let manifest_id = runtime
+            .with(|runtime| {
+                runtime.block_on(derive_test_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    parents,
+                    changes,
+                ))
+            })?
+            .expect("expect non empty manifest");
+        Ok(manifest_id)
+    };
+
+    let mf0 = derive(
+        vec![],
+        btreemap! {
+            "one/1" => Some("1"),
+            "one/2" => Some("2"),
+            "3" => Some("3"),
+            "two/three/4" => Some("4"),
+            "two/three/5" => Some("5"),
+            "two/three/four/6" => Some("6"),
+            "two/three/four/7" => Some("7"),
+        },
+    )?;
+
+    let paths = make_paths(&[
+        "one/1",
+        "two/three",
+        "none",
+        "two/three/four/7",
+        "two/three/6",
+    ])?;
+
+    let results =
+        runtime.with(|rt| rt.block_on(mf0.find_entries(ctx, blobstore, paths).collect()))?;
+
+    let mut leafs = HashSet::new();
+    let mut trees = HashSet::new();
+    for (path, entry) in results {
+        match entry {
+            Entry::Tree(_) => trees.insert(path),
+            Entry::Leaf(_) => leafs.insert(path),
+        };
+    }
+
+    assert_eq!(leafs, make_paths(&["one/1", "two/three/four/7",])?);
+    assert_eq!(trees, make_paths(&["two/three"])?);
+
+    Ok(())
+}
+
+#[test]
+fn test_diff() -> Result<(), Error> {
+    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let ctx = CoreContext::test_mock();
+
+    // derive manifest
+    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+        let manifest_id = runtime
+            .with(|runtime| {
+                runtime.block_on(derive_test_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    parents,
+                    changes,
+                ))
+            })?
+            .expect("expect non empty manifest");
+        Ok(manifest_id)
+    };
+
+    let mf0 = derive(
+        vec![],
+        btreemap! {
+            "same_dir/1" => Some("1"),
+            "dir/same_dir/2" => Some("2"),
+            "dir/removed_dir/3" => Some("3"),
+            "dir/changed_file" => Some("before"),
+            "dir/removed_file" => Some("removed_file"),
+            "same_file" => Some("4"),
+            "dir_file_conflict/5" => Some("5"),
+        },
+    )?;
+
+    let mf1 = derive(
+        vec![],
+        btreemap! {
+            "same_dir/1" => Some("1"),
+            "dir/same_dir/2" => Some("2"),
+            "dir/added_dir/3" => Some("3"),
+            "dir/changed_file" => Some("after"),
+            "added_file" => Some("added_file"),
+            "same_file" => Some("4"),
+            "dir_file_conflict" => Some("5"),
+        },
+    )?;
+
+    let diffs = runtime.with(|rt| rt.block_on(mf0.diff(ctx, blobstore, mf1).collect()))?;
+
+    let mut added = HashSet::new();
+    let mut removed = HashSet::new();
+    let mut changed = HashSet::new();
+    for diff in diffs {
+        match diff {
+            Diff::Added(Some(path), _) => {
+                added.insert(path);
+            }
+            Diff::Removed(Some(path), _) => {
+                removed.insert(path);
+            }
+            Diff::Changed(Some(path), _, _) => {
+                changed.insert(path);
+            }
+            _ => {}
+        };
+    }
+
+    assert_eq!(
+        added,
+        make_paths(&[
+            "added_file",
+            "dir/added_dir",
+            "dir/added_dir/3",
+            "dir_file_conflict"
+        ])?
+    );
+    assert_eq!(
+        removed,
+        make_paths(&[
+            "dir/removed_file",
+            "dir/removed_dir",
+            "dir/removed_dir/3",
+            "dir_file_conflict",
+            "dir_file_conflict/5"
+        ])?
+    );
+    assert_eq!(changed, make_paths(&["dir", "dir/changed_file"])?);
 
     Ok(())
 }
