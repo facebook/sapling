@@ -412,9 +412,13 @@ impl Dispatcher {
             }
         }
 
-        let (expanded, replaced) =
-            expand_aliases(&alias_map, &command_map, first_arg.to_string(), false)
-                .map_err(|_| DispatchError::AliasExpansionFailed)?;
+        let (expanded, replaced) = expand_aliases(
+            &alias_map,
+            &command_map,
+            &vec![first_arg.to_string()],
+            false,
+        )
+        .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
         let mut new_args = Vec::new();
 

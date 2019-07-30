@@ -16,7 +16,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// e.g. 'id' and 'identify'.  If commands point to the same id they are assumed
 /// to be equivalent.
 ///
-/// * `args` - The original arguments to resolve aliases from
+/// * `args` - The original arguments to resolve aliases from.
+/// The first argument should be the command name.
 ///
 /// * `strict` - Decides if there should be strict or prefix matching ( True = no prefix matching )
 ///
@@ -27,41 +28,45 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 pub fn expand_aliases(
     cfg: &BTreeMap<String, String>,
     command_map: &BTreeMap<String, usize>,
-    mut arg: String,
+    args: &[impl ToString],
     strict: bool,
 ) -> Result<(Vec<String>, Vec<String>), ParseError> {
-    let mut following_args = Vec::new();
     let mut replaced = Vec::new(); // keep track of what is replaced in-order
+    let (mut command_name, command_args) = args
+        .split_first()
+        .map(|(n, a)| (n.to_string(), a.iter().map(ToString::to_string).collect()))
+        .unwrap_or_else(Default::default);
+    let mut following_args = vec![command_args];
 
     if !strict {
-        arg = replace_prefix(command_map, arg)?;
+        command_name = replace_prefix(command_map, command_name)?;
     }
 
     let mut visited = HashSet::new();
 
-    while let Some(alias) = cfg.get(&arg) {
+    while let Some(alias) = cfg.get(&command_name) {
         let bad_alias = || ParseError::IllformedAlias {
-            name: arg.clone(),
+            name: command_name.clone(),
             value: alias.to_string(),
         };
 
-        if !visited.insert(arg.clone()) {
-            return Err(ParseError::CircularReference { command_name: arg });
+        if !visited.insert(command_name.clone()) {
+            return Err(ParseError::CircularReference { command_name });
         }
 
         let parts: Vec<String> = split(alias).ok_or_else(bad_alias)?;
         let (next_command_name, next_args) = parts.split_first().ok_or_else(bad_alias)?;
         let next_command_name = next_command_name.to_string();
-        replaced.push(arg.clone());
+        replaced.push(command_name.clone());
         following_args.push(next_args.iter().cloned().collect::<Vec<String>>());
-        if next_command_name == arg {
+        if next_command_name == command_name {
             break;
         } else {
-            arg = next_command_name;
+            command_name = next_command_name;
         }
     }
 
-    let expanded = std::iter::once(arg)
+    let expanded = std::iter::once(command_name)
         .chain(following_args.into_iter().rev().flatten())
         .collect();
 
@@ -138,8 +143,7 @@ mod tests {
     fn test_no_alias() {
         let cfg = BTreeMap::new();
         let command_map = BTreeMap::new();
-        let (_expanded, replaced) =
-            expand_aliases(&cfg, &command_map, "log".to_string(), false).unwrap();
+        let (_expanded, replaced) = expand_aliases(&cfg, &command_map, &["log"], false).unwrap();
         assert!(replaced.len() == 0);
     }
 
@@ -149,8 +153,7 @@ mod tests {
         cfg.insert("log".to_string(), "log -v".to_string());
         let command_map = BTreeMap::new();
 
-        let (expanded, replaced) =
-            expand_aliases(&cfg, &command_map, "log".to_string(), false).unwrap();
+        let (expanded, replaced) = expand_aliases(&cfg, &command_map, &["log"], false).unwrap();
         assert_eq!(expanded, vec!["log", "-v"]);
         assert_eq!(replaced, vec!["log"]);
     }
@@ -162,7 +165,7 @@ mod tests {
         command_map.insert("foo".to_string(), 0);
         command_map.insert("foobar".to_string(), 1);
 
-        if let Err(err) = expand_aliases(&cfg, &command_map, "fo".to_string(), false) {
+        if let Err(err) = expand_aliases(&cfg, &command_map, &["fo"], false) {
             let msg = format!("{}", err);
             assert_eq!(msg, "Command fo is ambiguous");
         } else {
@@ -177,7 +180,7 @@ mod tests {
         command_map.insert("foo".to_string(), 0);
         command_map.insert("foobar".to_string(), 1);
 
-        if let Err(err) = expand_aliases(&cfg, &command_map, "fo".to_string(), false) {
+        if let Err(err) = expand_aliases(&cfg, &command_map, &["fo"], false) {
             let msg = format!("{}", err);
             assert_eq!(msg, "Command fo is ambiguous");
         } else {
@@ -193,7 +196,7 @@ mod tests {
         command_map.insert("foobar".to_string(), 0);
         command_map.insert("foo".to_string(), 1);
 
-        if let Err(err) = expand_aliases(&cfg, &command_map, "fo".to_string(), false) {
+        if let Err(err) = expand_aliases(&cfg, &command_map, &["fo"], false) {
             let msg = format!("{}", err);
             assert_eq!(msg, "Command fo is ambiguous");
         } else {
@@ -208,8 +211,7 @@ mod tests {
         command_map.insert("id".to_string(), 0);
         command_map.insert("identify".to_string(), 0);
 
-        let (expanded, _replaced) =
-            expand_aliases(&cfg, &command_map, "i".to_string(), false).unwrap();
+        let (expanded, _replaced) = expand_aliases(&cfg, &command_map, &["i"], false).unwrap();
         let element = expanded.get(0).unwrap();
         assert!((element == "id") || (element == "identify"));
     }
@@ -221,7 +223,7 @@ mod tests {
         cfg.insert("foo".to_string(), "log".to_string());
         cfg.insert("log".to_string(), "foo".to_string());
 
-        if let Err(err) = expand_aliases(&cfg, &command_map, "foo".to_string(), false) {
+        if let Err(err) = expand_aliases(&cfg, &command_map, &["foo"], false) {
             let msg = format!("{}", err);
             assert_eq!(msg, "Alias foo resulted in a circular reference");
         } else {
@@ -237,8 +239,7 @@ mod tests {
         cfg.insert("b".to_string(), "c 2".to_string());
         cfg.insert("c".to_string(), "d 3".to_string());
 
-        let (expanded, _replaced) =
-            expand_aliases(&cfg, &command_map, "a".to_string(), false).unwrap();
+        let (expanded, _replaced) = expand_aliases(&cfg, &command_map, &["a"], false).unwrap();
 
         assert_eq!(expanded, vec!["d", "3", "2", "1"]);
     }
@@ -253,8 +254,7 @@ mod tests {
         cfg.insert("log".to_string(), "log -v".to_string());
         let command_map = BTreeMap::new();
 
-        let (expanded, replaced) =
-            expand_aliases(&cfg, &command_map, "foo".to_string(), false).unwrap();
+        let (expanded, replaced) = expand_aliases(&cfg, &command_map, &["foo"], false).unwrap();
 
         assert_eq!(expanded, vec!["log", "-v", "bar"]);
         assert_eq!(replaced, vec!["foo", "log"]);
@@ -269,8 +269,7 @@ mod tests {
         cfg.insert("bar".to_string(), "foo".to_string());
         let command_map = BTreeMap::new();
 
-        let (expanded, replaced) =
-            expand_aliases(&cfg, &command_map, "bar".to_string(), false).unwrap();
+        let (expanded, replaced) = expand_aliases(&cfg, &command_map, &["bar"], false).unwrap();
 
         assert_eq!(expanded, vec!["foo", "-r", "foo", "-v", "foo", "foo"]);
         assert_eq!(replaced, vec!["bar", "foo"]);
@@ -282,7 +281,7 @@ mod tests {
         cfg.insert("nodef".to_string(), "".to_string());
         let command_map = BTreeMap::new();
 
-        expand_aliases(&cfg, &command_map, "nodef".to_string(), false).unwrap_err();
+        expand_aliases(&cfg, &command_map, &["nodef"], false).unwrap_err();
     }
 
 }

@@ -1049,7 +1049,7 @@ def _parse(ui, args):
     if args:
         try:
             replacement, aliases = cliparser.expandargs(
-                ui._rcfg, commandnames, args[0], strict
+                ui._rcfg, commandnames, [args[0]], strict
             )
         except cliparser.AmbiguousCommand as e:
             e.args[2].sort()

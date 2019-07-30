@@ -42,7 +42,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             expand_args(
                 config: config,
                 command_names: Vec<String>,
-                arg: String,
+                args: Vec<String>,
                 strict: bool = false
             )
         ),
@@ -119,7 +119,7 @@ fn expand_args(
     py: Python,
     config: config,
     command_names: Vec<String>,
-    arg: String,
+    args: Vec<String>,
     strict: bool,
 ) -> PyResult<(Vec<PyBytes>, Vec<PyBytes>)> {
     let mut alias_map = BTreeMap::new();
@@ -141,7 +141,7 @@ fn expand_args(
         }
     }
 
-    let (expanded_args, replaced_aliases) = expand_aliases(&alias_map, &command_map, arg, strict)
+    let (expanded_args, replaced_aliases) = expand_aliases(&alias_map, &command_map, &args, strict)
         .map_err(|e| map_to_python_err(py, e))?;
 
     let expanded_args: Vec<PyBytes> = expanded_args
