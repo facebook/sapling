@@ -1080,19 +1080,6 @@ def _parse(ui, args):
         cmd, _args, a, entry, level = cmdutil.findsubcmd(
             replacement, commands.table, strict
         )
-        fulldefaults = [ui.config("defaults", cmd)]
-
-        for alias in aliases:
-            fulldefaults.append(ui.config("defaults", alias))
-
-        fulldefaults = [default for default in fulldefaults if default is not None]
-
-        if len(fulldefaults) > 0:
-            fulldefaults = sum(
-                (val for val in pycompat.maplist(pycompat.shlexsplit, fulldefaults)), []
-            )
-
-            fullargs = pycompat.maplist(util.expandpath, fulldefaults) + fullargs
         c = list(entry[1])
     else:
         aliases = []

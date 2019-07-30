@@ -277,26 +277,6 @@ impl Dispatcher {
         command_map
     }
 
-    fn defaults(
-        command_name: &String,
-        replacements: Vec<String>,
-        cfg: &ConfigSet,
-    ) -> Result<Vec<String>, DispatchError> {
-        let mut default_vals = vec![cfg.get("defaults", command_name.as_str())];
-
-        for replacement in replacements {
-            default_vals.push(cfg.get("defaults", replacement));
-        }
-
-        let defaults: Result<Vec<String>, _> = default_vals
-            .into_iter()
-            .filter_map(|o| o)
-            .map(|b| String::from_utf8(b.to_vec()))
-            .collect();
-
-        defaults.map_err(|_| DispatchError::InvalidConfigEncoding)
-    }
-
     fn parse(
         &self,
         args: &Vec<String>,
@@ -375,9 +355,28 @@ impl Dispatcher {
 
         self.load_python_commands(&config_set)?;
 
-        let alias_lookup = |name: &str| {
-            let value = config_set.get("alias", name);
-            value.and_then(|v| String::from_utf8(v.to_vec()).ok())
+        let alias_lookup = |name: &str| match (
+            config_set.get("alias", name),
+            config_set.get("defaults", name),
+        ) {
+            (None, None) => None,
+            (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
+            (None, Some(v)) => String::from_utf8(v.to_vec())
+                .ok()
+                .map(|v| format!("{} {}", name, v)),
+            (Some(a), Some(d)) => {
+                if let (Ok(a), Ok(d)) =
+                    (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec()))
+                {
+                    // XXX: This makes defaults override alias if there are conflicted
+                    // flags. The desired behavior is to make alias override defaults.
+                    // However, [defaults] is deprecated and is likely only used
+                    // by tests. So this might be fine.
+                    Some(format!("{} {}", a, d))
+                } else {
+                    None
+                }
+            }
         };
 
         let command_map = self.command_map(&config_set);
@@ -401,7 +400,7 @@ impl Dispatcher {
             }
         }
 
-        let (expanded, replaced) = expand_aliases(alias_lookup, &vec![first_arg.to_string()])
+        let (expanded, _replaced) = expand_aliases(alias_lookup, &vec![first_arg.to_string()])
             .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
         let mut new_args = Vec::new();
@@ -416,11 +415,7 @@ impl Dispatcher {
 
         repo_err?;
 
-        let defaults = Dispatcher::defaults(&command_name, replaced, &config_set)?;
-
-        let mut full_args = Vec::new();
-        full_args.extend(defaults);
-        full_args.extend(new_args);
+        let full_args = new_args;
 
         let result = self.parse(&full_args, &command_name)?;
 

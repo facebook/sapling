@@ -137,9 +137,23 @@ fn expand_args(
             expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }
 
-    let lookup = move |name: &str| {
-        let value = cfg.get("alias", name);
-        value.and_then(|v| String::from_utf8(v.to_vec()).ok())
+    let lookup = move |name: &str| match (cfg.get("alias", name), cfg.get("defaults", name)) {
+        (None, None) => None,
+        (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
+        (None, Some(v)) => String::from_utf8(v.to_vec())
+            .ok()
+            .map(|v| format!("{} {}", name, v)),
+        (Some(a), Some(d)) => {
+            if let (Ok(a), Ok(d)) = (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec())) {
+                // XXX: This makes defaults override alias if there are conflicted
+                // flags. The desired behavior is to make alias override defaults.
+                // However, [defaults] is deprecated and is likely only used
+                // by tests. So this might be fine.
+                Some(format!("{} {}", a, d))
+            } else {
+                None
+            }
+        }
     };
 
     let (expanded_args, replaced_aliases) =
