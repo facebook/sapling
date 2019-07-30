@@ -43,11 +43,6 @@ pub fn expand_aliases(
     let mut expanded = Vec::new();
 
     loop {
-        if arg.starts_with("-") {
-            expanded.push(arg);
-            break;
-        }
-
         match visited.get(&arg) {
             Some(amount) => {
                 if amount > &1 {
