@@ -1049,7 +1049,7 @@ def _parse(ui, args):
     if args:
         try:
             replacement, aliases = cliparser.expandargs(
-                ui._rcfg, commandnames, [args[0]], strict
+                ui._rcfg, commandnames, args, strict
             )
         except cliparser.AmbiguousCommand as e:
             e.args[2].sort()
@@ -1073,8 +1073,13 @@ def _parse(ui, args):
                 replace = idx
                 break
 
-        fullargs = fullargs[:replace] + replacement + fullargs[replace + 1 :]
-        replacement = replacement + args[1:]
+        # FIXME: Find a way to avoid calling expandargs twice.
+        fullargs = (
+            fullargs[:replace]
+            + cliparser.expandargs(ui._rcfg, commandnames, fullargs[replace:], strict)[
+                0
+            ]
+        )
 
         # Only need to figure out the command name. Parse result is dropped.
         cmd, _args, a, entry, level = cmdutil.findsubcmd(

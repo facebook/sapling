@@ -400,14 +400,13 @@ impl Dispatcher {
             }
         }
 
-        let (expanded, _replaced) = expand_aliases(alias_lookup, &vec![first_arg.to_string()])
+        let (expanded, _replaced) = expand_aliases(alias_lookup, &args[replace..])
             .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
         let mut new_args = Vec::new();
 
         new_args.extend_from_slice(&args[..replace]);
         new_args.extend_from_slice(&expanded[..]);
-        new_args.extend_from_slice(&args[replace + 1..]);
 
         let command_name = self
             .find_command_name(expanded)
