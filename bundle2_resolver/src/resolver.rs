@@ -226,7 +226,7 @@ fn resolve_push(
                 if let Some((cg_push, manifests)) = cg_and_manifests {
                     let changegroup_id = Some(cg_push.part_id);
                     resolver
-                        .upload_changesets(ctx, cg_push, manifests)
+                        .upload_changesets(ctx, cg_push, manifests, false)
                         .map(move |()| (changegroup_id, bookmark_push, bundle2))
                         .boxify()
                 } else {
@@ -354,7 +354,12 @@ fn resolve_pushrebase(
             move |(onto_params, cg_push, manifests, bundle2)| {
                 let changesets = cg_push.changesets.clone();
                 resolver
-                    .upload_changesets(ctx, cg_push, manifests)
+                    .upload_changesets(
+                        ctx,
+                        cg_push,
+                        manifests,
+                        onto_params.bookmark != *DONOTREBASEBOOKMARK,
+                    )
                     .map(move |()| (changesets, onto_params, bundle2))
             }
         })
@@ -1110,11 +1115,12 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
+        force_draft: bool,
     ) -> BoxFuture<(), Error> {
         let changesets = cg_push.changesets;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
-        let draft = cg_push.infinitepush_payload.is_some();
+        let draft = force_draft || cg_push.infinitepush_payload.is_some();
 
         self.ctx
             .scuba()

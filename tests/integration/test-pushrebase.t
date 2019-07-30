@@ -51,6 +51,7 @@ Clone the repo
   > remotenames =
   > EOF
 
+Pushrebase commit 1
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
@@ -78,6 +79,30 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
   o  A [public;rev=0;426bada5c675]
    (re)
 
+Check that the filenode for 1 does not point to the draft commit in a new clone
+  $ cd ..
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3 --noupdate --config extensions.remotenames= -q
+  $ cd repo3
+  $ setup_hg_client
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > remotenames =
+  > EOF
+
+  $ hgmn pull -r master_bookmark
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  new changesets c2e526aacb51
+  $ hgmn up master_bookmark
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn debugsh -c 'print(m.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
+  c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
+  $ cd ../repo2
 
 Push rebase fails with conflict in the bottom of the stack
   $ hg up -q 0
@@ -419,3 +444,19 @@ Test non-fast-forward force pushrebase
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
   ~
+
+-- Check that pulling a force pushrebase has good linknodes.
+  $ cd ../repo3
+  $ hgmn pull -r newbook
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 0 changes to 0 files
+  new changesets 7796136324ad:4899f9112d9b
+  $ hgmn up newbook
+  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn debugsh -c 'print(m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
+  4899f9112d9b79c3ecbc343169db37fbe1efdd20
+  $ cd ../repo2
