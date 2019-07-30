@@ -38,55 +38,32 @@ pub fn expand_aliases(
     }
 
     let mut visited = HashSet::new();
-    let mut expanded = Vec::new();
 
-    loop {
-        match cfg.get(&arg) {
-            Some(alias) => {
-                let parts: Vec<String> =
-                    split(alias).ok_or_else(|| ParseError::IllformedAlias {
-                        name: arg.clone(),
-                        value: alias.to_string(),
-                    })?;
+    while let Some(alias) = cfg.get(&arg) {
+        let bad_alias = || ParseError::IllformedAlias {
+            name: arg.clone(),
+            value: alias.to_string(),
+        };
 
-                if !visited.insert(arg.clone()) {
-                    return Err(ParseError::CircularReference { command_name: arg });
-                }
+        if !visited.insert(arg.clone()) {
+            return Err(ParseError::CircularReference { command_name: arg });
+        }
 
-                replaced.push(arg.clone());
-
-                if parts.len() == 0 {
-                    break;
-                }
-                let len = parts.len() - 1;
-
-                let mut last_part = None;
-
-                for (idx, part) in parts.into_iter().rev().enumerate() {
-                    if idx == len {
-                        last_part = Some(part);
-                    } else {
-                        following_args.insert(0, part);
-                    }
-                }
-
-                match last_part {
-                    Some(ref same_arg) if same_arg == &arg => {
-                        expanded.push(arg);
-                        break;
-                    }
-                    Some(diff_arg) => arg = diff_arg,
-                    None => unreachable!(),
-                }
-            }
-            None => {
-                expanded.push(arg);
-                break;
-            }
+        let parts: Vec<String> = split(alias).ok_or_else(bad_alias)?;
+        let (next_command_name, next_args) = parts.split_first().ok_or_else(bad_alias)?;
+        let next_command_name = next_command_name.to_string();
+        replaced.push(arg.clone());
+        following_args.push(next_args.iter().cloned().collect::<Vec<String>>());
+        if next_command_name == arg {
+            break;
+        } else {
+            arg = next_command_name;
         }
     }
 
-    expanded.extend(following_args.into_iter());
+    let expanded = std::iter::once(arg)
+        .chain(following_args.into_iter().rev().flatten())
+        .collect();
 
     Ok((expanded, replaced))
 }
@@ -305,11 +282,7 @@ mod tests {
         cfg.insert("nodef".to_string(), "".to_string());
         let command_map = BTreeMap::new();
 
-        let (expanded, replaced) =
-            expand_aliases(&cfg, &command_map, "nodef".to_string(), false).unwrap();
-        let empty: Vec<String> = Vec::new();
-        assert_eq!(expanded, empty);
-        assert_eq!(replaced, vec!["nodef"]);
+        expand_aliases(&cfg, &command_map, "nodef".to_string(), false).unwrap_err();
     }
 
 }
