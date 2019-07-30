@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::configparser::config;
-use cliparser::alias::expand_aliases;
+use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::hgflags::global_hg_flag_definitions;
 use cliparser::parser::*;
 use cpython::*;
@@ -119,7 +119,7 @@ fn expand_args(
     py: Python,
     config: config,
     command_names: Vec<String>,
-    args: Vec<String>,
+    mut args: Vec<String>,
     strict: bool,
 ) -> PyResult<(Vec<PyBytes>, Vec<PyBytes>)> {
     let mut alias_map = BTreeMap::new();
@@ -133,16 +133,21 @@ fn expand_args(
         alias_map.insert(key, val);
     }
 
-    let mut command_map = BTreeMap::new();
-    for (i, name) in command_names.into_iter().enumerate() {
-        let multiples = expand_command_name(name);
-        for multiple in multiples.into_iter() {
-            command_map.insert(multiple, i);
+    if !strict && !args.is_empty() {
+        // Expand args[0] from a prefix to a full command name
+        let mut command_map = BTreeMap::new();
+        for (i, name) in command_names.into_iter().enumerate() {
+            let multiples = expand_command_name(name);
+            for multiple in multiples.into_iter() {
+                command_map.insert(multiple, i);
+            }
         }
+        args[0] =
+            expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }
 
-    let (expanded_args, replaced_aliases) = expand_aliases(&alias_map, &command_map, &args, strict)
-        .map_err(|e| map_to_python_err(py, e))?;
+    let (expanded_args, replaced_aliases) =
+        expand_aliases(&alias_map, &args).map_err(|e| map_to_python_err(py, e))?;
 
     let expanded_args: Vec<PyBytes> = expanded_args
         .into_iter()

@@ -7,7 +7,7 @@ use crate::errors::{DispatchError, HighLevelError};
 use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
-use cliparser::alias::expand_aliases;
+use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::hgflags::global_hg_flag_definitions;
 use cliparser::parser::*;
 use configparser::config::ConfigSet;
@@ -366,7 +366,7 @@ impl Dispatcher {
         }
     }
 
-    pub fn _dispatch(&mut self, args: Vec<String>, io: &mut IO) -> Result<u8, DispatchError> {
+    pub fn _dispatch(&mut self, mut args: Vec<String>, io: &mut IO) -> Result<u8, DispatchError> {
         let early_result = self.early_parse(&args)?;
 
         let early_opts = early_result.opts();
@@ -405,20 +405,20 @@ impl Dispatcher {
             .ok_or_else(|| DispatchError::NoCommandFound)?;
 
         let mut replace = 0;
-        for (idx, arg) in args.iter().enumerate() {
+        for (idx, arg) in args.iter_mut().enumerate() {
             if arg == first_arg {
+                // FIXME: DispatchError::AliasExpansionFailed should contain information about
+                // ambiguous commands.
+                let expanded = expand_prefix(&command_map, first_arg)
+                    .map_err(|_| DispatchError::AliasExpansionFailed)?;
+                *arg = expanded;
                 replace = idx;
                 break;
             }
         }
 
-        let (expanded, replaced) = expand_aliases(
-            &alias_map,
-            &command_map,
-            &vec![first_arg.to_string()],
-            false,
-        )
-        .map_err(|_| DispatchError::AliasExpansionFailed)?;
+        let (expanded, replaced) = expand_aliases(&alias_map, &vec![first_arg.to_string()])
+            .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
         let mut new_args = Vec::new();
 
