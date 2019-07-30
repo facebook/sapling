@@ -149,10 +149,19 @@ pub fn expand_prefix(
             };
 
             if command_matches.len() > 1 {
-                let mut id_to_command_map = HashMap::new();
-                for name in command_matches {
-                    let id = command_map[&name];
-                    id_to_command_map.entry(id).or_insert(Vec::new()).push(name);
+                // Prepare the error message. It's a bit complex due to debug commands and aliases.
+                let ids: HashSet<isize> = command_matches
+                    .iter()
+                    .map(|name| command_map[name])
+                    .collect();
+                let mut id_to_command_map: HashMap<isize, Vec<String>> = HashMap::new();
+                for (name, id) in command_map {
+                    if ids.contains(id) && name.starts_with(&arg) {
+                        id_to_command_map
+                            .entry(*id)
+                            .or_insert(Vec::new())
+                            .push(name.to_string());
+                    }
                 }
 
                 // sort command aliases by length for consistency

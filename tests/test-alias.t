@@ -373,12 +373,12 @@ shadowing
 
   $ hg i
   hg: command 'i' is ambiguous:
-  	id
+  	id or identify
   	idalias
   	idaliaslong
   	idaliasshell
   	import
-  	in
+  	in or incoming
   	init
   [255]
   $ hg id
