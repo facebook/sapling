@@ -128,9 +128,11 @@ fn expand_args(
         // Expand args[0] from a prefix to a full command name
         let mut command_map = BTreeMap::new();
         for (i, name) in command_names.into_iter().enumerate() {
+            let i: isize = i as isize + 1; // avoid using 0
             let multiples = expand_command_name(name);
+            let is_debug = multiples.iter().any(|s| s.starts_with("debug"));
             for multiple in multiples.into_iter() {
-                command_map.insert(multiple, i);
+                command_map.insert(multiple, if is_debug { -i } else { i });
             }
         }
         args[0] =

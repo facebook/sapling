@@ -113,8 +113,12 @@ fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<St
 ///
 /// If there is an exact match the argument is returned as-is.  
 /// If there is no match the argument is returned as-is.
+///
+/// Commands with negative isize are considered as "debug" commands and treated
+/// specially - if there is only one non-debug match, that match will be used
+/// without causing `AmbiguousCommand` error.
 pub fn expand_prefix(
-    command_map: &BTreeMap<String, usize>,
+    command_map: &BTreeMap<String, isize>,
     arg: impl ToString,
 ) -> Result<String, ParseError> {
     let arg = arg.to_string();
@@ -123,26 +127,34 @@ pub fn expand_prefix(
         None => {
             let command_range = command_map.range(get_prefix_bounds(&arg));
 
-            let command_matches_map: HashMap<&str, &usize> =
-                command_range.map(|(c, id)| ((*c).as_ref(), id)).collect();
-
             let mut seen_ids = HashSet::new();
             let mut command_matches = HashSet::new();
-            let mut id_to_command_map = HashMap::new();
+            let mut non_debug_command_matches = HashSet::new();
 
             // split commands point to the same handler like id and identify, we only need one
-            for (command, id) in &command_matches_map {
+            for (command, id) in command_range {
                 if !seen_ids.contains(&id) {
-                    command_matches.insert(*command);
+                    command_matches.insert(command.clone());
+                    if *id >= 0 {
+                        non_debug_command_matches.insert(command.clone());
+                    }
                     seen_ids.insert(id);
                 }
-                id_to_command_map
-                    .entry(id)
-                    .or_insert(Vec::new())
-                    .push(*command);
             }
 
+            let command_matches = if non_debug_command_matches.is_empty() {
+                command_matches
+            } else {
+                non_debug_command_matches
+            };
+
             if command_matches.len() > 1 {
+                let mut id_to_command_map = HashMap::new();
+                for name in command_matches {
+                    let id = command_map[&name];
+                    id_to_command_map.entry(id).or_insert(Vec::new()).push(name);
+                }
+
                 // sort command aliases by length for consistency
                 for (_, vec) in &mut id_to_command_map {
                     vec.sort_by_key(|s| s.len());
@@ -242,6 +254,28 @@ mod tests {
 
         let element = expand_prefix(&command_map, "i").unwrap();
         assert!((element == "id") || (element == "identify"));
+    }
+
+    #[test]
+    fn test_match_debug_prefix() {
+        let mut command_map = BTreeMap::new();
+        command_map.insert("debugfoo".to_string(), -1);
+        assert_eq!(expand_prefix(&command_map, "d").unwrap(), "debugfoo");
+        command_map.insert("dbfoo".to_string(), -1);
+        assert_eq!(expand_prefix(&command_map, "d").unwrap(), "dbfoo");
+
+        command_map.insert("debugbar".to_string(), -2);
+        assert!(expand_prefix(&command_map, "d").is_err());
+
+        command_map.insert("diff".to_string(), 1);
+        assert_eq!(expand_prefix(&command_map, "d").unwrap(), "diff");
+        assert!(expand_prefix(&command_map, "debug").is_err());
+        assert_eq!(expand_prefix(&command_map, "debugf").unwrap(), "debugfoo");
+
+        command_map.insert("default".to_string(), 2);
+        assert!(expand_prefix(&command_map, "d").is_err());
+        assert_eq!(expand_prefix(&command_map, "di").unwrap(), "diff");
+        assert_eq!(expand_prefix(&command_map, "de").unwrap(), "default");
     }
 
     #[test]

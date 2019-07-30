@@ -257,19 +257,22 @@ impl Dispatcher {
         Ok(())
     }
 
-    fn command_map(&self, cfg: &ConfigSet) -> BTreeMap<String, usize> {
+    fn command_map(&self, cfg: &ConfigSet) -> BTreeMap<String, isize> {
         let mut command_map = BTreeMap::new();
-        let mut i = 0;
+        let mut i = 1;
 
         for command in (&self.commands).values() {
-            command_map.insert(command.name().to_string(), i);
+            let name = command.name();
+            let is_debug = name.starts_with("debug");
+            command_map.insert(name.to_string(), if is_debug { -i } else { i });
             i = i + 1;
         }
         // adding aliases into the command map is what Python does, so copying this behavior
         // allows alias expansion to not behave differently for Rust or Python.
         for name in cfg.keys("alias") {
             if let Ok(name) = String::from_utf8(name.to_vec()) {
-                command_map.insert(name, i);
+                let is_debug = name.starts_with("debug");
+                command_map.insert(name, if is_debug { -i } else { i });
                 i = i + 1;
             }
         }
