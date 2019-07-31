@@ -6,8 +6,10 @@
 
 use bytes::{Bytes, BytesMut};
 use failure_ext::{Error, Result};
-use futures::{try_ready, Async, Future, Poll, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::{
+    stream::{AndThen, Concat2},
+    try_ready, Async, Poll, Stream,
+};
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 
@@ -92,12 +94,29 @@ where
     }
 }
 
-pub enum Chunks {
-    Inline(BoxFuture<Bytes, Error>),
-    Chunked(ExpectedSize, BoxStream<Bytes, Error>),
+// NOTE: We concretely spell out the types the Chunk variants here. Boxifying would be a little
+// nicer, but that causes us to lose the sense of whether the incoming Stream was Send or not.
+// Spelling out the concrete types here lets us include the incoming Stream in them, and therefore
+// allow callers to call the Filestore with a Stream that's either Send or non-Send, and get back a
+// Future that is either Send or non-Send.
+type LimitFn = Box<dyn FnMut(Bytes) -> Result<Bytes> + Send>;
+type LimitStream<S> = AndThen<S, LimitFn, Result<Bytes>>;
+
+pub type BufferedStream<S> = Concat2<LimitStream<S>>;
+pub type ChunkedStream<S> = ChunkStream<LimitStream<S>>;
+
+pub enum Chunks<S>
+where
+    S: Stream<Item = Bytes, Error = Error>,
+{
+    Inline(BufferedStream<S>),
+    Chunked(ExpectedSize, ChunkedStream<S>),
 }
 
-impl Debug for Chunks {
+impl<S> Debug for Chunks<S>
+where
+    S: Stream<Item = Bytes, Error = Error>,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Chunks::Inline(_) => write!(f, "Chunks::Inline(..)"),
@@ -108,42 +127,34 @@ impl Debug for Chunks {
 
 /// Chunk a stream of incoming data for storage. We use the incoming size hint to decide whether
 /// to chunk.
-pub fn make_chunks<S>(data: S, expected_size: ExpectedSize, chunk_size: Option<u64>) -> Chunks
+pub fn make_chunks<S>(data: S, expected_size: ExpectedSize, chunk_size: Option<u64>) -> Chunks<S>
 where
-    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
+    S: Stream<Item = Bytes, Error = Error>,
 {
     // NOTE: We stop reading if the stream we are provided exceeds the expected_size we were given.
     // While we do check later that the stream matches *exactly* the size we were given, doing this
     // check lets us bail early (and e.g. ensures that if we are told something is 1 byte but it
     // actually is 1TB, we don't try to buffer the whole 1TB).
-    let mut observed_size: u64 = 0; // This moves into the closure below and serves as its state.
-    let data = data.and_then(move |chunk| {
-        // NOTE: unwrap() will fail if we have a Bytes whose length is too large to fit in a u64.
-        // We presumably don't have such Bytes in memory!
-        observed_size += u64::try_from(chunk.len()).unwrap();
-        expected_size.check_less(observed_size)?;
-        Ok(chunk)
-    });
+    let limit = {
+        let mut observed_size: u64 = 0; // This moves into the closure below and serves as its state.
+        move |chunk: Bytes| {
+            // NOTE: unwrap() will fail if we have a Bytes whose length is too large to fit in a u64.
+            // We presumably don't have such Bytes in memory!
+            observed_size += u64::try_from(chunk.len()).unwrap();
+            expected_size.check_less(observed_size)?;
+            Ok(chunk)
+        }
+    };
+
+    let data = data.and_then(Box::new(limit) as LimitFn);
 
     match chunk_size {
         Some(chunk_size) if expected_size.should_chunk(chunk_size) => {
-            let stream = ChunkStream::new(data, chunk_size as usize).boxify();
+            let stream = ChunkStream::new(data, chunk_size as usize);
             Chunks::Chunked(expected_size, stream)
         }
         _ => {
-            let buff = expected_size.new_buffer();
-
-            let fut = data
-                .fold(buff, move |mut buff, chunk| -> Result<BytesMut> {
-                    // NOTE: extend_from_slice should never need to extend here (but it won't panic if
-                    // it has to), since we reserve the max capacity upfront and don't allow the stream
-                    // to grow beyond that.
-                    buff.extend_from_slice(&chunk);
-                    Ok(buff)
-                })
-                .map(|bytes_mut| bytes_mut.freeze())
-                .boxify();
-
+            let fut = data.concat2();
             Chunks::Inline(fut)
         }
     }

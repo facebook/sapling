@@ -13,10 +13,11 @@ use futures::{
     future::{lazy, IntoFuture},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::FutureExt;
 use mononoke_types::{hash, ChunkedFileContents, FileContents};
 
 use crate::alias::add_aliases_to_multiplexer;
+use crate::chunk::{BufferedStream, ChunkedStream};
 use crate::expected_size::ExpectedSize;
 use crate::finalize::finalize;
 use crate::incremental_hash::{
@@ -52,21 +53,25 @@ pub fn prepare_bytes(bytes: Bytes) -> Prepared {
 
 /// Prepare a set of Bytes for upload. The size hint isn't actually used here, it's just passed
 /// through.
-pub fn prepare_inline(
-    chunk: BoxFuture<Bytes, Error>,
-) -> impl Future<Item = Prepared, Error = Error> {
+pub fn prepare_inline<S>(chunk: BufferedStream<S>) -> impl Future<Item = Prepared, Error = Error>
+where
+    S: Stream<Item = Bytes, Error = Error>,
+{
     chunk.map(prepare_bytes)
 }
 
 /// Prepare a stream of bytes for upload. This will return a Prepared struct that can be used to
 /// finalize the upload. The hashes we compute may depend on the size hint.
-pub fn prepare_chunked<B: Blobstore + Clone>(
+pub fn prepare_chunked<B: Blobstore + Clone, S>(
     ctx: CoreContext,
     blobstore: B,
     expected_size: ExpectedSize,
-    chunks: BoxStream<Bytes, Error>,
+    chunks: ChunkedStream<S>,
     concurrency: usize,
-) -> impl Future<Item = Prepared, Error = Error> {
+) -> impl Future<Item = Prepared, Error = Error>
+where
+    S: Stream<Item = Bytes, Error = Error>,
+{
     lazy(move || {
         // NOTE: The Multiplexer makes clones of the Bytes we pass in. It's worth noting that Bytes
         // actually behaves like an Arc with an inner reference-counted handle to data, so those

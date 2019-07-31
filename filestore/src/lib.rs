@@ -287,8 +287,8 @@ pub fn store<B: Blobstore + Clone>(
     config: &FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
-    data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-) -> impl Future<Item = Chunk, Error = Error> + Send + 'static {
+    data: impl Stream<Item = Bytes, Error = Error>,
+) -> impl Future<Item = Chunk, Error = Error> {
     use chunk::*;
     use finalize::*;
     use prepare::*;
@@ -319,10 +319,7 @@ pub fn store_bytes<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     bytes: Bytes,
-) -> (
-    FileContents,
-    impl Future<Item = (), Error = Error> + Send + 'static,
-) {
+) -> (FileContents, impl Future<Item = (), Error = Error>) {
     use finalize::*;
     use prepare::*;
 

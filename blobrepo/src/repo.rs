@@ -883,8 +883,8 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         req: &StoreRequest,
-        data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-    ) -> impl Future<Item = Chunk, Error = Error> + Send + 'static {
+        data: impl Stream<Item = Bytes, Error = Error>,
+    ) -> impl Future<Item = Chunk, Error = Error> {
         filestore::store(&self.blobstore, &self.filestore_config, ctx, req, data)
     }
 
