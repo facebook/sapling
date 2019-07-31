@@ -6,12 +6,12 @@
 
 #![deny(warnings)]
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::Timestamp;
+use mononoke_types::{BlobstoreBytes, Timestamp};
 use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashMap;

@@ -10,7 +10,7 @@ use std::iter::FromIterator;
 
 use crate::derive_unode_manifest;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
@@ -21,7 +21,9 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId};
+use mononoke_types::{
+    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
+};
 use repo_blobstore::RepoBlobstore;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

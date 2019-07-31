@@ -12,8 +12,9 @@ use failure_ext::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
 use context::CoreContext;
+use mononoke_types::BlobstoreBytes;
 
 /// In-memory "blob store"
 ///

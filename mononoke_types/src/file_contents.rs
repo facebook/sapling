@@ -6,14 +6,13 @@
 
 use std::fmt::{self, Debug};
 
-use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use failure_ext::{bail_err, chain::*};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rust_thrift::compact_protocol;
 
 use crate::{
-    blob::{Blob, BlobstoreValue, ContentBlob, ContentMetadataBlob},
+    blob::{Blob, BlobstoreBytes, BlobstoreValue, ContentBlob, ContentMetadataBlob},
     errors::*,
     hash, thrift,
     typed_hash::{ContentId, ContentIdContext, ContentMetadataId},

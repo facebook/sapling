@@ -9,11 +9,10 @@
 use std::fmt;
 use std::sync::Arc;
 
-use asyncmemo::Weight;
-use bytes::Bytes;
 use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, MononokeId};
 
 use context::CoreContext;
 
@@ -25,44 +24,6 @@ pub use crate::errors::ErrorKind;
 
 mod disabled;
 pub use crate::disabled::DisabledBlob;
-
-/// A type representing bytes written to or read from a blobstore. The goal here is to ensure
-/// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
-/// stored in the blob store.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BlobstoreBytes(Bytes);
-
-impl BlobstoreBytes {
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
-    #[inline]
-    pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
-        BlobstoreBytes(bytes.into())
-    }
-
-    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
-    #[inline]
-    pub fn into_bytes(self) -> Bytes {
-        self.0
-    }
-
-    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
-    #[inline]
-    pub fn as_bytes(&self) -> &Bytes {
-        &self.0
-    }
-}
-
-impl Weight for BlobstoreBytes {
-    #[inline]
-    fn get_weight(&self) -> usize {
-        self.len()
-    }
-}
 
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:
@@ -112,6 +73,25 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
                 } else {
                     future::err(ErrorKind::NotFound(key).into())
                 }
+            })
+            .boxify()
+    }
+    /// Fetch a typed value, or None if no value is present.
+    fn fetch<Id>(&self, ctx: CoreContext, id: Id) -> BoxFuture<Option<Id::Value>, Error>
+    where
+        Id: MononokeId,
+        Self: Sized,
+    {
+        let blobstore_key = id.blobstore_key();
+
+        self.get(ctx, blobstore_key.clone())
+            .and_then(move |bytes| {
+                bytes
+                    .map(move |bytes| {
+                        let blob: Blob<Id> = Blob::new(id, bytes.into_bytes());
+                        <Id::Value>::from_blob(blob)
+                    })
+                    .transpose()
             })
             .boxify()
     }

@@ -11,7 +11,8 @@ use futures_ext::BoxFuture;
 
 use context::CoreContext;
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
+use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]

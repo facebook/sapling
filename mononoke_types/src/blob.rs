@@ -6,6 +6,7 @@
 
 //! Support for converting Mononoke data structures into in-memory blobs.
 
+use asyncmemo::Weight;
 use bytes::Bytes;
 
 use crate::{
@@ -47,8 +48,6 @@ pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
 pub type ContentMetadataBlob = Blob<ContentMetadataId>;
 
-pub use blobstore::BlobstoreBytes;
-
 impl<Id> From<Blob<Id>> for BlobstoreBytes {
     #[inline]
     fn from(blob: Blob<Id>) -> BlobstoreBytes {
@@ -60,4 +59,42 @@ pub trait BlobstoreValue: Sized + Send {
     type Key;
     fn into_blob(self) -> Blob<Self::Key>;
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self>;
+}
+
+/// A type representing bytes written to or read from a blobstore. The goal here is to ensure
+/// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
+/// stored in the blob store.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BlobstoreBytes(Bytes);
+
+impl BlobstoreBytes {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
+        BlobstoreBytes(bytes.into())
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn into_bytes(self) -> Bytes {
+        self.0
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn as_bytes(&self) -> &Bytes {
+        &self.0
+    }
+}
+
+impl Weight for BlobstoreBytes {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.len()
+    }
 }

@@ -232,16 +232,8 @@ impl BlobRepo {
         let blobstore_key = id.blobstore_key();
 
         self.blobstore
-            .get(ctx, blobstore_key.clone())
-            .and_then(move |blob| {
-                blob.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into())
-                    .and_then(move |bytes| {
-                        // TODO: some function on BlobstoreBytes?
-                        // TODO: Maybe we can even make this a Blobstore function?
-                        let blob: Blob<Id> = Blob::new(id, bytes.into_bytes());
-                        <Id::Value>::from_blob(blob)
-                    })
-            })
+            .fetch(ctx, id)
+            .and_then(move |ret| ret.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into()))
     }
 
     // this is supposed to be used only from unittest
