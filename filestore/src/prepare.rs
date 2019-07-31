@@ -62,6 +62,7 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
     blobstore: B,
     expected_size: ExpectedSize,
     chunks: BoxStream<Bytes, Error>,
+    concurrency: usize,
 ) -> impl Future<Item = Prepared, Error = Error> {
     lazy(move || {
         // Split the error out of the data stream so we don't need to worry about cloning it
@@ -82,7 +83,7 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
             .next()
             .unwrap()
             .map_err(|e| -> Error { e })
-            .and_then(move |bytes| {
+            .map(move |bytes| {
                 // NOTE: When uploading individual chunks, we still treat them as a regular prepare +
                 // finalize Filestore upload (i.e. we create all mappings and such). Here's why:
                 //
@@ -101,6 +102,7 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
                 let prepared = prepare_bytes(bytes);
                 finalize(blobstore.clone(), ctx.clone(), None, prepared)
             })
+            .buffered(concurrency)
             .fold(vec![], |mut chunks, chunk| {
                 chunks.push(chunk);
                 let res: Result<_> = Ok(chunks);

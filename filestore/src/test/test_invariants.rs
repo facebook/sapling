@@ -79,7 +79,10 @@ fn test_invariants() -> Result<()> {
 
     let memblob = Arc::new(memblob::LazyMemblob::new());
     let blob = FailingBlobstore::new(memblob.clone(), 0.75, 0.75);
-    let config = FilestoreConfig { chunk_size: 16 };
+    let config = FilestoreConfig {
+        chunk_size: 16,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     for _ in 0..1000 {

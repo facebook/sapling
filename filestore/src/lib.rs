@@ -54,20 +54,16 @@ mod test;
 /// compatibility.
 #[derive(Debug, Clone)]
 pub struct FilestoreConfig {
-    chunk_size: u64,
-}
-
-impl FilestoreConfig {
-    fn chunk_size(&self) -> u64 {
-        self.chunk_size
-    }
+    pub chunk_size: u64,
+    pub concurrency: usize,
 }
 
 impl Default for FilestoreConfig {
     fn default() -> Self {
         FilestoreConfig {
             // TODO: Don't use the default value (expose it through config instead).
-            chunk_size: 256 * 1024,
+            chunk_size: 8 * 1024 * 1024,
+            concurrency: 1,
         }
     }
 }
@@ -296,11 +292,16 @@ pub fn store<B: Blobstore + Clone>(
     use finalize::*;
     use prepare::*;
 
-    let prepared = match make_chunks(data, req.expected_size, config.chunk_size()) {
+    let prepared = match make_chunks(data, req.expected_size, config.chunk_size) {
         Chunks::Inline(fut) => prepare_inline(fut).left_future(),
-        Chunks::Chunked(expected_size, chunks) => {
-            prepare_chunked(ctx.clone(), blobstore.clone(), expected_size, chunks).right_future()
-        }
+        Chunks::Chunked(expected_size, chunks) => prepare_chunked(
+            ctx.clone(),
+            blobstore.clone(),
+            expected_size,
+            chunks,
+            config.concurrency,
+        )
+        .right_future(),
     };
 
     prepared.and_then({

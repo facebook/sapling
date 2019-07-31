@@ -218,7 +218,10 @@ fn filestore_chunked_put_get() -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 1 };
+    let config = FilestoreConfig {
+        chunk_size: 1,
+        concurrency: 5,
+    };
 
     let ctx = CoreContext::test_mock();
 
@@ -248,8 +251,14 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
 
-    let small = FilestoreConfig { chunk_size: 1 };
-    let large = FilestoreConfig { chunk_size: 3 };
+    let small = FilestoreConfig {
+        chunk_size: 1,
+        concurrency: 5,
+    };
+    let large = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     let full_data = &b"foobar"[..];
@@ -323,7 +332,10 @@ fn filestore_chunk_not_found() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     let data = &b"foobar"[..];
@@ -363,7 +375,10 @@ fn filestore_put_invalid_size() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     let data = &b"foobar"[..];
@@ -389,7 +404,10 @@ fn filestore_put_content_id() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -427,7 +445,10 @@ fn filestore_put_sha1() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -465,7 +486,10 @@ fn filestore_put_git_sha1() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -506,7 +530,10 @@ fn filestore_put_sha256() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let config = FilestoreConfig { chunk_size: 3 };
+    let config = FilestoreConfig {
+        chunk_size: 3,
+        concurrency: 5,
+    };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -694,7 +721,10 @@ fn filestore_test_chunked_peek() -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let small = FilestoreConfig { chunk_size: 1 };
+    let small = FilestoreConfig {
+        chunk_size: 1,
+        concurrency: 5,
+    };
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock();
