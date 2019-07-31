@@ -294,10 +294,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
             .flatten(),
     );
 
-    let expected: Vec<_> = vec!["f", "o", "o", "bar"]
-        .into_iter()
-        .map(Bytes::from)
-        .collect();
+    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
 
     println!("res = {:#?}", res);
     assert_eq!(res?, Some(expected));
