@@ -108,12 +108,6 @@ void Overlay::initOverlay() {
         fsOverlay_.scanForNextInodeNumber().get(), std::memory_order_relaxed);
   }
 
-  // To support migrating from an older Overlay format, unconditionally create
-  // tmp/.
-  // TODO: It would be a bit expensive, but it might be worth checking
-  // all of the numbered subdirectories here too.
-  fsOverlay_.ensureTmpDirectoryIsCreated();
-
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(

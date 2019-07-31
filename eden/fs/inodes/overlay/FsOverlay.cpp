@@ -308,6 +308,11 @@ void FsOverlay::initNewOverlay() {
     }
   }
 
+  // Create the "tmp" directory
+  folly::checkUnixError(
+      ::mkdirat(localDirFile.fd(), "tmp", 0700),
+      "failed to create overlay tmp directory");
+
   // For now we just write a simple header, with a magic number to identify
   // this as an eden overlay file, and the version number of the overlay
   // format.
@@ -320,25 +325,6 @@ void FsOverlay::initNewOverlay() {
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   folly::writeFileAtomic(
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
-}
-
-void FsOverlay::ensureTmpDirectoryIsCreated() {
-  struct stat tmpStat;
-  int statResult = fstatat(dirFile_.fd(), "tmp", &tmpStat, AT_SYMLINK_NOFOLLOW);
-  if (statResult == 0) {
-    if (!S_ISDIR(tmpStat.st_mode)) {
-      folly::throwSystemErrorExplicit(
-          ENOTDIR, "overlay tmp is not a directory");
-    }
-  } else {
-    if (errno == ENOENT) {
-      folly::checkUnixError(
-          mkdirat(dirFile_.fd(), "tmp", 0700),
-          "failed to create overlay tmp directory");
-    } else {
-      folly::throwSystemError("fstatat(\"tmp\") failed");
-    }
-  }
 }
 
 optional<overlay::OverlayDir> FsOverlay::loadOverlayDir(

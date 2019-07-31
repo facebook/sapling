@@ -72,12 +72,6 @@ class FsOverlay {
       folly::MutableStringPiece subdirPath,
       InodeNumber inodeNum);
 
-  /**
-   * Unconditionally create the "tmp" directory in the overlay directory.
-   * It is used to support migration from an older Overlay format.
-   */
-  void ensureTmpDirectoryIsCreated();
-
   void initNewOverlay();
 
   void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir);
