@@ -13,9 +13,9 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{BoxFuture, BoxStream};
-use mononoke_types::{hash, ContentId, FileContents};
-use std::convert::TryInto;
+use mononoke_types::{hash, ChunkedFileContents, FileContents};
 
+use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;
 use crate::finalize::finalize;
 use crate::incremental_hash::{
@@ -23,11 +23,9 @@ use crate::incremental_hash::{
     Sha256IncrementalHasher,
 };
 use crate::streamhash::hash_stream;
-use crate::StoreRequest;
 
 #[derive(Debug, Clone)]
 pub struct Prepared {
-    pub total_size: u64,
     pub sha1: hash::Sha1,
     pub sha256: hash::Sha256,
     pub git_sha1: hash::GitSha1,
@@ -35,10 +33,6 @@ pub struct Prepared {
 }
 
 fn prepare_bytes(bytes: Bytes) -> Prepared {
-    // This will panic if we have a buffer whose size is too large to fit in a u64. Not worth
-    // handling here.
-    let total_size = bytes.len().try_into().unwrap();
-
     let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
     let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
     let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(&bytes), &bytes);
@@ -46,7 +40,6 @@ fn prepare_bytes(bytes: Bytes) -> Prepared {
     let contents = FileContents::Bytes(bytes);
 
     Prepared {
-        total_size,
         sha1,
         sha256,
         git_sha1,
@@ -74,24 +67,20 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
         // Split the error out of the data stream so we don't need to worry about cloning it
         let (chunks, err) = futures_ext::split_err(chunks);
 
-        // One stream for the data itself, and one for each hash format we might need
-        let mut copies = futures_ext::stream_clone(chunks, 5).into_iter();
+        // One stream for the data itself, one for the content ID, and one for the aliases.
+        // NOTE: it's safe to unwrap copies.next() below because we make enough copies (and we didn't,
+        // we'd hit the issue deterministically in tests).
+        let mut copies = futures_ext::stream_clone(chunks, 3).into_iter();
 
-        // It's safe to unwrap here because we make enough copeis (and we didn't, we'd hit this in
-        // tests).
-        let chunks = copies.next().unwrap();
-
-        let content_id = hash_stream(ContentIdIncrementalHasher::new(), copies.next().unwrap());
-        let sha1 = hash_stream(Sha1IncrementalHasher::new(), copies.next().unwrap());
-        let sha256 = hash_stream(Sha256IncrementalHasher::new(), copies.next().unwrap());
-        let git_sha1 = hash_stream(
-            GitSha1IncrementalHasher::new(expected_size),
-            copies.next().unwrap(),
-        );
-        let acc: Vec<(ContentId, u64)> = vec![];
+        let content_id = hash_stream(ContentIdIncrementalHasher::new(), copies.next().unwrap())
+            .map_err(|e| -> Error { e });
+        let aliases =
+            alias_stream(expected_size, copies.next().unwrap()).map_err(|e| -> Error { e });
 
         // XXX: Allow for buffering here? Note that ordering matters (we need the chunks in order)
-        let contents = chunks
+        let contents = copies
+            .next()
+            .unwrap()
             .map_err(|e| -> Error { e })
             .and_then(move |bytes| {
                 // NOTE: When uploading individual chunks, we still treat them as a regular prepare +
@@ -110,44 +99,28 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
                 // To avoid this problem, we always perform a proper upload, even for individual
                 // chunks.
                 let prepared = prepare_bytes(bytes);
-                let chunk_size = prepared.total_size;
-                let req = StoreRequest::new(chunk_size);
-                finalize(blobstore.clone(), ctx.clone(), &req, prepared)
-                    .map(move |content_id| (content_id, chunk_size))
+                finalize(blobstore.clone(), ctx.clone(), None, prepared)
             })
-            .fold(acc, |mut chunks, chunk| {
+            .fold(vec![], |mut chunks, chunk| {
                 chunks.push(chunk);
                 let res: Result<_> = Ok(chunks);
                 res
             });
 
-        let res = (
-            (content_id, sha1, sha256, git_sha1)
-                .into_future()
-                .map_err(|e| -> Error { e }),
-            contents,
-        )
-            .into_future()
-            .map(|((content_id, sha1, sha256, git_sha1), chunks)| {
-                // NOTE: We don't use the size hint that was provided here! Instead, we compute the
-                // actual size we observed.
-                let total_size = chunks
-                    .iter()
-                    .map(|(_, size)| size)
-                    .fold(0, |acc, x| acc + x);
-
-                let chunks: Vec<_> = chunks.into_iter().map(|(key, _)| key).collect();
-
-                let contents = FileContents::Chunked((content_id, chunks));
-
-                Prepared {
-                    total_size,
+        let res = (content_id, aliases, contents).into_future().and_then(
+            |(content_id, aliases, chunks)| {
+                let contents = FileContents::Chunked(ChunkedFileContents::new(content_id, chunks));
+                let (sha1, sha256, git_sha1) = aliases.redeem(contents.size())?;
+                let prepared = Prepared {
                     sha1,
                     sha256,
                     git_sha1,
                     contents,
-                }
-            });
+                };
+
+                Ok(prepared)
+            },
+        );
 
         assert!(copies.next().is_none());
 

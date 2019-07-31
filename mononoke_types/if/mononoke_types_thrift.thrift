@@ -122,6 +122,11 @@ struct DateTime {
   2: required i32 tz_offset_secs,
 }
 
+struct Chunk {
+  1: ContentId content_id,
+  2: i64 size,
+}
+
 // When a file is chunked, we reprsent it as a list of its chunks, as well as
 // its ContentId.
 struct ChunkedFileContents {
@@ -129,8 +134,8 @@ struct ChunkedFileContents {
   // FileContents reprseentation in Mononoke, which would normally require
   // hashing the contents (but we obviously can't do that here, since we don't
   // have the contents).
-  1: required ContentId content_id,
-  2: list<ContentId> chunks,
+  1: ContentId content_id,
+  2: list<Chunk> chunks,
 }
 
 union FileContents {

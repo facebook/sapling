@@ -37,9 +37,9 @@ impl EagerMemblob {
         }
     }
 
-    pub fn remove(&self, key: &String) {
+    pub fn remove(&self, key: &String) -> Option<BlobstoreBytes> {
         let mut inner = self.hash.lock().expect("lock poison");
-        inner.remove(key);
+        inner.remove(key)
     }
 }
 
@@ -50,9 +50,9 @@ impl LazyMemblob {
         }
     }
 
-    pub fn remove(&self, key: &String) {
+    pub fn remove(&self, key: &String) -> Option<BlobstoreBytes> {
         let mut inner = self.hash.lock().expect("lock poison");
-        inner.remove(key);
+        inner.remove(key)
     }
 }
 

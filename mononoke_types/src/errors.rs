@@ -11,10 +11,12 @@ pub use failure_ext::{Error, Fail, ResultExt};
 pub enum ErrorKind {
     #[fail(display = "invalid blake2 input: {}", _0)]
     InvalidBlake2Input(String),
-    #[fail(display = "invalid sha256 input: {}", _0)]
-    InvalidSha1Input(String),
     #[fail(display = "invalid sha1 input: {}", _0)]
+    InvalidSha1Input(String),
+    #[fail(display = "invalid sha256 input: {}", _0)]
     InvalidSha256Input(String),
+    #[fail(display = "invalid git sha1 input: {}", _0)]
+    InvalidGitSha1Input(String),
     #[fail(display = "invalid path '{}': {}", _0, _1)]
     InvalidPath(String, String),
     #[fail(display = "invalid Mononoke path '{}': {}", _0, _1)]

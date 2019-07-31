@@ -10,7 +10,7 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_left_future, FutureExt};
 use mononoke_types::{
-    BlobstoreBytes, BlobstoreValue, ContentAlias, ContentId, ContentMetadata, ContentMetadataId,
+    BlobstoreBytes, BlobstoreValue, Chunk, ContentAlias, ContentMetadata, ContentMetadataId,
     MononokeId,
 };
 
@@ -40,37 +40,40 @@ macro_rules! check_request_hash {
 pub fn finalize<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
-    req: &StoreRequest,
+    req: Option<&StoreRequest>,
     outcome: Prepared,
-) -> impl Future<Item = ContentId, Error = Error> {
-    let StoreRequest {
-        expected_size,
-        canonical: req_content_id,
-        sha1: req_sha1,
-        sha256: req_sha256,
-        git_sha1: req_git_sha1,
-    } = req;
-
+) -> impl Future<Item = Chunk, Error = Error> {
     let Prepared {
-        total_size,
         sha1,
         sha256,
         git_sha1,
         contents,
     } = outcome;
 
-    let _ = try_left_future!(expected_size.check_equals(total_size));
+    let total_size = contents.size();
 
     let blob = contents.into_blob();
     let content_id = *blob.id();
 
     // If we were provided any hashes in the request, then validate them before we proceed.
-    {
-        use ErrorKind::*;
-        check_request_hash!(req_content_id, content_id, InvalidContentId);
-        check_request_hash!(req_sha1, sha1, InvalidSha1);
-        check_request_hash!(req_sha256, sha256, InvalidSha256);
-        check_request_hash!(req_git_sha1, git_sha1, InvalidGitSha1);
+    if let Some(req) = req {
+        let StoreRequest {
+            expected_size,
+            canonical: req_content_id,
+            sha1: req_sha1,
+            sha256: req_sha256,
+            git_sha1: req_git_sha1,
+        } = req;
+
+        let _ = try_left_future!(expected_size.check_equals(total_size));
+
+        {
+            use ErrorKind::*;
+            check_request_hash!(req_content_id, content_id, InvalidContentId);
+            check_request_hash!(req_sha1, sha1, InvalidSha1);
+            check_request_hash!(req_sha256, sha256, InvalidSha256);
+            check_request_hash!(req_git_sha1, git_sha1, InvalidGitSha1);
+        }
     }
 
     let alias = ContentAlias::from_content_id(content_id).into_blob();
@@ -118,7 +121,7 @@ pub fn finalize<B: Blobstore + Clone>(
     //
     // - write the forward-mapping aliases
     // - write the data blob
-    // - write the back-mapping blob
+    // - write the metadata blob
     //
     // Rationale for this order: since we can't guarantee the aliases are written atomically,
     // on failure we could end up writing some but not others. If the underlying blob exists
@@ -126,14 +129,16 @@ pub fn finalize<B: Blobstore + Clone>(
     // and the aliases are only meaningful as references to that blob (in other words, an
     // alias referring to an absent blob is itself considered to be absent, so logically all
     // all the aliases come into existence atomically when the data blob is written).
-    // Once the data blob is written we can write the back-mapping object. This is just a
+    // Once the data blob is written we can write the metadata object. This is just a
     // cache, as everything in it can be computed from the content id. Therefore, in principle,
     // if it doesn't get written we can fix it up later.
+
+    let chunk = Chunk::new(content_id, total_size);
 
     (put_sha1, put_sha256, put_git_sha1)
         .into_future()
         .and_then(move |_| put_contents)
         .and_then(move |_| put_metadata)
-        .map(move |_| content_id)
+        .map(move |_| chunk)
         .right_future()
 }

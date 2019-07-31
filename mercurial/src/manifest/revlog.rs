@@ -410,7 +410,7 @@ impl RevlogEntry {
             .and_then(|content| match content {
                 EntryContent::File(data)
                 | EntryContent::Executable(data)
-                | EntryContent::Symlink(data) => Ok(Some(data.size())),
+                | EntryContent::Symlink(data) => Ok(Some(data.size() as usize)),
                 EntryContent::Tree(_) => Ok(None),
             })
             .boxify()

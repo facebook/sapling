@@ -108,7 +108,7 @@ pub struct EntryWithSizeAndContentHash {
     name: String,
     r#type: FileType,
     hash: String,
-    size: Option<usize>,
+    size: Option<u64>,
     content_sha1: Option<String>,
 }
 
@@ -142,7 +142,7 @@ impl EntryWithSizeAndContentHash {
                     Content::File(contents)
                     | Content::Executable(contents)
                     | Content::Symlink(contents) => Some(contents.size()),
-                    Content::Tree(manifest) => Some(manifest.list().count()),
+                    Content::Tree(manifest) => Some(manifest.list().count() as u64),
                 };
                 Ok(EntryWithSizeAndContentHash {
                     name,

@@ -78,13 +78,13 @@ pub fn fetch<B: Blobstore + Clone>(
                                 // Some(Bytes) to return.
                                 Some(bytes)
                             }
-                            FileContents::Chunked((_, chunks)) => {
+                            FileContents::Chunked(chunked) => {
                                 // We got a list of chunks. The next chunk we need to fetch should be
                                 // placed last in our stack, so we need to put the list of chunks into
                                 // our stack in reverse order. As for the bytes, we return None,
                                 // because we didn't find any.
                                 let next_depth = depth.next();
-                                stack.extend(chunks.into_iter().rev().map(|c| (next_depth, c)));
+                                stack.extend(chunked.into_chunks().into_iter().rev().map(|c| (next_depth, c.content_id())));
                                 None
                             }
                         };

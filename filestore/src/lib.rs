@@ -18,16 +18,16 @@ use futures_ext::FutureExt;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{
-    hash, ContentAlias, ContentId, ContentMetadata, ContentMetadataId, MononokeId,
-};
+use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, MononokeId};
 
+mod alias;
 mod chunk;
 mod errors;
 mod expected_size;
 mod fetch;
 mod finalize;
 mod incremental_hash;
+mod metadata;
 mod prepare;
 mod streamhash;
 
@@ -206,21 +206,20 @@ impl Filestore {
         }
     }
 
-    /// Fetch the alias ids for the underlying content.
-    /// XXX Compute missing ones?
-    /// XXX Allow caller to select which ones they're interested in?
+    /// Fetch the alias ids for the underlying content. This will return None if the content does
+    /// not exist. It might recompute the aliases on the fly if necessary.
     pub fn get_aliases(
         &self,
         ctxt: CoreContext,
         key: &FetchKey,
     ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
+        use metadata::*;
+
         self.get_canonical_id(ctxt.clone(), key).and_then({
             cloned!(self.blobstore, ctxt);
             move |maybe_id| match maybe_id {
-                None => Ok(None).into_future().left_future(),
-                Some(id) => blobstore
-                    .fetch(ctxt, ContentMetadataId::from(id))
-                    .right_future(),
+                Some(id) => get_metadata(blobstore, ctxt, id).left_future(),
+                None => Ok(None).into_future().right_future(),
             }
         })
     }
@@ -302,7 +301,7 @@ impl Filestore {
         prepared
             .and_then({
                 cloned!(self.blobstore, ctxt, req);
-                move |prepared| finalize(blobstore, ctxt, &req, prepared)
+                move |prepared| finalize(blobstore, ctxt, Some(&req), prepared)
             })
             .map(|_| ())
     }

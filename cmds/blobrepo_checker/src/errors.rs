@@ -29,7 +29,7 @@ pub enum ErrorKind {
     )]
     Sha256Mismatch(FileInformation, Sha256, ContentId),
     #[fail(display = "File {} read wrong size {} in blobstore", _0, _1)]
-    BadContentSize(FileInformation, usize),
+    BadContentSize(FileInformation, u64),
     #[fail(display = "File {} read wrong ContentId {} in blobstore", _0, _1)]
     BadContentId(FileInformation, ContentId),
     #[fail(

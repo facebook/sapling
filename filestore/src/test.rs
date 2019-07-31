@@ -8,7 +8,7 @@ use super::*;
 use assert_matches::assert_matches;
 use failure_ext::Result;
 use lazy_static::lazy_static;
-use mononoke_types::{typed_hash, ContentId};
+use mononoke_types::{typed_hash, ContentId, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -26,7 +26,7 @@ lazy_static! {
             0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
         ],
         "blob",
-        12
+        HELLO_WORLD_LENGTH
     )
     .unwrap();
     static ref HELLO_WORLD_SHA256: hash::Sha256 = hash::Sha256::from_bytes([
@@ -70,7 +70,7 @@ fn filestore_put_alias() -> Result<()> {
     assert_eq!(
         res?,
         Some(ContentMetadata {
-            total_size: 12,
+            total_size: HELLO_WORLD_LENGTH,
             content_id,
             sha1: *HELLO_WORLD_SHA1,
             git_sha1: *HELLO_WORLD_GIT_SHA1,
@@ -322,7 +322,7 @@ fn filestore_chunk_not_found() -> Result<()> {
 
     rt.block_on(filestore.store(ctx.clone(), &req, stream::once(Ok(Bytes::from(data)))))?;
 
-    blob.remove(&part_id.blobstore_key());
+    assert!(blob.remove(&part_id.blobstore_key()).is_some());
 
     // This should fail
     let res = rt.block_on(
@@ -498,6 +498,93 @@ fn filestore_put_sha256() -> Result<()> {
     ));
     println!("res = {:#?}", res);
     assert!(res.is_ok());
+
+    Ok(())
+}
+
+#[test]
+fn filestore_rebuild_metadata() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+    let metadata: ContentMetadataId = content_id.clone().into();
+
+    let expected = Some(ContentMetadata {
+        total_size: HELLO_WORLD_LENGTH,
+        content_id,
+        sha1: *HELLO_WORLD_SHA1,
+        git_sha1: *HELLO_WORLD_GIT_SHA1,
+        sha256: *HELLO_WORLD_SHA256,
+    });
+
+    let blob = Arc::new(memblob::LazyMemblob::new());
+    let filestore = Filestore::new(blob.clone());
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore.store(
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    // Remove the metadata
+    assert!(blob.remove(&metadata.blobstore_key()).is_some());
+
+    // Getting the metadata should cause it to get recomputed
+    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, expected);
+
+    // Now, delete the content (this shouldn't normally happen, but we're injecting failure here).
+    assert!(blob.remove(&content_id.blobstore_key()).is_some());
+
+    // Query the metadata again. It should succeed because it's saved.
+    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, expected);
+
+    // Delete the metadata now.
+    assert!(blob.remove(&metadata.blobstore_key()).is_some());
+
+    // And then, query it again. This should now return None, because the metadata isn't there,
+    // and we can't recreate it.
+    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+
+    Ok(())
+}
+
+#[test]
+fn filestore_test_missing_metadata() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = Arc::new(memblob::LazyMemblob::new());
+    let filestore = Filestore::new(blob.clone());
+    let ctx = CoreContext::test_mock();
+
+    // No matter the Fetchkey, querying the metadata should return None.
+
+    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+
+    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Sha1(*HELLO_WORLD_SHA1)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+
+    let res =
+        rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Sha256(*HELLO_WORLD_SHA256)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+
+    let res =
+        rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1)));
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
 
     Ok(())
 }

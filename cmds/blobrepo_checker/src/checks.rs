@@ -159,9 +159,9 @@ fn check_one_file(
     let file_checks = file.and_then({
         cloned!(file_info);
         move |file| {
-            let size = u64::try_from(file.size());
-            if Ok(file_info.size) != size {
-                return Err(ErrorKind::BadContentSize(file_info, file.size()).into());
+            let size = u64::try_from(file.size())?;
+            if file_info.size != size {
+                return Err(ErrorKind::BadContentSize(file_info, size).into());
             }
 
             let id = *file.into_blob().id();

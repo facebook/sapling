@@ -28,7 +28,7 @@ pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob,
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
 pub use datetime::{DateTime, Timestamp};
 pub use file_change::{FileChange, FileType};
-pub use file_contents::{ContentAlias, ContentMetadata, FileContents};
+pub use file_contents::{Chunk, ChunkedFileContents, ContentAlias, ContentMetadata, FileContents};
 pub use generation::Generation;
 pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, RepoPath, RepoPathCached};
 pub use rawbundle2::RawBundle2;
