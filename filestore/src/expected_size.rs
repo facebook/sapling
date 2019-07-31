@@ -27,7 +27,6 @@ impl ExpectedSize {
         self.0 > chunk_size
     }
 
-    #[allow(dead_code)]
     pub fn check_equals(&self, size: u64) -> Result<()> {
         if size == self.0 {
             return Ok(());

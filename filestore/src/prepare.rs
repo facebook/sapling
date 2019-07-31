@@ -14,6 +14,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, BoxStream};
 use mononoke_types::{hash, ContentId, FileContents};
+use std::convert::TryInto;
 
 use crate::expected_size::ExpectedSize;
 use crate::finalize::finalize;
@@ -22,6 +23,7 @@ use crate::incremental_hash::{
     Sha256IncrementalHasher,
 };
 use crate::streamhash::hash_stream;
+use crate::StoreRequest;
 
 #[derive(Debug, Clone)]
 pub struct Prepared {
@@ -33,7 +35,9 @@ pub struct Prepared {
 }
 
 fn prepare_bytes(bytes: Bytes) -> Prepared {
-    let total_size = bytes.len() as u64;
+    // This will panic if we have a buffer whose size is too large to fit in a u64. Not worth
+    // handling here.
+    let total_size = bytes.len().try_into().unwrap();
 
     let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
     let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
@@ -116,7 +120,8 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
                 // chunks.
                 let prepared = prepare_bytes(bytes);
                 let chunk_size = prepared.total_size;
-                finalize(blobstore.clone(), ctx.clone(), prepared)
+                let req = StoreRequest::new(chunk_size);
+                finalize(blobstore.clone(), ctx.clone(), &req, prepared)
                     .map(move |content_id| (content_id, chunk_size))
             })
             .fold(acc, |mut chunks, chunk| {

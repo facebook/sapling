@@ -103,11 +103,73 @@ impl FetchKey {
 /// Key for storing. We'll compute any missing keys, but we must have the total size.
 #[derive(Debug, Clone)]
 pub struct StoreRequest {
-    pub total_size: u64,
+    pub expected_size: expected_size::ExpectedSize,
     pub canonical: Option<ContentId>,
     pub sha1: Option<hash::Sha1>,
     pub sha256: Option<hash::Sha256>,
     pub git_sha1: Option<hash::GitSha1>,
+}
+
+impl StoreRequest {
+    pub fn new(size: u64) -> Self {
+        use expected_size::*;
+
+        Self {
+            expected_size: ExpectedSize::new(size),
+            canonical: None,
+            sha1: None,
+            sha256: None,
+            git_sha1: None,
+        }
+    }
+
+    pub fn with_canonical(size: u64, canonical: ContentId) -> Self {
+        use expected_size::*;
+
+        Self {
+            expected_size: ExpectedSize::new(size),
+            canonical: Some(canonical),
+            sha1: None,
+            sha256: None,
+            git_sha1: None,
+        }
+    }
+
+    pub fn with_sha1(size: u64, sha1: hash::Sha1) -> Self {
+        use expected_size::*;
+
+        Self {
+            expected_size: ExpectedSize::new(size),
+            canonical: None,
+            sha1: Some(sha1),
+            sha256: None,
+            git_sha1: None,
+        }
+    }
+
+    pub fn with_sha256(size: u64, sha256: hash::Sha256) -> Self {
+        use expected_size::*;
+
+        Self {
+            expected_size: ExpectedSize::new(size),
+            canonical: None,
+            sha1: None,
+            sha256: Some(sha256),
+            git_sha1: None,
+        }
+    }
+
+    pub fn with_git_sha1(size: u64, git_sha1: hash::GitSha1) -> Self {
+        use expected_size::*;
+
+        Self {
+            expected_size: ExpectedSize::new(size),
+            canonical: None,
+            sha1: None,
+            sha256: None,
+            git_sha1: Some(git_sha1),
+        }
+    }
 }
 
 impl Filestore {
@@ -222,19 +284,14 @@ impl Filestore {
     pub fn store(
         &self,
         ctxt: CoreContext,
-        key: &StoreRequest,
+        req: &StoreRequest,
         data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         use chunk::*;
-        use expected_size::*;
         use finalize::*;
         use prepare::*;
 
-        let prepared = match make_chunks(
-            data,
-            ExpectedSize::new(key.total_size),
-            self.config.chunk_size(),
-        ) {
+        let prepared = match make_chunks(data, req.expected_size, self.config.chunk_size()) {
             Chunks::Inline(fut) => prepare_inline(fut).left_future(),
             Chunks::Chunked(expected_size, chunks) => {
                 prepare_chunked(ctxt.clone(), self.blobstore.clone(), expected_size, chunks)
@@ -244,8 +301,8 @@ impl Filestore {
 
         prepared
             .and_then({
-                cloned!(self.blobstore, ctxt);
-                move |prepared| finalize(blobstore, ctxt, prepared)
+                cloned!(self.blobstore, ctxt, req);
+                move |prepared| finalize(blobstore, ctxt, &req, prepared)
             })
             .map(|_| ())
     }

@@ -760,6 +760,20 @@ macro_rules! ensure_boxstream {
     };
 }
 
+/// Macro that can be used like `?` operator, but in the context where the expected return type is
+///  a left future. The result of it is either Ok part of Result or immediate returning the Err
+//part / converted into a  a left future.
+#[macro_export]
+#[rustfmt::skip]
+macro_rules! try_left_future {
+    ($e:expr) => {
+        match $e {
+            Ok(t) => t,
+            Err(e) => return ::futures::future::err(e.into()).left_future(),
+        }
+    };
+}
+
 /// Take a future, and run it on its own task, returning the result to the caller. This permits
 /// Rust to run the spawned future on a different thread to the task that spawned it, thus adding
 /// parallelism if used sensibly.

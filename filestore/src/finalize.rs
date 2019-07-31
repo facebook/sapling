@@ -8,20 +8,49 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{Future, IntoFuture};
+use futures_ext::{try_left_future, FutureExt};
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, ContentAlias, ContentId, ContentMetadata, ContentMetadataId,
     MononokeId,
 };
 
+use crate::errors::{ErrorKind, InvalidHash};
 use crate::prepare::Prepared;
 use crate::FetchKey;
+use crate::StoreRequest;
+
+// Verify that a given $expected hash matches the $effective hash, and otherwise return a left
+// future containing the $error.
+macro_rules! check_request_hash {
+    ($expected:expr, $effective:expr, $error:expr) => {
+        if let Some(expected) = $expected {
+            if *expected != $effective {
+                return Err($error(InvalidHash {
+                    expected: *expected,
+                    effective: $effective,
+                })
+                .into())
+                .into_future()
+                .left_future();
+            }
+        }
+    };
+}
 
 pub fn finalize<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
+    req: &StoreRequest,
     outcome: Prepared,
 ) -> impl Future<Item = ContentId, Error = Error> {
-    // TODO: Maybe return ContentId synchronously here.
+    let StoreRequest {
+        expected_size,
+        canonical: req_content_id,
+        sha1: req_sha1,
+        sha256: req_sha256,
+        git_sha1: req_git_sha1,
+    } = req;
+
     let Prepared {
         total_size,
         sha1,
@@ -30,8 +59,19 @@ pub fn finalize<B: Blobstore + Clone>(
         contents,
     } = outcome;
 
+    let _ = try_left_future!(expected_size.check_equals(total_size));
+
     let blob = contents.into_blob();
     let content_id = *blob.id();
+
+    // If we were provided any hashes in the request, then validate them before we proceed.
+    {
+        use ErrorKind::*;
+        check_request_hash!(req_content_id, content_id, InvalidContentId);
+        check_request_hash!(req_sha1, sha1, InvalidSha1);
+        check_request_hash!(req_sha256, sha256, InvalidSha256);
+        check_request_hash!(req_git_sha1, git_sha1, InvalidGitSha1);
+    }
 
     let alias = ContentAlias::from_content_id(content_id).into_blob();
 
@@ -95,4 +135,5 @@ pub fn finalize<B: Blobstore + Clone>(
         .and_then(move |_| put_contents)
         .and_then(move |_| put_metadata)
         .map(move |_| content_id)
+        .right_future()
 }
