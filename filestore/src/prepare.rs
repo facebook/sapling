@@ -77,31 +77,22 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
         // One stream for the data itself, and one for each hash format we might need
         let mut copies = futures_ext::stream_clone(chunks, 5).into_iter();
 
+        // It's safe to unwrap here because we make enough copeis (and we didn't, we'd hit this in
+        // tests).
         let chunks = copies.next().unwrap();
 
-        let content_id = hash_stream(ContentIdIncrementalHasher::new(), copies.next().unwrap())
-            .shared()
-            .map_err(|_| -> Error { unreachable!() });
-
-        let sha1 = hash_stream(Sha1IncrementalHasher::new(), copies.next().unwrap())
-            .shared()
-            .map_err(|_| -> Error { unreachable!() });
-
-        let sha256 = hash_stream(Sha256IncrementalHasher::new(), copies.next().unwrap())
-            .shared()
-            .map_err(|_| -> Error { unreachable!() });
-
+        let content_id = hash_stream(ContentIdIncrementalHasher::new(), copies.next().unwrap());
+        let sha1 = hash_stream(Sha1IncrementalHasher::new(), copies.next().unwrap());
+        let sha256 = hash_stream(Sha256IncrementalHasher::new(), copies.next().unwrap());
         let git_sha1 = hash_stream(
             GitSha1IncrementalHasher::new(expected_size),
             copies.next().unwrap(),
-        )
-        .shared()
-        .map_err(|_| -> Error { unreachable!() });
+        );
         let acc: Vec<(ContentId, u64)> = vec![];
 
         // XXX: Allow for buffering here? Note that ordering matters (we need the chunks in order)
         let contents = chunks
-            .map_err(|_| -> Error { unreachable!() })
+            .map_err(|e| -> Error { e })
             .and_then(move |bytes| {
                 // NOTE: When uploading individual chunks, we still treat them as a regular prepare +
                 // finalize Filestore upload (i.e. we create all mappings and such). Here's why:
@@ -130,9 +121,14 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
                 res
             });
 
-        let res = (content_id, sha1, sha256, git_sha1, contents)
+        let res = (
+            (content_id, sha1, sha256, git_sha1)
+                .into_future()
+                .map_err(|e| -> Error { e }),
+            contents,
+        )
             .into_future()
-            .map(|(content_id, sha1, sha256, git_sha1, chunks)| {
+            .map(|((content_id, sha1, sha256, git_sha1), chunks)| {
                 // NOTE: We don't use the size hint that was provided here! Instead, we compute the
                 // actual size we observed.
                 let total_size = chunks
@@ -142,13 +138,13 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
 
                 let chunks: Vec<_> = chunks.into_iter().map(|(key, _)| key).collect();
 
-                let contents = FileContents::Chunked((*content_id, chunks));
+                let contents = FileContents::Chunked((content_id, chunks));
 
                 Prepared {
                     total_size,
-                    sha1: *sha1,
-                    sha256: *sha256,
-                    git_sha1: *git_sha1,
+                    sha1,
+                    sha256,
+                    git_sha1,
                     contents,
                 }
             });
@@ -156,7 +152,7 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
         assert!(copies.next().is_none());
 
         // Reunite result with the error
-        res.select(err.map(|_| -> Prepared { unreachable!() }))
+        res.select(err.map(|e| -> Prepared { e }))
             .map(|(res, _)| res)
             .map_err(|(err, _)| err)
     })
