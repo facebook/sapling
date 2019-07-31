@@ -122,8 +122,22 @@ struct DateTime {
   2: required i32 tz_offset_secs,
 }
 
+// When a file is chunked, we reprsent it as a list of its chunks, as well as
+// its ContentId.
+struct ChunkedFileContents {
+  // The ContentId is here to ensure we can reproduce the ContentId from the
+  // FileContents reprseentation in Mononoke, which would normally require
+  // hashing the contents (but we obviously can't do that here, since we don't
+  // have the contents).
+  1: required ContentId content_id,
+  2: list<ContentId> chunks,
+}
+
 union FileContents {
-  1: binary Bytes, // Plain uncompressed bytes - WYSIWYG
+   // Plain uncompressed bytes - WYSIWYG.
+  1: binary Bytes,
+  // References to Chunks (stored as FileContents, too).
+  2: ChunkedFileContents Chunked,
 }
 
 // Payload of object which is an alias

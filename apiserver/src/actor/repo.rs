@@ -40,7 +40,7 @@ use types::{
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
-use mononoke_types::{FileContents, MPath, RepositoryId};
+use mononoke_types::{MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
@@ -222,10 +222,9 @@ impl MononokeRepo {
 
         self.repo
             .get_file_content(ctx, HgFileNodeId::new(blobhash))
-            .and_then(move |content| match content {
-                FileContents::Bytes(content) => {
-                    Ok(MononokeRepoResponse::GetBlobContent { content })
-                }
+            .and_then(move |content| {
+                let content = content.into_bytes();
+                Ok(MononokeRepoResponse::GetBlobContent { content })
             })
             .from_err()
             .boxify()
@@ -333,10 +332,9 @@ impl MononokeRepo {
 
         self.repo
             .get_file_content_by_alias(ctx, sha256_oid)
-            .and_then(move |content| match content {
-                FileContents::Bytes(content) => {
-                    Ok(MononokeRepoResponse::DownloadLargeFile { content })
-                }
+            .and_then(move |content| {
+                let content = content.into_bytes();
+                Ok(MononokeRepoResponse::DownloadLargeFile { content })
             })
             .from_err()
             .boxify()

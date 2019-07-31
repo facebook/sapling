@@ -5,242 +5,336 @@
 // GNU General Public License version 2 or any later version.
 
 use super::*;
-use mononoke_types::typed_hash;
+use assert_matches::assert_matches;
+use failure_ext::Result;
+use mononoke_types::{typed_hash, ContentId};
 
-fn storekey(data: impl AsRef<[u8]>) -> StoreKey {
-    let data = data.as_ref();
-
-    let mut ctx = typed_hash::ContentIdContext::new();
-    ctx.update(data);
-    StoreKey {
-        total_size: data.len() as u64,
-        canonical: ctx.finish(),
+fn request(data: impl AsRef<[u8]>) -> StoreRequest {
+    StoreRequest {
+        total_size: data.as_ref().len() as u64,
+        canonical: None,
         sha1: None,
         git_sha1: None,
         sha256: None,
     }
 }
 
+fn canonical(data: impl AsRef<[u8]>) -> ContentId {
+    let mut ctx = typed_hash::ContentIdContext::new();
+    ctx.update(data.as_ref());
+    ctx.finish()
+}
+
 #[test]
-fn filestore_put_alias() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+fn filestore_put_alias() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
 
     let data = &b"hello, world"[..];
-    let key = storekey(data);
+    let key = request(data);
+    let content_id = canonical(data);
 
-    let res = rt.block_on(future::lazy({
-        cloned!(key);
-        move || {
-            let blob = memblob::LazyMemblob::new();
-            let filestore = Filestore::new(Arc::new(blob));
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::new(Arc::new(blob));
+    let ctx = CoreContext::test_mock();
 
-            let ctxt = CoreContext::test_mock();
-
-            filestore
-                .store(ctxt.clone(), &key, stream::once(Ok(Bytes::from(data))))
-                .and_then({
-                    cloned!(filestore, ctxt, key);
-                    move |()| filestore.get_aliases(ctxt, &FetchKey::Canonical(key.canonical))
-                })
-        }
-    }));
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+    let res = rt.block_on(filestore.get_aliases(ctx, &FetchKey::Canonical(content_id)));
 
     println!("res = {:#?}", res);
 
     assert_eq!(
-        res.unwrap(),
+        res?,
         Some(ContentMetadata {
             total_size: 12,
-            content_id: key.canonical,
-            sha1: Some(
-                hash::Sha1::from_bytes([
+            content_id,
+            sha1: Some(hash::Sha1::from_bytes([
+                0xb7, 0xe2, 0x3e, 0xc2, 0x9a, 0xf2, 0x2b, 0x0b, 0x4e, 0x41, 0xda, 0x31, 0xe8, 0x68,
+                0xd5, 0x72, 0x26, 0x12, 0x1c, 0x84
+            ])?),
+            git_sha1: Some(hash::GitSha1::from_bytes(
+                [
+                    0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa, 0xb2,
+                    0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
+                ],
+                "blob",
+                12
+            )?),
+            sha256: Some(hash::Sha256::from_bytes([
+                0x09, 0xca, 0x7e, 0x4e, 0xaa, 0x6e, 0x8a, 0xe9, 0xc7, 0xd2, 0x61, 0x16, 0x71, 0x29,
+                0x18, 0x48, 0x83, 0x64, 0x4d, 0x07, 0xdf, 0xba, 0x7c, 0xbf, 0xbc, 0x4c, 0x8a, 0x2e,
+                0x08, 0x36, 0x0d, 0x5b,
+            ],)?)
+        })
+    );
+
+    Ok(())
+}
+
+#[test]
+fn filestore_put_get_canon() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let data = &b"hello, world"[..];
+    let key = request(data);
+    let content_id = canonical(data);
+
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::new(Arc::new(blob));
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    let res = rt.block_on(
+        filestore
+            .fetch(ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(data)));
+
+    Ok(())
+}
+
+#[test]
+fn filestore_put_get_sha1() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let data = &b"hello, world"[..];
+    let key = request(data);
+
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::new(Arc::new(blob));
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    let res = rt.block_on(
+        filestore
+            .fetch(
+                ctx,
+                &FetchKey::Sha1(hash::Sha1::from_bytes([
                     0xb7, 0xe2, 0x3e, 0xc2, 0x9a, 0xf2, 0x2b, 0x0b, 0x4e, 0x41, 0xda, 0x31, 0xe8,
-                    0x68, 0xd5, 0x72, 0x26, 0x12, 0x1c, 0x84
-                ])
-                .unwrap()
-            ),
-            git_sha1: Some(
-                hash::GitSha1::from_bytes(
+                    0x68, 0xd5, 0x72, 0x26, 0x12, 0x1c, 0x84,
+                ])?),
+            )
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(data)));
+    Ok(())
+}
+
+#[test]
+fn filestore_put_get_git_sha1() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let data = &b"hello, world"[..];
+    let key = request(data);
+
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::new(Arc::new(blob));
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    let res = rt.block_on(
+        filestore
+            .fetch(
+                ctx,
+                &FetchKey::GitSha1(hash::GitSha1::from_bytes(
                     [
                         0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa,
-                        0xb2, 0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
+                        0xb2, 0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02,
                     ],
                     "blob",
-                    12
-                )
-                .unwrap()
-            ),
-            sha256: Some(
-                hash::Sha256::from_bytes([
+                    12,
+                )?),
+            )
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(data)));
+    Ok(())
+}
+
+#[test]
+fn filestore_put_get_sha256() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let data = &b"hello, world"[..];
+    let key = request(data);
+
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::new(Arc::new(blob));
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    let res = rt.block_on(
+        filestore
+            .fetch(
+                ctx,
+                &FetchKey::Sha256(hash::Sha256::from_bytes([
                     0x09, 0xca, 0x7e, 0x4e, 0xaa, 0x6e, 0x8a, 0xe9, 0xc7, 0xd2, 0x61, 0x16, 0x71,
                     0x29, 0x18, 0x48, 0x83, 0x64, 0x4d, 0x07, 0xdf, 0xba, 0x7c, 0xbf, 0xbc, 0x4c,
                     0x8a, 0x2e, 0x08, 0x36, 0x0d, 0x5b,
-                ],)
-                .unwrap()
+                ])?),
             )
-        })
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
     );
-}
-
-#[test]
-fn filestore_put_get_canon() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-
-    let data = &b"hello, world"[..];
-    let key = storekey(data);
-
-    let res = rt.block_on(future::lazy({
-        cloned!(key);
-        move || {
-            let blob = memblob::LazyMemblob::new();
-            let filestore = Filestore::new(Arc::new(blob));
-
-            let ctxt = CoreContext::test_mock();
-
-            filestore
-                .store(ctxt.clone(), &key, stream::once(Ok(Bytes::from(data))))
-                .and_then({
-                    cloned!(filestore, ctxt, key);
-                    move |()| filestore.fetch(ctxt, &FetchKey::Canonical(key.canonical))
-                })
-                .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-                .flatten()
-        }
-    }));
 
     println!("res = {:#?}", res);
 
-    assert_eq!(res.unwrap(), Some(Bytes::from(data)));
+    assert_eq!(res?, Some(Bytes::from(data)));
+    Ok(())
 }
 
 #[test]
-fn filestore_put_get_sha1() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+fn filestore_chunked_put_get() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
 
     let data = &b"hello, world"[..];
-    let key = storekey(data);
+    let key = request(data);
+    let content_id = canonical(data);
 
-    let res = rt.block_on(future::lazy({
-        cloned!(key);
-        move || {
-            let blob = memblob::LazyMemblob::new();
-            let filestore = Filestore::new(Arc::new(blob));
+    let blob = memblob::LazyMemblob::new();
+    let filestore = Filestore::with_config(Arc::new(blob), FilestoreConfig { chunk_size: 1 });
 
-            let ctxt = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock();
 
-            filestore
-                .store(ctxt.clone(), &key, stream::once(Ok(Bytes::from(data))))
-                .and_then({
-                    cloned!(filestore, ctxt);
-                    move |()| {
-                        filestore.fetch(
-                            ctxt,
-                            &FetchKey::Sha1(
-                                hash::Sha1::from_bytes([
-                                    0xb7, 0xe2, 0x3e, 0xc2, 0x9a, 0xf2, 0x2b, 0x0b, 0x4e, 0x41,
-                                    0xda, 0x31, 0xe8, 0x68, 0xd5, 0x72, 0x26, 0x12, 0x1c, 0x84,
-                                ])
-                                .unwrap(),
-                            ),
-                        )
-                    }
-                })
-                .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-                .flatten()
-        }
-    }));
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    let res = rt.block_on(
+        filestore
+            .fetch(ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
 
     println!("res = {:#?}", res);
 
-    assert_eq!(res.unwrap(), Some(Bytes::from(data)));
+    assert_eq!(res?, Some(Bytes::from(data)));
+    Ok(())
 }
 
 #[test]
-fn filestore_put_get_git_sha1() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+fn filestore_chunked_put_get_nested() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
 
-    let data = &b"hello, world"[..];
-    let key = storekey(data);
+    let blob = Arc::new(memblob::LazyMemblob::new());
+    let small = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 1 });
+    let large = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let ctx = CoreContext::test_mock();
 
-    let res = rt.block_on(future::lazy({
-        cloned!(key);
-        move || {
-            let blob = memblob::LazyMemblob::new();
-            let filestore = Filestore::new(Arc::new(blob));
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
 
-            let ctxt = CoreContext::test_mock();
+    let part_data = &b"foo"[..];
+    let part_key = request(part_data);
 
-            filestore
-                .store(ctxt.clone(), &key, stream::once(Ok(Bytes::from(data))))
-                .and_then({
-                    cloned!(filestore, ctxt);
-                    move |()| {
-                        filestore.fetch(
-                            ctxt,
-                            &FetchKey::GitSha1(
-                                hash::GitSha1::from_bytes(
-                                    [
-                                        0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4,
-                                        0xb1, 0xfa, 0xb2, 0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02,
-                                    ],
-                                    "blob",
-                                    12,
-                                )
-                                .unwrap(),
-                            ),
-                        )
-                    }
-                })
-                .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-                .flatten()
-        }
-    }));
+    // Store in 3-byte chunks
+    rt.block_on(large.store(
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    // Now, go and split up one chunk into 1-byte parts.
+    rt.block_on(small.store(
+        ctx.clone(),
+        &part_key,
+        stream::once(Ok(Bytes::from(part_data))),
+    ))?;
+
+    // Verify that we can still read the full thing.
+    let res = rt.block_on(
+        large
+            .fetch(ctx, &FetchKey::Canonical(full_id))
+            // .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["f", "o", "o", "bar"]
+        .into_iter()
+        .map(Bytes::from)
+        .collect();
 
     println!("res = {:#?}", res);
-
-    assert_eq!(res.unwrap(), Some(Bytes::from(data)));
+    assert_eq!(res?, Some(expected));
+    Ok(())
 }
 
 #[test]
-fn filestore_put_get_sha256() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+fn filestore_content_not_found() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
 
-    let data = &b"hello, world"[..];
-    let key = storekey(data);
+    let blob = Arc::new(memblob::LazyMemblob::new());
+    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let ctx = CoreContext::test_mock();
 
-    let res = rt.block_on(future::lazy({
-        cloned!(key);
-        move || {
-            let blob = memblob::LazyMemblob::new();
-            let filestore = Filestore::new(Arc::new(blob));
+    // Missing content shouldn't throw an error
 
-            let ctxt = CoreContext::test_mock();
+    let data = &b"foobar"[..];
+    let content_id = canonical(data);
 
-            filestore
-                .store(ctxt.clone(), &key, stream::once(Ok(Bytes::from(data))))
-                .and_then({
-                    cloned!(filestore, ctxt);
-                    move |()| {
-                        filestore.fetch(
-                            ctxt,
-                            &FetchKey::Sha256(
-                                hash::Sha256::from_bytes([
-                                    0x09, 0xca, 0x7e, 0x4e, 0xaa, 0x6e, 0x8a, 0xe9, 0xc7, 0xd2,
-                                    0x61, 0x16, 0x71, 0x29, 0x18, 0x48, 0x83, 0x64, 0x4d, 0x07,
-                                    0xdf, 0xba, 0x7c, 0xbf, 0xbc, 0x4c, 0x8a, 0x2e, 0x08, 0x36,
-                                    0x0d, 0x5b,
-                                ])
-                                .unwrap(),
-                            ),
-                        )
-                    }
-                })
-                .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-                .flatten()
-        }
-    }));
+    // Verify that we can still read the full thing.
+    let res = rt.block_on(
+        filestore
+            .fetch(ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
 
     println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+    Ok(())
+}
 
-    assert_eq!(res.unwrap(), Some(Bytes::from(data)));
+#[test]
+fn filestore_chunk_not_found() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = Arc::new(memblob::LazyMemblob::new());
+    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let ctx = CoreContext::test_mock();
+
+    // Missing content shouldn't throw an error
+
+    let data = &b"foobar"[..];
+    let key = request(data);
+    let content_id = canonical(data);
+
+    let part = &b"foo"[..];
+    let part_id = canonical(part);
+
+    rt.block_on(filestore.store(ctx.clone(), &key, stream::once(Ok(Bytes::from(data)))))?;
+
+    blob.remove(&part_id.blobstore_key());
+
+    // This should fail
+    let res = rt.block_on(
+        filestore
+            .fetch(ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+    assert_matches!(
+        res.unwrap_err().downcast::<fetch::FetchError>(),
+        Ok(fetch::FetchError::NotFound(_, fetch::Depth(1)))
+    );
+    Ok(())
 }

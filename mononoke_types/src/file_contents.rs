@@ -18,11 +18,14 @@ use crate::{
     typed_hash::{ContentId, ContentIdContext, ContentMetadataId},
 };
 
-/// An enum representing contents for a file. In the future this may have
-/// special support for very large files.
+/// An enum representing contents for a file.
 #[derive(Clone, Eq, PartialEq)]
 pub enum FileContents {
+    /// Raw contents of the file
     Bytes(Bytes),
+    /// Reference to separate FileContents that need to be joined together to produce this file
+    //again.
+    Chunked((ContentId, Vec<ContentId>)),
 }
 
 impl FileContents {
@@ -33,6 +36,17 @@ impl FileContents {
     pub(crate) fn from_thrift(fc: thrift::FileContents) -> Result<Self> {
         match fc {
             thrift::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes.into())),
+            thrift::FileContents::Chunked(chunked) => {
+                let content_id = ContentId::from_thrift(chunked.content_id);
+
+                let chunks: Result<Vec<_>> = chunked
+                    .chunks
+                    .into_iter()
+                    .map(ContentId::from_thrift)
+                    .collect();
+
+                Ok(FileContents::Chunked((content_id?, chunks?)))
+            }
             thrift::FileContents::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
                 "FileContents".into(),
                 format!("unknown file contents field: {}", x)
@@ -43,6 +57,7 @@ impl FileContents {
     pub fn size(&self) -> usize {
         match *self {
             FileContents::Bytes(ref bytes) => bytes.len(),
+            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
         }
     }
 
@@ -51,18 +66,21 @@ impl FileContents {
     pub fn starts_with(&self, needle: &[u8]) -> bool {
         match self {
             FileContents::Bytes(b) => b.starts_with(needle),
+            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
         }
     }
 
     pub fn into_bytes(self) -> Bytes {
         match self {
             FileContents::Bytes(bytes) => bytes,
+            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
         }
     }
 
     pub fn as_bytes(&self) -> &Bytes {
         match self {
             FileContents::Bytes(bytes) => &bytes,
+            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
         }
     }
 
@@ -70,6 +88,12 @@ impl FileContents {
         match self {
             // TODO (T26959816) -- allow Thrift to represent binary as Bytes
             FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes.to_vec()),
+            FileContents::Chunked((content_id, chunks)) => {
+                let content_id = content_id.into_thrift();
+                let chunks = chunks.into_iter().map(ContentId::into_thrift).collect();
+                let chunked = thrift::ChunkedFileContents { content_id, chunks };
+                thrift::FileContents::Chunked(chunked)
+            }
         }
     }
 
@@ -84,11 +108,18 @@ impl BlobstoreValue for FileContents {
     type Key = ContentId;
 
     fn into_blob(self) -> ContentBlob {
-        let mut context = ContentIdContext::new();
-        context.update(self.as_bytes());
-        let id = context.finish();
+        let id = match &self {
+            FileContents::Bytes(bytes) => {
+                let mut context = ContentIdContext::new();
+                context.update(&bytes);
+                context.finish()
+            }
+            FileContents::Chunked((content_id, _)) => *content_id,
+        };
+
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
+
         Blob::new(id, data)
     }
 
@@ -105,6 +136,12 @@ impl Debug for FileContents {
             FileContents::Bytes(ref bytes) => {
                 write!(f, "FileContents::Bytes(length {})", bytes.len())
             }
+            FileContents::Chunked((ref content_id, ref chunks)) => write!(
+                f,
+                "FileContents::Chunked({}, chunks {})",
+                content_id,
+                chunks.len()
+            ),
         }
     }
 }

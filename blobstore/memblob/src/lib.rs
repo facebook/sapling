@@ -36,6 +36,11 @@ impl EagerMemblob {
             hash: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
+    pub fn remove(&self, key: &String) {
+        let mut inner = self.hash.lock().expect("lock poison");
+        inner.remove(key);
+    }
 }
 
 impl LazyMemblob {
@@ -43,6 +48,11 @@ impl LazyMemblob {
         Self {
             hash: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    pub fn remove(&self, key: &String) {
+        let mut inner = self.hash.lock().expect("lock poison");
+        inner.remove(key);
     }
 }
 

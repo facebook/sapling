@@ -19,16 +19,19 @@ use futures_ext::FutureExt;
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::{
-    blob::{BlobstoreBytes, BlobstoreValue},
-    hash, ContentAlias, ContentId, ContentMetadata, ContentMetadataId, FileContents, MononokeId,
+    hash, ContentAlias, ContentId, ContentMetadata, ContentMetadataId, MononokeId,
 };
 
+mod chunk;
+mod errors;
+mod fetch;
+mod finalize;
+mod incremental_hash;
+mod prepare;
 mod streamhash;
 
 #[cfg(test)]
 mod test;
-
-use streamhash::*;
 
 /// File storage.
 ///
@@ -55,11 +58,22 @@ pub struct Filestore {
 }
 
 #[derive(Debug, Clone)]
-pub struct FilestoreConfig {}
+pub struct FilestoreConfig {
+    chunk_size: u64,
+}
+
+impl FilestoreConfig {
+    fn chunk_size(&self) -> u64 {
+        self.chunk_size
+    }
+}
 
 impl Default for FilestoreConfig {
     fn default() -> Self {
-        FilestoreConfig {}
+        FilestoreConfig {
+            // TODO: Don't use the default value (expose it through config instead).
+            chunk_size: 256 * 1024,
+        }
     }
 }
 
@@ -85,12 +99,11 @@ impl FetchKey {
     }
 }
 
-/// Key for storing. We'll compute any missing keys forms, but we must have the
-/// canonical key (blake2), and the total size.
+/// Key for storing. We'll compute any missing keys, but we must have the total size.
 #[derive(Debug, Clone)]
-pub struct StoreKey {
+pub struct StoreRequest {
     pub total_size: u64,
-    pub canonical: ContentId,
+    pub canonical: Option<ContentId>,
     pub sha1: Option<hash::Sha1>,
     pub sha256: Option<hash::Sha256>,
     pub git_sha1: Option<hash::GitSha1>,
@@ -170,31 +183,36 @@ impl Filestore {
     /// configured by FilestoreConfig::read_chunk_size - this defines the max chunk size, but
     /// they may be shorter (not just the final chunks - any of them). Chunks are guaranteed to
     /// have non-zero size.
-    ///
-    /// XXX Just simplify the API by making "not present" an error, at the risk of inconsistency
-    /// with `exists`?
     pub fn fetch(
         &self,
         ctxt: CoreContext,
         key: &FetchKey,
     ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
         // First fetch either the content or the alias
-        self.get_canonical_id(ctxt.clone(), key)
-            .and_then({
-                cloned!(self.blobstore, ctxt);
-                move |maybe_id| maybe_id.map(|id| blobstore.get(ctxt, id.blobstore_key()))
-            })
-            .and_then(|maybe_bytes|
-                maybe_bytes
-                .and_then(|x| x)
-                 .map(|file_bytes| {
-                     FileContents::from_encoded_bytes(file_bytes.into_bytes())
-                     .map(FileContents::into_bytes)
-                 })
-                 .transpose(),
-             )
-            // -> Stream<Bytes> - XXX chunkify
-            .map(|res: Option<Bytes>| res.map(|v| stream::once(Ok(v))))
+        use fetch::*;
+
+        self.get_canonical_id(ctxt.clone(), key).and_then({
+            cloned!(self.blobstore, ctxt);
+            move |content_id| match content_id {
+                // If we found a ContentId, then return a Future that waits for the first element
+                // to show up in the content stream. If we get a NotFound error waiting for this
+                // element and it was the root, then resolve to None (i.e. "this content does not
+                // exist"). Otherwise, return the content stream. Not found errors after the initial
+                // bytes will NOT be captured: such an error would indicate that we're missing part
+                // of our contents!
+                Some(content_id) => fetch(blobstore, ctxt, content_id)
+                    .into_future()
+                    .then(|res| match res {
+                        Err((FetchError::NotFound(_, Depth::ROOT), _)) => Ok(None),
+                        Err((e, _)) => Err(e.into()),
+                        Ok((bytes, rest)) => {
+                            Ok(Some(stream::iter_ok(bytes).chain(rest.from_err())))
+                        }
+                    })
+                    .left_future(),
+                None => Ok(None).into_future().right_future(),
+            }
+        })
     }
 
     /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
@@ -203,122 +221,26 @@ impl Filestore {
     pub fn store(
         &self,
         ctxt: CoreContext,
-        key: &StoreKey,
+        key: &StoreRequest,
         data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-        // Since we don't have atomicity for puts, we need to make sure they're ordered
-        // correctly:
-        //
-        // - compute missing hashes (trust the caller if provided)
-        // - write the forward-mapping aliases
-        // - write the data blob
-        // - write the back-mapping blob
-        //
-        // Rationale for this order: since we can't guarantee the aliases are written atomically,
-        // on failure we could end up writing some but not others. If the underlying blob exists
-        // at that point, we've got an inconsistency. However writing the data blob is atomic,
-        // and the aliases are only meaningful as references to that blob (in other words, an
-        // alias referring to an absent blob is itself considered to be absent, so logically all
-        // all the aliases come into existence atomically when the data blob is written).
-        // Once the data blob is written we can write the back-mapping object. This is just a
-        // cache, as everything in it can be computed from the content id. Therefore, in principle,
-        // if it doesn't get written we can fix it up later.
+        use chunk::*;
+        use finalize::*;
+        use prepare::*;
 
-        // Split the error out of the data stream so we don't need to worry about cloning it
-        let (data, err) = futures_ext::split_err(data);
+        let prepared = match make_chunks(data, key.total_size, self.config.chunk_size()) {
+            Chunks::Inline(fut) => prepare_inline(fut).left_future(),
+            Chunks::Chunked(total_size, chunks) => {
+                prepare_chunked(ctxt.clone(), self.blobstore.clone(), total_size, chunks)
+                    .right_future()
+            }
+        };
 
-        // One stream for the data itself, and one for each hash format we might need
-        let mut copies = futures_ext::stream_clone(data, 4).into_iter();
-        let data = copies.next().unwrap();
-
-        let sha1 = if let Some(sha1) = key.sha1 {
-            future::ok::<_, !>(sha1).left_future()
-        } else {
-            sha1_hasher(copies.next().unwrap()).right_future()
-        }
-        .shared();
-
-        let git_sha1 = if let Some(git_sha1) = key.git_sha1 {
-            future::ok::<_, !>(git_sha1).left_future()
-        } else {
-            git_sha1_hasher(key.total_size, copies.next().unwrap()).right_future()
-        }
-        .shared();
-
-        let sha256 = if let Some(sha256) = key.sha256 {
-            future::ok::<_, !>(sha256).left_future()
-        } else {
-            sha256_hasher(copies.next().unwrap()).right_future()
-        }
-        .shared();
-
-        let StoreKey {
-            total_size,
-            canonical,
-            ..
-        } = *key;
-
-        // Join computation of various hashes to create the back-mapping
-        let metadata = sha1
-            .clone()
-            .join3(git_sha1.clone(), sha256.clone())
-            .map(move |(sha1, git_sha1, sha256)| ContentMetadata {
-                total_size,
-                content_id: canonical,
-                sha1: Some(*sha1),
-                git_sha1: Some(*git_sha1),
-                sha256: Some(*sha256),
+        prepared
+            .and_then({
+                cloned!(self.blobstore, ctxt);
+                move |prepared| finalize(blobstore, ctxt, prepared)
             })
-            .map_err(|_| -> Error { unreachable!() });
-
-        // Store the aliases
-        let alias = ContentAlias::from_content_id(key.canonical).into_blob();
-
-        let put_sha1 = sha1.map_err(|_| -> Error { unreachable!() }).and_then({
-            cloned!(self.blobstore, alias, ctxt);
-            move |sha1| blobstore.put(ctxt, FetchKey::Sha1(*sha1).blobstore_key(), alias)
-        });
-        let put_git_sha1 = git_sha1.map_err(|_| -> Error { unreachable!() }).and_then({
-            cloned!(self.blobstore, alias, ctxt);
-            move |git_sha1| blobstore.put(ctxt, FetchKey::GitSha1(*git_sha1).blobstore_key(), alias)
-        });
-        let put_sha256 = sha256.map_err(|_| -> Error { unreachable!() }).and_then({
-            cloned!(self.blobstore, alias, ctxt);
-            move |sha256| blobstore.put(ctxt, FetchKey::Sha256(*sha256).blobstore_key(), alias)
-        });
-
-        let put_aliases = put_sha1.join3(put_git_sha1, put_sha256);
-
-        // Glom the whole stream into Filecontents for writing. Later this will
-        // use chunking.
-        let file_content = data
-            .concat2()
-            .map_err(|_| -> Error { unreachable!() })
-            .map(|bytes| FileContents::Bytes(bytes));
-
-        // Store the data
-        let put_data = put_aliases.join(file_content).and_then({
-            cloned!(self.blobstore, ctxt);
-            move |(_, file_content)| {
-                let blob = file_content.into_blob();
-                blobstore.put(ctxt, canonical.blobstore_key(), BlobstoreBytes::from(blob))
-            }
-        });
-
-        // Store the metadata
-        let put_metadata = put_data.join(metadata).and_then({
-            cloned!(self.blobstore, ctxt);
-            move |((), metadata)| {
-                let blob = metadata.into_blob();
-                let key = ContentMetadataId::from(canonical);
-                blobstore.put(ctxt, key.blobstore_key(), BlobstoreBytes::from(blob))
-            }
-        });
-
-        // Reunite result with the error
-        put_metadata
-            .select(err.map(|_| -> () { unreachable!() }))
-            .map(|(res, _)| res)
-            .map_err(|(err, _)| err)
+            .map(|_| ())
     }
 }

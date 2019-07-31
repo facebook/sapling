@@ -20,7 +20,7 @@ use mercurial_types::manifest_utils::{self, EntryStatus};
 use mercurial_types::{
     manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId, MPath, Type,
 };
-use mononoke_types::{FileContents, FileType};
+use mononoke_types::FileType;
 
 // TODO this can cache file content locally to prevent unnecessary lookup of changeset,
 // manifest and walk of manifest each time
@@ -54,7 +54,7 @@ impl FileContentStore for BlobRepoFileContentStore {
                 move |opt| match opt {
                     Some(hash) => repo
                         .get_file_content(ctx, hash)
-                        .map(|FileContents::Bytes(bytes)| Some(bytes))
+                        .map(|fc| Some(fc.into_bytes()))
                         .left_future(),
                     None => future::ok(None).right_future(),
                 }
@@ -69,7 +69,7 @@ impl FileContentStore for BlobRepoFileContentStore {
     ) -> BoxFuture<Bytes, Error> {
         self.repo
             .get_file_content(ctx, hash)
-            .map(|FileContents::Bytes(bytes)| bytes)
+            .map(|fc| fc.into_bytes())
             .boxify()
     }
 

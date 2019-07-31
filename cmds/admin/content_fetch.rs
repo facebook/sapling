@@ -16,7 +16,6 @@ use futures::stream::iter_ok;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
-use mononoke_types::FileContents;
 use slog::{debug, Logger};
 
 use crate::common::resolve_hg_rev;
@@ -41,13 +40,11 @@ pub fn subcommand_content_fetch(
                 Content::Executable(_) => {
                     println!("Binary file");
                 }
-                Content::File(contents) | Content::Symlink(contents) => match contents {
-                    FileContents::Bytes(bytes) => {
-                        let content =
-                            String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
-                        println!("{}", content);
-                    }
-                },
+                Content::File(contents) | Content::Symlink(contents) => {
+                    let content = String::from_utf8(contents.into_bytes().to_vec())
+                        .expect("non-utf8 file content");
+                    println!("{}", content);
+                }
                 Content::Tree(mf) => {
                     let entries: Vec<_> = mf.list().collect();
                     let mut longest_len = 0;
