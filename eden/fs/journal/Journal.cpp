@@ -60,77 +60,83 @@ void Journal::recordUncleanPaths(
   addDelta(std::move(delta));
 }
 
-void Journal::truncateIfNecessary(
-    folly::Synchronized<DeltaState>::LockedPtr& deltaState) {
-  while (!deltaState->deltas.empty() &&
-         deltaState->stats->memoryUsage > deltaState->memoryLimit) {
-    deltaState->stats->entryCount--;
-    deltaState->stats->memoryUsage -=
-        deltaState->deltas.front().estimateMemoryUsage();
-    deltaState->deltas.pop_front();
+void Journal::truncateIfNecessary(DeltaState& deltaState) {
+  while (!deltaState.deltas.empty() &&
+         deltaState.stats->memoryUsage > deltaState.memoryLimit) {
+    deltaState.stats->entryCount--;
+    deltaState.stats->memoryUsage -=
+        deltaState.deltas.front().estimateMemoryUsage();
+    deltaState.deltas.pop_front();
   }
 }
 
-void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
-  {
-    auto deltaState = deltaState_.wlock();
+void Journal::addDeltaWithoutNotifying(
+    std::unique_ptr<JournalDelta> delta,
+    DeltaState& deltaState) {
+  delta->sequenceID = deltaState.nextSequence++;
 
-    delta->sequenceID = deltaState->nextSequence++;
+  delta->time = std::chrono::steady_clock::now();
 
-    delta->time = std::chrono::steady_clock::now();
-
-    // If the hashes were not set to anything, default to copying
-    // the value from the prior journal entry
-    if (!deltaState->deltas.empty() && delta->fromHash == kZeroHash &&
-        delta->toHash == kZeroHash) {
-      JournalDelta& previous = deltaState->deltas.back();
-      delta->fromHash = previous.toHash;
-      delta->toHash = delta->fromHash;
-    }
-
-    // Check memory before adding the new delta to make sure we always
-    // have at least one delta (other than when the journal starts up)
-    truncateIfNecessary(deltaState);
-
-    // We will compact the delta if possible. We can compact the delta if it is
-    // a modification to a single file and matches the last delta added to the
-    // Journal. For a consumer the only differences seen due to compaction are
-    // that:
-    // - getDebugRawJournalInfo will skip entries in its list
-    // - The stats should show a different memory usage and number of entries
-    // - accumulateRange will return a different fromSequence and fromTime than
-    // what would happen if the deltas were not compacted [e.g. JournalDelta 3
-    // and 4 are the same modification, accumulateRange(3) would have a
-    // fromSequence of 3 without compaction and a fromSequence of 4 with
-    // compaction]
-    if (!deltaState->deltas.empty() && delta->isModification() &&
-        delta->isSameAction(deltaState->deltas.back())) {
-      deltaState->stats->latestTimestamp = delta->time;
-      deltaState->stats->memoryUsage -=
-          deltaState->deltas.back().estimateMemoryUsage();
-      deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
-      deltaState->deltas.back() = std::move(*delta);
-    } else {
-      if (deltaState->stats) {
-        ++(deltaState->stats->entryCount);
-        deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
-      } else {
-        deltaState->stats = JournalStats();
-        deltaState->stats->entryCount = 1;
-        deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
-      }
-      deltaState->stats->latestTimestamp = delta->time;
-      deltaState->deltas.emplace_back(std::move(*delta));
-    }
-
-    deltaState->stats->earliestTimestamp = deltaState->deltas.front().time;
+  // If the hashes were not set to anything, default to copying
+  // the value from the prior journal entry
+  if (!deltaState.deltas.empty() && delta->fromHash == kZeroHash &&
+      delta->toHash == kZeroHash) {
+    JournalDelta& previous = deltaState.deltas.back();
+    delta->fromHash = previous.toHash;
+    delta->toHash = delta->fromHash;
   }
 
-  // Careful to call the subscribers with no locks held.
+  // Check memory before adding the new delta to make sure we always
+  // have at least one delta (other than when the journal starts up)
+  truncateIfNecessary(deltaState);
+
+  // We will compact the delta if possible. We can compact the delta if it is
+  // a modification to a single file and matches the last delta added to the
+  // Journal. For a consumer the only differences seen due to compaction are
+  // that:
+  // - getDebugRawJournalInfo will skip entries in its list
+  // - The stats should show a different memory usage and number of entries
+  // - accumulateRange will return a different fromSequence and fromTime than
+  // what would happen if the deltas were not compacted [e.g. JournalDelta 3
+  // and 4 are the same modification, accumulateRange(3) would have a
+  // fromSequence of 3 without compaction and a fromSequence of 4 with
+  // compaction]
+  if (!deltaState.deltas.empty() && delta->isModification() &&
+      delta->isSameAction(deltaState.deltas.back())) {
+    deltaState.stats->latestTimestamp = delta->time;
+    deltaState.stats->memoryUsage -=
+        deltaState.deltas.back().estimateMemoryUsage();
+    deltaState.stats->memoryUsage += delta->estimateMemoryUsage();
+    deltaState.deltas.back() = std::move(*delta);
+  } else {
+    if (deltaState.stats) {
+      ++(deltaState.stats->entryCount);
+      deltaState.stats->memoryUsage += delta->estimateMemoryUsage();
+    } else {
+      deltaState.stats = JournalStats();
+      deltaState.stats->entryCount = 1;
+      deltaState.stats->memoryUsage = delta->estimateMemoryUsage();
+    }
+    deltaState.stats->latestTimestamp = delta->time;
+    deltaState.deltas.emplace_back(std::move(*delta));
+  }
+
+  deltaState.stats->earliestTimestamp = deltaState.deltas.front().time;
+}
+
+void Journal::notifySubscribers() const {
   auto subscribers = subscriberState_.rlock()->subscribers;
   for (auto& sub : subscribers) {
     sub.second();
   }
+}
+
+void Journal::addDelta(std::unique_ptr<JournalDelta> delta) {
+  {
+    auto deltaState = deltaState_.wlock();
+    addDeltaWithoutNotifying(std::move(delta), *deltaState);
+  }
+  notifySubscribers();
 }
 
 std::optional<JournalDeltaInfo> Journal::getLatest() const {

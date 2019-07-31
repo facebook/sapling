@@ -159,11 +159,11 @@ class Journal {
   size_t getMemoryLimit() const;
 
  private:
-  /** Add a delta to the journal.
+  /** Add a delta to the journal and notify subscribers.
    * The delta will have a new sequence number and timestamp
    * applied.
    */
-  void addDelta(std::unique_ptr<JournalDelta>&& delta);
+  void addDelta(std::unique_ptr<JournalDelta> delta);
 
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
@@ -183,13 +183,25 @@ class Journal {
   /** Removes the oldest deltas until the memory usage of the journal is below
    * the journal's memory limit.
    */
-  void truncateIfNecessary(
-      folly::Synchronized<DeltaState>::LockedPtr& deltaState);
+  void truncateIfNecessary(DeltaState& deltaState);
 
   struct SubscriberState {
     SubscriberId nextSubscriberId{1};
     std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
   };
+
+  /** Add a delta to the journal without notifying subscribers.
+   * The delta will have a new sequence number and timestamp
+   * applied. A lock to the deltaState must be held and passed to this function.
+   */
+  void addDeltaWithoutNotifying(
+      std::unique_ptr<JournalDelta> delta,
+      DeltaState& deltaState);
+
+  /** Notify subscribers that a change has happened, should be called with no
+   * Journal locks held.
+   */
+  void notifySubscribers() const;
 
   /** Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
