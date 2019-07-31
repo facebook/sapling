@@ -6,21 +6,18 @@
 
 use futures::{Future, Stream};
 
-use crate::incremental_hash::{Hashable, Hasher};
+use crate::incremental_hash::Hasher;
 
 pub fn hash_stream<H, E, I, S>(
-    size: u64,
+    hasher: impl Hasher<H>,
     stream: S,
-) -> impl Future<Item = H, Error = E> + Send + 'static
+) -> impl Future<Item = H, Error = E>
 where
-    H: Hashable,
-    H::Hasher: Send + 'static,
-    E: Send + 'static,
     I: AsRef<[u8]>,
-    S: Stream<Item = I, Error = E> + Send + 'static,
+    S: Stream<Item = I, Error = E>,
 {
     stream
-        .fold(H::Hasher::new(size), |mut hasher, bytes| {
+        .fold(hasher, |mut hasher, bytes| {
             hasher.update(bytes);
             Ok(hasher)
         })
@@ -32,6 +29,13 @@ mod test {
     use super::*;
     use bytes::Bytes;
     use futures::stream;
+
+    use crate::incremental_hash::{
+        ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
+        Sha256IncrementalHasher,
+    };
+
+    use crate::expected_size::ExpectedSize;
 
     use mononoke_types::{
         hash::{GitSha1, Sha1, Sha256},
@@ -45,7 +49,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: Sha1 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: Sha1 = rt
+            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -66,7 +72,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: Sha1 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: Sha1 = rt
+            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -85,7 +93,12 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: GitSha1 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: GitSha1 = rt
+            .block_on(hash_stream(
+                GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
+                s,
+            ))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -110,7 +123,12 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: GitSha1 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: GitSha1 = rt
+            .block_on(hash_stream(
+                GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
+                s,
+            ))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -133,7 +151,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: Sha256 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: Sha256 = rt
+            .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -155,7 +175,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: Sha256 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: Sha256 = rt
+            .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -175,7 +197,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: ContentId = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: ContentId = rt
+            .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -197,7 +221,9 @@ mod test {
 
         let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-        let res: ContentId = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: ContentId = rt
+            .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,
@@ -214,7 +240,9 @@ mod test {
     fn sha1_empty() {
         let s = stream::iter_ok::<_, ()>(Vec::<Bytes>::new());
         let mut rt = tokio::runtime::Runtime::new().unwrap();
-        let res: Sha1 = rt.block_on(hash_stream(12, s)).unwrap();
+        let res: Sha1 = rt
+            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
+            .unwrap();
 
         assert_eq!(
             res,

@@ -15,8 +15,12 @@ use futures::{
 use futures_ext::{BoxFuture, BoxStream};
 use mononoke_types::{hash, ContentId, FileContents};
 
+use crate::expected_size::ExpectedSize;
 use crate::finalize::finalize;
-use crate::incremental_hash::hash_bytes;
+use crate::incremental_hash::{
+    hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
+    Sha256IncrementalHasher,
+};
 use crate::streamhash::hash_stream;
 
 #[derive(Debug, Clone)]
@@ -31,9 +35,9 @@ pub struct Prepared {
 fn prepare_bytes(bytes: Bytes) -> Prepared {
     let total_size = bytes.len() as u64;
 
-    let sha1 = hash_bytes(&bytes);
-    let sha256 = hash_bytes(&bytes);
-    let git_sha1 = hash_bytes(&bytes);
+    let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
+    let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
+    let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(&bytes), &bytes);
 
     let contents = FileContents::Bytes(bytes);
 
@@ -59,7 +63,7 @@ pub fn prepare_inline(
 pub fn prepare_chunked<B: Blobstore + Clone>(
     ctx: CoreContext,
     blobstore: B,
-    total_size: u64,
+    expected_size: ExpectedSize,
     chunks: BoxStream<Bytes, Error>,
 ) -> impl Future<Item = Prepared, Error = Error> {
     lazy(move || {
@@ -71,21 +75,24 @@ pub fn prepare_chunked<B: Blobstore + Clone>(
 
         let chunks = copies.next().unwrap();
 
-        let content_id = hash_stream(total_size, copies.next().unwrap())
+        let content_id = hash_stream(ContentIdIncrementalHasher::new(), copies.next().unwrap())
             .shared()
             .map_err(|_| -> Error { unreachable!() });
 
-        let sha1 = hash_stream(total_size, copies.next().unwrap())
+        let sha1 = hash_stream(Sha1IncrementalHasher::new(), copies.next().unwrap())
             .shared()
             .map_err(|_| -> Error { unreachable!() });
 
-        let sha256 = hash_stream(total_size, copies.next().unwrap())
+        let sha256 = hash_stream(Sha256IncrementalHasher::new(), copies.next().unwrap())
             .shared()
             .map_err(|_| -> Error { unreachable!() });
 
-        let git_sha1 = hash_stream(total_size, copies.next().unwrap())
-            .shared()
-            .map_err(|_| -> Error { unreachable!() });
+        let git_sha1 = hash_stream(
+            GitSha1IncrementalHasher::new(expected_size),
+            copies.next().unwrap(),
+        )
+        .shared()
+        .map_err(|_| -> Error { unreachable!() });
         let acc: Vec<(ContentId, u64)> = vec![];
 
         // XXX: Allow for buffering here? Note that ordering matters (we need the chunks in order)

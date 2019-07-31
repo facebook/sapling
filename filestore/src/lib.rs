@@ -24,6 +24,7 @@ use mononoke_types::{
 
 mod chunk;
 mod errors;
+mod expected_size;
 mod fetch;
 mod finalize;
 mod incremental_hash;
@@ -225,13 +226,18 @@ impl Filestore {
         data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         use chunk::*;
+        use expected_size::*;
         use finalize::*;
         use prepare::*;
 
-        let prepared = match make_chunks(data, key.total_size, self.config.chunk_size()) {
+        let prepared = match make_chunks(
+            data,
+            ExpectedSize::new(key.total_size),
+            self.config.chunk_size(),
+        ) {
             Chunks::Inline(fut) => prepare_inline(fut).left_future(),
-            Chunks::Chunked(total_size, chunks) => {
-                prepare_chunked(ctxt.clone(), self.blobstore.clone(), total_size, chunks)
+            Chunks::Chunked(expected_size, chunks) => {
+                prepare_chunked(ctxt.clone(), self.blobstore.clone(), expected_size, chunks)
                     .right_future()
             }
         };

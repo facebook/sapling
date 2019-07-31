@@ -6,8 +6,10 @@
 
 use failure_ext::Fail;
 
+use crate::expected_size::ExpectedSize;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Invalid size: {:?} was expected, {:?} was observed", _0, _1)]
-    InvalidSize(u64, u64),
+    InvalidSize(ExpectedSize, u64),
 }
