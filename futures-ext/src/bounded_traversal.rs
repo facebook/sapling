@@ -4,14 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cloned::cloned;
 use futures::{
     stream::{self, FuturesUnordered},
     try_ready, Async, Future, IntoFuture, Poll, Stream,
 };
-use maplit::hashset;
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
 
 pub type Iter<Out> = std::iter::Flatten<std::vec::IntoIter<Option<Out>>>;
 
@@ -50,48 +47,6 @@ where
     FFut: IntoFuture<Item = Out, Error = UFut::Error>,
 {
     BoundedTraversal::new(scheduled_max, init, unfold, fold)
-}
-
-/// Same as bounded_traversal but it ensures that the same node is not visited twice
-pub fn single_visit_bounded_traversal<In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>(
-    scheduled_max: usize,
-    init: In,
-    mut unfold: Unfold,
-    fold: Fold,
-) -> impl Future<Item = Out, Error = UFut::Error>
-where
-    Unfold: FnMut(In) -> UFut,
-    UFut: IntoFuture<Item = (OutCtx, Ins)>,
-    Ins: IntoIterator<Item = In>,
-    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
-    FFut: IntoFuture<Item = Out, Error = UFut::Error>,
-    In: ::std::hash::Hash + Clone + Eq,
-{
-    let visited = Arc::new(Mutex::new(hashset! {}));
-    {
-        let mut visited = visited.lock().unwrap();
-        visited.insert(init.clone());
-    }
-
-    let filtered_unfold = move |input| {
-        unfold(input).into_future().map({
-            cloned!(visited);
-            move |(out_ctx, ins)| {
-                let ins = {
-                    let mut visited = visited.lock().unwrap();
-                    let ins = ins
-                        .into_iter()
-                        .filter(|entry| visited.insert(entry.clone()))
-                        .collect::<Vec<_>>();
-                    ins.into_iter()
-                };
-
-                (out_ctx, ins)
-            }
-        })
-    };
-
-    BoundedTraversal::new(scheduled_max, init, filtered_unfold, fold)
 }
 
 // execution tree node
