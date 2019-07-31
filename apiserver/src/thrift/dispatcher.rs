@@ -7,14 +7,18 @@
 use actix::msgs::Execute;
 use actix::{Addr, Arbiter};
 use futures::Future;
+use srserver::service_framework::ServiceFramework;
 
-use srserver::{ThriftExecutor, ThriftServer};
+use srserver::ThriftExecutor;
 
 #[derive(Clone)]
 pub struct ThriftDispatcher(pub Addr<Arbiter>);
 
 impl ThriftDispatcher {
-    pub fn start<F: FnOnce(Self) -> ThriftServer + Send + 'static>(self, thrift: F) {
+    pub fn start<F>(self, thrift: F)
+    where
+        F: FnOnce(Self) -> ServiceFramework + Send + 'static,
+    {
         let arbiter = Arbiter::new("thrift-server");
 
         arbiter.do_send::<Execute>(Execute::new(move || {

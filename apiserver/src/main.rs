@@ -595,7 +595,7 @@ fn main() -> Fallible<()> {
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
-    let thrift_port = value_t!(matches.value_of("thrift-port"), i32);
+    let thrift_port = value_t!(matches.value_of("thrift-port"), u16);
     let debug = matches.is_present("debug");
     let stdlog = matches.is_present("stdlog");
     let config_path = matches

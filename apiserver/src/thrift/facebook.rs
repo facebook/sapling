@@ -13,7 +13,7 @@ use fb303_core::server::BaseService;
 use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
 
 #[derive(Clone)]
-pub struct FacebookServiceImpl {}
+pub struct FacebookServiceImpl;
 
 impl BaseService for FacebookServiceImpl {
     fn getName(&self) -> BoxFuture<String, GetNameExn> {
