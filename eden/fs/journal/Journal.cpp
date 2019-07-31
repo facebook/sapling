@@ -11,41 +11,39 @@ namespace facebook {
 namespace eden {
 
 void Journal::recordCreated(RelativePathPiece fileName) {
-  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::CREATED));
+  addDelta(JournalDelta(fileName, JournalDelta::CREATED));
 }
 
 void Journal::recordRemoved(RelativePathPiece fileName) {
-  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::REMOVED));
+  addDelta(JournalDelta(fileName, JournalDelta::REMOVED));
 }
 
 void Journal::recordChanged(RelativePathPiece fileName) {
-  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::CHANGED));
+  addDelta(JournalDelta(fileName, JournalDelta::CHANGED));
 }
 
 void Journal::recordRenamed(
     RelativePathPiece oldName,
     RelativePathPiece newName) {
-  addDelta(
-      std::make_unique<JournalDelta>(oldName, newName, JournalDelta::RENAMED));
+  addDelta(JournalDelta(oldName, newName, JournalDelta::RENAMED));
 }
 
 void Journal::recordReplaced(
     RelativePathPiece oldName,
     RelativePathPiece newName) {
-  addDelta(
-      std::make_unique<JournalDelta>(oldName, newName, JournalDelta::REPLACED));
+  addDelta(JournalDelta(oldName, newName, JournalDelta::REPLACED));
 }
 
 void Journal::recordHashUpdate(Hash toHash) {
-  auto delta = std::make_unique<JournalDelta>();
-  delta->toHash = toHash;
+  JournalDelta delta;
+  delta.toHash = toHash;
   addDelta(std::move(delta));
 }
 
 void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
-  auto delta = std::make_unique<JournalDelta>();
-  delta->fromHash = fromHash;
-  delta->toHash = toHash;
+  JournalDelta delta;
+  delta.fromHash = fromHash;
+  delta.toHash = toHash;
   addDelta(std::move(delta));
 }
 
@@ -53,10 +51,10 @@ void Journal::recordUncleanPaths(
     Hash fromHash,
     Hash toHash,
     std::unordered_set<RelativePath>&& uncleanPaths) {
-  auto delta = std::make_unique<JournalDelta>();
-  delta->fromHash = fromHash;
-  delta->toHash = toHash;
-  delta->uncleanPaths = std::move(uncleanPaths);
+  JournalDelta delta;
+  delta.fromHash = fromHash;
+  delta.toHash = toHash;
+  delta.uncleanPaths = std::move(uncleanPaths);
   addDelta(std::move(delta));
 }
 
@@ -71,19 +69,19 @@ void Journal::truncateIfNecessary(DeltaState& deltaState) {
 }
 
 void Journal::addDeltaWithoutNotifying(
-    std::unique_ptr<JournalDelta> delta,
+    JournalDelta&& delta,
     DeltaState& deltaState) {
-  delta->sequenceID = deltaState.nextSequence++;
+  delta.sequenceID = deltaState.nextSequence++;
 
-  delta->time = std::chrono::steady_clock::now();
+  delta.time = std::chrono::steady_clock::now();
 
   // If the hashes were not set to anything, default to copying
   // the value from the prior journal entry
-  if (!deltaState.deltas.empty() && delta->fromHash == kZeroHash &&
-      delta->toHash == kZeroHash) {
+  if (!deltaState.deltas.empty() && delta.fromHash == kZeroHash &&
+      delta.toHash == kZeroHash) {
     JournalDelta& previous = deltaState.deltas.back();
-    delta->fromHash = previous.toHash;
-    delta->toHash = delta->fromHash;
+    delta.fromHash = previous.toHash;
+    delta.toHash = delta.fromHash;
   }
 
   // Check memory before adding the new delta to make sure we always
@@ -101,24 +99,24 @@ void Journal::addDeltaWithoutNotifying(
   // and 4 are the same modification, accumulateRange(3) would have a
   // fromSequence of 3 without compaction and a fromSequence of 4 with
   // compaction]
-  if (!deltaState.deltas.empty() && delta->isModification() &&
-      delta->isSameAction(deltaState.deltas.back())) {
-    deltaState.stats->latestTimestamp = delta->time;
+  if (!deltaState.deltas.empty() && delta.isModification() &&
+      delta.isSameAction(deltaState.deltas.back())) {
+    deltaState.stats->latestTimestamp = delta.time;
     deltaState.stats->memoryUsage -=
         deltaState.deltas.back().estimateMemoryUsage();
-    deltaState.stats->memoryUsage += delta->estimateMemoryUsage();
-    deltaState.deltas.back() = std::move(*delta);
+    deltaState.stats->memoryUsage += delta.estimateMemoryUsage();
+    deltaState.deltas.back() = std::move(delta);
   } else {
     if (deltaState.stats) {
       ++(deltaState.stats->entryCount);
-      deltaState.stats->memoryUsage += delta->estimateMemoryUsage();
+      deltaState.stats->memoryUsage += delta.estimateMemoryUsage();
     } else {
       deltaState.stats = JournalStats();
       deltaState.stats->entryCount = 1;
-      deltaState.stats->memoryUsage = delta->estimateMemoryUsage();
+      deltaState.stats->memoryUsage = delta.estimateMemoryUsage();
     }
-    deltaState.stats->latestTimestamp = delta->time;
-    deltaState.deltas.emplace_back(std::move(*delta));
+    deltaState.stats->latestTimestamp = delta.time;
+    deltaState.deltas.emplace_back(std::move(delta));
   }
 
   deltaState.stats->earliestTimestamp = deltaState.deltas.front().time;
@@ -131,7 +129,7 @@ void Journal::notifySubscribers() const {
   }
 }
 
-void Journal::addDelta(std::unique_ptr<JournalDelta> delta) {
+void Journal::addDelta(JournalDelta&& delta) {
   {
     auto deltaState = deltaState_.wlock();
     addDeltaWithoutNotifying(std::move(delta), *deltaState);
@@ -223,7 +221,7 @@ void Journal::flush() {
         : deltaState->deltas.back().toHash;
     deltaState->deltas.clear();
     deltaState->stats = std::nullopt;
-    auto delta = std::make_unique<JournalDelta>();
+    auto delta = JournalDelta();
     /* Tracking the hash correctly when the journal is flushed is important
      * since Watchman uses the hash to correctly determine what additional files
      * were changed when a checkout happens, journals have at least one entry
@@ -231,8 +229,8 @@ void Journal::flush() {
      * operation should leave us on the same checkout we were on before the
      * flush operation.
      */
-    delta->fromHash = lastHash;
-    delta->toHash = lastHash;
+    delta.fromHash = lastHash;
+    delta.toHash = lastHash;
     addDeltaWithoutNotifying(std::move(delta), *deltaState);
   }
   notifySubscribers();

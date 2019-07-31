@@ -168,7 +168,7 @@ class Journal {
    * The delta will have a new sequence number and timestamp
    * applied.
    */
-  void addDelta(std::unique_ptr<JournalDelta> delta);
+  void addDelta(JournalDelta&& delta);
 
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
@@ -199,9 +199,7 @@ class Journal {
    * The delta will have a new sequence number and timestamp
    * applied. A lock to the deltaState must be held and passed to this function.
    */
-  void addDeltaWithoutNotifying(
-      std::unique_ptr<JournalDelta> delta,
-      DeltaState& deltaState);
+  void addDeltaWithoutNotifying(JournalDelta&& delta, DeltaState& deltaState);
 
   /** Notify subscribers that a change has happened, should be called with no
    * Journal locks held.
