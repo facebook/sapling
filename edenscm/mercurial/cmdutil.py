@@ -3381,16 +3381,20 @@ def commit(ui, repo, commitfunc, pats, opts):
         return commitfunc(ui, repo, message, matcher, opts)
 
 
-def samefile(f, ctx1, ctx2):
-    if f in ctx1.manifest():
+def samefile(f, ctx1, ctx2, m1=None, m2=None):
+    if m1 is None:
+        m1 = ctx1.manifest()
+    if m2 is None:
+        m2 = ctx2.manifest()
+    if f in m1:
         a = ctx1.filectx(f)
-        if f in ctx2.manifest():
+        if f in m2:
             b = ctx2.filectx(f)
             return not a.cmp(b) and a.flags() == b.flags()
         else:
             return False
     else:
-        return f not in ctx2.manifest()
+        return f not in m2
 
 
 def amend(ui, repo, old, extra, pats, opts):
@@ -3452,7 +3456,8 @@ def amend(ui, repo, old, extra, pats, opts):
         ms = mergemod.mergestate.read(repo)
         mergeutil.checkunresolved(ms)
 
-        filestoamend = set(f for f in wctx.files() if matcher(f))
+        status = repo.status(match=matcher)
+        filestoamend = set(status.modified + status.added + status.removed)
 
         changes = len(filestoamend) > 0
         if changes:
@@ -3469,7 +3474,12 @@ def amend(ui, repo, old, extra, pats, opts):
             # deleted), old X must be preserved.
             files.update(filestoamend)
             files = [
-                f for f in files if (not samefile(f, wctx, base) or f in wctx.deleted())
+                f
+                for f in files
+                if (
+                    not samefile(f, wctx, base, m1=wctx.buildstatusmanifest(status))
+                    or f in status.deleted
+                )
             ]
 
             def filectxfn(repo, ctx_, path):
@@ -3483,7 +3493,7 @@ def amend(ui, repo, old, extra, pats, opts):
                         return old.filectx(path)
 
                     # Return None for removed files.
-                    if path in wctx.removed():
+                    if path in status.removed:
                         return None
 
                     fctx = wctx[path]
@@ -3576,13 +3586,13 @@ def amend(ui, repo, old, extra, pats, opts):
 
         # Update the state of the files which were added and
         # and modified in the amend to "normal" in the dirstate.
-        normalfiles = set(wctx.modified() + wctx.added()) & filestoamend
+        normalfiles = set(status.modified + status.added) & filestoamend
         for f in normalfiles:
             dirstate.normal(f)
 
         # Update the state of files which were removed in the amend
         # to "removed" in the dirstate.
-        removedfiles = set(wctx.removed()) & filestoamend
+        removedfiles = set(status.removed) & filestoamend
         for f in removedfiles:
             dirstate.untrack(f)
 

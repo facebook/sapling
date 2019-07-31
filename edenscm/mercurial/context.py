@@ -106,7 +106,7 @@ class basectx(object):
     def __iter__(self):
         return iter(self._manifest)
 
-    def _buildstatusmanifest(self, status):
+    def buildstatusmanifest(self, status):
         """Builds a manifest that includes the given status results, if this is
         a working copy context. For non-working copy contexts, it just returns
         the normal manifest."""
@@ -128,10 +128,10 @@ class basectx(object):
         # delta application.
         mf2 = None
         if self.rev() is not None and self.rev() < other.rev():
-            mf2 = self._buildstatusmanifest(s)
-        mf1 = other._buildstatusmanifest(s)
+            mf2 = self.buildstatusmanifest(s)
+        mf1 = other.buildstatusmanifest(s)
         if mf2 is None:
-            mf2 = self._buildstatusmanifest(s)
+            mf2 = self.buildstatusmanifest(s)
 
         modified, added = [], []
         removed = []
@@ -1981,9 +1981,9 @@ class workingctx(committablectx):
         merge to see that files are different and by update logic to avoid
         deleting newly added files.
         """
-        return self._buildstatusmanifest(self._status)
+        return self.buildstatusmanifest(self._status)
 
-    def _buildstatusmanifest(self, status):
+    def buildstatusmanifest(self, status):
         """Builds a manifest that includes the given status results."""
         parents = self.parents()
 
