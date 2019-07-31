@@ -18,6 +18,7 @@ pub mod derive_hg_manifest;
 mod envelope;
 pub mod file;
 pub mod file_history;
+mod filenode_lookup;
 mod manifest;
 mod repo;
 mod repo_commit;

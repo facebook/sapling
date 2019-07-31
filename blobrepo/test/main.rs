@@ -6,23 +6,30 @@
 
 #![deny(warnings)]
 
+mod tracing_blobstore;
 mod utils;
 
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
-use blobrepo::{compute_changed_files, BlobRepo};
+use blobrepo::{
+    compute_changed_files, BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
+    UploadHgNodeHash,
+};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Error;
+use failure_ext::{err_msg, Error};
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use memblob::LazyMemblob;
+use mercurial::file::File;
 use mercurial_types::{
     manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,
 };
+use mercurial_types_mocks::nodehash::ONES_FNID;
+use mononoke_types::blob::BlobstoreValue;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents, MononokeId,
@@ -40,6 +47,7 @@ use std::{
 };
 use tests_utils::{create_commit, store_files};
 use tokio::runtime::Runtime;
+use tracing_blobstore::TracingBlobstore;
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
     get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
@@ -1385,6 +1393,118 @@ fn save_reproducibility_under_load() -> Result<(), Error> {
         runtime.block_on(test)?,
         "6f67e722196896e645eec15b1d40fb0ecc5488d6".parse()?,
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_filenode_lookup() -> Result<(), Error> {
+    fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
+        let bad_mpath = err_msg("RepoPath did not convert to MPath");
+        path.into_mpath().ok_or(bad_mpath)
+    }
+
+    let ctx = CoreContext::test_mock();
+
+    let memblob = LazyMemblob::new();
+    let blobstore = Arc::new(TracingBlobstore::new(memblob));
+
+    let repo = blobrepo_factory::new_memblob_empty(Some(blobstore.clone()))?;
+
+    let p1 = None;
+    let p2 = None;
+
+    let content_blob = File::new(b"myblob".to_vec(), p1, p2)
+        .file_contents()
+        .into_blob();
+    let content_id = *content_blob.id();
+    let content_len = content_blob.len() as u64;
+
+    let mut rt = Runtime::new()?;
+    let _ = rt.block_on(repo.upload_blob_no_alias(ctx.clone(), content_blob))?;
+
+    let path1 = RepoPath::file("path/1")?;
+    let path2 = RepoPath::file("path/2")?;
+    let path3 = RepoPath::file("path/3")?;
+
+    let content_key = format!("repo0000.content.blake2.{}", content_id.to_hex());
+
+    let cbmeta = ContentBlobMeta {
+        id: content_id,
+        size: content_len,
+        copy_from: None,
+    };
+
+    let cbmeta_copy = ContentBlobMeta {
+        id: content_id,
+        size: content_len,
+        copy_from: Some((to_mpath(path3.clone())?, ONES_FNID)),
+    };
+
+    // Clear our blobstore first.
+    let _ = blobstore.tracing_gets();
+
+    // First, upload. We expect 3 calls here:
+    // - Filenode lookup: this will miss.
+    // - File lookup (to compute metadata): this will hit.
+    // - File lookup (to hash the contents): this will hit.
+
+    let upload = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
+        file_type: FileType::Regular,
+        p1,
+        p2,
+        path: to_mpath(path1.clone())?,
+    };
+    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+
+    let _ = rt.block_on(future)?;
+
+    let gets = blobstore.tracing_gets();
+    assert_eq!(gets.len(), 3);
+    assert!(gets[0].contains("filenode_lookup"));
+    assert_eq!(gets[1], content_key);
+    assert_eq!(gets[2], content_key);
+
+    // Now, upload the content again. This time, we expect one call to the alias, and one call to
+    // fetch the metadata (this is obviously a little inefficient if we need both, but the latter
+    // call can now be reduced to peeking at the file contents).
+
+    let upload = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
+        file_type: FileType::Regular,
+        p1,
+        p2,
+        path: to_mpath(path2.clone())?,
+    };
+    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let _ = rt.block_on(future)?;
+
+    let gets = blobstore.tracing_gets();
+    assert_eq!(gets.len(), 2);
+    assert!(gets[0].contains("filenode_lookup"));
+    assert_eq!(gets[1], content_key);
+
+    // Finally, upload with different copy metadata. Reusing the filenode should not be possible,
+    // so this should make 3 calls again.
+    let upload = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Generate,
+        contents: UploadHgFileContents::ContentUploaded(cbmeta_copy.clone()),
+        file_type: FileType::Regular,
+        p1,
+        p2,
+        path: to_mpath(path2.clone())?,
+    };
+    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let _ = rt.block_on(future)?;
+
+    let gets = blobstore.tracing_gets();
+    assert_eq!(gets.len(), 3);
+    assert!(gets[0].contains("filenode_lookup"));
+    assert_eq!(gets[1], content_key);
+    assert_eq!(gets[2], content_key);
 
     Ok(())
 }

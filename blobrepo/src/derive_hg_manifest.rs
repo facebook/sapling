@@ -254,6 +254,7 @@ fn create_hg_file(
                     if e1.content_id() == e2.content_id() {
                         let contents = ContentBlobMeta {
                             id: e1.content_id(),
+                            size: e1.content_size(),
                             copy_from: None,
                         };
                         UploadHgFileEntry {

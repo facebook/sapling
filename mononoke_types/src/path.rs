@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use ascii::AsciiString;
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::convert::{From, TryFrom, TryInto};
@@ -589,6 +590,10 @@ impl MPathHash {
 
     pub fn into_thrift(self) -> thrift::MPathHash {
         thrift::MPathHash(thrift::IdType::Blake2(self.0.into_thrift()))
+    }
+
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
     }
 }
 

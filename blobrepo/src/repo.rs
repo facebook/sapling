@@ -15,6 +15,7 @@ use crate::file::{
     fetch_file_parents_from_blobstore, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
     get_rename_from_envelope, HgBlobEntry,
 };
+use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
@@ -1123,6 +1124,7 @@ impl BlobRepo {
                                     contents: UploadHgFileContents::ContentUploaded(
                                         ContentBlobMeta {
                                             id: change.content_id(),
+                                            size: change.size(),
                                             copy_from: copy_from.clone(),
                                         },
                                     ),
@@ -1998,12 +2000,47 @@ impl UploadHgFileContents {
         impl Future<Item = (), Error = Error> + Send,
         impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> + Send,
     ) {
-        match self {
+        let (cbinfo, upload_fut, compute_fut) = match self {
             UploadHgFileContents::ContentUploaded(cbmeta) => {
                 let upload_fut = future::ok(());
-                let compute_fut = Self::compute(ctx, cbmeta.clone(), repo, p1, p2);
+
+                let size = cbmeta.size;
                 let cbinfo = ContentBlobInfo { path, meta: cbmeta };
-                (cbinfo, Either::A(upload_fut), Either::A(compute_fut))
+
+                let lookup_fut = lookup_filenode_id(
+                    ctx.clone(),
+                    &repo.blobstore,
+                    FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2),
+                );
+
+                let metadata_fut = Self::compute_metadata(
+                    ctx.clone(),
+                    repo,
+                    cbinfo.meta.id,
+                    cbinfo.meta.copy_from.clone(),
+                );
+
+                let content_id = cbinfo.meta.id;
+
+                // Attempt to lookup filenode ID by alias. Fallback to computing it if we cannot.
+                let compute_fut = (lookup_fut, metadata_fut).into_future().and_then({
+                    cloned!(ctx, repo);
+                    move |(res, metadata)| {
+                        res.ok_or(())
+                            .into_future()
+                            .or_else({
+                                cloned!(metadata);
+                                move |_| {
+                                    Self::compute_filenode_id(
+                                        ctx, &repo, content_id, metadata, p1, p2,
+                                    )
+                                }
+                            })
+                            .map(move |fnid| (fnid, metadata, size))
+                    }
+                });
+
+                (cbinfo, upload_fut.left_future(), compute_fut.left_future())
             }
             UploadHgFileContents::RawBytes(raw_content) => {
                 let node_id = Self::node_id(raw_content.clone(), p1, p2);
@@ -2026,6 +2063,7 @@ impl UploadHgFileContents {
                     path: path.clone(),
                     meta: ContentBlobMeta {
                         id: *contents_blob.id(),
+                        size,
                         copy_from,
                     },
                 };
@@ -2050,32 +2088,56 @@ impl UploadHgFileContents {
                     });
                 let compute_fut = future::ok((node_id, metadata, size));
 
-                (cbinfo, Either::B(upload_fut), Either::B(compute_fut))
+                (
+                    cbinfo,
+                    upload_fut.right_future(),
+                    compute_fut.right_future(),
+                )
             }
-        }
+        };
+
+        let key = FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2);
+
+        let compute_fut = compute_fut.and_then({
+            cloned!(ctx, repo);
+            move |(filenode_id, metadata, size)| {
+                store_filenode_id(ctx, &repo.blobstore, key, &filenode_id)
+                    .map(move |_| (filenode_id, metadata, size))
+            }
+        });
+
+        (cbinfo, upload_fut, compute_fut)
     }
 
-    fn compute(
+    fn compute_metadata(
         ctx: CoreContext,
-        cbmeta: ContentBlobMeta,
         repo: &BlobRepo,
+        content_id: ContentId,
+        copy_from: Option<(MPath, HgFileNodeId)>,
+    ) -> impl Future<Item = Bytes, Error = Error> {
+        // TODO (T47377853): This needs to peek at the contents.
+        repo.fetch(ctx, content_id).map(move |file_contents| {
+            let mut metadata = Vec::new();
+            File::generate_metadata(copy_from.as_ref(), &file_contents, &mut metadata)
+                .expect("Vec::write_all should never fail");
+            Bytes::from(metadata)
+        })
+    }
+
+    fn compute_filenode_id(
+        ctx: CoreContext,
+        repo: &BlobRepo,
+        content_id: ContentId,
+        metadata: Bytes,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
-    ) -> impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> {
-        // Computing the file node hash requires fetching the blob and gluing it together with the
-        // metadata.
-        repo.fetch(ctx, cbmeta.id).map(move |file_contents| {
-            let size = file_contents.size() as u64;
-            let mut metadata = Vec::new();
-            File::generate_metadata(cbmeta.copy_from.as_ref(), &file_contents, &mut metadata)
-                .expect("Vec::write_all should never fail");
-
-            let file_bytes = file_contents.into_bytes();
-
+    ) -> impl Future<Item = HgFileNodeId, Error = Error> {
+        // TODO (T47377853): This needs to stream the contents (and do stream hashing).
+        repo.fetch(ctx, content_id).map(move |file_contents| {
             // XXX this is just a hash computation, so it shouldn't require a copy
+            let file_bytes = file_contents.into_bytes();
             let raw_content = [&metadata[..], &file_bytes[..]].concat();
-            let node_id = Self::node_id(raw_content, p1, p2);
-            (node_id, Bytes::from(metadata), size)
+            Self::node_id(raw_content, p1, p2)
         })
     }
 
@@ -2229,6 +2291,7 @@ pub struct ContentBlobInfo {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContentBlobMeta {
     pub id: ContentId,
+    pub size: u64,
     // The copy info will later be stored as part of the commit.
     pub copy_from: Option<(MPath, HgFileNodeId)>,
 }

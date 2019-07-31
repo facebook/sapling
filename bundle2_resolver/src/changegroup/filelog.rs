@@ -169,11 +169,13 @@ fn generate_lfs_meta_data(
             (
                 repo.get_file_content_id_by_alias(ctx, lfs_content.oid()),
                 Ok(lfs_content.copy_from()),
+                Ok(lfs_content.size()),
             )
         })
-        .map(move |(content_id, copy_from)| ContentBlobMeta {
+        .map(move |(content_id, copy_from, size)| ContentBlobMeta {
             id: content_id,
             copy_from,
+            size,
         })
 }
 
