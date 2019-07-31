@@ -6,15 +6,18 @@
 
 use std::fmt::{self, Debug};
 
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use failure_ext::{bail_err, chain::*};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rust_thrift::compact_protocol;
 
-use crate::blob::{Blob, BlobstoreValue, ContentBlob};
-use crate::errors::*;
-use crate::thrift;
-use crate::typed_hash::{ContentId, ContentIdContext};
+use crate::{
+    blob::{Blob, BlobstoreValue, ContentBlob, ContentMetadataBlob},
+    errors::*,
+    hash, thrift,
+    typed_hash::{ContentId, ContentIdContext, ContentMetadataId},
+};
 
 /// An enum representing contents for a file. In the future this may have
 /// special support for very large files.
@@ -114,6 +117,107 @@ impl Arbitrary for FileContents {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         single_shrinker(FileContents::new_bytes(vec![]))
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ContentAlias(ContentId);
+
+impl ContentAlias {
+    pub fn from_content_id(id: ContentId) -> Self {
+        ContentAlias(id)
+    }
+
+    pub fn from_bytes(blob: Bytes) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(blob.as_ref())
+            .chain_err(ErrorKind::BlobDeserializeError("ContentAlias".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+
+    pub fn from_thrift(ca: thrift::ContentAlias) -> Result<Self> {
+        match ca {
+            thrift::ContentAlias::ContentId(id) => {
+                Ok(Self::from_content_id(ContentId::from_thrift(id)?))
+            }
+            thrift::ContentAlias::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+                "ContentAlias".into(),
+                format!("unknown content alias field: {}", x)
+            )),
+        }
+    }
+
+    pub fn into_blob(self) -> BlobstoreBytes {
+        let alias = thrift::ContentAlias::ContentId(self.0.into_thrift());
+        BlobstoreBytes::from_bytes(compact_protocol::serialize(&alias))
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ContentMetadata {
+    pub total_size: u64,
+    pub content_id: ContentId,
+    pub sha1: Option<hash::Sha1>,
+    pub sha256: Option<hash::Sha256>,
+    pub git_sha1: Option<hash::GitSha1>,
+}
+
+impl ContentMetadata {
+    pub fn from_thrift(cab: thrift::ContentMetadata) -> Result<Self> {
+        let total_size = if cab.total_size >= 0 {
+            cab.total_size as u64
+        } else {
+            bail_err!(ErrorKind::InvalidThrift(
+                "ContentMetadata".into(),
+                format!("Missing or negative size field ({})", cab.total_size)
+            ));
+        };
+
+        let res = ContentMetadata {
+            total_size,
+            content_id: ContentId::from_thrift(cab.content_id)?,
+            sha1: cab.sha1.map(|v| hash::Sha1::from_bytes(&v.0)).transpose()?,
+            sha256: cab
+                .sha256
+                .map(|v| hash::Sha256::from_bytes(&v.0))
+                .transpose()?,
+            git_sha1: cab
+                .git_sha1
+                .map(|v| hash::GitSha1::from_bytes(&v.0, "blob", total_size))
+                .transpose()?,
+        };
+
+        Ok(res)
+    }
+
+    fn into_thrift(self) -> thrift::ContentMetadata {
+        thrift::ContentMetadata {
+            total_size: self.total_size as i64,
+            content_id: self.content_id.into_thrift(),
+            sha1: self.sha1.map(|sha1| sha1.into_thrift()),
+            git_sha1: self.git_sha1.map(|git_sha1| git_sha1.into_thrift()),
+            sha256: self.sha256.map(|sha256| sha256.into_thrift()),
+        }
+    }
+}
+
+impl BlobstoreValue for ContentMetadata {
+    type Key = ContentMetadataId;
+
+    fn into_blob(self) -> ContentMetadataBlob {
+        let id = From::from(self.content_id.clone());
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: ContentMetadataBlob) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+            .chain_err(ErrorKind::BlobDeserializeError("ContentMetadata".into()))?;
+        Self::from_thrift(thrift_tc)
     }
 }
 

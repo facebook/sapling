@@ -234,7 +234,13 @@ impl BlobRepo {
             .get(ctx, blobstore_key.clone())
             .and_then(move |blob| {
                 blob.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into())
-                    .and_then(|blob| <<K as MononokeId>::Value>::from_blob(blob.into()))
+                    // TODO: (jsgf) T44583243 blob.into() here recomputes the MononokeId from the
+                    // serialized content, even though we just fetched it... Seems redundant?
+                    // Maybe there should be something to either create a blob from a MononokeId
+                    // and some content, or make it possible to construct MononokeId::Value from
+                    // just the data (though with the option of cross-checking it with the
+                    // MononokeId if desired.)
+                    .and_then(|blob| <K::Value>::from_blob(blob.into()))
             })
     }
 

@@ -15,14 +15,16 @@ use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde;
 
-use crate::blob::BlobstoreValue;
-use crate::bonsai_changeset::BonsaiChangeset;
-use crate::errors::*;
-use crate::file_contents::FileContents;
-use crate::hash::{Blake2, Context};
-use crate::rawbundle2::RawBundle2;
-use crate::thrift;
-use crate::unode::{FileUnode, ManifestUnode};
+use crate::{
+    blob::BlobstoreValue,
+    bonsai_changeset::BonsaiChangeset,
+    errors::*,
+    file_contents::{ContentMetadata, FileContents},
+    hash::{Blake2, Context},
+    rawbundle2::RawBundle2,
+    thrift,
+    unode::{FileUnode, ManifestUnode},
+};
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -61,6 +63,10 @@ pub struct ChangesetId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct ContentId(Blake2);
 
+/// An identifier for mapping from a ContentId to various aliases for that content
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct ContentMetadataId(Blake2);
+
 /// An identifier for raw bundle2 contents in Mononoke
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct RawBundle2Id(Blake2);
@@ -74,12 +80,10 @@ pub struct FileUnodeId(Blake2);
 pub struct ManifestUnodeId(Blake2);
 
 /// Implementations of typed hashes.
-macro_rules! impl_typed_hash {
+macro_rules! impl_typed_hash_no_context {
     {
         hash_type => $typed: ident,
         value_type => $value_type: ident,
-        context_type => $typed_context: ident,
-        context_key => $key: expr,
     } => {
         impl $typed {
             pub const fn new(blake2: Blake2) -> Self {
@@ -105,7 +109,7 @@ macro_rules! impl_typed_hash {
             }
 
             #[inline]
-            pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+            pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self> {
                 Blake2::from_bytes(bytes).map(Self::new)
             }
 
@@ -146,54 +150,9 @@ macro_rules! impl_typed_hash {
             }
         }
 
-        /// Context for incrementally computing a hash.
-        #[derive(Clone)]
-        pub struct $typed_context(Context);
-
-        impl $typed_context {
-            /// Construct a context.
-            #[inline]
-            pub fn new() -> Self {
-                $typed_context(Context::new($key.as_bytes()))
-            }
-
-            #[inline]
-            pub fn update<T>(&mut self, data: T)
-            where
-                T: AsRef<[u8]>,
-            {
-                self.0.update(data)
-            }
-
-            #[inline]
-            pub fn finish(self) -> $typed {
-                $typed(self.0.finish())
-            }
-        }
-
         impl asyncmemo::Weight for $typed {
             fn get_weight(&self) -> usize {
                 ::std::mem::size_of::<Blake2>()
-            }
-        }
-
-        impl MononokeId for $typed {
-            type Value = $value_type;
-
-            #[inline]
-            fn blobstore_key(&self) -> String {
-                format!(concat!($key, ".blake2.{}"), self.0)
-            }
-
-            #[inline]
-            fn blobstore_key_prefix() -> String {
-                concat!($key, ".blake2.").to_string()
-            }
-
-            fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
-                let mut context = $typed_context::new();
-                context.update(data);
-                context.finish()
             }
         }
 
@@ -227,7 +186,65 @@ macro_rules! impl_typed_hash {
                 serializer.serialize_str(self.to_hex().as_str())
             }
         }
+    }
+}
 
+macro_rules! impl_typed_hash {
+    {
+        hash_type => $typed: ident,
+        value_type => $value_type: ident,
+        context_type => $typed_context: ident,
+        context_key => $key: expr,
+    } => {
+        impl_typed_hash_no_context! {
+            hash_type => $typed,
+            value_type => $value_type,
+        }
+
+        /// Context for incrementally computing a hash.
+        #[derive(Clone)]
+        pub struct $typed_context(Context);
+
+        impl $typed_context {
+            /// Construct a context.
+            #[inline]
+            pub fn new() -> Self {
+                $typed_context(Context::new($key.as_bytes()))
+            }
+
+            #[inline]
+            pub fn update<T>(&mut self, data: T)
+            where
+                T: AsRef<[u8]>,
+            {
+                self.0.update(data)
+            }
+
+            #[inline]
+            pub fn finish(self) -> $typed {
+                $typed(self.0.finish())
+            }
+        }
+
+        impl MononokeId for $typed {
+            type Value = $value_type;
+
+            #[inline]
+            fn blobstore_key(&self) -> String {
+                format!(concat!($key, ".blake2.{}"), self.0)
+            }
+
+            #[inline]
+            fn blobstore_key_prefix() -> String {
+                concat!($key, ".blake2.").to_string()
+            }
+
+            fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
+                let mut context = $typed_context::new();
+                context.update(data);
+                context.finish()
+            }
+        }
     }
 }
 
@@ -264,6 +281,47 @@ impl_typed_hash! {
     value_type => ManifestUnode,
     context_type => ManifestUnodeIdContext,
     context_key => "manifestunode",
+}
+
+impl_typed_hash_no_context! {
+    hash_type => ContentMetadataId,
+    value_type => ContentMetadata,
+}
+
+impl ContentMetadataId {
+    const PREFIX: &'static str = "content_metadata.blake2";
+}
+
+impl From<ContentId> for ContentMetadataId {
+    fn from(content: ContentId) -> Self {
+        Self { 0: content.0 }
+    }
+}
+
+impl MononokeId for ContentMetadataId {
+    type Value = ContentMetadata;
+
+    #[inline]
+    fn blobstore_key(&self) -> String {
+        format!("{}.{}", Self::PREFIX, self.0)
+    }
+
+    #[inline]
+    fn blobstore_key_prefix() -> String {
+        Self::PREFIX.to_string()
+    }
+
+    fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
+        // This is intended to compute an id from raw bytes, but we actually need to do it
+        // by decoding the data... See T44583243.
+        let thrift_tc: thrift::ContentMetadata =
+            rust_thrift::compact_protocol::deserialize(data.as_ref())
+                .expect("Can't decode ContentMetadata");
+        let id = ContentId::from_thrift(thrift_tc.content_id)
+            .expect("Can't decode ContentId from ContentMetadata");
+
+        Self::from(id)
+    }
 }
 
 #[cfg(test)]
@@ -305,5 +363,11 @@ mod test {
 
         let id = ManifestUnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{}", id));
+
+        let id = ContentMetadataId::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("content_metadata.blake2.{}", id)
+        );
     }
 }

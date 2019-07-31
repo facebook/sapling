@@ -231,6 +231,10 @@ macro_rules! impl_hash {
             pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
                 Self::from_str(s.as_str())
             }
+
+            pub fn into_thrift(self) -> thrift::$type {
+                thrift::$type(self.0.to_vec())
+            }
         }
 
         impl FromStr for $type {
@@ -317,6 +321,10 @@ impl GitSha1 {
     /// Return the Git prefix bytes
     pub fn prefix(&self) -> Vec<u8> {
         format!("{} {}\0", self.ty, self.size).into_bytes()
+    }
+
+    pub fn into_thrift(self) -> thrift::GitSha1 {
+        thrift::GitSha1(self.sha1.0.to_vec())
     }
 }
 

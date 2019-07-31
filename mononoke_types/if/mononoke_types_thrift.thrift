@@ -43,9 +43,16 @@ typedef IdType FileUnodeId (hs.newtype)
 typedef IdType ManifestUnodeId (hs.newtype)
 typedef IdType MPathHash (hs.newtype)
 
+typedef IdType ContentMetadataId (hs.newtype)
+
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
-// This can be moved away in the future if necessary.
+// This can be moved away in the future if necessary. Could also be used for
+// raw content sha1 (should this be separated?)
 typedef binary Sha1 (hs.newtype)
+
+// Other content alias types
+typedef binary Sha256 (hs.newtype)
+typedef binary GitSha1 (hs.newtype)
 
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
@@ -116,7 +123,21 @@ struct DateTime {
 }
 
 union FileContents {
-  1: binary Bytes,
+  1: binary Bytes, // Plain uncompressed bytes - WYSIWYG
+}
+
+// Payload of object which is an alias
+union ContentAlias {
+  1: ContentId ContentId, // File content alias
+}
+
+// Metadata about a file. This includes hahs aliases, or the file's size.
+struct ContentMetadata {
+  1: i64 total_size = -1, // Needed to make GitSha1 meaningful, but generally useful
+  2: ContentId content_id, // ContentId we're providing metadata for
+  3: optional Sha1 sha1,
+  4: optional Sha256 sha256,
+  5: optional GitSha1 git_sha1, // always object type "blob"
 }
 
 union RawBundle2 {

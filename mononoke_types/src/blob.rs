@@ -8,9 +8,12 @@
 
 use bytes::Bytes;
 
-use crate::errors::*;
-use crate::typed_hash::{
-    ChangesetId, ContentId, FileUnodeId, ManifestUnodeId, MononokeId, RawBundle2Id,
+use crate::{
+    errors::*,
+    typed_hash::{
+        ChangesetId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId, MononokeId,
+        RawBundle2Id,
+    },
 };
 
 /// A serialized blob in memory.
@@ -43,6 +46,7 @@ pub type ContentBlob = Blob<ContentId>;
 pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
+pub type ContentMetadataBlob = Blob<ContentMetadataId>;
 
 pub use blobstore::BlobstoreBytes;
 
