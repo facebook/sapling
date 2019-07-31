@@ -25,6 +25,9 @@ Config::
   # Skip the post-push pull and rebase. This only works in single-writer
   # scenario and should only be used in HG -> SVN reverse sync.
   skippostpushpulls = False
+  # In `hg debugcrdump`, it uses svn revision number by default. When enabled,
+  # the command will give globalrev instead.
+  useglobalrevindebugcrdump = False
 """
 
 from __future__ import absolute_import
@@ -439,6 +442,7 @@ configitem("hgsubversion", "skippostpushpulls", default=False)
 # If this configuration is true, the `svnrev` template keyword would be
 # effectively disabled and querying for it would return nothing.
 configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
+configitem("hgsubversion", "useglobalrevindebugcrdump ", default=False)
 
 
 @templatekeyword("svnrev")

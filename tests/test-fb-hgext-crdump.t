@@ -309,6 +309,9 @@ Test basic dump of two commits
   ######## old
   62000a
 
+
+
+
 #if jq
 Test crdump not dumping binaries
 
@@ -476,3 +479,17 @@ Test non-ASCII characters
       ],
       "output_directory": "*" (glob)
   }
+
+#if jq
+Test use globalrev instead of svnrev
+
+  $ echo y > Y
+  $ hg commit --config "extensions.commitextras=" -Aqm "commit with globalrev and svnrev" --extra convert_revision="svn:2c7ba8d8-a2f7-0310-a573-de162e16dcc7/tfb/trunk/www@1234567" --extra global_rev="100098765"
+  $ hg phase -pfr '.'
+  $ echo z > Z
+  $ hg commit -Aqm "local commit"
+  $ hg debugcrdump --config 'extensions.hgsubversion=' --config 'extensions.globalrevs=' -r . | jq '.commits[].public_base.svnrev'
+  "1234567"
+  $ hg debugcrdump --config 'extensions.hgsubversion=' --config 'extensions.globalrevs=' --config "hgsubversion.useglobalrevindebugcrdump=True" -r . | jq '.commits[].public_base.svnrev'
+  "100098765"
+#endif

@@ -150,13 +150,18 @@ def crdump(ui, repo, *revs, **opts):
             if pbctx:
                 rdata["public_base"] = {"node": hex(pbctx.node())}
                 try:
-                    hgsubversion = extensions.find("hgsubversion")
-                    svnrev = hgsubversion.util.getsvnrev(pbctx)
-                    # There are no abstractions in hgsubversion for doing
-                    # it see hgsubversion/svncommands.py:267
-                    rdata["public_base"]["svnrev"] = (
-                        svnrev.split("@")[1] if svnrev else None
-                    )
+                    if ui.configbool("hgsubversion", "useglobalrevindebugcrdump"):
+                        globalrevs = extensions.find("globalrevs")
+                        globalrev = globalrevs.getglobalrev(ui, pbctx)
+                        rdata["public_base"]["svnrev"] = globalrev
+                    else:
+                        hgsubversion = extensions.find("hgsubversion")
+                        svnrev = hgsubversion.util.getsvnrev(pbctx)
+                        # There are no abstractions in hgsubversion for doing
+                        # it see hgsubversion/svncommands.py:267
+                        rdata["public_base"]["svnrev"] = (
+                            svnrev.split("@")[1] if svnrev else None
+                        )
                 except KeyError:
                     pass
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)

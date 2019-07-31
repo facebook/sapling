@@ -407,6 +407,14 @@ def _revsetglobalrev(repo, subset, x):
     return subset & smartset.baseset(_lookupglobalrev(repo, globalrev))
 
 
+def getglobalrev(ui, ctx, defval=None):
+    """Wrapper around _getglobalrev. See _getglobalrev for more detail."""
+    grev = _getglobalrev(ui, ctx.extra())
+    if grev:
+        return grev
+    return defval
+
+
 def _getglobalrev(ui, commitextra):
     grev = commitextra.get(EXTRASGLOBALREVKEY)
 
