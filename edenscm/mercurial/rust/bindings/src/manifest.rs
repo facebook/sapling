@@ -65,6 +65,12 @@ py_class!(class treemanifest |py| {
         treemanifest::create_instance(py, underlying)
     }
 
+    // Returns a new instance of treemanifest that contains the same data as the base.
+    def copy(&self) -> PyResult<treemanifest> {
+        let tree = self.underlying(py);
+        treemanifest::create_instance(py, tree.clone())
+    }
+
     // Returns (node, flag) for a given `path` in the manifest.
     def find(&self, path: &PyBytes) -> PyResult<Option<(PyBytes, String)>> {
         let repo_path = pybytes_to_path(py, path);
