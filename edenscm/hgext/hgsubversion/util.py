@@ -8,7 +8,7 @@ import os
 import re
 import urllib
 
-from edenscm.mercurial import error, hg, node, repair, util as hgutil
+from edenscm.mercurial import error, hg, node, phases, repair, util as hgutil
 
 from . import compathacks
 
@@ -104,6 +104,18 @@ def gcdisable(orig):
                 gc.enable()
 
     return wrapper
+
+
+def firstpublicancestorrev(ui, repo, ctx):
+    currentctx = ctx
+    while currentctx.node() != node.nullid and currentctx.phase() != phases.public:
+        parents = currentctx.parents()
+        if len(parents) != 1:
+            raise hgutil.Abort("Sorry, can't find parent of a merge revision.")
+        currentctx = parents[0]
+    if currentctx.node() != node.nullid:
+        return currentctx
+    raise hgutil.Abort("Sorry, can't find any public ancestor.")
 
 
 def parentrev(ui, repo, meta, hashes):

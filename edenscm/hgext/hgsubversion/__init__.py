@@ -31,6 +31,10 @@ Config::
   # In `hg svn info`, it uses the svn revision in revmap by default. When
   # enabled, the command will give globalrev instead.
   useglobalrevinsvninfo = False
+  # In `hg svn info` it uses the revmap to determine which commit is svn commit.
+  # Once HG is source of truth, revmap will be outdated. In this case, we should
+  # use phase to determine that.
+  usefirstpublicancestorinsvninfo = False
 """
 
 from __future__ import absolute_import
@@ -447,6 +451,7 @@ configitem("hgsubversion", "skippostpushpulls", default=False)
 configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
 configitem("hgsubversion", "useglobalrevindebugcrdump ", default=False)
 configitem("hgsubversion", "useglobalrevinsvninfo ", default=False)
+configitem("hgsubversion", "usefirstpublicancestorinsvninfo ", default=False)
 
 
 @templatekeyword("svnrev")

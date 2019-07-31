@@ -430,9 +430,10 @@ def info(ui, repo, **opts):
 
     meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
-
     if opts.get("rev"):
         parent = repo[opts["rev"]]
+    elif ui.configbool("hgsubversion", "usefirstpublicancestorinsvninfo"):
+        parent = util.firstpublicancestorrev(ui, repo, repo[None])
     else:
         parent = util.parentrev(ui, repo, meta, hashes)
 
