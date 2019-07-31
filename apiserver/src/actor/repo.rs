@@ -9,7 +9,7 @@ use std::{
     sync::Arc,
 };
 
-use blobrepo::{file_history::get_file_history, get_sha256_alias, get_sha256_alias_key, BlobRepo};
+use blobrepo::{file_history::get_file_history, BlobRepo, StoreRequest};
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
@@ -20,7 +20,7 @@ use failure::Error;
 use futures::{
     future::{join_all, ok},
     lazy,
-    stream::iter_ok,
+    stream::{iter_ok, once},
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
@@ -156,16 +156,24 @@ impl MononokeRepo {
 
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(|changesetid| {
-                mononoke_api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
+            .and_then({
+                cloned!(repo, ctx);
+                |changesetid| mononoke_api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
             })
-            .and_then(move |content| match content {
-                Content::File(content)
-                | Content::Executable(content)
-                | Content::Symlink(content) => Ok(MononokeRepoResponse::GetRawFile {
-                    content: content.into_bytes(),
-                }),
-                _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
+            .and_then({
+                move |content| match content {
+                    Content::File(stream)
+                    | Content::Executable(stream)
+                    | Content::Symlink(stream) => stream
+                        .concat2() // TODO (T47717165): Stream file contents out.
+                        .map(|file_bytes| MononokeRepoResponse::GetRawFile {
+                            content: file_bytes.into_bytes(),
+                        })
+                        .left_future(),
+                    _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into())
+                        .into_future()
+                        .right_future(),
+                }
             })
             .from_err()
             .boxify()
@@ -222,9 +230,11 @@ impl MononokeRepo {
 
         self.repo
             .get_file_content(ctx, HgFileNodeId::new(blobhash))
-            .and_then(move |content| {
-                let content = content.into_bytes();
-                Ok(MononokeRepoResponse::GetBlobContent { content })
+            .concat2() // TODO (T47717165): Stream file contents out.
+            .and_then(|file_bytes| {
+                Ok(MononokeRepoResponse::GetBlobContent {
+                    content: file_bytes.into_bytes(),
+                })
             })
             .from_err()
             .boxify()
@@ -330,11 +340,19 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
 
+        // TODO (T47378130): Stream files out.
+        // TODO (T47378130): Use a more native filestore interface here.
         self.repo
-            .get_file_content_by_alias(ctx, sha256_oid)
-            .and_then(move |content| {
-                let content = content.into_bytes();
-                Ok(MononokeRepoResponse::DownloadLargeFile { content })
+            .get_file_content_id_by_sha256(ctx.clone(), sha256_oid)
+            .and_then({
+                cloned!(self.repo, ctx);
+                move |content_id| {
+                    repo.get_file_content_by_content_id(ctx, content_id)
+                        .concat2() // TODO (T47717165): Stream file contents out.
+                        .map(|file_bytes| MononokeRepoResponse::DownloadLargeFile {
+                            content: file_bytes.into_bytes(),
+                        })
+                }
             })
             .from_err()
             .boxify()
@@ -348,18 +366,12 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid.clone()));
 
-        let calculated_sha256_key = get_sha256_alias(&body);
-        let given_sha256_key = get_sha256_alias_key(oid);
-
-        if calculated_sha256_key != given_sha256_key {
-            try_boxfuture!(Err(ErrorKind::InvalidInput(
-                "Upload file content has different sha256".to_string(),
-                None,
-            )))
-        }
+        // TODO (T47378130): Stream files in.
+        let size = body.len() as u64;
+        let body = once(Ok(body));
 
         self.repo
-            .upload_file_content_by_alias(ctx, sha256_oid, body)
+            .upload_file(ctx, &StoreRequest::with_sha256(size, sha256_oid), body)
             .and_then(|_| Ok(MononokeRepoResponse::UploadLargeFile {}))
             .from_err()
             .boxify()

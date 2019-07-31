@@ -26,6 +26,12 @@
   $ blobimport repo-hg-nolfs/.hg repo
 
   $ ls $TESTTMP/repo/blobs | grep "alias"
+  blob-repo0000.alias.gitsha1.45d9e0e9fc8859787c33081dffdf12f41b54fcf3
+  blob-repo0000.alias.gitsha1.8e1e71d5ce34c01b6fe83bc5051545f2918c8c2b
+  blob-repo0000.alias.gitsha1.9de77c18733ab8009a956c25e28c85fe203a17d7
+  blob-repo0000.alias.sha1.1c49a440c352f3473efa9512255033b94dc7def0
+  blob-repo0000.alias.sha1.aece6dfba588900e00d95601d22b4408d49580af
+  blob-repo0000.alias.sha1.b4c4c2a335010e242576b05f3e0b673adfa58bc8
   blob-repo0000.alias.sha256.2ba85baaa7922ff4c0dfdbc00fd07bd69dcb1dce745c6a8c676fe8b5642a0d66
   blob-repo0000.alias.sha256.b9a294f298d0ed2b65ca4488a42b473ff5f75d0b9843cbea84e1b472f9a514d1
   blob-repo0000.alias.sha256.d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f

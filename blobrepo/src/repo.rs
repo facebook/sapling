@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
@@ -32,28 +31,28 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use filenodes::{FilenodeInfo, Filenodes};
+use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{self, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{
     bounded_traversal::bounded_traversal, spawn_future, try_boxfuture, BoxFuture, BoxStream,
-    FutureExt,
+    FutureExt, StreamExt,
 };
 use futures_stats::{FutureStats, Timed};
 use lock_ext::LockExt;
 use maplit::hashmap;
-use mercurial::file::File;
+use mercurial::file::{File, META_SZ};
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelope,
+    Changeset, Entry, FileBytes, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelope,
     HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
     Manifest, RepoPath, Type,
 };
 use mononoke_types::{
-    hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
-    ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
-    RepositoryId, Timestamp,
+    hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
+    FileChange, FileType, Generation, MPath, MPathElement, MononokeId, RepositoryId, Timestamp,
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -63,7 +62,6 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     convert::From,
     mem,
-    str::FromStr,
     sync::{Arc, Mutex},
 };
 use time_ext::DurationExt;
@@ -127,6 +125,7 @@ pub struct BlobRepo {
     changeset_fetcher_factory:
         Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
     hg_generation_lease: Arc<dyn LeaseOps>,
+    filestore_config: FilestoreConfig,
 }
 
 impl BlobRepo {
@@ -159,6 +158,8 @@ impl BlobRepo {
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             hg_generation_lease,
+            // TODO (T47378130): Pass through a FilestoreConfig.
+            filestore_config: FilestoreConfig::default(),
         }
     }
 
@@ -183,6 +184,8 @@ impl BlobRepo {
             repoid,
             changeset_fetcher_factory,
             hg_generation_lease,
+            // TODO (T47378130): Pass through a FilestoreConfig.
+            filestore_config: FilestoreConfig::default(),
         }
     }
 
@@ -278,7 +281,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         key: HgFileNodeId,
-    ) -> BoxFuture<FileContents, Error> {
+    ) -> BoxStream<FileBytes, Error> {
         STATS::get_file_content.add_value(1);
         fetch_file_content_from_blobstore(ctx, &self.blobstore, key).boxify()
     }
@@ -287,24 +290,33 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         id: ContentId,
-    ) -> impl Future<Item = FileContents, Error = Error> {
-        fetch_file_contents(ctx, &self.blobstore, id)
+    ) -> BoxStream<FileBytes, Error> {
+        STATS::get_file_content.add_value(1);
+        fetch_file_contents(ctx, &self.blobstore, id).boxify()
     }
 
-    pub fn get_file_size(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-    ) -> impl Future<Item = u64, Error = Error> {
-        fetch_file_size_from_blobstore(ctx, &self.blobstore, key)
+    pub fn get_file_size(&self, ctx: CoreContext, key: HgFileNodeId) -> BoxFuture<u64, Error> {
+        fetch_file_size_from_blobstore(ctx, &self.blobstore, key).boxify()
     }
 
     pub fn get_file_content_id(
         &self,
         ctx: CoreContext,
         key: HgFileNodeId,
-    ) -> impl Future<Item = ContentId, Error = Error> {
-        fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key)
+    ) -> BoxFuture<ContentId, Error> {
+        fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key).boxify()
+    }
+
+    pub fn get_file_content_id_by_sha256(
+        &self,
+        ctx: CoreContext,
+        key: Sha256,
+    ) -> BoxFuture<ContentId, Error> {
+        filestore::get_canonical_id(&self.blobstore, ctx, &FetchKey::Sha256(key))
+            .and_then(move |content_id| {
+                content_id.ok_or(ErrorKind::ContentBlobByAliasMissing(key).into())
+            })
+            .boxify()
     }
 
     pub fn get_file_parents(
@@ -319,128 +331,22 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         content_id: ContentId,
-    ) -> impl Future<Item = Sha256, Error = Error> {
-        let blobrepo = self.clone();
-        cloned!(content_id, self.blobstore);
-
-        // try to get sha256 from blobstore from a blob to avoid calculation
-        self.get_alias_content_id_to_sha256(ctx.clone(), content_id)
-            .and_then(move |res| match res {
-                Some(file_content_sha256) => Ok(file_content_sha256).into_future().left_future(),
-                None => {
-                    fetch_file_content_sha256_from_blobstore(ctx.clone(), &blobstore, content_id)
-                        .and_then(move |alias| {
-                            blobrepo
-                                .put_alias_content_id_to_sha256(ctx, content_id, alias)
-                                .map(move |()| alias)
-                        })
-                        .right_future()
-                }
-            })
-    }
-
-    fn put_alias_content_id_to_sha256(
-        &self,
-        ctx: CoreContext,
-        content_id: ContentId,
-        alias_content: Sha256,
-    ) -> impl Future<Item = (), Error = Error> {
-        let alias_key = get_content_id_alias_key(content_id);
-        // Contents = alias.sha256.SHA256HASH (BlobstoreBytes)
-        let contents = BlobstoreBytes::from_bytes(Bytes::from(alias_content.as_ref()));
-
-        self.upload_blobstore_bytes(ctx, alias_key, contents)
-            .map(|_| ())
-    }
-
-    fn get_alias_content_id_to_sha256(
-        &self,
-        ctx: CoreContext,
-        content_id: ContentId,
-    ) -> impl Future<Item = Option<Sha256>, Error = Error> {
-        // Ok: Some(value) - found alias blob, None - alias blob nor found (lazy upload)
-        // Invalid alias blob content is considered as "Not found"
-        // Err: Error from server, does not proceed the opertion further
-        let alias_content_id = get_content_id_alias_key(content_id);
-
-        self.blobstore
-            .get(ctx, alias_content_id.clone())
-            .map(|content_key_bytes| {
-                content_key_bytes.and_then(|bytes| Sha256::from_bytes(bytes.as_bytes()).ok())
-            })
-    }
-
-    pub fn upload_file_content_by_alias(
-        &self,
-        ctx: CoreContext,
-        _alias: Sha256,
-        raw_file_content: Bytes,
-    ) -> impl Future<Item = (), Error = Error> {
-        // Get alias of raw file contents
-        let alias_key = get_sha256_alias(&raw_file_content);
-        // Raw contents = file content only, excluding metadata in the beginning
-        let contents = FileContents::Bytes(raw_file_content);
-        self.upload_blob(ctx, contents.into_blob(), alias_key)
-            .map(|_| ())
-            .boxify()
+    ) -> BoxFuture<Sha256, Error> {
+        fetch_file_content_sha256_from_blobstore(ctx, &self.blobstore, content_id).boxify()
     }
 
     pub fn get_file_content_by_alias(
         &self,
         ctx: CoreContext,
         alias: Sha256,
-    ) -> impl Future<Item = FileContents, Error = Error> {
-        let blobstore = self.blobstore.clone();
-
-        self.get_file_content_id_by_alias(ctx.clone(), alias)
-            .and_then(move |content_id| fetch_file_contents(ctx, &blobstore, content_id))
-            .from_err()
-    }
-
-    pub fn get_file_content_id_by_alias(
-        &self,
-        ctx: CoreContext,
-        alias: Sha256,
-    ) -> impl Future<Item = ContentId, Error = Error> {
-        STATS::get_file_content.add_value(1);
-        let prefixed_key = get_sha256_alias_key(alias.to_hex().to_string());
-        let blobstore = self.blobstore.clone();
-
-        blobstore
-            .get(ctx, prefixed_key.clone())
-            .and_then(move |bytes| {
-                let content_key_bytes = match bytes {
-                    Some(bytes) => bytes,
-                    None => bail_err!(ErrorKind::MissingTypedKeyEntry(prefixed_key)),
-                };
-                Ok(content_key_bytes)
+    ) -> BoxStream<FileBytes, Error> {
+        filestore::fetch(&self.blobstore, ctx, &FetchKey::Sha256(alias))
+            .and_then(move |stream| {
+                stream.ok_or(ErrorKind::ContentBlobByAliasMissing(alias).into())
             })
-            .and_then(move |content_key_bytes| {
-                let content_key = content_key_bytes.as_bytes().as_ref();
-
-                // check expected prefix
-                let content_prefix = ContentId::blobstore_key_prefix();
-                let prefix_len = content_prefix.len();
-
-                if prefix_len > content_key.len()
-                    || &content_key[..prefix_len] != content_prefix.as_bytes()
-                {
-                    let e: Error = ErrorKind::IncorrectAliasBlobContent(alias).into();
-                    try_boxfuture!(Err(e))
-                }
-
-                let blake2_hash = &content_key[prefix_len..];
-
-                // Need to convert hex_bytes -> String -> bytes for Blake2
-                String::from_utf8(blake2_hash.to_vec())
-                    .into_future()
-                    .from_err()
-                    .and_then(|blake2_str| Blake2::from_str(&blake2_str))
-                    .map(ContentId::new)
-                    .context("While casting alias blob contents, to content id")
-                    .from_err()
-                    .boxify()
-            })
+            .flatten_stream()
+            .map(FileBytes)
+            .boxify()
     }
 
     // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper
@@ -629,10 +535,11 @@ impl BlobRepo {
         entry_id: HgEntryId,
     ) -> impl Future<Item = Content, Error = Error> {
         match entry_id {
-            HgEntryId::File(file_type, filenode_id) => self
-                .get_file_content(ctx, filenode_id)
-                .map(move |content| Content::new_file(file_type, content))
-                .left_future(),
+            HgEntryId::File(file_type, filenode_id) => {
+                let stream = self.get_file_content(ctx, filenode_id).boxify();
+                let content = Content::new_file(file_type, stream);
+                Ok(content).into_future().left_future()
+            }
             HgEntryId::Manifest(manifest_id) => self
                 .get_manifest_by_nodeid(ctx, manifest_id)
                 .map(Content::Tree)
@@ -952,7 +859,8 @@ impl BlobRepo {
             })
     }
 
-    pub fn upload_blob_no_alias<Id>(
+    // TODO: Should we get rid of this function? It's only used for test code and Bundle2 upload.
+    pub fn upload_blob<Id>(
         &self,
         ctx: CoreContext,
         blob: Blob<Id>,
@@ -970,46 +878,13 @@ impl BlobRepo {
             .map(move |_| id)
     }
 
-    pub fn upload_blob<Id>(
+    pub fn upload_file(
         &self,
         ctx: CoreContext,
-        blob: Blob<Id>,
-        alias_key: String,
-    ) -> impl Future<Item = Id, Error = Error> + Send
-    where
-        Id: MononokeId,
-    {
-        STATS::upload_blob.add_value(1);
-        let id = blob.id().clone();
-        let blobstore_key = id.blobstore_key();
-        let blob_contents: BlobstoreBytes = blob.into();
-
-        // Upload {alias.sha256.sha256(blob_contents): blobstore_key}
-        let alias_key_operation = {
-            let contents = BlobstoreBytes::from_bytes(blobstore_key.as_bytes());
-            self.upload_blobstore_bytes(ctx.clone(), alias_key, contents)
-        };
-
-        // Upload {blobstore_key: blob_contents}
-        let blobstore_key_operation =
-            self.upload_blobstore_bytes(ctx, blobstore_key, blob_contents.clone());
-
-        blobstore_key_operation
-            .join(alias_key_operation)
-            .map(move |((), ())| id)
-    }
-
-    pub fn upload_alias_to_file_content_id(
-        &self,
-        ctx: CoreContext,
-        alias: Sha256,
-        content_id: ContentId,
-    ) -> impl Future<Item = (), Error = Error> + Send {
-        self.upload_blobstore_bytes(
-            ctx,
-            get_sha256_alias_key(alias.to_hex().to_string()),
-            BlobstoreBytes::from_bytes(content_id.blobstore_key().as_bytes()),
-        )
+        req: &StoreRequest,
+        data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
+    ) -> impl Future<Item = (), Error = Error> + Send + 'static {
+        filestore::store(&self.blobstore, &self.filestore_config, ctx, req, data)
     }
 
     // This is used by tests
@@ -2053,39 +1928,41 @@ impl UploadHgFileContents {
                     Err(_err) => None,
                 };
                 // Upload the contents separately (they'll be used for bonsai changesets as well).
-                let contents = f.file_contents();
-                let size = contents.size() as u64;
-                // Get alias of raw file contents
-                // TODO(anastasiyaz) T33391519 case with file renaming
-                let alias_key = get_sha256_alias(&contents.as_bytes());
-                let contents_blob = contents.into_blob();
+                let file_bytes = f.file_contents();
+
+                STATS::upload_blob.add_value(1);
+                let (contents, upload_fut) =
+                    filestore::store_bytes(&repo.blobstore, ctx.clone(), file_bytes.into_bytes());
+
+                let upload_fut = upload_fut.timed({
+                    cloned!(path);
+                    let logger = ctx.logger().clone();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            UploadHgFileEntry::log_stats(
+                                logger,
+                                path,
+                                node_id,
+                                "content_uploaded",
+                                stats,
+                            );
+                        }
+                        Ok(())
+                    }
+                });
+
+                let id = contents.content_id();
+                let size = contents.size();
+
                 let cbinfo = ContentBlobInfo {
-                    path: path.clone(),
+                    path,
                     meta: ContentBlobMeta {
-                        id: *contents_blob.id(),
+                        id,
                         size,
                         copy_from,
                     },
                 };
 
-                let upload_fut = repo
-                    .upload_blob(ctx.clone(), contents_blob, alias_key)
-                    .map(|_content_id| ())
-                    .timed({
-                        let logger = ctx.logger().clone();
-                        move |stats, result| {
-                            if result.is_ok() {
-                                UploadHgFileEntry::log_stats(
-                                    logger,
-                                    path,
-                                    node_id,
-                                    "content_uploaded",
-                                    stats,
-                                );
-                            }
-                            Ok(())
-                        }
-                    });
                 let compute_fut = future::ok((node_id, metadata, size));
 
                 (
@@ -2115,11 +1992,21 @@ impl UploadHgFileContents {
         content_id: ContentId,
         copy_from: Option<(MPath, HgFileNodeId)>,
     ) -> impl Future<Item = Bytes, Error = Error> {
-        // TODO (T47377853): This needs to peek at the contents.
-        repo.fetch(ctx, content_id).map(move |file_contents| {
+        filestore::peek(
+            &repo.blobstore,
+            ctx,
+            &FetchKey::Canonical(content_id),
+            META_SZ,
+        )
+        .and_then(move |bytes| bytes.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+        .context("While computing metadata")
+        .from_err()
+        .map(move |bytes| {
             let mut metadata = Vec::new();
-            File::generate_metadata(copy_from.as_ref(), &file_contents, &mut metadata)
+            File::generate_metadata(copy_from.as_ref(), &FileBytes(bytes), &mut metadata)
                 .expect("Vec::write_all should never fail");
+
+            // TODO: Introduce Metadata bytes?
             Bytes::from(metadata)
         })
     }
@@ -2132,13 +2019,17 @@ impl UploadHgFileContents {
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> impl Future<Item = HgFileNodeId, Error = Error> {
-        // TODO (T47377853): This needs to stream the contents (and do stream hashing).
-        repo.fetch(ctx, content_id).map(move |file_contents| {
-            // XXX this is just a hash computation, so it shouldn't require a copy
-            let file_bytes = file_contents.into_bytes();
-            let raw_content = [&metadata[..], &file_bytes[..]].concat();
-            Self::node_id(raw_content, p1, p2)
-        })
+        // TODO (T47377853): Streaming implementation
+        filestore::fetch(&repo.blobstore, ctx, &FetchKey::Canonical(content_id))
+            .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+            .flatten_stream()
+            .concat2()
+            .context("While computing a filenode id")
+            .from_err()
+            .map(move |bytes| {
+                let raw_content = [&metadata[..], &bytes[..]].concat();
+                Self::node_id(raw_content, p1, p2)
+            })
     }
 
     #[inline]
@@ -2675,6 +2566,7 @@ impl Clone for BlobRepo {
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
             hg_generation_lease: self.hg_generation_lease.clone(),
+            filestore_config: self.filestore_config.clone(),
         }
     }
 }

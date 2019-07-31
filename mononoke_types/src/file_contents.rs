@@ -48,29 +48,6 @@ impl FileContents {
         }
     }
 
-    /// Whether this starts with a particular string.
-    #[inline]
-    pub fn starts_with(&self, needle: &[u8]) -> bool {
-        match self {
-            FileContents::Bytes(b) => b.starts_with(needle),
-            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
-        }
-    }
-
-    pub fn into_bytes(self) -> Bytes {
-        match self {
-            FileContents::Bytes(bytes) => bytes,
-            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
-        }
-    }
-
-    pub fn as_bytes(&self) -> &Bytes {
-        match self {
-            FileContents::Bytes(bytes) => &bytes,
-            FileContents::Chunked(_) => unimplemented!(), // NOTE: Fixed later in this stack.
-        }
-    }
-
     pub(crate) fn into_thrift(self) -> thrift::FileContents {
         match self {
             // TODO (T26959816) -- allow Thrift to represent binary as Bytes
@@ -83,6 +60,15 @@ impl FileContents {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
             .chain_err(ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        match self {
+            // NOTE: This unwrap() will panic iif we have a Bytes in memory that's larger than a
+            // u64. That's not going to happen.
+            this @ FileContents::Bytes(..) => *this.clone().into_blob().id(),
+            FileContents::Chunked(chunked) => chunked.content_id(),
+        }
     }
 
     pub fn size(&self) -> u64 {
@@ -139,9 +125,11 @@ impl Debug for FileContents {
 
 impl Arbitrary for FileContents {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // NOTE: FileContents::Chunked is added in diff later in this stack (once all the
-        // unimplemented methods for this variant are implemented).
-        FileContents::new_bytes(Vec::arbitrary(g))
+        if bool::arbitrary(g) {
+            FileContents::new_bytes(Vec::arbitrary(g))
+        } else {
+            FileContents::Chunked(ChunkedFileContents::arbitrary(g))
+        }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {

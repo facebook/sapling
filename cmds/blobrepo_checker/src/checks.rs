@@ -12,7 +12,9 @@ use failure_ext::Error;
 use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{blob::BlobstoreValue, ChangesetId, ContentId, FileChange, MPath};
+use mononoke_types::{
+    blob::BlobstoreValue, ChangesetId, ContentId, FileChange, FileContents, MPath,
+};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
@@ -154,17 +156,22 @@ fn check_one_file(
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     // Fetch file.
-    let file = repo.get_file_content_by_content_id(ctx.clone(), file_info.id);
+    // TODO (T47717165): stream!
+    let bytes = repo
+        .get_file_content_by_content_id(ctx.clone(), file_info.id)
+        .concat2();
 
-    let file_checks = file.and_then({
+    let file_checks = bytes.and_then({
         cloned!(file_info);
-        move |file| {
-            let size = u64::try_from(file.size())?;
+        move |file_bytes| {
+            let bytes = file_bytes.into_bytes();
+
+            let size = u64::try_from(bytes.len())?;
             if file_info.size != size {
                 return Err(ErrorKind::BadContentSize(file_info, size).into());
             }
 
-            let id = *file.into_blob().id();
+            let id = FileContents::new_bytes(bytes).content_id();
             if id != file_info.id {
                 return Err(ErrorKind::BadContentId(file_info, id).into());
             }
@@ -176,7 +183,7 @@ fn check_one_file(
     let sha256_check = repo
         .get_file_sha256(ctx.clone(), file_info.id)
         .and_then(move |sha256| {
-            repo.get_file_content_id_by_alias(ctx, sha256)
+            repo.get_file_content_id_by_sha256(ctx, sha256)
                 .map(move |id| (sha256, id))
         })
         .and_then(move |(sha256, new_id)| {

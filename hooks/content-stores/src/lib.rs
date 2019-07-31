@@ -52,9 +52,11 @@ impl FileContentStore for BlobRepoFileContentStore {
             .and_then({
                 cloned!(self.repo);
                 move |opt| match opt {
+                    // TODO (T47378130): Elide large files in content hooks.
                     Some(hash) => repo
                         .get_file_content(ctx, hash)
-                        .map(|fc| Some(fc.into_bytes()))
+                        .concat2()
+                        .map(|file_bytes| Some(file_bytes.into_bytes()))
                         .left_future(),
                     None => future::ok(None).right_future(),
                 }
@@ -67,9 +69,11 @@ impl FileContentStore for BlobRepoFileContentStore {
         ctx: CoreContext,
         hash: HgFileNodeId,
     ) -> BoxFuture<Bytes, Error> {
+        // TODO (T47378130): Elide large files in content hooks.
         self.repo
             .get_file_content(ctx, hash)
-            .map(|fc| fc.into_bytes())
+            .concat2()
+            .map(|file_bytes| file_bytes.into_bytes())
             .boxify()
     }
 

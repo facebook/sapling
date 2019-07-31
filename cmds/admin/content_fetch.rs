@@ -35,39 +35,40 @@ pub fn subcommand_content_fetch(
 
     args::open_repo(&logger, &matches)
         .and_then(move |blobrepo| fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path))
-        .and_then(|content| {
-            match content {
-                Content::Executable(_) => {
-                    println!("Binary file");
-                }
-                Content::File(contents) | Content::Symlink(contents) => {
-                    let content = String::from_utf8(contents.into_bytes().to_vec())
+        .and_then(|content| match content {
+            Content::Executable(_) => {
+                println!("Binary file");
+                future::ok(()).boxify()
+            }
+            Content::File(stream) | Content::Symlink(stream) => stream
+                .concat2()
+                .map(|bytes| {
+                    let content = String::from_utf8(bytes.into_bytes().to_vec())
                         .expect("non-utf8 file content");
                     println!("{}", content);
-                }
-                Content::Tree(mf) => {
-                    let entries: Vec<_> = mf.list().collect();
-                    let mut longest_len = 0;
-                    for entry in entries.iter() {
-                        let basename_len =
-                            entry.get_name().map(|basename| basename.len()).unwrap_or(0);
-                        if basename_len > longest_len {
-                            longest_len = basename_len;
-                        }
-                    }
-                    for entry in entries {
-                        let mut basename = String::from_utf8_lossy(
-                            entry.get_name().expect("empty basename found").as_ref(),
-                        )
-                        .to_string();
-                        for _ in basename.len()..longest_len {
-                            basename.push(' ');
-                        }
-                        println!("{} {} {:?}", basename, entry.get_hash(), entry.get_type());
+                })
+                .boxify(),
+            Content::Tree(mf) => {
+                let entries: Vec<_> = mf.list().collect();
+                let mut longest_len = 0;
+                for entry in entries.iter() {
+                    let basename_len = entry.get_name().map(|basename| basename.len()).unwrap_or(0);
+                    if basename_len > longest_len {
+                        longest_len = basename_len;
                     }
                 }
+                for entry in entries {
+                    let mut basename = String::from_utf8_lossy(
+                        entry.get_name().expect("empty basename found").as_ref(),
+                    )
+                    .to_string();
+                    for _ in basename.len()..longest_len {
+                        basename.push(' ');
+                    }
+                    println!("{} {} {:?}", basename, entry.get_hash(), entry.get_type());
+                }
+                future::ok(()).boxify()
             }
-            future::ok(()).boxify()
         })
         .boxify()
 }

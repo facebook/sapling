@@ -10,23 +10,29 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use failure_ext::{bail_err, Error, ResultExt};
-use futures::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{stream, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use context::CoreContext;
 use mercurial_types::blobnode::HgParents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::{HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash};
-use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
-use mononoke_types::FileContents;
+use mercurial_types::{
+    Entry, FileBytes, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type,
+};
 
 use crate::errors::*;
 
-pub type ContentFactory = Arc<dyn Fn() -> Content + Send + Sync>;
+pub type ContentFactory = Arc<dyn (Fn() -> Content) + Send + Sync>;
 
 pub fn make_file<C: Into<Bytes>>(file_type: FileType, content: C) -> ContentFactory {
-    let content = content.into();
-    Arc::new(move || Content::new_file(file_type, FileContents::Bytes(content.clone())))
+    let content: Bytes = content.into();
+
+    Arc::new(move || {
+        let content = FileBytes(content.clone());
+        let stream = stream::once(Ok(content)).boxify();
+        Content::new_file(file_type, stream)
+    })
 }
 
 #[derive(Clone)]
@@ -286,7 +292,7 @@ impl Entry for MockEntry {
 mod test {
     use super::*;
     use async_unit;
-    use futures::Future;
+    use futures::{Future, Stream};
     use maplit::btreemap;
 
     #[test]
@@ -326,12 +332,15 @@ mod test {
                 .get_content(ctx.clone())
                 .wait()
                 .expect("content fetch should work");
-            match bar1_content {
-                Content::File(FileContents::Bytes(contents)) => {
-                    assert_eq!(contents.as_ref(), &b"bar1"[..])
-                }
+            let bar1_stream = match bar1_content {
+                Content::File(stream) => stream,
                 other => panic!("expected File content, found {:?}", other),
             };
+            let bar1_bytes = bar1_stream
+                .concat2()
+                .wait()
+                .expect("content stream should work");
+            assert_eq!(bar1_bytes.into_bytes().as_ref(), &b"bar1"[..]);
 
             let bar2_entry = foo_manifest
                 .lookup(&MPathElement::new(b"bar2".to_vec()).unwrap())
@@ -340,12 +349,15 @@ mod test {
                 .get_content(ctx.clone())
                 .wait()
                 .expect("content fetch should work");
-            match bar2_content {
-                Content::Symlink(FileContents::Bytes(contents)) => {
-                    assert_eq!(contents.as_ref(), &b"bar2"[..])
-                }
+            let bar2_stream = match bar2_content {
+                Content::Symlink(stream) => stream,
                 other => panic!("expected Symlink content, found {:?}", other),
             };
+            let bar2_bytes = bar2_stream
+                .concat2()
+                .wait()
+                .expect("content stream should work");
+            assert_eq!(bar2_bytes.into_bytes().as_ref(), &b"bar2"[..]);
         })
     }
 }

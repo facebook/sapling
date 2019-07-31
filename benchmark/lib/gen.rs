@@ -112,7 +112,7 @@ impl GenManifest {
                         file_changes.insert(path, None);
                     }
                     Some(content) => {
-                        let content = FileContents::Bytes(content.into());
+                        let content = FileContents::new_bytes(content);
                         store_changes.push(repo.unittest_store(ctx.clone(), content.clone()));
                         let size = content.size();
                         file_changes.insert(

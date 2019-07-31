@@ -34,7 +34,7 @@ fn store_files(
         match content {
             Some(content) => {
                 let size = content.len();
-                let content = FileContents::Bytes(Bytes::from(content));
+                let content = FileContents::new_bytes(Bytes::from(content));
                 let content_id = repo.unittest_store(ctx.clone(), content).wait().unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);

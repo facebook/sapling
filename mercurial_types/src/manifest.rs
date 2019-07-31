@@ -10,12 +10,13 @@ use std::iter;
 use failure::Error;
 
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{FileContents, FileType, MPathElement};
+use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use mononoke_types::{FileType, MPathElement};
 use serde_derive::Serialize;
 
 use crate::blob::HgBlob;
 use crate::blobnode::HgParents;
+use crate::file::FileBytes;
 use crate::nodehash::HgEntryId;
 
 /// Interface for a manifest
@@ -138,16 +139,16 @@ impl fmt::Display for Type {
 
 /// Concrete representation of various Entry Types.
 pub enum Content {
-    File(FileContents),       // TODO stream
-    Executable(FileContents), // TODO stream
+    File(BoxStream<FileBytes, Error>),
+    Executable(BoxStream<FileBytes, Error>),
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
-    Symlink(FileContents), // TODO stream
+    Symlink(BoxStream<FileBytes, Error>),
     Tree(Box<dyn Manifest + Sync>),
 }
 
 impl Content {
-    pub fn new_file(file_type: FileType, contents: FileContents) -> Self {
+    pub fn new_file(file_type: FileType, contents: BoxStream<FileBytes, Error>) -> Self {
         match file_type {
             FileType::Regular => Content::File(contents),
             FileType::Executable => Content::Executable(contents),
@@ -160,11 +161,9 @@ impl fmt::Debug for Content {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Content::Tree(_) => write!(f, "Tree(...)"),
-            Content::File(ref contents) => f.debug_tuple("File").field(contents).finish(),
-            Content::Executable(ref contents) => {
-                f.debug_tuple("Executable").field(contents).finish()
-            }
-            Content::Symlink(ref contents) => f.debug_tuple("Symlink").field(contents).finish(),
+            Content::File(..) => write!(f, "File(...)"),
+            Content::Executable(..) => write!(f, "Executable(...)"),
+            Content::Symlink(..) => write!(f, "Symlink(...)"),
         }
     }
 }

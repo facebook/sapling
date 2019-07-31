@@ -21,7 +21,6 @@ use mercurial_types::{
     FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
     MPath, MPathElement, RepoPath,
 };
-use mononoke_types::FileContents;
 
 use crate::RevlogRepo;
 
@@ -42,11 +41,11 @@ pub struct RevlogManifest {
 
 /// Concrete representation of various Entry Types.
 pub enum EntryContent {
-    File(FileContents),       // TODO stream
-    Executable(FileContents), // TODO stream
+    File(file::File),       // TODO stream
+    Executable(file::File), // TODO stream
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
-    Symlink(FileContents),
+    Symlink(file::File),
     Tree(RevlogManifest),
 }
 
@@ -371,11 +370,10 @@ impl RevlogEntry {
                 match self.get_type() {
                     Type::File(ft) => {
                         let f = file::File::data_only(data.clone());
-                        let file_contents = f.file_contents();
                         let content = match ft {
-                            FileType::Regular => EntryContent::File(file_contents),
-                            FileType::Executable => EntryContent::File(file_contents),
-                            FileType::Symlink => EntryContent::File(file_contents),
+                            FileType::Regular => EntryContent::File(f),
+                            FileType::Executable => EntryContent::File(f),
+                            FileType::Symlink => EntryContent::File(f),
                         };
                         Ok(content)
                     }
@@ -410,7 +408,7 @@ impl RevlogEntry {
             .and_then(|content| match content {
                 EntryContent::File(data)
                 | EntryContent::Executable(data)
-                | EntryContent::Symlink(data) => Ok(Some(data.size() as usize)),
+                | EntryContent::Symlink(data) => Ok(Some(data.content().len())),
                 EntryContent::Tree(_) => Ok(None),
             })
             .boxify()

@@ -25,9 +25,10 @@ use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use lz4_pyframe;
 use mercurial::file::File;
-use mercurial_types::{HgBlobNode, HgFileHistoryEntry, HgFileNodeId, MPath, RepoPath, RevFlags};
+use mercurial_types::{
+    FileBytes, HgBlobNode, HgFileHistoryEntry, HgFileNodeId, MPath, RepoPath, RevFlags,
+};
 use metaconfig_types::LfsParams;
-use mononoke_types::FileContents;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
@@ -74,7 +75,7 @@ pub fn create_remotefilelog_blob(
         match maybe_censored_err {
             Some(Censored(_, _)) => {
                 let meta_key_flag = RevFlags::REVIDX_DEFAULT_FLAGS;
-                let raw_content = FileContents::new_bytes(CENSORED_CONTENT.as_bytes());
+                let raw_content = FileBytes(CENSORED_CONTENT.as_bytes().into());
                 future::ok((raw_content, meta_key_flag)).right_future()
             }
             None => future::err(err).left_future(),
@@ -107,7 +108,7 @@ fn extract_copy_from<'a>(filenode: &'a FilenodeInfo) -> Option<(MPath, HgFileNod
 }
 
 fn validate_content(
-    content: &FileContents,
+    content: &FileBytes,
     filenode: FilenodeInfo,
     repopath: RepoPath,
     actual: HgFileNodeId,
@@ -141,7 +142,7 @@ pub fn get_raw_content(
     repopath: RepoPath,
     lfs_params: LfsParams,
     validate_hash: bool,
-) -> impl Future<Item = (FileContents, RevFlags), Error = Error> {
+) -> impl Future<Item = (FileBytes, RevFlags), Error = Error> {
     let filenode_fut =
         get_maybe_draft_filenode(ctx.clone(), repo.clone(), repopath.clone(), node.clone());
 
@@ -160,6 +161,7 @@ pub fn get_raw_content(
                 if direct_fetching_file {
                     (
                         repo.get_file_content(ctx, node)
+                            .concat2()
                             .and_then(move |content| {
                                 if validate_hash {
                                     validate_content(&content, filenode_info, repopath, node)
@@ -180,7 +182,7 @@ pub fn get_raw_content(
                         .and_then(move |oid| {
                             File::generate_lfs_file(oid, envelope.content_size(), copy_from)
                         })
-                        .map(|bytes| FileContents::Bytes(bytes));
+                        .map(|bytes| FileBytes(bytes));
 
                     (
                         file_fut.right_future(),
@@ -192,7 +194,7 @@ pub fn get_raw_content(
 }
 
 fn encode_remotefilelog_file_content(
-    raw_content: FileContents,
+    raw_content: FileBytes,
     meta_key_flag: RevFlags,
 ) -> Result<Vec<u8>, Error> {
     let raw_content = raw_content.into_bytes();

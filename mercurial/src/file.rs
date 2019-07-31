@@ -12,11 +12,12 @@ use std::str::FromStr;
 use bytes::Bytes;
 use itertools::Itertools;
 
-use mercurial_types::{HgBlob, HgBlobNode, HgFileNodeId, MPath};
-use mononoke_types::{hash::Sha256, FileContents};
+use mercurial_types::{FileBytes, HgBlob, HgBlobNode, HgFileNodeId, MPath};
+use mononoke_types::hash::Sha256;
 
 use crate::errors::*;
 
+/// A Mercurial file. Knows about its parents, and might content inline metadata.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
     node: HgBlobNode,
@@ -25,7 +26,7 @@ pub struct File {
 const META_MARKER: &[u8] = b"\x01\n";
 const COPY_PATH_KEY: &[u8] = b"copy";
 const COPY_REV_KEY: &[u8] = b"copyrev";
-const META_SZ: usize = 2;
+pub const META_SZ: usize = 2;
 
 impl File {
     pub fn new<B: Into<HgBlob>>(
@@ -136,7 +137,7 @@ impl File {
 
     pub fn generate_metadata<T>(
         copy_from: Option<&(MPath, HgFileNodeId)>,
-        file_contents: &FileContents,
+        file_bytes: &FileBytes,
         buf: &mut T,
     ) -> Result<()>
     where
@@ -144,7 +145,7 @@ impl File {
     {
         match copy_from {
             None => {
-                if file_contents.starts_with(META_MARKER) {
+                if file_bytes.starts_with(META_MARKER) {
                     // If the file contents starts with META_MARKER, the metadata must be
                     // written out to avoid ambiguity.
                     buf.write_all(META_MARKER)?;
@@ -180,10 +181,10 @@ impl File {
         data.slice_to(off)
     }
 
-    pub fn file_contents(&self) -> FileContents {
+    pub fn file_contents(&self) -> FileBytes {
         let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
-        FileContents::Bytes(data.slice_from(off))
+        FileBytes(data.slice_from(off))
     }
 
     pub fn get_lfs_content(&self) -> Result<LFSContent> {
@@ -489,17 +490,17 @@ mod test {
 
     #[test]
     fn generate_metadata_0() {
-        const FILE_CONTENTS: &[u8] = b"foobar";
-        let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
+        const FILE_BYTES: &[u8] = b"foobar";
+        let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
         let mut out: Vec<u8> = vec![];
-        File::generate_metadata(None, &file_contents, &mut out)
+        File::generate_metadata(None, &file_bytes, &mut out)
             .expect("Vec::write_all should succeed");
         assert_eq!(out.as_slice(), &b""[..]);
 
         let mut out: Vec<u8> = vec![];
         File::generate_metadata(
             Some(&(MPath::new("foo").unwrap(), ONES_FNID)),
-            &file_contents,
+            &file_bytes,
             &mut out,
         )
         .expect("Vec::write_all should succeed");
@@ -512,17 +513,17 @@ mod test {
     #[test]
     fn generate_metadata_1() {
         // The meta marker in the beginning should cause metadata to unconditionally be emitted.
-        const FILE_CONTENTS: &[u8] = b"\x01\nfoobar";
-        let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
+        const FILE_BYTES: &[u8] = b"\x01\nfoobar";
+        let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
         let mut out: Vec<u8> = vec![];
-        File::generate_metadata(None, &file_contents, &mut out)
+        File::generate_metadata(None, &file_bytes, &mut out)
             .expect("Vec::write_all should succeed");
         assert_eq!(out.as_slice(), &b"\x01\n\x01\n"[..]);
 
         let mut out: Vec<u8> = vec![];
         File::generate_metadata(
             Some(&(MPath::new("foo").unwrap(), ONES_FNID)),
-            &file_contents,
+            &file_bytes,
             &mut out,
         )
         .expect("Vec::write_all should succeed");
@@ -651,10 +652,10 @@ mod test {
     quickcheck! {
         fn copy_info_roundtrip(
             copy_info: Option<(MPath, HgFileNodeId)>,
-            contents: FileContents
+            file_bytes: FileBytes
         ) -> bool {
             let mut buf = Vec::new();
-            let result = File::generate_metadata(copy_info.as_ref(), &contents, &mut buf)
+            let result = File::generate_metadata(copy_info.as_ref(), &file_bytes, &mut buf)
                 .and_then(|_| {
                     File::get_copied_from(&File::parse_meta(&buf))
                 });

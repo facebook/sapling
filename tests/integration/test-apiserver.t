@@ -303,7 +303,7 @@ test download LFS (GET request)
 
   $ NON_EXISTING_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ sslcurl  -w "\n%{http_code}" $APISERVER/repo/lfs/download/$NON_EXISTING_SHA | extract_json_error
-  internal server error: Missing typed key entry for key: alias.sha256.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  internal server error: Content blob missing for id: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   500
 
   $ NON_VALID_SHA="1234"

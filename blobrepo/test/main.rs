@@ -14,12 +14,11 @@ use blobrepo::{
     compute_changed_files, BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
     UploadHgNodeHash,
 };
-use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
-use futures::Future;
+use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use memblob::LazyMemblob;
@@ -29,13 +28,11 @@ use mercurial_types::{
     MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
-use mononoke_types::blob::BlobstoreValue;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
-    BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents, MononokeId,
-    RepositoryId,
+    blob::BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange,
+    FileContents, MononokeId,
 };
-use prefixblob::PrefixBlobstore;
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
 use rand::{distributions::Normal, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -62,7 +59,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(run_future(repo.get_file_content(ctx.clone(), expected_hash)).is_err());
+    assert!(run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).is_err());
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
@@ -78,14 +75,16 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     );
 
     let content = run_future(entry.get_content(ctx.clone())).unwrap();
-    match content {
-        manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
+    let stream = match content {
+        manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
+    let bytes = run_future(stream.concat2()).unwrap();
+    assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
 
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap();
-    assert!(&bytes.into_bytes() == &b"blob"[..]);
+    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap();
+    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -104,7 +103,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    let _ = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap_err();
+    let _ = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap_err();
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
@@ -121,13 +120,16 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     );
 
     let content = run_future(entry.get_content(ctx.clone())).unwrap();
-    match content {
-        manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
+    let stream = match content {
+        manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
+    let bytes = run_future(stream.concat2()).unwrap();
+    assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
+
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap();
-    assert!(&bytes.into_bytes() == &b"blob"[..]);
+    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash).concat2()).unwrap();
+    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -135,44 +137,6 @@ test_both_repotypes!(
     upload_blob_one_parent_lazy,
     upload_blob_one_parent_eager
 );
-
-#[test]
-fn upload_blob_aliases() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
-        // echo -n "blob" | sha256sum
-        let alias_key =
-            "alias.sha256.fa2c8cc4f28176bbeed4b736df569a34c79cd3723e9ec42f9674b4d46ac6b8b8";
-        let memblob = LazyMemblob::new();
-        let blobstore = Arc::new(memblob.clone());
-        // repo_id = 0 (prefix = "repo0000"), the same as in new_memblob_empty
-        let repoid = RepositoryId::new(0);
-        let prefixed_blobstore = PrefixBlobstore::new(memblob, repoid.prefix());
-
-        let repo =
-            blobrepo_factory::new_memblob_empty(Some(blobstore)).expect("cannot create empty repo");
-        let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
-
-        // The blob with alias does not exist...
-        assert!(
-            run_future(prefixed_blobstore.get(ctx.clone(), alias_key.to_string()))
-                .unwrap()
-                .is_none()
-        );
-
-        // We upload file and wait until file is uploaded...
-        let (_, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
-        run_future(future).unwrap();
-
-        let expected_content =
-            "content.blake2.8d53819fadd0306a42cef7a9a9ac6814120efaaaedddb77d41d53a8e65e91bd0";
-
-        let contents = run_future(prefixed_blobstore.get(ctx.clone(), alias_key.to_string()))
-            .unwrap()
-            .unwrap();
-        assert_eq!(contents.as_bytes(), expected_content.as_bytes());
-    });
-}
 
 fn create_one_changeset(repo: BlobRepo) {
     let ctx = CoreContext::test_mock();
@@ -220,8 +184,8 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(ctx.clone(), filehash)).unwrap();
-    assert!(&bytes.into_bytes() == &b"blob"[..]);
+    let bytes = run_future(repo.get_file_content(ctx.clone(), filehash).concat2()).unwrap();
+    assert!(bytes.into_bytes().as_ref() == &b"blob"[..]);
 }
 
 test_both_repotypes!(
@@ -931,12 +895,13 @@ fn test_get_manifest_from_bonsai() {
                     .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(ms_hash)).unwrap();
             let new = entries.get("new").expect("new file should be in entries");
-            match run_future(new.get_content(ctx.clone())).unwrap() {
-                manifest::Content::File(content) => {
-                    assert_eq!(content, FileContents::new_bytes(content_expected));
-                }
+            let stream = match run_future(new.get_content(ctx.clone())).unwrap() {
+                manifest::Content::File(stream) => stream,
                 _ => panic!("content type mismatch"),
             };
+            let bytes = run_future(stream.concat2()).unwrap();
+            assert_eq!(bytes.into_bytes().as_ref(), content_expected.as_ref());
+
             let new_parents = run_future(new.get_parents(ctx.clone())).unwrap();
             assert_eq!(new_parents, HgParents::None);
         }
@@ -1414,14 +1379,17 @@ fn test_filenode_lookup() -> Result<(), Error> {
     let p1 = None;
     let p2 = None;
 
-    let content_blob = File::new(b"myblob".to_vec(), p1, p2)
-        .file_contents()
-        .into_blob();
+    let content_blob = FileContents::new_bytes(
+        File::new(b"myblob".to_vec(), p1, p2)
+            .file_contents()
+            .into_bytes(),
+    )
+    .into_blob();
     let content_id = *content_blob.id();
     let content_len = content_blob.len() as u64;
 
     let mut rt = Runtime::new()?;
-    let _ = rt.block_on(repo.upload_blob_no_alias(ctx.clone(), content_blob))?;
+    let _ = rt.block_on(repo.upload_blob(ctx.clone(), content_blob))?;
 
     let path1 = RepoPath::file("path/1")?;
     let path2 = RepoPath::file("path/2")?;

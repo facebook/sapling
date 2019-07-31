@@ -80,7 +80,7 @@ pub enum FetchKey {
 }
 
 impl FetchKey {
-    fn blobstore_key(&self) -> String {
+    pub fn blobstore_key(&self) -> String {
         use FetchKey::*;
 
         match self {

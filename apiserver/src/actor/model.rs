@@ -8,7 +8,7 @@
 
 use std::{
     collections::BTreeMap,
-    convert::{Into, TryFrom},
+    convert::{Into, TryFrom, TryInto},
     str,
 };
 
@@ -138,26 +138,39 @@ impl EntryWithSizeAndContentHash {
         let future = spawn_future(entry.get_content(ctx).and_then({
             cloned!(name, r#type, hash);
             move |content| {
-                let size = match &content {
-                    Content::File(contents)
-                    | Content::Executable(contents)
-                    | Content::Symlink(contents) => Some(contents.size()),
-                    Content::Tree(manifest) => Some(manifest.list().count() as u64),
+                let inner = match content {
+                    Content::File(stream)
+                    | Content::Executable(stream)
+                    | Content::Symlink(stream) => {
+                        // TODO (T47717165): Use a streaming implementation / get sha in filestore
+                        stream
+                            .concat2()
+                            .map(|file_bytes| {
+                                let bytes = file_bytes.into_bytes();
+
+                                // NOTE: This will only panic with a buffer whose length doesn't
+                                // fit in 64 bits. We don't care to support this.
+                                let size: u64 = bytes.len().try_into().unwrap();
+
+                                let sha1 = Sha1::from(bytes.as_ref());
+                                let sha1 = sha1.to_hex().to_string();
+
+                                (Some(size), Some(sha1))
+                            })
+                            .left_future()
+                    }
+                    Content::Tree(manifest) => {
+                        let size = manifest.list().count() as u64;
+                        Ok((Some(size), None)).into_future().right_future()
+                    }
                 };
-                Ok(EntryWithSizeAndContentHash {
+
+                inner.map(move |(size, content_sha1)| EntryWithSizeAndContentHash {
                     name,
                     r#type,
                     hash: hash.to_string(),
                     size,
-                    content_sha1: match content {
-                        Content::File(contents)
-                        | Content::Executable(contents)
-                        | Content::Symlink(contents) => {
-                            let sha1 = Sha1::from(contents.as_bytes().as_ref());
-                            Some(sha1.to_hex().to_string())
-                        }
-                        Content::Tree(_) => None,
-                    },
+                    content_sha1,
                 })
             }
         }));

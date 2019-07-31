@@ -12,7 +12,6 @@
 
 #![deny(warnings)]
 
-pub mod alias;
 mod bonsai_generation;
 pub mod derive_hg_manifest;
 mod envelope;
@@ -24,7 +23,6 @@ mod repo;
 mod repo_commit;
 mod utils;
 
-pub use crate::alias::*;
 pub use crate::errors::*;
 pub use crate::file::HgBlobEntry;
 pub use crate::manifest::BlobManifest;
@@ -45,3 +43,5 @@ pub mod internal {
 pub mod errors {
     pub use blobrepo_errors::*;
 }
+
+pub use filestore::StoreRequest;

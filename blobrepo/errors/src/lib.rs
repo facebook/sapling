@@ -80,6 +80,8 @@ pub enum ErrorKind {
     FileContentsDeserializeFailed(String),
     #[fail(display = "Content blob missing for id: {}", _0)]
     ContentBlobMissing(ContentId),
+    #[fail(display = "Content blob missing for id: {}", _0)]
+    ContentBlobByAliasMissing(Sha256),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)]
     BadUploadBlob(HgBlob),
     #[fail(display = "HgParents are not in blob store {:?}", _0)]

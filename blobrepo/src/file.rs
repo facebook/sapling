@@ -6,23 +6,27 @@
 
 //! Plain files, symlinks
 
-use super::alias::get_sha256;
 use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
 use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
 use blobstore::Blobstore;
+use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail_err, bail_msg, Error, FutureFailureErrorExt};
-use futures::future::{lazy, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use failure_ext::{bail_msg, Error, FutureFailureErrorExt, StreamFailureErrorExt};
+use filestore::{self, FetchKey};
+use futures::{
+    future::{lazy, Future},
+    stream::Stream,
+};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mercurial::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{
-    calculate_hg_node_id, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, MPath, MPathElement,
+    calculate_hg_node_id, FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId,
+    HgNodeHash, HgParents, MPath, MPathElement,
 };
-use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
+use mononoke_types::{hash::Sha256, ContentId};
 use repo_blobstore::RepoBlobstore;
 
 #[derive(Clone)]
@@ -51,15 +55,18 @@ pub fn fetch_raw_filenode_bytes(
             let blobstore = blobstore.clone();
             move |envelope| {
                 let envelope = envelope.into_mut();
-                let file_contents_fut = fetch_file_contents(ctx, &blobstore, envelope.content_id);
+
+                // TODO (T47717165): Avoid buffering here.
+                let file_bytes_fut =
+                    fetch_file_contents(ctx, &blobstore, envelope.content_id).concat2();
 
                 let mut metadata = envelope.metadata;
                 let f = if metadata.is_empty() {
-                    file_contents_fut
+                    file_bytes_fut
                         .map(|contents| contents.into_bytes())
                         .left_future()
                 } else {
-                    file_contents_fut
+                    file_bytes_fut
                         .map(move |contents| {
                             // The copy info and the blob have to be joined together.
                             // TODO (T30456231): avoid the copy
@@ -99,14 +106,16 @@ pub fn fetch_file_content_from_blobstore(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgFileNodeId,
-) -> impl Future<Item = FileContents, Error = Error> {
-    fetch_file_envelope(ctx.clone(), blobstore, node_id).and_then({
-        let blobstore = blobstore.clone();
-        move |envelope| {
-            let content_id = envelope.content_id();
-            fetch_file_contents(ctx, &blobstore, content_id.clone())
-        }
-    })
+) -> impl Stream<Item = FileBytes, Error = Error> {
+    fetch_file_envelope(ctx.clone(), blobstore, node_id)
+        .map({
+            cloned!(blobstore);
+            move |envelope| {
+                let content_id = envelope.content_id();
+                fetch_file_contents(ctx, &blobstore, content_id.clone())
+            }
+        })
+        .flatten_stream()
 }
 
 pub fn fetch_file_size_from_blobstore(
@@ -130,8 +139,11 @@ pub fn fetch_file_content_sha256_from_blobstore(
     blobstore: &RepoBlobstore,
     content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
-    fetch_file_contents(ctx, blobstore, content_id)
-        .map(|file_content| get_sha256(&file_content.into_bytes()))
+    filestore::get_aliases(blobstore, ctx, &FetchKey::Canonical(content_id))
+        .and_then(move |aliases| aliases.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+        .context("While fetching content metadata")
+        .from_err()
+        .map(|metadata| metadata.sha256)
 }
 
 pub fn fetch_file_parents_from_blobstore(
@@ -196,21 +208,12 @@ pub fn fetch_file_contents(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
     content_id: ContentId,
-) -> impl Future<Item = FileContents, Error = Error> {
-    let blobstore_key = content_id.blobstore_key();
-    blobstore
-        .get(ctx, blobstore_key.clone())
+) -> impl Stream<Item = FileBytes, Error = Error> {
+    filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
+        .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+        .flatten_stream()
+        .map(FileBytes)
         .context("While fetching content blob")
-        .map_err(Error::from)
-        .and_then(move |bytes| {
-            let blobstore_bytes = match bytes {
-                Some(bytes) => bytes,
-                None => bail_err!(ErrorKind::ContentBlobMissing(content_id)),
-            };
-            let file_contents = FileContents::from_encoded_bytes(blobstore_bytes.into_bytes())?;
-            Ok(file_contents)
-        })
-        .with_context(|_| ErrorKind::FileContentsDeserializeFailed(blobstore_key))
         .from_err()
 }
 
@@ -310,15 +313,16 @@ impl Entry for HgBlobEntry {
             .boxify(),
             HgEntryId::File(file_type, filenode_id) => lazy(move || {
                 fetch_file_envelope(ctx.clone(), &blobstore, filenode_id)
-                    .and_then(move |envelope| {
+                    .map(move |envelope| {
                         let envelope = envelope.into_mut();
-                        fetch_file_contents(ctx, &blobstore, envelope.content_id).map(
-                            move |contents| match file_type {
-                                FileType::Regular => Content::File(contents),
-                                FileType::Executable => Content::Executable(contents),
-                                FileType::Symlink => Content::Symlink(contents),
-                            },
-                        )
+                        let stream =
+                            fetch_file_contents(ctx, &blobstore, envelope.content_id).boxify();
+
+                        match file_type {
+                            FileType::Regular => Content::File(stream),
+                            FileType::Executable => Content::Executable(stream),
+                            FileType::Symlink => Content::Symlink(stream),
+                        }
                     })
                     .context(format!(
                         "While HgBlobEntry::get_content for id {}, name {:?}",

@@ -13,12 +13,14 @@ extern crate clap;
 extern crate cloned;
 extern crate cmdlib;
 extern crate context;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
+extern crate crypto;
 extern crate tokio;
 
 use std::cmp;
@@ -28,18 +30,34 @@ use std::sync::{
 };
 
 use crate::failure::{Error, Result};
+use bytes::Bytes;
 use clap::{App, Arg};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use tokio::prelude::stream::iter_ok;
 
-use blobrepo::alias::get_sha256;
 use blobrepo::BlobRepo;
+use blobstore::Blobstore;
 use changesets::SqlChangesets;
 use cmdlib::args;
 use context::CoreContext;
-use mononoke_types::{hash::Sha256, ChangesetId, ContentId, FileChange, RepositoryId};
+use filestore::{self, FetchKey};
+use mononoke_types::{
+    hash::{self, Sha256},
+    ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
+};
+
+pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
+    use crypto::digest::Digest;
+    use crypto::sha2::Sha256;
+
+    let mut hasher = Sha256::new();
+    hasher.input(contents);
+    let mut hash_buffer: [u8; 32] = [0; 32];
+    hasher.result(&mut hash_buffer);
+    hash::Sha256::from_byte_array(hash_buffer)
+}
 
 #[derive(Debug, Clone)]
 enum Mode {
@@ -137,10 +155,39 @@ impl AliasVerification {
         );
 
         match mode {
-            Mode::Verify => Ok(()).into_future().left_future(),
-            Mode::Generate => blobrepo
-                .upload_alias_to_file_content_id(ctx, alias, content_id)
-                .right_future(),
+            Mode::Verify => Ok(()).into_future().boxify(),
+            Mode::Generate => {
+                let blobstore = blobrepo.get_blobstore();
+
+                filestore::get_aliases(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+                    .and_then(move |meta| {
+                        meta.ok_or(format_err!("Missing content {:?}", content_id))
+                    })
+                    .and_then({
+                        cloned!(blobstore);
+                        move |meta| {
+                            if meta.sha256 == alias {
+                                blobstore
+                                    .put(
+                                        ctx.clone(),
+                                        FetchKey::Sha256(meta.sha256).blobstore_key(),
+                                        ContentAlias::from_content_id(content_id).into_blob(),
+                                    )
+                                    .left_future()
+                            } else {
+                                Err(format_err!(
+                                    "Inconsistent hashes for {:?}, got {:?}, meta is {:?}",
+                                    content_id,
+                                    alias,
+                                    meta.sha256
+                                ))
+                                .into_future()
+                                .right_future()
+                            }
+                        }
+                    })
+                    .boxify()
+            }
         }
     }
 
@@ -152,7 +199,7 @@ impl AliasVerification {
     ) -> impl Future<Item = (), Error = Error> {
         let av = self.clone();
         self.blobrepo
-            .get_file_content_id_by_alias(ctx.clone(), alias)
+            .get_file_content_id_by_sha256(ctx.clone(), alias)
             .then(move |result| match result {
                 Ok(content_id_from_blobstore) => av
                     .check_alias_blob(alias, content_id, content_id_from_blobstore)
@@ -174,6 +221,7 @@ impl AliasVerification {
         let av = self.clone();
 
         repo.get_file_content_by_content_id(ctx.clone(), content_id)
+            .concat2()
             .map(|content| get_sha256(&content.into_bytes()))
             .and_then(move |alias| av.process_alias(ctx, alias, content_id))
     }
@@ -236,6 +284,7 @@ impl AliasVerification {
             .buffer_unordered(1000)
             .for_each(|()| Ok(()))
             .map(move |()| av_for_report.print_report(true))
+            .boxify()
     }
 
     pub fn verify_all(

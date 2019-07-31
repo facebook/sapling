@@ -832,7 +832,7 @@ impl Bundle2Resolver {
                 let blob = RawBundle2::new_bytes(full_content.lock().unwrap().clone()).into_blob();
                 let ctx = self.ctx.clone();
                 self.repo
-                    .upload_blob_no_alias(ctx.clone(), blob)
+                    .upload_blob(ctx.clone(), blob)
                     .map(move |id| {
                         debug!(ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
                         Some(id)

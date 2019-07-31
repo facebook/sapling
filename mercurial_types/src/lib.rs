@@ -53,6 +53,7 @@ pub mod delta;
 pub mod delta_apply;
 mod envelope;
 pub mod errors;
+pub mod file;
 pub mod flags;
 pub mod fsencode;
 pub mod hash;
@@ -79,6 +80,7 @@ pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
 // directly on mononoke_types;
+pub use file::FileBytes;
 pub use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
 pub use node::Node;
 pub use nodehash::{

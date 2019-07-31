@@ -167,7 +167,7 @@ fn generate_lfs_meta_data(
         .into_future()
         .and_then(move |lfs_content| {
             (
-                repo.get_file_content_id_by_alias(ctx, lfs_content.oid()),
+                repo.get_file_content_id_by_sha256(ctx, lfs_content.oid()),
                 Ok(lfs_content.copy_from()),
                 Ok(lfs_content.size()),
             )
