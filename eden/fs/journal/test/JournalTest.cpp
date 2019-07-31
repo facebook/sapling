@@ -296,6 +296,20 @@ TEST(Journal, set_get_memory_limit) {
   ASSERT_EQ(0, journal.getMemoryLimit());
 }
 
+TEST(Journal, truncation_by_flush) {
+  Journal journal(std::make_shared<EdenStats>());
+  journal.recordCreated("file1.txt"_relpath);
+  journal.recordCreated("file2.txt"_relpath);
+  journal.recordCreated("file3.txt"_relpath);
+  auto summed = journal.accumulateRange(1);
+  ASSERT_TRUE(summed);
+  EXPECT_FALSE(summed->isTruncated);
+  journal.flush();
+  summed = journal.accumulateRange(1);
+  ASSERT_TRUE(summed);
+  EXPECT_TRUE(summed->isTruncated);
+}
+
 TEST(Journal, limit_of_zero_holds_one_entry) {
   Journal journal(std::make_shared<EdenStats>());
   // Even though limit is 0, journal will always remember at least one entry

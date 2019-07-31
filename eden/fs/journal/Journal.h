@@ -154,6 +154,11 @@ class Journal {
       std::optional<size_t> limit,
       long mountGeneration) const;
 
+  /** Removes all prior contents from the journal and sets up the journal in a
+   * way such that when subscribers are notified they all get truncated results
+   * */
+  void flush();
+
   void setMemoryLimit(size_t limit);
 
   size_t getMemoryLimit() const;

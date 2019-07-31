@@ -214,6 +214,30 @@ size_t Journal::getMemoryLimit() const {
   return deltaState->memoryLimit;
 }
 
+void Journal::flush() {
+  {
+    auto deltaState = deltaState_.wlock();
+    ++deltaState->nextSequence;
+    auto lastHash = deltaState->deltas.empty()
+        ? kZeroHash
+        : deltaState->deltas.back().toHash;
+    deltaState->deltas.clear();
+    deltaState->stats = std::nullopt;
+    auto delta = std::make_unique<JournalDelta>();
+    /* Tracking the hash correctly when the journal is flushed is important
+     * since Watchman uses the hash to correctly determine what additional files
+     * were changed when a checkout happens, journals have at least one entry
+     * unless they are on the null commit with no modifications done. A flush
+     * operation should leave us on the same checkout we were on before the
+     * flush operation.
+     */
+    delta->fromHash = lastHash;
+    delta->toHash = lastHash;
+    addDeltaWithoutNotifying(std::move(delta), *deltaState);
+  }
+  notifySubscribers();
+}
+
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() {
   return accumulateRange(1);
 }

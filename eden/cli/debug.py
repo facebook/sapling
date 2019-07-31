@@ -723,6 +723,30 @@ class DebugJournalGetMemoryLimitCmd(Subcmd):
             return 0
 
 
+@debug_cmd(
+    "flush_journal",
+    "Flushes the journal, and causes any subscribers to get a truncated result",
+)
+class DebugFlushJournalCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
+
+        with instance.get_thrift_client() as client:
+            try:
+                client.flushJournal(bytes(checkout.path))
+            except EdenError as err:
+                print(err, file=sys.stderr)
+                return 1
+            return 0
+
+
 @debug_cmd("journal", "Prints the most recent entries from the journal")
 class DebugJournalCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

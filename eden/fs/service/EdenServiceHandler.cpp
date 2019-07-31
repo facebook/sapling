@@ -678,6 +678,18 @@ int64_t EdenServiceHandler::getJournalMemoryLimit(
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
+#ifndef _WIN32
+  if (!mountPoint) {
+    throw newEdenError(EINVAL, "mount point must not be null");
+  }
+  auto edenMount = server_->getMount(*mountPoint);
+  edenMount->getJournal().flush();
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
