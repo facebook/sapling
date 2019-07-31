@@ -1134,7 +1134,7 @@ def manifestmerge(
         filesmatcher = scmutil.matchfiles(repo, relevantfiles)
         matcher = matchmod.intersectmatchers(matcher, filesmatcher)
 
-    diff = m1.diff(m2, match=matcher)
+    diff = m1.diff(m2, matcher=matcher)
 
     if matcher is None:
         matcher = matchmod.always("", "")

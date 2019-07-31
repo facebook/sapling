@@ -382,7 +382,7 @@ class fastmanifestdict(object):
 
     def filesnotin(self, m2, match=None):
         """Set of files in this manifest that are not in the other"""
-        diff = self.diff(m2, match=match)
+        diff = self.diff(m2, matcher=match)
         files = set(
             filepath
             for filepath, hashflags in diff.iteritems()
@@ -461,7 +461,7 @@ class fastmanifestdict(object):
         m = fastmanifestdict(nfm)
         return m
 
-    def diff(self, m2, match=None, clean=False):
+    def diff(self, m2, matcher=None):
         """Finds changes between the current manifest and m2.
 
         Args:
@@ -476,11 +476,11 @@ class fastmanifestdict(object):
         the nodeid will be None and the flags will be the empty
         string.
         """
-        if match:
-            mf1 = self.matches(match)
-            mf2 = m2.matches(match)
-            return mf1.diff(mf2, clean=clean)
-        return self._fm.diff(m2._fm, clean=clean)
+        if matcher:
+            mf1 = self.matches(matcher)
+            mf2 = m2.matches(matcher)
+            return mf1.diff(mf2)
+        return self._fm.diff(m2._fm)
 
     def setflag(self, key, flag):
         self._fm[key] = self[key], flag

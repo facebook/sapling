@@ -452,12 +452,12 @@ class ctreemanifesttests(unittest.TestCase):
         )
 
         # - uncommitted trees with matcher
-        match = matchmod.match("/", "/", ["abc/*"])
-        diff = a.diff(b2, match=match)
+        matcher = matchmod.match("/", "/", ["abc/*"])
+        diff = a.diff(b2, matcher=matcher)
         self.assertEquals(diff, {"abc/z": (zflags, newzflags)})
 
-        match = matchmod.match("/", "/", ["newfile"])
-        diff = a.diff(b2, match=match)
+        matcher = matchmod.match("/", "/", ["newfile"])
+        diff = a.diff(b2, matcher=matcher)
         self.assertEquals(diff, {"newfile": ((None, ""), newfileflags)})
 
         # - committed trees

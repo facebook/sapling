@@ -490,7 +490,7 @@ class manifestdict(object):
         m._lm = self._lm.filtercopy(match)
         return m
 
-    def diff(self, m2, match=None):
+    def diff(self, m2, matcher=None):
         """Finds changes between the current manifest and m2.
 
         Args:
@@ -503,9 +503,9 @@ class manifestdict(object):
         the nodeid will be None and the flags will be the empty
         string.
         """
-        if match:
-            m1 = self.matches(match)
-            m2 = m2.matches(match)
+        if matcher:
+            m1 = self.matches(matcher)
+            m2 = m2.matches(matcher)
             return m1.diff(m2)
         return self._lm.diff(m2._lm)
 
@@ -1019,7 +1019,7 @@ class treemanifest(object):
             ret._dirty = True
         return ret
 
-    def diff(self, m2, match=None):
+    def diff(self, m2, matcher=None):
         """Finds changes between the current manifest and m2.
 
         Args:
@@ -1032,9 +1032,9 @@ class treemanifest(object):
         the nodeid will be None and the flags will be the empty
         string.
         """
-        if match:
-            m1 = self.matches(match)
-            m2 = m2.matches(match)
+        if matcher:
+            m1 = self.matches(matcher)
+            m2 = m2.matches(matcher)
             return m1.diff(m2)
         result = {}
         emptytree = treemanifest()

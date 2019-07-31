@@ -101,11 +101,10 @@ class overlaymanifest(object):
         self.load()
         return self._map.get(path, default)
 
-    def diff(self, m2, match=None):
+    def diff(self, m2, matcher=None):
         # Older mercurial clients used diff(m2, clean=False). If a caller failed
         # to specify clean as a keyword arg, it might get passed as match here.
-
-        assert not isinstance(match, bool), "match must inherit from basematcher"
+        assert not isinstance(matcher, bool), "match must inherit from basematcher"
 
         self.load()
         if isinstance(m2, overlaymanifest):
@@ -120,10 +119,10 @@ class overlaymanifest(object):
             # Mercurial <= 3.3
             m2flagget = m2._flags.get
 
-        if match is None:
-            match = matchmod.always("", "")
+        if matcher is None:
+            matcher = matchmod.always("", "")
         for fn, n1 in self.iteritems():
-            if not match(fn):
+            if not matcher(fn):
                 continue
             fl1 = self._flags.get(fn, "")
             n2 = m2.get(fn, None)
@@ -135,7 +134,7 @@ class overlaymanifest(object):
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
-                if not match(fn):
+                if not matcher(fn):
                     continue
                 fl2 = m2flagget(fn, "")
                 diff[fn] = ((None, ""), (n2, fl2))
@@ -146,17 +145,17 @@ class overlaymanifest(object):
         del self._map[path]
 
 
-def wrapmanifestdictdiff(orig, self, m2, match=None):
+def wrapmanifestdictdiff(orig, self, m2, matcher=None):
     """avoid calling into lazymanifest code if m2 is an overlaymanifest"""
     # Older mercurial clients used diff(m2, clean=False). If a caller failed
     # to specify clean as a keyword arg, it might get passed as match here.
-    assert not isinstance(match, bool), "match must inherit from basematcher"
+    assert not isinstance(matcher, bool), "match must inherit from basematcher"
 
     kwargs = {}
     # Older versions of mercurial don't support the match arg, so only add it if
     # it exists.
-    if match is not None:
-        kwargs["match"] = match
+    if matcher is not None:
+        kwargs["matcher"] = matcher
     if isinstance(m2, overlaymanifest):
         diff = m2.diff(self, **kwargs)
         # since we calculated the diff with m2 vs m1, flip it around

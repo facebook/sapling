@@ -141,7 +141,7 @@ class basectx(object):
             cleanset = set()
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2, match=match)
+        d = mf1.diff(mf2, matcher=match)
         for fn, value in d.iteritems():
             if listclean:
                 cleanset.discard(fn)

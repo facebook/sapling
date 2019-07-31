@@ -431,7 +431,7 @@ treemanifest_diff(PyObject* o, PyObject* args, PyObject* kwargs) {
   PyObject* otherObj;
   PyObject* matcherObj = NULL;
   PyObject* cleanObj = NULL;
-  static char const* kwlist[] = {"m2", "match", "clean", NULL};
+  static char const* kwlist[] = {"m2", "matcher", "clean", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
           args,
