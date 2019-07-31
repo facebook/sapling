@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use ascii::AsAsciiStr;
 use bytes::Bytes;
-use failure_ext::Error;
+use failure_ext::{err_msg, Error};
 use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::futures_unordered;
@@ -22,7 +22,7 @@ use blobrepo::{
 use blobrepo_factory::new_memblob_empty;
 use context::CoreContext;
 use memblob::{EagerMemblob, LazyMemblob};
-use mercurial_types::{FileType, HgBlobNode, HgFileNodeId, HgNodeHash, RepoPath};
+use mercurial_types::{FileType, HgBlobNode, HgFileNodeId, HgNodeHash, MPath, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
@@ -253,4 +253,9 @@ where
     F: Future,
 {
     spawn(future).wait_future()
+}
+
+pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
+    let bad_mpath = err_msg("RepoPath did not convert to MPath");
+    path.into_mpath().ok_or(bad_mpath)
 }

@@ -16,7 +16,7 @@ use blobrepo::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::Error;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -47,7 +47,7 @@ use tokio::runtime::Runtime;
 use tracing_blobstore::TracingBlobstore;
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
-    get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
+    get_empty_lazy_repo, run_future, string_to_nodehash, to_mpath, upload_file_no_parents,
     upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent,
 };
 
@@ -1364,11 +1364,6 @@ fn save_reproducibility_under_load() -> Result<(), Error> {
 
 #[test]
 fn test_filenode_lookup() -> Result<(), Error> {
-    fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
-        let bad_mpath = err_msg("RepoPath did not convert to MPath");
-        path.into_mpath().ok_or(bad_mpath)
-    }
-
     let ctx = CoreContext::test_mock();
 
     let memblob = LazyMemblob::new();
@@ -1473,6 +1468,53 @@ fn test_filenode_lookup() -> Result<(), Error> {
     assert!(gets[0].contains("filenode_lookup"));
     assert_eq!(gets[1], content_key);
     assert_eq!(gets[2], content_key);
+
+    Ok(())
+}
+
+#[test]
+fn test_content_uploaded_filenode_id() -> Result<(), Error> {
+    let ctx = CoreContext::test_mock();
+
+    let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+    let p1 = None;
+    let p2 = None;
+
+    let content_blob = FileContents::new_bytes(
+        File::new(b"myblob".to_vec(), p1, p2)
+            .file_contents()
+            .into_bytes(),
+    )
+    .into_blob();
+    let content_id = *content_blob.id();
+    let content_len = content_blob.len() as u64;
+
+    let mut rt = Runtime::new()?;
+    let _ = rt.block_on(repo.upload_blob(ctx.clone(), content_blob))?;
+
+    let path1 = RepoPath::file("path/1")?;
+    let path2 = RepoPath::file("path/2")?;
+
+    let cbmeta = ContentBlobMeta {
+        id: content_id,
+        size: content_len,
+        copy_from: Some((to_mpath(path2.clone())?, ONES_FNID)),
+    };
+
+    let upload = UploadHgFileEntry {
+        upload_node_id: UploadHgNodeHash::Checked(
+            "47f917b28e191c4bb0de8927e716e1b976ec3ad0".parse()?,
+        ),
+        contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
+        file_type: FileType::Regular,
+        p1,
+        p2,
+        path: to_mpath(path1.clone())?,
+    };
+    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+
+    let _ = rt.block_on(future)?;
 
     Ok(())
 }

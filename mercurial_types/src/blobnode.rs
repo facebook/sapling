@@ -4,7 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use bytes::Bytes;
+use futures::{Future, Stream};
 use heapsize_derive::HeapSizeOf;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::blob::HgBlob;
@@ -37,6 +40,23 @@ impl HgParents {
             &HgParents::None => (None, None),
             &HgParents::One(p1) => (Some(p1), None),
             &HgParents::Two(p1, p2) => (Some(p1), Some(p2)),
+        }
+    }
+}
+
+impl Arbitrary for HgParents {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        // We make single-parent a litle more common because it's a) little simpler b) a little
+        // more common anyway.
+        if bool::arbitrary(g) {
+            Self::new(Some(HgNodeHash::arbitrary(g)), None)
+        } else if bool::arbitrary(g) {
+            Self::new(
+                Some(HgNodeHash::arbitrary(g)),
+                Some(HgNodeHash::arbitrary(g)),
+            )
+        } else {
+            Self::new(None, None)
         }
     }
 }
@@ -121,7 +141,7 @@ impl HgBlobNode {
     }
 }
 
-pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
+fn hg_node_id_hash_context(parents: &HgParents) -> Context {
     let null = hash::NULL;
 
     let (h1, h2) = match &parents {
@@ -135,16 +155,42 @@ pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
 
     ctxt.update(h1);
     ctxt.update(h2);
-    ctxt.update(data);
 
+    ctxt
+}
+
+/// Compute a Hg Node ID from parents and in-place data.
+pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
+    let mut ctxt = hg_node_id_hash_context(parents);
+    ctxt.update(data);
     HgNodeHash(ctxt.finish())
+}
+
+/// Compute a Hg Node ID from parents and a stream of data.
+pub fn calculate_hg_node_id_stream<S, E>(
+    stream: S,
+    parents: &HgParents,
+) -> impl Future<Item = HgNodeHash, Error = E>
+where
+    S: Stream<Item = Bytes, Error = E>,
+{
+    let ctxt = hg_node_id_hash_context(parents);
+    stream
+        .fold(ctxt, |mut ctxt, bytes| {
+            ctxt.update(bytes);
+            Ok(ctxt)
+        })
+        .map(|ctxt| ctxt.finish())
+        .map(HgNodeHash)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::blob::HgBlob;
-    use bytes::Bytes;
+    use futures::stream;
+    use quickcheck::quickcheck;
+    use tokio::runtime::Runtime;
 
     #[test]
     fn test_node_none() {
@@ -198,5 +244,26 @@ mod test {
             n.nodeid()
         };
         assert_eq!(node1, node2);
+    }
+
+    quickcheck! {
+        // Verify that the two Node Id computation implementations (in place and streaming) are
+        // consistent.
+        fn test_node_consistency(input: Vec<Vec<u8>>, hg_parents: HgParents) -> bool {
+            let mut rt = Runtime::new().unwrap();
+            let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
+
+            let stream = stream::iter_ok::<_, ()>(input.clone());
+
+            let bytes = input.iter().fold(Bytes::new(), |mut bytes, chunk| {
+                bytes.extend_from_slice(&chunk);
+                bytes
+            });
+
+            let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
+            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();
+
+            out_inplace == out_stream
+        }
     }
 }

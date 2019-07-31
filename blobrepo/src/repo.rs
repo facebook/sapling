@@ -33,7 +33,7 @@ use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFail
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
-use futures::stream::{self, FuturesUnordered, Stream};
+use futures::stream::{self, once, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{
@@ -46,9 +46,9 @@ use maplit::hashmap;
 use mercurial::file::{File, META_SZ};
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    Changeset, Entry, FileBytes, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelope,
-    HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
-    Manifest, RepoPath, Type,
+    calculate_hg_node_id_stream, Changeset, Entry, FileBytes, HgBlob, HgBlobNode, HgChangesetId,
+    HgEntryId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut,
+    HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
@@ -1918,7 +1918,15 @@ impl UploadHgFileContents {
                 (cbinfo, upload_fut.left_future(), compute_fut.left_future())
             }
             UploadHgFileContents::RawBytes(raw_content) => {
-                let node_id = Self::node_id(raw_content.clone(), p1, p2);
+                let node_id = HgFileNodeId::new(
+                    HgBlobNode::new(
+                        raw_content.clone(),
+                        p1.map(HgFileNodeId::into_nodehash),
+                        p2.map(HgFileNodeId::into_nodehash),
+                    )
+                    .nodeid(),
+                );
+
                 let f = File::new(raw_content, p1, p2);
                 let metadata = f.metadata();
 
@@ -2019,34 +2027,21 @@ impl UploadHgFileContents {
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> impl Future<Item = HgFileNodeId, Error = Error> {
-        // TODO (T47377853): Streaming implementation
-        filestore::fetch(&repo.blobstore, ctx, &FetchKey::Canonical(content_id))
+        let file_bytes = filestore::fetch(&repo.blobstore, ctx, &FetchKey::Canonical(content_id))
             .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-            .flatten_stream()
-            .concat2()
+            .flatten_stream();
+
+        let all_bytes = once(Ok(metadata)).chain(file_bytes);
+
+        let hg_parents = HgParents::new(
+            p1.map(HgFileNodeId::into_nodehash),
+            p2.map(HgFileNodeId::into_nodehash),
+        );
+
+        calculate_hg_node_id_stream(all_bytes, &hg_parents)
+            .map(HgFileNodeId::new)
             .context("While computing a filenode id")
             .from_err()
-            .map(move |bytes| {
-                let raw_content = [&metadata[..], &bytes[..]].concat();
-                Self::node_id(raw_content, p1, p2)
-            })
-    }
-
-    #[inline]
-    fn node_id<B: Into<Bytes>>(
-        raw_content: B,
-        p1: Option<HgFileNodeId>,
-        p2: Option<HgFileNodeId>,
-    ) -> HgFileNodeId {
-        let raw_content = raw_content.into();
-        HgFileNodeId::new(
-            HgBlobNode::new(
-                raw_content,
-                p1.map(HgFileNodeId::into_nodehash),
-                p2.map(HgFileNodeId::into_nodehash),
-            )
-            .nodeid(),
-        )
     }
 }
 
