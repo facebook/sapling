@@ -74,7 +74,7 @@ fn main() -> Result<(), Error> {
         .map_err(Error::from)?;
 
     let config = FilestoreConfig {
-        chunk_size,
+        chunk_size: Some(chunk_size),
         concurrency,
     };
 

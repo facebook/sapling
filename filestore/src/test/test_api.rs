@@ -219,7 +219,7 @@ fn filestore_chunked_put_get() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 1,
+        chunk_size: Some(1),
         concurrency: 5,
     };
 
@@ -252,11 +252,11 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let small = FilestoreConfig {
-        chunk_size: 1,
+        chunk_size: Some(1),
         concurrency: 5,
     };
     let large = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -333,7 +333,7 @@ fn filestore_chunk_not_found() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -376,7 +376,7 @@ fn filestore_put_invalid_size() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -405,7 +405,7 @@ fn filestore_put_content_id() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -446,7 +446,7 @@ fn filestore_put_sha1() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -487,7 +487,7 @@ fn filestore_put_git_sha1() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -531,7 +531,7 @@ fn filestore_put_sha256() -> Result<()> {
 
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
-        chunk_size: 3,
+        chunk_size: Some(3),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock();
@@ -722,7 +722,7 @@ fn filestore_test_chunked_peek() -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let small = FilestoreConfig {
-        chunk_size: 1,
+        chunk_size: Some(1),
         concurrency: 5,
     };
 

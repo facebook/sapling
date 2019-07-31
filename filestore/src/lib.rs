@@ -54,15 +54,14 @@ mod test;
 /// compatibility.
 #[derive(Debug, Clone)]
 pub struct FilestoreConfig {
-    pub chunk_size: u64,
+    pub chunk_size: Option<u64>,
     pub concurrency: usize,
 }
 
 impl Default for FilestoreConfig {
     fn default() -> Self {
         FilestoreConfig {
-            // TODO: Don't use the default value (expose it through config instead).
-            chunk_size: 8 * 1024 * 1024,
+            chunk_size: None,
             concurrency: 1,
         }
     }

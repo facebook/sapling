@@ -108,7 +108,7 @@ impl Debug for Chunks {
 
 /// Chunk a stream of incoming data for storage. We use the incoming size hint to decide whether
 /// to chunk.
-pub fn make_chunks<S>(data: S, expected_size: ExpectedSize, chunk_size: u64) -> Chunks
+pub fn make_chunks<S>(data: S, expected_size: ExpectedSize, chunk_size: Option<u64>) -> Chunks
 where
     S: Stream<Item = Bytes, Error = Error> + Send + 'static,
 {
@@ -125,24 +125,27 @@ where
         Ok(chunk)
     });
 
-    if expected_size.should_chunk(chunk_size) {
-        let stream = ChunkStream::new(data, chunk_size as usize).boxify();
-        Chunks::Chunked(expected_size, stream)
-    } else {
-        let buff = expected_size.new_buffer();
+    match chunk_size {
+        Some(chunk_size) if expected_size.should_chunk(chunk_size) => {
+            let stream = ChunkStream::new(data, chunk_size as usize).boxify();
+            Chunks::Chunked(expected_size, stream)
+        }
+        _ => {
+            let buff = expected_size.new_buffer();
 
-        let fut = data
-            .fold(buff, move |mut buff, chunk| -> Result<BytesMut> {
-                // NOTE: extend_from_slice should never need to extend here (but it won't panic if
-                // it has to), since we reserve the max capacity upfront and don't allow the stream
-                // to grow beyond that.
-                buff.extend_from_slice(&chunk);
-                Ok(buff)
-            })
-            .map(|bytes_mut| bytes_mut.freeze())
-            .boxify();
+            let fut = data
+                .fold(buff, move |mut buff, chunk| -> Result<BytesMut> {
+                    // NOTE: extend_from_slice should never need to extend here (but it won't panic if
+                    // it has to), since we reserve the max capacity upfront and don't allow the stream
+                    // to grow beyond that.
+                    buff.extend_from_slice(&chunk);
+                    Ok(buff)
+                })
+                .map(|bytes_mut| bytes_mut.freeze())
+                .boxify();
 
-        Chunks::Inline(fut)
+            Chunks::Inline(fut)
+        }
     }
 }
 
@@ -155,10 +158,20 @@ mod test {
     use tokio::runtime::Runtime;
 
     #[test]
+    fn test_make_chunks_no_chunk_size() {
+        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+
+        match make_chunks(in_stream, ExpectedSize::new(10), None) {
+            Chunks::Inline(_) => {}
+            c => panic!("Did not expect {:?}", c),
+        };
+    }
+
+    #[test]
     fn test_make_chunks_no_chunking() {
         let in_stream = stream::iter_ok::<_, Error>(vec![]);
 
-        match make_chunks(in_stream, ExpectedSize::new(10), 100) {
+        match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
             Chunks::Inline(_) => {}
             c => panic!("Did not expect {:?}", c),
         };
@@ -168,7 +181,7 @@ mod test {
     fn test_make_chunks_no_chunking_limit() {
         let in_stream = stream::iter_ok::<_, Error>(vec![]);
 
-        match make_chunks(in_stream, ExpectedSize::new(100), 100) {
+        match make_chunks(in_stream, ExpectedSize::new(100), Some(100)) {
             Chunks::Inline(_) => {}
             c => panic!("Did not expect {:?}", c),
         };
@@ -178,7 +191,7 @@ mod test {
     fn test_make_chunks_chunking() {
         let in_stream = stream::iter_ok::<_, Error>(vec![]);
 
-        match make_chunks(in_stream, ExpectedSize::new(1000), 100) {
+        match make_chunks(in_stream, ExpectedSize::new(1000), Some(100)) {
             Chunks::Chunked(h, _) if h.check_equals(1000).is_ok() => {}
             c => panic!("Did not expect {:?}", c),
         };
@@ -198,7 +211,7 @@ mod test {
         ];
         let in_stream = stream::iter_ok::<_, Error>(chunks);
 
-        let fut = match make_chunks(in_stream, ExpectedSize::new(10), 100) {
+        let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
             c @ Chunks::Chunked(..) => panic!("Did not expect {:?}", c),
             Chunks::Inline(fut) => fut,
         };
@@ -220,7 +233,7 @@ mod test {
         ];
         let in_stream = stream::iter_ok::<_, Error>(chunks);
 
-        let fut = match make_chunks(in_stream, ExpectedSize::new(10), 1) {
+        let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(1)) {
             Chunks::Chunked(_, stream) => stream.collect(),
             c @ Chunks::Inline(..) => panic!("Did not expect {:?}", c),
         };
@@ -350,7 +363,7 @@ mod test {
 
             let len = expected_bytes.len() as u64;
 
-            let fut = match make_chunks(in_stream, ExpectedSize::new(len), len) {
+            let fut = match make_chunks(in_stream, ExpectedSize::new(len), Some(len)) {
                 Chunks::Inline(fut) => fut,
                 c => panic!("Did not expect {:?}", c),
             };
