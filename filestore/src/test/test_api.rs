@@ -21,7 +21,9 @@ use futures::{
     stream::{self, Stream},
 };
 use lazy_static::lazy_static;
-use mononoke_types::{hash, typed_hash::MononokeId, ContentMetadata, ContentMetadataId};
+use mononoke_types::{
+    hash, typed_hash::MononokeId, BlobstoreValue, ContentMetadata, ContentMetadataId,
+};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -780,5 +782,30 @@ fn filestore_test_empty_peek() -> Result<()> {
 
     assert_eq!(res?, Some(bytes.clone()));
 
+    Ok(())
+}
+
+#[test]
+fn filestore_store_bytes() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let ctx = CoreContext::test_mock();
+    let (contents, fut) = filestore::store_bytes(&blob, ctx.clone(), Bytes::from(HELLO_WORLD));
+    let content_id = *contents.into_blob().id();
+    assert_eq!(content_id, canonical(HELLO_WORLD));
+
+    rt.block_on(fut)?;
+
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
 }

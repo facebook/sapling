@@ -16,7 +16,7 @@ use futures_ext::FutureExt;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, MononokeId};
+use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId};
 
 mod alias;
 mod chunk;
@@ -307,4 +307,27 @@ pub fn store<B: Blobstore + Clone>(
             move |prepared| finalize(blobstore, ctx, Some(&req), prepared)
         })
         .map(|_| ())
+}
+
+/// Store a set of bytes, and immediately return FileContents. This function does NOT do chunking.
+/// This is intended as a transition function while we convert writers to streams and refactor them
+/// to not expect to be able to obtain the ContentId for the content they uploaded immediately.
+/// Avoid adding new callsites.
+pub fn store_bytes<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    bytes: Bytes,
+) -> (
+    FileContents,
+    impl Future<Item = (), Error = Error> + Send + 'static,
+) {
+    use finalize::*;
+    use prepare::*;
+
+    let prepared = prepare_bytes(bytes);
+
+    (
+        prepared.contents.clone(),
+        finalize(blobstore.clone(), ctx, None, prepared).map(|_| ()),
+    )
 }

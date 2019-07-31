@@ -17,7 +17,7 @@ pub enum FetchError {
     #[fail(display = "Not found: {:?}", _0)]
     NotFound(ContentId, Depth),
     #[fail(display = "Error loading {:?}: {:?}", _0, _1)]
-    Error(ContentId, Error),
+    Error(ContentId, #[cause] Error),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

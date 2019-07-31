@@ -32,7 +32,7 @@ pub struct Prepared {
     pub contents: FileContents,
 }
 
-fn prepare_bytes(bytes: Bytes) -> Prepared {
+pub fn prepare_bytes(bytes: Bytes) -> Prepared {
     let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
     let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
     let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(&bytes), &bytes);
