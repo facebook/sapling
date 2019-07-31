@@ -12,7 +12,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FailingBlobstore<B> {
     inner: B,
     read_success_probability: f64,

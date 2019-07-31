@@ -4,13 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::super::*;
 use super::{canonical, request};
+use crate as filestore;
+use crate::{
+    errors,
+    fetch::{Depth, FetchError},
+    FetchKey, FilestoreConfig, StoreRequest,
+};
 
 use assert_matches::assert_matches;
+use bytes::Bytes;
+use context::CoreContext;
 use failure_ext::Result;
+use futures::{
+    future::Future,
+    stream::{self, Stream},
+};
 use lazy_static::lazy_static;
-use mononoke_types::ContentMetadataId;
+use mononoke_types::{hash, typed_hash::MononokeId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -37,6 +48,7 @@ lazy_static! {
         0x0d, 0x5b,
     ])
     .unwrap();
+    static ref DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig::default();
 }
 
 #[test]
@@ -47,15 +59,20 @@ fn filestore_put_alias() -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::new(Arc::new(blob));
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
-    let res = rt.block_on(filestore.get_aliases(ctx, &FetchKey::Canonical(content_id)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -81,18 +98,18 @@ fn filestore_put_get_canon() -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::new(Arc::new(blob));
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Canonical(content_id))
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -111,18 +128,18 @@ fn filestore_put_get_sha1() -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::new(Arc::new(blob));
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Sha1(*HELLO_WORLD_SHA1))
+        filestore::fetch(&blob, ctx, &FetchKey::Sha1(*HELLO_WORLD_SHA1))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -140,18 +157,18 @@ fn filestore_put_get_git_sha1() -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::new(Arc::new(blob));
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1))
+        filestore::fetch(&blob, ctx, &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -169,18 +186,18 @@ fn filestore_put_get_sha256() -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::new(Arc::new(blob));
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Sha256(*HELLO_WORLD_SHA256))
+        filestore::fetch(&blob, ctx, &FetchKey::Sha256(*HELLO_WORLD_SHA256))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -199,19 +216,20 @@ fn filestore_chunked_put_get() -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let filestore = Filestore::with_config(Arc::new(blob), FilestoreConfig { chunk_size: 1 });
+    let config = FilestoreConfig { chunk_size: 1 };
 
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Canonical(content_id))
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -226,9 +244,10 @@ fn filestore_chunked_put_get() -> Result<()> {
 fn filestore_chunked_put_get_nested() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let small = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 1 });
-    let large = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+
+    let small = FilestoreConfig { chunk_size: 1 };
+    let large = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     let full_data = &b"foobar"[..];
@@ -239,14 +258,18 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
     let part_key = request(part_data);
 
     // Store in 3-byte chunks
-    rt.block_on(large.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
     ))?;
 
     // Now, go and split up one chunk into 1-byte parts.
-    rt.block_on(small.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &small,
         ctx.clone(),
         &part_key,
         stream::once(Ok(Bytes::from(part_data))),
@@ -254,9 +277,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
 
     // Verify that we can still read the full thing.
     let res = rt.block_on(
-        large
-            .fetch(ctx, &FetchKey::Canonical(full_id))
-            // .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
             .map(|maybe_str| maybe_str.map(|s| s.collect()))
             .flatten(),
     );
@@ -275,8 +296,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
 fn filestore_content_not_found() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock();
 
     // Missing content shouldn't throw an error
@@ -286,8 +306,7 @@ fn filestore_content_not_found() -> Result<()> {
 
     // Verify that we can still read the full thing.
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Canonical(content_id))
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
@@ -301,8 +320,8 @@ fn filestore_content_not_found() -> Result<()> {
 fn filestore_chunk_not_found() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     let data = &b"foobar"[..];
@@ -312,22 +331,27 @@ fn filestore_chunk_not_found() -> Result<()> {
     let part = &b"foo"[..];
     let part_id = canonical(part);
 
-    rt.block_on(filestore.store(ctx.clone(), &req, stream::once(Ok(Bytes::from(data)))))?;
+    rt.block_on(filestore::store(
+        &blob,
+        &config,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(data))),
+    ))?;
 
     assert!(blob.remove(&part_id.blobstore_key()).is_some());
 
     // This should fail
     let res = rt.block_on(
-        filestore
-            .fetch(ctx, &FetchKey::Canonical(content_id))
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
             .map(|maybe_str| maybe_str.map(|s| s.concat2()))
             .flatten(),
     );
 
     println!("res = {:#?}", res);
     assert_matches!(
-        res.unwrap_err().downcast::<fetch::FetchError>(),
-        Ok(fetch::FetchError::NotFound(_, fetch::Depth(1)))
+        res.unwrap_err().downcast::<FetchError>(),
+        Ok(FetchError::NotFound(_, Depth(1)))
     );
     Ok(())
 }
@@ -336,14 +360,20 @@ fn filestore_chunk_not_found() -> Result<()> {
 fn filestore_put_invalid_size() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     let data = &b"foobar"[..];
     let req = StoreRequest::new(123);
 
-    let res = rt.block_on(filestore.store(ctx.clone(), &req, stream::once(Ok(Bytes::from(data)))));
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(data))),
+    ));
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -356,13 +386,15 @@ fn filestore_put_invalid_size() -> Result<()> {
 fn filestore_put_content_id() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -375,7 +407,9 @@ fn filestore_put_content_id() -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, canonical(HELLO_WORLD));
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -390,13 +424,15 @@ fn filestore_put_content_id() -> Result<()> {
 fn filestore_put_sha1() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -409,7 +445,9 @@ fn filestore_put_sha1() -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA1);
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -424,8 +462,8 @@ fn filestore_put_sha1() -> Result<()> {
 fn filestore_put_git_sha1() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -433,7 +471,9 @@ fn filestore_put_git_sha1() -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::GitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
     );
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -446,7 +486,9 @@ fn filestore_put_git_sha1() -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_git_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_GIT_SHA1);
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -461,8 +503,8 @@ fn filestore_put_git_sha1() -> Result<()> {
 fn filestore_put_sha256() -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::with_config(blob.clone(), FilestoreConfig { chunk_size: 3 });
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig { chunk_size: 3 };
     let ctx = CoreContext::test_mock();
 
     // Bad Content Id should fail
@@ -470,7 +512,9 @@ fn filestore_put_sha256() -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::Sha256::from_byte_array([0x00; 32]),
     );
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -483,7 +527,9 @@ fn filestore_put_sha256() -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_sha256(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA256);
-    let res = rt.block_on(filestore.store(
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -510,11 +556,12 @@ fn filestore_rebuild_metadata() -> Result<()> {
         sha256: *HELLO_WORLD_SHA256,
     });
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::new(blob.clone());
+    let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock();
 
-    rt.block_on(filestore.store(
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -524,7 +571,11 @@ fn filestore_rebuild_metadata() -> Result<()> {
     assert!(blob.remove(&metadata.blobstore_key()).is_some());
 
     // Getting the metadata should cause it to get recomputed
-    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Canonical(content_id),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -532,7 +583,11 @@ fn filestore_rebuild_metadata() -> Result<()> {
     assert!(blob.remove(&content_id.blobstore_key()).is_some());
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Canonical(content_id),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -541,7 +596,11 @@ fn filestore_rebuild_metadata() -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Canonical(content_id),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
@@ -554,27 +613,40 @@ fn filestore_test_missing_metadata() -> Result<()> {
 
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = Arc::new(memblob::LazyMemblob::new());
-    let filestore = Filestore::new(blob.clone());
+    let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock();
 
     // No matter the Fetchkey, querying the metadata should return None.
 
-    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Canonical(content_id)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Canonical(content_id),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Sha1(*HELLO_WORLD_SHA1)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Sha1(*HELLO_WORLD_SHA1),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res =
-        rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::Sha256(*HELLO_WORLD_SHA256)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::Sha256(*HELLO_WORLD_SHA256),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res =
-        rt.block_on(filestore.get_aliases(ctx.clone(), &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1)));
+    let res = rt.block_on(filestore::get_aliases(
+        &blob,
+        ctx.clone(),
+        &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1),
+    ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 

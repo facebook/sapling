@@ -7,8 +7,6 @@
 #![feature(never_type)]
 #![deny(warnings)]
 
-use std::sync::Arc;
-
 use bytes::Bytes;
 
 use cloned::cloned;
@@ -52,12 +50,6 @@ mod test;
 /// the same blobstore key structure and the same encoding schemes for existing files.
 /// Extensions (compression, chunking) will change this, but it will still allow backwards
 /// compatibility.
-#[derive(Debug, Clone)]
-pub struct Filestore {
-    blobstore: Arc<dyn Blobstore>,
-    config: FilestoreConfig,
-}
-
 #[derive(Debug, Clone)]
 pub struct FilestoreConfig {
     chunk_size: u64,
@@ -172,137 +164,124 @@ impl StoreRequest {
     }
 }
 
-impl Filestore {
-    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
-        Self::with_config(blobstore, FilestoreConfig::default())
-    }
-
-    pub fn with_config(blobstore: Arc<dyn Blobstore>, config: FilestoreConfig) -> Self {
-        Filestore { blobstore, config }
-    }
-
-    /// Return the canonical ID for a key. It doesn't check if the corresponding content
-    /// actually exists (its possible for an alias to exist before the ID if there was an
-    /// interrupted store operation).
-    pub fn get_canonical_id(
-        &self,
-        ctxt: CoreContext,
-        key: &FetchKey,
-    ) -> impl Future<Item = Option<ContentId>, Error = Error> {
-        match key {
-            FetchKey::Canonical(canonical) => future::ok(Some(*canonical)).left_future(),
-            aliaskey => self
-                .blobstore
-                .get(ctxt, aliaskey.blobstore_key())
-                .and_then(|maybe_alias| {
-                    maybe_alias
-                        .map(|blob| {
-                            ContentAlias::from_bytes(blob.into_bytes().into())
-                                .map(|alias| alias.content_id())
-                        })
-                        .transpose()
-                })
-                .right_future(),
-        }
-    }
-
-    /// Fetch the alias ids for the underlying content. This will return None if the content does
-    /// not exist. It might recompute the aliases on the fly if necessary.
-    pub fn get_aliases(
-        &self,
-        ctxt: CoreContext,
-        key: &FetchKey,
-    ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-        use metadata::*;
-
-        self.get_canonical_id(ctxt.clone(), key).and_then({
-            cloned!(self.blobstore, ctxt);
-            move |maybe_id| match maybe_id {
-                Some(id) => get_metadata(blobstore, ctxt, id).left_future(),
-                None => Ok(None).into_future().right_future(),
-            }
-        })
-    }
-
-    /// Return true if the given key exists. A successful return means the key definitely
-    /// either exists or doesn't; an error means the existence could not be determined.
-    pub fn exists(
-        &self,
-        ctxt: CoreContext,
-        key: &FetchKey,
-    ) -> impl Future<Item = bool, Error = Error> {
-        self.get_canonical_id(ctxt.clone(), &key)
-            .and_then({
-                cloned!(self.blobstore, ctxt);
-                move |maybe_id| maybe_id.map(|id| blobstore.is_present(ctxt, id.blobstore_key()))
-            })
-            .map(|exists: Option<bool>| exists.unwrap_or(false))
-    }
-
-    /// Fetch a file as a stream. This returns either success with a stream of data if the file
-    ///  exists, success with None if it does not exist, or an Error if either existence can't
-    /// be determined or if opening the file failed. File contents are returned in chunks
-    /// configured by FilestoreConfig::read_chunk_size - this defines the max chunk size, but
-    /// they may be shorter (not just the final chunks - any of them). Chunks are guaranteed to
-    /// have non-zero size.
-    pub fn fetch(
-        &self,
-        ctxt: CoreContext,
-        key: &FetchKey,
-    ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-        // First fetch either the content or the alias
-        use fetch::*;
-
-        self.get_canonical_id(ctxt.clone(), key).and_then({
-            cloned!(self.blobstore, ctxt);
-            move |content_id| match content_id {
-                // If we found a ContentId, then return a Future that waits for the first element
-                // to show up in the content stream. If we get a NotFound error waiting for this
-                // element and it was the root, then resolve to None (i.e. "this content does not
-                // exist"). Otherwise, return the content stream. Not found errors after the initial
-                // bytes will NOT be captured: such an error would indicate that we're missing part
-                // of our contents!
-                Some(content_id) => fetch(blobstore, ctxt, content_id)
-                    .into_future()
-                    .then(|res| match res {
-                        Err((FetchError::NotFound(_, Depth::ROOT), _)) => Ok(None),
-                        Err((e, _)) => Err(e.into()),
-                        Ok((bytes, rest)) => {
-                            Ok(Some(stream::iter_ok(bytes).chain(rest.from_err())))
-                        }
+/// Return the canonical ID for a key. It doesn't check if the corresponding content
+/// actually exists (its possible for an alias to exist before the ID if there was an
+/// interrupted store operation).
+pub fn get_canonical_id<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<ContentId>, Error = Error> {
+    match key {
+        FetchKey::Canonical(canonical) => future::ok(Some(*canonical)).left_future(),
+        aliaskey => blobstore
+            .get(ctx, aliaskey.blobstore_key())
+            .and_then(|maybe_alias| {
+                maybe_alias
+                    .map(|blob| {
+                        ContentAlias::from_bytes(blob.into_bytes().into())
+                            .map(|alias| alias.content_id())
                     })
-                    .left_future(),
-                None => Ok(None).into_future().right_future(),
-            }
-        })
-    }
-
-    /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
-    /// for the entire file, or it will fail and the file will logically not exist (however
-    /// there's no guarantee that any partially written parts will be cleaned up).
-    pub fn store(
-        &self,
-        ctxt: CoreContext,
-        req: &StoreRequest,
-        data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-    ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-        use chunk::*;
-        use finalize::*;
-        use prepare::*;
-
-        let prepared = match make_chunks(data, req.expected_size, self.config.chunk_size()) {
-            Chunks::Inline(fut) => prepare_inline(fut).left_future(),
-            Chunks::Chunked(expected_size, chunks) => {
-                prepare_chunked(ctxt.clone(), self.blobstore.clone(), expected_size, chunks)
-                    .right_future()
-            }
-        };
-
-        prepared
-            .and_then({
-                cloned!(self.blobstore, ctxt, req);
-                move |prepared| finalize(blobstore, ctxt, Some(&req), prepared)
+                    .transpose()
             })
-            .map(|_| ())
+            .right_future(),
     }
+}
+
+/// Fetch the alias ids for the underlying content. This will return None if the content does
+/// not exist. It might recompute the aliases on the fly if necessary.
+pub fn get_aliases<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
+    use metadata::*;
+
+    get_canonical_id(blobstore, ctx.clone(), key).and_then({
+        cloned!(blobstore, ctx);
+        move |maybe_id| match maybe_id {
+            Some(id) => get_metadata(blobstore, ctx, id).left_future(),
+            None => Ok(None).into_future().right_future(),
+        }
+    })
+}
+
+/// Return true if the given key exists. A successful return means the key definitely
+/// either exists or doesn't; an error means the existence could not be determined.
+pub fn exists<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = bool, Error = Error> {
+    get_canonical_id(blobstore, ctx.clone(), &key)
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |maybe_id| maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()))
+        })
+        .map(|exists: Option<bool>| exists.unwrap_or(false))
+}
+
+/// Fetch a file as a stream. This returns either success with a stream of data if the file
+///  exists, success with None if it does not exist, or an Error if either existence can't
+/// be determined or if opening the file failed. File contents are returned in chunks
+/// configured by FilestoreConfig::read_chunk_size - this defines the max chunk size, but
+/// they may be shorter (not just the final chunks - any of them). Chunks are guaranteed to
+/// have non-zero size.
+pub fn fetch<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+    // First fetch either the content or the alias
+    use fetch::*;
+
+    get_canonical_id(blobstore, ctx.clone(), key).and_then({
+        cloned!(blobstore, ctx);
+        move |content_id| match content_id {
+            // If we found a ContentId, then return a Future that waits for the first element
+            // to show up in the content stream. If we get a NotFound error waiting for this
+            // element and it was the root, then resolve to None (i.e. "this content does not
+            // exist"). Otherwise, return the content stream. Not found errors after the initial
+            // bytes will NOT be captured: such an error would indicate that we're missing part
+            // of our contents!
+            Some(content_id) => fetch(blobstore, ctx, content_id)
+                .into_future()
+                .then(|res| match res {
+                    Err((FetchError::NotFound(_, Depth::ROOT), _)) => Ok(None),
+                    Err((e, _)) => Err(e.into()),
+                    Ok((bytes, rest)) => Ok(Some(stream::iter_ok(bytes).chain(rest.from_err()))),
+                })
+                .left_future(),
+            None => Ok(None).into_future().right_future(),
+        }
+    })
+}
+
+/// Store a file from a stream. This is guaranteed atomic - either the store will succeed
+/// for the entire file, or it will fail and the file will logically not exist (however
+/// there's no guarantee that any partially written parts will be cleaned up).
+pub fn store<B: Blobstore + Clone>(
+    blobstore: &B, // TODO: Check: is this the right signature?
+    config: &FilestoreConfig,
+    ctx: CoreContext,
+    req: &StoreRequest,
+    data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
+) -> impl Future<Item = (), Error = Error> + Send + 'static {
+    use chunk::*;
+    use finalize::*;
+    use prepare::*;
+
+    let prepared = match make_chunks(data, req.expected_size, config.chunk_size()) {
+        Chunks::Inline(fut) => prepare_inline(fut).left_future(),
+        Chunks::Chunked(expected_size, chunks) => {
+            prepare_chunked(ctx.clone(), blobstore.clone(), expected_size, chunks).right_future()
+        }
+    };
+
+    prepared
+        .and_then({
+            cloned!(blobstore, ctx, req);
+            move |prepared| finalize(blobstore, ctx, Some(&req), prepared)
+        })
+        .map(|_| ())
 }
