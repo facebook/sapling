@@ -4,11 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::*;
+use super::super::*;
+use super::{canonical, request};
+
 use assert_matches::assert_matches;
 use failure_ext::Result;
 use lazy_static::lazy_static;
-use mononoke_types::{typed_hash, ContentId, ContentMetadataId};
+use mononoke_types::ContentMetadataId;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -35,16 +37,6 @@ lazy_static! {
         0x0d, 0x5b,
     ])
     .unwrap();
-}
-
-fn request(data: impl AsRef<[u8]>) -> StoreRequest {
-    StoreRequest::new(data.as_ref().len() as u64)
-}
-
-fn canonical(data: impl AsRef<[u8]>) -> ContentId {
-    let mut ctx = typed_hash::ContentIdContext::new();
-    ctx.update(data.as_ref());
-    ctx.finish()
 }
 
 #[test]
