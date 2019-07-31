@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
-use failure_ext::Result;
+use failure_ext::{Error, Result};
 use futures::{
     future::{lazy, IntoFuture},
     Future, Stream,
@@ -13,11 +13,12 @@ use futures::{
 use mononoke_types::hash;
 
 use crate::expected_size::ExpectedSize;
-use crate::streamhash::hash_stream;
-
 use crate::incremental_hash::{
     GitSha1IncrementalHasher, Sha1IncrementalHasher, Sha256IncrementalHasher,
 };
+use crate::multiplexer::Multiplexer;
+use crate::spawn::SpawnError;
+use crate::streamhash::hash_stream;
 
 type Aliases = (hash::Sha1, hash::Sha256, hash::GitSha1);
 
@@ -25,6 +26,7 @@ type Aliases = (hash::Sha1, hash::Sha256, hash::GitSha1);
 /// that the size they gave us is actually the one they observed before giving them access to the
 /// resulting hashes. To do so, we require callers to provide the effective size to retrieve
 /// aliases.
+#[derive(Debug)]
 pub struct RedeemableAliases {
     expected_size: ExpectedSize,
     aliases: Aliases,
@@ -47,39 +49,36 @@ impl RedeemableAliases {
     }
 }
 
+// Given a multiplexer, attach new aliases computations to it.
+pub fn add_aliases_to_multiplexer<T: AsRef<[u8]> + Send + Sync + Clone + 'static>(
+    multiplexer: &mut Multiplexer<T>,
+    expected_size: ExpectedSize,
+) -> impl Future<Item = RedeemableAliases, Error = SpawnError<!>> {
+    let sha1 = multiplexer.add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream));
+    let sha256 = multiplexer.add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream));
+    let git_sha1 = multiplexer
+        .add(move |stream| hash_stream(GitSha1IncrementalHasher::new(expected_size), stream));
+
+    (sha1, sha256, git_sha1)
+        .into_future()
+        .map(move |aliases| RedeemableAliases::new(expected_size, aliases))
+}
+
 /// Produce hashes for a stream.
-pub fn alias_stream<E, S>(
+pub fn alias_stream<S>(
     expected_size: ExpectedSize,
     chunks: S,
-) -> impl Future<Item = RedeemableAliases, Error = E> + Send
+) -> impl Future<Item = RedeemableAliases, Error = Error>
 where
-    E: Send,
-    S: Stream<Item = Bytes, Error = E> + Send + 'static,
+    S: Stream<Item = Bytes, Error = Error>,
 {
     lazy(move || {
-        // Split out the error to not require cloning it.
-        let (chunks, err) = futures_ext::split_err(chunks);
+        let mut multiplexer = Multiplexer::new();
+        let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
 
-        // One stream for the data itself, and one for each hash format we might need
-        let mut copies = futures_ext::stream_clone(chunks, 3).into_iter();
-
-        // It's safe to unwrap copies.next() below because we make enough copies (and we didn't,
-        // we'd hit the issue deterministically in tests).
-        let sha1 = hash_stream(Sha1IncrementalHasher::new(), copies.next().unwrap());
-        let sha256 = hash_stream(Sha256IncrementalHasher::new(), copies.next().unwrap());
-        let git_sha1 = hash_stream(
-            GitSha1IncrementalHasher::new(expected_size),
-            copies.next().unwrap(),
-        );
-        assert!(copies.next().is_none());
-
-        let res = (sha1, sha256, git_sha1).into_future();
-
-        // Rejoin error with output stream.
-        res.map_err(|e| -> E { e })
-            .select(err.map(|e| -> Aliases { e }))
-            .map(|(res, _)| res)
-            .map_err(|(err, _)| err)
-            .map(move |aliases| RedeemableAliases::new(expected_size, aliases))
+        multiplexer
+            .drain(chunks)
+            .map_err(|e| e.into())
+            .and_then(|_| aliases.map_err(|e| e.into()))
     })
 }

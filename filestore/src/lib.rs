@@ -28,7 +28,9 @@ mod fetch;
 mod finalize;
 mod incremental_hash;
 mod metadata;
+mod multiplexer;
 mod prepare;
+mod spawn;
 mod streamhash;
 
 #[cfg(test)]

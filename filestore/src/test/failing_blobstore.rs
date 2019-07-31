@@ -6,11 +6,15 @@
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
+use failure_ext::{Error, Fail};
 use futures::future::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
+
+#[derive(Debug, Fail)]
+#[fail(display = "Failing Blobstore Error")]
+pub struct FailingBlobstoreError;
 
 #[derive(Debug, Clone)]
 pub struct FailingBlobstore<B> {
@@ -38,7 +42,7 @@ where
         if rng.gen_bool(self.read_success_probability) {
             self.inner.get(ctx, key)
         } else {
-            Err(err_msg("FailingBlobstore")).into_future().boxify()
+            Err(FailingBlobstoreError.into()).into_future().boxify()
         }
     }
 
@@ -47,7 +51,7 @@ where
         if rng.gen_bool(self.write_success_probability) {
             self.inner.put(ctx, key, value)
         } else {
-            Err(err_msg("FailingBlobstore")).into_future().boxify()
+            Err(FailingBlobstoreError.into()).into_future().boxify()
         }
     }
 
@@ -56,7 +60,7 @@ where
         if rng.gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key)
         } else {
-            Err(err_msg("FailingBlobstore")).into_future().boxify()
+            Err(FailingBlobstoreError.into()).into_future().boxify()
         }
     }
 
@@ -65,7 +69,7 @@ where
         if rng.gen_bool(self.read_success_probability) {
             self.inner.assert_present(ctx, key)
         } else {
-            Err(err_msg("FailingBlobstore")).into_future().boxify()
+            Err(FailingBlobstoreError.into()).into_future().boxify()
         }
     }
 }

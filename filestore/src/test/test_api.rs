@@ -12,6 +12,7 @@ use crate::{
     FetchKey, FilestoreConfig, StoreRequest,
 };
 
+use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use assert_matches::assert_matches;
 use bytes::Bytes;
 use context::CoreContext;
@@ -837,5 +838,33 @@ fn filestore_store_bytes() -> Result<()> {
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
+    Ok(())
+}
+
+#[test]
+fn filestore_store_error() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let memblob = memblob::LazyMemblob::new();
+    let blob = FailingBlobstore::new(memblob.clone(), 1.0, 0.0); // Blobstore you can't write to.
+
+    let config = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+
+    let res = rt.block_on(filestore::store(
+        &blob,
+        &config,
+        CoreContext::test_mock(),
+        &request(HELLO_WORLD),
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ));
+
+    println!("res = {:#?}", res);
+    assert_matches!(
+        res.unwrap_err().downcast::<FailingBlobstoreError>(),
+        Ok(FailingBlobstoreError)
+    );
     Ok(())
 }

@@ -8,7 +8,7 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
-use futures::{Future, IntoFuture};
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId, FileContents,
@@ -90,7 +90,7 @@ fn rebuild_metadata<B: Blobstore + Clone>(
             move |file_contents| {
                 // NOTE: We implicitly trust data from the Filestore here. We do not validate
                 // the size, nor the ContentId.
-                let content_stream = fetch(blobstore, ctx, content_id);
+                let content_stream = fetch(blobstore, ctx, content_id).from_err();
                 let total_size = file_contents.size();
 
                 alias_stream(ExpectedSize::new(total_size), content_stream)
