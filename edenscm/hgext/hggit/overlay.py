@@ -101,12 +101,11 @@ class overlaymanifest(object):
         self.load()
         return self._map.get(path, default)
 
-    def diff(self, m2, match=None, clean=False):
+    def diff(self, m2, match=None):
         # Older mercurial clients used diff(m2, clean=False). If a caller failed
         # to specify clean as a keyword arg, it might get passed as match here.
-        if isinstance(match, bool):
-            clean = match
-            match = None
+
+        assert not isinstance(match, bool), "match must inherit from basematcher"
 
         self.load()
         if isinstance(m2, overlaymanifest):
@@ -133,8 +132,6 @@ class overlaymanifest(object):
                 fl2 = ""
             if n1 != n2 or fl1 != fl2:
                 diff[fn] = ((n1, fl1), (n2, fl2))
-            elif clean:
-                diff[fn] = None
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
@@ -149,15 +146,13 @@ class overlaymanifest(object):
         del self._map[path]
 
 
-def wrapmanifestdictdiff(orig, self, m2, match=None, clean=False):
+def wrapmanifestdictdiff(orig, self, m2, match=None):
     """avoid calling into lazymanifest code if m2 is an overlaymanifest"""
     # Older mercurial clients used diff(m2, clean=False). If a caller failed
     # to specify clean as a keyword arg, it might get passed as match here.
-    if isinstance(match, bool):
-        clean = match
-        match = None
+    assert not isinstance(match, bool), "match must inherit from basematcher"
 
-    kwargs = {"clean": clean}
+    kwargs = {}
     # Older versions of mercurial don't support the match arg, so only add it if
     # it exists.
     if match is not None:

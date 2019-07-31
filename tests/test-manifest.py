@@ -259,8 +259,6 @@ class basemanifesttests(object):
         self.assertEqual(want, short.diff(pruned))
         want = {b"foo": (MISSING, (BIN_HASH_1, b""))}
         self.assertEqual(want, pruned.diff(short))
-        want = {b"bar/baz/qux.py": None, b"foo": (MISSING, (BIN_HASH_1, b""))}
-        self.assertEqual(want, pruned.diff(short, clean=True))
 
     def testReversedLines(self):
         backwards = b"".join(

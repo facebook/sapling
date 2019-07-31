@@ -545,10 +545,8 @@ class mercurial_source(common.converter_source):
         copies = self._getcopies(ctx, parents, copyfiles)
         cleanp2 = set()
         if len(parents) == 2:
-            d = parents[1].manifest().diff(ctx.manifest(), clean=True)
-            for f, value in d.iteritems():
-                if value is None:
-                    cleanp2.add(f)
+            cleanp2 = set(parents[1].manifest().keys())
+            cleanp2 -= set(parents[1].manifest().diff(ctx.manifest()))
         changes = [(f, rev) for f in files if f not in self.ignored]
         changes.sort()
         return changes, copies, cleanp2

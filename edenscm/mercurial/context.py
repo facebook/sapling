@@ -135,15 +135,17 @@ class basectx(object):
 
         modified, added = [], []
         removed = []
-        clean = []
+        if listclean:
+            cleanset = set(mf1.walk(match))
+        else:
+            cleanset = set()
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2, match=match, clean=listclean)
+        d = mf1.diff(mf2, match=match)
         for fn, value in d.iteritems():
+            if listclean:
+                cleanset.discard(fn)
             if fn in deletedset:
-                continue
-            if value is None:
-                clean.append(fn)
                 continue
             (node1, flag1), (node2, flag2) = value
             if node1 is None:
@@ -161,7 +163,7 @@ class basectx(object):
             elif self[fn].cmp(other[fn]):
                 modified.append(fn)
             else:
-                clean.append(fn)
+                cleanset.add(fn)
 
         if removed:
             # need to filter files if they are already reported as removed
@@ -173,6 +175,7 @@ class basectx(object):
             ]
             # if they're deleted, don't report them as removed
             removed = [fn for fn in removed if fn not in deletedset]
+        clean = list(cleanset)
 
         return scmutil.status(
             modified, added, removed, deleted, unknown, ignored, clean

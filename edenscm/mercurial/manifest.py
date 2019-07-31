@@ -319,7 +319,7 @@ class purelazymanifest(object):
         self._compact()
         return self.data
 
-    def diff(self, m2, clean=False):
+    def diff(self, m2):
         """Finds changes between the current manifest and m2."""
         # XXX think whether efficiency matters here
         diff = {}
@@ -331,8 +331,6 @@ class purelazymanifest(object):
                 e2 = m2[fn]
                 if (e1, flags) != e2:
                     diff[fn] = (e1, flags), e2
-                elif clean:
-                    diff[fn] = None
 
         for fn, e2, flags in m2.iterentries():
             if fn not in self:
@@ -492,13 +490,11 @@ class manifestdict(object):
         m._lm = self._lm.filtercopy(match)
         return m
 
-    def diff(self, m2, match=None, clean=False):
+    def diff(self, m2, match=None):
         """Finds changes between the current manifest and m2.
 
         Args:
           m2: the manifest to which this manifest should be compared.
-          clean: if true, include files unchanged between these manifests
-                 with a None value in the returned dictionary.
 
         The result is returned as a dict with filename as key and
         values of the form ((n1,fl1),(n2,fl2)), where n1/n2 is the
@@ -510,8 +506,8 @@ class manifestdict(object):
         if match:
             m1 = self.matches(match)
             m2 = m2.matches(match)
-            return m1.diff(m2, clean=clean)
-        return self._lm.diff(m2._lm, clean)
+            return m1.diff(m2)
+        return self._lm.diff(m2._lm)
 
     def setflag(self, key, flag):
         self._lm[key] = self[key], flag
@@ -1023,13 +1019,11 @@ class treemanifest(object):
             ret._dirty = True
         return ret
 
-    def diff(self, m2, match=None, clean=False):
+    def diff(self, m2, match=None):
         """Finds changes between the current manifest and m2.
 
         Args:
           m2: the manifest to which this manifest should be compared.
-          clean: if true, include files unchanged between these manifests
-                 with a None value in the returned dictionary.
 
         The result is returned as a dict with filename as key and
         values of the form ((n1,fl1),(n2,fl2)), where n1/n2 is the
@@ -1041,7 +1035,7 @@ class treemanifest(object):
         if match:
             m1 = self.matches(match)
             m2 = m2.matches(match)
-            return m1.diff(m2, clean=clean)
+            return m1.diff(m2)
         result = {}
         emptytree = treemanifest()
 
@@ -1064,8 +1058,6 @@ class treemanifest(object):
                 fl2 = t2._flags.get(fn, "")
                 if n1 != n2 or fl1 != fl2:
                     result[t1._subpath(fn)] = ((n1, fl1), (n2, fl2))
-                elif clean:
-                    result[t1._subpath(fn)] = None
 
             for fn, n2 in t2._files.iteritems():
                 if fn not in t1._files:
