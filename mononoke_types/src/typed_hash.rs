@@ -39,9 +39,6 @@ pub trait MononokeId: Copy + Send + 'static {
 
     /// Return a prefix before hash used in blobstore
     fn blobstore_key_prefix() -> String;
-
-    /// Compute this Id for some data.
-    fn from_data<T: AsRef<[u8]>>(data: T) -> Self;
 }
 
 /// An identifier for a changeset in Mononoke.
@@ -238,12 +235,6 @@ macro_rules! impl_typed_hash {
             fn blobstore_key_prefix() -> String {
                 concat!($key, ".blake2.").to_string()
             }
-
-            fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
-                let mut context = $typed_context::new();
-                context.update(data);
-                context.finish()
-            }
         }
     }
 }
@@ -309,18 +300,6 @@ impl MononokeId for ContentMetadataId {
     #[inline]
     fn blobstore_key_prefix() -> String {
         Self::PREFIX.to_string()
-    }
-
-    fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
-        // This is intended to compute an id from raw bytes, but we actually need to do it
-        // by decoding the data... See T44583243.
-        let thrift_tc: thrift::ContentMetadata =
-            rust_thrift::compact_protocol::deserialize(data.as_ref())
-                .expect("Can't decode ContentMetadata");
-        let id = ContentId::from_thrift(thrift_tc.content_id)
-            .expect("Can't decode ContentId from ContentMetadata");
-
-        Self::from(id)
     }
 }
 

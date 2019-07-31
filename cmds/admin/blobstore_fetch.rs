@@ -22,7 +22,7 @@ use context::CoreContext;
 use futures::future;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Censoring, MetadataDBConfig, StorageConfig};
-use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents, RepositoryId};
+use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
@@ -151,7 +151,9 @@ pub fn subcommand_blobstore_fetch(
                         Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
                         Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
                         // TODO: (rain1) T30974137 add a better way to print out file contents
-                        Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
+                        Some("contents") => {
+                            println!("{:?}", FileContents::from_encoded_bytes(value.into_bytes()))
+                        }
                         _ => (),
                     }
                 }

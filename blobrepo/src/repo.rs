@@ -221,39 +221,39 @@ impl BlobRepo {
         )
     }
 
-    fn fetch<K>(
+    fn fetch<Id>(
         &self,
         ctx: CoreContext,
-        key: &K,
-    ) -> impl Future<Item = K::Value, Error = Error> + Send
+        id: Id,
+    ) -> impl Future<Item = Id::Value, Error = Error> + Send
     where
-        K: MononokeId,
+        Id: MononokeId,
     {
-        let blobstore_key = key.blobstore_key();
+        let blobstore_key = id.blobstore_key();
+
         self.blobstore
             .get(ctx, blobstore_key.clone())
             .and_then(move |blob| {
                 blob.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into())
-                    // TODO: (jsgf) T44583243 blob.into() here recomputes the MononokeId from the
-                    // serialized content, even though we just fetched it... Seems redundant?
-                    // Maybe there should be something to either create a blob from a MononokeId
-                    // and some content, or make it possible to construct MononokeId::Value from
-                    // just the data (though with the option of cross-checking it with the
-                    // MononokeId if desired.)
-                    .and_then(|blob| <K::Value>::from_blob(blob.into()))
+                    .and_then(move |bytes| {
+                        // TODO: some function on BlobstoreBytes?
+                        // TODO: Maybe we can even make this a Blobstore function?
+                        let blob: Blob<Id> = Blob::new(id, bytes.into_bytes());
+                        <Id::Value>::from_blob(blob)
+                    })
             })
     }
 
     // this is supposed to be used only from unittest
-    pub fn unittest_fetch<K>(
+    pub fn unittest_fetch<Id>(
         &self,
         ctx: CoreContext,
-        key: &K,
-    ) -> impl Future<Item = K::Value, Error = Error> + Send
+        id: Id,
+    ) -> impl Future<Item = Id::Value, Error = Error> + Send
     where
-        K: MononokeId,
+        Id: MononokeId,
     {
-        self.fetch(ctx, key)
+        self.fetch(ctx, id)
     }
 
     fn store<K, V>(&self, ctx: CoreContext, value: V) -> impl Future<Item = K, Error = Error> + Send
@@ -883,7 +883,7 @@ impl BlobRepo {
         bonsai_cs_id: ChangesetId,
     ) -> BoxFuture<BonsaiChangeset, Error> {
         STATS::get_bonsai_changeset.add_value(1);
-        self.fetch(ctx, &bonsai_cs_id).boxify()
+        self.fetch(ctx, bonsai_cs_id).boxify()
     }
 
     // TODO(stash): make it accept ChangesetId
@@ -1707,7 +1707,7 @@ impl BlobRepo {
                                 )))
                                 .left_future(),
                                 None => repo
-                                    .fetch(ctx.clone(), &bcs_id)
+                                    .fetch(ctx.clone(), bcs_id)
                                     .map(move |bcs| {
                                         commits_to_generate.push(bcs.clone());
                                         queue.extend(bcs.parents().filter(|p| visited.insert(*p)));
@@ -2072,7 +2072,7 @@ impl UploadHgFileContents {
     ) -> impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> {
         // Computing the file node hash requires fetching the blob and gluing it together with the
         // metadata.
-        repo.fetch(ctx, &cbmeta.id).map(move |file_contents| {
+        repo.fetch(ctx, cbmeta.id).map(move |file_contents| {
             let size = file_contents.size() as u64;
             let mut metadata = Vec::new();
             File::generate_metadata(cbmeta.copy_from.as_ref(), &file_contents, &mut metadata)

@@ -11,8 +11,7 @@ use bytes::Bytes;
 use crate::{
     errors::*,
     typed_hash::{
-        ChangesetId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId, MononokeId,
-        RawBundle2Id,
+        ChangesetId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId, RawBundle2Id,
     },
 };
 
@@ -23,7 +22,7 @@ pub struct Blob<Id> {
 }
 
 impl<Id> Blob<Id> {
-    pub(crate) fn new(id: Id, data: Bytes) -> Self {
+    pub fn new(id: Id, data: Bytes) -> Self {
         Self { id, data }
     }
 
@@ -49,17 +48,6 @@ pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
 pub type ContentMetadataBlob = Blob<ContentMetadataId>;
 
 pub use blobstore::BlobstoreBytes;
-
-impl<Id> From<BlobstoreBytes> for Blob<Id>
-where
-    Id: MononokeId,
-{
-    fn from(bytes: BlobstoreBytes) -> Blob<Id> {
-        let data = bytes.into_bytes();
-        let id = Id::from_data(&data);
-        Blob { id, data }
-    }
-}
 
 impl<Id> From<Blob<Id>> for BlobstoreBytes {
     #[inline]

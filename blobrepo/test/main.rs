@@ -634,7 +634,7 @@ where
             .unittest_store(ctx.clone(), value)
             .and_then({
                 cloned!(ctx, self.repo);
-                move |key| repo.unittest_fetch(ctx, &key)
+                move |key| repo.unittest_fetch(ctx, key)
             })
             .map(move |value_fetched| TestResult::from_bool(value_fetched == value_cloned));
         run_future(store_fetch_future).expect("valid mononoke type")
