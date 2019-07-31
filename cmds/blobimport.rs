@@ -12,6 +12,7 @@ extern crate cloned;
 extern crate cmdlib;
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 extern crate mercurial_types;
 #[macro_use]
 extern crate slog;
@@ -26,6 +27,7 @@ use crate::failure::{Result, SlogKVError};
 use clap::{App, Arg};
 use cloned::cloned;
 use futures::Future;
+use futures_ext::FutureExt;
 use phases::SqlPhases;
 use tracing::{trace_args, Traced};
 
@@ -46,6 +48,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <INPUT>                         'input revlog repo'
             --changeset [HASH]              'if provided, the only changeset to be imported'
             --no-bookmark                   'if provided won't update bookmarks'
+            --no-create                     'if provided won't create a new repo (only meaningful for local)'
             --lfs-helper [LFS_HELPER]       'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
         "#,
         )
@@ -96,7 +99,13 @@ fn main() -> Result<()> {
 
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
-    let blobimport = args::create_repo(&ctx.logger(), &matches)
+    let blobrepo = if matches.is_present("no-create") {
+        args::open_repo(&ctx.logger(), &matches).left_future()
+    } else {
+        args::create_repo(&ctx.logger(), &matches).right_future()
+    };
+
+    let blobimport = blobrepo
         .join(phases_store)
         .and_then(move |(blobrepo, phases_store)| {
             let blobrepo = Arc::new(blobrepo);
