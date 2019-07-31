@@ -26,10 +26,12 @@ extern crate phases;
 extern crate slog;
 extern crate scuba_ext;
 extern crate tokio;
+extern crate tokio_process;
 extern crate tracing;
 
 mod bookmark;
 mod changeset;
+mod lfs;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -57,6 +59,7 @@ pub struct Blobimport {
     pub commits_limit: Option<usize>,
     pub no_bookmark: bool,
     pub phases_store: Arc<dyn Phases>,
+    pub lfs_helper: Option<String>,
 }
 
 impl Blobimport {
@@ -71,6 +74,7 @@ impl Blobimport {
             commits_limit,
             no_bookmark,
             phases_store,
+            lfs_helper,
         } = self;
 
         let stale_bookmarks = {
@@ -88,6 +92,7 @@ impl Blobimport {
             skip,
             commits_limit,
             phases_store,
+            lfs_helper,
         }
         .upload()
         .enumerate()

@@ -237,6 +237,10 @@ impl Chunk {
     pub fn content_id(&self) -> ContentId {
         self.content_id
     }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
 }
 
 impl Arbitrary for Chunk {

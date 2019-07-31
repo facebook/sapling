@@ -51,8 +51,9 @@ use mercurial_types::{
     HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
 };
 use mononoke_types::{
-    hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
-    FileChange, FileType, Generation, MPath, MPathElement, MononokeId, RepositoryId, Timestamp,
+    hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, Chunk,
+    ContentId, FileChange, FileType, Generation, MPath, MPathElement, MononokeId, RepositoryId,
+    Timestamp,
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -883,7 +884,7 @@ impl BlobRepo {
         ctx: CoreContext,
         req: &StoreRequest,
         data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-    ) -> impl Future<Item = (), Error = Error> + Send + 'static {
+    ) -> impl Future<Item = Chunk, Error = Error> + Send + 'static {
         filestore::store(&self.blobstore, &self.filestore_config, ctx, req, data)
     }
 

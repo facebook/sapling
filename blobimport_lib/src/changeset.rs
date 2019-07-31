@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use crate::failure::err_msg;
 use crate::failure::prelude::*;
+use crate::lfs::lfs_upload;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::{self, SharedItem};
@@ -21,10 +22,11 @@ use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::{
-    BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset, HgBlobEntry,
-    UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+    BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobMeta, CreateChangeset,
+    HgBlobChangeset, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+    UploadHgTreeEntry,
 };
-use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial::{file::File, manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
 };
@@ -156,6 +158,7 @@ fn upload_entry(
     blobrepo: &BlobRepo,
     entry: RevlogEntry,
     path: Option<MPath>,
+    lfs_helper: Option<String>,
 ) -> BoxFuture<(HgBlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
@@ -174,15 +177,16 @@ fn upload_entry(
     };
 
     let content = entry.get_raw_content();
+    let is_ext = entry.is_ext();
     let parents = entry.get_parents();
 
-    content
-        .join(parents)
-        .and_then(move |(content, parents)| {
+    (content, is_ext, parents)
+        .into_future()
+        .and_then(move |(content, is_ext, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
-            match ty {
-                Type::Tree => {
+            match (ty, is_ext) {
+                (Type::Tree, false) => {
                     let upload = UploadHgTreeEntry {
                         upload_node_id,
                         contents: content.into_inner(),
@@ -193,7 +197,10 @@ fn upload_entry(
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
                     upload_fut
                 }
-                Type::File(ft) => {
+                (Type::Tree, true) => Err(err_msg("Inconsistent data: externally stored Tree"))
+                    .into_future()
+                    .boxify(),
+                (Type::File(ft), false) => {
                     let upload = UploadHgFileEntry {
                         upload_node_id,
                         contents: UploadHgFileContents::RawBytes(content.into_inner()),
@@ -204,6 +211,38 @@ fn upload_entry(
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
                     upload_fut
+                }
+                (Type::File(ft), true) => {
+                    let p1 = p1.map(HgFileNodeId::new);
+                    let p2 = p2.map(HgFileNodeId::new);
+
+                    let file = File::new(content, p1.clone(), p2.clone());
+                    let lfs_content = try_boxfuture!(file.get_lfs_content());
+
+                    let lfs_helper = try_boxfuture!(
+                        lfs_helper.ok_or(err_msg("Cannot blobimport LFS without LFS helper"))
+                    );
+
+                    lfs_upload(ctx.clone(), blobrepo.clone(), &lfs_helper, &lfs_content)
+                        .and_then(move |chunk| {
+                            let cbmeta = ContentBlobMeta {
+                                id: chunk.content_id(),
+                                size: chunk.size(),
+                                copy_from: lfs_content.copy_from(),
+                            };
+
+                            let upload = UploadHgFileEntry {
+                                upload_node_id,
+                                contents: UploadHgFileContents::ContentUploaded(cbmeta),
+                                file_type: ft,
+                                p1,
+                                p2,
+                                path,
+                            };
+                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                            upload_fut
+                        })
+                        .boxify()
                 }
             }
         })
@@ -218,6 +257,7 @@ pub struct UploadChangesets {
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
     pub phases_store: Arc<dyn Phases>,
+    pub lfs_helper: Option<String>,
 }
 
 impl UploadChangesets {
@@ -230,6 +270,7 @@ impl UploadChangesets {
             skip,
             commits_limit,
             phases_store,
+            lfs_helper,
         } = self;
 
         let changesets = match changeset {
@@ -292,8 +333,8 @@ impl UploadChangesets {
                     });
 
                     let entries = entries.map({
-                        cloned!(ctx, blobrepo);
-                        move |(path, entry)| upload_entry(ctx.clone(), &blobrepo, entry, path)
+                        cloned!(ctx, blobrepo, lfs_helper);
+                        move |(path, entry)| upload_entry(ctx.clone(), &blobrepo, entry, path, lfs_helper.clone())
                     });
 
                     revlogcs

@@ -46,6 +46,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <INPUT>                         'input revlog repo'
             --changeset [HASH]              'if provided, the only changeset to be imported'
             --no-bookmark                   'if provided won't update bookmarks'
+            --lfs-helper [LFS_HELPER]       'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
         "#,
         )
         .arg(
@@ -91,6 +92,8 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
+    let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
+
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
     let blobimport = args::create_repo(&ctx.logger(), &matches)
@@ -109,6 +112,7 @@ fn main() -> Result<()> {
                 commits_limit,
                 no_bookmark,
                 phases_store,
+                lfs_helper,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())

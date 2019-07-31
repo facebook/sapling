@@ -16,7 +16,9 @@ use futures_ext::FutureExt;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId};
+use mononoke_types::{
+    hash, Chunk, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId,
+};
 
 mod alias;
 mod chunk;
@@ -289,7 +291,7 @@ pub fn store<B: Blobstore + Clone>(
     ctx: CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-) -> impl Future<Item = (), Error = Error> + Send + 'static {
+) -> impl Future<Item = Chunk, Error = Error> + Send + 'static {
     use chunk::*;
     use finalize::*;
     use prepare::*;
@@ -301,12 +303,10 @@ pub fn store<B: Blobstore + Clone>(
         }
     };
 
-    prepared
-        .and_then({
-            cloned!(blobstore, ctx, req);
-            move |prepared| finalize(blobstore, ctx, Some(&req), prepared)
-        })
-        .map(|_| ())
+    prepared.and_then({
+        cloned!(blobstore, ctx, req);
+        move |prepared| finalize(blobstore, ctx, Some(&req), prepared)
+    })
 }
 
 /// Store a set of bytes, and immediately return FileContents. This function does NOT do chunking.
