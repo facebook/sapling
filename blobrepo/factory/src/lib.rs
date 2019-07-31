@@ -28,8 +28,11 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
 use filenodes::CachingFilenodes;
+use filestore::FilestoreConfig;
 use memblob::EagerMemblob;
-use metaconfig_types::{self, BlobConfig, Censoring, MetadataDBConfig, StorageConfig};
+use metaconfig_types::{
+    self, BlobConfig, Censoring, FilestoreParams, MetadataDBConfig, StorageConfig,
+};
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -58,7 +61,22 @@ pub fn open_blobrepo(
     bookmarks_cache_ttl: Option<Duration>,
     censoring: Censoring,
     scuba_censored_table: Option<String>,
+    filestore_params: Option<FilestoreParams>,
 ) -> BoxFuture<BlobRepo, Error> {
+    let filestore_config = filestore_params
+        .map(|params| {
+            let FilestoreParams {
+                chunk_size,
+                concurrency,
+            } = params;
+
+            FilestoreConfig {
+                chunk_size: Some(chunk_size),
+                concurrency,
+            }
+        })
+        .unwrap_or(FilestoreConfig::default());
+
     myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
         .and_then(move |()| match storage_config.dbconfig {
             MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
@@ -70,6 +88,7 @@ pub fn open_blobrepo(
                 bookmarks_cache_ttl,
                 censoring,
                 scuba_censored_table,
+                filestore_config,
             )
             .left_future(),
             MetadataDBConfig::Mysql {
@@ -84,6 +103,7 @@ pub fn open_blobrepo(
                 bookmarks_cache_ttl,
                 censoring,
                 scuba_censored_table,
+                filestore_config,
             )
             .right_future(),
         })
@@ -99,6 +119,7 @@ fn do_open_blobrepo<T: SqlFactory>(
     bookmarks_cache_ttl: Option<Duration>,
     censoring: Censoring,
     scuba_censored_table: Option<String>,
+    filestore_config: FilestoreConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
 
@@ -124,6 +145,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                 censored_blobs,
                 scuba_censored_table,
                 repoid,
+                filestore_config,
             ),
             Caching::Enabled => new_production(
                 &sql_factory,
@@ -132,6 +154,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                 scuba_censored_table,
                 repoid,
                 bookmarks_cache_ttl,
+                filestore_config,
             ),
         },
     )
@@ -162,6 +185,7 @@ pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRe
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
         Arc::new(DummyLease {}),
+        FilestoreConfig::default(),
     ))
 }
 
@@ -173,6 +197,7 @@ fn new_development<T: SqlFactory>(
     censored_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
+    filestore_config: FilestoreConfig,
 ) -> BoxFuture<BlobRepo, Error> {
     let bookmarks = sql_factory
         .open::<SqlBookmarks>()
@@ -207,6 +232,7 @@ fn new_development<T: SqlFactory>(
                     changesets,
                     bonsai_hg_mapping,
                     Arc::new(DummyLease {}),
+                    filestore_config,
                 )
             }
         })
@@ -222,6 +248,7 @@ fn new_production<T: SqlFactory>(
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
+    filestore_config: FilestoreConfig,
 ) -> BoxFuture<BlobRepo, Error> {
     fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
         let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
@@ -299,6 +326,7 @@ fn new_production<T: SqlFactory>(
                     Arc::new(bonsai_hg_mapping),
                     Arc::new(changeset_fetcher_factory),
                     Arc::new(hg_generation_lease),
+                    filestore_config,
                 )
             },
         )

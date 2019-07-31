@@ -137,6 +137,7 @@ impl BlobRepo {
         changesets: Arc<dyn Changesets>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         hg_generation_lease: Arc<dyn LeaseOps>,
+        filestore_config: FilestoreConfig,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -159,8 +160,7 @@ impl BlobRepo {
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             hg_generation_lease,
-            // TODO (T47378130): Pass through a FilestoreConfig.
-            filestore_config: FilestoreConfig::default(),
+            filestore_config,
         }
     }
 
@@ -174,6 +174,7 @@ impl BlobRepo {
             dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
         >,
         hg_generation_lease: Arc<dyn LeaseOps>,
+        filestore_config: FilestoreConfig,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
         BlobRepo {
@@ -185,8 +186,7 @@ impl BlobRepo {
             repoid,
             changeset_fetcher_factory,
             hg_generation_lease,
-            // TODO (T47378130): Pass through a FilestoreConfig.
-            filestore_config: FilestoreConfig::default(),
+            filestore_config,
         }
     }
 
@@ -208,6 +208,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             hg_generation_lease,
+            filestore_config,
             ..
         } = self;
 
@@ -223,6 +224,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             hg_generation_lease,
+            filestore_config,
         )
     }
 

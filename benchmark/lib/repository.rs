@@ -19,6 +19,7 @@ use dbbookmarks::SqlBookmarks;
 use failure::{err_msg, Error};
 use failure_ext::Result;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
+use filestore::FilestoreConfig;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memblob::EagerMemblob;
@@ -126,6 +127,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         changesets,
         bonsai_hg_mapping,
         Arc::new(DummyLease {}),
+        FilestoreConfig::default(),
     ))
 }
 

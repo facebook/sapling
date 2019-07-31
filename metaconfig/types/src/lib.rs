@@ -98,6 +98,8 @@ pub struct RepoConfig {
     pub bundle2_replay_params: Bundle2ReplayParams,
     /// Max number of results in listkeyspatterns.
     pub list_keys_patterns_max: u64,
+    /// Params for File storage
+    pub filestore: Option<FilestoreParams>,
 }
 
 impl RepoConfig {
@@ -692,4 +694,13 @@ impl Default for InfinitepushParams {
             namespace: None,
         }
     }
+}
+
+/// Filestore configuration.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FilestoreParams {
+    /// Chunk size for the Filestore, in bytes.
+    pub chunk_size: u64,
+    /// Max number of concurrent chunk uploads to perform in the Filestore.
+    pub concurrency: usize,
 }

@@ -83,6 +83,7 @@ impl MononokeRepo {
             config.bookmarks_cache_ttl,
             config.censoring,
             common_config.scuba_censored_table,
+            config.filestore,
         )
         .map(move |repo| {
             let skiplist_index = {

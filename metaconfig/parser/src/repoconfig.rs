@@ -23,10 +23,10 @@ use bookmarks::BookmarkName;
 use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
-    CacheWarmupParams, Censoring, CommonConfig, HookBypass, HookConfig, HookManagerParams,
-    HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
-    PushParams, PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
-    WhitelistEntry,
+    CacheWarmupParams, Censoring, CommonConfig, FilestoreParams, HookBypass, HookConfig,
+    HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
+    MetadataDBConfig, PushParams, PushrebaseParams, RepoConfig, RepoReadOnly,
+    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -474,6 +474,8 @@ impl RepoConfigs {
             .list_keys_patterns_max
             .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
 
+        let filestore = this.filestore.map(|f| f.into());
+
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         Ok(RepoConfig {
             enabled,
@@ -498,6 +500,7 @@ impl RepoConfigs {
             write_lock_db_address: this.write_lock_db_address,
             infinitepush,
             list_keys_patterns_max,
+            filestore,
         })
     }
 }
@@ -582,6 +585,7 @@ struct RawRepoConfig {
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
     infinitepush: Option<RawInfinitepushParams>,
     list_keys_patterns_max: Option<u64>,
+    filestore: Option<RawFilestoreParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -849,6 +853,26 @@ struct RawInfinitepushParams {
     namespace: Option<RawRegex>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawFilestoreParams {
+    chunk_size: u64,
+    concurrency: usize,
+}
+
+impl From<RawFilestoreParams> for FilestoreParams {
+    fn from(raw: RawFilestoreParams) -> Self {
+        let RawFilestoreParams {
+            chunk_size,
+            concurrency,
+        } = raw;
+        Self {
+            chunk_size,
+            concurrency,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -967,6 +991,10 @@ mod test {
             [infinitepush]
             allow_writes = true
             namespace = "foobar/.+"
+
+            [filestore]
+            chunk_size = 768
+            concurrency = 48
         "#;
         let www_content = r#"
             repoid=1
@@ -1141,6 +1169,10 @@ mod test {
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
                 },
                 list_keys_patterns_max: 123,
+                filestore: Some(FilestoreParams {
+                    chunk_size: 768,
+                    concurrency: 48,
+                }),
             },
         );
         repos.insert(
@@ -1175,6 +1207,7 @@ mod test {
                 bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
+                filestore: None,
             },
         );
         assert_eq!(

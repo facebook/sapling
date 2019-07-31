@@ -1247,6 +1247,7 @@ fn default_repo_config() -> RepoConfig {
         bundle2_replay_params: Bundle2ReplayParams::default(),
         infinitepush: InfinitepushParams::default(),
         list_keys_patterns_max: 123,
+        filestore: None,
     }
 }
 

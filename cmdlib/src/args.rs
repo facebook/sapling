@@ -719,6 +719,7 @@ fn open_repo_internal<'a>(
                 config.bookmarks_cache_ttl,
                 config.censoring,
                 common_config.scuba_censored_table,
+                config.filestore,
             )
         })
         .boxify()

@@ -90,6 +90,7 @@ fn main() -> Result<()> {
         config.bookmarks_cache_ttl,
         config.censoring,
         common_config.scuba_censored_table,
+        config.filestore.clone(),
     );
 
     let rc = RequestContext {
