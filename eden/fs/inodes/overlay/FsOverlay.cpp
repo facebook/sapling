@@ -650,15 +650,6 @@ void FsOverlay::validateHeader(
   if (version != kHeaderVersion) {
     folly::throwSystemError(EIO, "Unexpected overlay version :", version);
   }
-
-  // Eden used to store timestamps in the Overlay entry's header, but they're
-  // no longer used. Read them anyway and throw an exception on error.
-  cursor.readBE<uint64_t>(); // atime.tv_sec
-  cursor.readBE<uint64_t>(); // atime.tv_nsec
-  cursor.readBE<uint64_t>(); // ctime.tv_sec
-  cursor.readBE<uint64_t>(); // ctime.tv_nsec
-  cursor.readBE<uint64_t>(); // mtime.tv_sec
-  cursor.readBE<uint64_t>(); // mtime.tv_nsec
 }
 
 void FsOverlay::removeOverlayFile(InodeNumber inodeNumber) {
