@@ -564,7 +564,7 @@ class TestBase(unittest.TestCase):
         scmutil._rcpath = None
         rc = open(self.hgrc, "w")
         rc.write("[ui]\nusername=test-user\n")
-        for l in "[extensions]", "hgsubversion=":
+        for l in "[extensions]", "hgsubversion=", "globalrevs=":
             print >> rc, l
 
         self.repocount = 0
@@ -775,7 +775,9 @@ class TestBase(unittest.TestCase):
         if p.returncode:
             raise Exception("svn co failed on %s: %r" % (svnpath, stderr))
 
-    def commitchanges(self, changes, parent="tip", message="automated test"):
+    def commitchanges(
+        self, changes, parent="tip", message="automated test", extras=None
+    ):
         """Commit changes to mercurial directory
 
         'changes' is a sequence of tuples (source, dest, data). It can look
@@ -817,6 +819,9 @@ class TestBase(unittest.TestCase):
                 copied=copied,
             )
 
+        commitextras = {"branch": parentctx.branch()}
+        if extras:
+            commitextras.update(extras)
         ctx = context.memctx(
             repo,
             (parentctx.node(), node.nullid),
@@ -825,7 +830,7 @@ class TestBase(unittest.TestCase):
             filectxfn,
             "an_author",
             "2008-10-07 20:59:48 -0500",
-            {"branch": parentctx.branch()},
+            commitextras,
         )
         nodeid = repo.commitctx(ctx)
         repo = self.repo

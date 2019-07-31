@@ -23,7 +23,7 @@ Repository Root: %(repourl)s
 Repository UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
 Revision: %(rev)s
 Node Kind: directory
-Last Changed Author: durin
+Last Changed Author: %(author)s
 Last Changed Rev: %(rev)s
 Last Changed Date: %(date)s
 """
@@ -56,6 +56,29 @@ class UtilityTests(test_hgsubversion_util.TestBase):
             "repourl": repourl(repo_path),
             "branch": "trunk",
             "rev": 6,
+            "author": "durin",
+        }
+        self.assertMultiLineEqual(expected, actual)
+        # let's set the config and test again
+        self.commitchanges(
+            changes=[("a", "a", "random string")],
+            extras={
+                "global_rev": 123456789,
+                "convert_revision": "svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@7",
+            },
+        )
+        hg.update(self.repo, "tip")
+        svncommands.updatemeta(u, self.repo, [])
+        u.pushbuffer()
+        u.setconfig("hgsubversion", "useglobalrevinsvninfo", True)
+        svncommands.info(u, self.repo)
+        actual = u.popbuffer()
+        expected = expected_info_output % {
+            "date": "2008-10-07 20:59:48 -0500 (Tue, 07 Oct 2008)",
+            "repourl": repourl(repo_path),
+            "branch": "trunk",
+            "rev": 123456789,
+            "author": "an_author",
         }
         self.assertMultiLineEqual(expected, actual)
 

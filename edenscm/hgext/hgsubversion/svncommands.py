@@ -7,7 +7,15 @@ import os
 import sys
 import traceback
 
-from edenscm.mercurial import commands, error, hg, node, progress, util as hgutil
+from edenscm.mercurial import (
+    commands,
+    error,
+    extensions,
+    hg,
+    node,
+    progress,
+    util as hgutil,
+)
 
 from . import svnexternals, svnmeta, svnrepo, svnwrap, util, verify
 
@@ -433,6 +441,14 @@ def info(ui, repo, **opts):
         ui.status("Not a child of an svn revision.\n")
         return 0
     r, br = hashes[pn]
+    if ui.configbool("hgsubversion", "useglobalrevinsvninfo"):
+        try:
+            globalrevmod = extensions.find("globalrevs")
+        except Exception:
+            raise error.Abort("globalrevs extension is not enabled")
+
+        globalrev = globalrevmod.getglobalrev(ui, parent)
+        r = globalrev
     subdir = util.getsvnrev(parent)[40:].split("@")[0]
     remoterepo = svnrepo.svnremoterepo(repo.ui)
     url = meta.layoutobj.remotepath(br, remoterepo.svnurl)

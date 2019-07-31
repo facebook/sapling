@@ -28,6 +28,9 @@ Config::
   # In `hg debugcrdump`, it uses svn revision number by default. When enabled,
   # the command will give globalrev instead.
   useglobalrevindebugcrdump = False
+  # In `hg svn info`, it uses the svn revision in revmap by default. When
+  # enabled, the command will give globalrev instead.
+  useglobalrevinsvninfo = False
 """
 
 from __future__ import absolute_import
@@ -443,6 +446,7 @@ configitem("hgsubversion", "skippostpushpulls", default=False)
 # effectively disabled and querying for it would return nothing.
 configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
 configitem("hgsubversion", "useglobalrevindebugcrdump ", default=False)
+configitem("hgsubversion", "useglobalrevinsvninfo ", default=False)
 
 
 @templatekeyword("svnrev")
