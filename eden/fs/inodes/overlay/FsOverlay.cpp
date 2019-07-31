@@ -7,6 +7,9 @@
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 
 #include <boost/filesystem.hpp>
+#include <algorithm>
+#include <chrono>
+
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -15,8 +18,8 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include <algorithm>
-#include <chrono>
+
+#include "eden/fs/service/EdenError.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -208,7 +211,7 @@ InodeNumber FsOverlay::scanForNextInodeNumber() {
     auto dir = optional<overlay::OverlayDir>{};
     try {
       dir = loadOverlayDir(dirInodeNumber);
-    } catch (std::system_error& error) {
+    } catch (const std::exception& error) {
       XLOG_IF(WARN, !encounteredBrokenDirectory)
           << "Ignoring failure to load directory inode " << dirInodeNumber
           << ": " << error.what();
@@ -608,8 +611,7 @@ void FsOverlay::validateHeader(
     folly::StringPiece headerId) {
   if (contents.size() < kHeaderLength) {
     // Something wrong with the file (may be corrupted)
-    folly::throwSystemErrorExplicit(
-        EIO,
+    throw newEdenError(
         "Overlay file (inode ",
         inodeNumber,
         ") is too short for header: size=",
@@ -625,8 +627,7 @@ void FsOverlay::validateHeader(
   auto id = cursor.readFixedString(kHeaderIdentifierDir.size());
   StringPiece identifier{id};
   if (identifier.compare(headerId) != 0) {
-    folly::throwSystemError(
-        EIO,
+    throw newEdenError(
         "unexpected overlay header identifier : ",
         folly::hexlify(ByteRange{identifier}));
   }
@@ -634,7 +635,7 @@ void FsOverlay::validateHeader(
   // Validate header version
   auto version = cursor.readBE<uint32_t>();
   if (version != kHeaderVersion) {
-    folly::throwSystemError(EIO, "Unexpected overlay version :", version);
+    throw newEdenError("Unexpected overlay version :", version);
   }
 }
 
