@@ -340,18 +340,17 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
 
-        // TODO (T47378130): Stream files out.
         // TODO (T47378130): Use a more native filestore interface here.
         self.repo
             .get_file_content_id_by_sha256(ctx.clone(), sha256_oid)
-            .and_then({
+            .map({
                 cloned!(self.repo, ctx);
                 move |content_id| {
-                    repo.get_file_content_by_content_id(ctx, content_id)
-                        .concat2() // TODO (T47717165): Stream file contents out.
-                        .map(|file_bytes| MononokeRepoResponse::DownloadLargeFile {
-                            content: file_bytes.into_bytes(),
-                        })
+                    let stream = repo
+                        .get_file_content_by_content_id(ctx, content_id)
+                        .map(|s| s.into_bytes())
+                        .boxify();
+                    MononokeRepoResponse::DownloadLargeFile(stream)
                 }
             })
             .from_err()

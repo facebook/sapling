@@ -50,15 +50,14 @@ pub enum MononokeRepoResponse {
     IsAncestor {
         answer: bool,
     },
-    DownloadLargeFile {
-        content: Bytes,
-    },
     LfsBatch {
         response: BatchResponse,
     },
     UploadLargeFile {},
 
     // NOTE: Please add serializable responses before this line
+    #[serde(skip)]
+    DownloadLargeFile(BoxStream<Bytes, Error>),
     #[serde(skip)]
     EdenGetData(DataResponse),
     #[serde(skip)]
@@ -108,6 +107,18 @@ where
         .body(Body::Streaming(stream as BodyStream))
 }
 
+fn streaming_binary_response<S>(stream: S) -> HttpResponse
+where
+    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
+{
+    let stream = stream.from_err().boxify();
+
+    HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .header("x-served-by", get_hostname().unwrap_or_default())
+        .body(Body::Streaming(stream))
+}
+
 impl Responder for MononokeRepoResponse {
     type Item = HttpResponse;
     type Error = actix_web::Error;
@@ -128,9 +139,9 @@ impl Responder for MononokeRepoResponse {
                     "false".into()
                 }
             })),
-            DownloadLargeFile { content } => Ok(binary_response(content.into())),
             LfsBatch { response } => Json(response).respond_to(req),
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
+            DownloadLargeFile(stream) => Ok(streaming_binary_response(stream)),
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),
             EdenGetTrees(response) => Ok(cbor_response(response)),
