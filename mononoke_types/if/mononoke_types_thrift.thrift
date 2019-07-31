@@ -146,12 +146,20 @@ union ContentAlias {
 }
 
 // Metadata about a file. This includes hahs aliases, or the file's size.
+// NOTE: Fields 1 through 5 have always been written by Mononoke, and Mononoke
+// expects them to be present when reading ContentMetadata structs back
+// from its Filestore. They're marked optional so we can report errors if
+// they're absent at runtime (as opposed to letting Thrift give us a default
+// value).
 struct ContentMetadata {
-  1: i64 total_size = -1, // Needed to make GitSha1 meaningful, but generally useful
-  2: ContentId content_id, // ContentId we're providing metadata for
+  // total_size is needed to make GitSha1 meaningful, but generally useful
+  1: optional i64 total_size,
+  // ContentId we're providing metadata for
+  2: optional ContentId content_id,
   3: optional Sha1 sha1,
   4: optional Sha256 sha256,
-  5: optional GitSha1 git_sha1, // always object type "blob"
+  // always object type "blob"
+  5: optional GitSha1 git_sha1,
 }
 
 union RawBundle2 {

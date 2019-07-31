@@ -72,9 +72,9 @@ fn filestore_put_alias() -> Result<()> {
         Some(ContentMetadata {
             total_size: 12,
             content_id,
-            sha1: Some(*HELLO_WORLD_SHA1),
-            git_sha1: Some(*HELLO_WORLD_GIT_SHA1),
-            sha256: Some(*HELLO_WORLD_SHA256)
+            sha1: *HELLO_WORLD_SHA1,
+            git_sha1: *HELLO_WORLD_GIT_SHA1,
+            sha256: *HELLO_WORLD_SHA256
         })
     );
 

@@ -38,6 +38,8 @@ pub use typed_hash::{
     RawBundle2Id,
 };
 
+mod macros;
+
 mod thrift {
     pub use mononoke_types_thrift::*;
 }

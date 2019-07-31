@@ -299,19 +299,15 @@ pub struct GitSha1 {
 
 impl GitSha1 {
     pub fn from_bytes(bytes: impl AsRef<[u8]>, ty: &'static str, size: u64) -> Result<Self> {
-        Ok(GitSha1 {
-            sha1: Sha1::from_bytes(bytes)?,
-            ty,
-            size,
-        })
+        Ok(Self::from_sha1(Sha1::from_bytes(bytes)?, ty, size))
     }
 
     pub const fn from_byte_array(bytes: [u8; 20], ty: &'static str, size: u64) -> Self {
-        GitSha1 {
-            sha1: Sha1::from_byte_array(bytes),
-            ty,
-            size,
-        }
+        Self::from_sha1(Sha1::from_byte_array(bytes), ty, size)
+    }
+
+    pub const fn from_sha1(sha1: Sha1, ty: &'static str, size: u64) -> Self {
+        GitSha1 { sha1, ty, size }
     }
 
     pub fn to_hex(&self) -> AsciiString {
@@ -347,6 +343,14 @@ impl Debug for GitSha1 {
 impl Display for GitSha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+impl Arbitrary for Sha1 {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let mut bytes = [0; 20];
+        g.fill_bytes(&mut bytes);
+        Sha1(bytes)
     }
 }
 

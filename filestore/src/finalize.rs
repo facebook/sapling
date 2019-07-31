@@ -103,9 +103,9 @@ pub fn finalize<B: Blobstore + Clone>(
         let metadata = ContentMetadata {
             total_size,
             content_id,
-            sha1: Some(sha1),
-            git_sha1: Some(git_sha1),
-            sha256: Some(sha256),
+            sha1,
+            git_sha1,
+            sha256,
         };
 
         let blob = metadata.into_blob();

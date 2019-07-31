@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
@@ -14,7 +15,7 @@ use rust_thrift::compact_protocol;
 use crate::{
     blob::{Blob, BlobstoreBytes, BlobstoreValue, ContentBlob, ContentMetadataBlob},
     errors::*,
-    hash, thrift,
+    hash, thrift, thrift_field,
     typed_hash::{ContentId, ContentIdContext, ContentMetadataId},
 };
 
@@ -196,34 +197,26 @@ impl ContentAlias {
 pub struct ContentMetadata {
     pub total_size: u64,
     pub content_id: ContentId,
-    pub sha1: Option<hash::Sha1>,
-    pub sha256: Option<hash::Sha256>,
-    pub git_sha1: Option<hash::GitSha1>,
+    pub sha1: hash::Sha1,
+    pub sha256: hash::Sha256,
+    pub git_sha1: hash::GitSha1,
 }
 
 impl ContentMetadata {
     pub fn from_thrift(cab: thrift::ContentMetadata) -> Result<Self> {
-        let total_size = if cab.total_size >= 0 {
-            cab.total_size as u64
-        } else {
-            bail_err!(ErrorKind::InvalidThrift(
-                "ContentMetadata".into(),
-                format!("Missing or negative size field ({})", cab.total_size)
-            ));
-        };
+        let total_size = thrift_field!(ContentMetadata, cab, total_size)?;
+        let total_size: u64 = total_size.try_into()?;
 
         let res = ContentMetadata {
             total_size,
-            content_id: ContentId::from_thrift(cab.content_id)?,
-            sha1: cab.sha1.map(|v| hash::Sha1::from_bytes(&v.0)).transpose()?,
-            sha256: cab
-                .sha256
-                .map(|v| hash::Sha256::from_bytes(&v.0))
-                .transpose()?,
-            git_sha1: cab
-                .git_sha1
-                .map(|v| hash::GitSha1::from_bytes(&v.0, "blob", total_size))
-                .transpose()?,
+            content_id: ContentId::from_thrift(thrift_field!(ContentMetadata, cab, content_id)?)?,
+            sha1: hash::Sha1::from_bytes(&thrift_field!(ContentMetadata, cab, sha1)?.0)?,
+            sha256: hash::Sha256::from_bytes(&thrift_field!(ContentMetadata, cab, sha256)?.0)?,
+            git_sha1: hash::GitSha1::from_bytes(
+                &thrift_field!(ContentMetadata, cab, git_sha1)?.0,
+                "blob",
+                total_size,
+            )?,
         };
 
         Ok(res)
@@ -231,11 +224,25 @@ impl ContentMetadata {
 
     fn into_thrift(self) -> thrift::ContentMetadata {
         thrift::ContentMetadata {
-            total_size: self.total_size as i64,
-            content_id: self.content_id.into_thrift(),
-            sha1: self.sha1.map(|sha1| sha1.into_thrift()),
-            git_sha1: self.git_sha1.map(|git_sha1| git_sha1.into_thrift()),
-            sha256: self.sha256.map(|sha256| sha256.into_thrift()),
+            total_size: Some(self.total_size as i64),
+            content_id: Some(self.content_id.into_thrift()),
+            sha1: Some(self.sha1.into_thrift()),
+            git_sha1: Some(self.git_sha1.into_thrift()),
+            sha256: Some(self.sha256.into_thrift()),
+        }
+    }
+}
+
+impl Arbitrary for ContentMetadata {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let total_size = u64::arbitrary(g);
+
+        Self {
+            total_size,
+            content_id: ContentId::arbitrary(g),
+            sha1: hash::Sha1::arbitrary(g),
+            sha256: hash::Sha256::arbitrary(g),
+            git_sha1: hash::GitSha1::from_sha1(hash::Sha1::arbitrary(g), "blob", total_size),
         }
     }
 }
@@ -263,18 +270,34 @@ mod test {
     use quickcheck::quickcheck;
 
     quickcheck! {
-        fn thrift_roundtrip(fc: FileContents) -> bool {
+        fn file_contents_thrift_roundtrip(fc: FileContents) -> bool {
             let thrift_fc = fc.clone().into_thrift();
             let fc2 = FileContents::from_thrift(thrift_fc)
                 .expect("thrift roundtrips should always be valid");
             fc == fc2
         }
 
-        fn blob_roundtrip(cs: FileContents) -> bool {
-            let blob = cs.clone().into_blob();
-            let cs2 = FileContents::from_blob(blob)
+        fn file_contents_blob_roundtrip(fc: FileContents) -> bool {
+            let blob = fc.clone().into_blob();
+            let fc2 = FileContents::from_blob(blob)
                 .expect("blob roundtrips should always be valid");
-            cs == cs2
+            fc == fc2
+        }
+
+        fn content_alias_metadata_thrift_roundtrip(cab: ContentMetadata) -> bool {
+            let thrift_cab = cab.clone().into_thrift();
+            let cab2 = ContentMetadata::from_thrift(thrift_cab)
+                .expect("thrift roundtrips should always be valid");
+            println!("cab: {:?}", cab);
+            println!("cab2: {:?}", cab2);
+            cab == cab2
+        }
+
+        fn content_alias_metadata_blob_roundtrip(cab: ContentMetadata) -> bool {
+            let blob = cab.clone().into_blob();
+            let cab2 = ContentMetadata::from_blob(blob)
+                .expect("blob roundtrips should always be valid");
+            cab == cab2
         }
     }
 
