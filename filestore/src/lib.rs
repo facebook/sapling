@@ -257,6 +257,29 @@ pub fn fetch<B: Blobstore + Clone>(
     })
 }
 
+/// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
+/// found, and None otherwise. If Bytes are found, this function is guaranteed to return as many
+/// Bytes as requested unless the file is shorter than that.
+pub fn peek<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+    size: usize,
+) -> impl Future<Item = Option<Bytes>, Error = Error> {
+    use chunk::*;
+
+    fetch(blobstore, ctx, key)
+        .map(move |maybe_stream| match maybe_stream {
+            None => Ok(None).into_future().left_future(),
+            Some(stream) => ChunkStream::new(stream, size)
+                .into_future()
+                .map(|(bytes, _rest)| bytes)
+                .map_err(|(err, _rest)| err)
+                .right_future(),
+        })
+        .flatten()
+}
+
 /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).

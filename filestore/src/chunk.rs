@@ -15,20 +15,24 @@ use crate::expected_size::ExpectedSize;
 
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-struct ChunkStream<S> {
+pub struct ChunkStream<S> {
     stream: S,
     chunk_size: usize,
     buff: BytesMut,
+    emitted: bool,
+    had_data: bool,
 }
 
 impl<S> ChunkStream<S> {
-    fn new(stream: S, chunk_size: usize) -> ChunkStream<S> {
+    pub fn new(stream: S, chunk_size: usize) -> ChunkStream<S> {
         assert!(chunk_size > 0);
 
         ChunkStream {
             stream,
             chunk_size,
             buff: BytesMut::with_capacity(chunk_size),
+            emitted: false,
+            had_data: false,
         }
     }
 }
@@ -44,6 +48,7 @@ where
         loop {
             if self.buff.len() >= self.chunk_size {
                 // We've buffered more data than we need. Emit some.
+                self.emitted = true;
                 let chunk = self.buff.split_to(self.chunk_size).freeze();
                 return Ok(Async::Ready(Some(chunk)));
             }
@@ -53,14 +58,28 @@ where
             if let Some(bytes) = try_ready!(self.stream.poll()) {
                 // We got more data. Extend our buffer, then see if that is enough to return. Note
                 // that extend_from slice implicitly extends our BytesMut.
+                self.had_data = true;
                 self.buff.extend_from_slice(&bytes);
                 continue;
             }
 
-            // No more data is coming. Return whatever we have left.
+            // No more data is coming. Return whatever we have left. However, we need to be a
+            // little careful to handle empty data here.
+            //
+            // If our buffer happens to just be empty, but we emitted data, that just means our
+            // data was disivible by our chunk size, and we are done.
+            //
+            // However, if our buffer is empty, but we never emitted, then we have two possible
+            // cases to handle:
+            //
+            // - Our underlying stream was empty Bytes. In this case, we should return empty Bytes
+            // too (we're returning a representation of the underlying content, chunked).
+            //
+            // - Our underlying stream was empty. In this case, we shouldn't return anything.
 
-            let out = if self.buff.len() > 0 {
+            let out = if self.buff.len() > 0 || (self.had_data && !self.emitted) {
                 // We did have some buffered data. Emit that.
+                self.emitted = true;
                 let chunk = std::mem::replace(&mut self.buff, BytesMut::new()).freeze();
                 Async::Ready(Some(chunk))
             } else {
@@ -208,6 +227,52 @@ mod test {
 
         rt.block_on(fut)
             .expect_err("make_chunks should abort if the content does not end as advertised");
+    }
+
+    #[test]
+    fn test_stream_of_empty_bytes() {
+        // If we give ChunkStream a stream that contains empty bytes, then we should return one
+        // chunk of empty bytes.
+        let mut rt = Runtime::new().unwrap();
+
+        let chunks = vec![Bytes::new()];
+        let in_stream = stream::iter_ok::<_, Error>(chunks);
+        let stream = ChunkStream::new(in_stream, 1);
+
+        let (ret, stream) = rt.block_on(stream.into_future()).unwrap();
+        assert_eq!(ret, Some(Bytes::new()));
+
+        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
+        assert_eq!(ret, None);
+    }
+
+    #[test]
+    fn test_stream_of_repeated_empty_bytes() {
+        // If we give ChunkStream a stream that contains however many empty bytes, then we should
+        // return a single chunk of empty bytes.
+        let mut rt = Runtime::new().unwrap();
+
+        let chunks = vec![Bytes::new(), Bytes::new()];
+        let in_stream = stream::iter_ok::<_, Error>(chunks);
+        let stream = ChunkStream::new(in_stream, 1);
+
+        let (ret, stream) = rt.block_on(stream.into_future()).unwrap();
+        assert_eq!(ret, Some(Bytes::new()));
+
+        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
+        assert_eq!(ret, None);
+    }
+
+    #[test]
+    fn test_empty_stream() {
+        // If we give ChunkStream an empty stream, it should retun an empty stream.
+        let mut rt = Runtime::new().unwrap();
+
+        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+        let stream = ChunkStream::new(in_stream, 1);
+
+        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
+        assert_eq!(ret, None);
     }
 
     #[test]

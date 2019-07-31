@@ -652,3 +652,133 @@ fn filestore_test_missing_metadata() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn filestore_test_peek() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    let res = rt.block_on(filestore::peek(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        3,
+    ));
+    println!("res = {:#?}", res);
+
+    let expected: &[u8] = b"hel";
+    assert_eq!(res?, Some(Bytes::from(expected)));
+
+    Ok(())
+}
+
+#[test]
+fn filestore_test_chunked_peek() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let small = FilestoreConfig { chunk_size: 1 };
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore::store(
+        &blob,
+        &small,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    let res = rt.block_on(filestore::peek(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        3,
+    ));
+    println!("res = {:#?}", res);
+
+    let expected: &[u8] = b"hel";
+    assert_eq!(res?, Some(Bytes::from(expected)));
+
+    Ok(())
+}
+
+#[test]
+fn filestore_test_short_peek() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    let res = rt.block_on(filestore::peek(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        128,
+    ));
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
+
+    Ok(())
+}
+
+#[test]
+fn filestore_test_empty_peek() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let bytes = Bytes::new();
+
+    let req = request(&bytes);
+    let content_id = canonical(&bytes);
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore::store(
+        &blob,
+        &DEFAULT_CONFIG,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(bytes.clone())),
+    ))?;
+
+    let res = rt.block_on(filestore::peek(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        128,
+    ));
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(bytes.clone()));
+
+    Ok(())
+}
