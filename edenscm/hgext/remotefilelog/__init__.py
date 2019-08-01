@@ -142,6 +142,9 @@ Configs for Eden API (HTTP data fetching):
     ``edenapi.historybatchsize`` specifies the batch size for history requests
     for backends that support batching.
 
+    ``edenapi.maxretries`` specifies the maximum number of times the client
+    should retry failed HTTP requests.
+
     ``edenapi.validate`` specifies that the client should recompute and
     validate the node hash for data fetched over HTTP.
 
@@ -262,6 +265,7 @@ configitem("edenapi", "debug", default=False)
 configitem("edenapi", "url", default=None)
 configitem("edenapi", "databatchsize", default=None)
 configitem("edenapi", "historybatchsize", default=None)
+configitem("edenapi", "maxretries", default=3)
 configitem("edenapi", "validate", default=True)
 configitem("edenapi", "streamdata", default=False)
 configitem("edenapi", "streamhistory", default=False)

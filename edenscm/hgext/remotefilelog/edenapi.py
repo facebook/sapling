@@ -170,10 +170,11 @@ def _retryonerror(ui, exctypes, maxtries=3):
 class pyclient(object):
     def __init__(self, ui, repo):
         self._ui = ui
+        self._retries = ui.configint("edenapi", "maxretries")
         self._rustclient = _warnexceptions(ui)(_initclient)(ui, repo)
 
     def __getattr__(self, name):
         method = getattr(self._rustclient, name)
-        method = _retryonerror(self._ui, [edenapi.ProxyError])(method)
+        method = _retryonerror(self._ui, [edenapi.ProxyError], self._retries)(method)
         method = _warnexceptions(self._ui)(method)
         return method
