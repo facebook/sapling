@@ -21,10 +21,6 @@ class TopTest(unittest.TestCase):
         self.process.increment_counts(AccessCounts(42, 42, 42, 42))
         self.assertEqual(self.process.access_counts, AccessCounts(42, 42, 42, 42))
 
-    def test_get_tuple(self):
-        expected_tuple = (42, "ls", "fbsource", 0, 0, 0, 0, "0s")
-        self.assertEqual(self.process.get_tuple(), expected_tuple)
-
     def test_format_cmd(self):
         self.assertEqual(format_cmd(b"/bin/ls"), "ls")
 

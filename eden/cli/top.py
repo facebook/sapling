@@ -12,11 +12,38 @@ import datetime
 import os
 import socket
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
+
+
+Row = collections.namedtuple(
+    "Row",
+    "top_pid command mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_last_access",
+)
+
+COLUMN_TITLES = Row(
+    top_pid="TOP PID",
+    command="COMMAND",
+    mount="MOUNT",
+    fuse_reads="FUSE READS",
+    fuse_writes="FUSE WRITES",
+    fuse_total="FUSE TOTAL",
+    fuse_backing_store_imports="BACKING IMPORTS",
+    fuse_last_access="LST",
+)
+COLUMN_SPACING = Row(
+    top_pid=7,
+    command=25,
+    mount=15,
+    fuse_reads=10,
+    fuse_writes=11,
+    fuse_total=10,
+    fuse_backing_store_imports=15,
+    fuse_last_access=3,
+)
 
 
 class Top:
@@ -30,11 +57,12 @@ class Top:
         self.refresh_rate = 1
 
         # Processes are stored by PID
-        self.processes: Dict[int, Process] = collections.OrderedDict()
+        self.processes: Dict[int, Process] = {}
+        self.rows: List = []
+        self.selected_column = COLUMN_TITLES.index("LST")
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[int, bytes, bytes, int, int, int, int, bytes]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -73,12 +101,7 @@ class Top:
 
         for mount, accesses in counts.accessesByMount.items():
             for pid, access_counts in accesses.accessCountsByPid.items():
-                if pid in self.processes:
-                    # Has accessed FUSE again, so move to end of OrderedDict.
-                    temp = self.processes[pid]
-                    del self.processes[pid]
-                    self.processes[pid] = temp
-                else:
+                if pid not in self.processes:
                     cmd = counts.cmdsByPid.get(pid, b"<unknown>")
                     self.processes[pid] = Process(pid, cmd, mount)
 
@@ -113,40 +136,35 @@ class Top:
 
     def render_column_titles(self, stdscr):
         LINE = 2
-        TITLES = (
-            "TOP PID",
-            "COMMAND",
-            "MOUNT",
-            "FUSE READS",
-            "FUSE WRITES",
-            "FUSE TOTAL",
-            "IMPORTS",
-            "LST",
-        )
-        self.render_row(stdscr, LINE, TITLES, self.curses.A_REVERSE)
+        self.render_row(stdscr, LINE, COLUMN_TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
         START_LINE = 3
         line_numbers = range(START_LINE, self.height - 1)
 
-        # Group same-named processes
-        aggregated_processes = collections.OrderedDict()
-        for process in reversed(list(self.processes.values())):
+        aggregated_processes = {}
+        for process in self.processes.values():
             key = process.get_key()
             if key in aggregated_processes:
                 aggregated_processes[key].aggregate(process)
             else:
                 aggregated_processes[key] = copy.deepcopy(process)
 
-        for line, process in zip(line_numbers, aggregated_processes.values()):
-            row = process.get_tuple()
+        sorted_processes = sorted(
+            aggregated_processes.values(),
+            key=lambda p: p.get_row()[self.selected_column],
+            reverse=True,
+        )
+
+        for line, process in zip(line_numbers, sorted_processes):
+            row = process.get_row()
+            row = (fmt(data) for fmt, data in zip(COLUMN_FORMATTING, row))
+
             style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
             self.render_row(stdscr, line, row, style)
 
     def render_row(self, stdscr, y, data, style):
-        SPACING = (7, 25, 15, 10, 11, 10, 7, 3)
-        text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
-
+        text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, COLUMN_SPACING))
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
 
     def get_keypress(self, stdscr):
@@ -173,10 +191,12 @@ class Process:
 
     def aggregate(self, other):
         self.increment_counts(other.access_counts)
-        if other.is_running:
+        self.is_running |= other.is_running
+
+        # Check if other is more relevant
+        if other.is_running or other.last_access > self.last_access:
             self.pid = other.pid
-            self.is_running = True
-        self.last_access = max(self.last_access, other.last_access)
+            self.last_access = other.last_access
 
     def increment_counts(self, access_counts):
         self.access_counts.fuseReads += access_counts.fuseReads
@@ -186,16 +206,16 @@ class Process:
             access_counts.fuseBackingStoreImports
         )
 
-    def get_tuple(self):
-        return (
-            self.pid,
-            self.cmd,
-            self.mount,
-            self.access_counts.fuseReads,
-            self.access_counts.fuseWrites,
-            self.access_counts.fuseTotal,
-            self.access_counts.fuseBackingStoreImports,
-            format_last_access(self.last_access),
+    def get_row(self):
+        return Row(
+            top_pid=self.pid,
+            command=self.cmd,
+            mount=self.mount,
+            fuse_reads=self.access_counts.fuseReads,
+            fuse_writes=self.access_counts.fuseWrites,
+            fuse_total=self.access_counts.fuseTotal,
+            fuse_backing_store_imports=self.access_counts.fuseBackingStoreImports,
+            fuse_last_access=self.last_access,
         )
 
 
@@ -233,3 +253,15 @@ def format_time(elapsed):
 
     last_suffix = suffixes[-1]
     return f"{elapsed}{last_suffix}"
+
+
+COLUMN_FORMATTING = Row(
+    top_pid=lambda x: x,
+    command=lambda x: x,
+    mount=lambda x: x,
+    fuse_reads=lambda x: x,
+    fuse_writes=lambda x: x,
+    fuse_total=lambda x: x,
+    fuse_backing_store_imports=lambda x: x,
+    fuse_last_access=format_last_access,
+)
