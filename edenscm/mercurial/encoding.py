@@ -75,7 +75,7 @@ def setfromenviron():
         items = os.environ.items()  # re-exports
         environ = dict((k.encode(u"utf-8"), v.encode(u"utf-8")) for k, v in items)
     try:
-        encoding = environ.get("HGENCODING") or "ascii"
+        encoding = environ.get("HGENCODING")
         if not encoding:
             encoding = locale.getpreferredencoding().encode("ascii") or "ascii"
             encoding = _encodingfixers.get(encoding, lambda: encoding)()
