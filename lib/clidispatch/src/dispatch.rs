@@ -238,20 +238,17 @@ impl Dispatcher {
     }
 
     fn load_python_commands(&mut self, cfg: &ConfigSet) -> Result<(), DispatchError> {
-        let config_commands = parse_list(
-            cfg.get("commands", "names")
-                .ok_or_else(|| DispatchError::ConfigIssue)?,
-        );
+        let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
 
         for b_name in config_commands {
-            let name = String::from_utf8(b_name.to_vec())
-                .map_err(|_| DispatchError::InvalidConfigEncoding)?;
-            name.trim_start_matches("^")
-                .split("|")
-                .map(|n| CommandDefinition::new(n))
-                .for_each(|c| {
-                    self.add_command(c.mark_as_python());
-                });
+            if let Ok(name) = String::from_utf8(b_name.to_vec()) {
+                name.trim_start_matches("^")
+                    .split("|")
+                    .map(|n| CommandDefinition::new(n))
+                    .for_each(|c| {
+                        self.add_command(c.mark_as_python());
+                    });
+            }
         }
 
         Ok(())
