@@ -27,7 +27,7 @@ use types::{Node, RepoPath, RepoPathBuf};
 pub trait Manifest {
     /// Retrieve the FileMetadata that is associated with a path.
     /// Paths that were not set will return None.
-    fn get(&self, file_path: &RepoPath) -> Fallible<Option<&FileMetadata>>;
+    fn get(&self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.

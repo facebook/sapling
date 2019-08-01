@@ -78,7 +78,7 @@ py_class!(class treemanifest |py| {
         let tree = self.underlying(py).borrow();
         let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
-            Some(file_metadata) => Some(file_metadata_to_py_tuple(py, file_metadata)?),
+            Some(file_metadata) => Some(file_metadata_to_py_tuple(py, &file_metadata)?),
         };
         Ok(result)
     }
