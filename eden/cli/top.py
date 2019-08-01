@@ -44,6 +44,18 @@ COLUMN_SPACING = Row(
     fuse_backing_store_imports=15,
     fuse_last_access=3,
 )
+COLUMN_REVERSE_SORT = Row(
+    top_pid=False,
+    command=False,
+    mount=False,
+    fuse_reads=True,
+    fuse_writes=True,
+    fuse_total=True,
+    fuse_last_access=True,
+    fuse_backing_store_imports=True,
+)
+
+COLOR_SELECTED = 1
 
 
 class Top:
@@ -82,6 +94,9 @@ class Top:
             self.height, self.width = stdscr.getmaxyx()
             stdscr.timeout(self.refresh_rate * 1000)
             self.curses.curs_set(0)
+
+            self.curses.use_default_colors()
+            self.curses.init_pair(COLOR_SELECTED, self.curses.COLOR_GREEN, -1)
 
             # Avoid displaying a blank screen during the first update()
             self.render(stdscr)
@@ -136,6 +151,7 @@ class Top:
 
     def render_column_titles(self, stdscr):
         LINE = 2
+        stdscr.addnstr(LINE, 0, " " * self.width, self.width, self.curses.A_REVERSE)
         self.render_row(stdscr, LINE, COLUMN_TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
@@ -153,7 +169,7 @@ class Top:
         sorted_processes = sorted(
             aggregated_processes.values(),
             key=lambda p: p.get_row()[self.selected_column],
-            reverse=True,
+            reverse=COLUMN_REVERSE_SORT[self.selected_column],
         )
 
         for line, process in zip(line_numbers, sorted_processes):
@@ -164,8 +180,19 @@ class Top:
             self.render_row(stdscr, line, row, style)
 
     def render_row(self, stdscr, y, data, style):
-        text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, COLUMN_SPACING))
-        stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
+        x = 0
+        for i, (str, len) in enumerate(zip(data, COLUMN_SPACING)):
+            text = f"{str:{len}}"[:len]
+
+            color = 0
+            if i == self.selected_column:
+                color = self.curses.color_pair(COLOR_SELECTED)
+
+            if x + len > self.width:
+                break
+
+            stdscr.addnstr(y, x, text, len, color | style)
+            x += len + 1
 
     def get_keypress(self, stdscr):
         key = stdscr.getch()
@@ -175,6 +202,13 @@ class Top:
             self.height, self.width = stdscr.getmaxyx()
         elif key == ord("q"):
             self.running = False
+        elif key == self.curses.KEY_LEFT:
+            self.move_selector(-1)
+        elif key == self.curses.KEY_RIGHT:
+            self.move_selector(1)
+
+    def move_selector(self, dx):
+        self.selected_column = (self.selected_column + dx) % len(COLUMN_TITLES)
 
 
 class Process:
