@@ -51,8 +51,9 @@ inline Hash hashFromThrift(const std::string& commitID) {
   } else {
     throw newEdenError(
         "expected argument to be a 20-byte binary hash or "
-        "40-byte hexadecimal hash; got \"{}\"",
-        commitID);
+        "40-byte hexadecimal hash; got \"",
+        commitID,
+        "\"");
   }
 }
 } // namespace eden

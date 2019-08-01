@@ -1389,7 +1389,7 @@ std::optional<folly::exception_wrapper> getFaultError(
     }
     // If we want to support other error types in the future they should
     // be added here.
-    throw newEdenError("unknown error type {}", type);
+    throw newEdenError("unknown error type ", type);
   };
 
   return createException(

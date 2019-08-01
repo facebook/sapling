@@ -6,8 +6,8 @@
  */
 #pragma once
 
+#include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
-#include <folly/Format.h>
 #include <folly/Range.h>
 #include <system_error>
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -22,29 +22,29 @@ namespace eden {
 /**
  * Construct an EdenError from an error code and message.
  *
- * The message is used literally in this case, and is not passed through
- * folly::format() if no format arguments are supplied..
+ * The message arguments will be joined with folly::to<std::string>().
  */
-EdenError newEdenError(int errorCode, folly::StringPiece message);
-
-/**
- * Construct an EdenError from an error code, plus a format
- * string and format arguments.
- */
-template <class... Args>
-EdenError newEdenError(int errorCode, folly::StringPiece fmt, Args&&... args) {
-  auto e = EdenError(folly::sformat(fmt, std::forward<Args>(args)...));
+template <class Arg1, class... Args>
+EdenError newEdenError(int errorCode, Arg1&& msg, Args&&... args) {
+  auto e = EdenError(folly::to<std::string>(
+      std::forward<Arg1>(msg), std::forward<Args>(args)...));
   e.set_errorCode(errorCode);
   return e;
 }
 
 /**
- * Construct an EdenError from a format string and format arguments, with no
- * error code.
+ * Construct an EdenError with an error message but no error code.
+ *
+ * The message arguments will be joined with folly::to<std::string>().
+ *
+ * The first message argument must be a string, primarily to help distinguish
+ * this version of newEdenError() from the one above that takes an error code as
+ * the first argument.  (This is just to eliminate confusion if called with a
+ * numeric type other than `int` as the first argument.)
  */
 template <class... Args>
-EdenError newEdenError(folly::StringPiece fmt, Args&&... args) {
-  return EdenError(folly::sformat(fmt, std::forward<Args>(args)...));
+EdenError newEdenError(folly::StringPiece msg, Args&&... args) {
+  return EdenError(folly::to<std::string>(msg, std::forward<Args>(args)...));
 }
 
 /**

@@ -9,12 +9,6 @@
 namespace facebook {
 namespace eden {
 
-EdenError newEdenError(int errorCode, folly::StringPiece message) {
-  auto e = EdenError(message.str());
-  e.set_errorCode(errorCode);
-  return e;
-}
-
 EdenError newEdenError(const std::system_error& ex) {
   return newEdenError(ex.code().value(), ex.what());
 }
