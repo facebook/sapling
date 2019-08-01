@@ -238,8 +238,13 @@ folly::Future<folly::Unit> EdenMount::initialize(
         // .eden directory inode number 2.
         return setupDotEden(getRootInode());
       })
-      .thenValue([this](auto&&) {
-        transitionState(State::INITIALIZING, State::INITIALIZED);
+      .thenTry([this](auto&& result) {
+        if (result.hasException()) {
+          transitionState(State::INITIALIZING, State::INIT_ERROR);
+        } else {
+          transitionState(State::INITIALIZING, State::INITIALIZED);
+        }
+        return std::move(result);
       });
 }
 
@@ -443,6 +448,7 @@ void EdenMount::transitionToFuseInitializationErrorState() {
       case State::SHUT_DOWN:
         break;
 
+      case State::INIT_ERROR:
       case State::FUSE_ERROR:
       case State::INITIALIZED:
       case State::INITIALIZING:
@@ -482,6 +488,7 @@ void EdenMount::destroy() {
     case State::INITIALIZED:
     case State::RUNNING:
     case State::STARTING:
+    case State::INIT_ERROR:
     case State::FUSE_ERROR: {
       // Call shutdownImpl() to destroy all loaded inodes.
       shutdownImpl(/*doTakeover=*/false);
@@ -516,6 +523,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
          tryToTransitionState(State::INITIALIZED, State::SHUTTING_DOWN))) &&
       !tryToTransitionState(State::RUNNING, State::SHUTTING_DOWN) &&
       !tryToTransitionState(State::STARTING, State::SHUTTING_DOWN) &&
+      !tryToTransitionState(State::INIT_ERROR, State::SHUTTING_DOWN) &&
       !tryToTransitionState(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
                << "state was " << getState();

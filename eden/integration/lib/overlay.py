@@ -51,3 +51,12 @@ class OverlayStore:
 
     def delete_cached_next_inode_number(self) -> None:
         (self.overlay_dir / "next-inode-number").unlink()
+
+    def get_info_path(self) -> pathlib.Path:
+        """Get the path to the overlay "info" file that contains the top-level overlay
+        metadata and also serves as the overlay lock file.
+
+        Corrupting this file will make it impossible for Eden to read or repair the
+        overlay data.  This can be used to make the overlay unusable in tests.
+        """
+        return self.overlay_dir / "info"

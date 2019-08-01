@@ -876,6 +876,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_,
       std::move(journal));
   addToMountPoints(edenMount);
+  registerStats(edenMount);
 
   // Now actually begin starting the mount point
   const bool doTakeover = optionalTakeover.has_value();
@@ -883,22 +884,31 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       optionalTakeover ? std::make_optional(optionalTakeover->inodeMap)
                        : std::nullopt);
   return std::move(initFuture)
-      .thenValue([this,
-                  doTakeover,
-                  edenMount,
-                  optionalTakeover =
-                      std::move(optionalTakeover)](auto&&) mutable {
+      .thenTry([this,
+                doTakeover,
+                edenMount,
+                optionalTakeover = std::move(optionalTakeover)](
+                   folly::Try<Unit>&& result) mutable {
+        if (result.hasException()) {
+          XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
+                    << result.exception().what();
+          mountFinished(edenMount.get(), std::nullopt);
+          return makeFuture<shared_ptr<EdenMount>>(
+              std::move(result).exception());
+        }
         return (optionalTakeover ? performTakeoverFuseStart(
                                        edenMount, std::move(*optionalTakeover))
                                  : performFreshFuseStart(edenMount))
-            // If an error occurs we want to call mountFinished and throw the
-            // error here.  Once the pool is up and running, the finishFuture
-            // will ensure that this happens.
-            .thenError([this, edenMount](folly::exception_wrapper ew) {
-              mountFinished(edenMount.get(), std::nullopt);
-              return makeFuture<folly::Unit>(ew);
-            })
-            .thenValue([edenMount, doTakeover, this](auto&&) mutable {
+            .thenTry([edenMount, doTakeover, this](
+                         folly::Try<Unit>&& result) mutable {
+              // Call mountFinished() if an error occurred during FUSE
+              // initialization.
+              if (result.hasException()) {
+                mountFinished(edenMount.get(), std::nullopt);
+                return makeFuture<shared_ptr<EdenMount>>(
+                    std::move(result).exception());
+              }
+
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture = edenMount->getFuseCompletionFuture().thenTry(
@@ -910,8 +920,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     }
                     mountFinished(edenMount.get(), std::move(optTakeover));
                   });
-
-              registerStats(edenMount);
 
               if (doTakeover) {
                 // The bind mounts are already mounted in the takeover case

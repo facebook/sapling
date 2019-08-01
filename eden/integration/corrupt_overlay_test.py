@@ -90,3 +90,13 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.overlay.delete_cached_next_inode_number()
 
         self.eden.mount(self.mount_path)
+
+    def test_eden_list_does_not_return_corrupt_mounts(self) -> None:
+        self.eden.shutdown()
+
+        # Truncate the overlay info file so edenfs will
+        # not be able to open the overlay
+        os.truncate(self.overlay.get_info_path(), 0)
+
+        self.eden.start()
+        self.assertEqual({str(self.mount): "NOT_RUNNING"}, self.eden.list_cmd_simple())
