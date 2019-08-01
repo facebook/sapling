@@ -405,11 +405,11 @@ class manifestdict(object):
     def keys(self):
         return list(self.iterkeys())
 
-    def filesnotin(self, m2, match=None):
+    def filesnotin(self, m2, matcher=None):
         """Set of files in this manifest that are not in the other"""
-        if match:
-            m1 = self.matches(match)
-            m2 = m2.matches(match)
+        if matcher:
+            m1 = self.matches(matcher)
+            m2 = m2.matches(matcher)
             return m1.filesnotin(m2)
         diff = self.diff(m2)
         files = set(
@@ -894,11 +894,11 @@ class treemanifest(object):
             copy._copyfunc = self._copyfunc
         return copy
 
-    def filesnotin(self, m2, match=None):
+    def filesnotin(self, m2, matcher=None):
         """Set of files in this manifest that are not in the other"""
-        if match:
-            m1 = self.matches(match)
-            m2 = m2.matches(match)
+        if matcher:
+            m1 = self.matches(matcher)
+            m2 = m2.matches(matcher)
             return m1.filesnotin(m2)
 
         files = set()

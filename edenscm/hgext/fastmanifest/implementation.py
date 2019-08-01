@@ -380,9 +380,9 @@ class fastmanifestdict(object):
     def keys(self):
         return list(self.iterkeys())
 
-    def filesnotin(self, m2, match=None):
+    def filesnotin(self, m2, matcher=None):
         """Set of files in this manifest that are not in the other"""
-        diff = self.diff(m2, matcher=match)
+        diff = self.diff(m2, matcher=matcher)
         files = set(
             filepath
             for filepath, hashflags in diff.iteritems()

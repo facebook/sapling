@@ -1313,7 +1313,7 @@ static PyObject* treemanifest_filesnotin(
   py_treemanifest* other;
   PyObject* matcherObj = NULL;
 
-  static char const* kwlist[] = {"m2", "match", NULL};
+  static char const* kwlist[] = {"m2", "matcher", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
           args, kwargs, "O|O", (char**)kwlist, &other, &matcherObj)) {

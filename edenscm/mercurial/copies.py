@@ -152,7 +152,7 @@ def _computeforwardmissing(a, b, match=None):
     """
     ma = a.manifest()
     mb = b.manifest()
-    return mb.filesnotin(ma, match=match)
+    return mb.filesnotin(ma, matcher=match)
 
 
 def _committedforwardcopies(a, b, match):

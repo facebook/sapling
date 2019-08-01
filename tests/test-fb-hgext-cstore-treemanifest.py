@@ -527,17 +527,17 @@ class ctreemanifesttests(unittest.TestCase):
 
         # With dir matcher
         match = matchmod.match("/", "/", ["abc/*"])
-        files = b.filesnotin(a, match=match)
+        files = b.filesnotin(a, matcher=match)
         self.assertEquals(files, set())
 
         # With file matcher
         match = matchmod.match("/", "/", ["newfile"])
-        files = b.filesnotin(a, match=match)
+        files = b.filesnotin(a, matcher=match)
         self.assertEquals(files, set(["newfile"]))
 
         # With no matches
         match = matchmod.match("/", "/", ["xxx"])
-        files = b.filesnotin(a, match=match)
+        files = b.filesnotin(a, matcher=match)
         self.assertEquals(files, set([]))
 
     def testHasDir(self):
