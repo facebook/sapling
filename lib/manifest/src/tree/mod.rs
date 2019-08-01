@@ -10,6 +10,7 @@ mod store;
 use std::{
     cmp::Ordering,
     collections::{btree_map::Entry, BTreeMap},
+    fmt,
     sync::Arc,
 };
 
@@ -18,7 +19,7 @@ use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::{DirectoryMatch, Matcher};
-use types::{Node, PathComponent, RepoPath, RepoPathBuf};
+use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
@@ -205,6 +206,51 @@ impl Manifest for Tree {
         let mut path = RepoPathBuf::new();
         let (node, _) = do_flush(&self.store, &mut path, &mut self.root)?;
         Ok(node.clone())
+    }
+}
+
+impl fmt::Debug for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn write_indent(f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
+            write!(f, "{}", str::repeat("| ", indent))?;
+            Ok(())
+        }
+        fn write_children(
+            f: &mut fmt::Formatter<'_>,
+            children: &BTreeMap<PathComponentBuf, Link>,
+            indent: usize,
+        ) -> fmt::Result {
+            for (component, link) in children {
+                write_indent(f, indent)?;
+                write!(f, "{} ", component)?;
+                write_links(f, link, indent + 1)?;
+            }
+            Ok(())
+        }
+        fn write_links(f: &mut fmt::Formatter<'_>, link: &Link, indent: usize) -> fmt::Result {
+            match link {
+                Link::Leaf(metadata) => {
+                    write!(f, "(File, {}, {:?})\n", metadata.node, metadata.file_type)
+                }
+                Link::Ephemeral(children) => {
+                    write!(f, "(Ephemeral)\n")?;
+                    write_children(f, children, indent)
+                }
+                Link::Durable(entry) => {
+                    write!(f, "(Durable, {})\n", entry.node)?;
+                    match entry.links.get() {
+                        None => Ok(()),
+                        Some(Err(fallible)) => {
+                            write_indent(f, indent)?;
+                            write!(f, "failed to load: {:?}", fallible)
+                        }
+                        Some(Ok(children)) => write_children(f, children, indent),
+                    }
+                }
+            }
+        }
+        write!(f, "Root ")?;
+        write_links(f, &self.root, 1)
     }
 }
 
@@ -1220,6 +1266,36 @@ mod tests {
             diff(&left, &right, &TreeMatcher::from_rules(["a3/**"].iter()))
                 .next()
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn test_debug() {
+        use std::fmt::Write;
+
+        let store = Arc::new(TestStore::new());
+        let mut tree = Tree::ephemeral(store.clone());
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .unwrap();
+        let _node = tree.flush().unwrap();
+
+        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+
+        let mut output = String::new();
+        write!(output, "{:?}", tree).unwrap();
+        assert_eq!(
+            output,
+            "Root (Ephemeral)\n\
+             | a1 (Ephemeral)\n\
+             | | b1 (Durable, 4f75b40350c5a77ea27d3287b371016e2d940bab)\n\
+             | | | c1 (Durable, 4495bc0cc4093ed880fe1eb1489635f3cddcf04d)\n\
+             | | | | d1 (File, 0000000000000000000000000000000000000010, Regular)\n\
+             | | b2 (File, 0000000000000000000000000000000000000020, Regular)\n\
+             | a2 (Ephemeral)\n\
+             | | b2 (Ephemeral)\n\
+             | | | c2 (File, 0000000000000000000000000000000000000030, Regular)\n\
+             "
         );
     }
 }
