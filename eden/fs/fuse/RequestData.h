@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 #pragma once
+
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
 #include <atomic>
 #include <utility>
+
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/tracing/EdenStats.h"
@@ -26,6 +28,19 @@ class RequestData : public folly::RequestData {
   FuseThreadStats::HistogramPtr latencyHistogram_{nullptr};
   EdenStats* stats_{nullptr};
   Dispatcher* dispatcher_{nullptr};
+
+  struct EdenTopStats {
+   public:
+    bool didImportFromBackingStore() const {
+      return didImportFromBackingStore_.load(std::memory_order_relaxed);
+    }
+    void setDidImportFromBackingStore() {
+      didImportFromBackingStore_.store(true, std::memory_order_relaxed);
+    }
+
+   private:
+    std::atomic<bool> didImportFromBackingStore_{false};
+  } edenTopStats_;
 
   fuse_in_header stealReq();
 
@@ -58,6 +73,8 @@ class RequestData : public folly::RequestData {
 
   // Returns the associated dispatcher instance
   Dispatcher* getDispatcher() const;
+
+  EdenTopStats& getEdenTopStats();
 
   // Returns the underlying fuse request, throwing an error if it has
   // already been released

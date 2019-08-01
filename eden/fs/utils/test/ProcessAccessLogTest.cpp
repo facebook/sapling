@@ -29,7 +29,7 @@ TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
   auto pid = ::getpid();
   auto processNameCache = std::make_shared<ProcessNameCache>();
   auto log = ProcessAccessLog{processNameCache};
-  log.recordAccess(::getpid(), ProcessAccessLog::OTHER);
+  log.recordAccess(::getpid(), ProcessAccessLog::AccessType::FuseOther);
   EXPECT_THAT(processNameCache->getAllProcessNames(), Contains(Key(Eq(pid))));
 }
 
@@ -37,14 +37,16 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   auto pid = pid_t{42};
   auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
 
-  log.recordAccess(pid, ProcessAccessLog::READ);
-  log.recordAccess(pid, ProcessAccessLog::WRITE);
-  log.recordAccess(pid, ProcessAccessLog::OTHER);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseRead);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseWrite);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseOther);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseBackingStoreImport);
 
   auto ac = AccessCounts{};
-  ac.total = 3;
-  ac.reads = 1;
-  ac.writes = 1;
+  ac.fuseTotal = 3;
+  ac.fuseReads = 1;
+  ac.fuseWrites = 1;
+  ac.fuseBackingStoreImports = 1;
 
   EXPECT_THAT(log.getAccessCounts(1s), Contains(std::pair{pid, ac}));
 }

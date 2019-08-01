@@ -34,7 +34,7 @@ class Top:
 
         self.height = 0
         self.width = 0
-        self.rows: List[Tuple[int, bytes, bytes, int, int, int, int, bool]] = []
+        self.rows: List[Tuple[int, bytes, bytes, int, int, int, int, bytes]] = []
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -71,15 +71,15 @@ class Top:
 
         counts = client.getAccessCounts(self.refresh_rate)
 
-        for mount, accesses in counts.fuseAccessesByMount.items():
-            for pid, access_counts in accesses.fuseAccesses.items():
+        for mount, accesses in counts.accessesByMount.items():
+            for pid, access_counts in accesses.accessCountsByPid.items():
                 if pid in self.processes:
                     # Has accessed FUSE again, so move to end of OrderedDict.
                     temp = self.processes[pid]
                     del self.processes[pid]
                     self.processes[pid] = temp
                 else:
-                    cmd = counts.exeNamesByPid.get(pid, b"<unknown>")
+                    cmd = counts.cmdsByPid.get(pid, b"<unknown>")
                     self.processes[pid] = Process(pid, cmd, mount)
 
                 self.processes[pid].increment_counts(access_counts)
@@ -120,6 +120,7 @@ class Top:
             "FUSE READS",
             "FUSE WRITES",
             "FUSE TOTAL",
+            "IMPORTS",
             "LST",
         )
         self.render_row(stdscr, LINE, TITLES, self.curses.A_REVERSE)
@@ -143,7 +144,7 @@ class Top:
             self.render_row(stdscr, line, row, style)
 
     def render_row(self, stdscr, y, data, style):
-        SPACING = (7, 25, 15, 10, 11, 10, 3)
+        SPACING = (7, 25, 15, 10, 11, 10, 7, 3)
         text = " ".join(f"{str:{len}}"[:len] for str, len in zip(data, SPACING))
 
         stdscr.addnstr(y, 0, text.ljust(self.width), self.width, style)
@@ -163,7 +164,7 @@ class Process:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
-        self.access_counts = AccessCounts(0, 0, 0)
+        self.access_counts = AccessCounts(0, 0, 0, 0)
         self.last_access = time.monotonic()
         self.is_running = True
 
@@ -178,18 +179,22 @@ class Process:
         self.last_access = max(self.last_access, other.last_access)
 
     def increment_counts(self, access_counts):
-        self.access_counts.reads += access_counts.reads
-        self.access_counts.writes += access_counts.writes
-        self.access_counts.total += access_counts.total
+        self.access_counts.fuseReads += access_counts.fuseReads
+        self.access_counts.fuseWrites += access_counts.fuseWrites
+        self.access_counts.fuseTotal += access_counts.fuseTotal
+        self.access_counts.fuseBackingStoreImports += (
+            access_counts.fuseBackingStoreImports
+        )
 
     def get_tuple(self):
         return (
             self.pid,
             self.cmd,
             self.mount,
-            self.access_counts.reads,
-            self.access_counts.writes,
-            self.access_counts.total,
+            self.access_counts.fuseReads,
+            self.access_counts.fuseWrites,
+            self.access_counts.fuseTotal,
+            self.access_counts.fuseBackingStoreImports,
             format_last_access(self.last_access),
         )
 

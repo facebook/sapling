@@ -37,7 +37,8 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
         [&processAccessLog, &gate, assignedIterations, myPid = getpid()] {
           gate.wait();
           for (size_t j = 0; j < assignedIterations; ++j) {
-            processAccessLog.recordAccess(myPid, ProcessAccessLog::OTHER);
+            processAccessLog.recordAccess(
+                myPid, ProcessAccessLog::AccessType::FuseOther);
           }
         });
   }

@@ -65,6 +65,12 @@ void RequestData::finishRequest() {
       latencyHistogram_, diff, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
+
+  auto& pal = channel_->getProcessAccessLog();
+  if (getEdenTopStats().didImportFromBackingStore()) {
+    auto type = ProcessAccessLog::AccessType::FuseBackingStoreImport;
+    pal.recordAccess(examineReq().pid, type);
+  }
 }
 
 fuse_in_header RequestData::stealReq() {
@@ -91,6 +97,10 @@ const fuse_in_header& RequestData::examineReq() const {
 
 Dispatcher* RequestData::getDispatcher() const {
   return dispatcher_;
+}
+
+RequestData::EdenTopStats& RequestData::getEdenTopStats() {
+  return edenTopStats_;
 }
 
 void RequestData::replyError(int err) {

@@ -1160,13 +1160,12 @@ void FuseChannel::processSession() {
 
     ProcessAccessLog::AccessType type;
     if (isReadOperation(header->opcode)) {
-      type = ProcessAccessLog::READ;
+      type = ProcessAccessLog::AccessType::FuseRead;
     } else if (isWriteOperation(header->opcode)) {
-      type = ProcessAccessLog::WRITE;
+      type = ProcessAccessLog::AccessType::FuseWrite;
     } else {
-      type = ProcessAccessLog::OTHER;
+      type = ProcessAccessLog::AccessType::FuseOther;
     }
-
     processAccessLog_.recordAccess(header->pid, type);
 
     switch (header->opcode) {

@@ -13,6 +13,7 @@
 #include <folly/logging/xlog.h>
 #include <stdexcept>
 
+#include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
@@ -51,7 +52,8 @@ ObjectStore::~ObjectStore() {}
 Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   return localStore_->getTree(id).thenValue(
-      [id, backingStore = backingStore_](shared_ptr<const Tree> tree) {
+      [self = shared_from_this(), id, backingStore = backingStore_](
+          shared_ptr<const Tree> tree) {
         if (tree) {
           XLOG(DBG4) << "tree " << id << " found in local store";
           return makeFuture(std::move(tree));
@@ -68,6 +70,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
         // this layer.
 
         // Load the tree from the BackingStore.
+        self->recordBackingStoreImport();
         return backingStore->getTree(id).thenValue(
             [id](unique_ptr<const Tree> loadedTree) {
               if (!loadedTree) {
@@ -92,6 +95,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
+  recordBackingStoreImport();
   return backingStore_->getTreeForCommit(commitID).thenValue(
       [commitID](std::shared_ptr<const Tree> tree) {
         if (!tree) {
@@ -139,6 +143,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
     }
 
     // Look in the BackingStore
+    self->recordBackingStoreImport();
     return self->backingStore_->getBlob(id).thenValue(
         [self, id](unique_ptr<const Blob> loadedBlob) {
           if (loadedBlob) {
@@ -194,6 +199,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         //
         // TODO: This should probably check the LocalStore for the blob first,
         // especially when we begin to expire entries in RocksDB.
+        self->recordBackingStoreImport();
         return self->backingStore_->getBlob(id).thenValue(
             [self, id](std::unique_ptr<Blob> blob) {
               if (blob) {
@@ -236,6 +242,7 @@ Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
         }
 
         // Check backing store for blob
+        self->recordBackingStoreImport();
         return self->backingStore_->getBlob(id).thenValue(
             [self, id](std::unique_ptr<Blob> blob) {
               if (blob) {
@@ -259,6 +266,12 @@ void ObjectStore::updateBlobSizeStats(bool local, bool backing) const {
   ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
   stats.getBlobSizeFromLocalStore.addValue(local);
   stats.getBlobSizeFromBackingStore.addValue(backing);
+}
+
+void ObjectStore::recordBackingStoreImport() const {
+  if (RequestData::isFuseRequest()) {
+    RequestData::get().getEdenTopStats().setDidImportFromBackingStore();
+  }
 }
 
 } // namespace eden

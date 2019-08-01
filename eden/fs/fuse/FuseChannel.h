@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 #pragma once
+
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>

@@ -100,13 +100,13 @@ void ProcessAccessLog::Bucket::add(
     bool& isNewPid,
     ProcessAccessLog::AccessType type) {
   auto [it, contains] = accessCountsByPid.emplace(pid, PerBucketAccessCounts{});
-  it->second.counts[type]++;
+  it->second[type]++;
   isNewPid = contains;
 }
 
 void ProcessAccessLog::Bucket::merge(const Bucket& other) {
   for (auto [pid, otherAccessCounts] : other.accessCountsByPid) {
-    for (int type = 0; type != LAST; type++) {
+    for (int type = 0; type != static_cast<int>(AccessType::Last); type++) {
       accessCountsByPid[pid].counts[type] += otherAccessCounts.counts[type];
     }
   }
@@ -195,11 +195,13 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
   // Transfer to a Thrift map
   std::unordered_map<pid_t, AccessCounts> accessCountsByPid;
   for (auto& [pid, accessCounts] : bucket.accessCountsByPid) {
-    accessCountsByPid[pid] = AccessCounts{};
-    auto counts = accessCounts.counts;
-    accessCountsByPid[pid].reads = counts[READ];
-    accessCountsByPid[pid].writes = counts[WRITE];
-    accessCountsByPid[pid].total = counts[READ] + counts[WRITE] + counts[OTHER];
+    accessCountsByPid[pid].fuseReads = accessCounts[AccessType::FuseRead];
+    accessCountsByPid[pid].fuseWrites = accessCounts[AccessType::FuseWrite];
+    accessCountsByPid[pid].fuseTotal = accessCounts[AccessType::FuseRead] +
+        accessCounts[AccessType::FuseWrite] +
+        accessCounts[AccessType::FuseOther];
+    accessCountsByPid[pid].fuseBackingStoreImports =
+        accessCounts[AccessType::FuseBackingStoreImport];
   }
   return accessCountsByPid;
 }

@@ -28,11 +28,12 @@ class ProcessNameCache;
  */
 class ProcessAccessLog {
  public:
-  enum AccessType : unsigned int {
-    READ,
-    WRITE,
-    OTHER,
-    LAST,
+  enum class AccessType : unsigned int {
+    FuseRead,
+    FuseWrite,
+    FuseOther,
+    FuseBackingStoreImport,
+    Last,
   };
 
   explicit ProcessAccessLog(std::shared_ptr<ProcessNameCache> processNameCache);
@@ -60,10 +61,11 @@ class ProcessAccessLog {
 
  private:
   struct PerBucketAccessCounts {
-    size_t counts[AccessType::LAST];
+    size_t counts[static_cast<int>(AccessType::Last)];
 
-    size_t& operator[](AccessType idx) {
-      CHECK_LT(idx, AccessType::LAST);
+    size_t& operator[](AccessType type) {
+      int idx = static_cast<int>(type);
+      CHECK_LT(idx, static_cast<int>(AccessType::Last));
       return counts[idx];
     }
   };

@@ -1177,7 +1177,7 @@ void EdenServiceHandler::getAccessCounts(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
-  result.exeNamesByPid =
+  result.cmdsByPid =
       server_->getServerState()->getProcessNameCache()->getAllProcessNames();
 
   auto seconds = std::chrono::seconds{duration};
@@ -1186,9 +1186,9 @@ void EdenServiceHandler::getAccessCounts(
     auto& mountStr = mount->getPath().value();
     auto& pal = mount->getFuseChannel()->getProcessAccessLog();
 
-    FuseMountAccesses& fma = result.fuseAccessesByMount[mountStr];
+    MountAccesses& ma = result.accessesByMount[mountStr];
     for (auto& [pid, accessCount] : pal.getAccessCounts(seconds)) {
-      fma.fuseAccesses[pid] = accessCount;
+      ma.accessCountsByPid[pid] = accessCount;
     }
   }
 #else
