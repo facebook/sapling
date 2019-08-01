@@ -432,8 +432,8 @@ pub struct Diff<'a, M> {
 /// Represents a file that is different between two tree manifests.
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct DiffEntry {
-    path: RepoPathBuf,
-    diff_type: DiffType,
+    pub path: RepoPathBuf,
+    pub diff_type: DiffType,
 }
 
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -446,6 +446,26 @@ pub enum DiffType {
 impl DiffEntry {
     fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
         DiffEntry { path, diff_type }
+    }
+}
+
+impl DiffType {
+    /// Returns the metadata of the file in the left manifest when it exists.
+    pub fn left(&self) -> Option<FileMetadata> {
+        match self {
+            DiffType::LeftOnly(left_metadata) => Some(*left_metadata),
+            DiffType::RightOnly(_) => None,
+            DiffType::Changed(left_metadata, _) => Some(*left_metadata),
+        }
+    }
+
+    /// Returns the metadata of the file in the right manifest when it exists.
+    pub fn right(&self) -> Option<FileMetadata> {
+        match self {
+            DiffType::LeftOnly(_) => None,
+            DiffType::RightOnly(right_metadata) => Some(*right_metadata),
+            DiffType::Changed(_, right_metadata) => Some(*right_metadata),
+        }
     }
 }
 

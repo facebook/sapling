@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{str, sync::Arc};
+use std::{borrow::Borrow, cell::RefCell, str, sync::Arc};
 
 use bytes::Bytes;
 use cpython::*;
@@ -11,7 +11,8 @@ use failure::Fallible;
 
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::Manifest;
+use manifest::{self, FileMetadata, FileType, Manifest};
+use pathmatcher::{AlwaysMatcher, Matcher};
 use revisionstore::DataStore;
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
@@ -49,7 +50,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class treemanifest |py| {
-    data underlying: manifest::Tree;
+    data underlying: RefCell<manifest::Tree>;
 
     def __new__(
         _cls,
@@ -62,7 +63,7 @@ py_class!(class treemanifest |py| {
             None => manifest::Tree::ephemeral(manifest_store),
             Some(value) => manifest::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
         };
-        treemanifest::create_instance(py, underlying)
+        treemanifest::create_instance(py, RefCell::new(underlying))
     }
 
     // Returns a new instance of treemanifest that contains the same data as the base.
@@ -74,7 +75,7 @@ py_class!(class treemanifest |py| {
     // Returns (node, flag) for a given `path` in the manifest.
     def find(&self, path: &PyBytes) -> PyResult<Option<(PyBytes, String)>> {
         let repo_path = pybytes_to_path(py, path);
-        let tree = &self.underlying(py);
+        let tree = self.underlying(py).borrow();
         let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
             Some(file_metadata) => Some(file_metadata_to_py_tuple(py, file_metadata)?),
@@ -82,13 +83,99 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    def flags(&self, path: &PyBytes, default: Option<PyString> = None) -> PyResult<PyString> {
+        let repo_path = pybytes_to_path(py, path);
+        let tree = self.underlying(py).borrow();
+        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            None => None,
+            Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
+        };
+        Ok(result.or(default).unwrap_or_else(|| PyString::new(py, "")))
+    }
+
     // Returns a list<path> for all files that match the predicate passed to the function.
-    def walk(&self, matcher: PyObject) -> PyResult<Vec<PyBytes>> {
+    def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyBytes>> {
         let mut result = Vec::new();
-        let manifest = self.underlying(py);
-        for entry in manifest.files(&PythonMatcher::new(py, matcher)) {
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
             let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
             result.push(path_to_pybytes(py, &path));
+        }
+        Ok(result)
+    }
+
+    def set(&self, path: &PyBytes, binnode: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
+        let mut tree = self.underlying(py).borrow_mut();
+        let repo_path = pybytes_to_path(py, path);
+        let node = pybytes_to_node(py, binnode)?;
+        let file_type = pystring_to_file_type(py, flag)?;
+        let file_metadata = FileMetadata::new(node, file_type);
+        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(py.None())
+    }
+
+    def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None) -> PyResult<PyDict> {
+        fn convert_side_diff(
+            py: Python,
+            entry: Option<FileMetadata>
+        ) -> (Option<PyBytes>, PyString) {
+            match entry {
+                None => (None, PyString::new(py, "")),
+                Some(file_metadata) => (
+                    Some(node_to_pybytes(py, file_metadata.node)),
+                    file_type_to_pystring(py, file_metadata.file_type)
+                )
+            }
+        }
+
+        let result = PyDict::new(py);
+        let this_tree = self.underlying(py).borrow();
+        let other_tree = other.underlying(py).borrow();
+        let matcher: Box<dyn Matcher> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+        };
+        for entry in manifest::diff(&this_tree, &other_tree, &matcher) {
+            let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let path = path_to_pybytes(py, &entry.path);
+            let diff_left = convert_side_diff(py, entry.diff_type.left());
+            let diff_right = convert_side_diff(py, entry.diff_type.right());
+            result.set_item(py, path, (diff_left, diff_right))?;
+        }
+        Ok(result)
+    }
+
+    // iterator stuff
+
+    def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
+        let path = pybytes_to_path(py, key);
+        let tree = self.underlying(py).borrow();
+        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
+            Some(_) => Ok(true),
+            None => Ok(false),
+        }
+    }
+
+    def __getitem__(&self, key: &PyBytes) -> PyResult<PyBytes> {
+        let path = pybytes_to_path(py, key);
+        let tree = self.underlying(py).borrow();
+        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
+            Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.node)),
+            None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
+        }
+    }
+
+    def iteritems(&self) -> PyResult<Vec<(PyBytes, PyBytes, PyString)>> {
+        let mut result = Vec::new();
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&AlwaysMatcher::new()) {
+            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let tuple = (
+                path_to_pybytes(py, &path),
+                node_to_pybytes(py, file_metadata.node),
+                file_type_to_pystring(py, file_metadata.file_type),
+            );
+            result.push(tuple);
         }
         Ok(result)
     }
@@ -115,10 +202,31 @@ fn pybytes_to_node(py: Python, pybytes: &PyBytes) -> PyResult<Node> {
     Node::from_slice(pybytes.data(py)).map_pyerr::<exc::ValueError>(py)
 }
 
+fn node_to_pybytes(py: Python, node: Node) -> PyBytes {
+    PyBytes::new(py, node.as_ref())
+}
+
 fn pybytes_to_path(py: Python, pybytes: &PyBytes) -> RepoPathBuf {
     local_bytes_to_repo_path(pybytes.data(py)).to_owned()
 }
 
 fn path_to_pybytes(py: Python, path: &RepoPath) -> PyBytes {
     PyBytes::new(py, repo_path_to_local_bytes(path))
+}
+
+fn pystring_to_file_type(py: Python, pystring: &PyString) -> PyResult<FileType> {
+    match pystring.to_string_lossy(py).borrow() {
+        "x" => Ok(FileType::Executable),
+        "l" => Ok(FileType::Symlink),
+        "" => Ok(FileType::Regular),
+        _ => Err(PyErr::new::<exc::RuntimeError, _>(py, "invalid file flags")),
+    }
+}
+
+fn file_type_to_pystring(py: Python, file_type: FileType) -> PyString {
+    match file_type {
+        FileType::Regular => PyString::new(py, ""),
+        FileType::Executable => PyString::new(py, "x"),
+        FileType::Symlink => PyString::new(py, "l"),
+    }
 }

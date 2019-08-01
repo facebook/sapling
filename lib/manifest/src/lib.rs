@@ -45,4 +45,4 @@ pub trait Manifest {
 mod file;
 pub mod tree;
 pub use crate::file::{FileMetadata, FileType};
-pub use crate::tree::{diff, Tree, TreeStore};
+pub use crate::tree::{diff, DiffEntry, DiffType, Tree, TreeStore};
