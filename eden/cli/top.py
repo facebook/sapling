@@ -28,21 +28,31 @@ COLUMN_TITLES = Row(
     top_pid="TOP PID",
     command="COMMAND",
     mount="MOUNT",
-    fuse_reads="FUSE READS",
-    fuse_writes="FUSE WRITES",
-    fuse_total="FUSE TOTAL",
-    fuse_backing_store_imports="BACKING IMPORTS",
-    fuse_last_access="LST",
+    fuse_reads="FUSE R",
+    fuse_writes="FUSE W",
+    fuse_total="FUSE ALL",
+    fuse_backing_store_imports="IMPORTS",
+    fuse_last_access="FUSE LAST",
 )
 COLUMN_SPACING = Row(
     top_pid=7,
     command=25,
-    mount=15,
+    mount=12,
     fuse_reads=10,
-    fuse_writes=11,
+    fuse_writes=10,
     fuse_total=10,
-    fuse_backing_store_imports=15,
-    fuse_last_access=3,
+    fuse_backing_store_imports=10,
+    fuse_last_access=10,
+)
+COLUMN_ALIGNMENT = Row(
+    top_pid=">",
+    command="<",
+    mount="<",
+    fuse_reads=">",
+    fuse_writes=">",
+    fuse_total=">",
+    fuse_backing_store_imports=">",
+    fuse_last_access=">",
 )
 COLUMN_REVERSE_SORT = Row(
     top_pid=False,
@@ -71,7 +81,7 @@ class Top:
         # Processes are stored by PID
         self.processes: Dict[int, Process] = {}
         self.rows: List = []
-        self.selected_column = COLUMN_TITLES.index("LST")
+        self.selected_column = COLUMN_TITLES.index("FUSE LAST")
 
         self.height = 0
         self.width = 0
@@ -117,7 +127,7 @@ class Top:
         for mount, accesses in counts.accessesByMount.items():
             for pid, access_counts in accesses.accessCountsByPid.items():
                 if pid not in self.processes:
-                    cmd = counts.cmdsByPid.get(pid, b"<unknown>")
+                    cmd = counts.cmdsByPid.get(pid, b"<kernel>")
                     self.processes[pid] = Process(pid, cmd, mount)
 
                 self.processes[pid].increment_counts(access_counts)
@@ -179,10 +189,10 @@ class Top:
             style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
             self.render_row(stdscr, line, row, style)
 
-    def render_row(self, stdscr, y, data, style):
+    def render_row(self, stdscr, y, row, style):
         x = 0
-        for i, (str, len) in enumerate(zip(data, COLUMN_SPACING)):
-            text = f"{str:{len}}"[:len]
+        for i, (str, dir, len) in enumerate(zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)):
+            text = f"{str:{dir}{len}}"[:len]
 
             color = 0
             if i == self.selected_column:
