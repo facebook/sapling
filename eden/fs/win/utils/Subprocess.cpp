@@ -27,6 +27,7 @@ Subprocess::~Subprocess() {}
 
 void Subprocess::createSubprocess(
     const std::vector<string>& cmd,
+    const char* currentDir,
     std::unique_ptr<Pipe> childInPipe,
     std::unique_ptr<Pipe> childOutPipe) {
   childInPipe_ = std::move(childInPipe);
@@ -48,14 +49,14 @@ void Subprocess::createSubprocess(
   XLOG(DBG1) << "Creating the process: " << cmdToProcess.c_str() << std::endl;
 
   status = CreateProcessA(
-      NULL,
+      nullptr,
       (LPSTR)cmdToProcess.c_str(),
-      NULL,
-      NULL,
+      nullptr,
+      nullptr,
       TRUE, // inherit the handles
       0,
-      NULL,
-      NULL,
+      nullptr,
+      currentDir,
       &startupInfo,
       &procInfo);
 

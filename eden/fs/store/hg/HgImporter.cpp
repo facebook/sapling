@@ -330,7 +330,10 @@ HgImporter::HgImporter(
   cmd.push_back(folly::to<string>((int)childInPipe->readHandle));
 
   helper_.createSubprocess(
-      cmd, std::move(childInPipe), std::move(childOutPipe));
+      cmd,
+      repoPath.value().str().c_str(),
+      std::move(childInPipe),
+      std::move(childOutPipe));
   helperIn_ = helper_.childInPipe_->writeHandle;
   helperOut_ = helper_.childOutPipe_->readHandle;
 

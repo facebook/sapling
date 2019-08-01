@@ -22,6 +22,7 @@ class Subprocess {
 
   void createSubprocess(
       const std::vector<std::string>& cmd,
+      const char* currentDir = nullptr,
       std::unique_ptr<Pipe> childInPipe = nullptr,
       std::unique_ptr<Pipe> childOutPipe = nullptr);
 
