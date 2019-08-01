@@ -10,8 +10,10 @@ mod bytearrayobject;
 mod bytes;
 mod bytesobject;
 mod pybuf;
+mod pyset;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;
 pub use crate::pybuf::SimplePyBuf;
+pub use crate::pyset::{pyset_add, pyset_new};
 pub use bytes::Bytes;
