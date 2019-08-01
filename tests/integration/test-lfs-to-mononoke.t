@@ -137,15 +137,15 @@
   remote:   Error:
   remote:     While resolving Changegroup
   remote:   Root cause:
-  remote:     MissingTypedKeyEntry(
-  remote:         "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7",
+  remote:     ContentBlobByAliasMissing(
+  remote:         Sha256(098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7),
   remote:     )
   remote:   Caused by:
   remote:     While uploading File Blobs
   remote:   Caused by:
   remote:     While decoding delta cache for file id c9d07fd7e2ec8a7a84ffa605085c8d98012cae47, path f
   remote:   Caused by:
-  remote:     Missing typed key entry for key: alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7
+  remote:     Content blob missing for id: 098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

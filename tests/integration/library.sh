@@ -550,7 +550,8 @@ function setup_no_ssl_apiserver {
 
 
 function apiserver {
-  $MONONOKE_APISERVER "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
+  "$MONONOKE_APISERVER" "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
+   --without-skiplist \
     --ssl-ca "$TEST_CERTDIR/root-ca.crt" \
     --ssl-private-key "$TEST_CERTDIR/localhost.key" \
     --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
@@ -561,7 +562,8 @@ function apiserver {
 }
 
 function no_ssl_apiserver {
-  $MONONOKE_APISERVER "$@" \
+  "$MONONOKE_APISERVER" "$@" \
+   --without-skiplist \
    --mononoke-config-path "$TESTTMP/mononoke-config" \
    "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"

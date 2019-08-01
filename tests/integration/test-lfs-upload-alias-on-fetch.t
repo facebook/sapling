@@ -74,8 +74,13 @@
   updating bookmark master_bookmark
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is not generated
-  $ ls $TESTTMP/repo/blobs | grep "alias.content.blake2" | wc -l
-  0
+  $ ls $TESTTMP/repo/blobs | grep "alias" | sort -h
+  blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
+  blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
+  blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885
+  blob-repo0000.alias.sha1.ded5ba42480fe75dcebba1ce068489ff7be2186a
+  blob-repo0000.alias.sha256.cbc80bb5c0c0f8944bf73b3a429505ac5cde16644978bc9a1e74c5755f8ca556
+  blob-repo0000.alias.sha256.f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
 
   $ cd ..
 7. Hg pull from hg client repo.
@@ -112,5 +117,10 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated
-  $ ls $TESTTMP/repo/blobs | grep "alias.content" | wc -l
-  1
+  $ ls $TESTTMP/repo/blobs | grep "alias" | sort -h
+  blob-repo0000.alias.gitsha1.23c160a91fd3e722a49a86017e103e83e7965af7
+  blob-repo0000.alias.gitsha1.b4785957bc986dc39c629de9fac9df46972c00fc
+  blob-repo0000.alias.sha1.8cfc11d4c1bf45aca9412afc5b95cfd1db83e885
+  blob-repo0000.alias.sha1.ded5ba42480fe75dcebba1ce068489ff7be2186a
+  blob-repo0000.alias.sha256.cbc80bb5c0c0f8944bf73b3a429505ac5cde16644978bc9a1e74c5755f8ca556
+  blob-repo0000.alias.sha256.f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b

@@ -9,6 +9,7 @@
 
 import contextlib
 import json
+import logging
 import multiprocessing
 import os
 import subprocess
@@ -19,6 +20,7 @@ from typing import Any, Dict, List, NamedTuple
 
 import click
 from common.db.tests import DbDef
+from libfb.py.log import set_simple_logging
 from mononoke.tests.integration.lib_buck import find_buck_out
 
 
@@ -34,6 +36,12 @@ EPHEMERAL_DB_WHITELIST = {
     "test-lookup.t",
     "test-mononoke-admin.t",
     "test-bookmarks-filler.t",
+}
+
+NETWORK_BLACKHOLE_BLACKLIST = {
+    "test-lfs-to-mononoke.t",
+    "test-lfs-upload-alias-on-fetch.t",
+    "test-lfs-copytracing.t",
 }
 
 
@@ -63,14 +71,22 @@ class TestFlags(NamedTuple):
 
         return r
 
-    def runner_kwargs(self) -> Dict[str, bool]:
+    def runner_kwargs(self, tests: List[str]) -> Dict[str, bool]:
         r = {}
 
         if self.interactive:
             r["interactive"] = True
 
         if self.blackhole:
-            r["blackhole"] = True
+            incompatible_tests = set(tests) & set(NETWORK_BLACKHOLE_BLACKLIST)
+            if incompatible_tests:
+                logging.warning(
+                    "Not enabling blackhole because incompatible "
+                    "tests are to be run: %s",
+                    " ".join(incompatible_tests),
+                )
+            else:
+                r["blackhole"] = True
 
         return r
 
@@ -268,7 +284,8 @@ def run_tests(
         args.extend(tests)
 
         try:
-            runner(manifest_env, args, test_env, **test_flags.runner_kwargs())
+            kwargs = test_flags.runner_kwargs(tests)
+            runner(manifest_env, args, test_env, **kwargs)
         except subprocess.CalledProcessError:
             success = False
 
@@ -320,6 +337,8 @@ def run(
     keep_tmpdir,
     mysql,
 ):
+    set_simple_logging(logging.INFO)
+
     manifest_env = load_manifest_env(manifest)
     maybe_use_local_test_paths(manifest_env)
 
