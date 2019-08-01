@@ -83,6 +83,16 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    def get(&self, path: &PyBytes, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
+        let repo_path = pybytes_to_path(py, path);
+        let tree = self.underlying(py).borrow();
+        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            None => None,
+            Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.node)),
+        };
+        Ok(result.or(default))
+    }
+
     def flags(&self, path: &PyBytes, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
@@ -104,7 +114,24 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    def text(&self) -> PyResult<PyString> {
+        let mut result = String::with_capacity(150 * 1024 * 1024);
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&AlwaysMatcher::new()) {
+            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push_str(&format!(
+                "{} {}{}\n",
+                path,
+                file_metadata.node,
+                file_type_to_str(file_metadata.file_type)
+            ));
+        }
+        // This will copy the string :((
+        Ok(PyString::new(py, &result))
+    }
+
     def set(&self, path: &PyBytes, binnode: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
+        // TODO: can the node and flag that are passed in be None?
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         let node = pybytes_to_node(py, binnode)?;
@@ -112,6 +139,24 @@ py_class!(class treemanifest |py| {
         let file_metadata = FileMetadata::new(node, file_type);
         tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
         Ok(py.None())
+    }
+
+    def setflag(&self, path: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
+        let mut tree = self.underlying(py).borrow_mut();
+        let repo_path = pybytes_to_path(py, path);
+        let file_type = pystring_to_file_type(py, flag)?;
+        let file_metadata = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            None => {
+                let msg = "cannot setflag on file that is not in manifest";
+                return Err(PyErr::new::<exc::KeyError, _>(py, msg));
+            }
+            Some(mut file_metadata) => {
+                file_metadata.file_type = file_type;
+                file_metadata
+            }
+        };
+        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(Python::None(py))
     }
 
     def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None) -> PyResult<PyDict> {
@@ -145,15 +190,19 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
-    // iterator stuff
-
-    def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
-        let path = pybytes_to_path(py, key);
-        let tree = self.underlying(py).borrow();
-        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
-            Some(_) => Ok(true),
-            None => Ok(false),
-        }
+    def __setitem__(&self, path: &PyBytes, binnode: &PyBytes) -> PyResult<()> {
+        let mut tree = self.underlying(py).borrow_mut();
+        let repo_path = pybytes_to_path(py, path);
+        let node = pybytes_to_node(py, binnode)?;
+        let file_metadata = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            None => FileMetadata::new(node, FileType::Regular),
+            Some(mut file_metadata) => {
+                file_metadata.node = node;
+                file_metadata
+            }
+        };
+        tree.insert(repo_path, file_metadata).map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(())
     }
 
     def __getitem__(&self, key: &PyBytes) -> PyResult<PyBytes> {
@@ -162,6 +211,17 @@ py_class!(class treemanifest |py| {
         match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.node)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
+        }
+    }
+
+    // iterator stuff
+
+    def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
+        let path = pybytes_to_path(py, key);
+        let tree = self.underlying(py).borrow();
+        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
+            Some(_) => Ok(true),
+            None => Ok(false),
         }
     }
 
@@ -176,6 +236,16 @@ py_class!(class treemanifest |py| {
                 file_type_to_pystring(py, file_metadata.file_type),
             );
             result.push(tuple);
+        }
+        Ok(result)
+    }
+
+    def iterkeys(&self) -> PyResult<Vec<PyBytes>> {
+        let mut result = Vec::new();
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&AlwaysMatcher::new()) {
+            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &path));
         }
         Ok(result)
     }
@@ -224,9 +294,13 @@ fn pystring_to_file_type(py: Python, pystring: &PyString) -> PyResult<FileType> 
 }
 
 fn file_type_to_pystring(py: Python, file_type: FileType) -> PyString {
+    PyString::new(py, file_type_to_str(file_type))
+}
+
+fn file_type_to_str(file_type: FileType) -> &'static str {
     match file_type {
-        FileType::Regular => PyString::new(py, ""),
-        FileType::Executable => PyString::new(py, "x"),
-        FileType::Symlink => PyString::new(py, "l"),
+        FileType::Regular => "",
+        FileType::Executable => "x",
+        FileType::Symlink => "l",
     }
 }
