@@ -248,7 +248,7 @@ def cloudauth(ui, repo, **opts):
         ),
         (
             "",
-            "version_number",
+            "workspace-version",
             "",
             "show the specified version of the smartlog",
             _("NUM"),
@@ -281,7 +281,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
     date = opts.get("date")
-    version = opts.get("version_number")
+    version = opts.get("workspace_version")
     if date:
         parseddate = util.parsedate(date)
     else:

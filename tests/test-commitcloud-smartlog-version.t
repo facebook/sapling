@@ -88,7 +88,7 @@ Tests for hg cloud sl --date "2019-06-23 19:34:39"
   $ hg cloud sl --date "2019-06-23 19:34:"
   hg: parse error: invalid date: '2019-06-23 19:34:'
   [255]
-Tests for hg cloud sl --version_number
+Tests for hg cloud sl --workspace-version
   $ cat > $TESTTMP/usersmartlogbyversiondata << EOF
   > {
   >   "smartlog": {
@@ -96,7 +96,7 @@ Tests for hg cloud sl --version_number
   >   }
   > }
   > EOF
-  $ hg cloud sl --version_number 42
+  $ hg cloud sl --workspace-version 42
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
@@ -119,7 +119,7 @@ Tests for hg cloud sl --version_number
   > }
   > EOF
 
-  $ hg cloud sl --version_number 42
+  $ hg cloud sl --workspace-version 42
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
