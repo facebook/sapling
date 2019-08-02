@@ -84,10 +84,8 @@ translateeq(
 )
 
 
-# FIXME: '|' not translated correctly
-translateeq(
-    "  $ seq 1 10 | tail -2 >> b.txt", "sh % \"seq 1 10 '|' tail -2\" >> 'b.txt'"
-)
+# pipe
+translateeq("  $ seq 1 10 | tail -2 >> b.txt", "sh % 'seq 1 10' | 'tail -2' >> 'b.txt'")
 
 
 # FIXME: shell functions are not translated correctly

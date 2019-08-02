@@ -43,7 +43,7 @@ def parsecmd(line):
     cmd = []
 
     def reset(opts=opts, cmd=cmd):
-        for name in [">>", "<<", ">", "<"]:
+        for name in [">>", "<<", ">", "<", "|"]:
             opts[name] = None
         cmd[:] = []
 
@@ -57,6 +57,11 @@ def parsecmd(line):
         if arg is None or arg == "#":
             break
         if arg in {";", "&&"}:
+            yield result()
+            reset()
+            continue
+        if arg == "|":
+            opts["|"] = True
             yield result()
             reset()
             continue
@@ -111,8 +116,12 @@ def translatecontent(code, state):
         # shell command
         allcode = ""
         parsed = list(parsecmd(firstline[4:]))
+        waspipe = False
         for cmd, opts in parsed:
-            code = "sh %% %r" % cmd
+            if waspipe:
+                code = " | %r" % cmd
+            else:
+                code = "sh %% %r" % cmd
             # Be careful with Python operator precedence and auto-rewrite
             # from `a op1 b op2 c` to `a op1 b and b op2 c`. Strategy:
             # - Do not use `<`. Avoid `cmd < in > out` being written to
@@ -138,7 +147,11 @@ def translatecontent(code, state):
                 output = _marktrailingspaces(output.rstrip())
                 if output:
                     code += " == %s" % _repr(output, indent=4)
-            allcode += code + "\n"
+            haspipe = opts["|"]
+            allcode += code
+            if not haspipe:
+                allcode += "\n"
+            waspipe = haspipe
         return allcode, rest
 
     return "", code
