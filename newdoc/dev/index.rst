@@ -12,6 +12,7 @@ Contents:
 
    process/QuickStart
    process/WritingExtensions
+   process/WritingNativeCommands
    process/WritingTests
    process/DebuggingFeatures
    process/DebuggingTests
