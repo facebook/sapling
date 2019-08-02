@@ -557,6 +557,18 @@ def safesend(self, str):
         blocksize = 8192
         read = getattr(str, "read", None)
         if read is not None:
+            # Uploading data is always expected to consume the entire file
+            # or buffer as we send a content-length for the full length. So
+            # it's safe for us to rewind the cursor back to the beginning of
+            # our file/buffer. This avoid the problem that when we retry a
+            # request that we can't read the data that we need, as we've already
+            # consumed all the data by reading it.
+            seek = getattr(str, "seek", None)
+            if seek is not None:
+                if self.debuglevel > 0:
+                    print("sending a seek()able")
+                seek(0)
+
             expectedlen = len(str)
             totalwritten = 0
             if self.debuglevel > 0:
@@ -567,6 +579,12 @@ def safesend(self, str):
                 self.sock.sendall(data)
                 data = read(blocksize)
 
+            # This is a safety check to avoid waiting for a server response in
+            # the case where we haven't written the amount of data that the
+            # server is expecting. Earlier in the stack we set the Content-Length
+            # to the length of 'str'. It's possible a server could wait indefenitely
+            # in some cases where less data has been written then expected, therefor
+            # always ensure we have actually written what we are expecting.
             if expectedlen != totalwritten:
                 raise urlerr.urlerror(
                     "couldn't read {} bytes, only got {}".format(

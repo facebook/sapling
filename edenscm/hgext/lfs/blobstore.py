@@ -89,10 +89,15 @@ class filewithprogress(object):
         if data:
             if self._callback:
                 self._callback(len(data))
-        else:
-            self._fp.close()
-            self._fp = None
         return data
+
+    def seek(self, offset):
+        if self._fp is not None:
+            self._fp.seek(offset)
+
+    def __del__(self):
+        self._fp.close()
+        self._fp = None
 
 
 class local(object):
