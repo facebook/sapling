@@ -4,19 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::BlobRepo;
 use clap::ArgMatches;
 use cmdlib::args;
 
-use crate::common::resolve_hg_rev;
+use crate::common::get_file_nodes;
 use censoredblob::SqlCensoredContentStore;
-use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
-use futures::future;
 use futures::future::{join_all, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::{Changeset, HgFileNodeId, MPath};
+use mercurial_types::MPath;
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use slog::{debug, Logger};
 
@@ -78,54 +75,4 @@ pub fn subcommand_blacklist(
             }
         })
         .boxify()
-}
-
-// The function retrieves the ContentId of a file, based on path and rev.
-// If the path is not valid an error is expected.
-fn get_file_nodes(
-    ctx: CoreContext,
-    logger: Logger,
-    repo: &BlobRepo,
-    rev: &str,
-    paths: Vec<MPath>,
-) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
-    let resolved_cs_id = resolve_hg_rev(ctx.clone(), repo, rev);
-
-    resolved_cs_id
-        .and_then({
-            cloned!(ctx, repo);
-            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
-        })
-        .map(|cs| cs.manifestid().clone())
-        .and_then({
-            cloned!(ctx, repo);
-            move |root_mf_id| {
-                repo.find_files_in_manifest(ctx, root_mf_id, paths.clone())
-                    .map(move |manifest_entries| {
-                        let mut existing_hg_nodes = Vec::new();
-                        let mut non_existing_paths = Vec::new();
-
-                        for path in paths.iter() {
-                            match manifest_entries.get(&path) {
-                                Some(hg_node) => existing_hg_nodes.push(*hg_node),
-                                None => non_existing_paths.push(path.clone()),
-                            };
-                        }
-                        (non_existing_paths, existing_hg_nodes)
-                    })
-            }
-        })
-        .and_then({
-            move |(non_existing_paths, existing_hg_nodes)| match non_existing_paths.len() {
-                0 => {
-                    debug!(logger, "All the file paths are valid");
-                    future::ok(existing_hg_nodes).right_future()
-                }
-                _ => future::err(format_err!(
-                    "failed to identify the files associated with the file paths {:?}",
-                    non_existing_paths
-                ))
-                .left_future(),
-            }
-        })
 }

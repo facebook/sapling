@@ -8,11 +8,13 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error};
-use futures::future::Future;
-use mercurial_types::HgChangesetId;
+use failure_ext::{err_msg, format_err, Error};
+use futures::future::{self, Future};
+use futures_ext::FutureExt;
+use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
+use slog::{debug, Logger};
 use std::str::FromStr;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
@@ -85,4 +87,54 @@ pub fn resolve_hg_rev(
             None => hash,
         }
     })
+}
+
+// The function retrieves the HgFileNodeId of a file, based on path and rev.
+// If the path is not valid an error is expected.
+pub fn get_file_nodes(
+    ctx: CoreContext,
+    logger: Logger,
+    repo: &BlobRepo,
+    rev: &str,
+    paths: Vec<MPath>,
+) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
+    let resolved_cs_id = resolve_hg_rev(ctx.clone(), repo, rev);
+
+    resolved_cs_id
+        .and_then({
+            cloned!(ctx, repo);
+            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
+        })
+        .map(|cs| cs.manifestid().clone())
+        .and_then({
+            cloned!(ctx, repo);
+            move |root_mf_id| {
+                repo.find_files_in_manifest(ctx, root_mf_id, paths.clone())
+                    .map(move |manifest_entries| {
+                        let mut existing_hg_nodes = Vec::new();
+                        let mut non_existing_paths = Vec::new();
+
+                        for path in paths.iter() {
+                            match manifest_entries.get(&path) {
+                                Some(hg_node) => existing_hg_nodes.push(*hg_node),
+                                None => non_existing_paths.push(path.clone()),
+                            };
+                        }
+                        (non_existing_paths, existing_hg_nodes)
+                    })
+            }
+        })
+        .and_then({
+            move |(non_existing_paths, existing_hg_nodes)| match non_existing_paths.len() {
+                0 => {
+                    debug!(logger, "All the file paths are valid");
+                    future::ok(existing_hg_nodes).right_future()
+                }
+                _ => future::err(format_err!(
+                    "failed to identify the files associated with the file paths {:?}",
+                    non_existing_paths
+                ))
+                .left_future(),
+            }
+        })
 }
