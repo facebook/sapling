@@ -23,3 +23,4 @@ pub const SKIPLIST_BUILD: &'static str = "build";
 pub const SKIPLIST_READ: &'static str = "read";
 pub const ADD_PUBLIC_PHASES: &'static str = "add-public-phases";
 pub const BLACKLIST: &'static str = "blacklist";
+pub const FILENODES: &'static str = "filenodes";

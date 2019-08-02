@@ -19,11 +19,12 @@ use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
     ADD_PUBLIC_PHASES, BLACKLIST, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH,
-    HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE,
+    FILENODES, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE,
     HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
     SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
+use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 use crate::hg_sync::subcommand_process_hg_sync;
@@ -37,6 +38,7 @@ mod bookmarks_manager;
 mod cmdargs;
 mod common;
 mod content_fetch;
+mod filenodes;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
@@ -266,6 +268,22 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 "#,
         );
 
+    let filenodes = SubCommand::with_name(FILENODES)
+        .about("fetches hg filenodes information for a commit and one or more paths")
+        .arg(
+            Arg::with_name("hg-changeset-or-bookmark")
+                .required(true)
+                .takes_value(true)
+                .help("hg chageset to lookup filenodes for"),
+        )
+        .arg(
+            Arg::with_name("paths")
+                .required(true)
+                .multiple(true)
+                .takes_value(true)
+                .help("a list of file paths to lookup filenodes for"),
+        );
+
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
@@ -287,6 +305,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(hg_sync)
         .subcommand(add_public_phases)
         .subcommand(blacklist)
+        .subcommand(filenodes)
 }
 
 fn main() -> Result<()> {
@@ -314,6 +333,7 @@ fn main() -> Result<()> {
         (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
         (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
         (BLACKLIST, Some(sub_m)) => subcommand_blacklist(logger, &matches, sub_m),
+        (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
