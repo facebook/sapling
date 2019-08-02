@@ -1187,8 +1187,8 @@ void EdenServiceHandler::getAccessCounts(
     auto& pal = mount->getFuseChannel()->getProcessAccessLog();
 
     MountAccesses& ma = result.accessesByMount[mountStr];
-    for (auto& [pid, accessCount] : pal.getAccessCounts(seconds)) {
-      ma.accessCountsByPid[pid] = accessCount;
+    for (auto& [pid, accessCounts] : pal.getAccessCounts(seconds)) {
+      ma.accessCountsByPid[pid] = accessCounts;
     }
   }
 #else

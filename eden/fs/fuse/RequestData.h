@@ -37,6 +37,7 @@ class RequestData : public folly::RequestData {
     void setDidImportFromBackingStore() {
       didImportFromBackingStore_.store(true, std::memory_order_relaxed);
     }
+    std::chrono::nanoseconds fuseDuration{0};
 
    private:
     std::atomic<bool> didImportFromBackingStore_{false};

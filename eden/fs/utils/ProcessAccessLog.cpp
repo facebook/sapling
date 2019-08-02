@@ -42,6 +42,17 @@ struct ThreadLocalBucket {
     return isNewPid;
   }
 
+  bool add(
+      uint64_t secondsSinceStart,
+      pid_t pid,
+      std::chrono::nanoseconds duration) {
+    auto state = state_.lock();
+
+    bool isNewPid = false;
+    state->buckets.add(secondsSinceStart, pid, isNewPid, duration);
+    return isNewPid;
+  }
+
   void mergeUpstream() {
     auto state = state_.lock();
     if (!state->owner) {
@@ -104,11 +115,21 @@ void ProcessAccessLog::Bucket::add(
   isNewPid = contains;
 }
 
+void ProcessAccessLog::Bucket::add(
+    pid_t pid,
+    bool& isNewPid,
+    std::chrono::nanoseconds duration) {
+  auto [it, contains] = accessCountsByPid.emplace(pid, PerBucketAccessCounts{});
+  it->second.duration += duration;
+  isNewPid = contains;
+}
+
 void ProcessAccessLog::Bucket::merge(const Bucket& other) {
   for (auto [pid, otherAccessCounts] : other.accessCountsByPid) {
     for (int type = 0; type != static_cast<int>(AccessType::Last); type++) {
       accessCountsByPid[pid].counts[type] += otherAccessCounts.counts[type];
     }
+    accessCountsByPid[pid].duration += otherAccessCounts.duration;
   }
 }
 
@@ -124,6 +145,21 @@ ProcessAccessLog::~ProcessAccessLog() {
   }
 }
 
+ThreadLocalBucket* ProcessAccessLog::getTlb() {
+  auto tlb = threadLocalBucketPtr.get();
+  if (!tlb) {
+    threadLocalBucketPtr.reset(std::make_unique<ThreadLocalBucket>(this));
+    tlb = threadLocalBucketPtr.get();
+  }
+  return tlb;
+}
+
+uint64_t ProcessAccessLog::getSecondsSinceEpoch() {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
 void ProcessAccessLog::recordAccess(
     pid_t pid,
     ProcessAccessLog::AccessType type) {
@@ -131,19 +167,7 @@ void ProcessAccessLog::recordAccess(
   // write-often, read-rarely use case, so, to avoid synchronization overhead,
   // record to thread-local storage and only merge into the access log when the
   // calling thread dies or when the data must be read.
-
-  auto tlb = threadLocalBucketPtr.get();
-  if (!tlb) {
-    threadLocalBucketPtr.reset(std::make_unique<ThreadLocalBucket>(this));
-    tlb = threadLocalBucketPtr.get();
-  }
-
-  uint64_t secondsSinceEpoch =
-      std::chrono::duration_cast<std::chrono::seconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count();
-
-  bool isNewPid = tlb->add(secondsSinceEpoch, pid, type);
+  bool isNewPid = getTlb()->add(getSecondsSinceEpoch(), pid, type);
 
   // Many processes are short-lived, so grab the executable name during the
   // access. We could potentially get away with grabbing executable names a
@@ -151,7 +175,7 @@ void ProcessAccessLog::recordAccess(
 
   // Sometimes we receive requests from pid 0. Record the access,
   // but don't try to look up a name.
-  if (pid) {
+  if (pid != 0) {
     // Since recordAccess is called a lot by latency- and throughput-sensitive
     // code, only try to lookup and cache the process name if we haven't seen
     // it this thread-second.
@@ -160,6 +184,15 @@ void ProcessAccessLog::recordAccess(
       // SharedMutex, but it will be shared with thrift counters.
       processNameCache_->add(pid);
     }
+  }
+}
+
+void ProcessAccessLog::recordDuration(
+    pid_t pid,
+    std::chrono::nanoseconds duration) {
+  bool isNewPid = getTlb()->add(getSecondsSinceEpoch(), pid, duration);
+  if (pid != 0 && isNewPid) {
+    processNameCache_->add(pid);
   }
 }
 
@@ -172,13 +205,8 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
     tlb.mergeUpstream();
   }
 
-  uint64_t secondsSinceEpoch =
-      std::chrono::duration_cast<std::chrono::seconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count();
-
   auto state = state_.wlock();
-  auto allBuckets = state->buckets.getAll(secondsSinceEpoch);
+  auto allBuckets = state->buckets.getAll(getSecondsSinceEpoch());
 
   if (secondCount < 0) {
     return {};
@@ -202,6 +230,7 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
         accessCounts[AccessType::FuseOther];
     accessCountsByPid[pid].fuseBackingStoreImports =
         accessCounts[AccessType::FuseBackingStoreImport];
+    accessCountsByPid[pid].fuseDurationNs = accessCounts.duration.count();
   }
   return accessCountsByPid;
 }

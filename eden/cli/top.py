@@ -21,7 +21,7 @@ from . import cmd_util
 
 Row = collections.namedtuple(
     "Row",
-    "top_pid command mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_last_access",
+    "top_pid command mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_duration fuse_last_access",
 )
 
 COLUMN_TITLES = Row(
@@ -30,8 +30,9 @@ COLUMN_TITLES = Row(
     mount="MOUNT",
     fuse_reads="FUSE R",
     fuse_writes="FUSE W",
-    fuse_total="FUSE ALL",
+    fuse_total="FUSE COUNT",
     fuse_backing_store_imports="IMPORTS",
+    fuse_duration="FUSE TIME",
     fuse_last_access="FUSE LAST",
 )
 COLUMN_SPACING = Row(
@@ -42,6 +43,7 @@ COLUMN_SPACING = Row(
     fuse_writes=10,
     fuse_total=10,
     fuse_backing_store_imports=10,
+    fuse_duration=10,
     fuse_last_access=10,
 )
 COLUMN_ALIGNMENT = Row(
@@ -52,6 +54,7 @@ COLUMN_ALIGNMENT = Row(
     fuse_writes=">",
     fuse_total=">",
     fuse_backing_store_imports=">",
+    fuse_duration=">",
     fuse_last_access=">",
 )
 COLUMN_REVERSE_SORT = Row(
@@ -61,8 +64,9 @@ COLUMN_REVERSE_SORT = Row(
     fuse_reads=True,
     fuse_writes=True,
     fuse_total=True,
-    fuse_last_access=True,
     fuse_backing_store_imports=True,
+    fuse_duration=True,
+    fuse_last_access=True,
 )
 
 COLOR_SELECTED = 1
@@ -226,8 +230,8 @@ class Process:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
-        self.access_counts = AccessCounts(0, 0, 0, 0)
-        self.last_access = time.monotonic()
+        self.access_counts = AccessCounts(0, 0, 0, 0, 0)
+        self.last_access_time = time.monotonic()
         self.is_running = True
 
     def get_key(self):
@@ -249,6 +253,7 @@ class Process:
         self.access_counts.fuseBackingStoreImports += (
             access_counts.fuseBackingStoreImports
         )
+        self.access_counts.fuseDurationNs += access_counts.fuseDurationNs
 
     def get_row(self):
         return Row(
@@ -259,6 +264,7 @@ class Process:
             fuse_writes=self.access_counts.fuseWrites,
             fuse_total=self.access_counts.fuseTotal,
             fuse_backing_store_imports=self.access_counts.fuseBackingStoreImports,
+            fuse_duration=self.access_counts.fuseDurationNs,
             fuse_last_access=self.last_access,
         )
 
@@ -281,15 +287,21 @@ def format_mount(mount):
     return os.fsdecode(os.path.basename(mount))
 
 
+def format_duration(duration):
+    modulos = (1000, 1000, 1000, 60, 60, 24)
+    suffixes = ("ns", "us", "ms", "s", "m", "h", "d")
+    return format_time(duration, modulos, suffixes)
+
+
 def format_last_access(last_access):
     elapsed = int(time.monotonic() - last_access)
-    return format_time(elapsed)
 
-
-def format_time(elapsed):
     modulos = (60, 60, 24)
     suffixes = ("s", "m", "h", "d")
+    return format_time(elapsed, modulos, suffixes)
 
+
+def format_time(elapsed, modulos, suffixes):
     for modulo, suffix in zip(modulos, suffixes):
         if elapsed < modulo:
             return f"{elapsed}{suffix}"
@@ -307,5 +319,6 @@ COLUMN_FORMATTING = Row(
     fuse_writes=lambda x: x,
     fuse_total=lambda x: x,
     fuse_backing_store_imports=lambda x: x,
+    fuse_duration=format_duration,
     fuse_last_access=format_last_access,
 )

@@ -16,6 +16,7 @@ namespace facebook {
 namespace eden {
 
 class ProcessNameCache;
+struct ThreadLocalBucket;
 
 /**
  * An inexpensive mechanism for counting accesses by pids. Intended for counting
@@ -48,6 +49,7 @@ class ProcessAccessLog {
    * ProcessNameCache.
    */
   void recordAccess(pid_t pid, AccessType type);
+  void recordDuration(pid_t pid, std::chrono::nanoseconds duration);
 
   /**
    * Returns the number of times each pid was passed to recordAccess() in
@@ -62,6 +64,7 @@ class ProcessAccessLog {
  private:
   struct PerBucketAccessCounts {
     size_t counts[static_cast<int>(AccessType::Last)];
+    std::chrono::nanoseconds duration;
 
     size_t& operator[](AccessType type) {
       int idx = static_cast<int>(type);
@@ -74,6 +77,7 @@ class ProcessAccessLog {
   struct Bucket {
     void clear();
     void add(pid_t pid, bool& isNew, AccessType type);
+    void add(pid_t pid, bool& isNew, std::chrono::nanoseconds duration);
     void merge(const Bucket& other);
 
     std::unordered_map<pid_t, PerBucketAccessCounts> accessCountsByPid;
@@ -90,6 +94,9 @@ class ProcessAccessLog {
 
   const std::shared_ptr<ProcessNameCache> processNameCache_;
   folly::Synchronized<State> state_;
+
+  uint64_t getSecondsSinceEpoch();
+  ThreadLocalBucket* getTlb();
 
   friend struct ThreadLocalBucket;
 };

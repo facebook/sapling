@@ -60,9 +60,13 @@ void RequestData::startRequest(
 void RequestData::finishRequest() {
   const auto now = steady_clock::now();
   const auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
-  const auto diff = duration_cast<microseconds>(now - startTime_);
+
+  const auto diff = now - startTime_;
+  const auto diff_us = duration_cast<microseconds>(diff);
+  const auto diff_ns = duration_cast<nanoseconds>(diff);
+
   stats_->getFuseStatsForCurrentThread().recordLatency(
-      latencyHistogram_, diff, now_since_epoch);
+      latencyHistogram_, diff_us, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
 
@@ -71,6 +75,7 @@ void RequestData::finishRequest() {
     auto type = ProcessAccessLog::AccessType::FuseBackingStoreImport;
     pal.recordAccess(examineReq().pid, type);
   }
+  pal.recordDuration(examineReq().pid, diff_ns);
 }
 
 fuse_in_header RequestData::stealReq() {

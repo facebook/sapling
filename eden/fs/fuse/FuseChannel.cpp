@@ -23,6 +23,7 @@
 
 using namespace folly::literals::string_piece_literals;
 using namespace folly;
+using namespace std::chrono;
 using std::string;
 
 namespace facebook {
