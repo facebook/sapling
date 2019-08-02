@@ -12,6 +12,7 @@
 pub mod blob;
 pub mod bonsai_changeset;
 pub mod content_chunk;
+pub mod content_metadata;
 pub mod datetime;
 pub mod errors;
 pub mod file_change;
@@ -28,11 +29,10 @@ pub mod unode;
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob, RawBundle2Blob};
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
 pub use content_chunk::ContentChunk;
+pub use content_metadata::{ContentAlias, ContentMetadata};
 pub use datetime::{DateTime, Timestamp};
 pub use file_change::{FileChange, FileType};
-pub use file_contents::{
-    ChunkedFileContents, ContentAlias, ContentChunkPointer, ContentMetadata, FileContents,
-};
+pub use file_contents::{ChunkedFileContents, ContentChunkPointer, FileContents};
 pub use generation::Generation;
 pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, RepoPath, RepoPathCached};
 pub use rawbundle2::RawBundle2;
