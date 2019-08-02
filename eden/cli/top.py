@@ -273,7 +273,9 @@ def format_cmd(cmd):
     args = os.fsdecode(cmd).split("\x00", 1)
 
     # Focus on just the basename as the paths can be quite long
-    cmd = os.path.basename(args[0])
+    cmd = args[0]
+    if os.path.isabs(cmd):
+        cmd = os.path.basename(cmd)
 
     # Show cmdline args too, if they exist
     if len(args) > 1:

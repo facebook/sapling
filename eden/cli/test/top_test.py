@@ -16,6 +16,7 @@ class TopTest(unittest.TestCase):
 
     def test_format_cmd(self):
         self.assertEqual(format_cmd(b"/bin/ls"), "ls")
+        self.assertEqual(format_cmd(b"chg[worker/0]"), "chg[worker/0]")
 
     def test_format_cmd_with_arg(self):
         self.assertEqual(format_cmd(b"/bin/ls\x00-l"), "ls -l")
