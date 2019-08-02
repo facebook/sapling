@@ -18,6 +18,7 @@ use serde;
 use crate::{
     blob::BlobstoreValue,
     bonsai_changeset::BonsaiChangeset,
+    content_chunk::ContentChunk,
     errors::*,
     file_contents::{ContentMetadata, FileContents},
     hash::{Blake2, Context},
@@ -59,6 +60,10 @@ pub struct ChangesetId(Blake2);
 /// An identifier for file contents in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct ContentId(Blake2);
+
+/// An identifier for a chunk of a file's contents.
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct ContentChunkId(Blake2);
 
 /// An identifier for mapping from a ContentId to various aliases for that content
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
@@ -254,6 +259,13 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
+    hash_type => ContentChunkId,
+    value_type => ContentChunk,
+    context_type => ContentChunkIdContext,
+    context_key => "chunk",
+}
+
+impl_typed_hash! {
     hash_type => RawBundle2Id,
     value_type => RawBundle2,
     context_type => RawBundle2IdContext,
@@ -333,6 +345,9 @@ mod test {
 
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
+
+        let id = ContentChunkId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("chunk.blake2.{}", id));
 
         let id = RawBundle2Id::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("rawbundle2.blake2.{}", id));

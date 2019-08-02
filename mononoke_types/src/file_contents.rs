@@ -16,7 +16,7 @@ use crate::{
     blob::{Blob, BlobstoreBytes, BlobstoreValue, ContentBlob, ContentMetadataBlob},
     errors::*,
     hash, thrift, thrift_field,
-    typed_hash::{ContentId, ContentIdContext, ContentMetadataId},
+    typed_hash::{ContentChunkId, ContentId, ContentIdContext, ContentMetadataId},
 };
 
 /// An enum representing contents for a file.
@@ -24,8 +24,7 @@ use crate::{
 pub enum FileContents {
     /// Raw contents of the file
     Bytes(Bytes),
-    /// Reference to separate FileContents that need to be joined together to produce this file
-    /// again.
+    /// Reference to separate ContentChunks that need to be joined together to produce this file
     Chunked(ChunkedFileContents),
 }
 
@@ -64,8 +63,6 @@ impl FileContents {
 
     pub fn content_id(&self) -> ContentId {
         match self {
-            // NOTE: This unwrap() will panic iif we have a Bytes in memory that's larger than a
-            // u64. That's not going to happen.
             this @ FileContents::Bytes(..) => *this.clone().into_blob().id(),
             FileContents::Chunked(chunked) => chunked.content_id(),
         }
@@ -143,13 +140,13 @@ impl Arbitrary for FileContents {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ChunkedFileContents {
     content_id: ContentId,
-    chunks: Vec<Chunk>,
+    chunks: Vec<ContentChunkPointer>,
     // NOTE: We compute the size upon construction to make size() a O(1) call, not O(len(chunks)).
     size: u64,
 }
 
 impl ChunkedFileContents {
-    pub fn new(content_id: ContentId, chunks: Vec<Chunk>) -> Self {
+    pub fn new(content_id: ContentId, chunks: Vec<ContentChunkPointer>) -> Self {
         let size = chunks.iter().map(|c| c.size).sum();
 
         Self {
@@ -171,7 +168,7 @@ impl ChunkedFileContents {
         let chunks = thrift_chunked
             .chunks
             .into_iter()
-            .map(Chunk::from_thrift)
+            .map(ContentChunkPointer::from_thrift)
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self::new(content_id, chunks))
@@ -179,11 +176,15 @@ impl ChunkedFileContents {
 
     pub fn into_thrift(self) -> thrift::ChunkedFileContents {
         let content_id = self.content_id.into_thrift();
-        let chunks = self.chunks.into_iter().map(Chunk::into_thrift).collect();
+        let chunks = self
+            .chunks
+            .into_iter()
+            .map(ContentChunkPointer::into_thrift)
+            .collect();
         thrift::ChunkedFileContents { content_id, chunks }
     }
 
-    pub fn into_chunks(self) -> Vec<Chunk> {
+    pub fn into_chunks(self) -> Vec<ContentChunkPointer> {
         self.chunks
     }
 
@@ -203,39 +204,40 @@ impl Arbitrary for ChunkedFileContents {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub struct Chunk {
-    content_id: ContentId,
+pub struct ContentChunkPointer {
+    chunk_id: ContentChunkId,
     size: u64,
 }
 
-impl Chunk {
-    pub fn new(content_id: ContentId, size: u64) -> Self {
-        Self { content_id, size }
+impl ContentChunkPointer {
+    pub fn new(chunk_id: ContentChunkId, size: u64) -> Self {
+        Self { chunk_id, size }
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunk = compact_protocol::deserialize(blob.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("Chunk".into()))?;
+        let thrift_chunk = compact_protocol::deserialize(blob.as_ref()).chain_err(
+            ErrorKind::BlobDeserializeError("ContentChunkPointer".into()),
+        )?;
         Self::from_thrift(thrift_chunk)
     }
 
-    pub fn from_thrift(thrift_chunk: thrift::Chunk) -> Result<Self> {
-        let content_id = ContentId::from_thrift(thrift_chunk.content_id)?;
+    pub fn from_thrift(thrift_chunk: thrift::ContentChunkPointer) -> Result<Self> {
+        let chunk_id = ContentChunkId::from_thrift(thrift_chunk.chunk_id)?;
         let size: u64 = thrift_chunk.size.try_into()?;
-        Ok(Self::new(content_id, size))
+        Ok(Self::new(chunk_id, size))
     }
 
-    pub fn into_thrift(self) -> thrift::Chunk {
+    pub fn into_thrift(self) -> thrift::ContentChunkPointer {
         // NOTE: unwrap() will fail here if we are dealing with a chunk whose size doesn't fit an
         // i64 but does fit a u64. This isn't something we meaningfully seek to support at the
         // moment.
-        let content_id = self.content_id.into_thrift();
+        let chunk_id = self.chunk_id.into_thrift();
         let size: i64 = self.size.try_into().unwrap();
-        thrift::Chunk { content_id, size }
+        thrift::ContentChunkPointer { chunk_id, size }
     }
 
-    pub fn content_id(&self) -> ContentId {
-        self.content_id
+    pub fn chunk_id(&self) -> ContentChunkId {
+        self.chunk_id
     }
 
     pub fn size(&self) -> u64 {
@@ -243,9 +245,9 @@ impl Chunk {
     }
 }
 
-impl Arbitrary for Chunk {
+impl Arbitrary for ContentChunkPointer {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Self::new(ContentId::arbitrary(g), u64::arbitrary(g))
+        Self::new(ContentChunkId::arbitrary(g), u64::arbitrary(g))
     }
 }
 

@@ -8,7 +8,7 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
-use futures::{Future, IntoFuture, Stream};
+use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId, FileContents,
@@ -17,7 +17,7 @@ use mononoke_types::{
 
 use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;
-use crate::fetch::fetch;
+use crate::fetch::stream_file_bytes;
 
 #[derive(Debug, Fail)]
 pub enum RebuildBackmappingError {
@@ -90,8 +90,8 @@ fn rebuild_metadata<B: Blobstore + Clone>(
             move |file_contents| {
                 // NOTE: We implicitly trust data from the Filestore here. We do not validate
                 // the size, nor the ContentId.
-                let content_stream = fetch(blobstore, ctx, content_id).from_err();
                 let total_size = file_contents.size();
+                let content_stream = stream_file_bytes(blobstore, ctx, file_contents);
 
                 alias_stream(ExpectedSize::new(total_size), content_stream)
                     .from_err()

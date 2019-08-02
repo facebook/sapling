@@ -10,8 +10,7 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_left_future, FutureExt};
 use mononoke_types::{
-    BlobstoreBytes, BlobstoreValue, Chunk, ContentAlias, ContentMetadata, ContentMetadataId,
-    MononokeId,
+    BlobstoreBytes, BlobstoreValue, ContentAlias, ContentMetadata, ContentMetadataId, MononokeId,
 };
 
 use crate::errors::{ErrorKind, InvalidHash};
@@ -42,7 +41,7 @@ pub fn finalize<B: Blobstore + Clone>(
     ctx: CoreContext,
     req: Option<&StoreRequest>,
     outcome: Prepared,
-) -> impl Future<Item = Chunk, Error = Error> {
+) -> impl Future<Item = ContentMetadata, Error = Error> {
     let Prepared {
         sha1,
         sha256,
@@ -102,16 +101,16 @@ pub fn finalize<B: Blobstore + Clone>(
         alias.clone(),
     );
 
-    let put_metadata = {
-        let metadata = ContentMetadata {
-            total_size,
-            content_id,
-            sha1,
-            git_sha1,
-            sha256,
-        };
+    let metadata = ContentMetadata {
+        total_size,
+        content_id,
+        sha1,
+        git_sha1,
+        sha256,
+    };
 
-        let blob = metadata.into_blob();
+    let put_metadata = {
+        let blob = metadata.clone().into_blob();
         let key = ContentMetadataId::from(content_id);
         blobstore.put(ctx, key.blobstore_key(), BlobstoreBytes::from(blob))
     };
@@ -133,12 +132,10 @@ pub fn finalize<B: Blobstore + Clone>(
     // cache, as everything in it can be computed from the content id. Therefore, in principle,
     // if it doesn't get written we can fix it up later.
 
-    let chunk = Chunk::new(content_id, total_size);
-
     (put_sha1, put_sha256, put_git_sha1)
         .into_future()
         .and_then(move |_| put_contents)
         .and_then(move |_| put_metadata)
-        .map(move |_| chunk)
+        .map(move |_| metadata)
         .right_future()
 }

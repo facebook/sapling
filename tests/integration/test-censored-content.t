@@ -212,7 +212,7 @@ As of the time of writing, updating blacklisted files throws an error - artifact
   remote:   Root cause:
   remote:     SharedError {
   remote:         error: Compat {
-  remote:             error: Error(ContentId(Blake2(096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2)), Censored("content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "my_task"))
+  remote:             error: Censored("content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "my_task")
   remote:             
   remote:             While fetching content blob
   remote:             

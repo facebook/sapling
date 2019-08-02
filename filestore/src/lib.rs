@@ -11,14 +11,12 @@ use bytes::Bytes;
 
 use cloned::cloned;
 use failure_ext::Error;
-use futures::{future, prelude::*, stream};
+use futures::{future, prelude::*};
 use futures_ext::FutureExt;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{
-    hash, Chunk, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId,
-};
+use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId};
 
 mod alias;
 mod chunk;
@@ -237,20 +235,7 @@ pub fn fetch<B: Blobstore + Clone>(
     get_canonical_id(blobstore, ctx.clone(), key).and_then({
         cloned!(blobstore, ctx);
         move |content_id| match content_id {
-            // If we found a ContentId, then return a Future that waits for the first element
-            // to show up in the content stream. If we get a NotFound error waiting for this
-            // element and it was the root, then resolve to None (i.e. "this content does not
-            // exist"). Otherwise, return the content stream. Not found errors after the initial
-            // bytes will NOT be captured: such an error would indicate that we're missing part
-            // of our contents!
-            Some(content_id) => fetch(blobstore, ctx, content_id)
-                .into_future()
-                .then(|res| match res {
-                    Err((FetchError::NotFound(_, Depth::ROOT), _)) => Ok(None),
-                    Err((e, _)) => Err(e.into()),
-                    Ok((bytes, rest)) => Ok(Some(stream::iter_ok(bytes).chain(rest.from_err()))),
-                })
-                .left_future(),
+            Some(content_id) => fetch(blobstore, ctx, content_id).left_future(),
             None => Ok(None).into_future().right_future(),
         }
     })
@@ -288,7 +273,7 @@ pub fn store<B: Blobstore + Clone>(
     ctx: CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Bytes, Error = Error>,
-) -> impl Future<Item = Chunk, Error = Error> {
+) -> impl Future<Item = ContentMetadata, Error = Error> {
     use chunk::*;
     use finalize::*;
     use prepare::*;

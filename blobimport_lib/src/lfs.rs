@@ -10,7 +10,7 @@ use context::CoreContext;
 use failure::{Error, Result};
 use futures::{Future, IntoFuture, Stream};
 use mercurial::file::LFSContent;
-use mononoke_types::Chunk;
+use mononoke_types::ContentMetadata;
 use std::io::BufReader;
 use std::process::{Command, Stdio};
 use tokio::codec;
@@ -42,7 +42,7 @@ pub fn lfs_upload(
     blobrepo: BlobRepo,
     lfs_helper: &str,
     lfs: &LFSContent,
-) -> impl Future<Item = Chunk, Error = Error> {
+) -> impl Future<Item = ContentMetadata, Error = Error> {
     let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
     lfs_stream(lfs_helper, lfs)

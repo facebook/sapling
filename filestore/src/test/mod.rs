@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mononoke_types::{typed_hash, ContentId};
+use mononoke_types::{typed_hash, ContentChunkId, ContentId};
 
 use super::StoreRequest;
 
@@ -18,6 +18,12 @@ fn request(data: impl AsRef<[u8]>) -> StoreRequest {
 
 fn canonical(data: impl AsRef<[u8]>) -> ContentId {
     let mut ctx = typed_hash::ContentIdContext::new();
+    ctx.update(data.as_ref());
+    ctx.finish()
+}
+
+fn chunk(data: impl AsRef<[u8]>) -> ContentChunkId {
+    let mut ctx = typed_hash::ContentChunkIdContext::new();
     ctx.update(data.as_ref());
     ctx.finish()
 }

@@ -12,7 +12,8 @@ use bytes::Bytes;
 use crate::{
     errors::*,
     typed_hash::{
-        ChangesetId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId, RawBundle2Id,
+        ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId,
+        RawBundle2Id,
     },
 };
 
@@ -43,6 +44,7 @@ impl<Id> Blob<Id> {
 
 pub type ChangesetBlob = Blob<ChangesetId>;
 pub type ContentBlob = Blob<ContentId>;
+pub type ContentChunkBlob = Blob<ContentChunkId>;
 pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;

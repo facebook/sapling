@@ -38,6 +38,7 @@ union IdType {
 
 typedef IdType ChangesetId (hs.newtype)
 typedef IdType ContentId (hs.newtype)
+typedef IdType ContentChunkId (hs.newtype)
 typedef IdType RawBundle2Id (hs.newtype)
 typedef IdType FileUnodeId (hs.newtype)
 typedef IdType ManifestUnodeId (hs.newtype)
@@ -122,8 +123,8 @@ struct DateTime {
   2: required i32 tz_offset_secs,
 }
 
-struct Chunk {
-  1: ContentId content_id,
+struct ContentChunkPointer {
+  1: ContentChunkId chunk_id,
   2: i64 size,
 }
 
@@ -135,7 +136,7 @@ struct ChunkedFileContents {
   // hashing the contents (but we obviously can't do that here, since we don't
   // have the contents).
   1: ContentId content_id,
-  2: list<Chunk> chunks,
+  2: list<ContentChunkPointer> chunks,
 }
 
 union FileContents {
@@ -143,6 +144,10 @@ union FileContents {
   1: binary Bytes,
   // References to Chunks (stored as FileContents, too).
   2: ChunkedFileContents Chunked,
+}
+
+union ContentChunk {
+  1: binary Bytes,
 }
 
 // Payload of object which is an alias

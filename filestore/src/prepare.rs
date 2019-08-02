@@ -14,12 +14,13 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::FutureExt;
-use mononoke_types::{hash, ChunkedFileContents, FileContents};
+use mononoke_types::{
+    content_chunk::new_blob_and_pointer, hash, ChunkedFileContents, FileContents, MononokeId,
+};
 
 use crate::alias::add_aliases_to_multiplexer;
 use crate::chunk::{BufferedStream, ChunkedStream};
 use crate::expected_size::ExpectedSize;
-use crate::finalize::finalize;
 use crate::incremental_hash::{
     hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
     Sha256IncrementalHasher,
@@ -76,7 +77,7 @@ where
         // NOTE: The Multiplexer makes clones of the Bytes we pass in. It's worth noting that Bytes
         // actually behaves like an Arc with an inner reference-counted handle to data, so those
         // clones are actually fairly cheap
-        let mut multiplexer = Multiplexer::new();
+        let mut multiplexer = Multiplexer::<Bytes>::new();
 
         // Spawn a stream for each hash we need to produce.
         let content_id =
@@ -91,14 +92,17 @@ where
             stream
                 .map_err(|e| -> Error { e })  // Coerce the Error value for our stream.
                 .map(move |bytes| {
-                    // NOTE: This is lazy to ensure the hash computation that prepare_bytes
-                    // performs happens on a separate task (and therefore potentially a separate
-                    // CPU core).
+                    // NOTE: This is lazy to allow the hash computation for this chunk's ID to
+                    // happen on a separate core.
                     let fut = lazy({
                         cloned!(blobstore, ctx);
                         move || {
-                            let prepared = prepare_bytes(bytes);
-                            finalize(blobstore, ctx, None, prepared)
+                            let (blob, pointer) = new_blob_and_pointer(bytes);
+
+                            // TODO: Convert this along with other store calls to impl Storable for
+                            // MononokeId.
+                            blobstore.put(ctx, blob.id().blobstore_key(), blob.into())
+                                .map(move |_| pointer)
                         }
                     });
 

@@ -124,7 +124,7 @@ fn main() -> Result<(), Error> {
         .and_then({
             cloned!(blob, ctx);
             move |res| {
-                let key = FetchKey::Canonical(res.content_id());
+                let key = FetchKey::Canonical(res.content_id);
                 eprintln!("Fetch start? {:?}", key);
 
                 filestore::fetch(&blob, ctx, &key)

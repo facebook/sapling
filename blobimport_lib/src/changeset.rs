@@ -224,10 +224,10 @@ fn upload_entry(
                     );
 
                     lfs_upload(ctx.clone(), blobrepo.clone(), &lfs_helper, &lfs_content)
-                        .and_then(move |chunk| {
+                        .and_then(move |meta| {
                             let cbmeta = ContentBlobMeta {
-                                id: chunk.content_id(),
-                                size: chunk.size(),
+                                id: meta.content_id,
+                                size: meta.total_size,
                                 copy_from: lfs_content.copy_from(),
                             };
 

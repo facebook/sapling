@@ -4,13 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::{canonical, request};
+use super::{canonical, chunk, request};
 use crate as filestore;
-use crate::{
-    errors,
-    fetch::{Depth, FetchError},
-    FetchKey, FilestoreConfig, StoreRequest,
-};
+use crate::{errors, FetchKey, FilestoreConfig, StoreRequest};
 
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use assert_matches::assert_matches;
@@ -341,7 +337,7 @@ fn filestore_chunk_not_found() -> Result<()> {
     let content_id = canonical(data);
 
     let part = &b"foo"[..];
-    let part_id = canonical(part);
+    let part_id = chunk(part);
 
     rt.block_on(filestore::store(
         &blob,
@@ -361,10 +357,7 @@ fn filestore_chunk_not_found() -> Result<()> {
     );
 
     println!("res = {:#?}", res);
-    assert_matches!(
-        res.unwrap_err().downcast::<FetchError>(),
-        Ok(FetchError::NotFound(_, Depth(1)))
-    );
+    assert!(res.is_err());
     Ok(())
 }
 
