@@ -5,6 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use blobstore::Blobstore;
+use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
+use cachelib;
 use clap::{App, Arg};
 use cloned::cloned;
 use context::CoreContext;
@@ -12,17 +14,62 @@ use failure::Error;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{Future, Stream};
 use futures_ext::FutureExt;
-use futures_stats::Timed;
+use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
 use memblob;
+use mononoke_types::ContentMetadata;
 use prefixblob::PrefixBlobstore;
 use std::convert::TryInto;
+use std::fmt::Debug;
 use std::io::BufReader;
 use std::sync::Arc;
 use tokio::{codec, fs::File};
 
+const NAME: &str = "benchmark_filestore";
+
+fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> Result<(), ()> {
+    match res {
+        Ok(_) => {
+            let bytes_per_ns = (len as f64) / (stats.completion_time.as_nanos() as f64);
+            let mbytes_per_s = bytes_per_ns * (10_u128.pow(9) as f64) / (2_u128.pow(20) as f64);
+            let gb_per_s = mbytes_per_s * 8_f64 / 1024_f64;
+            eprintln!(
+                "Success: {:.2} MB/s ({:.2} Gb/s) ({:?})",
+                mbytes_per_s, gb_per_s, stats
+            );
+        }
+        Err(e) => {
+            eprintln!("Failure: {:?}", e);
+        }
+    };
+
+    Ok(())
+}
+
+fn read<B: Blobstore + Clone>(
+    blob: B,
+    ctx: CoreContext,
+    content_metadata: ContentMetadata,
+) -> impl Future<Item = ContentMetadata, Error = Error> {
+    let ContentMetadata {
+        content_id,
+        total_size,
+        ..
+    } = content_metadata.clone();
+
+    let key = FetchKey::Canonical(content_id);
+    eprintln!("Fetch start: {:?} ({:?} B)", key, total_size);
+
+    filestore::fetch(&blob, ctx, &key)
+        .map(|maybe_stream| maybe_stream.unwrap())
+        .flatten_stream()
+        .for_each(|_| Ok(()))
+        .timed(move |stats, res| log_perf(stats, res, total_size))
+        .map(move |_| content_metadata)
+}
+
 fn main() -> Result<(), Error> {
-    let app = App::new("benchmark filestore")
+    let app = App::new(NAME)
         .arg(
             Arg::with_name("input-capacity")
                 .long("input-capacity")
@@ -47,6 +94,13 @@ fn main() -> Result<(), Error> {
         .arg(
             Arg::with_name("manifold-bucket")
                 .long("manifold-bucket")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(Arg::with_name("memcache").long("memcache").required(false))
+        .arg(
+            Arg::with_name("cachelib-size")
+                .long("cachelib-size")
                 .takes_value(true)
                 .required(false),
         )
@@ -81,10 +135,35 @@ fn main() -> Result<(), Error> {
     let blob: Arc<dyn Blobstore> = match matches.value_of("manifold-bucket") {
         Some(bucket) => {
             let manifold = ThriftManifoldBlob::new(bucket).map_err(|e| -> Error { e.into() })?;
-            let blobstore = PrefixBlobstore::new(manifold, "flat/benchmark_filstore.");
+            let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
             Arc::new(blobstore)
         }
         None => Arc::new(memblob::LazyMemblob::new()),
+    };
+
+    let blob: Arc<dyn Blobstore> = if matches.is_present("memcache") {
+        Arc::new(new_memcache_blobstore_no_lease(blob, NAME, "")?)
+    } else {
+        blob
+    };
+
+    let blob: Arc<dyn Blobstore> = match matches.value_of("cachelib-size") {
+        Some(size) => {
+            let cache_size_bytes = size.parse().map_err(Error::from)?;
+            cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size_bytes))?;
+
+            let presence_pool =
+                cachelib::get_or_create_pool("presence", cachelib::get_available_space()? / 20)?;
+            let blob_pool =
+                cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
+
+            Arc::new(new_cachelib_blobstore_no_lease(
+                blob,
+                Arc::new(blob_pool),
+                Arc::new(presence_pool),
+            ))
+        }
+        None => blob,
     };
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
@@ -99,7 +178,7 @@ fn main() -> Result<(), Error> {
             move |(file, metadata)| {
                 let stdout = BufReader::with_capacity(input_capacity, file);
                 let len: u64 = metadata.len().try_into().unwrap();
-                eprintln!("Starting... File size is: {:?} B", len);
+                eprintln!("Write start: {:?} B", len);
 
                 let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
                     .map(|bytes_mut| bytes_mut.freeze())
@@ -107,35 +186,17 @@ fn main() -> Result<(), Error> {
 
                 let req = StoreRequest::new(len);
 
-                filestore::store(&blob, &config, ctx, &req, data).timed(move |stats, x| {
-                    let bytes_per_ns = (len as f64) / (stats.completion_time.as_nanos() as f64);
-                    let mbytes_per_s =
-                        bytes_per_ns * (10_u128.pow(9) as f64) / (2_u128.pow(20) as f64);
-                    let gb_per_s = mbytes_per_s * 8_f64 / 1024_f64;
-                    eprintln!(
-                        "Done writing: {:.2} MB/s ({:.2} Gb/s) ({:?})",
-                        mbytes_per_s, gb_per_s, stats
-                    );
-                    eprintln!("hello {:?}", x);
-                    Ok(())
-                })
+                filestore::store(&blob, &config, ctx, &req, data)
+                    .timed(move |stats, res| log_perf(stats, res, len))
             }
         })
         .and_then({
             cloned!(blob, ctx);
-            move |res| {
-                let key = FetchKey::Canonical(res.content_id);
-                eprintln!("Fetch start? {:?}", key);
-
-                filestore::fetch(&blob, ctx, &key)
-                    .map(|maybe_stream| maybe_stream.unwrap())
-                    .flatten_stream()
-                    .for_each(|_| Ok(()))
-                    .timed(|stats, _| {
-                        eprintln!("Done reading: {:?}", stats);
-                        Ok(())
-                    })
-            }
+            move |res| read(blob, ctx, res)
+        })
+        .and_then({
+            cloned!(blob, ctx);
+            move |res| read(blob, ctx, res)
         });
 
     tokio::run(
