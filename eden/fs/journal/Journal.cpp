@@ -37,16 +37,13 @@ void Journal::recordReplaced(
 }
 
 void Journal::recordHashUpdate(Hash toHash) {
-  HashUpdateJournalDelta delta;
-  delta.toHash = toHash;
-  addDelta(std::move(delta));
+  addDelta(HashUpdateJournalDelta{}, toHash);
 }
 
 void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
   HashUpdateJournalDelta delta;
   delta.fromHash = fromHash;
-  delta.toHash = toHash;
-  addDelta(std::move(delta));
+  addDelta(std::move(delta), toHash);
 }
 
 void Journal::recordUncleanPaths(
@@ -55,9 +52,8 @@ void Journal::recordUncleanPaths(
     std::unordered_set<RelativePath>&& uncleanPaths) {
   HashUpdateJournalDelta delta;
   delta.fromHash = fromHash;
-  delta.toHash = toHash;
   delta.uncleanPaths = std::move(uncleanPaths);
-  addDelta(std::move(delta));
+  addDelta(std::move(delta), toHash);
 }
 
 JournalDeltaPtr Journal::DeltaState::frontPtr() noexcept {
@@ -196,18 +192,17 @@ void Journal::addDelta(FileChangeJournalDelta&& delta) {
   notifySubscribers();
 }
 
-void Journal::addDelta(HashUpdateJournalDelta&& delta) {
+void Journal::addDelta(HashUpdateJournalDelta&& delta, const Hash& newHash) {
   {
     auto deltaState = deltaState_.wlock();
 
     // If the hashes were not set to anything, default to copying
     // the value from the prior journal entry
     if (delta.fromHash == kZeroHash) {
-      delta.fromHash = deltaState->hashUpdateDeltas.empty()
-          ? kZeroHash
-          : deltaState->hashUpdateDeltas.back().toHash;
+      delta.fromHash = deltaState->currentHash;
     }
     addDeltaWithoutNotifying(std::move(delta), *deltaState);
+    deltaState->currentHash = newHash;
   }
   notifySubscribers();
 }
@@ -219,15 +214,14 @@ std::optional<JournalDeltaInfo> Journal::getLatest() const {
   } else {
     if (deltaState->isFileChangeInBack()) {
       const FileChangeJournalDelta& back = deltaState->fileChangeDeltas.back();
-      auto currentHash = deltaState->hashUpdateDeltas.empty()
-          ? kZeroHash
-          : deltaState->hashUpdateDeltas.back().toHash;
-      return JournalDeltaInfo{
-          currentHash, currentHash, back.sequenceID, back.time};
+      return JournalDeltaInfo{deltaState->currentHash,
+                              deltaState->currentHash,
+                              back.sequenceID,
+                              back.time};
     } else {
       const HashUpdateJournalDelta& back = deltaState->hashUpdateDeltas.back();
       return JournalDeltaInfo{
-          back.fromHash, back.toHash, back.sequenceID, back.time};
+          back.fromHash, deltaState->currentHash, back.sequenceID, back.time};
     }
   }
 }
@@ -326,9 +320,7 @@ void Journal::flush() {
   {
     auto deltaState = deltaState_.wlock();
     ++deltaState->nextSequence;
-    auto lastHash = deltaState->hashUpdateDeltas.empty()
-        ? kZeroHash
-        : deltaState->hashUpdateDeltas.back().toHash;
+    auto lastHash = deltaState->currentHash;
     deltaState->fileChangeDeltas.clear();
     deltaState->hashUpdateDeltas.clear();
     deltaState->stats = std::nullopt;
@@ -341,7 +333,6 @@ void Journal::flush() {
      * flush operation.
      */
     delta.fromHash = lastHash;
-    delta.toHash = lastHash;
     addDeltaWithoutNotifying(std::move(delta), *deltaState);
   }
   notifySubscribers();
@@ -373,11 +364,8 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            auto hash = deltaState->hashUpdateDeltas.empty()
-                ? kZeroHash
-                : deltaState->hashUpdateDeltas.back().toHash;
-            result->toHash = hash;
-            result->fromHash = hash;
+            result->toHash = deltaState->currentHash;
+            result->fromHash = deltaState->currentHash;
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
@@ -407,9 +395,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            result->toHash = deltaState->hashUpdateDeltas.empty()
-                ? kZeroHash
-                : deltaState->hashUpdateDeltas.back().toHash;
+            result->toHash = deltaState->currentHash;
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
@@ -447,9 +433,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     long mountGeneration) const {
   auto result = std::vector<DebugJournalDelta>();
   auto deltaState = deltaState_.rlock();
-  Hash currentHash = deltaState->hashUpdateDeltas.empty()
-      ? kZeroHash
-      : deltaState->hashUpdateDeltas.back().toHash;
+  Hash currentHash = deltaState->currentHash;
   forEachDelta(
       *deltaState,
       from,
@@ -493,7 +477,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         JournalPosition toPosition;
         toPosition.set_mountGeneration(mountGeneration);
         toPosition.set_sequenceNumber(current.sequenceID);
-        toPosition.set_snapshotHash(thriftHash(current.toHash));
+        toPosition.set_snapshotHash(thriftHash(currentHash));
         delta.set_toPosition(toPosition);
         currentHash = current.fromHash;
 

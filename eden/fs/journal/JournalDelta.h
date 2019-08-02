@@ -130,7 +130,6 @@ class HashUpdateJournalDelta : public JournalDelta {
    * This will often be the same unless we perform a checkout or make
    * a new snapshot from the snapshotable files in the overlay. */
   Hash fromHash;
-  Hash toHash;
 
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */

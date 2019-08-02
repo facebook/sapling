@@ -170,7 +170,7 @@ class Journal {
    * applied.
    */
   void addDelta(FileChangeJournalDelta&& delta);
-  void addDelta(HashUpdateJournalDelta&& delta);
+  void addDelta(HashUpdateJournalDelta&& delta, const Hash& newHash);
 
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
@@ -182,6 +182,7 @@ class Journal {
      * of the appropriate deque. */
     std::deque<FileChangeJournalDelta> fileChangeDeltas;
     std::deque<HashUpdateJournalDelta> hashUpdateDeltas;
+    Hash currentHash = kZeroHash;
     /** The stats about this Journal up to the latest delta */
     std::optional<JournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
