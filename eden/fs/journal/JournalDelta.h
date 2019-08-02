@@ -7,7 +7,9 @@
 #pragma once
 
 #include <chrono>
+#include <type_traits>
 #include <unordered_set>
+#include <variant>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -52,41 +54,46 @@ class JournalDelta {
  public:
   using SequenceNumber = uint64_t;
 
+  /** The ID of this Delta in the Journal */
+  JournalDelta::SequenceNumber sequenceID;
+  /** The time at which the change was recorded. */
+  std::chrono::steady_clock::time_point time;
+};
+
+/** A delta that stores information about changed files */
+class FileChangeJournalDelta : public JournalDelta {
+ public:
   enum Created { CREATED };
   enum Removed { REMOVED };
   enum Changed { CHANGED };
   enum Renamed { RENAMED };
   enum Replaced { REPLACED };
-  JournalDelta() = default;
-  JournalDelta(JournalDelta&&) = default;
-  JournalDelta& operator=(JournalDelta&&) = default;
-  JournalDelta(const JournalDelta&) = delete;
-  JournalDelta& operator=(const JournalDelta&) = delete;
-  JournalDelta(RelativePathPiece fileName, Created);
-  JournalDelta(RelativePathPiece fileName, Removed);
-  JournalDelta(RelativePathPiece fileName, Changed);
+
+  FileChangeJournalDelta() = default;
+  FileChangeJournalDelta(FileChangeJournalDelta&&) = default;
+  FileChangeJournalDelta& operator=(FileChangeJournalDelta&&) = default;
+  FileChangeJournalDelta(const FileChangeJournalDelta&) = delete;
+  FileChangeJournalDelta& operator=(const FileChangeJournalDelta&) = delete;
+  FileChangeJournalDelta(RelativePathPiece fileName, Created);
+  FileChangeJournalDelta(RelativePathPiece fileName, Removed);
+  FileChangeJournalDelta(RelativePathPiece fileName, Changed);
 
   /**
    * "Renamed" means that that newName was created as a result of the mv(1).
    */
-  JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Renamed);
+  FileChangeJournalDelta(
+      RelativePathPiece oldName,
+      RelativePathPiece newName,
+      Renamed);
 
   /**
    * "Replaced" means that that newName was overwritten by oldName as a result
    * of the mv(1).
    */
-  JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Replaced);
-
-  /** The ID of this Delta in the Journal */
-  SequenceNumber sequenceID;
-  /** The time at which the change was recorded. */
-  std::chrono::steady_clock::time_point time;
-
-  /** The snapshot hash that we started and ended up on.
-   * This will often be the same unless we perform a checkout or make
-   * a new snapshot from the snapshotable files in the overlay. */
-  Hash fromHash;
-  Hash toHash;
+  FileChangeJournalDelta(
+      RelativePathPiece oldName,
+      RelativePathPiece newName,
+      Replaced);
 
   /** Which of these paths actually contain information */
   RelativePath path1;
@@ -99,19 +106,64 @@ class JournalDelta {
   std::unordered_map<RelativePath, PathChangeInfo> getChangedFilesInOverlay()
       const;
 
+  /** Checks whether this delta is a modification */
+  bool isModification() const;
+
+  /** Checks whether this delta and other are the same disregarding time and
+   * sequenceID [whether they do the same action] */
+  bool isSameAction(const FileChangeJournalDelta& other) const;
+
+  /** Get memory used (in bytes) by this Delta */
+  size_t estimateMemoryUsage() const;
+};
+
+/** A delta that stores information about changing commits */
+class HashUpdateJournalDelta : public JournalDelta {
+ public:
+  HashUpdateJournalDelta() = default;
+  HashUpdateJournalDelta(HashUpdateJournalDelta&&) = default;
+  HashUpdateJournalDelta& operator=(HashUpdateJournalDelta&&) = default;
+  HashUpdateJournalDelta(const HashUpdateJournalDelta&) = delete;
+  HashUpdateJournalDelta& operator=(const HashUpdateJournalDelta&) = delete;
+
+  /** The snapshot hash that we started and ended up on.
+   * This will often be the same unless we perform a checkout or make
+   * a new snapshot from the snapshotable files in the overlay. */
+  Hash fromHash;
+  Hash toHash;
+
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */
   std::unordered_set<RelativePath> uncleanPaths;
 
   /** Get memory used (in bytes) by this Delta */
   size_t estimateMemoryUsage() const;
+};
 
-  /** Checks whether this delta is a modification */
-  bool isModification() const;
+class JournalDeltaPtr {
+ public:
+  /* implicit */ JournalDeltaPtr(std::nullptr_t);
 
-  /** Checks whether this delta and other are the same disregarding time and
-   * sequenceID [whether they do the same action] */
-  bool isSameAction(const JournalDelta& other) const;
+  /* implicit */ JournalDeltaPtr(FileChangeJournalDelta* p);
+
+  /* implicit */ JournalDeltaPtr(HashUpdateJournalDelta* p);
+
+  size_t estimateMemoryUsage() const;
+
+  explicit operator bool() const noexcept {
+    return !std::holds_alternative<std::monostate>(data_);
+  }
+
+  /** If this JournalDeltaPtr points to a FileChangeJournalDelta then returns
+   * the raw pointer, if it does not point to a FileChangeJournalDelta then
+   * return nullptr. */
+  FileChangeJournalDelta* getAsFileChangeJournalDelta();
+
+  const JournalDelta* operator->() const noexcept;
+
+ private:
+  std::variant<std::monostate, FileChangeJournalDelta*, HashUpdateJournalDelta*>
+      data_;
 };
 
 struct JournalDeltaRange {

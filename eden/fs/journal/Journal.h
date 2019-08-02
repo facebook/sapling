@@ -169,7 +169,8 @@ class Journal {
    * The delta will have a new sequence number and timestamp
    * applied.
    */
-  void addDelta(JournalDelta&& delta);
+  void addDelta(FileChangeJournalDelta&& delta);
+  void addDelta(HashUpdateJournalDelta&& delta);
 
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
@@ -177,13 +178,58 @@ class Journal {
     /** The sequence number that we'll use for the next entry
      * that we link into the chain */
     SequenceNumber nextSequence{1};
-    /** All recorded entries. Newer (more recent) deltas are added using
-     * push_back. */
-    std::deque<JournalDelta> deltas;
+    /** All recorded entries. Newer (more recent) deltas are added to the back
+     * of the appropriate deque. */
+    std::deque<FileChangeJournalDelta> fileChangeDeltas;
+    std::deque<HashUpdateJournalDelta> hashUpdateDeltas;
     /** The stats about this Journal up to the latest delta */
     std::optional<JournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
     size_t deltaMemoryUsage = 0;
+
+    JournalDeltaPtr frontPtr() noexcept;
+    void popFront();
+    JournalDeltaPtr backPtr() noexcept;
+
+    bool empty() const {
+      return fileChangeDeltas.empty() && hashUpdateDeltas.empty();
+    }
+
+    bool isFileChangeInFront() const {
+      bool isFileChangeEmpty = fileChangeDeltas.empty();
+      bool isHashUpdateEmpty = hashUpdateDeltas.empty();
+      if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+        return fileChangeDeltas.front().sequenceID <
+            hashUpdateDeltas.front().sequenceID;
+      }
+      return !isFileChangeEmpty && isHashUpdateEmpty;
+    }
+
+    bool isFileChangeInBack() const {
+      bool isFileChangeEmpty = fileChangeDeltas.empty();
+      bool isHashUpdateEmpty = hashUpdateDeltas.empty();
+      if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+        return fileChangeDeltas.back().sequenceID >
+            hashUpdateDeltas.back().sequenceID;
+      }
+      return !isFileChangeEmpty && isHashUpdateEmpty;
+    }
+
+    void appendDelta(FileChangeJournalDelta&& delta) {
+      fileChangeDeltas.emplace_back(std::move(delta));
+    }
+
+    void appendDelta(HashUpdateJournalDelta&& delta) {
+      hashUpdateDeltas.emplace_back(std::move(delta));
+    }
+
+    JournalDelta::SequenceNumber getFrontSequenceID() const {
+      if (isFileChangeInFront()) {
+        return fileChangeDeltas.front().sequenceID;
+      } else {
+        return hashUpdateDeltas.front().sequenceID;
+      }
+    }
   };
   folly::Synchronized<DeltaState> deltaState_;
 
@@ -192,6 +238,12 @@ class Journal {
    */
   void truncateIfNecessary(DeltaState& deltaState);
 
+  /** Tries to compact a new Journal Delta with an old one if possible,
+   * returning true if it did compact it and false if not
+   */
+  bool compact(FileChangeJournalDelta& delta, DeltaState& deltaState);
+  bool compact(HashUpdateJournalDelta& delta, DeltaState& deltaState);
+
   struct SubscriberState {
     SubscriberId nextSubscriberId{1};
     std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
@@ -199,9 +251,11 @@ class Journal {
 
   /** Add a delta to the journal without notifying subscribers.
    * The delta will have a new sequence number and timestamp
-   * applied. A lock to the deltaState must be held and passed to this function.
+   * applied. A lock to the deltaState must be held and passed to this
+   * function.
    */
-  void addDeltaWithoutNotifying(JournalDelta&& delta, DeltaState& deltaState);
+  template <typename T>
+  void addDeltaWithoutNotifying(T&& delta, DeltaState& deltaState);
 
   /** Notify subscribers that a change has happened, should be called with no
    * Journal locks held.
@@ -214,12 +268,13 @@ class Journal {
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
    * deltaActor on each entry encountered.
    * */
-  template <class Func>
+  template <class FileChangeFunc, class HashUpdateFunc>
   void forEachDelta(
-      const std::deque<JournalDelta>& deltas,
-      SequenceNumber from,
+      const DeltaState& deltaState,
+      JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
-      Func&& deltaCallback) const;
+      FileChangeFunc&& fileChangeDeltaCallback,
+      HashUpdateFunc&& hashUpdateDeltaCallback) const;
 
   folly::Synchronized<SubscriberState> subscriberState_;
 
