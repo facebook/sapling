@@ -47,6 +47,8 @@ import traceback
 import warnings
 import zlib
 
+from edenscmnative import bindings
+
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
 
 
@@ -4486,3 +4488,65 @@ def log(service, *msg, **opts):
         blackbox.log({"legacy_log": {"service": service, "msg": msg, "opts": opts}})
     except UnicodeDecodeError:
         pass
+
+
+def describe(describefunc, _describecall=bindings.stackdesc.describecall):
+    """Attach stackdesc information to a function
+
+    describefunc can take arguments accepted by the function being decorated.
+    describefunc returns a string.
+
+    Example:
+
+    ```
+    @describe(lambda a, b: "calculating %s + %s" % (a, b))
+    def plusint(a, b):
+        return toint(a) + toint(b)
+
+
+    @describe(lambda x: "converting %s to int" % x)
+    def toint(x):
+        # Calling `renderstack()` here returns:
+        # ["calculating ...", "converting ..."]
+        return int(x)
+
+    plusint(1.1, 2.2)
+    ```
+    """
+    descargnames = describefunc.func_code.co_varnames
+
+    def makedescribefunc(body):
+        bodyargnames = body.func_code.co_varnames
+
+        def wrapper(*args, **kwargs):
+
+            # The "describefunc" used by "describecall" takes no argument.
+            # But this function's "describefunc" can take arguments. Wrap it.
+            def _describefunc():
+                descargs = []
+                for n in descargnames:
+                    if n in kwargs:
+                        descargs.append(kwargs[n])
+                    else:
+                        # a positional argument in args
+                        try:
+                            descargs.append(args[bodyargnames.index(n)])
+                        except ValueError:
+                            # break, rely on default arguments of describefunc
+                            break
+
+                return describefunc(*descargs)
+
+            # The "body" used by "describecall_py" takes no argument.
+            # But this function's "body" can take arguments. Wrap it.
+            def _body():
+                return body(*args, **kwargs)
+
+            return _describecall(_describefunc, _body)
+
+        return wrapper
+
+    return makedescribefunc
+
+
+renderstack = bindings.stackdesc.renderstack
