@@ -60,9 +60,9 @@ void Journal::recordUncleanPaths(
 
 void Journal::truncateIfNecessary(DeltaState& deltaState) {
   while (!deltaState.deltas.empty() &&
-         deltaState.stats->memoryUsage > deltaState.memoryLimit) {
+         estimateMemoryUsage(deltaState) > deltaState.memoryLimit) {
     deltaState.stats->entryCount--;
-    deltaState.stats->memoryUsage -=
+    deltaState.deltaMemoryUsage -=
         deltaState.deltas.front().estimateMemoryUsage();
     deltaState.deltas.pop_front();
   }
@@ -102,18 +102,18 @@ void Journal::addDeltaWithoutNotifying(
   if (!deltaState.deltas.empty() && delta.isModification() &&
       delta.isSameAction(deltaState.deltas.back())) {
     deltaState.stats->latestTimestamp = delta.time;
-    deltaState.stats->memoryUsage -=
+    deltaState.deltaMemoryUsage -=
         deltaState.deltas.back().estimateMemoryUsage();
-    deltaState.stats->memoryUsage += delta.estimateMemoryUsage();
+    deltaState.deltaMemoryUsage += delta.estimateMemoryUsage();
     deltaState.deltas.back() = std::move(delta);
   } else {
     if (deltaState.stats) {
       ++(deltaState.stats->entryCount);
-      deltaState.stats->memoryUsage += delta.estimateMemoryUsage();
+      deltaState.deltaMemoryUsage += delta.estimateMemoryUsage();
     } else {
       deltaState.stats = JournalStats();
       deltaState.stats->entryCount = 1;
-      deltaState.stats->memoryUsage = delta.estimateMemoryUsage();
+      deltaState.deltaMemoryUsage = delta.estimateMemoryUsage();
     }
     deltaState.stats->latestTimestamp = delta.time;
     deltaState.deltas.emplace_back(std::move(delta));
@@ -210,6 +210,25 @@ void Journal::setMemoryLimit(size_t limit) {
 size_t Journal::getMemoryLimit() const {
   auto deltaState = deltaState_.rlock();
   return deltaState->memoryLimit;
+}
+
+size_t Journal::estimateMemoryUsage() const {
+  return estimateMemoryUsage(*deltaState_.rlock());
+}
+
+size_t Journal::estimateMemoryUsage(const DeltaState& deltaState) const {
+  size_t memoryUsage = folly::goodMallocSize(sizeof(Journal));
+  // Account for overhead of deque which has a maximum buffer size of 512.
+  constexpr size_t numElementsInDequeBuffer = 512 / sizeof(JournalDelta);
+  constexpr size_t maxBufSize = numElementsInDequeBuffer * sizeof(JournalDelta);
+  size_t numBufs = (deltaState.deltas.size() + numElementsInDequeBuffer - 1) /
+      numElementsInDequeBuffer;
+  size_t padding = folly::goodMallocSize(maxBufSize) - maxBufSize;
+  memoryUsage += padding * numBufs;
+  if (deltaState.stats) {
+    memoryUsage += deltaState.deltaMemoryUsage;
+  }
+  return memoryUsage;
 }
 
 void Journal::flush() {

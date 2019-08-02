@@ -272,7 +272,7 @@ TEST(Journal, files_accumulated_stats) {
 TEST(Journal, memory_usage) {
   Journal journal(std::make_shared<EdenStats>());
   auto stats = journal.getStats();
-  uint64_t prevMem = stats ? stats->memoryUsage : 0;
+  uint64_t prevMem = journal.estimateMemoryUsage();
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
       journal.recordCreated("test.txt"_relpath);
@@ -280,7 +280,7 @@ TEST(Journal, memory_usage) {
       journal.recordRemoved("test.txt"_relpath);
     }
     stats = journal.getStats();
-    uint64_t newMem = stats ? stats->memoryUsage : 0;
+    uint64_t newMem = journal.estimateMemoryUsage();
     ASSERT_GT(newMem, prevMem);
     prevMem = newMem;
   }

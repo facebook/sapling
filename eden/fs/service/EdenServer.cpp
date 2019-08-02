@@ -764,10 +764,8 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         return edenMount->getInodeMap()->getUnloadedInodeCount();
       });
   counters->registerCallback(
-      edenMount->getCounterName(CounterName::JOURNAL_MEMORY), [edenMount] {
-        auto stats = edenMount->getJournal().getStats();
-        return stats ? stats->memoryUsage : 0;
-      });
+      edenMount->getCounterName(CounterName::JOURNAL_MEMORY),
+      [edenMount] { return edenMount->getJournal().estimateMemoryUsage(); });
   counters->registerCallback(
       edenMount->getCounterName(CounterName::JOURNAL_ENTRIES), [edenMount] {
         auto stats = edenMount->getJournal().getStats();

@@ -48,7 +48,7 @@ JournalDelta::JournalDelta(
       isPath2Valid{true} {}
 
 size_t JournalDelta::estimateMemoryUsage() const {
-  size_t mem = folly::goodMallocSize(sizeof(JournalDelta));
+  size_t mem = sizeof(JournalDelta);
   /* NOTE: The following code assumes an unordered_set is separated into an
    * array of buckets, each one being a chain of nodes containing a next
    * pointer, a key-value pair, and a stored hash

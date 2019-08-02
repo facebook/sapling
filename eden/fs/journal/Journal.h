@@ -24,7 +24,6 @@ namespace eden {
 /** Contains statistics about the current state of the journal */
 struct JournalStats {
   size_t entryCount = 0;
-  size_t memoryUsage = 0;
   std::chrono::steady_clock::time_point earliestTimestamp;
   std::chrono::steady_clock::time_point latestTimestamp;
   size_t maxFilesAccumulated = 0;
@@ -163,6 +162,8 @@ class Journal {
 
   size_t getMemoryLimit() const;
 
+  size_t estimateMemoryUsage() const;
+
  private:
   /** Add a delta to the journal and notify subscribers.
    * The delta will have a new sequence number and timestamp
@@ -182,6 +183,7 @@ class Journal {
     /** The stats about this Journal up to the latest delta */
     std::optional<JournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
+    size_t deltaMemoryUsage = 0;
   };
   folly::Synchronized<DeltaState> deltaState_;
 
@@ -205,6 +207,8 @@ class Journal {
    * Journal locks held.
    */
   void notifySubscribers() const;
+
+  size_t estimateMemoryUsage(const DeltaState& deltaState) const;
 
   /** Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
