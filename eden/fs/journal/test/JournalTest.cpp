@@ -126,6 +126,58 @@ TEST(Journal, accumulateRangeRemoveCreateUpdate) {
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }
 
+void checkHashMatches(const Hash& from, const Hash& to, Journal& journal) {
+  auto latest = journal.getLatest();
+  ASSERT_TRUE(latest);
+  EXPECT_EQ(from, latest->fromHash);
+  EXPECT_EQ(to, latest->toHash);
+  auto range = journal.accumulateRange(latest->sequenceID);
+  ASSERT_TRUE(range);
+  EXPECT_EQ(from, range->fromHash);
+  EXPECT_EQ(to, range->toHash);
+  range = journal.accumulateRange();
+  ASSERT_TRUE(range);
+  EXPECT_EQ(kZeroHash, range->fromHash);
+  EXPECT_EQ(to, range->toHash);
+}
+
+TEST(Journal, accumulate_range_with_hash_updates) {
+  Journal journal(std::make_shared<EdenStats>());
+
+  auto hash0 = kZeroHash;
+  auto hash1 = Hash("1111111111111111111111111111111111111111");
+  auto hash2 = Hash("2222222222222222222222222222222222222222");
+  // Empty journals have no range to accumulate over
+  EXPECT_FALSE(journal.getLatest());
+  EXPECT_EQ(nullptr, journal.accumulateRange());
+
+  // Make an initial entry.
+  journal.recordChanged("foo/bar"_relpath);
+  checkHashMatches(hash0, hash0, journal);
+
+  // Update to a new hash using 'to' syntax
+  journal.recordHashUpdate(hash1);
+  checkHashMatches(hash0, hash1, journal);
+
+  journal.recordChanged("foo/bar"_relpath);
+  checkHashMatches(hash1, hash1, journal);
+
+  // Update to a new hash using 'from/to' syntax
+  journal.recordHashUpdate(hash1, hash2);
+  checkHashMatches(hash1, hash2, journal);
+
+  journal.recordChanged("foo/bar"_relpath);
+  checkHashMatches(hash2, hash2, journal);
+
+  auto uncleanPaths = std::unordered_set<RelativePath>();
+  uncleanPaths.insert(RelativePath("foo/bar"));
+  journal.recordUncleanPaths(hash2, hash1, std::move(uncleanPaths));
+  checkHashMatches(hash2, hash1, journal);
+
+  journal.recordChanged("foo/bar"_relpath);
+  checkHashMatches(hash1, hash1, journal);
+}
+
 TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
   Journal journal(std::make_shared<EdenStats>());
 
@@ -164,6 +216,44 @@ TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
 
   debugDeltas = journal.getDebugRawJournalInfo(0, 0, mountGen);
   ASSERT_EQ(0, debugDeltas.size());
+}
+
+TEST(Journal, debugRawJournalInfoHashUpdates) {
+  Journal journal(std::make_shared<EdenStats>());
+
+  auto hash0 = kZeroHash;
+  auto hash1 = Hash("1111111111111111111111111111111111111111");
+  auto hash2 = Hash("2222222222222222222222222222222222222222");
+
+  // Go from hash0 to hash1
+  journal.recordHashUpdate(hash0, hash1);
+  // Create test.txt
+  journal.recordCreated("test.txt"_relpath);
+  // Go from hash1 to hash2
+  journal.recordHashUpdate(hash1, hash2);
+
+  long mountGen = 333;
+
+  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen);
+  ASSERT_EQ(3, debugDeltas.size());
+
+  // Debug Raw Journal Info returns info from newest->latest
+  EXPECT_TRUE(debugDeltas[0].changedPaths.empty());
+  EXPECT_EQ(debugDeltas[0].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[0].fromPosition.sequenceNumber, 3);
+  EXPECT_EQ(debugDeltas[0].fromPosition.snapshotHash, thriftHash(hash1));
+  EXPECT_EQ(debugDeltas[0].toPosition.snapshotHash, thriftHash(hash2));
+  EXPECT_FALSE(debugDeltas[1].changedPaths["test.txt"].existedBefore);
+  EXPECT_TRUE(debugDeltas[1].changedPaths["test.txt"].existedAfter);
+  EXPECT_EQ(debugDeltas[1].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[1].fromPosition.sequenceNumber, 2);
+  EXPECT_EQ(debugDeltas[1].fromPosition.snapshotHash, thriftHash(hash1));
+  EXPECT_EQ(debugDeltas[1].toPosition.snapshotHash, thriftHash(hash1));
+  EXPECT_TRUE(debugDeltas[2].changedPaths.empty());
+  EXPECT_EQ(debugDeltas[2].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[2].fromPosition.sequenceNumber, 1);
+  EXPECT_EQ(debugDeltas[2].fromPosition.snapshotHash, thriftHash(hash0));
+  EXPECT_EQ(debugDeltas[2].toPosition.snapshotHash, thriftHash(hash1));
 }
 
 TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
