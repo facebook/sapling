@@ -53,7 +53,7 @@ def parsecmd(line):
             yield result()
             reset()
             continue
-        for name in opts:
+        for name in [">>", "<<", ">", "<"]:
             if arg.startswith(name):
                 if len(arg) > len(name):
                     opts[name] = arg[len(name) :]
