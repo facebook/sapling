@@ -557,12 +557,22 @@ def safesend(self, str):
         blocksize = 8192
         read = getattr(str, "read", None)
         if read is not None:
+            expectedlen = len(str)
+            totalwritten = 0
             if self.debuglevel > 0:
                 print("sending a read()able")
             data = read(blocksize)
             while data:
+                totalwritten += len(data)
                 self.sock.sendall(data)
                 data = read(blocksize)
+
+            if expectedlen != totalwritten:
+                raise urlerr.urlerror(
+                    "couldn't read {} bytes, only got {}".format(
+                        expectedlen, totalwritten
+                    )
+                )
         else:
             self.sock.sendall(str)
     except socket.error as v:
