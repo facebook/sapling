@@ -195,8 +195,27 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 """
-    body = ""
     code = open(path).read()
+    body = translatebody(code)
+    newpath = "%s-t.py" % path[:-2]
+    with open(newpath, "w") as f:
+        f.write(header + body)
+    if verify:
+        # Run the test. Skip it if it fails.
+        # Store error message in .err.
+        errpath = newpath + ".err"
+        if os.system("python %r &> %s" % (newpath, errpath)) != 0:
+            skipcode = "feature.require('false')  # test not passing\n"
+            with open(newpath, "w") as f:
+                f.write(header + skipcode + body)
+        else:
+            os.unlink(errpath)
+    if black:
+        os.system("black %r > %s" % (newpath, os.devnull))
+
+
+def translatebody(code):
+    body = ""
     # hack: make multi-line command single-line
     code = code.replace("\\\n  > ", "")
     state = {"indent": 0, "nextindent": 0}
@@ -215,21 +234,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
                 line = indent + line
             body += line
         code = rest
-    newpath = "%s-t.py" % path[:-2]
-    with open(newpath, "w") as f:
-        f.write(header + body)
-    if verify:
-        # Run the test. Skip it if it fails.
-        # Store error message in .err.
-        errpath = newpath + ".err"
-        if os.system("python %r &> %s" % (newpath, errpath)) != 0:
-            skipcode = "feature.require('false')  # test not passing\n"
-            with open(newpath, "w") as f:
-                f.write(header + skipcode + body)
-        else:
-            os.unlink(errpath)
-    if black:
-        os.system("black %r > %s" % (newpath, os.devnull))
+    return body
 
 
 def _iscreatedbyfb(path):
