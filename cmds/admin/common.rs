@@ -95,16 +95,10 @@ pub fn get_file_nodes(
     ctx: CoreContext,
     logger: Logger,
     repo: &BlobRepo,
-    rev: &str,
+    cs_id: HgChangesetId,
     paths: Vec<MPath>,
 ) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
-    let resolved_cs_id = resolve_hg_rev(ctx.clone(), repo, rev);
-
-    resolved_cs_id
-        .and_then({
-            cloned!(ctx, repo);
-            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
-        })
+    repo.get_changeset_by_changesetid(ctx.clone(), cs_id)
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(ctx, repo);

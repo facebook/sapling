@@ -7,8 +7,9 @@
 use clap::ArgMatches;
 use cmdlib::args;
 
-use crate::common::get_file_nodes;
+use crate::common::{get_file_nodes, resolve_hg_rev};
 use censoredblob::SqlCensoredContentStore;
+use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
 use futures::future::{join_all, Future};
@@ -52,10 +53,16 @@ pub fn subcommand_blacklist(
     let blobrepo = args::open_repo(&logger, &matches);
 
     blobrepo
+        .and_then({
+            cloned!(ctx);
+            move |blobrepo| {
+                resolve_hg_rev(ctx.clone(), &blobrepo, &rev).map(|cs_id| (blobrepo, cs_id))
+            }
+        })
         .join(censored_blobs)
         .and_then({
-            move |(blobrepo, censored_blobs)| {
-                get_file_nodes(ctx.clone(), logger.clone(), &blobrepo, &rev, paths).and_then({
+            move |((blobrepo, cs_id), censored_blobs)| {
+                get_file_nodes(ctx.clone(), logger.clone(), &blobrepo, cs_id, paths).and_then({
                     move |hg_node_ids| {
                         let content_ids = hg_node_ids.into_iter().map(move |hg_node_id| {
                             blobrepo.get_file_content_id(ctx.clone(), hg_node_id)
