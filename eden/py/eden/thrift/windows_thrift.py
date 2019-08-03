@@ -9,6 +9,10 @@ import ctypes
 import os
 
 from thrift.transport.TSocket import TSocket
+from thrift.transport.TTransport import TTransportException
+
+
+WSAECONNREFUSED = 10061
 
 
 class SOCKADDR_UN(ctypes.Structure):
@@ -42,7 +46,13 @@ class WindowsSocketHandle(object):
     def _checkReturnCode(retcode):
         if retcode == -1:
             errcode = WindowsSocketHandle._ws2_32().WSAGetLastError()
-            raise WindowsSocketException(errcode)
+            if errcode == WSAECONNREFUSED:
+                # This error will be returned when Edenfs is not running
+                raise TTransportException(
+                    type=TTransportException.NOT_OPEN, message="eden not running"
+                )
+            else:
+                raise WindowsSocketException(errcode)
 
     def __init__(self):
         # type: () -> None
