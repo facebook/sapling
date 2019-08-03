@@ -13,7 +13,9 @@
 #include <folly/logging/xlog.h>
 #include <stdexcept>
 
+#ifndef _WIN32
 #include "eden/fs/fuse/RequestData.h"
+#endif
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
@@ -269,9 +271,12 @@ void ObjectStore::updateBlobSizeStats(bool local, bool backing) const {
 }
 
 void ObjectStore::recordBackingStoreImport() const {
+#ifndef _WIN32
+  // TODO(puneetk): Add Windows stats for Backing store import here.
   if (RequestData::isFuseRequest()) {
     RequestData::get().getEdenTopStats().setDidImportFromBackingStore();
   }
+#endif
 }
 
 } // namespace eden
