@@ -35,6 +35,10 @@ Config::
   # Once HG is source of truth, revmap will be outdated. In this case, we should
   # use phase to determine that.
   usefirstpublicancestorinsvninfo = False
+  # When enabled, hgsubversion will use manifest lookup to speed up some ops in
+  # getctxdirs. This is used to speed up hg push when there are directory
+  # changes.
+  getctxdirsfastpath = False
 """
 
 from __future__ import absolute_import
@@ -452,6 +456,7 @@ configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
 configitem("hgsubversion", "useglobalrevindebugcrdump ", default=False)
 configitem("hgsubversion", "useglobalrevinsvninfo ", default=False)
 configitem("hgsubversion", "usefirstpublicancestorinsvninfo ", default=False)
+configitem("hgsubversion", "getctxdirsfastpath ", default=False)
 
 
 @templatekeyword("svnrev")

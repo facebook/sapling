@@ -25,7 +25,7 @@ def _isdir(svn, branchpath, svndir):
         return False
 
 
-def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
+def _getdirchanges(ui, svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     """Compute directories to add or delete when moving from parentctx
     to ctx, assuming only 'changedfiles' files changed, and 'extchanges'
     external references changed (as returned by svnexternals.diff()).
@@ -50,14 +50,20 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
         # other child item still existing.
         yield ""
 
-    def getctxdirs(ctx, keptdirs, extdirs):
+    def getctxdirs(ui, ctx, keptdirs, extdirs):
         dirs = {}
-        for f in ctx.manifest():
-            for d in finddirs(f):
-                if d in dirs:
-                    break
-                if d in keptdirs:
+        if ui.configbool("hgsubversion", "getctxdirsfastpath"):
+            m = ctx.manifest()
+            for d in keptdirs:
+                if m.hasdir(d):
                     dirs[d] = 1
+        else:
+            for f in ctx.manifest():
+                for d in finddirs(f):
+                    if d in dirs:
+                        break
+                    if d in keptdirs:
+                        dirs[d] = 1
         for extdir in extdirs:
             for d in finddirs(extdir, True):
                 dirs[d] = 1
@@ -78,8 +84,8 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
                 changeddirs[d] = 1
     if not changeddirs:
         return added, deleted
-    olddirs = getctxdirs(parentctx, changeddirs, [e[0] for e in extchanges if e[1]])
-    newdirs = getctxdirs(ctx, changeddirs, [e[0] for e in extchanges if e[2]])
+    olddirs = getctxdirs(ui, parentctx, changeddirs, [e[0] for e in extchanges if e[1]])
+    newdirs = getctxdirs(ui, ctx, changeddirs, [e[0] for e in extchanges if e[2]])
 
     for d in newdirs:
         if d not in olddirs and not _isdir(svn, branchpath, d):
@@ -109,7 +115,7 @@ def commit(ui, repo, rev_ctx, original_ctx, meta, base_revision, svn):
         svnexternals.parse(ui, parent), svnexternals.parse(ui, rev_ctx)
     )
     addeddirs, deleteddirs = _getdirchanges(
-        svn, branch_path, parent, rev_ctx, rev_ctx.files(), extchanges
+        ui, svn, branch_path, parent, rev_ctx, rev_ctx.files(), extchanges
     )
     deleteddirs = set(deleteddirs)
 
