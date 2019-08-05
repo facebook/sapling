@@ -57,9 +57,9 @@ fn maybe_schedule_healer_for_storage(
         _ => bail_msg!("Repo doesn't use Multiplexed blobstore"),
     };
 
-    let blobstores = {
+    let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
         let mut blobstores = HashMap::new();
-        for (id, args) in blobstores_args.into_iter() {
+        for (id, args) in blobstores_args {
             match args {
                 BlobConfig::Manifold { bucket, prefix } => {
                     let blobstore = ThriftManifoldBlob::new(bucket)
@@ -138,23 +138,24 @@ fn maybe_schedule_healer_for_storage(
         replication_lag_db_conns.push(conn_builder.build_read_only());
     }
 
-    let heal = blobstores.and_then(move |blobstores| {
-        let repo_healer = Healer::new(
-            logger.clone(),
-            blobstore_sync_queue_limit,
-            rate_limiter,
-            sync_queue,
-            Arc::new(blobstores),
-        );
+    let heal = blobstores.and_then(
+        move |blobstores: HashMap<_, Arc<dyn Blobstore + 'static>>| {
+            let repo_healer = Healer::new(
+                logger.clone(),
+                blobstore_sync_queue_limit,
+                rate_limiter,
+                sync_queue,
+                Arc::new(blobstores),
+            );
 
-        if dry_run {
-            // TODO(luk) use a proper context here and put the logger inside of it
-            let ctx = CoreContext::test_mock();
-            repo_healer.heal(ctx).boxify()
-        } else {
-            schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
-        }
-    });
+            if dry_run {
+                let ctx = CoreContext::new_with_logger(logger);
+                repo_healer.heal(ctx).boxify()
+            } else {
+                schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
+            }
+        },
+    );
     Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
         .and_then(|_| heal)
         .boxify())
@@ -168,8 +169,7 @@ fn schedule_everlasting_healing(
     let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
 
     let fut = loop_fn((), move |()| {
-        // TODO(luk) use a proper context here and put the logger inside of it
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::new_with_logger(logger.clone());
 
         cloned!(logger, replication_lag_db_conns);
         repo_healer.heal(ctx).and_then(move |()| {
@@ -236,7 +236,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
             --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
-            --storage-id=[STORAGE_ID] 'id of storage to be healed'
+            --storage-id=[STORAGE_ID] 'id of storage to be healed, e.g. manifold_xdb_multiplex'
         "#,
         )
 }
