@@ -20,7 +20,7 @@ use std::{
 
 use crate::errors::*;
 use bookmarks::BookmarkName;
-use failure_ext::ResultExt;
+use failure_ext::{format_err, prelude::*};
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, Censoring, CommonConfig, FilestoreParams, HookBypass, HookConfig,
@@ -68,7 +68,7 @@ impl RepoConfigs {
             if dir_path.is_dir() {
                 let (name, config) =
                     RepoConfigs::read_single_repo_config(&dir_path, config_path)
-                        .context(format!("while opening config for {:?} repo", dir_path))?;
+                        .chain_err(format_err!("while opening config for {:?} repo", dir_path))?;
                 repo_configs.insert(name, config);
             }
         }
@@ -208,10 +208,13 @@ impl RepoConfigs {
                 ))
                 .into());
             } else {
-                let content = fs::read(&storage_config_path)
-                    .context(format!("While opening {}", storage_config_path.display()))?;
-                toml::from_slice::<HashMap<String, RawStorageConfig>>(&content)
-                    .context(format!("while reading {}", storage_config_path.display()))?
+                let content = fs::read(&storage_config_path).chain_err(format_err!(
+                    "While opening {}",
+                    storage_config_path.display()
+                ))?;
+                toml::from_slice::<HashMap<String, RawStorageConfig>>(&content).chain_err(
+                    format_err!("while reading {}", storage_config_path.display()),
+                )?
             }
         } else {
             HashMap::new()
@@ -280,7 +283,7 @@ impl RepoConfigs {
                 };
 
                 let contents = fs::read(&path_adjusted)
-                    .context(format!("while reading hook {:?}", path_adjusted))?;
+                    .chain_err(format_err!("while reading hook {:?}", path_adjusted))?;
                 let code = str::from_utf8(&contents)?;
                 let code = code.to_string();
                 HookParams {
