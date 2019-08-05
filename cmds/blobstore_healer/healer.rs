@@ -9,7 +9,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, prelude::*};
+use failure_ext::{err_msg, prelude::*};
 use futures::{
     self,
     future::{join_all, loop_fn, Loop},
@@ -20,7 +20,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
-use slog::{info, Logger};
+use slog::{info, warn, Logger};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -132,7 +132,7 @@ fn heal_blob(
         })
         .collect();
 
-    let missing_blobstores: HashSet<_> = blobstores
+    let mut missing_blobstores: HashSet<BlobstoreId> = blobstores
         .iter()
         .filter_map(|(key, _)| {
             if seen_blobstores.contains(key) {
@@ -160,9 +160,22 @@ fn heal_blob(
         ctx.clone(),
         blobstores.clone(),
         key.clone(),
-        seen_blobstores,
+        seen_blobstores.clone(),
     )
-    .and_then(move |blob| {
+    .and_then(move |(blob, missing_source_blobstores)| {
+        if !missing_source_blobstores.is_empty() {
+            warn!(
+                ctx.logger(),
+                "Source Blobstores {:?} of {:?} returned None even though they \
+                 should contain data",
+                missing_source_blobstores,
+                seen_blobstores
+            );
+            for bid in missing_source_blobstores {
+                missing_blobstores.insert(bid);
+            }
+        }
+
         let heal_blobstores: Vec<_> = missing_blobstores
             .into_iter()
             .map(|bid| {
@@ -198,50 +211,49 @@ fn heal_blob(
 }
 
 /// Fetch a blob by `key` from one of the `seen_blobstores`. This tries them one at at time
-/// sequentially, until either it find the entry or it fails.
-/// TODO: if one of the blobstores returns "not found" (None) rather than an error (or success),
-/// we should add that blobstore to the missing set. (Currently it just fails, which will not
-/// be recoverable.)
+/// sequentially, returning those found missing, or an error
 fn fetch_blob(
     ctx: CoreContext,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     key: String,
     seen_blobstores: HashSet<BlobstoreId>,
-) -> impl Future<Item = BlobstoreBytes, Error = Error> {
+) -> impl Future<Item = (BlobstoreBytes, Vec<BlobstoreId>), Error = Error> {
     let blobstores_to_fetch: Vec<_> = seen_blobstores.iter().cloned().collect();
     let err_context = format!(
         "While fetching blob '{}', seen in blobstores: {:?}",
         key, seen_blobstores
     );
+    let missing_blobstores: Vec<BlobstoreId> = vec![];
 
-    loop_fn(blobstores_to_fetch, move |mut blobstores_to_fetch| {
-        let bid = match blobstores_to_fetch.pop() {
-            None => {
-                return Err(err_msg("None of the blobstores to fetch responded"))
-                    .into_future()
-                    .left_future();
-            }
-            Some(bid) => bid,
-        };
-
-        let blobstore = blobstores
-            .get(&bid)
-            .expect("blobstores_to_fetch contains only existing blobstores");
-
-        blobstore
-            .get(ctx.clone(), key.clone())
-            .then(move |result| match result {
-                Err(_) => return Ok(Loop::Continue(blobstores_to_fetch)),
-                Ok(None) => {
-                    return Err(format_err!(
-                        "Blobstore {:?} returned None even though it should contain data",
-                        bid
-                    ));
+    loop_fn(
+        (blobstores_to_fetch, missing_blobstores),
+        move |(mut blobstores_to_fetch, mut missing_blobstores)| {
+            let bid = match blobstores_to_fetch.pop() {
+                None => {
+                    return Err(err_msg("None of the blobstores to fetch responded"))
+                        .into_future()
+                        .left_future();
                 }
-                Ok(Some(blob)) => Ok(Loop::Break(blob)),
-            })
-            .right_future()
-    })
+                Some(bid) => bid,
+            };
+
+            let blobstore = blobstores
+                .get(&bid)
+                .expect("blobstores_to_fetch contains only existing blobstores");
+
+            blobstore
+                .get(ctx.clone(), key.clone())
+                .then(move |result| match result {
+                    Err(_) => return Ok(Loop::Continue((blobstores_to_fetch, missing_blobstores))),
+                    Ok(None) => {
+                        missing_blobstores.push(bid);
+                        return Ok(Loop::Continue((blobstores_to_fetch, missing_blobstores)));
+                    }
+                    Ok(Some(blob)) => Ok(Loop::Break((blob, missing_blobstores))),
+                })
+                .right_future()
+        },
+    )
     .chain_err(err_context)
     .from_err()
 }
@@ -279,4 +291,91 @@ fn report_partial_heal(
         }
     }))
     .map(|_| ())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use memblob::EagerMemblob;
+    use std::iter::FromIterator;
+
+    fn make_empty_stores(n: usize) -> (Vec<BlobstoreId>, HashMap<BlobstoreId, Arc<dyn Blobstore>>) {
+        let mut test_bids = Vec::new();
+        let mut test_stores = HashMap::new();
+        for i in 0..n {
+            test_bids.push(BlobstoreId::new(i as u64));
+            let s: Arc<dyn Blobstore> = Arc::new(EagerMemblob::new());
+            test_stores.insert(test_bids[i], s);
+        }
+        (test_bids, test_stores)
+    }
+
+    fn make_value(value: &str) -> BlobstoreBytes {
+        BlobstoreBytes::from_bytes(value.as_bytes())
+    }
+
+    fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, value: &str) {
+        store.map(|s| s.put(ctx.clone(), key.to_string(), make_value(value)));
+    }
+
+    #[test]
+    fn fetch_blob_missing_all() {
+        let ctx = CoreContext::test_mock();
+        let (bids, stores) = make_empty_stores(3);
+        put_value(&ctx, stores.get(&bids[0]), "dummyk", "dummyv");
+        put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyv");
+        put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+        let fut = fetch_blob(
+            ctx,
+            Arc::new(stores),
+            "specialk".to_string(),
+            HashSet::from_iter(bids.into_iter()),
+        );
+        let r = fut.wait();
+        let msg = r
+            .err()
+            .and_then(|e| e.as_fail().cause().map(|f| (format!("{}", f))));
+        assert_eq!(
+            Some("None of the blobstores to fetch responded".to_string()),
+            msg
+        );
+    }
+
+    #[test]
+    fn fetch_blob_missing_none() {
+        let ctx = CoreContext::test_mock();
+        let (bids, stores) = make_empty_stores(3);
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
+        put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
+        let fut = fetch_blob(
+            ctx,
+            Arc::new(stores),
+            "specialk".to_string(),
+            HashSet::from_iter(bids.into_iter()),
+        );
+        let r = fut.wait();
+        let foundv = r.ok().unwrap().0;
+        assert_eq!(make_value("specialv"), foundv);
+    }
+
+    // TODO enable as test once fetch_blob gives repeatable results in the some case
+    // fn fetch_blob_missing_some() {
+    //     let ctx = CoreContext::test_mock();
+    //     let (bids, stores) = make_empty_stores(3);
+    //     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    //     put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyv");
+    //     put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+    //     let fut = fetch_blob(
+    //         ctx,
+    //         Arc::new(stores),
+    //         "specialk".to_string(),
+    //         HashSet::from_iter(bids.clone().into_iter()),
+    //     );
+    //     let r = fut.wait();
+    //     let (foundblob, mut missing_bids) = r.ok().unwrap();
+    //     assert_eq!(make_value("specialv"), foundblob);
+    //     missing_bids.sort();
+    //     assert_eq!(missing_bids, &bids[1..3]);
+    // }
 }
