@@ -49,19 +49,19 @@ fn test_simple() {
 
     // iter
     let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), t1, 1))
+        .block_on(queue.iter(ctx.clone(), None, t1, 1))
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
     let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), t1, 2))
+        .block_on(queue.iter(ctx.clone(), None, t1, 2))
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 3);
     let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), t0, 1))
+        .block_on(queue.iter(ctx.clone(), None, t0, 1))
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
     let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), t0, 100))
+        .block_on(queue.iter(ctx.clone(), None, t0, 100))
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
 
@@ -75,7 +75,7 @@ fn test_simple() {
 
     // iter
     let entries = rt
-        .block_on(queue.iter(ctx.clone(), t1, 100))
+        .block_on(queue.iter(ctx.clone(), None, t1, 100))
         .expect("Iterating over entries failed");
     assert_eq!(entries.len(), 0)
 }

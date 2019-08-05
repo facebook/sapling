@@ -57,7 +57,8 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     ) -> BoxFuture<(), Error>;
 
     /// Returns list of entries that consist of two groups of entries:
-    /// 1. Group with at most `limit` entries that are older than `older_than`
+    /// 1. Group with at most `limit` entries that are older than `older_than` and
+    ///    optionally sql like `key_like`
     /// 2. Group of entries whose `blobstore_key` can be found in group (1)
     ///
     /// As a result the caller gets a reasonably limited slice of BlobstoreSyncQueue entries that
@@ -66,6 +67,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     fn iter(
         &self,
         ctx: CoreContext,
+        key_like: Option<String>,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
@@ -87,10 +89,11 @@ impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
     fn iter(
         &self,
         ctx: CoreContext,
+        key_like: Option<String>,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        (**self).iter(ctx, older_than, limit)
+        (**self).iter(ctx, key_like, older_than, limit)
     }
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error> {
@@ -131,11 +134,6 @@ queries! {
          WHERE id = {id}"
     }
 
-    read GetAllIEntries() -> (String, BlobstoreId, Timestamp, u64) {
-        "SELECT blobstore_key, blobstore_id, add_timestamp, id
-         FROM blobstore_sync_queue"
-    }
-
     read GetRangeOfEntries(older_than: Timestamp, limit: usize) -> (
         String,
         BlobstoreId,
@@ -148,6 +146,24 @@ queries! {
                SELECT DISTINCT blobstore_key
                FROM blobstore_sync_queue
                WHERE add_timestamp <= {older_than}
+               LIMIT {limit}
+         ) b
+         ON blobstore_sync_queue.blobstore_key = b.blobstore_key
+         "
+    }
+
+    read GetRangeOfEntriesLike(blobstore_key_like: String, older_than: Timestamp, limit: usize) -> (
+        String,
+        BlobstoreId,
+        Timestamp,
+        u64,
+    ) {
+        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
+         FROM blobstore_sync_queue
+         JOIN (
+               SELECT DISTINCT blobstore_key
+               FROM blobstore_sync_queue
+               WHERE blobstore_key LIKE {blobstore_key_like} AND add_timestamp <= {older_than}
                LIMIT {limit}
          ) b
          ON blobstore_sync_queue.blobstore_key = b.blobstore_key
@@ -310,12 +326,26 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     fn iter(
         &self,
         _ctx: CoreContext,
+        key_like: Option<String>,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
         STATS::iters.add_value(1);
-        // query
-        GetRangeOfEntries::query(&self.read_master_connection, &older_than.into(), &limit)
+        let query = match &key_like {
+            Some(sql_like) => GetRangeOfEntriesLike::query(
+                &self.read_master_connection,
+                &sql_like,
+                &older_than.into(),
+                &limit,
+            )
+            .left_future(),
+            None => {
+                GetRangeOfEntries::query(&self.read_master_connection, &older_than.into(), &limit)
+                    .right_future()
+            }
+        };
+
+        query
             .map(|rows| {
                 rows.into_iter()
                     .map(

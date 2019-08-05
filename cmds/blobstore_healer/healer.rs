@@ -34,6 +34,7 @@ pub struct Healer {
     blobstore_sync_queue_limit: usize,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
+    blobstore_key_like: Option<String>,
 }
 
 impl Healer {
@@ -42,12 +43,14 @@ impl Healer {
         blobstore_sync_queue_limit: usize,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
+        blobstore_key_like: Option<String>,
     ) -> Self {
         Self {
             logger,
             blobstore_sync_queue_limit,
             sync_queue,
             blobstores,
+            blobstore_key_like,
         }
     }
 
@@ -67,6 +70,7 @@ impl Healer {
         sync_queue
             .iter(
                 ctx.clone(),
+                self.blobstore_key_like.clone(),
                 healing_deadline.clone(),
                 blobstore_sync_queue_limit,
             )

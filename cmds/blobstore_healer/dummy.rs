@@ -77,10 +77,11 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
     fn iter(
         &self,
         ctx: CoreContext,
+        key_like: Option<String>,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        self.inner.iter(ctx, older_than, limit)
+        self.inner.iter(ctx, key_like, older_than, limit)
     }
 
     fn del(

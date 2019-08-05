@@ -45,6 +45,7 @@ fn maybe_schedule_healer_for_storage(
     storage_config: StorageConfig,
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
+    source_blobstore_key: Option<String>,
 ) -> Result<BoxFuture<(), Error>> {
     let (db_address, blobstores_args) = match &storage_config {
         StorageConfig {
@@ -142,6 +143,7 @@ fn maybe_schedule_healer_for_storage(
                 blobstore_sync_queue_limit,
                 sync_queue,
                 Arc::new(blobstores),
+                source_blobstore_key,
             );
 
             if dry_run {
@@ -232,7 +234,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
             --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
-            --storage-id=[STORAGE_ID] 'id of storage to be healed, e.g. manifold_xdb_multiplex'
+            --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
+            --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
         )
 }
@@ -249,6 +252,7 @@ fn main() -> Result<()> {
     let storage_config = args::read_storage_configs(&matches)?
         .remove(storage_id)
         .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?;
+    let source_blobstore_key = matches.value_of("blobstore-key-like");
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
 
@@ -269,6 +273,7 @@ fn main() -> Result<()> {
                 .split(',')
                 .map(|s| s.to_string())
                 .collect(),
+            source_blobstore_key.map(|s| s.to_string()),
         );
 
         match scheduled {
