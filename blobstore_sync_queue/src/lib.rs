@@ -28,7 +28,6 @@ define_stats! {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct BlobstoreSyncQueueEntry {
-    pub repo_id: RepositoryId,
     pub blobstore_key: String,
     pub blobstore_id: BlobstoreId,
     pub timestamp: DateTime,
@@ -36,14 +35,8 @@ pub struct BlobstoreSyncQueueEntry {
 }
 
 impl BlobstoreSyncQueueEntry {
-    pub fn new(
-        repo_id: RepositoryId,
-        blobstore_key: String,
-        blobstore_id: BlobstoreId,
-        timestamp: DateTime,
-    ) -> Self {
+    pub fn new(blobstore_key: String, blobstore_id: BlobstoreId, timestamp: DateTime) -> Self {
         Self {
-            repo_id,
             blobstore_key,
             blobstore_id,
             timestamp,
@@ -73,19 +66,13 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     fn iter(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error>;
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        key: String,
-    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
 }
 
 impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
@@ -100,24 +87,18 @@ impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
     fn iter(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        (**self).iter(ctx, repo_id, older_than, limit)
+        (**self).iter(ctx, older_than, limit)
     }
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error> {
         (**self).del(ctx, entries)
     }
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        key: String,
-    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        (**self).get(ctx, repo_id, key)
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+        (**self).get(ctx, key)
     }
 }
 
@@ -150,42 +131,38 @@ queries! {
          WHERE id = {id}"
     }
 
-    read GetAllIEntries() -> (RepositoryId, String, BlobstoreId, Timestamp, u64) {
-        "SELECT repo_id, blobstore_key, blobstore_id, add_timestamp, id
+    read GetAllIEntries() -> (String, BlobstoreId, Timestamp, u64) {
+        "SELECT blobstore_key, blobstore_id, add_timestamp, id
          FROM blobstore_sync_queue"
     }
 
-    read GetRangeOfEntries(repo_id: RepositoryId, older_than: Timestamp, limit: usize) -> (
-        RepositoryId,
+    read GetRangeOfEntries(older_than: Timestamp, limit: usize) -> (
         String,
         BlobstoreId,
         Timestamp,
         u64,
     ) {
-        "SELECT repo_id, blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
          FROM blobstore_sync_queue
          JOIN (
                SELECT DISTINCT blobstore_key
                FROM blobstore_sync_queue
-               WHERE repo_id = {repo_id}
-                 AND add_timestamp <= {older_than}
+               WHERE add_timestamp <= {older_than}
                LIMIT {limit}
          ) b
          ON blobstore_sync_queue.blobstore_key = b.blobstore_key
-         WHERE repo_id = {repo_id}"
+         "
     }
 
-    read GetByKey(repo_id: RepositoryId, key: String) -> (
-        RepositoryId,
+    read GetByKey(key: String) -> (
         String,
         BlobstoreId,
         Timestamp,
         u64,
     ) {
-        "SELECT repo_id, blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT blobstore_key, blobstore_id, add_timestamp, id
          FROM blobstore_sync_queue
-         WHERE repo_id = {repo_id}
-         AND blobstore_key = {key}"
+         WHERE blobstore_key = {key}"
     }
 }
 
@@ -266,14 +243,13 @@ fn insert_entries(
         .into_iter()
         .map(|entry| {
             let BlobstoreSyncQueueEntry {
-                repo_id,
                 blobstore_key,
                 blobstore_id,
                 timestamp,
                 ..
             } = entry;
             let t: Timestamp = timestamp.into();
-            (repo_id, blobstore_key, blobstore_id, t)
+            (RepositoryId::new(0), blobstore_key, blobstore_id, t)
         })
         .collect();
 
@@ -334,32 +310,25 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     fn iter(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
         STATS::iters.add_value(1);
         // query
-        GetRangeOfEntries::query(
-            &self.read_master_connection,
-            &repo_id,
-            &older_than.into(),
-            &limit,
-        )
-        .map(|rows| {
-            rows.into_iter()
-                .map(|(repo_id, blobstore_key, blobstore_id, timestamp, id)| {
-                    BlobstoreSyncQueueEntry {
-                        repo_id,
-                        blobstore_key,
-                        blobstore_id,
-                        timestamp: timestamp.into(),
-                        id: Some(id),
-                    }
-                })
-                .collect()
-        })
-        .boxify()
+        GetRangeOfEntries::query(&self.read_master_connection, &older_than.into(), &limit)
+            .map(|rows| {
+                rows.into_iter()
+                    .map(
+                        |(blobstore_key, blobstore_id, timestamp, id)| BlobstoreSyncQueueEntry {
+                            blobstore_key,
+                            blobstore_id,
+                            timestamp: timestamp.into(),
+                            id: Some(id),
+                        },
+                    )
+                    .collect()
+            })
+            .boxify()
     }
 
     fn del(
@@ -394,21 +363,19 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     fn get(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
         key: String,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        GetByKey::query(&self.read_master_connection, &repo_id, &key)
+        GetByKey::query(&self.read_master_connection, &key)
             .map(|rows| {
                 rows.into_iter()
-                    .map(|(repo_id, blobstore_key, blobstore_id, timestamp, id)| {
-                        BlobstoreSyncQueueEntry {
-                            repo_id,
+                    .map(
+                        |(blobstore_key, blobstore_id, timestamp, id)| BlobstoreSyncQueueEntry {
                             blobstore_key,
                             blobstore_id,
                             timestamp: timestamp.into(),
                             id: Some(id),
-                        }
-                    })
+                        },
+                    )
                     .collect()
             })
             .boxify()

@@ -22,7 +22,6 @@ use fileblob::Fileblob;
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{self, BlobConfig, ShardedFilenodesParams};
-use mononoke_types::RepositoryId;
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
@@ -30,8 +29,6 @@ use rocksdb;
 use scuba::ScubaClient;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
-
-const DUMMY_REPO: RepositoryId = RepositoryId::new(0);
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Scrubbing {
@@ -226,7 +223,6 @@ pub fn make_blobstore<T: SqlFactory>(
                         future::join_all(components).map({
                             move |components| {
                                 Arc::new(MultiplexedBlobstore::new(
-                                    DUMMY_REPO.clone(),
                                     components,
                                     queue,
                                     scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
@@ -261,7 +257,6 @@ pub fn make_blobstore<T: SqlFactory>(
                         future::join_all(components).map({
                             move |components| {
                                 Arc::new(ScrubBlobstore::new(
-                                    DUMMY_REPO.clone(),
                                     components,
                                     queue,
                                     scuba_table.map(|table| Arc::new(ScubaClient::new(table))),

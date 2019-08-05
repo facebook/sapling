@@ -20,7 +20,7 @@ use futures_ext::FutureExt;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
-use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
+use mononoke_types::{BlobstoreBytes, DateTime};
 use slog::{info, Logger};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -33,7 +33,6 @@ lazy_static! {
 pub struct RepoHealer {
     logger: Logger,
     blobstore_sync_queue_limit: usize,
-    repo_id: RepositoryId,
     rate_limiter: RateLimiter,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
@@ -43,7 +42,6 @@ impl RepoHealer {
     pub fn new(
         logger: Logger,
         blobstore_sync_queue_limit: usize,
-        repo_id: RepositoryId,
         rate_limiter: RateLimiter,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
@@ -51,7 +49,6 @@ impl RepoHealer {
         Self {
             logger,
             blobstore_sync_queue_limit,
-            repo_id,
             rate_limiter,
             sync_queue,
             blobstores,
@@ -62,7 +59,6 @@ impl RepoHealer {
         cloned!(
             self.logger,
             self.blobstore_sync_queue_limit,
-            self.repo_id,
             self.rate_limiter,
             self.sync_queue,
             self.blobstores
@@ -74,7 +70,6 @@ impl RepoHealer {
         sync_queue
             .iter(
                 ctx.clone(),
-                repo_id,
                 healing_deadline.clone(),
                 blobstore_sync_queue_limit,
             )
@@ -89,7 +84,6 @@ impl RepoHealer {
                         cloned!(ctx, sync_queue, blobstores, healing_deadline);
                         heal_blob(
                             ctx,
-                            repo_id,
                             sync_queue,
                             blobstores,
                             healing_deadline,
@@ -119,7 +113,6 @@ impl RepoHealer {
 
 fn heal_blob(
     ctx: CoreContext,
-    repo_id: RepositoryId,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     healing_deadline: DateTime,
@@ -189,7 +182,7 @@ fn heal_blob(
                     heal_results
                         .into_iter()
                         .filter_map(|(id, result)| if result { Some(id) } else { None });
-                report_partial_heal(ctx, repo_id, sync_queue, key, healed_blobstores)
+                report_partial_heal(ctx, sync_queue, key, healed_blobstores)
                     .map(|_| vec![])
                     .right_future()
             }
@@ -253,7 +246,6 @@ fn cleanup_after_healing(
 
 fn report_partial_heal(
     ctx: CoreContext,
-    repo_id: RepositoryId,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstore_key: String,
     healed_blobstores: impl IntoIterator<Item = BlobstoreId>,
@@ -262,11 +254,10 @@ fn report_partial_heal(
 
     join_all(healed_blobstores.into_iter().map({
         move |blobstore_id| {
-            cloned!(ctx, repo_id, blobstore_key, timestamp);
+            cloned!(ctx, blobstore_key, timestamp);
             sync_queue.add(
                 ctx,
                 BlobstoreSyncQueueEntry {
-                    repo_id,
                     blobstore_key,
                     blobstore_id,
                     timestamp,

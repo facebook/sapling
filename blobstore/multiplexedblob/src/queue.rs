@@ -13,31 +13,27 @@ use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::BlobstoreId;
-use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
+use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaClient;
 use std::fmt;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MultiplexedBlobstore {
-    repo_id: RepositoryId,
     blobstore: Arc<MultiplexedBlobstoreBase>,
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstore {
     pub fn new(
-        repo_id: RepositoryId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
-            repo_id,
             queue: queue.clone(),
         });
         Self {
-            repo_id,
             blobstore: Arc::new(MultiplexedBlobstoreBase::new(
                 blobstores,
                 put_handler,
@@ -57,7 +53,6 @@ impl fmt::Debug for MultiplexedBlobstore {
 }
 
 struct QueueBlobstorePutHandler {
-    repo_id: RepositoryId,
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
@@ -71,7 +66,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         self.queue
             .add(
                 ctx,
-                BlobstoreSyncQueueEntry::new(self.repo_id, key, blobstore_id, DateTime::now()),
+                BlobstoreSyncQueueEntry::new(key, blobstore_id, DateTime::now()),
             )
             .map(|_| ())
             .boxify()
@@ -83,7 +78,7 @@ impl Blobstore for MultiplexedBlobstore {
         self.blobstore
             .get(ctx.clone(), key.clone())
             .then({
-                cloned!(self.repo_id, self.queue);
+                cloned!(self.queue);
                 move |result| match result {
                     Ok(value) => future::ok(value).left_future(),
                     Err(error) => {
@@ -96,7 +91,7 @@ impl Blobstore for MultiplexedBlobstore {
                         // it means it is true-none otherwise, only replica containing key has
                         // failed and we need to return error.
                         queue
-                            .get(ctx, repo_id, key)
+                            .get(ctx, key)
                             .and_then(|entries| {
                                 if entries.is_empty() {
                                     Ok(None)
@@ -119,7 +114,7 @@ impl Blobstore for MultiplexedBlobstore {
         self.blobstore
             .is_present(ctx.clone(), key.clone())
             .then({
-                cloned!(self.repo_id, self.queue);
+                cloned!(self.queue);
                 move |result| match result {
                     Ok(value) => future::ok(value).left_future(),
                     Err(error) => {
@@ -127,7 +122,7 @@ impl Blobstore for MultiplexedBlobstore {
                             return future::err(error).left_future();
                         }
                         queue
-                            .get(ctx, repo_id, key)
+                            .get(ctx, key)
                             .and_then(|entries| {
                                 if entries.is_empty() {
                                     Ok(false)
@@ -150,12 +145,11 @@ pub struct ScrubBlobstore {
 
 impl ScrubBlobstore {
     pub fn new(
-        repo_id: RepositoryId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
-        let inner = MultiplexedBlobstore::new(repo_id, blobstores, queue, scuba_logger);
+        let inner = MultiplexedBlobstore::new(blobstores, queue, scuba_logger);
         Self { inner }
     }
 }
@@ -175,7 +169,7 @@ impl Blobstore for ScrubBlobstore {
             .scrub_get(ctx.clone(), key.clone())
             .then({
                 let inner = &self.inner;
-                cloned!(inner.repo_id, inner.queue);
+                cloned!(inner.queue);
                 move |result| {
                     match result {
                         Ok(value) => future::ok(value).left_future(),
@@ -188,7 +182,7 @@ impl Blobstore for ScrubBlobstore {
                                 _ => return future::err(error).left_future(),
                             };
                             queue
-                                .get(ctx, repo_id, key)
+                                .get(ctx, key)
                                 .and_then(move |entries| {
                                     match (entries.is_empty(), value.is_some(), some_none) {
                                         // No sync in progress, got None + Error. Assume OK

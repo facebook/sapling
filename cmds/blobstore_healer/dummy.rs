@@ -13,7 +13,7 @@ use context::CoreContext;
 use failure_ext::Error;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
+use mononoke_types::{BlobstoreBytes, DateTime};
 use slog::{info, Logger};
 
 #[derive(Debug)]
@@ -77,11 +77,10 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
     fn iter(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        self.inner.iter(ctx, repo_id, older_than, limit)
+        self.inner.iter(ctx, older_than, limit)
     }
 
     fn del(
@@ -93,12 +92,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         Ok(()).into_future().boxify()
     }
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        key: String,
-    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        self.inner.get(ctx, repo_id, key)
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+        self.inner.get(ctx, key)
     }
 }

@@ -335,19 +335,13 @@ fn populate_healer_queue(
             .fold(state, move |state, entries| {
                 let range = entries[0].range.clone();
                 let state = state.with_current_many(range, entries.len());
-                let repo_id = config.repo_id;
                 let src_blobstore_id = config.src_blobstore_id;
 
                 let enqueue = if config.dry_run {
                     future::ok(()).left_future()
                 } else {
                     let iterator_box = Box::new(entries.into_iter().map(move |entry| {
-                        BlobstoreSyncQueueEntry::new(
-                            repo_id,
-                            entry.key,
-                            src_blobstore_id,
-                            DateTime::now(),
-                        )
+                        BlobstoreSyncQueueEntry::new(entry.key, src_blobstore_id, DateTime::now())
                     }));
                     queue
                         .add_many(config.ctx.clone(), iterator_box)

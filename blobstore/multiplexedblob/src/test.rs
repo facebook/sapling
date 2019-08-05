@@ -21,7 +21,7 @@ use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use metaconfig_types::BlobstoreId;
-use mononoke_types::{BlobstoreBytes, RepositoryId};
+use mononoke_types::BlobstoreBytes;
 
 pub struct TickBlobstore {
     pub storage: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
@@ -45,12 +45,17 @@ impl TickBlobstore {
             queue: Default::default(),
         }
     }
+
+    // Broadcast either success or error to a set of outstanding futures, advancing the
+    // overall state by one tick.
     pub fn tick(&self, error: Option<&str>) {
         let mut queue = self.queue.lock().unwrap();
         for send in queue.drain(..) {
             send.send(error.map(String::from)).unwrap();
         }
     }
+
+    // Register this task on the tick queue and wait for it to progress.
     pub fn on_tick(&self) -> impl Future<Item = (), Error = Error> {
         let (send, recv) = oneshot::channel();
         let mut queue = self.queue.lock().unwrap();
@@ -69,6 +74,7 @@ impl Blobstore for TickBlobstore {
             .map(move |_| storage.with(|s| s.get(&key).cloned()))
             .boxify()
     }
+
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let storage = self.storage.clone();
         self.on_tick()
@@ -162,7 +168,7 @@ fn base() {
 
             let mut put_fut = bs.put(ctx.clone(), k1.clone(), v1.clone());
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
-            bs0.tick(Some("bs0 failed"));
+            bs0.tick(Some("case 2: bs0 failed"));
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
             bs1.tick(None);
             put_fut.wait().unwrap();
@@ -190,9 +196,9 @@ fn base() {
 
             let mut put_fut = bs.put(ctx.clone(), k2.clone(), v2.clone());
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
-            bs0.tick(Some("bs0 failed"));
+            bs0.tick(Some("case 3: bs0 failed"));
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
-            bs1.tick(Some("bs1 failed"));
+            bs1.tick(Some("case 3: bs1 failed"));
             assert!(put_fut.wait().is_err());
         }
 
@@ -202,7 +208,7 @@ fn base() {
             let mut get_fut = bs.get(ctx.clone(), k3);
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
 
-            bs0.tick(Some("bs0 failed"));
+            bs0.tick(Some("case 4: bs0 failed"));
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
 
             bs1.tick(None);
@@ -243,7 +249,6 @@ fn base() {
 #[test]
 fn multiplexed() {
     async_unit::tokio_unit_test(|| {
-        let repoid = RepositoryId::new(0);
         let ctx = CoreContext::test_mock();
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
@@ -252,7 +257,6 @@ fn multiplexed() {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(TickBlobstore::new());
         let bs = MultiplexedBlobstore::new(
-            repoid,
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             None,
@@ -268,7 +272,7 @@ fn multiplexed() {
             bs0.tick(None);
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
 
-            bs1.tick(Some("bs1 failed"));
+            bs1.tick(Some("case 1: bs1 failed"));
             assert_eq!(get_fut.wait().unwrap(), None);
         }
 
@@ -280,13 +284,13 @@ fn multiplexed() {
             let mut put_fut = bs.put(ctx.clone(), k1.clone(), v1.clone());
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
             bs0.tick(None);
-            bs1.tick(Some("bs1 failed"));
-            put_fut.wait().unwrap();
+            bs1.tick(Some("case 2: bs1 failed"));
+            put_fut.wait().expect("case 2 put_fut failed");
 
             match queue
-                .get(ctx.clone(), repoid, k1.clone())
+                .get(ctx.clone(), k1.clone())
                 .wait()
-                .unwrap()
+                .expect("case 2 get failed")
                 .as_slice()
             {
                 [entry] => assert_eq!(entry.blobstore_id, bid0),
@@ -295,7 +299,7 @@ fn multiplexed() {
 
             let mut get_fut = bs.get(ctx.clone(), k1.clone());
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
-            bs0.tick(Some("bs0 failed"));
+            bs0.tick(Some("case 2: bs0 failed"));
             bs1.tick(None);
             assert!(get_fut.wait().is_err());
         }
@@ -306,8 +310,8 @@ fn multiplexed() {
 
             let mut get_fut = bs.get(ctx.clone(), k2.clone());
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
-            bs0.tick(Some("bs0 failed"));
-            bs1.tick(Some("bs1 failed"));
+            bs0.tick(Some("case 3: bs0 failed"));
+            bs1.tick(Some("case 3: bs1 failed"));
             assert!(get_fut.wait().is_err());
         }
     });
@@ -316,7 +320,6 @@ fn multiplexed() {
 #[test]
 fn scrubbed() {
     async_unit::tokio_unit_test(|| {
-        let repoid = RepositoryId::new(0);
         let ctx = CoreContext::test_mock();
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
@@ -325,7 +328,6 @@ fn scrubbed() {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(TickBlobstore::new());
         let bs = ScrubBlobstore::new(
-            repoid,
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             None,
@@ -357,7 +359,7 @@ fn scrubbed() {
             put_fut.wait().unwrap();
 
             match queue
-                .get(ctx.clone(), repoid, k1.clone())
+                .get(ctx.clone(), k1.clone())
                 .wait()
                 .unwrap()
                 .as_slice()
@@ -388,7 +390,6 @@ fn scrubbed() {
         let bid1 = BlobstoreId::new(1);
         let bs1 = Arc::new(TickBlobstore::new());
         let bs = ScrubBlobstore::new(
-            repoid,
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
             None,
@@ -425,7 +426,7 @@ fn scrubbed() {
             let k1 = String::from("k1");
 
             match queue
-                .get(ctx.clone(), repoid, k1.clone())
+                .get(ctx.clone(), k1.clone())
                 .wait()
                 .unwrap()
                 .as_slice()

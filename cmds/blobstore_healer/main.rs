@@ -46,7 +46,6 @@ fn maybe_schedule_healer_for_storage(
     blobstore_sync_queue_limit: usize,
     logger: Logger,
     rate_limiter: RateLimiter,
-    repo_id: RepositoryId,
     storage_config: StorageConfig,
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
@@ -144,7 +143,6 @@ fn maybe_schedule_healer_for_storage(
         let repo_healer = RepoHealer::new(
             logger.clone(),
             blobstore_sync_queue_limit,
-            repo_id,
             rate_limiter,
             sync_queue,
             Arc::new(blobstores),
@@ -283,7 +281,6 @@ fn main() -> Result<()> {
                 blobstore_sync_queue_limit,
                 logger.clone(),
                 rate_limiter.clone(),
-                RepositoryId::new(config.repoid),
                 config.storage_config,
                 myrouter_port,
                 matches
