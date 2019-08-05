@@ -107,7 +107,7 @@ impl Healer {
 /// Heal an individual blob. The `entries` are the blobstores which have successfully stored
 /// this blob; we need to replicate them onto the remaining `blobstores`. If the blob is not
 /// yet eligable (too young), then just return None, otherwise we return the healed entries
-/// which have now been dealt with.
+/// which have now been dealt with and can be deleted.
 fn heal_blob(
     ctx: CoreContext,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
@@ -116,17 +116,24 @@ fn heal_blob(
     key: String,
     entries: Vec<BlobstoreSyncQueueEntry>,
 ) -> Option<impl Future<Item = Vec<BlobstoreSyncQueueEntry>, Error = Error>> {
-    let seen_blobstores: HashSet<_> = entries
-        .iter()
-        .filter_map(|entry| {
+    let (seen_blobstores, unknown_seen_blobstores): (HashSet<_>, HashSet<_>) =
+        entries.iter().partition_map(|entry| {
             let id = entry.blobstore_id;
             if blobstores.contains_key(&id) {
-                Some(id)
+                Either::Left(id)
             } else {
-                None
+                Either::Right(id)
             }
-        })
-        .collect();
+        });
+
+    if !unknown_seen_blobstores.is_empty() {
+        warn!(
+            ctx.logger(),
+            "Ignoring entries for key {} on unknown blobstores {:?}, leaving them on the queue.",
+            key,
+            unknown_seen_blobstores
+        );
+    }
 
     let mut stores_to_heal: HashSet<BlobstoreId> = blobstores
         .iter()
@@ -144,11 +151,17 @@ fn heal_blob(
         return Some(futures::future::ok(entries).left_future());
     }
 
+    // Make sure we only put and delete entries for our own blobstores
+    let entries: Vec<BlobstoreSyncQueueEntry> = entries
+        .into_iter()
+        .filter(|e| blobstores.contains_key(&e.blobstore_id))
+        .collect();
+
     if !entries
         .iter()
         .any(|entry| entry.timestamp < healing_deadline)
     {
-        // The oldes entry is not old enough to be eligible for healing
+        // The oldest remaining entry, if any, is not old enough to be eligible for healing
         return None;
     }
 
@@ -641,6 +654,73 @@ mod tests {
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[2]).unwrap().len());
+    }
+
+    #[test]
+    fn heal_blob_only_unknown_queue_entry() {
+        let ctx = CoreContext::test_mock();
+        let (bids, underlying_stores, stores) = make_empty_stores(2);
+        let (bids_from_different_config, _, _) = make_empty_stores(5);
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let entries = vec![BlobstoreSyncQueueEntry::new(
+            "specialk".to_string(),
+            bids_from_different_config[4],
+            t0,
+        )];
+        let sync_queue = Arc::new(MockBlobstoreSyncQueue::new());
+        let fut = heal_blob(
+            ctx,
+            sync_queue.clone(),
+            stores,
+            healing_deadline,
+            "specialk".to_string(),
+            entries,
+        );
+        let r = fut.wait();
+        assert!(r.is_ok());
+        assert!(r.unwrap().is_none(), "expecting no entries to delete");
+        assert_eq!(
+            0,
+            underlying_stores.get(&bids[1]).unwrap().len(),
+            "Expected no change"
+        );
+    }
+
+    #[test]
+    fn heal_blob_some_unknown_queue_entry() {
+        let ctx = CoreContext::test_mock();
+        let (bids, underlying_stores, stores) = make_empty_stores(2);
+        let (bids_from_different_config, _, _) = make_empty_stores(5);
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
+        let entries = vec![
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids_from_different_config[4], t0),
+        ];
+        let sync_queue = Arc::new(MockBlobstoreSyncQueue::new());
+        let fut = heal_blob(
+            ctx,
+            sync_queue.clone(),
+            stores,
+            healing_deadline,
+            "specialk".to_string(),
+            entries,
+        );
+        let r = fut.wait();
+        assert!(r.is_ok());
+        assert_eq!(
+            1,
+            r.unwrap().unwrap().len(),
+            "expecting 1 entries to delete"
+        );
+        assert_eq!(
+            1,
+            underlying_stores.get(&bids[1]).unwrap().len(),
+            "Expected put to complete"
+        );
     }
 
     #[test]
