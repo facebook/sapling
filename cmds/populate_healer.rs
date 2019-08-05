@@ -120,6 +120,14 @@ fn parse_args() -> Result<Config, Error> {
     .version("0.0.0")
     .about("Populate blobstore queue from existing manifold bucket")
     .arg(
+        Arg::with_name("storage-id")
+            .long("storage-id")
+            .short("S")
+            .takes_value(true)
+            .value_name("STORAGEID")
+            .help("Storage identifier"),
+    )
+    .arg(
         Arg::with_name("source-blobstore-id")
             .long("source-blobstore-id")
             .short("s")
@@ -165,16 +173,13 @@ fn parse_args() -> Result<Config, Error> {
     let matches = app.get_matches();
     let repo_id = args::get_repo_id(&matches)?;
 
-    let repo_config = args::read_configs(&matches)?
-        .repos
-        .into_iter()
-        .filter(|(_, config)| RepositoryId::new(config.repoid) == repo_id)
-        .map(|(_, config)| config)
-        .next()
-        .ok_or(format_err!(
-            "failed to find config with repo id: {:?}",
-            repo_id
-        ))?;
+    let storage_id = matches
+        .value_of("storage-id")
+        .ok_or(err_msg("`storage-id` argument required"))?;
+
+    let storage_config = args::read_storage_configs(&matches)?
+        .remove(storage_id)
+        .ok_or(err_msg("Unknown `storage-id`"))?;
 
     let src_blobstore_id = matches
         .value_of("source-blobstore-id")
@@ -192,7 +197,7 @@ fn parse_args() -> Result<Config, Error> {
         ));
     }
 
-    let (blobstores, db_address) = match &repo_config.storage_config {
+    let (blobstores, db_address) = match storage_config {
         StorageConfig {
             dbconfig: MetadataDBConfig::Mysql { db_address, .. },
             blobstore: BlobConfig::Multiplexed { blobstores, .. },
