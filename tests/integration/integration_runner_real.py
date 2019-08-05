@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Set
 
 import click
 from common.db.tests import DbDef
@@ -38,11 +38,9 @@ EPHEMERAL_DB_WHITELIST = {
     "test-bookmarks-filler.t",
 }
 
-NETWORK_BLACKHOLE_BLACKLIST = {
-    "test-lfs-to-mononoke.t",
-    "test-lfs-upload-alias-on-fetch.t",
-    "test-lfs-copytracing.t",
-}
+# At this time, all tests support the network blackhole (except when ephemeral
+# MySQL is used)
+NETWORK_BLACKHOLE_BLACKLIST: Set[str] = set()
 
 
 class TestFlags(NamedTuple):
