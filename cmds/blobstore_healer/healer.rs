@@ -16,7 +16,7 @@ use futures::{
     prelude::*,
 };
 use futures_ext::FutureExt;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -162,62 +162,80 @@ fn heal_blob(
         key.clone(),
         seen_blobstores.clone(),
     )
-    .and_then(move |(blob, missing_source_blobstores)| {
-        if !missing_source_blobstores.is_empty() {
-            warn!(
-                ctx.logger(),
-                "Source Blobstores {:?} of {:?} returned None even though they \
-                 should contain data",
-                missing_source_blobstores,
-                seen_blobstores
-            );
-            for bid in missing_source_blobstores {
-                missing_blobstores.insert(bid);
+    .and_then(
+        move |(blob, known_good_blobstore, missing_source_blobstores)| {
+            if !missing_source_blobstores.is_empty() {
+                warn!(
+                    ctx.logger(),
+                    "Source Blobstores {:?} of {:?} returned None even though they\
+                     should contain data",
+                    missing_source_blobstores,
+                    seen_blobstores
+                );
+                for bid in missing_source_blobstores {
+                    missing_blobstores.insert(bid);
+                }
             }
-        }
 
-        let heal_blobstores: Vec<_> = missing_blobstores
-            .into_iter()
-            .map(|bid| {
-                let blobstore = blobstores
-                    .get(&bid)
-                    .expect("missing_blobstores contains unknown blobstore?");
-                blobstore
-                    .put(ctx.clone(), key.clone(), blob.clone())
-                    .then(move |result| Ok((bid, result.is_ok())))
+            let heal_puts: Vec<_> = missing_blobstores
+                .into_iter()
+                .map(|bid| {
+                    let blobstore = blobstores
+                        .get(&bid)
+                        .expect("missing_blobstores contains unknown blobstore?");
+                    blobstore
+                        .put(ctx.clone(), key.clone(), blob.clone())
+                        .then(move |result| Ok((bid, result.is_ok())))
+                })
+                .collect();
+
+            // If any puts fail make sure we put a good source blobstore_id for that blob
+            // back on the queue
+            join_all(heal_puts).and_then(move |heal_results| {
+                let (mut healed_stores, unhealed_stores): (HashSet<_>, HashSet<_>) =
+                    heal_results.into_iter().partition_map(|(id, put_ok)| {
+                        if put_ok {
+                            Either::Left(id)
+                        } else {
+                            Either::Right(id)
+                        }
+                    });
+                if !unhealed_stores.is_empty() {
+                    // Add known_good_blobstore to the healed_stores as we should write all
+                    // known good blobstores so that the missing_blobstores logic run on read
+                    // has the full data for the blobstore_key
+                    //
+                    // This also ensures we requeue at least one good source store in the case
+                    // where all heal puts fail
+                    healed_stores.insert(known_good_blobstore);
+                    warn!(
+                        ctx.logger(),
+                        "Adding source blobstores {:?} to the queue so that failed \
+                         destination blob stores {:?} will be retried later",
+                        healed_stores,
+                        unhealed_stores
+                    );
+                    requeue_partial_heal(ctx, sync_queue, key, healed_stores)
+                        .map(|()| entries)
+                        .left_future()
+                } else {
+                    futures::future::ok(entries).right_future()
+                }
             })
-            .collect();
-
-        // XXX(jsgf) Don't really understand this. I'd expect it to filter the missing_blobstores
-        // by put_ok, and then return only those (ie, leave the entries which didn't store
-        // correctly in the queue). This logic seems to report success if everything was successful,
-        // otherwise it re-puts the successes into the queue (via report_partial_heal), and returns
-        // an empty "to be cleaned" vector.
-        join_all(heal_blobstores).and_then(move |heal_results| {
-            if heal_results.iter().all(|(_, put_ok)| *put_ok) {
-                futures::future::ok(entries).left_future()
-            } else {
-                let healed_blobstores = heal_results
-                    .into_iter()
-                    .filter_map(|(id, put_ok)| Some(id).filter(|_| put_ok));
-                report_partial_heal(ctx, sync_queue, key, healed_blobstores)
-                    .map(|_| vec![])
-                    .right_future()
-            }
-        })
-    });
+        },
+    );
 
     Some(heal_future.right_future())
 }
 
 /// Fetch a blob by `key` from one of the `seen_blobstores`. This tries them one at at time
-/// sequentially, returning those found missing, or an error
+/// sequentially, returning the known good store plus those found missing, or an error
 fn fetch_blob(
     ctx: CoreContext,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     key: String,
     seen_blobstores: HashSet<BlobstoreId>,
-) -> impl Future<Item = (BlobstoreBytes, Vec<BlobstoreId>), Error = Error> {
+) -> impl Future<Item = (BlobstoreBytes, BlobstoreId, Vec<BlobstoreId>), Error = Error> {
     let blobstores_to_fetch: Vec<_> = seen_blobstores.iter().cloned().collect();
     let err_context = format!(
         "While fetching blob '{}', seen in blobstores: {:?}",
@@ -249,7 +267,7 @@ fn fetch_blob(
                         missing_blobstores.push(bid);
                         return Ok(Loop::Continue((blobstores_to_fetch, missing_blobstores)));
                     }
-                    Ok(Some(blob)) => Ok(Loop::Break((blob, missing_blobstores))),
+                    Ok(Some(blob)) => Ok(Loop::Break((blob, bid, missing_blobstores))),
                 })
                 .right_future()
         },
@@ -267,16 +285,19 @@ fn cleanup_after_healing(
     sync_queue.del(ctx, entries)
 }
 
-/// ??? Don't understand this. This is putting the entries we healed back into the queue?
-fn report_partial_heal(
+/// Write new queue items with a populated source blobstore for unhealed entries
+/// Uses a current timestamp so we'll get around to trying them again for the destination
+/// blobstores eventually without getting stuck on them permanently.
+/// Uses a new queue entry id so the delete of original entry is safe.
+fn requeue_partial_heal(
     ctx: CoreContext,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstore_key: String,
-    healed_blobstores: impl IntoIterator<Item = BlobstoreId>,
+    source_blobstores: impl IntoIterator<Item = BlobstoreId>,
 ) -> impl Future<Item = (), Error = Error> {
     let timestamp = DateTime::now();
 
-    join_all(healed_blobstores.into_iter().map({
+    join_all(source_blobstores.into_iter().map({
         move |blobstore_id| {
             cloned!(ctx, blobstore_key, timestamp);
             sync_queue.add(
@@ -290,7 +311,7 @@ fn report_partial_heal(
             )
         }
     }))
-    .map(|_| ())
+    .map(|_: Vec<()>| ())
 }
 
 #[cfg(test)]
