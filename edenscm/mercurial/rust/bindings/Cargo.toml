@@ -39,7 +39,7 @@ zstd = "0.4.18"
 zstdelta = { path = "../../../../lib/zstdelta/" }
 
 [dependencies.cpython]
-version = "0.2"
+version = "0.3"
 default-features = false
 features = ["python27-sys", "extension-module-2-7"]
 

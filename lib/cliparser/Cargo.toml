@@ -11,7 +11,7 @@ shlex = { path = "../shlex" }
 cpython-ext = { path = "../cpython-ext", optional = true }
 
 [dependencies.cpython]
-version = "0.2"
+version = "0.3"
 default-features = false
 features = ["python27-sys", "extension-module-2-7"]
 optional = true

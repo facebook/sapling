@@ -12,9 +12,9 @@ cliparser = { path = "../cliparser" }
 path = "../encoding"
 
 [dependencies.cpython]
-version = "0.2"
+version = "0.3"
 default-features = false
 features = ["python27-sys"]
 
 [dependencies.python27-sys]
-version = "0.2"
+version = "0.3"
