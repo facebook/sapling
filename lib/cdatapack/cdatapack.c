@@ -504,7 +504,7 @@ static inline int platform_madvise_away(void* ptr, size_t len) {
 #endif /* #if defined(_MSC_VER) */
 }
 
-const get_delta_chain_link_result_t getdeltachainlink(
+get_delta_chain_link_result_t getdeltachainlink(
     const datapack_handle_t* handle,
     const uint8_t* ptr,
     delta_chain_link_t* link) {
