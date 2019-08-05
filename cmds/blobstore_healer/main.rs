@@ -25,10 +25,9 @@ use futures::{
 };
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use glusterblob::Glusterblob;
-use healer::RepoHealer;
+use healer::Healer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
-use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use rate_limiter::RateLimiter;
 use slog::{error, info, o, Logger};
@@ -140,7 +139,7 @@ fn maybe_schedule_healer_for_storage(
     }
 
     let heal = blobstores.and_then(move |blobstores| {
-        let repo_healer = RepoHealer::new(
+        let repo_healer = Healer::new(
             logger.clone(),
             blobstore_sync_queue_limit,
             rate_limiter,
@@ -163,7 +162,7 @@ fn maybe_schedule_healer_for_storage(
 
 fn schedule_everlasting_healing(
     logger: Logger,
-    repo_healer: RepoHealer,
+    repo_healer: Healer,
     replication_lag_db_conns: Vec<Connection>,
 ) -> BoxFuture<(), Error> {
     let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
@@ -237,6 +236,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
             --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
+            --storage-id=[STORAGE_ID] 'id of storage to be healed'
         "#,
         )
 }
@@ -244,68 +244,53 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let repo_id = matches
-        .value_of("repo-id")
-        .and_then(|repo_id_str| repo_id_str.parse::<u32>().ok())
-        .and_then(|repo_id| {
-            if repo_id == 0 {
-                None
-            } else {
-                Some(RepositoryId::new(repo_id as i32))
-            }
-        });
+    let storage_id = matches
+        .value_of("storage-id")
+        .ok_or(err_msg("Missing storage-id"))?;
     let logger = args::get_logger(&matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
     let rate_limiter = RateLimiter::new(100);
-    let repo_configs = args::read_configs(&matches)?;
+    let storage_config = args::read_storage_configs(&matches)?
+        .remove(storage_id)
+        .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?;
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
 
-    let healers: Vec<_> = repo_configs
-        .repos
-        .into_iter()
-        .filter_map(move |(name, config)| {
-            if let Some(repo_id) = repo_id {
-                if repo_id != RepositoryId::new(config.repoid) {
-                    return None;
-                }
+    let healer = {
+        let logger = logger.new(o!(
+            "storage" => format!("{:#?}", storage_config),
+        ));
+
+        let scheduled = maybe_schedule_healer_for_storage(
+            dry_run,
+            blobstore_sync_queue_limit,
+            logger.clone(),
+            rate_limiter.clone(),
+            storage_config,
+            myrouter_port,
+            matches
+                .value_of("db-regions")
+                .unwrap_or("")
+                .split(',')
+                .map(|s| s.to_string())
+                .collect(),
+        );
+
+        match scheduled {
+            Err(err) => {
+                error!(logger, "Did not schedule, because of: {:#?}", err);
+                return Err(err);
             }
-
-            let logger = logger.new(o!(
-                "repo" => format!("{} ({})", name, config.repoid),
-            ));
-
-            let scheduled = maybe_schedule_healer_for_storage(
-                dry_run,
-                blobstore_sync_queue_limit,
-                logger.clone(),
-                rate_limiter.clone(),
-                config.storage_config,
-                myrouter_port,
-                matches
-                    .value_of("db-regions")
-                    .unwrap_or("")
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect(),
-            );
-
-            match scheduled {
-                Err(err) => {
-                    error!(logger, "Did not schedule, because of: {:#?}", err);
-                    None
-                }
-                Ok(scheduled) => {
-                    info!(logger, "Successfully scheduled");
-                    Some(scheduled)
-                }
+            Ok(scheduled) => {
+                info!(logger, "Successfully scheduled");
+                scheduled
             }
-        })
-        .collect();
+        }
+    };
 
     let mut runtime = tokio::runtime::Runtime::new()?;
-    let result = runtime.block_on(join_all(healers).map(|_| ()));
+    let result = runtime.block_on(healer.map(|_| ()));
     runtime.shutdown_on_idle();
     result
 }

@@ -30,7 +30,7 @@ lazy_static! {
     static ref ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
 }
 
-pub struct RepoHealer {
+pub struct Healer {
     logger: Logger,
     blobstore_sync_queue_limit: usize,
     rate_limiter: RateLimiter,
@@ -38,7 +38,7 @@ pub struct RepoHealer {
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
 }
 
-impl RepoHealer {
+impl Healer {
     pub fn new(
         logger: Logger,
         blobstore_sync_queue_limit: usize,
