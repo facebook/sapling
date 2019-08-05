@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::rate_limiter::RateLimiter;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use chrono::Duration as ChronoDuration;
@@ -33,7 +32,6 @@ lazy_static! {
 pub struct Healer {
     logger: Logger,
     blobstore_sync_queue_limit: usize,
-    rate_limiter: RateLimiter,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
 }
@@ -42,14 +40,12 @@ impl Healer {
     pub fn new(
         logger: Logger,
         blobstore_sync_queue_limit: usize,
-        rate_limiter: RateLimiter,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     ) -> Self {
         Self {
             logger,
             blobstore_sync_queue_limit,
-            rate_limiter,
             sync_queue,
             blobstores,
         }
@@ -61,7 +57,6 @@ impl Healer {
         cloned!(
             self.logger,
             self.blobstore_sync_queue_limit,
-            self.rate_limiter,
             self.sync_queue,
             self.blobstores,
         );
@@ -76,8 +71,6 @@ impl Healer {
                 blobstore_sync_queue_limit,
             )
             .and_then(move |queue_entries: Vec<BlobstoreSyncQueueEntry>| {
-                cloned!(rate_limiter);
-
                 let healing_futures: Vec<_> = queue_entries
                     .into_iter()
                     .group_by(|entry| entry.blobstore_key.clone())
@@ -93,7 +86,6 @@ impl Healer {
                             entries.collect(),
                         )
                     })
-                    .map(move |healing_future| rate_limiter.execute(healing_future))
                     .collect();
 
                 info!(

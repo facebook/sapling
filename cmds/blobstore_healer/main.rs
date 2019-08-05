@@ -9,7 +9,6 @@
 
 mod dummy;
 mod healer;
-mod rate_limiter;
 
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
@@ -29,7 +28,6 @@ use healer::Healer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use prefixblob::PrefixBlobstore;
-use rate_limiter::RateLimiter;
 use slog::{error, info, o, Logger};
 use sql::{myrouter, Connection};
 use sqlblob::Sqlblob;
@@ -44,7 +42,6 @@ fn maybe_schedule_healer_for_storage(
     dry_run: bool,
     blobstore_sync_queue_limit: usize,
     logger: Logger,
-    rate_limiter: RateLimiter,
     storage_config: StorageConfig,
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
@@ -143,7 +140,6 @@ fn maybe_schedule_healer_for_storage(
             let repo_healer = Healer::new(
                 logger.clone(),
                 blobstore_sync_queue_limit,
-                rate_limiter,
                 sync_queue,
                 Arc::new(blobstores),
             );
@@ -250,7 +246,6 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
-    let rate_limiter = RateLimiter::new(100);
     let storage_config = args::read_storage_configs(&matches)?
         .remove(storage_id)
         .ok_or(err_msg(format!("Storage id `{}` not found", storage_id)))?;
@@ -266,7 +261,6 @@ fn main() -> Result<()> {
             dry_run,
             blobstore_sync_queue_limit,
             logger.clone(),
-            rate_limiter.clone(),
             storage_config,
             myrouter_port,
             matches
