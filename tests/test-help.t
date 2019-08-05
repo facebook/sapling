@@ -376,6 +376,7 @@ Test extension help:
        sigtrace      sigtrace - dump stack and memory traces on signal
        simplecache
        smartlog      command to display a relevant subgraph
+       snapshot      extension to snapshot the working copy
        sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
