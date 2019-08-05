@@ -185,9 +185,10 @@ pub fn get_canonical_id<B: Blobstore + Clone>(
     }
 }
 
-/// Fetch the alias ids for the underlying content. This will return None if the content does
-/// not exist. It might recompute the aliases on the fly if necessary.
-pub fn get_aliases<B: Blobstore + Clone>(
+/// Fetch the metadata for the underlying content. This will return None if the content does
+/// not exist. It might recompute metadata on the fly if the content exists but the metadata does
+/// not.
+pub fn get_metadata<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,

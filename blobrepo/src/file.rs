@@ -139,7 +139,7 @@ pub fn fetch_file_content_sha256_from_blobstore(
     blobstore: &RepoBlobstore,
     content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
-    filestore::get_aliases(blobstore, ctx, &FetchKey::Canonical(content_id))
+    filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
         .and_then(move |aliases| aliases.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
         .context("While fetching content metadata")
         .from_err()

@@ -64,7 +64,7 @@ fn check_metadata<B: Blobstore + Clone>(
 ) -> impl Future<Item = bool, Error = Error> {
     let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
 
-    filestore::get_aliases(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+    filestore::get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
         .map(|r| r.is_some())
 }
 

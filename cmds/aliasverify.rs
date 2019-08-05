@@ -159,7 +159,7 @@ impl AliasVerification {
             Mode::Generate => {
                 let blobstore = blobrepo.get_blobstore();
 
-                filestore::get_aliases(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+                filestore::get_metadata(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
                     .and_then(move |meta| {
                         meta.ok_or(format_err!("Missing content {:?}", content_id))
                     })

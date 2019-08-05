@@ -67,7 +67,7 @@ fn filestore_put_alias() -> Result<()> {
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx,
         &FetchKey::Canonical(content_id),
@@ -591,7 +591,7 @@ fn filestore_rebuild_metadata() -> Result<()> {
     assert!(blob.remove(&metadata.blobstore_key()).is_some());
 
     // Getting the metadata should cause it to get recomputed
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Canonical(content_id),
@@ -603,7 +603,7 @@ fn filestore_rebuild_metadata() -> Result<()> {
     assert!(blob.remove(&content_id.blobstore_key()).is_some());
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Canonical(content_id),
@@ -616,7 +616,7 @@ fn filestore_rebuild_metadata() -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Canonical(content_id),
@@ -638,7 +638,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
 
     // No matter the Fetchkey, querying the metadata should return None.
 
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Canonical(content_id),
@@ -646,7 +646,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Sha1(*HELLO_WORLD_SHA1),
@@ -654,7 +654,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Sha256(*HELLO_WORLD_SHA256),
@@ -662,7 +662,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_aliases(
+    let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1),

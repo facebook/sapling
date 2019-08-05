@@ -19,9 +19,9 @@ use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
     ADD_PUBLIC_PHASES, BLACKLIST, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH,
-    FILENODES, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE,
-    HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
-    SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
+    FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE,
+    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
+    HG_SYNC_VERIFY, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::filenodes::subcommand_filenodes;
@@ -39,6 +39,7 @@ mod cmdargs;
 mod common;
 mod content_fetch;
 mod filenodes;
+mod filestore;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
@@ -306,6 +307,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_public_phases)
         .subcommand(blacklist)
         .subcommand(filenodes)
+        .subcommand(filestore::build_subcommand(FILESTORE))
 }
 
 fn main() -> Result<()> {
@@ -334,6 +336,7 @@ fn main() -> Result<()> {
         (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
         (BLACKLIST, Some(sub_m)) => subcommand_blacklist(logger, &matches, sub_m),
         (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
+        (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
