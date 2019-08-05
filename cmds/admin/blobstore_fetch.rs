@@ -57,7 +57,6 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
 }
 
 fn get_blobstore(
-    repo_id: RepositoryId,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
@@ -65,13 +64,12 @@ fn get_blobstore(
 
     match storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => {
-            make_blobstore(repo_id, &blobconfig, &SqliteFactory::new(path), None)
+            make_blobstore(&blobconfig, &SqliteFactory::new(path), None)
         }
         MetadataDBConfig::Mysql {
             db_address,
             sharded_filenodes,
         } => make_blobstore(
-            repo_id,
             &blobconfig,
             &XdbFactory::new(db_address, None, sharded_filenodes),
             None,
@@ -89,7 +87,7 @@ pub fn subcommand_blobstore_fetch(
     let censoring = config.censoring;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let blobstore_fut = get_blobstore(repo_id, storage_config, inner_blobstore_id);
+    let blobstore_fut = get_blobstore(storage_config, inner_blobstore_id);
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;

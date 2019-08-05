@@ -20,7 +20,7 @@ use futures::future::join_all;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
-use mononoke_types::{BlobstoreBytes, RepositoryId};
+use mononoke_types::BlobstoreBytes;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
@@ -69,12 +69,11 @@ pub struct Sqlblob {
 
 impl Sqlblob {
     pub fn with_myrouter(
-        repo_id: RepositoryId,
         shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        Self::with_connection_factory(repo_id, shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
                 Some(shard_id),
@@ -88,17 +87,15 @@ impl Sqlblob {
     }
 
     pub fn with_raw_xdb_shardmap(
-        repo_id: RepositoryId,
         shardmap: String,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        Self::with_connection_factory(repo_id, shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id)).boxify()
         })
     }
 
     fn with_connection_factory(
-        repo_id: RepositoryId,
         label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
@@ -143,14 +140,12 @@ impl Sqlblob {
                 Self::counted(
                     Self {
                         data_store: DataSqlStore::new(
-                            repo_id,
                             shard_num,
                             write_connection.clone(),
                             read_connection.clone(),
                             read_master_connection.clone(),
                         ),
                         chunk_store: ChunkSqlStore::new(
-                            repo_id,
                             shard_num,
                             write_connection,
                             read_connection,
@@ -158,17 +153,17 @@ impl Sqlblob {
                         ),
                         data_cache: SqlblobCacheOps::new(
                             Arc::new(
-                                MemcacheOps::new("sqlblob.data", repo_id.id())
+                                MemcacheOps::new("sqlblob.data", 0)
                                     .expect("failed to create MemcacheOps"),
                             ),
-                            DataCacheTranslator::new(repo_id),
+                            DataCacheTranslator::new(),
                         ),
                         chunk_cache: SqlblobCacheOps::new(
                             Arc::new(
-                                MemcacheOps::new("sqlblob.chunk", repo_id.id())
+                                MemcacheOps::new("sqlblob.chunk", 0)
                                     .expect("failed to create MemcacheOps"),
                             ),
-                            ChunkCacheTranslator::new(repo_id),
+                            ChunkCacheTranslator::new(),
                         ),
                     },
                     label,
@@ -177,20 +172,17 @@ impl Sqlblob {
             .boxify()
     }
 
-    pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<CountedSqlblob> {
-        Self::with_sqlite(repo_id, |_| {
+    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
+        Self::with_sqlite(|_| {
             let con = SqliteConnection::open_in_memory()?;
             con.execute_batch(Self::get_up_query())?;
             Ok(con)
         })
     }
 
-    pub fn with_sqlite_path<P: Into<PathBuf>>(
-        repo_id: RepositoryId,
-        path: P,
-    ) -> Result<CountedSqlblob> {
+    pub fn with_sqlite_path<P: Into<PathBuf>>(path: P) -> Result<CountedSqlblob> {
         let path = path.into();
-        Self::with_sqlite(repo_id, move |shard_id| {
+        Self::with_sqlite(move |shard_id| {
             let con = SqliteConnection::open(path.join(format!("shard_{}.sqlite", shard_id)))?;
             // When opening an sqlite database we might already have the proper tables in it, so ignore
             // errors from table creation
@@ -199,7 +191,7 @@ impl Sqlblob {
         })
     }
 
-    fn with_sqlite<F>(repo_id: RepositoryId, mut constructor: F) -> Result<CountedSqlblob>
+    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -214,26 +206,19 @@ impl Sqlblob {
         Ok(Self::counted(
             Self {
                 data_store: DataSqlStore::new(
-                    repo_id,
                     SQLITE_SHARD_NUM,
                     cons.clone(),
                     cons.clone(),
                     cons.clone(),
                 ),
-                chunk_store: ChunkSqlStore::new(
-                    repo_id,
-                    SQLITE_SHARD_NUM,
-                    cons.clone(),
-                    cons.clone(),
-                    cons,
-                ),
+                chunk_store: ChunkSqlStore::new(SQLITE_SHARD_NUM, cons.clone(), cons.clone(), cons),
                 data_cache: SqlblobCacheOps::new(
                     Arc::new(DummyCache {}),
-                    DataCacheTranslator::new(repo_id),
+                    DataCacheTranslator::new(),
                 ),
                 chunk_cache: SqlblobCacheOps::new(
                     Arc::new(DummyCache {}),
-                    ChunkCacheTranslator::new(repo_id),
+                    ChunkCacheTranslator::new(),
                 ),
             },
             "sqlite".into(),
@@ -391,7 +376,7 @@ mod tests {
         let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let key = format!("manifoldblob_test_{}", suffix);
 
-        let bs = Arc::new(Sqlblob::with_sqlite_in_memory(RepositoryId::new(1234)).unwrap());
+        let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
 
         let mut bytes_in = [0u8; 64];
         thread_rng().fill_bytes(&mut bytes_in);

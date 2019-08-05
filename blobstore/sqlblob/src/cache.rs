@@ -14,7 +14,7 @@ use rust_thrift::compact_protocol;
 use tokio;
 
 use cacheblob::{CacheOps, CacheOpsUtil};
-use mononoke_types::{BlobstoreBytes, RepositoryId};
+use mononoke_types::BlobstoreBytes;
 use sqlblob_thrift::{DataCacheEntry, InChunk};
 
 use crate::{i32_to_non_zero_usize, DataEntry};
@@ -67,13 +67,11 @@ where
 }
 
 #[derive(Clone)]
-pub(crate) struct DataCacheTranslator {
-    repo_id: RepositoryId,
-}
+pub(crate) struct DataCacheTranslator {}
 
 impl DataCacheTranslator {
-    pub(crate) fn new(repo_id: RepositoryId) -> Self {
-        Self { repo_id }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 }
 
@@ -121,18 +119,16 @@ impl CacheTranslator for DataCacheTranslator {
     }
 
     fn cache_key(&self, key: &Self::Key) -> String {
-        format!("{}.{}", self.repo_id.id(), key)
+        format!("{}", key)
     }
 }
 
 #[derive(Clone)]
-pub(crate) struct ChunkCacheTranslator {
-    repo_id: RepositoryId,
-}
+pub(crate) struct ChunkCacheTranslator {}
 
 impl ChunkCacheTranslator {
-    pub(crate) fn new(repo_id: RepositoryId) -> Self {
-        Self { repo_id }
+    pub(crate) fn new() -> Self {
+        Self {}
     }
 }
 
@@ -149,6 +145,6 @@ impl CacheTranslator for ChunkCacheTranslator {
     }
 
     fn cache_key(&self, &(ref key, ref chunk_id): &Self::Key) -> String {
-        format!("{}.{}.{}", self.repo_id.id(), key, chunk_id)
+        format!("{}.{}", key, chunk_id)
     }
 }

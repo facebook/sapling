@@ -31,6 +31,8 @@ use scuba::ScubaClient;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
+const DUMMY_REPO: RepositoryId = RepositoryId::new(0);
+
 #[derive(Copy, Clone, PartialEq)]
 pub enum Scrubbing {
     Enabled,
@@ -133,7 +135,6 @@ impl SqlFactory for SqliteFactory {
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
 pub fn make_blobstore<T: SqlFactory>(
-    repoid: RepositoryId,
     blobconfig: &BlobConfig,
     sql_factory: &T,
     myrouter_port: Option<u16>,
@@ -164,7 +165,7 @@ pub fn make_blobstore<T: SqlFactory>(
                 .boxify()
         }
 
-        Sqlite { path } => Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
+        Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"))
             .chain_err(ErrorKind::StateOpen)
             .map_err(Error::from)
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
@@ -194,9 +195,9 @@ pub fn make_blobstore<T: SqlFactory>(
             shard_map,
             shard_num,
         } => if let Some(myrouter_port) = myrouter_port {
-            Sqlblob::with_myrouter(repoid, shard_map.clone(), myrouter_port, *shard_num)
+            Sqlblob::with_myrouter(shard_map.clone(), myrouter_port, *shard_num)
         } else {
-            Sqlblob::with_raw_xdb_shardmap(repoid, shard_map.clone(), *shard_num)
+            Sqlblob::with_raw_xdb_shardmap(shard_map.clone(), *shard_num)
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
@@ -212,7 +213,7 @@ pub fn make_blobstore<T: SqlFactory>(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(repoid, config, sql_factory, myrouter_port)
+                        make_blobstore(config, sql_factory, myrouter_port)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -225,7 +226,7 @@ pub fn make_blobstore<T: SqlFactory>(
                         future::join_all(components).map({
                             move |components| {
                                 Arc::new(MultiplexedBlobstore::new(
-                                    repoid,
+                                    DUMMY_REPO.clone(),
                                     components,
                                     queue,
                                     scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
@@ -246,7 +247,7 @@ pub fn make_blobstore<T: SqlFactory>(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(repoid, config, sql_factory, myrouter_port)
+                        make_blobstore(config, sql_factory, myrouter_port)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -260,7 +261,7 @@ pub fn make_blobstore<T: SqlFactory>(
                         future::join_all(components).map({
                             move |components| {
                                 Arc::new(ScrubBlobstore::new(
-                                    repoid,
+                                    DUMMY_REPO.clone(),
                                     components,
                                     queue,
                                     scuba_table.map(|table| Arc::new(ScubaClient::new(table))),

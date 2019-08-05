@@ -121,7 +121,7 @@ fn do_open_blobrepo<T: SqlFactory>(
     scuba_censored_table: Option<String>,
     filestore_config: FilestoreConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
+    let uncensored_blobstore = make_blobstore(&blobconfig, &sql_factory, myrouter_port);
 
     let censored_blobs = match censoring {
         Censoring::Enabled => sql_factory

@@ -15,7 +15,7 @@ use rust_thrift::compact_protocol;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
 
-use mononoke_types::{BlobstoreBytes, RepositoryId};
+use mononoke_types::BlobstoreBytes;
 use sqlblob_thrift::InChunk;
 
 use crate::{i32_to_non_zero_usize, DataEntry};
@@ -111,7 +111,6 @@ queries! {
 
 #[derive(Clone)]
 pub(crate) struct DataSqlStore {
-    repo_id: RepositoryId,
     shard_num: NonZeroUsize,
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
@@ -120,14 +119,12 @@ pub(crate) struct DataSqlStore {
 
 impl DataSqlStore {
     pub(crate) fn new(
-        repo_id: RepositoryId,
         shard_num: NonZeroUsize,
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
     ) -> Self {
         Self {
-            repo_id,
             shard_num,
             write_connection,
             read_connection,
@@ -209,7 +206,6 @@ impl DataSqlStore {
 
     fn shard(&self, key: &str) -> usize {
         let mut hasher = XxHash32::with_seed(0);
-        hasher.write_i32(self.repo_id.id());
         hasher.write(key.as_bytes());
         ((hasher.finish() % self.shard_num.get() as u64) + 1) as usize
     }
@@ -217,7 +213,6 @@ impl DataSqlStore {
 
 #[derive(Clone)]
 pub(crate) struct ChunkSqlStore {
-    repo_id: RepositoryId,
     shard_num: NonZeroUsize,
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
@@ -226,14 +221,12 @@ pub(crate) struct ChunkSqlStore {
 
 impl ChunkSqlStore {
     pub(crate) fn new(
-        repo_id: RepositoryId,
         shard_num: NonZeroUsize,
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
     ) -> Self {
         Self {
-            repo_id,
             shard_num,
             write_connection,
             read_connection,
@@ -286,7 +279,6 @@ impl ChunkSqlStore {
 
     fn shard(&self, key: &str, chunk_id: u32) -> usize {
         let mut hasher = XxHash32::with_seed(0);
-        hasher.write_i32(self.repo_id.id());
         hasher.write(key.as_bytes());
         hasher.write_u32(chunk_id);
         ((hasher.finish() % self.shard_num.get() as u64) + 1) as usize
