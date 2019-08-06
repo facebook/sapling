@@ -11,7 +11,7 @@ use failure::Fallible;
 
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::{self, FileMetadata, FileType, Manifest};
+use manifest::{self, FileMetadata, FileType, FsNode, Manifest};
 use pathmatcher::{AlwaysMatcher, Matcher};
 use revisionstore::DataStore;
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -101,6 +101,16 @@ py_class!(class treemanifest |py| {
             Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
         };
         Ok(result.or(default).unwrap_or_else(|| PyString::new(py, "")))
+    }
+
+    def hasdir(&self, path: &PyBytes) -> PyResult<bool> {
+        let repo_path = pybytes_to_path(py, path);
+        let tree = self.underlying(py).borrow();
+        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            Some(FsNode::Directory) => true,
+            _ => false
+        };
+        Ok(result)
     }
 
     // Returns a list<path> for all files that match the predicate passed to the function.
