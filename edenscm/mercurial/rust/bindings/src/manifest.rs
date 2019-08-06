@@ -73,14 +73,17 @@ py_class!(class treemanifest |py| {
     }
 
     // Returns (node, flag) for a given `path` in the manifest.
-    def find(&self, path: &PyBytes) -> PyResult<Option<(PyBytes, String)>> {
+    // When the `path` does not exist, it return a KeyError.
+    def find(&self, path: &PyBytes) -> PyResult<(PyBytes, String)> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
-            None => None,
-            Some(file_metadata) => Some(file_metadata_to_py_tuple(py, &file_metadata)?),
-        };
-        Ok(result)
+        match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            None => {
+                let msg = format!("cannot find file '{}' in manifest", repo_path);
+                Err(PyErr::new::<exc::KeyError, _>(py, msg))
+            }
+            Some(file_metadata) => file_metadata_to_py_tuple(py, &file_metadata),
+        }
     }
 
     def get(&self, path: &PyBytes, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
