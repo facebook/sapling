@@ -3,15 +3,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{borrow::Borrow, cell::RefCell, str, sync::Arc};
+use std::{borrow::Borrow, cell::RefCell, ops::Deref, str, sync::Arc};
 
 use bytes::Bytes;
 use cpython::*;
 use failure::Fallible;
 
+use cpython_ext::{pyset_add, pyset_new, vec_to_pyobj};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::{self, FileMetadata, FileType, FsNode, Manifest};
+use manifest::{self, DiffType, FileMetadata, FileType, FsNode, Manifest};
 use pathmatcher::{AlwaysMatcher, Matcher};
 use revisionstore::DataStore;
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -127,20 +128,20 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
-    def text(&self) -> PyResult<PyString> {
-        let mut result = String::with_capacity(150 * 1024 * 1024);
+    def text(&self) -> PyResult<PyObject> {
+        let mut lines = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            result.push_str(&format!(
-                "{} {}{}\n",
+            lines.push(format!(
+                "{}\0{}{}\n",
                 path,
                 file_metadata.node,
                 file_type_to_str(file_metadata.file_type)
             ));
         }
-        // This will copy the string :((
-        Ok(PyString::new(py, &result))
+        lines.sort();
+        Ok(vec_to_pyobj(py, lines.join("").into()))
     }
 
     def set(&self, path: &PyBytes, binnode: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
@@ -199,6 +200,31 @@ py_class!(class treemanifest |py| {
             let diff_left = convert_side_diff(py, entry.diff_type.left());
             let diff_right = convert_side_diff(py, entry.diff_type.right());
             result.set_item(py, path, (diff_left, diff_right))?;
+        }
+        Ok(result)
+    }
+
+
+    def filesnotin(
+        &self,
+        other: &treemanifest,
+        matcher: Option<PyObject> = None
+    ) -> PyResult<PyObject> {
+        let mut result = pyset_new(py)?;
+        let this_tree = self.underlying(py).borrow();
+        let other_tree = other.underlying(py).borrow();
+        let matcher: Box<dyn Matcher> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+        };
+        for entry in manifest::diff(&this_tree, &other_tree, &matcher) {
+            let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            match entry.diff_type {
+                DiffType::LeftOnly(_) => {
+                    pyset_add(py, &mut result, path_to_pybytes(py, &entry.path))?;
+                }
+                DiffType::RightOnly(_) | DiffType::Changed(_, _) => (),
+            }
         }
         Ok(result)
     }
@@ -266,6 +292,41 @@ py_class!(class treemanifest |py| {
         for entry in tree.files(&AlwaysMatcher::new()) {
             let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
             result.push(path_to_pybytes(py, &path));
+        }
+        Ok(result)
+    }
+
+    def finalize(
+        &self,
+        p1tree: Option<&treemanifest> = None,
+        p2tree: Option<&treemanifest> = None
+    ) -> PyResult<Vec<PyTuple>> {
+        let mut result = Vec::new();
+        let mut tree = self.underlying(py).borrow_mut();
+        let mut parents = vec!();
+        if let Some(m1) = p1tree {
+            parents.push(m1.underlying(py).borrow());
+        }
+        if let Some(m2) = p2tree {
+            parents.push(m2.underlying(py).borrow());
+        }
+        let entries = tree.finalize(
+            parents.iter().map(|x| x.deref()).collect()
+        ).map_pyerr::<exc::RuntimeError>(py)?;
+        for entry in entries {
+            let (repo_path, node, raw, p1node, p1raw, p2node) = entry;
+            let tuple = PyTuple::new(
+                py,
+                &[
+                    path_to_pybytes(py, &repo_path).into_object(),
+                    node_to_pybytes(py, node).into_object(),
+                    PyBytes::new(py, &raw).into_object(),
+                    PyBytes::new(py, &p1raw).into_object(),
+                    node_to_pybytes(py, p1node).into_object(),
+                    node_to_pybytes(py, p2node).into_object(),
+                ],
+            );
+            result.push(tuple);
         }
         Ok(result)
     }

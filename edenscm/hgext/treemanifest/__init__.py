@@ -782,22 +782,14 @@ class basetreemanifestlog(object):
     ):
         dpack, hpack = self._getmutablelocalpacks()
 
-        p1tree = self[p1node].read()
-        p2tree = self[p2node].read()
-        if util.safehasattr(p1tree, "_treemanifest"):
-            # Detect hybrid manifests and unwrap them
-            p1tree = p1tree._treemanifest()
-        if util.safehasattr(p2tree, "_treemanifest"):
-            # Detect hybrid manifests and unwrap them
-            p2tree = p2tree._treemanifest()
-        newtreeiter = newtree.finalize(p1tree, p2tree)
+        newtreeiter = _finalize(self, newtree, p1node, p2node)
 
         if overridenode is not None:
             dpack = InterceptedMutableDataPack(dpack, overridenode, overridep1node)
             hpack = InterceptedMutableHistoryPack(hpack, overridenode, overridep1node)
 
         node = overridenode
-        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+        for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
             self._addtreeentry(
                 dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
             )
@@ -830,18 +822,10 @@ class basetreemanifestlog(object):
         if linkrev is None:
             linkrev = self._maplinknode(linknode)
 
-        p1tree = self[p1node].read()
-        if util.safehasattr(p1tree, "_treemanifest"):
-            # Detect hybrid manifests and unwrap them
-            p1tree = p1tree._treemanifest()
-        p2tree = self[p2node].read()
-        if util.safehasattr(p2tree, "_treemanifest"):
-            # Detect hybrid manifests and unwrap them
-            p2tree = p2tree._treemanifest()
-
         revlogstore = self.revlogstore
         node = overridenode
-        for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree, p2tree):
+        newtreeiter = _finalize(self, newtree, p1node, p2node)
+        for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
             revlog = revlogstore._revlog(nname)
             override = None
             if nname == "":
@@ -967,6 +951,46 @@ class hybridmanifestlog(manifest.manifestlog):
         self.treemanifestlog.abortpending()
 
 
+def _userustmanifest(manifestlog):
+    return manifestlog.ui.configbool("treemanifest", "rustmanifest")
+
+
+def _buildtree(manifestlog, node=None):
+    # this code seems to belong in manifestlog but I have no idea how
+    # manifestlog objects work
+    if _userustmanifest(manifestlog):
+        manifestbuilder = rustmanifest.treemanifest
+    else:
+        manifestbuilder = cstore.treemanifest
+    store = manifestlog.datastore
+    if node is not None and node != nullid:
+        tree = manifestbuilder(store, node)
+    else:
+        tree = manifestbuilder(store)
+    return tree
+
+
+def _finalize(manifestlog, tree, p1node=None, p2node=None):
+    parents = []
+    p1tree = _getparenttree(manifestlog, p1node)
+    if p1tree is not None:
+        parents.append(p1tree)
+    p2tree = _getparenttree(manifestlog, p2node)
+    if p2tree is not None:
+        parents.append(p2tree)
+    return tree.finalize(*parents)
+
+
+def _getparenttree(manifestlog, node=None):
+    if node is None or node == nullid:
+        return None
+    tree = manifestlog[node].read()
+    if util.safehasattr(tree, "_treemanifest"):
+        # Detect hybrid manifests and unwrap them
+        tree = tree._treemanifest()
+    return tree
+
+
 class treemanifestctx(object):
     def __init__(self, manifestlog, dir, node):
         self._manifestlog = manifestlog
@@ -976,20 +1000,7 @@ class treemanifestctx(object):
 
     def read(self):
         if self._tree is None:
-            userust = self._manifestlog.ui.configbool("treemanifest", "rustmanifest")
-            store = self._manifestlog.datastore
-            if self._node != nullid:
-                if userust:
-                    self._tree = rustmanifest.treemanifest(store, self._node)
-                else:
-                    self._tree = cstore.treemanifest(store, self._node)
-            else:
-                if userust:
-                    # untested
-                    self._tree = rustmanifest.treemanifest(store)
-                else:
-                    self._tree = cstore.treemanifest(store)
-
+            self._tree = _buildtree(self._manifestlog, self._node)
         return self._tree
 
     def node(self):
@@ -1000,9 +1011,7 @@ class treemanifestctx(object):
             raise RuntimeError(
                 "native tree manifestlog doesn't support " "subdir creation: '%s'" % dir
             )
-
-        store = self._manifestlog.datastore
-        return cstore.treemanifest(store)
+        return _buildtree(self._manifestlog)
 
     def copy(self):
         memmf = memtreemanifestctx(self._manifestlog, dir=self._dir)
@@ -1028,13 +1037,9 @@ class treemanifestctx(object):
         the subdirectory will be reported among files and distinguished only by
         its 't' flag.
         """
-        store = self._manifestlog.datastore
         p1, p2 = self.parents
         mf = self.read()
-        if p1 == nullid:
-            parentmf = cstore.treemanifest(store)
-        else:
-            parentmf = cstore.treemanifest(store, p1)
+        parentmf = _buildtree(self._manifestlog, p1)
 
         if shallow:
             # This appears to only be used for changegroup creation in
@@ -1042,7 +1047,7 @@ class treemanifestctx(object):
             # tree exchanges, we shouldn't need to implement this.
             raise NotImplemented("native trees don't support shallow " "readdelta yet")
         else:
-            md = cstore.treemanifest(store)
+            md = _buildtree(self._manifestlog)
             for f, ((n1, fl1), (n2, fl2)) in parentmf.diff(mf).iteritems():
                 if n2:
                     md[f] = n2
@@ -1058,8 +1063,7 @@ class memtreemanifestctx(object):
     def __init__(self, manifestlog, dir=""):
         self._manifestlog = manifestlog
         self._dir = dir
-        store = self._manifestlog.datastore
-        self._treemanifest = cstore.treemanifest(store)
+        self._treemanifest = _buildtree(manifestlog)
 
     def new(self, dir=""):
         return memtreemanifestctx(self._manifestlog, dir=dir)
@@ -1373,7 +1377,10 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
                 _("unable to find tree parent nodes %s %s") % (hex(p1node), hex(p2node))
             )
     else:
-        parenttree = cstore.treemanifest(tmfl.datastore)
+        if _userustmanifest(mfl):
+            parenttree = rustmanifest.treemanifest(tmfl.datastore)
+        else:
+            parenttree = cstore.treemanifest(tmfl.datastore)
 
     added, removed = _getflatdiff(mfl, mfctx)
     newtree = _getnewtree(parenttree, added, removed)
@@ -1657,6 +1664,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
         if name in repo:
             allowedtreeroots.add(repo[name].manifestnode())
 
+    userustmanifest = _userustmanifest(mfl)
     includedentries = set()
     with progress.bar(ui, _("priming tree cache"), total=total) as prog:
         for rev in xrange(oldtip, newtip):
@@ -1668,7 +1676,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             linknode = cl.node(linkrev)
 
             if p1node == nullid:
-                origtree = cstore.treemanifest(mfl.datastore)
+                origtree = _buildtree(mfl)
             elif p1node in builttrees:
                 origtree = builttrees[p1node]
             else:
@@ -1680,7 +1688,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
                 p1mf = mfl[p1node].read()
                 p1linknode = cl.node(mfrevlog.linkrev(p1))
-                origtree = cstore.treemanifest(mfl.datastore)
+                origtree = _buildtree(mfl)
                 for filename, fnode, flag in p1mf.iterentries():
                     origtree.set(filename, fnode, flag)
 
@@ -1688,7 +1696,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                 temphistorypack = InterceptedMutableHistoryPack(
                     historypack, p1node, nullid
                 )
-                for nname, nnode, ntext, np1text, np1, np2 in origtree.finalize():
+                for nname, nnode, ntext, _np1text, np1, np2 in origtree.finalize():
                     # No need to compute a delta, since we know the parent isn't
                     # already a tree.
                     tempdatapack.add(nname, nnode, nullid, ntext)
@@ -1740,6 +1748,8 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
                 # Only use deltas if the delta base is in this same pack file
                 if np1 != nullid and (nname, np1) in includedentries:
+                    if userustmanifest:
+                        np1text = mfdatastore.get(nname, np1)
                     delta = mdiff.textdiff(np1text, ntext)
                     deltabase = np1
                 else:
@@ -1927,7 +1937,12 @@ def _registerbundle2parts():
 
             for node in rootnodes:
                 p1, p2, linknode, copyfrom = wirepackstore.getnodeinfo("", node)
-                newtree = cstore.treemanifest(datastore, node)
+                userustmanifest = mfl.ui.configbool("treemanifest", "rustmanifest")
+                if userustmanifest:
+                    newtree = rustmanifest.treemanifest(datastore, node)
+                else:
+                    newtree = cstore.treemanifest(datastore, node)
+
                 mfl.add(mfl.ui, newtree, p1, p2, linknode, tr=tr)
             return
 
@@ -2337,9 +2352,13 @@ def _generatepackstream(
 
         # Only use the first two base trees, since the current tree
         # implementation cannot handle more yet.
-        subtrees = cstore.treemanifest.walksubdirtrees(
-            (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
-        )
+        userustmanifest = repo.ui.configbool("treemanifest", "rustmanifest")
+        if userustmanifest:
+            raise NotImplementedError
+        else:
+            subtrees = cstore.treemanifest.walksubdirtrees(
+                (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
+            )
         rootlinknode = None
         if linknodefixup is not None:
             validlinknodes, linknodemap = linknodefixup
@@ -2564,6 +2583,9 @@ def _debugcmdfindtreemanifest(orig, ctx):
     manifest = ctx.manifest()
     # Check if the manifest we have is a treemanifest.
     if isinstance(manifest, cstore.treemanifest):
+        return manifest
+    if isinstance(manifest, rustmanifest.treemanifest):
+        # should be the same as the cstore treemanifest
         return manifest
     try:
         # Look up the treemanifest in the treemanifestlog.  There might not be

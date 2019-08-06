@@ -106,7 +106,7 @@ impl Entry {
         Ok(Entry(underlying.freeze()))
     }
 
-    #[cfg(test)]
+    // used in tests and in finalize
     pub fn to_bytes(self) -> Bytes {
         self.0
     }

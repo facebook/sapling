@@ -14,6 +14,7 @@ use std::{
     sync::Arc,
 };
 
+use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
@@ -257,12 +258,14 @@ impl Tree {
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&Tree>,
-    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, Node, Vec<Node>)>> {
+    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, Node, Bytes, Node, Bytes, Node)>> {
         fn compute_node<C: AsRef<[u8]>>(parent_tree_nodes: &[Node], content: C) -> Node {
             let mut hasher = Sha1::new();
             debug_assert!(parent_tree_nodes.len() <= 2);
             let p1 = parent_tree_nodes.get(0).unwrap_or(Node::null_id());
             let p2 = parent_tree_nodes.get(1).unwrap_or(Node::null_id());
+            // Even if parents are sorted two hashes go into hash computation but surprise
+            // the NULL_ID is not a special case in this case and gets sorted.
             if p1 < p2 {
                 hasher.input(p1.as_ref());
                 hasher.input(p2.as_ref());
@@ -277,7 +280,7 @@ impl Tree {
         }
         struct Executor<'a> {
             path: RepoPathBuf,
-            converted_nodes: Vec<(RepoPathBuf, Node, Vec<Node>)>,
+            converted_nodes: Vec<(RepoPathBuf, Node, Bytes, Node, Bytes, Node)>,
             parent_trees: Vec<Cursor<'a>>,
         };
         impl<'a> Executor<'a> {
@@ -314,6 +317,7 @@ impl Tree {
                         Step::Err(err) => return Err(err),
                     }
                 }
+                parent_nodes.sort();
                 Ok(parent_nodes)
             }
             fn parent_trees_for_subdirectory(
@@ -375,8 +379,17 @@ impl Tree {
                         let durable_entry = DurableEntry { node, links: cell };
                         let inner = Arc::new(durable_entry);
                         *link = Durable(inner);
-                        self.converted_nodes
-                            .push((self.path.clone(), node, parent_tree_nodes));
+                        let parent_node =
+                            |id| *parent_tree_nodes.get(id).unwrap_or(Node::null_id());
+                        let p1raw = Bytes::new();
+                        self.converted_nodes.push((
+                            self.path.clone(),
+                            node,
+                            entry.to_bytes(),
+                            parent_node(0),
+                            p1raw,
+                            parent_node(1),
+                        ));
                         Ok((node, store::Flag::Directory))
                     }
                 }
@@ -639,7 +652,7 @@ mod tests {
     use super::*;
 
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
-    use types::testutil::*;
+    use types::{node::NULL_ID, testutil::*};
 
     use self::store::TestStore;
     use crate::FileType;
@@ -881,7 +894,8 @@ mod tests {
 
     #[test]
     fn test_finalize_with_zero_and_one_parents() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let store = Arc::new(TestStore::new());
+        let mut tree = Tree::ephemeral(store.clone());
         tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
             .unwrap();
         tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
@@ -896,17 +910,29 @@ mod tests {
         assert_eq!(tree_changed[4].0, repo_path_buf("a2"));
         assert_eq!(tree_changed[5].0, RepoPathBuf::new());
 
+        // we should write before we can update
+        // depends on the implementation but it is valid for finalize to query the store
+        // for the values returned in the previous finalize call
+
+        use bytes::Bytes;
+        for (path, node, raw, _, _, _) in tree_changed.iter() {
+            store.insert(&path, *node, Bytes::from(&raw[..])).unwrap();
+        }
+
         let mut update = tree.clone();
         update.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
         update.remove(repo_path("a2/b2/c2")).unwrap();
         update.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
         let update_changed: Vec<_> = update.finalize(vec![&tree]).unwrap().collect();
         assert_eq!(update_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(update_changed[0].2, vec![tree_changed[2].1]);
+        assert_eq!(update_changed[0].3, tree_changed[2].1);
+        assert_eq!(update_changed[0].5, NULL_ID);
         assert_eq!(update_changed[1].0, repo_path_buf("a3"));
-        assert_eq!(update_changed[1].2, vec![]);
+        assert_eq!(update_changed[1].3, NULL_ID);
+        assert_eq!(update_changed[1].5, NULL_ID);
         assert_eq!(update_changed[2].0, RepoPathBuf::new());
-        assert_eq!(update_changed[2].2, vec![tree_changed[5].1]);
+        assert_eq!(update_changed[2].3, tree_changed[5].1);
+        assert_eq!(update_changed[2].5, NULL_ID);
     }
 
     #[test]
@@ -929,26 +955,24 @@ mod tests {
         tree.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
         let tree_changed: Vec<_> = tree.finalize(vec![&p1, &p2]).unwrap().collect();
         assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(
-            tree_changed[0].2,
-            vec![
-                get_node(&p1, repo_path("a1")),
-                get_node(&p2, repo_path("a1"))
-            ]
-        );
+        assert_eq!(tree_changed[0].3, get_node(&p1, repo_path("a1")));
+        assert_eq!(tree_changed[0].5, get_node(&p2, repo_path("a1")));
+
         assert_eq!(tree_changed[1].0, repo_path_buf("a2/b2"));
-        assert_eq!(tree_changed[1].2, vec![get_node(&p1, repo_path("a2/b2"))]);
+        assert_eq!(tree_changed[1].3, get_node(&p1, repo_path("a2/b2")));
+        assert_eq!(tree_changed[1].5, NULL_ID);
         assert_eq!(tree_changed[2].0, repo_path_buf("a2"));
         assert_eq!(tree_changed[3].0, repo_path_buf("a3"));
-        assert_eq!(tree_changed[3].2, vec![get_node(&p2, repo_path("a3"))]);
+        assert_eq!(tree_changed[3].3, get_node(&p2, repo_path("a3")));
+        assert_eq!(tree_changed[3].5, NULL_ID);
         assert_eq!(tree_changed[4].0, RepoPathBuf::new());
-        assert_eq!(
-            tree_changed[4].2,
-            vec![
-                get_node(&p1, RepoPath::empty()),
-                get_node(&p2, RepoPath::empty())
-            ]
-        );
+
+        let mut sorted = vec![
+            get_node(&p1, RepoPath::empty()),
+            get_node(&p2, RepoPath::empty()),
+        ];
+        sorted.sort();
+        assert_eq!(vec![tree_changed[4].3, tree_changed[4].5], sorted);
     }
 
     #[test]
@@ -958,21 +982,23 @@ mod tests {
         tree1.insert(repo_path_buf("a1"), meta("10")).unwrap();
         let tree1_changed: Vec<_> = tree1.finalize(vec![]).unwrap().collect();
         assert_eq!(tree1_changed[0].0, RepoPathBuf::new());
-        assert_eq!(tree1_changed[0].2, vec![]);
+        assert_eq!(tree1_changed[0].3, NULL_ID);
 
         let mut tree2 = Tree::ephemeral(store.clone());
         tree2.insert(repo_path_buf("a1/b1"), meta("20")).unwrap();
         let tree2_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
         assert_eq!(tree2_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(tree2_changed[0].2, vec![]);
+        assert_eq!(tree2_changed[0].3, NULL_ID);
         assert_eq!(tree2_changed[1].0, RepoPathBuf::new());
-        assert_eq!(tree2_changed[1].2, vec![tree1_changed[0].1]);
+        assert_eq!(tree2_changed[1].3, tree1_changed[0].1);
+        assert_eq!(tree2_changed[1].5, NULL_ID);
 
         let mut tree3 = Tree::ephemeral(store.clone());
         tree3.insert(repo_path_buf("a1"), meta("30")).unwrap();
         let tree3_changed: Vec<_> = tree3.finalize(vec![&tree2]).unwrap().collect();
         assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
-        assert_eq!(tree3_changed[0].2, vec![tree2_changed[1].1]);
+        assert_eq!(tree3_changed[0].3, tree2_changed[1].1);
+        assert_eq!(tree3_changed[0].5, NULL_ID);
     }
 
     #[test]
