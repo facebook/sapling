@@ -215,6 +215,13 @@ py_class!(class treemanifest |py| {
         Ok(())
     }
 
+    def __delitem__(&self, path: &PyBytes) -> PyResult<()> {
+        let mut tree = self.underlying(py).borrow_mut();
+        let repo_path = pybytes_to_path(py, path);
+        tree.remove(&repo_path).map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(())
+    }
+
     def __getitem__(&self, key: &PyBytes) -> PyResult<PyBytes> {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
