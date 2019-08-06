@@ -543,24 +543,6 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
-            usehttp = self.ui.configbool("treemanifest", "usehttp")
-            if edenapi.enabled(self.ui) and usehttp:
-                try:
-                    if self.ui.interactive() and edenapi.debug(self.ui):
-                        self.ui.warn(_("fetching trees over HTTPS\n"))
-                    dpack, hpack = self.manifestlog.getmutablesharedpacks()
-                    stats = self.edenapi.prefetch_trees(
-                        rootdir, mfnodes, basemfnodes, dpack, depth
-                    )
-                    if self.ui.interactive() and edenapi.debug(self.ui):
-                        self.ui.warn(_("%s\n") % stats.to_str())
-                    return
-                except Exception as e:
-                    self.ui.warn(_("encountered error during HTTPS fetching;"))
-                    self.ui.warn(_(" falling back to SSH\n"))
-                    edenapi.logexception(self.ui, e)
-                    self.ui.metrics.gauge("edenapi_fallbacks", 1)
-
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):
                 with self.connectionpool.get(fallbackpath) as conn:
