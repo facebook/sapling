@@ -77,10 +77,10 @@ impl Healer {
                     .into_iter()
                     .filter_map(|(key, entries)| {
                         cloned!(ctx, sync_queue, blobstores, healing_deadline);
-                        let entries = entries.collect();
+                        let entries: Vec<_> = entries.collect();
                         let heal_opt =
                             heal_blob(ctx, sync_queue, blobstores, healing_deadline, key, &entries);
-                        heal_opt.map(|fut| fut.and_then(|()| Ok(entries)))
+                        heal_opt.map(|fut| fut.map(|()| entries))
                     })
                     .collect();
 
@@ -110,7 +110,7 @@ fn heal_blob(
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     healing_deadline: DateTime,
     key: String,
-    entries: &Vec<BlobstoreSyncQueueEntry>,
+    entries: &[BlobstoreSyncQueueEntry],
 ) -> Option<impl Future<Item = (), Error = Error>> {
     // This is needed as we load by key, and a given key may have entries both before and after
     // the deadline.  We leave the key rather than re-add to avoid entries always being too new.
