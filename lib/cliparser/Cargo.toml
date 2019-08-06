@@ -17,5 +17,5 @@ features = ["python27-sys", "extension-module-2-7"]
 optional = true
 
 [features]
-default-features = []
+default = []
 python = ["cpython-ext", "cpython"]
