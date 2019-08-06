@@ -11,7 +11,7 @@ use bytes::Bytes;
 
 use cloned::cloned;
 use failure_ext::Error;
-use futures::{future, prelude::*};
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 
 use blobstore::Blobstore;
@@ -101,7 +101,7 @@ pub struct StoreRequest {
 
 impl StoreRequest {
     pub fn new(size: u64) -> Self {
-        use expected_size::*;
+        use expected_size::ExpectedSize;
 
         Self {
             expected_size: ExpectedSize::new(size),
@@ -113,7 +113,7 @@ impl StoreRequest {
     }
 
     pub fn with_canonical(size: u64, canonical: ContentId) -> Self {
-        use expected_size::*;
+        use expected_size::ExpectedSize;
 
         Self {
             expected_size: ExpectedSize::new(size),
@@ -125,7 +125,7 @@ impl StoreRequest {
     }
 
     pub fn with_sha1(size: u64, sha1: hash::Sha1) -> Self {
-        use expected_size::*;
+        use expected_size::ExpectedSize;
 
         Self {
             expected_size: ExpectedSize::new(size),
@@ -137,7 +137,7 @@ impl StoreRequest {
     }
 
     pub fn with_sha256(size: u64, sha256: hash::Sha256) -> Self {
-        use expected_size::*;
+        use expected_size::ExpectedSize;
 
         Self {
             expected_size: ExpectedSize::new(size),
@@ -149,7 +149,7 @@ impl StoreRequest {
     }
 
     pub fn with_git_sha1(size: u64, git_sha1: hash::GitSha1) -> Self {
-        use expected_size::*;
+        use expected_size::ExpectedSize;
 
         Self {
             expected_size: ExpectedSize::new(size),
@@ -170,7 +170,7 @@ pub fn get_canonical_id<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<ContentId>, Error = Error> {
     match key {
-        FetchKey::Canonical(canonical) => future::ok(Some(*canonical)).left_future(),
+        FetchKey::Canonical(canonical) => Ok(Some(*canonical)).into_future().left_future(),
         aliaskey => blobstore
             .get(ctx, aliaskey.blobstore_key())
             .and_then(|maybe_alias| {
@@ -193,12 +193,10 @@ pub fn get_metadata<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-    use metadata::*;
-
     get_canonical_id(blobstore, ctx.clone(), key).and_then({
         cloned!(blobstore, ctx);
         move |maybe_id| match maybe_id {
-            Some(id) => get_metadata(blobstore, ctx, id).left_future(),
+            Some(id) => metadata::get_metadata(blobstore, ctx, id).left_future(),
             None => Ok(None).into_future().right_future(),
         }
     })
@@ -230,13 +228,10 @@ pub fn fetch<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-    // First fetch either the content or the alias
-    use fetch::*;
-
     get_canonical_id(blobstore, ctx.clone(), key).and_then({
         cloned!(blobstore, ctx);
         move |content_id| match content_id {
-            Some(content_id) => fetch(blobstore, ctx, content_id).left_future(),
+            Some(content_id) => fetch::fetch(blobstore, ctx, content_id).left_future(),
             None => Ok(None).into_future().right_future(),
         }
     })
@@ -251,12 +246,10 @@ pub fn peek<B: Blobstore + Clone>(
     key: &FetchKey,
     size: usize,
 ) -> impl Future<Item = Option<Bytes>, Error = Error> {
-    use chunk::*;
-
     fetch(blobstore, ctx, key)
         .map(move |maybe_stream| match maybe_stream {
             None => Ok(None).into_future().left_future(),
-            Some(stream) => ChunkStream::new(stream, size)
+            Some(stream) => chunk::ChunkStream::new(stream, size)
                 .into_future()
                 .map(|(bytes, _rest)| bytes)
                 .map_err(|(err, _rest)| err)
@@ -275,13 +268,11 @@ pub fn store<B: Blobstore + Clone>(
     req: &StoreRequest,
     data: impl Stream<Item = Bytes, Error = Error>,
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
-    use chunk::*;
-    use finalize::*;
-    use prepare::*;
+    use chunk::Chunks;
 
-    let prepared = match make_chunks(data, req.expected_size, config.chunk_size) {
-        Chunks::Inline(fut) => prepare_inline(fut).left_future(),
-        Chunks::Chunked(expected_size, chunks) => prepare_chunked(
+    let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
+        Chunks::Inline(fut) => prepare::prepare_inline(fut).left_future(),
+        Chunks::Chunked(expected_size, chunks) => prepare::prepare_chunked(
             ctx.clone(),
             blobstore.clone(),
             expected_size,
@@ -293,7 +284,7 @@ pub fn store<B: Blobstore + Clone>(
 
     prepared.and_then({
         cloned!(blobstore, ctx, req);
-        move |prepared| finalize(blobstore, ctx, Some(&req), prepared)
+        move |prepared| finalize::finalize(blobstore, ctx, Some(&req), prepared)
     })
 }
 
@@ -306,13 +297,10 @@ pub fn store_bytes<B: Blobstore + Clone>(
     ctx: CoreContext,
     bytes: Bytes,
 ) -> (FileContents, impl Future<Item = (), Error = Error>) {
-    use finalize::*;
-    use prepare::*;
-
-    let prepared = prepare_bytes(bytes);
+    let prepared = prepare::prepare_bytes(bytes);
 
     (
         prepared.contents.clone(),
-        finalize(blobstore.clone(), ctx, None, prepared).map(|_| ()),
+        finalize::finalize(blobstore.clone(), ctx, None, prepared).map(|_| ()),
     )
 }
