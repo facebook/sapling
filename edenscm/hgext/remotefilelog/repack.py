@@ -654,17 +654,19 @@ def _cleanuptemppacks(ui, packpath):
     of these. Let's remove these.
     """
     extensions = [
-        datapack.PACKSUFFIX + "-tmp",
-        datapack.INDEXSUFFIX + "-tmp",
-        historypack.PACKSUFFIX + "-tmp",
-        historypack.INDEXSUFFIX + "-tmp",
-        "to-delete",
+        datapack.PACKSUFFIX,
+        datapack.INDEXSUFFIX,
+        historypack.PACKSUFFIX,
+        historypack.INDEXSUFFIX,
     ]
 
     def _shouldhold(f):
         """Newish files shouldn't be removed as they could be used by another
         running command.
         """
+        if os.path.isdir(f) or os.path.basename(f) == "repacklock":
+            return True
+
         stat = os.lstat(f)
         return time.gmtime(stat.st_atime + 24 * 3600) > time.gmtime()
 
@@ -674,12 +676,15 @@ def _cleanuptemppacks(ui, packpath):
                 f = os.path.join(packpath, f)
                 if _shouldhold(f):
                     continue
-                for ext in extensions:
-                    if f.endswith(ext):
-                        try:
-                            util.unlink(f)
-                        except Exception:
-                            pass
+
+                __, ext = os.path.splitext(f)
+
+                if ext not in extensions:
+                    try:
+                        util.unlink(f)
+                    except Exception:
+                        pass
+
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
