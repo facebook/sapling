@@ -172,6 +172,6 @@ def unhide(ui, repo, *revs, **opts):
     with repo.lock():
         revs = set(scmutil.revrange(unfi, revs))
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            ctxs = unfi.set("::(%ld) & obsolete()", revs)
+            ctxs = unfi.set("not public() & ::(%ld) & obsolete()", revs)
             obsolete.revive(ctxs, operation="unhide")
         visibility.add(repo, [unfi[r].node() for r in revs])
