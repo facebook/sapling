@@ -25,7 +25,7 @@ use self::cursor::{Cursor, Step};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
 use self::store::InnerStore;
 pub use self::store::TreeStore;
-use crate::{FileMetadata, Manifest};
+use crate::{FileMetadata, FsNode, Manifest};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
@@ -70,17 +70,15 @@ impl Tree {
 }
 
 impl Manifest for Tree {
-    fn get(&self, path: &RepoPath) -> Fallible<Option<FileMetadata>> {
-        match self.get_link(path)? {
-            None => Ok(None),
-            Some(link) => {
-                if let &Leaf(file_metadata) = link {
-                    Ok(Some(file_metadata))
-                } else {
-                    Err(format_err!("Encountered directory where file was expected"))
-                }
+    fn get(&self, path: &RepoPath) -> Fallible<Option<FsNode>> {
+        let result = self.get_link(path)?.map(|link| {
+            if let &Leaf(file_metadata) = link {
+                FsNode::File(file_metadata)
+            } else {
+                FsNode::Directory
             }
-        }
+        });
+        Ok(result)
     }
 
     fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()> {
@@ -668,17 +666,29 @@ mod tests {
     fn test_insert() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar"), meta("10")).unwrap();
-        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(meta("10")));
-        assert_eq!(tree.get(repo_path("baz")).unwrap(), None);
+        assert_eq!(
+            tree.get_file(repo_path("foo/bar")).unwrap(),
+            Some(meta("10"))
+        );
+        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), None);
 
         tree.insert(repo_path_buf("baz"), meta("20")).unwrap();
-        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(meta("10")));
-        assert_eq!(tree.get(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("foo/bar")).unwrap(),
+            Some(meta("10"))
+        );
+        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
 
         tree.insert(repo_path_buf("foo/bat"), meta("30")).unwrap();
-        assert_eq!(tree.get(repo_path("foo/bat")).unwrap(), Some(meta("30")));
-        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(meta("10")));
-        assert_eq!(tree.get(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("foo/bat")).unwrap(),
+            Some(meta("30"))
+        );
+        assert_eq!(
+            tree.get_file(repo_path("foo/bar")).unwrap(),
+            Some(meta("10"))
+        );
+        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
     }
 
     #[test]
@@ -703,13 +713,22 @@ mod tests {
             .unwrap();
         let mut tree = Tree::durable(Arc::new(store), node("1"));
 
-        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(meta("11")));
-        assert_eq!(tree.get(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("foo/bar")).unwrap(),
+            Some(meta("11"))
+        );
+        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
 
         tree.insert(repo_path_buf("foo/bat"), meta("12")).unwrap();
-        assert_eq!(tree.get(repo_path("foo/bat")).unwrap(), Some(meta("12")));
-        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(meta("11")));
-        assert_eq!(tree.get(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("foo/bat")).unwrap(),
+            Some(meta("12"))
+        );
+        assert_eq!(
+            tree.get_file(repo_path("foo/bar")).unwrap(),
+            Some(meta("11"))
+        );
+        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
     }
 
     #[test]
@@ -736,8 +755,11 @@ mod tests {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar/baz"), meta("10"))
             .unwrap();
-        assert!(tree.get(repo_path("foo/bar")).is_err());
-        assert!(tree.get(repo_path("foo")).is_err());
+        assert_eq!(
+            tree.get(repo_path("foo/bar")).unwrap(),
+            Some(FsNode::Directory)
+        );
+        assert_eq!(tree.get(repo_path("foo")).unwrap(), Some(FsNode::Directory));
     }
 
     #[test]
@@ -767,15 +789,24 @@ mod tests {
         assert!(tree.remove(RepoPath::empty()).is_err());
         assert_eq!(tree.get(repo_path("a1/b1/c1/d1")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
-        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get(repo_path("a1/b2")).unwrap(),
+            Some(FsNode::File(meta("20")))
+        );
         tree.remove(repo_path("a1/b2")).unwrap();
-        assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
 
-        assert_eq!(tree.get(repo_path("a2/b2/c2")).unwrap(), Some(meta("30")));
+        assert_eq!(
+            tree.get(repo_path("a2/b2/c2")).unwrap(),
+            Some(FsNode::File(meta("30")))
+        );
         tree.remove(repo_path("a2/b2/c2")).unwrap();
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
-        assert!(tree.get_link(RepoPath::empty()).unwrap().is_some());
+        assert_eq!(
+            tree.get(RepoPath::empty()).unwrap(),
+            Some(FsNode::Directory)
+        );
     }
 
     #[test]
@@ -802,17 +833,26 @@ mod tests {
         assert!(tree.remove(repo_path("a1")).is_err());
         tree.remove(repo_path("a1/b1")).unwrap();
         assert_eq!(tree.get(repo_path("a1/b1")).unwrap(), None);
-        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(meta("12")));
+        assert_eq!(
+            tree.get(repo_path("a1/b2")).unwrap(),
+            Some(FsNode::File(meta("12")))
+        );
         tree.remove(repo_path("a1/b2")).unwrap();
         assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
         assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
 
-        assert_eq!(tree.get(repo_path("a2")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get(repo_path("a2")).unwrap(),
+            Some(FsNode::File(meta("20")))
+        );
         tree.remove(repo_path("a2")).unwrap();
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
-        assert!(tree.get_link(RepoPath::empty()).unwrap().is_some());
+        assert_eq!(
+            tree.get(RepoPath::empty()).unwrap(),
+            Some(FsNode::Directory)
+        );
     }
 
     #[test]
@@ -828,11 +868,14 @@ mod tests {
 
         let tree = Tree::durable(store.clone(), node);
         assert_eq!(
-            tree.get(repo_path("a1/b1/c1/d1")).unwrap(),
+            tree.get_file(repo_path("a1/b1/c1/d1")).unwrap(),
             Some(meta("10"))
         );
-        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(meta("20")));
-        assert_eq!(tree.get(repo_path("a2/b2/c2")).unwrap(), Some(meta("30")));
+        assert_eq!(tree.get_file(repo_path("a1/b2")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("a2/b2/c2")).unwrap(),
+            Some(meta("30"))
+        );
         assert_eq!(tree.get(repo_path("a2/b1")).unwrap(), None);
     }
 

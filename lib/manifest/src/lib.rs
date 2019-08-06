@@ -25,9 +25,11 @@ use types::{Node, RepoPath, RepoPathBuf};
 /// paths composed of directory names and file names. Querying for paths that the Manifest has
 /// determined previously to be directories will result in Errors.
 pub trait Manifest {
-    /// Retrieve the FileMetadata that is associated with a path.
-    /// Paths that were not set will return None.
-    fn get(&self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>>;
+    /// Inspects the manifest for the given path.
+    /// If the path is pointing to an file then Some(FsNode::File) is returned with then
+    /// file_metadata associated with the file. If the path is poitning to a directory then
+    /// Some(FsNode::Directory) is returned. If the path is not found then None is returned.
+    fn get(&self, path: &RepoPath) -> Fallible<Option<FsNode>>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.
@@ -40,6 +42,27 @@ pub trait Manifest {
     /// Persists the manifest so that it can be retrieved at a later time. Returns a note
     /// representing the identifier for saved manifest.
     fn flush(&mut self) -> Fallible<Node>;
+
+    /// Retrieve the FileMetadata that is associated with a path.
+    /// Paths that were not set will return None.
+    fn get_file(&self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>> {
+        let result = self.get(file_path)?.and_then(|fs_node| match fs_node {
+            FsNode::File(file_metadata) => Some(file_metadata),
+            FsNode::Directory => None,
+        });
+        Ok(result)
+    }
+}
+
+/// FsNode short for file system node.
+/// The manifest tracks a list of files. However file systems are hierarchical structures
+/// composed of directories and files at the end. For different operations it is useful to have
+/// a representation for file or directory. A good example is listing a directory. This structure
+/// helps us represent that notion.
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum FsNode {
+    Directory,
+    File(FileMetadata),
 }
 
 mod file;

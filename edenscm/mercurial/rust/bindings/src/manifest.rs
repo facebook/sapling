@@ -76,7 +76,7 @@ py_class!(class treemanifest |py| {
     def find(&self, path: &PyBytes) -> PyResult<Option<(PyBytes, String)>> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
             Some(file_metadata) => Some(file_metadata_to_py_tuple(py, &file_metadata)?),
         };
@@ -86,7 +86,7 @@ py_class!(class treemanifest |py| {
     def get(&self, path: &PyBytes, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
             Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.node)),
         };
@@ -96,7 +96,7 @@ py_class!(class treemanifest |py| {
     def flags(&self, path: &PyBytes, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = pybytes_to_path(py, path);
         let tree = self.underlying(py).borrow();
-        let result = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
             Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
         };
@@ -145,7 +145,7 @@ py_class!(class treemanifest |py| {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         let file_type = pystring_to_file_type(py, flag)?;
-        let file_metadata = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let file_metadata = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => {
                 let msg = "cannot setflag on file that is not in manifest";
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg));
@@ -194,7 +194,7 @@ py_class!(class treemanifest |py| {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
         let node = pybytes_to_node(py, binnode)?;
-        let file_metadata = match tree.get(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+        let file_metadata = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => FileMetadata::new(node, FileType::Regular),
             Some(mut file_metadata) => {
                 file_metadata.node = node;
@@ -208,7 +208,7 @@ py_class!(class treemanifest |py| {
     def __getitem__(&self, key: &PyBytes) -> PyResult<PyBytes> {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
-        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
+        match tree.get_file(&path).map_pyerr::<exc::RuntimeError>(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.node)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
         }
