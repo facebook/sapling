@@ -23,7 +23,5 @@ blobstore_type = "multiplexed"
 
   [[storage.multiplex.components]]
   blobstore_id=4
-  blobstore_type="gluster"
-  gluster_tier="mononoke"
-  gluster_export="groot"
-  gluster_basepath="mononoke/replica"
+  blobstore_type="blob:files"
+  path="/tmp/foo"

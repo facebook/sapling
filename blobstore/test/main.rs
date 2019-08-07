@@ -14,14 +14,12 @@ use std::sync::Arc;
 use bytes::Bytes;
 use failure_ext::Error;
 use futures::Future;
-use rand::prelude::*;
 use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
 
 use blobstore::Blobstore;
 use context::CoreContext;
 use fileblob::Fileblob;
-use glusterblob::Glusterblob;
 use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
@@ -163,22 +161,6 @@ blobstore_test_impl! {
         state: Arc::new(TempDir::new("rocksblob_test").unwrap()),
         // create/open may need to be unified once persistence tests are added
         new: move |dir: Arc<TempDir>| Rocksblob::create(&*dir),
-        persistent: true,
-    }
-}
-
-const GLUSTER_TIER: &str = "gluster.prod.flash.prn.cell002";
-const GLUSTER_EXPORT: &str = "groot";
-const GLUSTER_BASEPATH: &str = "mononoke/glusterblob-test";
-
-blobstore_test_impl! {
-    glusterblob_test => {
-        state: {
-            let name = format!("{}-{}", GLUSTER_BASEPATH, random::<u32>());
-            println!("glusterblob name {}", name);
-            name
-        },
-        new: |dir| Glusterblob::with_smc(GLUSTER_TIER, GLUSTER_EXPORT, dir),
         persistent: true,
     }
 }

@@ -19,7 +19,6 @@ use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use fileblob::Fileblob;
-use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{self, BlobConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
@@ -178,14 +177,6 @@ pub fn make_blobstore<T: SqlFactory>(
             .map_err(Error::from)
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .into_future()
-            .boxify(),
-
-        Gluster {
-            tier,
-            export,
-            basepath,
-        } => Glusterblob::with_smc(tier.clone(), export.clone(), basepath.clone())
-            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .boxify(),
 
         Mysql {

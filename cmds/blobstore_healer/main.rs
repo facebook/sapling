@@ -23,7 +23,6 @@ use futures::{
     prelude::*,
 };
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
-use glusterblob::Glusterblob;
 use healer::Healer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
@@ -65,16 +64,6 @@ fn maybe_schedule_healer_for_storage(
                     let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
                     let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
                     blobstores.insert(id, ok(blobstore).boxify());
-                }
-                BlobConfig::Gluster {
-                    tier,
-                    export,
-                    basepath,
-                } => {
-                    let blobstore = Glusterblob::with_smc(tier, export, basepath)
-                        .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) })
-                        .boxify();
-                    blobstores.insert(id, blobstore);
                 }
                 BlobConfig::Mysql {
                     shard_map,

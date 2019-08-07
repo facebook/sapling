@@ -496,15 +496,6 @@ pub enum BlobConfig {
         /// Prefix to be prepended to all the keys. In prod it should be ""
         prefix: String,
     },
-    /// Store in a gluster mount
-    Gluster {
-        /// Gluster tier
-        tier: String,
-        /// Nfs export name
-        export: String,
-        /// Content prefix path
-        basepath: String,
-    },
     /// Store in a sharded Mysql
     Mysql {
         /// Name of the Mysql shardmap to use
@@ -536,7 +527,7 @@ impl BlobConfig {
 
         match self {
             Disabled | Files { .. } | Rocks { .. } | Sqlite { .. } => true,
-            Manifold { .. } | Gluster { .. } | Mysql { .. } => false,
+            Manifold { .. } | Mysql { .. } => false,
             Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, config)| config)

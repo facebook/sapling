@@ -720,12 +720,6 @@ enum RawBlobstoreConfig {
         #[serde(default)]
         manifold_prefix: String,
     },
-    #[serde(rename = "gluster")]
-    Gluster {
-        gluster_tier: String,
-        gluster_export: String,
-        gluster_basepath: String,
-    },
     #[serde(rename = "mysql")]
     Mysql {
         mysql_shardmap: String,
@@ -753,15 +747,6 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
             } => BlobConfig::Manifold {
                 bucket: manifold_bucket.clone(),
                 prefix: manifold_prefix.clone(),
-            },
-            RawBlobstoreConfig::Gluster {
-                gluster_tier,
-                gluster_export,
-                gluster_basepath,
-            } => BlobConfig::Gluster {
-                tier: gluster_tier.clone(),
-                export: gluster_export.clone(),
-                basepath: gluster_basepath.clone(),
             },
             RawBlobstoreConfig::Mysql {
                 mysql_shardmap,
@@ -936,10 +921,8 @@ mod test {
 
                 [[storage.main.components]]
                 blobstore_id=1
-                blobstore_type="gluster"
-                gluster_tier="mononoke.gluster.tier"
-                gluster_export="groot"
-                gluster_basepath="mononoke/glusterblob-test"
+                blobstore_type="blob:files"
+                path="/tmp/foo"
 
             [[bookmarks]]
             name="master"
@@ -1046,10 +1029,8 @@ mod test {
                 ),
                 (
                     BlobstoreId::new(1),
-                    BlobConfig::Gluster {
-                        tier: "mononoke.gluster.tier".into(),
-                        export: "groot".into(),
-                        basepath: "mononoke/glusterblob-test".into(),
+                    BlobConfig::Files {
+                        path: "/tmp/foo".into(),
                     },
                 ),
             ],
@@ -1398,11 +1379,9 @@ mod test {
 
         blobstore_type = "multiplexed"
           [[multiplex_store.components]]
-          blobstore_type = "gluster"
           blobstore_id = 1
-          gluster_tier = "glustertier"
-          gluster_export = "export"
-          gluster_basepath = "groot"
+          blobstore_type = "blob:files"
+          path = "/tmp/foo"
 
         [manifold_store]
         db.db_address = "some_db"
@@ -1437,10 +1416,8 @@ mod test {
                     blobstore: BlobConfig::Multiplexed {
                         scuba_table: None,
                         blobstores: vec![
-                            (BlobstoreId::new(1), BlobConfig::Gluster {
-                                tier: "glustertier".into(),
-                                export: "export".into(),
-                                basepath: "groot".into(),
+                            (BlobstoreId::new(1), BlobConfig::Files {
+                                path: "/tmp/foo".into()
                             })
                         ]
                     },
@@ -1470,11 +1447,9 @@ mod test {
         db.db_address = "some_db"
         blobstore_type = "multiplexed"
           [[multiplex_store.components]]
-          blobstore_type = "gluster"
+          blobstore_type = "blob:files"
           blobstore_id = 1
-          gluster_tier = "glustertier"
-          gluster_export = "export"
-          gluster_basepath = "groot"
+          path = "/tmp/foo"
 
         [manifold_store]
         db.db_address = "other_db"
@@ -1533,7 +1508,7 @@ mod test {
 
         [storage.randomstore]
         db.db_address = "other_other_db"
-        blobstore_type = "files"
+        blobstore_type = "blob:files"
         path = "/tmp/foo"
 
         # Should be above
