@@ -18,8 +18,9 @@
 # Make some changes: add an untracked file and remove the tracked file
   $ echo "bar" > untrackedfile
   $ rm existingfile
-  $ hg debugcreatesnapshotmanifest
-  manifest oid: 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c65d
+  $ OID="$(hg debugcreatesnapshotmanifest | cut -f3 -d' ')"
+  $ echo "$OID"
+  1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c65d
 
 # Check that the blobstore is populated
   $ find .hg/store/lfs/objects | sort
@@ -35,4 +36,31 @@
 
 # Check that the untracked file is stored in lfs
   $ cat .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+  bar
+
+# Upload the manifest contents to server
+  $ cat >> $HGRCPATH << EOF
+  > [lfs]
+  > url=file:$TESTTMP/lfsremote/
+  > EOF
+
+  $ hg debuguploadsnapshotmanifest 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5
+  abort: manifest oid 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5 not found in local blobstorage
+  [255]
+
+  $ hg debuguploadsnapshotmanifest "$OID"
+  upload complete
+
+# Check the remote storage
+  $ find $TESTTMP/lfsremote | sort
+  $TESTTMP/lfsremote
+  $TESTTMP/lfsremote/1f
+  $TESTTMP/lfsremote/1f/341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c65d
+  $TESTTMP/lfsremote/7d
+  $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+
+  $ cat $TESTTMP/lfsremote/1f/341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c65d
+  {"deleted": {"existingfile": null}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}} (no-eol)
+
+  $ cat $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
   bar
