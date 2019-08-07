@@ -7,7 +7,6 @@
 use clap::ArgMatches;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::Error;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
@@ -16,12 +15,13 @@ use slog::Logger;
 use std::collections::BTreeMap;
 
 use crate::common::fetch_bonsai_changeset;
+use crate::error::SubcommandError;
 
 pub fn subcommand_bonsai_fetch(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let rev = sub_m
         .value_of("HG_CHANGESET_OR_BOOKMARK")
         .unwrap()
@@ -67,6 +67,7 @@ pub fn subcommand_bonsai_fetch(
                 }
             }
         })
+        .from_err()
         .boxify()
 }
 

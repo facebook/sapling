@@ -19,12 +19,13 @@ use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use slog::{debug, Logger};
 
 use crate::common::resolve_hg_rev;
+use crate::error::SubcommandError;
 
 pub fn subcommand_content_fetch(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
     let path = sub_m.value_of("PATH").unwrap().to_string();
 
@@ -70,6 +71,7 @@ pub fn subcommand_content_fetch(
                 future::ok(()).boxify()
             }
         })
+        .map_err(|e| e.into())
         .boxify()
 }
 

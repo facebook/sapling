@@ -18,11 +18,13 @@ use mercurial_types::MPath;
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
 
+use crate::error::SubcommandError;
+
 pub fn subcommand_filenodes(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let rev = sub_m
         .value_of("hg-changeset-or-bookmark")
         .unwrap()
@@ -105,5 +107,6 @@ pub fn subcommand_filenodes(
                 );
             });
         })
+        .from_err()
         .boxify()
 }

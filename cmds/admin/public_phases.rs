@@ -27,6 +27,8 @@ use mercurial_types::HgChangesetId;
 use phases::SqlPhases;
 use slog::{info, Logger};
 
+use crate::error::SubcommandError;
+
 fn add_public_phases(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -79,7 +81,7 @@ pub fn subcommand_add_public_phases(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let path = String::from(sub_m.value_of("input-file").unwrap());
     let chunk_size = sub_m
         .value_of("chunk-size")
@@ -97,5 +99,6 @@ pub fn subcommand_add_public_phases(
         .and_then(move |(repo, phases)| {
             add_public_phases(ctx, repo, Arc::new(phases), logger, path, chunk_size)
         })
+        .from_err()
         .boxify()
 }

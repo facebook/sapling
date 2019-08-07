@@ -23,12 +23,13 @@ use std::io;
 use std::str::FromStr;
 
 use crate::cmdargs::{HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
+use crate::error::SubcommandError;
 
 pub fn subcommand_hg_changeset(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     match sub_m.subcommand() {
         (HG_CHANGESET_DIFF, Some(sub_m)) => {
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
@@ -57,6 +58,7 @@ pub fn subcommand_hg_changeset(
                         .map(|_| ())
                         .map_err(Error::from)
                 })
+                .from_err()
                 .boxify()
         }
         (HG_CHANGESET_RANGE, Some(sub_m)) => {
@@ -113,12 +115,10 @@ pub fn subcommand_hg_changeset(
                                 .map_err(Error::from)
                         })
                 })
+                .from_err()
                 .boxify()
         }
-        _ => {
-            println!("{}", sub_m.usage());
-            ::std::process::exit(1);
-        }
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
 }
 

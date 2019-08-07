@@ -26,12 +26,13 @@ use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 
 use crate::cmdargs::{SKIPLIST_BUILD, SKIPLIST_READ};
+use crate::error::SubcommandError;
 
 pub fn subcommand_skiplist(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     match sub_m.subcommand() {
         (SKIPLIST_BUILD, Some(sub_m)) => {
             let key = sub_m
@@ -47,6 +48,7 @@ pub fn subcommand_skiplist(
                 .and_then(move |(repo, sql_changesets)| {
                     build_skiplist_index(ctx, repo, key, logger, sql_changesets)
                 })
+                .from_err()
                 .boxify()
         }
         (SKIPLIST_READ, Some(sub_m)) => {
@@ -59,12 +61,10 @@ pub fn subcommand_skiplist(
             let ctx = CoreContext::test_mock();
             args::open_repo(&logger, &matches)
                 .and_then(move |repo| read_skiplist_index(ctx.clone(), repo, key, logger))
+                .from_err()
                 .boxify()
         }
-        _ => {
-            println!("{}", sub_m.usage());
-            ::std::process::exit(1);
-        }
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
 }
 

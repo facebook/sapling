@@ -18,11 +18,13 @@ use mercurial_types::MPath;
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use slog::{debug, Logger};
 
+use crate::error::SubcommandError;
+
 pub fn subcommand_blacklist(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let rev = sub_m.value_of("hash").unwrap().to_string();
     let task = sub_m.value_of("task").unwrap().to_string();
 
@@ -81,5 +83,6 @@ pub fn subcommand_blacklist(
                 })
             }
         })
+        .from_err()
         .boxify()
 }

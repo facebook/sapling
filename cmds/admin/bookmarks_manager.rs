@@ -8,7 +8,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
-use futures::{future, Future, Stream};
+use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -19,6 +19,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 
 use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
+use crate::error::SubcommandError;
 
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
@@ -111,17 +112,14 @@ pub fn handle_command<'a>(
     repo: BoxFuture<BlobRepo, Error>,
     matches: &ArgMatches<'a>,
     _logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     match matches.subcommand() {
-        (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, repo),
-        (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo),
-        (LOG_CMD, Some(sub_m)) => handle_log(sub_m, ctx, repo),
-        (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, repo),
-        (DEL_CMD, Some(sub_m)) => handle_delete(sub_m, ctx, repo),
-        _ => {
-            println!("{}", matches.usage());
-            ::std::process::exit(1);
-        }
+        (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, repo).from_err().boxify(),
+        (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo).from_err().boxify(),
+        (LOG_CMD, Some(sub_m)) => handle_log(sub_m, ctx, repo).from_err().boxify(),
+        (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, repo).from_err().boxify(),
+        (DEL_CMD, Some(sub_m)) => handle_delete(sub_m, ctx, repo).from_err().boxify(),
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
 }
 
@@ -141,7 +139,7 @@ fn handle_get<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
@@ -156,7 +154,7 @@ fn handle_get<'a>(
                 println!("{}", output);
                 future::ok(())
             })
-            .boxify(),
+            .left_future(),
 
         "bonsai" => repo
             .and_then(move |repo| {
@@ -169,7 +167,7 @@ fn handle_get<'a>(
                     },
                 )
             })
-            .boxify(),
+            .right_future(),
 
         _ => panic!("Unknown changeset-type supplied"),
     }
@@ -201,7 +199,7 @@ fn handle_log<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
@@ -300,7 +298,7 @@ fn handle_set<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
@@ -316,14 +314,13 @@ fn handle_set<'a>(
             transaction.commit().map(|_| ()).from_err().boxify()
         })
     })
-    .boxify()
 }
 
 fn handle_delete<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     repo.and_then(move |repo| {
@@ -331,7 +328,6 @@ fn handle_delete<'a>(
         try_boxfuture!(transaction.force_delete(&bookmark, BookmarkUpdateReason::ManualMove));
         transaction.commit().map(|_| ()).from_err().boxify()
     })
-    .boxify()
 }
 
 #[cfg(test)]

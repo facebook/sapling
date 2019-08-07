@@ -23,13 +23,15 @@ use crate::cmdargs::{
     HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
 };
 use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
+use crate::error::SubcommandError;
 
 pub fn subcommand_process_hg_sync(
     sub_m: &ArgMatches<'_>,
     matches: &ArgMatches<'_>,
     logger: Logger,
-) -> BoxFuture<(), Error> {
-    let repo_id = try_boxfuture!(args::get_repo_id(&matches));
+) -> BoxFuture<(), SubcommandError> {
+    let repo_id =
+        try_boxfuture!(args::get_repo_id(&matches).map_err(|e| SubcommandError::Error(e)));
 
     let ctx = CoreContext::test_mock();
 
@@ -48,11 +50,14 @@ pub fn subcommand_process_hg_sync(
             sub_m.is_present("dry-run"),
         ) {
             (Some(..), true, ..) => {
-                future::err(err_msg("cannot pass both --set and --skip-blobimport")).boxify()
+                future::err(err_msg("cannot pass both --set and --skip-blobimport"))
+                    .from_err()
+                    .boxify()
             }
             (.., false, true) => future::err(err_msg(
                 "--dry-run is meaningless without --skip-blobimport",
             ))
+            .from_err()
             .boxify(),
             (Some(new_value), false, false) => {
                 let new_value = i64::from_str_radix(new_value, 10).unwrap();
@@ -86,6 +91,7 @@ pub fn subcommand_process_hg_sync(
                                 }
                             })
                     })
+                    .from_err()
                     .boxify()
             }
             (None, skip, dry_run) => mutable_counters
@@ -164,6 +170,7 @@ pub fn subcommand_process_hg_sync(
                             }
                         })
                 })
+                .from_err()
                 .boxify(),
         },
         (HG_SYNC_REMAINS, Some(sub_m)) => {
@@ -231,6 +238,7 @@ pub fn subcommand_process_hg_sync(
                             }
                         })
                 })
+                .from_err()
                 .boxify()
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
@@ -290,6 +298,7 @@ pub fn subcommand_process_hg_sync(
                             Ok(())
                         })
                 })
+                .from_err()
                 .boxify()
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
@@ -298,7 +307,9 @@ pub fn subcommand_process_hg_sync(
             let id = args::get_u64_opt(sub_m, "id");
             let id = try_boxfuture!(id.ok_or(err_msg("--id is not specified")));
             if id == 0 {
-                return future::err(err_msg("--id has to be greater than 0")).boxify();
+                return future::err(err_msg("--id has to be greater than 0"))
+                    .from_err()
+                    .boxify();
             }
 
             let output_file = try_boxfuture!(sub_m
@@ -340,6 +351,7 @@ pub fn subcommand_process_hg_sync(
                                 .boxify()
                         })
                 })
+                .from_err()
                 .boxify()
         }
         (HG_SYNC_VERIFY, Some(..)) => mutable_counters
@@ -350,11 +362,9 @@ pub fn subcommand_process_hg_sync(
                     process_hg_sync_verify(ctx, repo_id, mutable_counters, bookmarks, logger)
                 }
             })
+            .from_err()
             .boxify(),
-        _ => {
-            eprintln!("{}", matches.usage());
-            ::std::process::exit(1);
-        }
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
 }
 

@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use clap::ArgMatches;
-use failure_ext::Error;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use std::str::FromStr;
@@ -16,11 +15,13 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::Logger;
 
+use crate::error::SubcommandError;
+
 pub fn subcommand_hash_convert(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let source_hash = sub_m.value_of("HASH").unwrap().to_string();
     let source = sub_m.value_of("from").unwrap().to_string();
     let target = sub_m.value_of("to").unwrap();
@@ -66,5 +67,6 @@ pub fn subcommand_hash_convert(
                 .right_future()
             }
         })
+        .from_err()
         .boxify()
 }

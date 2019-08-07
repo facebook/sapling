@@ -8,7 +8,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error, Result};
+use failure_ext::{err_msg, format_err, Result};
 use filestore::{self, FetchKey};
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -18,6 +18,8 @@ use mononoke_types::{
 };
 use slog::Logger;
 use std::str::FromStr;
+
+use crate::error::SubcommandError;
 
 const COMMAND_METADATA: &str = "metadata";
 const COMMAND_VERIFY: &str = "verify";
@@ -58,7 +60,7 @@ pub fn execute_command(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_matches: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let blobrepo = args::open_repo(&logger, &matches);
     let ctx = CoreContext::test_mock();
 
@@ -70,6 +72,7 @@ pub fn execute_command(
                     .inspect(|r| println!("{:?}", r))
                     .map(|_| ())
             })
+            .from_err()
             .boxify(),
         (COMMAND_VERIFY, Some(matches)) => (blobrepo, extract_fetch_key(matches).into_future())
             .into_future()
@@ -113,11 +116,9 @@ pub fn execute_command(
                         println!("git_sha1: {:?}", git_sha1.is_ok());
                     })
             })
+            .from_err()
             .boxify(),
-        _ => {
-            eprintln!("{}", matches.usage());
-            ::std::process::exit(1);
-        }
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
 }
 

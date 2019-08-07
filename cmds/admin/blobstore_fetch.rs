@@ -29,6 +29,8 @@ use slog::{info, warn, Logger};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
+use crate::error::SubcommandError;
+
 fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> Result<BlobConfig> {
     match inner_blobstore_id {
         None => Ok(blob_config),
@@ -81,7 +83,7 @@ pub fn subcommand_blobstore_fetch(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<(), SubcommandError> {
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
     let (_, config) = try_boxfuture!(args::get_config(&matches));
     let censoring = config.censoring;
@@ -157,6 +159,7 @@ pub fn subcommand_blobstore_fetch(
                 }
             }
         })
+        .from_err()
         .boxify()
 }
 

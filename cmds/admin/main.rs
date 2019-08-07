@@ -5,10 +5,13 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(process_exitcode_placeholder)]
+
 use clap::{App, Arg, SubCommand};
-use failure_ext::Result;
-use futures::future::Future;
+use futures::IntoFuture;
 use futures_ext::FutureExt;
+use std::process::ExitCode;
+use tokio::runtime::Runtime;
 
 use cmdlib::args;
 use context::CoreContext;
@@ -24,6 +27,7 @@ use crate::cmdargs::{
     HG_SYNC_VERIFY, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
+use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
@@ -38,6 +42,7 @@ mod bookmarks_manager;
 mod cmdargs;
 mod common;
 mod content_fetch;
+mod error;
 mod filenodes;
 mod filestore;
 mod hash_convert;
@@ -310,7 +315,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(filestore::build_subcommand(FILESTORE))
 }
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
@@ -337,22 +342,27 @@ fn main() -> Result<()> {
         (BLACKLIST, Some(sub_m)) => subcommand_blacklist(logger, &matches, sub_m),
         (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
         (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
-        _ => {
-            eprintln!("{}", matches.usage());
-            ::std::process::exit(1);
-        }
+        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 
     let debug = matches.is_present("debug");
 
-    tokio::run(future.map_err(move |err| {
-        error!(error_logger, "{:?}", err);
-        if debug {
-            error!(error_logger, "\n============ DEBUG ERROR ============");
-            error!(error_logger, "{:#?}", err);
-        }
-        ::std::process::exit(1);
-    }));
+    let mut runtime = Runtime::new().expect("failed to initialize Tokio runtime");
+    let res = runtime.block_on(future);
 
-    Ok(())
+    match res {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(SubcommandError::Error(err)) => {
+            error!(error_logger, "{:?}", err);
+            if debug {
+                error!(error_logger, "\n============ DEBUG ERROR ============");
+                error!(error_logger, "{:#?}", err);
+            }
+            ExitCode::FAILURE
+        }
+        Err(SubcommandError::InvalidArgs) => {
+            eprintln!("{}", matches.usage());
+            ExitCode::FAILURE
+        }
+    }
 }
