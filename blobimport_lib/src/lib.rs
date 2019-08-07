@@ -33,6 +33,7 @@ mod bookmark;
 mod changeset;
 mod lfs;
 
+use std::cmp;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -84,6 +85,11 @@ impl Blobimport {
 
         let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
 
+        let log_step = match commits_limit {
+            Some(commits_limit) => cmp::max(1, commits_limit / 10),
+            None => 5000,
+        };
+
         let upload_changesets = UploadChangesets {
             ctx: ctx.clone(),
             blobrepo: blobrepo.clone(),
@@ -100,7 +106,7 @@ impl Blobimport {
             let logger = logger.clone();
             move |(cs_count, cs)| {
                 debug!(logger, "{} inserted: {}", cs_count, cs.1.get_changeset_id());
-                if cs_count % 5000 == 0 {
+                if cs_count % log_step == 0 {
                     info!(logger, "inserted commits # {}", cs_count);
                 }
                 ()
