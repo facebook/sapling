@@ -35,6 +35,12 @@
   $ blobimport repo-hg/.hg repo --lfs-helper "$LFS_HELPER"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
+  * lfs_upload: importing blob Sha256(cc216c8df3beca4da80c551d178260b2cb844e04f7f7aa943d8c665162abca14) (glob)
   * failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
   * cause: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
   * cause: While creating Changeset Some(HgNodeHash(Sha1(527169d71e0eac8abd0a25d18520cb3b8371edb5))), uuid: * (glob)
