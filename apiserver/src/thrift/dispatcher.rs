@@ -25,7 +25,7 @@ impl ThriftDispatcher {
             let mut thrift = thrift(self);
 
             thrift
-                .serve()
+                .serve_blocking()
                 .map_err(|e| eprintln!("Failed to start serve(): {}", e))
         }));
     }
