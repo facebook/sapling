@@ -10,7 +10,7 @@ add_thrift_cpp2_library(
     EdenService
   DEPENDS
     eden_config_thrift
-    fb303::fb303_thrift_cpp2
+    fb303::fb303_thrift_cpp
 )
 add_thrift_cpp2_library(
   streamingeden_thrift
@@ -19,7 +19,7 @@ add_thrift_cpp2_library(
     StreamingEdenService
   DEPENDS
     eden_service_thrift
-    fb303::fb303_thrift_cpp2
+    fb303::fb303_thrift_cpp
 )
 
 file(GLOB SERVICE_SRCS "*.cpp")
