@@ -6,29 +6,6 @@
 
 #![deny(warnings)]
 
-extern crate ascii;
-extern crate blobrepo;
-extern crate bookmarks;
-extern crate bytes;
-extern crate context;
-#[macro_use]
-extern crate cloned;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate mercurial;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate phases;
-#[macro_use]
-extern crate slog;
-extern crate scuba_ext;
-extern crate tokio;
-extern crate tokio_process;
-extern crate tracing;
-
 mod bookmark;
 mod changeset;
 mod concurrency;
@@ -38,10 +15,10 @@ use std::cmp;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use slog::Logger;
+use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -49,7 +26,7 @@ use mercurial::RevlogRepo;
 use mercurial_types::HgNodeHash;
 use phases::Phases;
 
-use self::changeset::UploadChangesets;
+use crate::changeset::UploadChangesets;
 
 pub struct Blobimport {
     pub ctx: CoreContext,

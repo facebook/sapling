@@ -7,18 +7,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::failure::err_msg;
-use crate::failure::prelude::*;
-use crate::lfs::lfs_upload;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
+use failure_ext::{
+    err_msg, Error, Fail, FutureFailureErrorExt, FutureFailureExt, ResultExt, StreamFailureErrorExt,
+};
 use futures::{
     future::{self, SharedItem},
     stream::{self, Stream},
     sync::oneshot,
     Future, IntoFuture,
 };
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
@@ -39,6 +40,7 @@ use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use phases::Phases;
 
 use crate::concurrency::JobProcessor;
+use crate::lfs::lfs_upload;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,

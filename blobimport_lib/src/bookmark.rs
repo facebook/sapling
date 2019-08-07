@@ -7,12 +7,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::failure::err_msg;
-use crate::failure::prelude::*;
 use ascii::AsciiString;
+use cloned::cloned;
+use failure_ext::{err_msg, format_err, Error};
 use futures::{prelude::*, stream};
-use futures_ext::{BoxFuture, FutureExt};
-use slog::Logger;
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use slog::{info, Logger};
 
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};

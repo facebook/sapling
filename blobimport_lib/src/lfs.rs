@@ -6,13 +6,15 @@
 
 use blobrepo::BlobRepo;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fail, Result};
+use failure_ext::{Error, Fail, Result};
 use filestore::{self, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 use mercurial::file::LFSContent;
 use mononoke_types::ContentMetadata;
+use slog::info;
 use std::io::BufReader;
 use std::process::{Command, Stdio};
 use tokio::codec;

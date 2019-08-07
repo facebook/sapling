@@ -6,33 +6,19 @@
 
 #![deny(warnings)]
 
-extern crate blobimport_lib;
-extern crate clap;
-extern crate cloned;
-extern crate cmdlib;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate mercurial_types;
-#[macro_use]
-extern crate slog;
-extern crate phases;
-extern crate tokio;
-extern crate tracing;
-
-use std::str::FromStr;
-use std::sync::Arc;
-
-use crate::failure::{Result, SlogKVError};
+use blobimport_lib;
 use clap::{App, Arg};
 use cloned::cloned;
+use cmdlib::args;
+use failure_ext::{Result, SlogKVError};
 use futures::Future;
 use futures_ext::FutureExt;
-use phases::SqlPhases;
-use tracing::{trace_args, Traced};
-
-use cmdlib::args;
 use mercurial_types::HgNodeHash;
+use phases::SqlPhases;
+use slog::error;
+use std::str::FromStr;
+use std::sync::Arc;
+use tracing::{trace_args, Traced};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
