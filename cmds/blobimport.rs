@@ -45,11 +45,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
             r#"
-            <INPUT>                         'input revlog repo'
-            --changeset [HASH]              'if provided, the only changeset to be imported'
-            --no-bookmark                   'if provided won't update bookmarks'
-            --no-create                     'if provided won't create a new repo (only meaningful for local)'
-            --lfs-helper [LFS_HELPER]       'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
+            <INPUT>                              'input revlog repo'
+            --changeset [HASH]                   'if provided, the only changeset to be imported'
+            --no-bookmark                        'if provided won't update bookmarks'
+            --no-create                          'if provided won't create a new repo (only meaningful for local)'
+            --lfs-helper [LFS_HELPER]            'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
+            --concurrent-changesets [LIMIT]      'if provided, max number of changesets to upload concurrently'
+            --concurrent-changeset-blobs [LIMIT] 'if provided, max number of blobs to upload concurrently per changeset'
         "#,
         )
         .arg(
@@ -97,6 +99,10 @@ fn main() -> Result<()> {
 
     let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
 
+    let concurrent_changesets = args::get_usize(&matches, "concurrent-changesets", 100);
+    let concurrent_blob_uploads_per_changeset =
+        args::get_usize(&matches, "concurrent-changeset-blobs", 100);
+
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
     let blobrepo = if matches.is_present("no-create") {
@@ -122,6 +128,8 @@ fn main() -> Result<()> {
                 no_bookmark,
                 phases_store,
                 lfs_helper,
+                concurrent_changesets,
+                concurrent_blob_uploads_per_changeset,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())

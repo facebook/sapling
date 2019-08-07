@@ -61,6 +61,8 @@ pub struct Blobimport {
     pub no_bookmark: bool,
     pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
+    pub concurrent_changesets: usize,
+    pub concurrent_blob_uploads_per_changeset: usize,
 }
 
 impl Blobimport {
@@ -76,6 +78,8 @@ impl Blobimport {
             no_bookmark,
             phases_store,
             lfs_helper,
+            concurrent_changesets,
+            concurrent_blob_uploads_per_changeset,
         } = self;
 
         let stale_bookmarks = {
@@ -99,6 +103,8 @@ impl Blobimport {
             commits_limit,
             phases_store,
             lfs_helper,
+            concurrent_changesets,
+            concurrent_blob_uploads_per_changeset,
         }
         .upload()
         .enumerate()

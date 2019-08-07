@@ -33,9 +33,6 @@ use mercurial_types::{
 use mononoke_types::BonsaiChangeset;
 use phases::Phases;
 
-const CONCURRENT_CHANGESETS: usize = 100;
-const CONCURRENT_BLOB_UPLOADS_PER_CHANGESET: usize = 100;
-
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
     rootmf:
@@ -258,6 +255,8 @@ pub struct UploadChangesets {
     pub commits_limit: Option<usize>,
     pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
+    pub concurrent_changesets: usize,
+    pub concurrent_blob_uploads_per_changeset: usize,
 }
 
 impl UploadChangesets {
@@ -271,6 +270,8 @@ impl UploadChangesets {
             commits_limit,
             phases_store,
             lfs_helper,
+            concurrent_changesets,
+            concurrent_blob_uploads_per_changeset,
         } = self;
 
         let changesets = match changeset {
@@ -345,7 +346,7 @@ impl UploadChangesets {
             })
             .map(move |(csid, cs, rootmf, entries)| {
                 // For each ongoing changeset, upload entries in a background task, and allow that task to run ahead
-                let entries = mpsc::spawn(stream::futures_unordered(entries), &DefaultExecutor::current(), CONCURRENT_BLOB_UPLOADS_PER_CHANGESET).boxify();
+                let entries = mpsc::spawn(stream::futures_unordered(entries), &DefaultExecutor::current(), concurrent_blob_uploads_per_changeset).boxify();
 
                 let (p1handle, p2handle) = {
                     let mut parents = cs.parents().into_iter().map(|p| {
@@ -405,7 +406,7 @@ impl UploadChangesets {
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database
             // load under control
-            .buffer_unordered(CONCURRENT_CHANGESETS)
+            .buffer_unordered(concurrent_changesets)
             .boxify()
     }
 }
