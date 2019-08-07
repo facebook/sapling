@@ -4,27 +4,27 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
-
+use async_trait::async_trait;
 use fb303::fb_status;
-use fb303::server::FacebookService;
-use fb303_core::server::BaseService;
+use fb303::server_async::FacebookService;
+use fb303_core::server_async::BaseService;
 use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
 
 #[derive(Clone)]
 pub struct FacebookServiceImpl;
 
+#[async_trait]
 impl BaseService for FacebookServiceImpl {
-    fn getName(&self) -> BoxFuture<String, GetNameExn> {
-        Ok("Mononoke API Server".to_string()).into_future().boxify()
+    async fn getName(&self) -> Result<String, GetNameExn> {
+        Ok("Mononoke API Server".to_string())
     }
 
-    fn getStatus(&self) -> BoxFuture<fb_status, GetStatusExn> {
-        Ok(fb_status::ALIVE).into_future().boxify()
+    async fn getStatus(&self) -> Result<fb_status, GetStatusExn> {
+        Ok(fb_status::ALIVE)
     }
-    fn getStatusDetails(&self) -> BoxFuture<String, GetStatusDetailsExn> {
-        Ok("Alive and running.".to_string()).into_future().boxify()
+
+    async fn getStatusDetails(&self) -> Result<String, GetStatusDetailsExn> {
+        Ok("Alive and running.".to_string())
     }
 }
 

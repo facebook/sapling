@@ -7,22 +7,24 @@
 use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
-use apiserver_thrift::server::MononokeApiservice;
+use apiserver_thrift::server_async::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
     GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, GetTreeExn, IsAncestorExn,
     ListDirectoryExn,
 };
 use apiserver_thrift::types::{
-    MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBlobParams,
-    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
+    MononokeAPIException, MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory,
+    MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
+    MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
+    MononokeListDirectoryParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
+use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sshrelay::SshEnvVars;
@@ -79,15 +81,16 @@ impl MononokeAPIServiceImpl {
         scuba
     }
 
-    fn convert_and_call<F, P, Ret>(
+    async fn convert_and_call<F, P, Ret, Err>(
         &self,
         ctx: CoreContext,
         params: P,
         mapper: F,
-    ) -> impl Future<Item = Ret, Error = ErrorKind>
+    ) -> Result<Ret, Err>
     where
         F: FnMut(MononokeRepoResponse) -> Result<Ret, ErrorKind>,
         MononokeQuery: TryFrom<P, Error = Error>,
+        Err: From<MononokeAPIException>,
     {
         params
             .try_into()
@@ -98,6 +101,10 @@ impl MononokeAPIServiceImpl {
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(mapper)
+            .map_err(MononokeAPIException::from)
+            .map_err(Err::from)
+            .compat()
+            .await
     }
 
     fn create_ctx(&self, scuba: ScubaSampleBuilder) -> CoreContext {
@@ -120,8 +127,9 @@ fn log_response_size(mut scuba: ScubaSampleBuilder, size: usize) {
     scuba.log()
 }
 
+#[async_trait]
 impl MononokeApiservice for MononokeAPIServiceImpl {
-    fn get_raw(&self, params: MononokeGetRawParams) -> BoxFuture<Vec<u8>, GetRawExn> {
+    async fn get_raw(&self, params: MononokeGetRawParams) -> Result<Vec<u8>, GetRawExn> {
         let scuba = self.create_scuba_logger(
             Some(params.path.clone()),
             Some(params.revision.clone()),
@@ -129,100 +137,103 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         );
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::GetRawFile { content } => Ok(content.to_vec()),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| GetRawExn::e(e.into()))
-        .inspect_result({
-            move |resp| {
-                log_response_size(ctx.scuba().clone(), resp.map(|vec| vec.len()).unwrap_or(0));
-            }
-        })
-        .boxify()
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetRawFile { content } => Ok(content.to_vec()),
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref().map(Vec::len).unwrap_or(0),
+        );
+        resp
     }
 
-    fn get_changeset(
+    async fn get_changeset(
         &self,
         params: MononokeGetChangesetParams,
-    ) -> BoxFuture<MononokeChangeset, GetChangesetExn> {
+    ) -> Result<MononokeChangeset, GetChangesetExn> {
         let scuba =
             self.create_scuba_logger(None, Some(params.revision.clone()), params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::GetChangeset { changeset } => {
-                    Ok(MononokeChangeset::from(changeset))
-                }
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| GetChangesetExn::e(e.into()))
-        .inspect_result({
-            move |resp| {
-                log_response_size(
-                    ctx.scuba().clone(),
-                    resp.map(|resp| {
-                        resp.commit_hash.as_bytes().len()
-                            + resp.message.len()
-                            + resp.author.as_bytes().len()
-                            + size_of::<i64>()
-                    })
-                    .unwrap_or(0),
-                );
-            }
-        })
-        .boxify()
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetChangeset { changeset } => {
+                        Ok(MononokeChangeset::from(changeset))
+                    }
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref()
+                .map(|resp| {
+                    resp.commit_hash.as_bytes().len()
+                        + resp.message.len()
+                        + resp.author.as_bytes().len()
+                        + size_of::<i64>()
+                })
+                .unwrap_or(0),
+        );
+        resp
     }
 
-    fn get_branches(
+    async fn get_branches(
         &self,
         params: MononokeGetBranchesParams,
-    ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
+    ) -> Result<MononokeBranches, GetBranchesExn> {
         let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::GetBranches { branches } => Ok(MononokeBranches { branches }),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| GetBranchesExn::e(e.into()))
-        .inspect_result(move |resp| {
-            log_response_size(
-                ctx.scuba().clone(),
-                resp.map(|resp| {
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetBranches { branches } => {
+                        Ok(MononokeBranches { branches })
+                    }
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref()
+                .map(|resp| {
                     resp.branches
                         .iter()
                         .map(|(bookmark, hash)| bookmark.len() + hash.len())
                         .sum()
                 })
                 .unwrap_or(0),
-            );
-        })
-        .boxify()
+        );
+        resp
     }
 
-    fn list_directory(
+    async fn list_directory(
         &self,
         params: MononokeListDirectoryParams,
-    ) -> BoxFuture<MononokeDirectory, ListDirectoryExn> {
+    ) -> Result<MononokeDirectory, ListDirectoryExn> {
         let scuba = self.create_scuba_logger(
             Some(params.path.clone()),
             Some(params.revision.clone()),
@@ -230,23 +241,25 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         );
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
-                    files: files.into_iter().map(|f| f.into()).collect(),
-                }),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| ListDirectoryExn::e(e.into()))
-        .inspect_result(move |resp| {
-            log_response_size(
-                ctx.scuba().clone(),
-                resp.map(|resp| {
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
+                        files: files.into_iter().map(|f| f.into()).collect(),
+                    }),
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref()
+                .map(|resp| {
                     resp.files
                         .iter()
                         .map(
@@ -255,12 +268,11 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                         .sum()
                 })
                 .unwrap_or(0),
-            );
-        })
-        .boxify()
+        );
+        resp
     }
 
-    fn is_ancestor(&self, params: MononokeIsAncestorParams) -> BoxFuture<bool, IsAncestorExn> {
+    async fn is_ancestor(&self, params: MononokeIsAncestorParams) -> Result<bool, IsAncestorExn> {
         let mut scuba =
             self.create_scuba_logger(None, Some(params.descendant.clone()), params.repo.clone());
 
@@ -273,80 +285,88 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         scuba.add("ancestor", ancestor);
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::IsAncestor { answer } => Ok(answer),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| IsAncestorExn::e(e.into()))
-        .inspect_result({
-            move |resp| {
-                log_response_size(ctx.scuba().clone(), resp.map(|_| 0).unwrap_or(0));
-            }
-        })
-        .boxify()
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::IsAncestor { answer } => Ok(answer),
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(ctx.scuba().clone(), 0);
+        resp
     }
 
-    fn get_blob(&self, params: MononokeGetBlobParams) -> BoxFuture<MononokeBlob, GetBlobExn> {
+    async fn get_blob(&self, params: MononokeGetBlobParams) -> Result<MononokeBlob, GetBlobExn> {
         let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(
-            ctx.clone(),
-            params,
-            |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::GetBlobContent { content } => Ok(MononokeBlob {
-                    content: content.to_vec(),
-                }),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            },
-        )
-        .map_err(move |e| GetBlobExn::e(e.into()))
-        .inspect_result(move |resp| {
-            log_response_size(
-                ctx.scuba().clone(),
-                resp.map(|resp| resp.content.len()).unwrap_or(0),
-            );
-        })
-        .boxify()
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetBlobContent { content } => Ok(MononokeBlob {
+                        content: content.to_vec(),
+                    }),
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref().map(|resp| resp.content.len()).unwrap_or(0),
+        );
+        resp
     }
 
-    fn get_tree(&self, params: MononokeGetTreeParams) -> BoxFuture<MononokeDirectory, GetTreeExn> {
+    async fn get_tree(
+        &self,
+        params: MononokeGetTreeParams,
+    ) -> Result<MononokeDirectory, GetTreeExn> {
         let scuba = self.create_scuba_logger(None, None, params.repo.clone());
         let ctx = self.create_ctx(scuba);
 
-        self.convert_and_call(ctx.clone(), params, |resp: MononokeRepoResponse| match resp {
-                MononokeRepoResponse::GetTree { files } => Ok(MononokeDirectory {
-                    files: files.into_iter().map(|f| f.into()).collect(),
-                }),
-                _ => Err(ErrorKind::InternalError(err_msg(
-                    "Actor returned wrong response type to query".to_string(),
-                ))),
-            })
-            .map_err(move |e| GetTreeExn::e(e.into()))
-            .inspect_result(move |resp| {
-                log_response_size(ctx.scuba().clone(), resp.map(|resp| {
-                            resp.files
-                                .iter()
-                                .map(|file| {
-                                    file.name.len()
-                                        + 1   // FileType
-                                        + file.hash.hash.len()
-                                        + file.size.as_ref().map(|_| size_of::<usize>()).unwrap_or(0)
-                                        + file.content_sha1.as_ref().map(|sha1| sha1.len()).unwrap_or(0)
-                                })
-                                .sum()
-                        }).unwrap_or(0)
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetTree { files } => Ok(MononokeDirectory {
+                        files: files.into_iter().map(|f| f.into()).collect(),
+                    }),
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
 
-                );
-            })
-            .boxify()
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref()
+                .map(|resp| {
+                    resp.files
+                        .iter()
+                        .map(|file| {
+                            file.name.len()
+                                + 1   // FileType
+                                + file.hash.hash.len()
+                                + file.size.as_ref().map(|_| size_of::<usize>()).unwrap_or(0)
+                                + file.content_sha1.as_ref().map(|sha1| sha1.len()).unwrap_or(0)
+                        })
+                        .sum()
+                })
+                .unwrap_or(0),
+        );
+        resp
     }
 }
