@@ -4,11 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::{BlobRepo, StoreRequest};
+use blobrepo::BlobRepo;
 use bytes::Bytes;
 use context::CoreContext;
 use failure::{Error, Fail, Result};
+use filestore::{self, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
+use futures_ext::FutureExt;
 use mercurial::file::LFSContent;
 use mononoke_types::ContentMetadata;
 use std::io::BufReader;
@@ -44,21 +46,43 @@ fn lfs_stream(
 pub fn lfs_upload(
     ctx: CoreContext,
     blobrepo: BlobRepo,
-    lfs_helper: &str,
-    lfs: &LFSContent,
+    lfs_helper: String,
+    lfs: LFSContent,
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
-    let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
+    let blobstore = blobrepo.get_blobstore();
 
-    lfs_stream(lfs_helper, lfs)
-        .into_future()
-        .and_then(move |(child, stream)| {
-            let upload_fut = blobrepo.upload_file(ctx, &req, stream);
+    filestore::get_metadata(&blobstore, ctx.clone(), &FetchKey::Sha256(lfs.oid())).and_then({
+        move |metadata| match metadata {
+            Some(metadata) => {
+                info!(
+                    ctx.logger(),
+                    "lfs_upload: reusing blob {:?}", metadata.sha256
+                );
+                Ok(metadata).into_future()
+            }
+            .left_future(),
+            None => {
+                info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
+                let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
-            // NOTE: We ignore the child exit code here. Since the Filestore validates the object
-            // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
-            // if it gave us exactly the content we wanted).
-            (upload_fut, child.from_err())
-                .into_future()
-                .map(|(chunk, _)| chunk)
-        })
+                lfs_stream(&lfs_helper, &lfs)
+                    .into_future()
+                    .and_then(move |(child, stream)| {
+                        let upload_fut = blobrepo.upload_file(ctx.clone(), &req, stream);
+
+                        // NOTE: We ignore the child exit code here. Since the Filestore validates the object
+                        // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
+                        // if it gave us exactly the content we wanted).
+                        (upload_fut, child.from_err()).into_future().map({
+                            cloned!(ctx);
+                            move |(meta, _)| {
+                                info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
+                                meta
+                            }
+                        })
+                    })
+            }
+            .right_future(),
+        }
+    })
 }

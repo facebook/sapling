@@ -220,26 +220,31 @@ fn upload_entry(
                         lfs_helper.ok_or(err_msg("Cannot blobimport LFS without LFS helper"))
                     );
 
-                    lfs_upload(ctx.clone(), blobrepo.clone(), &lfs_helper, &lfs_content)
-                        .and_then(move |meta| {
-                            let cbmeta = ContentBlobMeta {
-                                id: meta.content_id,
-                                size: meta.total_size,
-                                copy_from: lfs_content.copy_from(),
-                            };
+                    lfs_upload(
+                        ctx.clone(),
+                        blobrepo.clone(),
+                        lfs_helper.clone(),
+                        lfs_content.clone(),
+                    )
+                    .and_then(move |meta| {
+                        let cbmeta = ContentBlobMeta {
+                            id: meta.content_id,
+                            size: meta.total_size,
+                            copy_from: lfs_content.copy_from(),
+                        };
 
-                            let upload = UploadHgFileEntry {
-                                upload_node_id,
-                                contents: UploadHgFileContents::ContentUploaded(cbmeta),
-                                file_type: ft,
-                                p1,
-                                p2,
-                                path,
-                            };
-                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
-                            upload_fut
-                        })
-                        .boxify()
+                        let upload = UploadHgFileEntry {
+                            upload_node_id,
+                            contents: UploadHgFileContents::ContentUploaded(cbmeta),
+                            file_type: ft,
+                            p1,
+                            p2,
+                            path,
+                        };
+                        let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                        upload_fut
+                    })
+                    .boxify()
                 }
             }
         })
