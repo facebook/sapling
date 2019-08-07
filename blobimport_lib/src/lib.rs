@@ -31,6 +31,7 @@ extern crate tracing;
 
 mod bookmark;
 mod changeset;
+mod concurrency;
 mod lfs;
 
 use std::cmp;
@@ -53,7 +54,7 @@ use self::changeset::UploadChangesets;
 pub struct Blobimport {
     pub ctx: CoreContext,
     pub logger: Logger,
-    pub blobrepo: Arc<BlobRepo>,
+    pub blobrepo: BlobRepo,
     pub revlogrepo_path: PathBuf,
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
@@ -62,7 +63,8 @@ pub struct Blobimport {
     pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
-    pub concurrent_blob_uploads_per_changeset: usize,
+    pub concurrent_blobs: usize,
+    pub concurrent_lfs_imports: usize,
 }
 
 impl Blobimport {
@@ -79,7 +81,8 @@ impl Blobimport {
             phases_store,
             lfs_helper,
             concurrent_changesets,
-            concurrent_blob_uploads_per_changeset,
+            concurrent_blobs,
+            concurrent_lfs_imports,
         } = self;
 
         let stale_bookmarks = {
@@ -104,7 +107,8 @@ impl Blobimport {
             phases_store,
             lfs_helper,
             concurrent_changesets,
-            concurrent_blob_uploads_per_changeset,
+            concurrent_blobs,
+            concurrent_lfs_imports,
         }
         .upload()
         .enumerate()

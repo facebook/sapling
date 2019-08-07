@@ -45,13 +45,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
             r#"
-            <INPUT>                              'input revlog repo'
-            --changeset [HASH]                   'if provided, the only changeset to be imported'
-            --no-bookmark                        'if provided won't update bookmarks'
-            --no-create                          'if provided won't create a new repo (only meaningful for local)'
-            --lfs-helper [LFS_HELPER]            'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
-            --concurrent-changesets [LIMIT]      'if provided, max number of changesets to upload concurrently'
-            --concurrent-changeset-blobs [LIMIT] 'if provided, max number of blobs to upload concurrently per changeset'
+            <INPUT>                          'input revlog repo'
+            --changeset [HASH]               'if provided, the only changeset to be imported'
+            --no-bookmark                    'if provided won't update bookmarks'
+            --no-create                      'if provided won't create a new repo (only meaningful for local)'
+            --lfs-helper [LFS_HELPER]        'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
+            --concurrent-changesets [LIMIT]  'if provided, max number of changesets to upload concurrently'
+            --concurrent-blobs [LIMIT]       'if provided, max number of blobs to process concurrently'
+            --concurrent-lfs-imports [LIMIT] 'if provided, max number of LFS files to import concurrently'
         "#,
         )
         .arg(
@@ -100,8 +101,8 @@ fn main() -> Result<()> {
     let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
 
     let concurrent_changesets = args::get_usize(&matches, "concurrent-changesets", 100);
-    let concurrent_blob_uploads_per_changeset =
-        args::get_usize(&matches, "concurrent-changeset-blobs", 100);
+    let concurrent_blobs = args::get_usize(&matches, "concurrent-blobs", 100);
+    let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
 
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
@@ -114,7 +115,6 @@ fn main() -> Result<()> {
     let blobimport = blobrepo
         .join(phases_store)
         .and_then(move |(blobrepo, phases_store)| {
-            let blobrepo = Arc::new(blobrepo);
             let phases_store = Arc::new(phases_store);
 
             blobimport_lib::Blobimport {
@@ -129,7 +129,8 @@ fn main() -> Result<()> {
                 phases_store,
                 lfs_helper,
                 concurrent_changesets,
-                concurrent_blob_uploads_per_changeset,
+                concurrent_blobs,
+                concurrent_lfs_imports,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())

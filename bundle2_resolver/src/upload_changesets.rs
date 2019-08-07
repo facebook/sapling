@@ -26,7 +26,6 @@ use mercurial_types::{
 use scuba_ext::ScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::AddAssign;
-use std::sync::Arc;
 use wirepack::TreemanifestEntry;
 
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
@@ -264,7 +263,7 @@ fn get_parent(
         Some(p) => match map.get(&HgChangesetId::new(p)) {
             None => Some(ChangesetHandle::ready_cs_handle(
                 ctx,
-                Arc::new(repo.clone()),
+                repo.clone(),
                 HgChangesetId::new(p),
             )),
             Some(cs) => Some(cs.clone()),

@@ -85,7 +85,7 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn ready_cs_handle(ctx: CoreContext, repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
+    pub fn ready_cs_handle(ctx: CoreContext, repo: BlobRepo, hg_cs: HgChangesetId) -> Self {
         let bonsai_cs = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs)
             .and_then(move |bonsai_id| {

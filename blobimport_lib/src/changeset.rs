@@ -12,10 +12,12 @@ use crate::failure::prelude::*;
 use crate::lfs::lfs_upload;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::{self, SharedItem};
-use futures::stream::{self, Stream};
-use futures::sync::{mpsc, oneshot};
-use futures::{Future, IntoFuture};
+use futures::{
+    future::{self, SharedItem},
+    stream::{self, Stream},
+    sync::oneshot,
+    Future, IntoFuture,
+};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
@@ -26,12 +28,17 @@ use blobrepo::{
     HgBlobChangeset, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     UploadHgTreeEntry,
 };
-use mercurial::{file::File, manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial::{
+    file::{File, LFSContent},
+    manifest, RevlogChangeset, RevlogEntry, RevlogRepo,
+};
 use mercurial_types::{
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
 };
-use mononoke_types::BonsaiChangeset;
+use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use phases::Phases;
+
+use crate::concurrency::JobProcessor;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -153,9 +160,9 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 fn upload_entry(
     ctx: CoreContext,
     blobrepo: &BlobRepo,
+    lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadata>>,
     entry: RevlogEntry,
     path: Option<MPath>,
-    lfs_helper: Option<String>,
 ) -> BoxFuture<(HgBlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
@@ -216,35 +223,27 @@ fn upload_entry(
                     let file = File::new(content, p1.clone(), p2.clone());
                     let lfs_content = try_boxfuture!(file.get_lfs_content());
 
-                    let lfs_helper = try_boxfuture!(
-                        lfs_helper.ok_or(err_msg("Cannot blobimport LFS without LFS helper"))
-                    );
+                    lfs_uploader
+                        .process(lfs_content.clone())
+                        .and_then(move |meta| {
+                            let cbmeta = ContentBlobMeta {
+                                id: meta.content_id,
+                                size: meta.total_size,
+                                copy_from: lfs_content.copy_from(),
+                            };
 
-                    lfs_upload(
-                        ctx.clone(),
-                        blobrepo.clone(),
-                        lfs_helper.clone(),
-                        lfs_content.clone(),
-                    )
-                    .and_then(move |meta| {
-                        let cbmeta = ContentBlobMeta {
-                            id: meta.content_id,
-                            size: meta.total_size,
-                            copy_from: lfs_content.copy_from(),
-                        };
-
-                        let upload = UploadHgFileEntry {
-                            upload_node_id,
-                            contents: UploadHgFileContents::ContentUploaded(cbmeta),
-                            file_type: ft,
-                            p1,
-                            p2,
-                            path,
-                        };
-                        let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
-                        upload_fut
-                    })
-                    .boxify()
+                            let upload = UploadHgFileEntry {
+                                upload_node_id,
+                                contents: UploadHgFileContents::ContentUploaded(cbmeta),
+                                file_type: ft,
+                                p1,
+                                p2,
+                                path,
+                            };
+                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                            upload_fut
+                        })
+                        .boxify()
                 }
             }
         })
@@ -253,7 +252,7 @@ fn upload_entry(
 
 pub struct UploadChangesets {
     pub ctx: CoreContext,
-    pub blobrepo: Arc<BlobRepo>,
+    pub blobrepo: BlobRepo,
     pub revlogrepo: RevlogRepo,
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
@@ -261,7 +260,8 @@ pub struct UploadChangesets {
     pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
-    pub concurrent_blob_uploads_per_changeset: usize,
+    pub concurrent_blobs: usize,
+    pub concurrent_lfs_imports: usize,
 }
 
 impl UploadChangesets {
@@ -276,7 +276,8 @@ impl UploadChangesets {
             phases_store,
             lfs_helper,
             concurrent_changesets,
-            concurrent_blob_uploads_per_changeset,
+            concurrent_blobs,
+            concurrent_lfs_imports,
         } = self;
 
         let changesets = match changeset {
@@ -297,7 +298,40 @@ impl UploadChangesets {
         let is_import_from_beggining = changeset.is_none() && skip.is_none();
         let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
+        let mut executor = DefaultExecutor::current();
+
         let event_id = EventId::new();
+
+        let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(
+            {
+                cloned!(ctx, blobrepo);
+                move |lfs_content| match &lfs_helper {
+                    Some(lfs_helper) => lfs_upload(
+                        ctx.clone(),
+                        blobrepo.clone(),
+                        lfs_helper.clone(),
+                        lfs_content,
+                    )
+                    .boxify(),
+                    None => Err(err_msg("Cannot blobimport LFS without LFS helper"))
+                        .into_future()
+                        .boxify(),
+                }
+            },
+            &mut executor,
+            concurrent_lfs_imports,
+        )));
+
+        let blob_uploader = Arc::new(try_boxstream!(JobProcessor::new(
+            {
+                cloned!(ctx, blobrepo, lfs_uploader);
+                move |(entry, path)| {
+                    upload_entry(ctx.clone(), &blobrepo, lfs_uploader.clone(), entry, path).boxify()
+                }
+            },
+            &mut executor,
+            concurrent_blobs,
+        )));
 
         changesets
             .and_then({
@@ -339,8 +373,10 @@ impl UploadChangesets {
                     });
 
                     let entries = entries.map({
-                        cloned!(ctx, blobrepo, lfs_helper);
-                        move |(path, entry)| upload_entry(ctx.clone(), &blobrepo, entry, path, lfs_helper.clone())
+                        cloned!(blob_uploader);
+                        move |(path, entry)|  {
+                            blob_uploader.process((entry, path))
+                        }
                     });
 
                     revlogcs
@@ -350,8 +386,7 @@ impl UploadChangesets {
                 }
             })
             .map(move |(csid, cs, rootmf, entries)| {
-                // For each ongoing changeset, upload entries in a background task, and allow that task to run ahead
-                let entries = mpsc::spawn(stream::futures_unordered(entries), &DefaultExecutor::current(), concurrent_blob_uploads_per_changeset).boxify();
+                let entries = stream::futures_unordered(entries).boxify();
 
                 let (p1handle, p2handle) = {
                     let mut parents = cs.parents().into_iter().map(|p| {
@@ -397,15 +432,14 @@ impl UploadChangesets {
                     create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
-                cloned!(ctx, phases_store);
-                let blobrepo = (*blobrepo).clone();
+                cloned!(ctx, blobrepo, phases_store);
 
                 // Uploading changeset and populate phases
                 // We know they are public.
                 oneshot::spawn(cshandle
                     .get_completed_changeset()
                     .with_context(move |_| format!("While uploading changeset: {}", csid))
-                    .from_err(), &DefaultExecutor::current())
+                    .from_err(), &executor)
                     .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| shared))
                     .boxify()
             })

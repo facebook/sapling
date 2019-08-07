@@ -44,7 +44,7 @@ pub fn upload_bookmarks(
     ctx: CoreContext,
     logger: &Logger,
     revlogrepo: RevlogRepo,
-    blobrepo: Arc<BlobRepo>,
+    blobrepo: BlobRepo,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
     mononoke_bookmarks: Vec<(BookmarkName, ChangesetId)>,
 ) -> BoxFuture<(), Error> {
