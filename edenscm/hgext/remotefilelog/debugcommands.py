@@ -525,7 +525,7 @@ def debuggetfiles(ui, repo, **opts):
 
     msg = _("fetching %d files") % len(keys)
     with progress.bar(
-        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+        ui, msg, start=0, unit=_("bytes"), formatfunc=util.bytecount
     ) as prog:
 
         def progcb(dl, dlt, ul, ult):
@@ -572,7 +572,7 @@ def debuggethistory(ui, repo, **opts):
 
     msg = _("fetching history for %d files") % len(keys)
     with progress.bar(
-        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+        ui, msg, start=0, unit=_("bytes"), formatfunc=util.bytecount
     ) as prog:
 
         def progcb(dl, dlt, ul, ult):
@@ -601,7 +601,7 @@ def debuggettrees(ui, repo, **opts):
 
     msg = _("fetching %d trees") % len(keys)
     with progress.bar(
-        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+        ui, msg, start=0, unit=_("bytes"), formatfunc=util.bytecount
     ) as prog:
 
         def progcb(dl, dlt, ul, ult):

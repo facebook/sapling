@@ -799,7 +799,7 @@ class fileserverclient(object):
         self.ui.metrics.gauge("http_getfiles_calls", 1)
 
         with progress.bar(
-            self.ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+            self.ui, msg, start=0, unit=_("bytes"), formatfunc=util.bytecount
         ) as prog:
 
             def progcallback(dl, dlt, ul, ult):
@@ -837,7 +837,7 @@ class fileserverclient(object):
         self.ui.metrics.gauge("http_gethistory_calls", 1)
 
         with progress.bar(
-            self.ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+            self.ui, msg, start=0, unit=_("bytes"), formatfunc=util.bytecount
         ) as prog:
 
             def progcallback(dl, dlt, ul, ult):
