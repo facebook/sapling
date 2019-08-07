@@ -19,7 +19,9 @@ use futures::{
     sync::oneshot,
     Future, IntoFuture,
 };
-use futures_ext::{try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{
+    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
+};
 use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
@@ -216,7 +218,7 @@ fn upload_entry(
                         path,
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
-                    upload_fut
+                    spawn_future(upload_fut).boxify()
                 }
                 (Type::File(ft), true) => {
                     let p1 = p1.map(HgFileNodeId::new);
@@ -243,7 +245,7 @@ fn upload_entry(
                                 path,
                             };
                             let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
-                            upload_fut
+                            spawn_future(upload_fut).boxify()
                         })
                         .boxify()
                 }
