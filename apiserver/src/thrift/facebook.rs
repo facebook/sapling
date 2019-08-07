@@ -6,8 +6,8 @@
 
 use async_trait::async_trait;
 use fb303::fb_status;
-use fb303::server_async::FacebookService;
-use fb303_core::server_async::BaseService;
+use fb303::server::FacebookService;
+use fb303_core::server::BaseService;
 use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
 
 #[derive(Clone)]

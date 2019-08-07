@@ -7,7 +7,7 @@
 use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
-use apiserver_thrift::server_async::MononokeApiservice;
+use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
     GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, GetTreeExn, IsAncestorExn,
     ListDirectoryExn,
