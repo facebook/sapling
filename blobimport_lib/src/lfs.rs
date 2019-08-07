@@ -7,7 +7,7 @@
 use blobrepo::{BlobRepo, StoreRequest};
 use bytes::Bytes;
 use context::CoreContext;
-use failure::{Error, Result};
+use failure::{Error, Fail, Result};
 use futures::{Future, IntoFuture, Stream};
 use mercurial::file::LFSContent;
 use mononoke_types::ContentMetadata;
@@ -27,7 +27,11 @@ fn lfs_stream(
         .stdout(Stdio::piped())
         .spawn_async();
 
-    cmd.map_err(|e| e.into()).map(|mut cmd| {
+    cmd.map_err(|e| {
+        e.context(format!("While starting lfs_helper: {:?}", lfs_helper))
+            .into()
+    })
+    .map(|mut cmd| {
         let stdout = cmd.stdout().take().expect("stdout was missing");
         let stdout = BufReader::new(stdout);
         let stream = codec::FramedRead::new(stdout, codec::BytesCodec::new())
