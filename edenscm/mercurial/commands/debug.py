@@ -3253,6 +3253,38 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
 
 
 @command(
+    b"debugexistingcasecollisions",
+    [("r", "rev", "", _("check the specified revision"), _("REV"))],
+    _("[-r REV] [PATH...]"),
+)
+def debugexistingcasecollisions(ui, repo, *basepaths, **opts):
+    """check for existing case collisions in a commit"""
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
+    treemanifest = _findtreemanifest(ctx)
+    if not treemanifest:
+        raise error.Abort("debugexistingcasecollisions requires treemanifest")
+    paths = list(reversed(basepaths)) if basepaths else [""]
+    while paths:
+        path = paths.pop()
+        dirlist = treemanifest.listdir(path)
+        if dirlist:
+            dirlistmap = {}
+            for entry in dirlist:
+                dirlistmap.setdefault(entry.lower(), []).append(entry)
+            for _lowername, entries in sorted(dirlistmap.iteritems()):
+                if len(entries) > 1:
+                    ui.write(
+                        _("%s contains collisions: %s\n")
+                        % (
+                            '"%s"' % path if path else "<root>",
+                            ", ".join(sorted(entries)),
+                        )
+                    )
+            prefix = (path + "/") if path else ""
+            paths.extend(prefix + entry for entry in sorted(dirlist, reverse=True))
+
+
+@command(
     "debugtreestate|debugtreedirstate",
     [],
     "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",

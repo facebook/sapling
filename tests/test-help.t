@@ -1032,6 +1032,8 @@ Test list of internal help commands
    debugdrawdag  read an ASCII graph from stdin and create changesets
    debugedenimporthelper
                  Obtain data for edenfs
+   debugexistingcasecollisions
+                 check for existing case collisions in a commit
    debugextensions
                  show information about active extensions
    debugfilerevision
