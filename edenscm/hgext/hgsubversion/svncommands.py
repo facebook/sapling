@@ -438,10 +438,7 @@ def info(ui, repo, **opts):
         parent = util.parentrev(ui, repo, meta, hashes)
 
     pn = parent.node()
-    if pn not in hashes:
-        ui.status("Not a child of an svn revision.\n")
-        return 0
-    r, br = hashes[pn]
+
     if ui.configbool("hgsubversion", "useglobalrevinsvninfo"):
         try:
             globalrevmod = extensions.find("globalrevs")
@@ -450,7 +447,17 @@ def info(ui, repo, **opts):
 
         globalrev = globalrevmod.getglobalrev(ui, parent)
         r = globalrev
-    subdir = util.getsvnrev(parent)[40:].split("@")[0]
+        # svn deprecation: we are not using any branch in WWW anyway.
+        br = ""
+    else:
+        if pn not in hashes:
+            ui.status("Not a child of an svn revision.\n")
+            return 0
+        r, br = hashes[pn]
+    if ui.configbool("hgsubversion", "usereposubdirinsvninfo"):
+        subdir = ui.config("hgsubversion", "reposubdir")
+    else:
+        subdir = util.getsvnrev(parent)[40:].split("@")[0]
     remoterepo = svnrepo.svnremoterepo(repo.ui)
     url = meta.layoutobj.remotepath(br, remoterepo.svnurl)
     author = meta.authors.reverselookup(parent.user())

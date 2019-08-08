@@ -39,6 +39,9 @@ Config::
   # getctxdirs. This is used to speed up hg push when there are directory
   # changes.
   getctxdirsfastpath = False
+  # When enabled, hg svn info will use the configured subdir in config instead
+  # of parsing it from ctx.extras["convert_info"].
+  usereposubdirinsvninfo = False
 """
 
 from __future__ import absolute_import
@@ -452,11 +455,12 @@ configitem("hgsubversion", "rewritesvncommitwithhghash", default=False)
 configitem("hgsubversion", "skippostpushpulls", default=False)
 # If this configuration is true, the `svnrev` template keyword would be
 # effectively disabled and querying for it would return nothing.
-configitem("hgsubversion", "disablesvnrevkeyword ", default=False)
-configitem("hgsubversion", "useglobalrevindebugcrdump ", default=False)
-configitem("hgsubversion", "useglobalrevinsvninfo ", default=False)
-configitem("hgsubversion", "usefirstpublicancestorinsvninfo ", default=False)
-configitem("hgsubversion", "getctxdirsfastpath ", default=False)
+configitem("hgsubversion", "disablesvnrevkeyword", default=False)
+configitem("hgsubversion", "useglobalrevindebugcrdump", default=False)
+configitem("hgsubversion", "useglobalrevinsvninfo", default=False)
+configitem("hgsubversion", "usereposubdirinsvninfo", default=False)
+configitem("hgsubversion", "usefirstpublicancestorinsvninfo", default=False)
+configitem("hgsubversion", "getctxdirsfastpath", default=False)
 
 
 @templatekeyword("svnrev")
