@@ -126,59 +126,36 @@ def cloudjoin(ui, repo, **opts):
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
-    Reconnect only happens if the machine has been registered with Commit Cloud,
-    and the workspace has been already used for this repo
+    If the local repository is not connected to commit cloud, attempt to connect
+    it.  If the repository cannot be connected, then display a message
+    describing how to connect to commit cloud.
+
+    If connection is successful, then commits and bookmarks will be synchronized
+    between all repositories that have been connected to the service.
 
     Use `hg cloud sync` to trigger a new synchronization.
-
-    Use `hg cloud connect` to connect to commit cloud for the first time.
     """
+    if workspace.currentworkspace(repo):
+        return
 
-    educationpage = ui.config("commitcloud", "education_page")
-    token = tokenmod.TokenLocator(ui).token
-    if token:
-        try:
-            serv = service.get(ui, token)
-            serv.check()
-            reponame = ccutil.getreponame(repo)
-            workspacename = workspace.parseworkspace(ui, opts)
-            if workspacename is None:
-                workspacename = workspace.currentworkspace(repo)
-            if workspacename is None:
-                workspacename = workspace.defaultworkspace(ui)
-            ui.status(
-                _("trying to reconnect to the '%s' workspace for the '%s' repo\n")
-                % (workspacename, reponame),
-                component="commitcloud",
-            )
-            cloudrefs = serv.getreferences(reponame, workspacename, 0)
-            if cloudrefs.version == 0:
-                ui.status(
-                    _(
-                        "unable to reconnect: this workspace has been never connected to Commit Cloud for this repo\n"
-                    ),
-                    component="commitcloud",
-                )
-                if educationpage:
-                    ui.status(
-                        _("learn more about Commit Cloud at %s\n") % educationpage
-                    )
-            else:
-                workspace.setworkspace(repo, workspacename)
-                ui.status(
-                    _("the repository is now reconnected\n"), component="commitcloud"
-                )
-                cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
-            return
-        except ccerror.RegistrationError:
-            pass
-
+    workspacename = workspace.parseworkspace(ui, opts)
+    if workspacename is None:
+        workspacename = workspace.defaultworkspace(ui)
     ui.status(
-        _("unable to reconnect: not authenticated with Commit Cloud on this host\n"),
+        _("attempting to connect to the '%s' workspace for the '%s' repo\n")
+        % (workspacename, ccutil.getreponame(repo)),
         component="commitcloud",
     )
-    if educationpage:
-        ui.status(_("learn more about Commit Cloud at %s\n") % educationpage)
+    try:
+        cloudjoin(ui, repo, **opts)
+    except ccerror.RegistrationError:
+        ui.status(
+            _("unable to connect: not authenticated with Commit Cloud on this host\n"),
+            component="commitcloud",
+        )
+        educationpage = ui.config("commitcloud", "education_page")
+        if educationpage:
+            ui.status(_("learn more about Commit Cloud at %s\n") % educationpage)
 
 
 @subcmd("leave|disconnect")

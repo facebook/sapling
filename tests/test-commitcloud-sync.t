@@ -1216,18 +1216,30 @@ Rejoin
   $ cd client2
   $ cat ../shared.rc >> .hg/hgrc
 
-  $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation" # invalid token
-  commitcloud: unable to reconnect: not authenticated with Commit Cloud on this host
+Attempt to reconnect with an invalid token.  This should fail, but print a nice error
+message.
+
+  $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation"
+  commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: unable to connect: not authenticated with Commit Cloud on this host
   learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
-  $ hg cloud reconnect --config "commitcloud.servicelocation=$TESTTMP/otherservicelocation" # token is valid but server is different
-  commitcloud: trying to reconnect to the 'user/test/default' workspace for the 'server' repo
-  commitcloud: unable to reconnect: this workspace has been never connected to Commit Cloud for this repo
-  learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
+Reconnect to a service where the workspace is brand new.  This should work.
 
-  $ hg cloud reconnect 			# should be able to reconnect
-  commitcloud: trying to reconnect to the 'user/test/default' workspace for the 'server' repo
-  commitcloud: the repository is now reconnected
+  $ hg cloud reconnect --config "commitcloud.servicelocation=$TESTTMP/otherservicelocation"
+  commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in 0.00 sec
+
+  $ hg cloud disconnect
+  commitcloud: this repository is now disconnected from commit cloud
+
+Reconnect to the default repository.  This should work and pull in the commits.
+  $ hg cloud reconnect
+  commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
   pulling 799d22972c4e af621240884f
   pulling from ssh://user@dummy/server
@@ -1259,3 +1271,6 @@ Rejoin
   |/
   o  d20a80d4def3 'base'
   
+
+Reconnecting while already connected does nothing.
+  $ hg cloud reconnect
