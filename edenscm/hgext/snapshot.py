@@ -36,15 +36,118 @@ def extsetup(ui):
         ui.warning("snapshot extension requires lfs to be enabled")
 
 
-def uploadtolfs(repo, data):
+def checkloadblobbyoid(repo, oid, path, allow_remote=False):
+    localstore = repo.svfs.lfslocalblobstore
+    if localstore.has(oid):
+        return
+    if allow_remote:
+        p = lfs.pointer.gitlfspointer(oid=oid)
+        repo.svfs.lfsremoteblobstore.readbatch([p], localstore)
+    else:
+        raise error.Abort(
+            _("file %s with oid %s not found in local blobstorage") % (path, oid)
+        )
+
+
+class filelfswrapper(object):
     """
-    Util function which uploads data to the local lfs storage.
-    Returns oid and size of data (TODO move to special class).
+    Helper class that links files to oids in the lfs blobstorage.
+    Also does serialization/deserialization for manifest.
     """
-    # TODO(alexeyqu): do we care about metadata?
-    oid = hashlib.sha256(data).hexdigest()
-    repo.svfs.lfslocalblobstore.write(oid, data)
-    return oid, str(len(data))
+
+    def __init__(self, path, oid=None, size=None):
+        self.path = path
+        self.oid = oid
+        self.size = size
+
+    def serialize(self):
+        if not self.oid and not self.size:
+            return None
+        return {"oid": self.oid, "size": self.size}
+
+    @classmethod
+    def deserialize(cls, path, data):
+        try:
+            return cls(path, data["oid"], data["size"])
+        except ValueError:
+            raise error.Abort(_("invalid file description: %s") % data)
+
+
+class snapshotmanifest(object):
+    """
+    Main class that contains snapshot manifest representation.
+    """
+
+    def __init__(self, repo, oid=None):
+        self.repo = repo
+        self.oid = oid
+        self.deleted = []
+        self.unknown = []
+
+    @property
+    def empty(self):
+        return not (self.deleted or self.unknown)
+
+    def serialize(self):
+        manifest = defaultdict(dict)
+        manifest["deleted"] = {d.path: d.serialize() for d in self.deleted}
+        manifest["unknown"] = {u.path: u.serialize() for u in self.unknown}
+        return json.dumps(manifest)
+
+    def deserialize(self, json_string):
+        try:
+            manifest = json.loads(json_string)
+            self.deleted = [filelfswrapper(path) for path in manifest["deleted"]]
+            self.unknown = [
+                filelfswrapper.deserialize(path, data)
+                for path, data in manifest["unknown"].items()
+            ]
+        except ValueError:
+            raise error.Abort(_("invalid manifest json: %s") % json_string)
+
+    @classmethod
+    def createfromworkingcopy(cls, repo, include_untracked):
+        manifest = cls(repo)
+        # populate the manifest
+        status = manifest.repo.status(unknown=include_untracked)
+        manifest.deleted = [filelfswrapper(path) for path in status.deleted]
+        manifest.unknown = [filelfswrapper(path) for path in status.unknown]
+        return manifest
+
+    @classmethod
+    def restorefromlfs(cls, repo, oid, allow_remote=False):
+        manifest = cls(repo, oid)
+        checkloadblobbyoid(manifest.repo, oid, "manifest", allow_remote)
+        manifest.deserialize(manifest.repo.svfs.lfslocalblobstore.read(oid))
+        # validate related files
+        for file in manifest.unknown:
+            checkloadblobbyoid(manifest.repo, file.oid, file.path, allow_remote)
+        return manifest
+
+    def storetolocallfs(self):
+        def storetolfs(repo, data):
+            """
+            Util function which uploads data to the local lfs storage.
+            Returns oid and size of data.
+            """
+            # TODO(alexeyqu): do we care about metadata?
+            oid = hashlib.sha256(data).hexdigest()
+            repo.svfs.lfslocalblobstore.write(oid, data)
+            return oid, str(len(data))
+
+        wctx = self.repo[None]
+        for f in self.unknown:
+            f.oid, f.size = storetolfs(self.repo, wctx[f.path].data())
+        oid, size = storetolfs(self.repo, self.serialize())
+        return oid, size
+
+    def uploadtoremotelfs(self):
+        assert self.oid is not None
+        pointers = [lfs.pointer.gitlfspointer(oid=self.oid)]
+        for file in self.unknown:
+            checkloadblobbyoid(self.repo, file.oid, file.path)
+            pointers.append(lfs.pointer.gitlfspointer(oid=file.oid, size=file.size))
+        lfs.wrapper.uploadblobs(self.repo, pointers)
 
 
 @command("debugcreatesnapshotmanifest", inferrepo=True)
@@ -58,8 +161,8 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
     """
     if lfs is None:
         raise error.Abort(_("lfs is not initialised"))
-    stat = repo.status(unknown=True)
-    if not stat.deleted and not stat.unknown:
+    snapmanifest = snapshotmanifest.createfromworkingcopy(repo, include_untracked=True)
+    if snapmanifest.empty:
         ui.status(
             _(
                 "Working copy is even with the last commit. "
@@ -67,17 +170,7 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
             )
         )
         return
-    manifest = defaultdict(dict)
-    # store missing files
-    manifest["deleted"] = {d: None for d in stat.deleted}
-    # store untracked files into local lfs
-    wctx = repo[None]
-    for unknown in stat.unknown:
-        data = wctx[unknown].data()
-        oid, size = uploadtolfs(repo, data)
-        manifest["unknown"][unknown] = {"oid": oid, "size": size}
-    # store manifest into local lfs
-    oid, size = uploadtolfs(repo, json.dumps(manifest))
+    oid, size = snapmanifest.storetolocallfs()
     ui.status(_("manifest oid: %s\n") % oid)
 
 
@@ -93,25 +186,8 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
         raise error.Abort(_("lfs not initialised"))
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a manifest oid"))
-    manifestoid = args[0]
-    store = repo.svfs.lfslocalblobstore
-    if not store.has(manifestoid):
-        raise error.Abort(
-            _("manifest oid %s not found in local blobstorage") % manifestoid
-        )
-    # TODO(alexeyqu): wrap it into manifest class with data validation etc
-    manifest = json.loads(store.read(manifestoid))
-    # prepare pointers to blobs for uploading into remote lfs
-    pointers = [lfs.pointer.gitlfspointer(oid=manifestoid, size=str(len(manifest)))]
-    for filename, pointer in manifest["unknown"].items():
-        oid = pointer["oid"]
-        if not store.has(oid):
-            raise error.Abort(
-                _("file %s with oid %s not found in local blobstorage")
-                % (filename, oid)
-            )
-        pointers.append(lfs.pointer.gitlfspointer(oid=oid, size=pointer["size"]))
-    lfs.wrapper.uploadblobs(repo, pointers)
+    snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0])
+    snapmanifest.uploadtoremotelfs()
     ui.status(_("upload complete\n"))
 
 
@@ -124,28 +200,18 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
 
     This command does not validate contents of the snapshot manifest.
     """
-
-    def checkloadblobbyoid(repo, oid):
-        store = repo.svfs.lfslocalblobstore
-        if not store.has(oid):
-            p = lfs.pointer.gitlfspointer(oid=oid)
-            repo.svfs.lfsremoteblobstore.readbatch([p], store)
-        return store.read(oid)
-
     if lfs is None:
         raise error.Abort(_("lfs not initialised"))
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a manifest oid"))
-    manifestoid = args[0]
-    # TODO(alexeyqu): special manifest class
-    snapshotmanifest = json.loads(checkloadblobbyoid(repo, manifestoid))
+    snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0], allow_remote=True)
     # deleting files that should be missing
-    ui.note(_("will delete %s") % ",".join(snapshotmanifest["deleted"]))
-    m = scmutil.match(repo[None], snapshotmanifest["deleted"])
+    todelete = [f.path for f in snapmanifest.deleted]
+    ui.note(_("will delete %s") % ",".join(todelete))
+    m = scmutil.match(repo[None], todelete)
     cmdutil.remove(ui, repo, m, "", after=False, force=False)
     # populating the untracked files
-    for filename, pointer in snapshotmanifest["unknown"].items():
-        ui.note(_("will add %s") % filename)
-        data = checkloadblobbyoid(repo, pointer["oid"])
-        repo.wvfs.write(filename, data)
+    for unknown in snapmanifest.unknown:
+        ui.note(_("will add %s") % unknown.path)
+        repo.wvfs.write(unknown.path, repo.svfs.lfslocalblobstore.read(unknown.oid))
     ui.status(_("snapshot checkout complete\n"))
