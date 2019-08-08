@@ -21,12 +21,11 @@ from . import cmd_util
 
 Row = collections.namedtuple(
     "Row",
-    "top_pid command mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_duration fuse_last_access",
+    "top_pid mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_duration fuse_last_access command",
 )
 
 COLUMN_TITLES = Row(
     top_pid="TOP PID",
-    command="COMMAND",
     mount="MOUNT",
     fuse_reads="FUSE R",
     fuse_writes="FUSE W",
@@ -34,10 +33,10 @@ COLUMN_TITLES = Row(
     fuse_backing_store_imports="IMPORTS",
     fuse_duration="FUSE TIME",
     fuse_last_access="FUSE LAST",
+    command="CMD",
 )
 COLUMN_SPACING = Row(
     top_pid=7,
-    command=25,
     mount=12,
     fuse_reads=10,
     fuse_writes=10,
@@ -45,10 +44,10 @@ COLUMN_SPACING = Row(
     fuse_backing_store_imports=10,
     fuse_duration=10,
     fuse_last_access=10,
+    command=25,
 )
 COLUMN_ALIGNMENT = Row(
     top_pid=">",
-    command="<",
     mount="<",
     fuse_reads=">",
     fuse_writes=">",
@@ -56,10 +55,10 @@ COLUMN_ALIGNMENT = Row(
     fuse_backing_store_imports=">",
     fuse_duration=">",
     fuse_last_access=">",
+    command="<",
 )
 COLUMN_REVERSE_SORT = Row(
     top_pid=False,
-    command=False,
     mount=False,
     fuse_reads=True,
     fuse_writes=True,
@@ -67,6 +66,7 @@ COLUMN_REVERSE_SORT = Row(
     fuse_backing_store_imports=True,
     fuse_duration=True,
     fuse_last_access=True,
+    command=False,
 )
 
 COLOR_SELECTED = 1
@@ -158,10 +158,11 @@ class Top:
 
         # left: title
         stdscr.addnstr(0, 0, TITLE, self.width)
-        # center: date
-        stdscr.addnstr(0, len(TITLE) + extra_space // 2, date, self.width)
-        # right: hostname
-        stdscr.addnstr(0, self.width - len(hostname), hostname, self.width)
+        if extra_space >= 0:
+            # center: date
+            stdscr.addnstr(0, len(TITLE) + extra_space // 2, date, self.width)
+            # right: hostname
+            stdscr.addnstr(0, self.width - len(hostname), hostname, self.width)
 
     def render_column_titles(self, stdscr):
         LINE = 2
@@ -195,18 +196,25 @@ class Top:
 
     def render_row(self, stdscr, y, row, style):
         x = 0
-        for i, (str, dir, len) in enumerate(zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)):
-            text = f"{str:{dir}{len}}"[:len]
+
+        row_data = zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)
+        for i, (str, align, space) in enumerate(row_data):
+            remaining_space = self.width - x
+            if remaining_space <= 0:
+                break
+
+            space = min(space, remaining_space)
+            if i == len(COLUMN_SPACING) - 1:
+                space = max(space, remaining_space)
+
+            text = f"{str:{align}{space}}"[:space]
 
             color = 0
             if i == self.selected_column:
                 color = self.curses.color_pair(COLOR_SELECTED)
 
-            if x + len > self.width:
-                break
-
-            stdscr.addnstr(y, x, text, len, color | style)
-            x += len + 1
+            stdscr.addnstr(y, x, text, space, color | style)
+            x += space + 1
 
     def get_keypress(self, stdscr):
         key = stdscr.getch()
@@ -258,7 +266,6 @@ class Process:
     def get_row(self):
         return Row(
             top_pid=self.pid,
-            command=self.cmd,
             mount=self.mount,
             fuse_reads=self.access_counts.fuseReads,
             fuse_writes=self.access_counts.fuseWrites,
@@ -266,23 +273,8 @@ class Process:
             fuse_backing_store_imports=self.access_counts.fuseBackingStoreImports,
             fuse_duration=self.access_counts.fuseDurationNs,
             fuse_last_access=self.last_access,
+            command=self.cmd,
         )
-
-
-def format_cmd(cmd):
-    args = os.fsdecode(cmd).split("\x00", 1)
-
-    # Focus on just the basename as the paths can be quite long
-    cmd = args[0]
-    if os.path.isabs(cmd):
-        cmd = os.path.basename(cmd)
-
-    # Show cmdline args too, if they exist
-    if len(args) > 1:
-        arg_str = args[1].replace("\x00", " ")
-        cmd += f" {arg_str}"
-
-    return cmd
 
 
 def format_mount(mount):
@@ -313,9 +305,24 @@ def format_time(elapsed, modulos, suffixes):
     return f"{elapsed}{last_suffix}"
 
 
+def format_cmd(cmd):
+    args = os.fsdecode(cmd).split("\x00", 1)
+
+    # Focus on just the basename as the paths can be quite long
+    cmd = args[0]
+    if os.path.isabs(cmd):
+        cmd = os.path.basename(cmd)
+
+    # Show cmdline args too, if they exist
+    if len(args) > 1:
+        arg_str = args[1].replace("\x00", " ")
+        cmd += f" {arg_str}"
+
+    return cmd
+
+
 COLUMN_FORMATTING = Row(
     top_pid=lambda x: x,
-    command=lambda x: x,
     mount=lambda x: x,
     fuse_reads=lambda x: x,
     fuse_writes=lambda x: x,
@@ -323,4 +330,5 @@ COLUMN_FORMATTING = Row(
     fuse_backing_store_imports=lambda x: x,
     fuse_duration=format_duration,
     fuse_last_access=format_last_access,
+    command=lambda x: x,
 )
