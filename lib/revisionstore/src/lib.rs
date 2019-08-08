@@ -6,6 +6,7 @@ mod ancestors;
 mod dataindex;
 mod fanouttable;
 mod historyindex;
+mod packstore;
 mod sliceext;
 mod unionstore;
 mod vfs;
