@@ -135,6 +135,10 @@ impl PerfCounters {
         self.change_counter(name, val, |old| *old += val);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.counters.is_empty()
+    }
+
     pub fn set_max_counter(&self, name: &'static str, val: i64) {
         self.change_counter(name, val, |old| {
             if val > *old {

@@ -622,9 +622,11 @@ fn log_result(
     stats: &FutureStats,
     query: &serde_json::value::Value,
 ) {
-    if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-        scuba.add("extra_context", counters);
-    };
+    if !ctx.perf_counters().is_empty() {
+        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+            scuba.add("extra_context", counters);
+        };
+    }
 
     scuba
         .add_future_stats(&stats)
