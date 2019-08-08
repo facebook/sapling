@@ -110,7 +110,7 @@ Run cloud status after setting a workspace
   Last Sync State: Success
 
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -1194,7 +1194,7 @@ Check subscription when join/leave and also scm service health check
   repo_name=server
   repo_root=$TESTTMP/client1/.hg
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
   $ ls $TESTTMP/.commitcloud/joined/
   $ hg cloud join -q
   $ cat $TESTTMP/.commitcloud/joined/*
@@ -1234,7 +1234,7 @@ Reconnect to a service where the workspace is brand new.  This should work.
   finished in 0.00 sec
 
   $ hg cloud disconnect
-  commitcloud: this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
 
 Reconnect to the default repository.  This should work and pull in the commits.
   $ hg cloud reconnect

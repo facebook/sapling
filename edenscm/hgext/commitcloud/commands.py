@@ -162,22 +162,22 @@ def cloudrejoin(ui, repo, **opts):
 def cloudleave(ui, repo, **opts):
     """disconnect the local repository from commit cloud
 
-    Commits and bookmarks will no londer be synchronized with other
+    Commits and bookmarks will no longer be synchronized with other
     repositories.
     """
-    # do no crash on run cloud leave multiple times
-    if not workspace.currentworkspace(repo):
-        ui.status(
-            _("this repository has been already disconnected from commit cloud\n"),
-            component="commitcloud",
-        )
-        return
+    oldworkspacename = workspace.currentworkspace(repo)
     subscription.remove(repo)
     workspace.clearworkspace(repo)
-    ui.status(
-        _("this repository is now disconnected from commit cloud\n"),
-        component="commitcloud",
-    )
+    if oldworkspacename:
+        ui.status(
+            _("this repository is now disconnected from Commit Cloud Sync\n"),
+            component="commitcloud",
+        )
+    else:
+        ui.status(
+            _("this repository is not connected to Commit Cloud Sync\n"),
+            component="commitcloud",
+        )
 
 
 @subcmd("authenticate", [("t", "token", "", _("set or update token"))])

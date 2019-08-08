@@ -63,25 +63,25 @@ sh % "hg cloud join" == r"""
     commitcloud: synchronizing 'server' with 'user/test/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 sh % "'HGUSER=Test Longname <test.longname@example.com>' hg cloud join" == r"""
     commitcloud: this repository is now connected to the 'user/test.longname@example.com/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/test.longname@example.com/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 sh % "'HGUSER=Test Longname <test.longname@example.com>' hg cloud join --config 'commitcloud.email_domain=example.com'" == r"""
     commitcloud: this repository is now connected to the 'user/test.longname/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/test.longname/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 sh % "'HGUSER=Another Domain <other.longname@example.org>' hg cloud join --config 'commitcloud.email_domain=example.com'" == r"""
     commitcloud: this repository is now connected to the 'user/other.longname@example.org/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/other.longname@example.org/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # Can join workspaces using raw workspace names
 sh % "hg cloud join --raw-workspace project/unsupported" == r"""
@@ -89,7 +89,7 @@ sh % "hg cloud join --raw-workspace project/unsupported" == r"""
     commitcloud: synchronizing 'server' with 'project/unsupported'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # Test deprecated joining a user workspace via full workspace name
 sh % "hg cloud join -w user/other/work" == r"""
@@ -99,7 +99,7 @@ sh % "hg cloud join -w user/other/work" == r"""
     commitcloud: synchronizing 'server' with 'user/other/work'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # But specifying a user and a workspace name like this just treats the workspace name as-is.
 sh % "hg cloud join -u other -w user/nested/name" == r"""
@@ -107,7 +107,7 @@ sh % "hg cloud join -u other -w user/nested/name" == r"""
     commitcloud: synchronizing 'server' with 'user/other/user/nested/name'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # Test joining other users' workspaces the right way
 sh % "hg cloud join -u other -w work" == r"""
@@ -115,7 +115,7 @@ sh % "hg cloud join -u other -w work" == r"""
     commitcloud: synchronizing 'server' with 'user/other/work'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # Test joining other users' default workspace
 sh % "hg cloud join -u other" == r"""
@@ -123,7 +123,7 @@ sh % "hg cloud join -u other" == r"""
     commitcloud: synchronizing 'server' with 'user/other/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
 
 # Test joining other user's workspace by matching domain email
 sh % "hg cloud join -u 'other@example.com' --config 'commitcloud.email_domain=example.com'" == r"""
@@ -131,4 +131,4 @@ sh % "hg cloud join -u 'other@example.com' --config 'commitcloud.email_domain=ex
     commitcloud: synchronizing 'server' with 'user/other/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
-sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from commit cloud"
+sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from Commit Cloud Sync"
