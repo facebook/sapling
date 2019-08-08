@@ -90,6 +90,9 @@ treeonly=True
 
 [ui]
 ssh=$TESTDIR/dummyssh
+
+[tweakdefaults]
+rebasekeepdate=True
 EOF
 
   if [ -n "$USE_MONONOKE" ] ; then
