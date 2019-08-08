@@ -192,7 +192,7 @@ def sync(
     ui.status(_("finished in %0.2f sec\n") % elapsed)
 
     # Check that Scm Service is running and a subscription exists
-    subscription.SubscriptionManager(repo).checksubscription()
+    subscription.check(repo)
 
     # log whether the sync was successful
     with repo.wlock():

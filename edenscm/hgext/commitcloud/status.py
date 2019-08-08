@@ -48,7 +48,7 @@ def summary(repo):
 
     workspacename = workspace.currentworkspace(repo)
     if workspacename:
-        subscription.SubscriptionManager(repo).checksubscription()
+        subscription.check(repo)
         backuplock.status(repo)
         lastsyncstate = syncstate.SyncState(repo, workspacename)
         if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:

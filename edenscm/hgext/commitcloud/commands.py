@@ -111,7 +111,7 @@ def cloudjoin(ui, repo, **opts):
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
     if workspace.currentworkspace(repo):
-        subscription.SubscriptionManager(repo).removesubscription()
+        subscription.remove(repo)
     workspace.setworkspace(repo, workspacename)
 
     ui.status(
@@ -172,7 +172,7 @@ def cloudleave(ui, repo, **opts):
             component="commitcloud",
         )
         return
-    subscription.SubscriptionManager(repo).removesubscription()
+    subscription.remove(repo)
     workspace.clearworkspace(repo)
     ui.status(
         _("this repository is now disconnected from commit cloud\n"),
