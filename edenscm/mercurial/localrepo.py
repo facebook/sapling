@@ -2567,14 +2567,21 @@ class localrepository(object):
             fp.close()
         return self.pathto(fp.name[len(self.root) + 1 :])
 
-    def automigrate(self):
+    def automigratestart(self):
         """perform potentially expensive in-place migrations
 
-        Called during pull if pull.automigrate is true
+        Called at the start of pull if pull.automigrate is true
         """
         treestate.automigrate(self)
         mutation.automigrate(self)
         visibility.automigrate(self)
+
+    def automigratefinish(self):
+        """perform potentially expensive in-place migrations
+
+        Called at the end of pull if pull.automigrate is true
+        """
+        pass
 
 
 # used to avoid circular references so destructors work

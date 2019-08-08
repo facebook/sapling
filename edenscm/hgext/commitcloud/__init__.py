@@ -98,6 +98,13 @@ Configs::
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
 
+    # Connect repos to commit cloud during automigration (at the end of pull).
+    automigrate = True
+
+    # When connecting during automigration, connect to a workspace named
+    # after the host, rather than the default workspace
+    automigratehostworkspace = True
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -132,6 +139,8 @@ Configs::
 
 from __future__ import absolute_import
 
+import socket
+
 from edenscm.mercurial import (
     extensions,
     localrepo,
@@ -154,6 +163,7 @@ from . import (
     status,
     syncstate,
     util as ccutil,
+    workspace,
 )
 
 
@@ -173,6 +183,8 @@ configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "backuplimitnocheck", default=4)
+configitem("commitcloud", "automigrate", default=False)
+configitem("commitcloud", "automigratehostworkspace", default=False)
 configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
@@ -216,6 +228,17 @@ def reposetup(ui, repo):
             tr = super(commitcloudrepo, self).transaction(*args, **kwargs)
             tr.addfinalize("commitcloudobsmarkers", finalize)
             return tr
+
+        def automigratefinish(self):
+            super(commitcloudrepo, self).automigratefinish()
+            automigrate = self.ui.configbool("commitcloud", "automigrate")
+            if automigrate and not workspace.disconnected(self):
+                workspacename = None
+                if self.ui.configbool("commitcloud", "automigratehostworkspace"):
+                    workspacename = self.ui.config(
+                        "commitcloud", "hostname", socket.gethostname()
+                    )
+                cccommands.cloudrejoin(self.ui, self, workspace=workspacename)
 
     repo.__class__ = commitcloudrepo
 

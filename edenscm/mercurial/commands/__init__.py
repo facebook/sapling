@@ -4702,7 +4702,7 @@ def pull(ui, repo, source="default", **opts):
     Returns 0 on success, 1 if ``--update`` was specified but the update had unresolved conflicts.
     """
     if ui.configbool("pull", "automigrate"):
-        repo.automigrate()
+        repo.automigratestart()
 
     opts = pycompat.byteskwargs(opts)
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):
@@ -4784,6 +4784,9 @@ def pull(ui, repo, source="default", **opts):
 
         finally:
             del repo._subtoppath
+
+    if ui.configbool("pull", "automigrate"):
+        repo.automigratefinish()
 
     return ret
 

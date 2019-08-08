@@ -1274,3 +1274,48 @@ Reconnect to the default repository.  This should work and pull in the commits.
 
 Reconnecting while already connected does nothing.
   $ hg cloud reconnect
+
+  $ hg cloud disconnect
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
+
+Completely remove commit cloud config and then pull with automigrate enabled.
+This should also reconnect.
+
+  $ rm .hg/store/commitcloudrc
+  $ hg pull --config commitcloud.automigrate=true
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
+  commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in 0.00 sec
+
+But not if already connected.
+  $ hg pull --config commitcloud.automigrate=true
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
+
+  $ hg cloud disconnect
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
+
+And not if explicitly disconnected.
+  $ hg pull --config commitcloud.automigrate=true
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
+
+Pull with automigrate enabled and host-specific workspaces
+
+  $ rm .hg/store/commitcloudrc
+  $ hg pull --config commitcloud.automigrate=true --config commitcloud.automigratehostworkspace=true
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
+  commitcloud: attempting to connect to the 'user/test/testhost' workspace for the 'server' repo
+  commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/testhost'
+  commitcloud: commits synchronized
+  finished in 0.00 sec
