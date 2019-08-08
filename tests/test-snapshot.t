@@ -1,6 +1,7 @@
 # Initial setup
   $ setconfig extensions.lfs=
   $ setconfig extensions.snapshot=
+  $ setconfig extensions.treemanifest=!
 
 # Prepare server and client repos.
   $ hg init server
@@ -10,6 +11,13 @@
 # Add a file to the store
   $ echo "foo" > existingfile
   $ hg commit -Aqm "add some file"
+  $ hg push
+  pushing to $TESTTMP/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
 
 # No need to create snapshot now
   $ hg debugcreatesnapshotmanifest
@@ -63,4 +71,22 @@
   {"deleted": {"existingfile": null}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}} (no-eol)
 
   $ cat $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+  bar
+
+# Checkout the manifest
+  $ cd ../
+  $ hg clone -q server client2
+  $ cd client2
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls
+  existingfile
+
+  $ hg debugcheckoutsnapshot "$OID"
+  snapshot checkout complete
+
+  $ ls
+  untrackedfile
+
+  $ cat untrackedfile
   bar

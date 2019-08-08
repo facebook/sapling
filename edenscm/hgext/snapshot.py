@@ -19,7 +19,7 @@ TODO(alexeyqu): finish docs
 import hashlib
 from collections import defaultdict
 
-from edenscm.mercurial import error, extensions, json, registrar
+from edenscm.mercurial import cmdutil, error, extensions, json, registrar, scmutil
 from edenscm.mercurial.i18n import _
 
 
@@ -54,7 +54,7 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
     Loads untracked files and the created manifest into local lfsstore.
     Outputs the oid of the created manifest file.
 
-    This is a debug command => it lacks security and is unsuitable for prod.
+    Be careful, snapshot manifest internal structure may change.
     """
     if lfs is None:
         raise error.Abort(_("lfs is not initialised"))
@@ -87,7 +87,7 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
     Uploads manifest and all related blobs to remote lfs.
     Takes in an oid of the desired manifest in the local lfs.
 
-    This is a debug command => it lacks security and is unsuitable for prod.
+    This command does not validate contents of the snapshot manifest.
     """
     if lfs is None:
         raise error.Abort(_("lfs not initialised"))
@@ -113,3 +113,39 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
         pointers.append(lfs.pointer.gitlfspointer(oid=oid, size=pointer["size"]))
     lfs.wrapper.uploadblobs(repo, pointers)
     ui.status(_("upload complete\n"))
+
+
+@command("debugcheckoutsnapshot", [], _("OID"), inferrepo=True)
+def debugcheckoutsnapshot(ui, repo, *args, **opts):
+    """
+    Checks out the working copy to the snapshot state, given its manifest oid.
+    Downloads the snapshot manifest from remote lfs if needed.
+    Takes in an oid of the manifest.
+
+    This command does not validate contents of the snapshot manifest.
+    """
+
+    def checkloadblobbyoid(repo, oid):
+        store = repo.svfs.lfslocalblobstore
+        if not store.has(oid):
+            p = lfs.pointer.gitlfspointer(oid=oid)
+            repo.svfs.lfsremoteblobstore.readbatch([p], store)
+        return store.read(oid)
+
+    if lfs is None:
+        raise error.Abort(_("lfs not initialised"))
+    if not args or len(args) != 1:
+        raise error.Abort(_("you must specify a manifest oid"))
+    manifestoid = args[0]
+    # TODO(alexeyqu): special manifest class
+    snapshotmanifest = json.loads(checkloadblobbyoid(repo, manifestoid))
+    # deleting files that should be missing
+    ui.note(_("will delete %s") % ",".join(snapshotmanifest["deleted"]))
+    m = scmutil.match(repo[None], snapshotmanifest["deleted"])
+    cmdutil.remove(ui, repo, m, "", after=False, force=False)
+    # populating the untracked files
+    for filename, pointer in snapshotmanifest["unknown"].items():
+        ui.note(_("will add %s") % filename)
+        data = checkloadblobbyoid(repo, pointer["oid"])
+        repo.wvfs.write(filename, data)
+    ui.status(_("snapshot checkout complete\n"))
