@@ -222,19 +222,21 @@ impl Dag {
     /// `high - 1`, with the downside of increasing fragmentation.  Setting it
     /// to a larger value will reduce fragmentation, with the downside of
     /// [`Dag`] covers less ids.
+    ///
+    /// Return number of segments inserted.
     pub fn build_flat_segments<F>(
         &mut self,
         high: Id,
         get_parents: &F,
         last_threshold: Id,
-    ) -> Fallible<()>
+    ) -> Fallible<usize>
     where
         F: Fn(Id) -> Fallible<Vec<Id>>,
     {
         let low = self.next_free_id(0)?;
-
         let mut current_low = None;
         let mut current_parents = Vec::new();
+        let mut insert_count = 0;
         for id in low..=high {
             let parents = get_parents(id)?;
             if parents.len() != 1 || parents[0] + 1 != id {
@@ -242,6 +244,7 @@ impl Dag {
                 if let Some(low) = current_low {
                     debug_assert!(id > 0);
                     self.insert(0, low, id - 1, &current_parents)?;
+                    insert_count += 1;
                 }
                 current_parents = parents;
                 current_low = Some(id);
@@ -252,10 +255,11 @@ impl Dag {
         if let Some(low) = current_low {
             if low + last_threshold <= high {
                 self.insert(0, low, high, &current_parents)?;
+                insert_count += 1;
             }
         }
 
-        Ok(())
+        Ok(insert_count)
     }
 
     /// Find segments that covers `id..` range at the given level.
@@ -284,12 +288,14 @@ impl Dag {
     /// If `drop_last` is `true`, the last segment is dropped because it's
     /// likely to be incomplete. This helps reduce fragmentation if segments
     /// are built frequently.
+    ///
+    /// Return number of segments inserted.
     pub fn build_high_level_segments(
         &mut self,
         level: Level,
         size: usize,
         drop_last: bool,
-    ) -> Fallible<()> {
+    ) -> Fallible<usize> {
         assert!(level > 0);
 
         // `get_parents` is on the previous level of segments.
@@ -358,15 +364,17 @@ impl Dag {
             new_segments
         };
 
+        let insert_count = new_segments.len();
+
         for (_, low, high, parents) in new_segments {
             self.insert(level, low, high, &parents)?;
         }
 
-        if level > self.max_level {
+        if level > self.max_level && insert_count > 0 {
             self.max_level = level;
         }
 
-        Ok(())
+        Ok(insert_count)
     }
 }
 
