@@ -7,6 +7,7 @@ use clidispatch::io::IO;
 use clidispatch::repo::Repo;
 use cliparser::parser::ParseOutput;
 
+#[allow(dead_code)]
 pub fn create_dispatcher() -> Dispatcher {
     let mut dispatcher = Dispatcher::new();
     let root_command = root_command();
@@ -15,6 +16,7 @@ pub fn create_dispatcher() -> Dispatcher {
     dispatcher
 }
 
+#[allow(dead_code)]
 pub fn dispatch(dispatcher: &mut Dispatcher) -> Result<u8, DispatchError> {
     let args = args()?;
 

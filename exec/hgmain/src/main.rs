@@ -1,14 +1,7 @@
 // Copyright Facebook, Inc. 2018
 
-extern crate clidispatch;
-#[cfg(feature = "with_chg")]
-extern crate dirs;
-extern crate encoding;
-extern crate hgcommands;
-#[cfg(feature = "with_chg")]
-extern crate libc;
 use clidispatch::dispatch::Dispatcher;
-use hgcommands::HgPython;
+use hgcommands::{commands, HgPython};
 
 mod buildinfo;
 #[cfg(feature = "with_chg")]
@@ -16,7 +9,6 @@ mod chg;
 #[cfg(feature = "with_chg")]
 use chg::maybe_call_chg;
 
-mod commands;
 use commands::{create_dispatcher, dispatch};
 
 use std::env;
