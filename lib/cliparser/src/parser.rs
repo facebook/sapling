@@ -204,7 +204,8 @@ pub struct Flag {
     long_name: Cow<'static, str>,
     /// description of a flag i.e. `silences the output`
     description: Cow<'static, str>,
-    value_type: Value,
+    /// default value (including its type)
+    default_value: Value,
 }
 
 impl Flag {
@@ -234,13 +235,13 @@ impl Flag {
             _ => Some(definition.0),
         };
 
-        let (_, long_name, description, value_type) = definition;
+        let (_, long_name, description, default_value) = definition;
 
         Flag {
             short_name: short_name_opt,
             long_name,
             description,
-            value_type,
+            default_value,
         }
     }
 
@@ -361,7 +362,7 @@ impl Parser {
             }
             long_map.insert(flag.long_name.to_string(), i);
 
-            opts.insert(flag.long_name.to_string(), flag.value_type.clone());
+            opts.insert(flag.long_name.to_string(), flag.default_value.clone());
         }
 
         Parser {
@@ -742,7 +743,7 @@ mod tests {
         assert_eq!('q', flag.short_name.unwrap());
         assert_eq!("quiet", flag.long_name);
         assert_eq!("silences the output", flag.description);
-        assert_eq!(Value::Bool(false), flag.value_type);
+        assert_eq!(Value::Bool(false), flag.default_value);
     }
 
     #[test]
