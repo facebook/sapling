@@ -22,17 +22,12 @@ The Python flag definitions look like:
 
     ( short_name, long_name, default_value, description, display_value )
 
-The Rust flag definitions look like:
+The Rust ``Flag`` type implements convertion from Rust tuples that look like
+the Python tuple:
 
 .. sourcecode:: rust
 
     ( short_name, long_name, description, default_value )
-
-The actual type alias of the Rust definition is:
-
-.. sourcecode:: rust
-
-    let FlagDefinition<'a> = (char, Cow<'a, str>, Cow<'a, str>, Value);
 
 Value Enum
 ~~~~~~~~~~
@@ -71,7 +66,7 @@ Translating this definition to Rust we would end up with:
 
 .. sourcecode:: rust
 
-    ( 'y', "noninteractive".into(), "do not prompt...".into(), Value::Bool(false) )
+    let flag: Flag = ('y', "noninteractive", "do not prompt...", false).into();
     
 If there is no ``short_name`` for a flag then pass an empty character literal
 e.g. ``' '`` in the ``short_name`` place.
@@ -90,7 +85,7 @@ builder pattern to add flags, add documentation ( to interop with Mercurial's
 .. sourcecode:: rust
     
     let command = CommandDefinition::new(command_name)
-        .add_flag(flag_definition)
+        .add_flag(flag)
         .with_doc(r#"documentation goes here"#);
 
 Add as many flags are is necessary.  The flags that are parsed will be the superset
@@ -102,7 +97,7 @@ Real Example
 .. sourcecode:: rust
 
     let root_command = CommandDefinition::new("root")
-        .add_flag((' ', "shared".into(), "show shared...".into(), Value::Bool(false)))
+        .add_flag((None, "shared", "show shared...", false))
         .with_doc(r#"show root of the repo returns 0 on success."#);
 
 Command Handlers

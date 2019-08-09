@@ -16,31 +16,6 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 
-/// FlagDefinition represents a tuple of options that represent
-/// a single definition of a flag configured by each property.
-///
-/// | Type         | Meaning |
-/// | ---          | --- |
-/// | char         | short_name of a flag i.e. '-q' |
-/// | &str         | long_name of a flag i.e. '--quiet' |
-/// | &str         | description of a flag i.e. 'silences the output' |
-/// | Value        | The expected type of value as well as a default |
-///
-/// To omit a short_name, pass in empty character ' '
-///
-/// To omit a long_name, pass in a blank string or a string with just whitespace
-///
-///
-/// ```
-/// use cliparser::parser::{Value, FlagDefinition};
-///
-/// let def: FlagDefinition = ('q',
-///     "quiet".into(),
-///     "silences the output".into(),
-///     Value::Bool(false));
-/// ```
-pub type FlagDefinition = (char, Cow<'static, str>, Cow<'static, str>, Value);
-
 #[derive(Debug, Fail)]
 pub enum ParseError {
     #[fail(display = "option {} not recognized", option_name)]
@@ -219,7 +194,14 @@ impl From<&[&str]> for Value {
     }
 }
 
-/// Flag holds information about a configurable flag to be used during parsing CLI args.
+/// [`Flag`] defines a command line flag, including:
+///
+/// - Optional short flag name
+/// - Long flag name
+/// - Description (for help text)
+/// - Default value and its type
+///
+/// Use [`Flag::from`] to create a [`Flag`] from other types.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Flag {
     /// short_name of a flag i.e. `q`
@@ -293,66 +275,6 @@ impl From<Flag> for (String, String, String, Value) {
             flag.description.to_string(),
             flag.default_value,
         )
-    }
-}
-
-impl Flag {
-    /// Create a new Flag struct from a given FlagDefinition.
-    ///
-    /// ```
-    /// use cliparser::parser::*;
-    /// let def: FlagDefinition = ('q', "quiet".into(), "silences the output".into(), Value::Bool(false));
-    /// let flag = Flag::new(def);
-    /// ```
-    ///
-    /// If no short_name should be used, provide an empty char ' '
-    /// ```
-    /// use cliparser::parser::*;
-    /// let def: FlagDefinition = (' ', "quiet".into(), "silences the output".into(), Value::Bool(false));
-    /// ```
-    ///
-    /// If no description should be used, provide an empty string
-    /// ```
-    /// use cliparser::parser::*;
-    /// let def: FlagDefinition = ('q', "quiet".into(), "".into(), Value::Bool(false));
-    /// ```
-    ///
-    pub fn new(definition: FlagDefinition) -> Self {
-        let short_name_opt = match definition.0 {
-            ' ' => None,
-            _ => Some(definition.0),
-        };
-
-        let (_, long_name, description, default_value) = definition;
-
-        Flag {
-            short_name: short_name_opt,
-            long_name,
-            description,
-            default_value,
-        }
-    }
-
-    /// Create a vector of Flags from a collection of FlagDefinition.
-    ///
-    /// ```
-    /// use cliparser::parser::*;
-    ///
-    /// let defs: Vec<FlagDefinition> = vec![
-    /// ('q', "quiet".into(), "silences the output".into(), Value::Bool(false)),
-    /// ('c', "config".into(), "supply config file".into(), Value::Str("".to_string())),
-    /// ('h', "help".into(), "get some help".into(), Value::Bool(false)),
-    /// ('v', "verbose".into(), "level of verbosity".into(), Value::Bool(false)),
-    /// ];
-    ///
-    /// let flags = Flag::from_flags(&defs);
-    /// assert_eq!(flags.len(), 4);
-    /// ```
-    pub fn from_flags(definitions: &[FlagDefinition]) -> Vec<Flag> {
-        definitions
-            .iter()
-            .map(|def| Flag::new(def.clone()))
-            .collect()
     }
 }
 
