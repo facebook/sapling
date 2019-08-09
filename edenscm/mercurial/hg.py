@@ -34,7 +34,6 @@ from . import (
     repoview,
     scmutil,
     sshpeer,
-    statichttprepo,
     ui as uimod,
     url,
     util,
@@ -117,7 +116,6 @@ schemes = {
     "http": httppeer,
     "https": httppeer,
     "ssh": sshpeer,
-    "static-http": statichttprepo,
 }
 
 

@@ -406,7 +406,7 @@ def update(repo, parents, node):
 
 def listbinbookmarks(repo):
     # We may try to list bookmarks on a repo type that does not
-    # support it (e.g., statichttprepository).
+    # support it.
     marks = getattr(repo, "_bookmarks", {})
 
     hasnode = repo.changelog.hasnode

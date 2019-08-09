@@ -1114,7 +1114,6 @@ class localrepository(object):
         return self.ui.configbool("phases", "publish", untrusted=True)
 
     def cancopy(self):
-        # so statichttprepo's override of local() works
         if not self.local():
             return False
         if not self.publishing():

@@ -195,7 +195,7 @@ class repoview(object):
         repoview.method() --> repo.__class__.method(repoview)
 
     The inheritance has to be done dynamically because `repo` can be of any
-    subclasses of `localrepo`. Eg: `bundlerepo` or `statichttprepo`.
+    subclasses of `localrepo`. Eg: `bundlerepo`.
     """
 
     def __init__(self, repo, filtername):

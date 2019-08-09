@@ -2,14 +2,7 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import (
-    bundlerepo,
-    httppeer,
-    localrepo,
-    sshpeer,
-    statichttprepo,
-    ui as uimod,
-)
+from edenscm.mercurial import bundlerepo, httppeer, localrepo, sshpeer, ui as uimod
 
 
 def checkobject(o):
@@ -76,7 +69,6 @@ def main():
     checkobject(localrepo.localpeer(dummyrepo()))
     checkobject(testingsshpeer(ui, "ssh://localhost/foo"))
     checkobject(bundlerepo.bundlepeer(dummyrepo()))
-    checkobject(statichttprepo.statichttppeer(dummyrepo()))
 
 
 main()

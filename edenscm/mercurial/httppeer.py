@@ -15,16 +15,7 @@ import socket
 import struct
 import tempfile
 
-from . import (
-    bundle2,
-    error,
-    httpconnection,
-    pycompat,
-    statichttprepo,
-    url,
-    util,
-    wireproto,
-)
+from . import bundle2, error, httpconnection, pycompat, url, util, wireproto
 from .i18n import _
 from .node import nullid
 
@@ -487,23 +478,15 @@ class httpspeer(httppeer):
 def instance(ui, path, create):
     if create:
         raise error.Abort(_("cannot create new http repository"))
+    if path.startswith("https:"):
+        inst = httpspeer(ui, path)
+    else:
+        inst = httppeer(ui, path)
     try:
-        if path.startswith("https:"):
-            inst = httpspeer(ui, path)
-        else:
-            inst = httppeer(ui, path)
-        try:
-            # Try to do useful work when checking compatibility.
-            # Usually saves a roundtrip since we want the caps anyway.
-            inst._fetchcaps()
-        except error.RepoError:
-            # No luck, try older compatibility check.
-            inst.between([(nullid, nullid)])
-        return inst
-    except error.RepoError as httpexception:
-        try:
-            r = statichttprepo.instance(ui, "static-" + path, create)
-            ui.note(_("(falling back to static-http)\n"))
-            return r
-        except error.RepoError:
-            raise httpexception  # use the original http RepoError instead
+        # Try to do useful work when checking compatibility.
+        # Usually saves a roundtrip since we want the caps anyway.
+        inst._fetchcaps()
+    except error.RepoError:
+        # No luck, try older compatibility check.
+        inst.between([(nullid, nullid)])
+    return inst
