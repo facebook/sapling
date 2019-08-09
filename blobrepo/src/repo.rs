@@ -1137,14 +1137,44 @@ impl BlobRepo {
             })
     }
 
-    /// Find entries matching any of the paths privided in manifest
+    /// Look up manifest entries for multiple paths.
     ///
-    /// This function correctly handles conflicting paths too.
+    /// Given a list of paths and a root manifest ID, walk the tree and
+    /// return the manifest entries corresponding to the specified paths.
     pub fn find_entries_in_manifest(
         &self,
         ctx: CoreContext,
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
+    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
+        self.query_manifest(ctx, manifest_id, paths, false)
+    }
+
+    /// Look up manifest entries for every component of multiple paths.
+    ///
+    /// Similar to `find_entries_in_manifest`, walks the manifest tree starting from
+    /// the given root manifest ID, looking for the specified paths. Unlike
+    /// `find_entries_in_manifest`, this method returns the manifest entry of every
+    /// path component traversed. This is useful for situations where the client would
+    /// like to cache these entries to avoid future roundtrips to the server.
+    pub fn find_all_path_component_entries(
+        &self,
+        ctx: CoreContext,
+        manifest_id: HgManifestId,
+        paths: impl IntoIterator<Item = MPath>,
+    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
+        self.query_manifest(ctx, manifest_id, paths, true)
+    }
+
+    /// Efficiently fetch manifest entries for multiple paths.
+    ///
+    /// This function correctly handles conflicting paths too.
+    fn query_manifest(
+        &self,
+        ctx: CoreContext,
+        manifest_id: HgManifestId,
+        paths: impl IntoIterator<Item = MPath>,
+        select_all_path_components: bool,
     ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
         // Note: `children` and `selected` fields are not exclusive, that is
         //       selected might be true and children is not empty.
@@ -1182,7 +1212,11 @@ impl BlobRepo {
         let output = Arc::new(Mutex::new(HashMap::new()));
         bounded_traversal(
             1024,
-            (QueryTree::from_paths(paths, false), manifest_id, None),
+            (
+                QueryTree::from_paths(paths, select_all_path_components),
+                manifest_id,
+                None,
+            ),
             {
                 let repo = self.clone();
                 cloned!(output);

@@ -780,6 +780,44 @@ fn test_find_files_in_manifest() -> Result<(), Error> {
 }
 
 #[test]
+fn test_find_all_path_component_entries() -> Result<(), Error> {
+    let make_paths =
+        |paths: &[&str]| -> Result<HashSet<_>, _> { paths.into_iter().map(MPath::new).collect() };
+
+    let mut rt = Runtime::new()?;
+    let ctx = CoreContext::test_mock();
+    let repo = many_files_dirs::getrepo();
+
+    let mf = rt
+        .block_on(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            HgChangesetId::new(string_to_nodehash(
+                "d261bc7900818dea7c86935b3fb17a33b2e3a6b4",
+            )),
+        ))?
+        .manifestid();
+    let paths = make_paths(&[
+        "dir1/subdir1/subsubdir1/file_1",
+        "dir1/subdir1/subsubdir2/file_1",
+        "dir1/subdir1/subsubdir2/file_2",
+    ])?;
+    let files = rt.block_on(repo.find_all_path_component_entries(ctx, mf, paths))?;
+    assert_eq!(
+        HashSet::from_iter(files.keys().cloned()),
+        make_paths(&[
+            "dir1",
+            "dir1/subdir1",
+            "dir1/subdir1/subsubdir1",
+            "dir1/subdir1/subsubdir2",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2/file_1",
+            "dir1/subdir1/subsubdir2/file_2",
+        ])?
+    );
+    Ok(())
+}
+
+#[test]
 fn test_get_manifest_from_bonsai() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
