@@ -258,7 +258,7 @@ class Client(object):
                     )
                     info["hash"] = localcommits[0].get("commit", None)
 
-        except (TypeError, KeyError):
+        except (AttributeError, KeyError, TypeError):
             raise ClientError(None, "Unexpected graphql response format")
 
         return infos
