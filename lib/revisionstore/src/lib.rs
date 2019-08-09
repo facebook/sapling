@@ -19,7 +19,6 @@ pub mod historypack;
 pub mod historystore;
 pub mod indexedlogdatastore;
 pub mod localstore;
-pub mod loosefile;
 pub mod multiplexstore;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
