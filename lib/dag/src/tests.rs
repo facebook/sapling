@@ -9,36 +9,42 @@ use drawdag;
 use failure::Fallible;
 use tempfile::tempdir;
 
-#[test]
-fn test_segment_examples() {
-    // Examples from segmented-changelog.pdf
-    let ascii_page10 = r#"
+// Example from segmented-changelog.pdf
+// - DAG1: page 10
+// - DAG2: page 11
+// - DAG3: page 17
+// - DAG4: page 18
+// - DAG5: page 19
+
+static ASCII_DAG1: &str = r#"
                 C-D-\     /--I--J--\
             A-B------E-F-G-H--------K--L"#;
 
-    let ascii_page11 = r#"
+static ASCII_DAG2: &str = r#"
                       T /---------------N--O---\           T
                      / /                        \           \
                /----E-F-\    /-------L--M--------P--\     S--U---\
             A-B-C-D------G--H--I--J--K---------------Q--R---------V--W
                                    \--N"#;
 
-    let ascii_page17 = r#"
+static ASCII_DAG3: &str = r#"
               B---D---F--\
             A---C---E-----G"#;
 
-    let ascii_page18 = r#"
+static ASCII_DAG4: &str = r#"
              D  C  B
               \  \  \
             A--E--F--G"#;
 
-    let ascii_page19 = r#"
+static ASCII_DAG5: &str = r#"
         B---D---F
          \   \   \
       A---C---E---G"#;
 
+#[test]
+fn test_segment_examples() {
     assert_eq!(
-        build_segments(ascii_page10, "L", 3, 2).ascii[0],
+        build_segments(ASCII_DAG1, "L", 3, 2).ascii[0],
         r#"
                 2-3-\     /--8--9--\
             0-1------4-5-6-7--------10-11
@@ -48,7 +54,7 @@ Lv2: 0-11[]"#
     );
 
     assert_eq!(
-            build_segments(ascii_page11, "W", 3, 3).ascii[0],
+            build_segments(ASCII_DAG2, "W", 3, 3).ascii[0],
             r#"
                       19/---------------13-14--\           19
                      / /                        \           \
@@ -62,7 +68,7 @@ Lv3: 0-22[]"#
         );
 
     assert_eq!(
-        build_segments(ascii_page17, "G", 3, 1).ascii[0],
+        build_segments(ASCII_DAG3, "G", 3, 1).ascii[0],
         r#"
               3---4---5--\
             0---1---2-----6
@@ -71,7 +77,7 @@ Lv1: 0-6[]"#
     );
 
     assert_eq!(
-        build_segments(ascii_page18, "G", 3, 3).ascii[0],
+        build_segments(ASCII_DAG4, "G", 3, 3).ascii[0],
         r#"
              3  1  0
               \  \  \
@@ -83,7 +89,7 @@ Lv3: 0-6[]"#
     );
 
     assert_eq!(
-        build_segments(ascii_page19, "G", 3, 2).ascii[0],
+        build_segments(ASCII_DAG5, "G", 3, 2).ascii[0],
         r#"
         1---3---5
          \   \   \
