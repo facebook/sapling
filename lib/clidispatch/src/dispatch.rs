@@ -312,7 +312,7 @@ impl Dispatcher {
                     }
                     HighLevelError::SupportedError { cause } => {
                         let msg = format!("{}\n", cause);
-                        io.write_str(msg)?;
+                        io.write(msg)?;
                         return Ok(255);
                     }
                 }

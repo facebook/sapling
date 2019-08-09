@@ -69,6 +69,6 @@ pub fn root(
         repo.path().to_owned()
     };
 
-    io.write_str(format!("{}\n", path.canonicalize()?.to_string_lossy()))?;
+    io.write(format!("{}\n", path.canonicalize()?.to_string_lossy()))?;
     Ok(0)
 }

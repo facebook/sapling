@@ -24,17 +24,15 @@ impl IO {
         }
     }
 
-    pub fn write_str(&mut self, msg: impl AsRef<[u8]>) -> io::Result<()> {
-        self.write(msg.as_ref())
-    }
-
-    pub fn write(&mut self, data: &[u8]) -> io::Result<()> {
+    pub fn write(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+        let data = data.as_ref();
         self.output.write_all(data)?;
         self.output.flush()?;
         Ok(())
     }
 
-    pub fn write_err(&mut self, data: &[u8]) -> io::Result<()> {
+    pub fn write_err(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+        let data = data.as_ref();
         if let Some(ref mut error) = self.error {
             error.write_all(data)?;
         } else {
