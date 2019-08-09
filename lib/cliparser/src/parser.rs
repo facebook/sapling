@@ -195,6 +195,30 @@ impl From<Value> for Vec<String> {
     }
 }
 
+impl From<i64> for Value {
+    fn from(v: i64) -> Self {
+        Value::Int(v)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(v: bool) -> Self {
+        Value::Bool(v)
+    }
+}
+
+impl From<&str> for Value {
+    fn from(v: &str) -> Self {
+        Value::Str(v.to_string())
+    }
+}
+
+impl From<&[&str]> for Value {
+    fn from(v: &[&str]) -> Self {
+        Value::List(v.iter().map(|s| s.to_string()).collect())
+    }
+}
+
 /// Flag holds information about a configurable flag to be used during parsing CLI args.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Flag {
@@ -206,6 +230,53 @@ pub struct Flag {
     description: Cow<'static, str>,
     /// default value (including its type)
     default_value: Value,
+}
+
+/// Convert a tuple to a [`Flag`].
+///
+/// The tuple is similar to the command flag registration used in hg Python
+/// code. It consists of 4 items `(short, long, description, default)`.
+///
+/// Examples:
+///
+/// ```
+/// # use cliparser::parser::*;
+/// let flag: Flag = ('q', "quiet", "silence output", false).into();
+///
+/// // ' ' as short name indicates no short flag name
+/// let flag: Flag = (' ', "quiet", "silence output", false).into();
+///
+/// // Alternatively, None can be used.
+/// let flag: Flag = (None, "quiet", "silence output", true).into();
+///
+/// // Accept various types.
+/// let flag: Flag = (Some('r'), format!("rev"), format!("revisions"), "master").into();
+/// let flag: Flag = (Some('r'), "rev", "revisions", &["master", "stable"][..]).into();
+/// let flag: Flag = (None, format!("sleep"), format!("sleep few seconds (default: {})", 1), 1).into();
+/// ```
+impl<S, L, D, V> From<(S, L, D, V)> for Flag
+where
+    S: Into<Option<char>>,
+    L: Into<Cow<'static, str>>,
+    D: Into<Cow<'static, str>>,
+    V: Into<Value>,
+{
+    fn from(tuple: (S, L, D, V)) -> Flag {
+        let (short_name, long_name, description, default_value) = tuple;
+
+        let mut short_name = short_name.into();
+        // Translate ' ' to "no short name".
+        if Some(' ') == short_name {
+            short_name = None;
+        }
+
+        Flag {
+            short_name,
+            long_name: long_name.into(),
+            description: description.into(),
+            default_value: default_value.into(),
+        }
+    }
 }
 
 impl Flag {
