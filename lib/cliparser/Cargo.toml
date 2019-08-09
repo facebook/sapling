@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 failure = "0.1.3"
 lazy_static = "1.3.0"
-shlex = { path = "../shlex" }
+shlex = "0.1"
 cpython-ext = { path = "../cpython-ext", optional = true }
 
 [dependencies.cpython]
