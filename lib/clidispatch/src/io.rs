@@ -6,19 +6,22 @@ use std::default::Default;
 use std::io::{self, Read, Write};
 
 pub struct IO {
-    output: Box<dyn Write>,
     input: Box<dyn Read>,
+    output: Box<dyn Write>,
+    error: Option<Box<dyn Write>>,
 }
 
 impl IO {
-    fn new<OS, IS>(output: OS, input: IS) -> Self
+    fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
     where
-        OS: Write + 'static,
         IS: Read + 'static,
+        OS: Write + 'static,
+        ES: Write + 'static,
     {
         IO {
-            output: Box::new(output),
             input: Box::new(input),
+            output: Box::new(output),
+            error: error.map(|e| Box::new(e) as Box<dyn Write>),
         }
     }
 
@@ -26,9 +29,18 @@ impl IO {
         self.write(msg.as_ref())
     }
 
-    pub fn write(&mut self, msg: &[u8]) -> io::Result<()> {
-        self.output.write_all(msg)?;
+    pub fn write(&mut self, data: &[u8]) -> io::Result<()> {
+        self.output.write_all(data)?;
         self.output.flush()?;
+        Ok(())
+    }
+
+    pub fn write_err(&mut self, data: &[u8]) -> io::Result<()> {
+        if let Some(ref mut error) = self.error {
+            error.write_all(data)?;
+        } else {
+            self.output.write_all(data)?;
+        }
         Ok(())
     }
 }
@@ -36,8 +48,9 @@ impl IO {
 impl Default for IO {
     fn default() -> Self {
         IO {
-            output: Box::new(io::stdout()),
             input: Box::new(io::stdin()),
+            output: Box::new(io::stdout()),
+            error: Some(Box::new(io::stderr())),
         }
     }
 }
