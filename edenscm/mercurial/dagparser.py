@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import re
 import string
 
+from edenscmnative.bindings import vlq
+
 from . import error, pycompat, util
 from .i18n import _
 
@@ -500,3 +502,141 @@ def dagtext(
             maxlinewidth,
         )
     )
+
+
+def bindag(revs, parentrevs):
+    """Generate binary representation for a dag
+
+    revs is a list of commit identities. It must be topo-sorted from the oldest
+    to the newest commits.
+
+    parentrevs is a function that takes a commit identity, and returns a list
+    of parent commit identities: (rev) -> [rev].
+
+    The binary format consists of a stream of VLQ-encoded integers.
+
+    Every commit has an ID. The first commit created has ID K, the second has
+    ID K+1, and so on. K does not matter, because the format uses relative
+    reference to previous commits.
+
+    To parse the binary data, read integers one by one, and handle them using
+    the following rules:
+
+    - 0: New root commit.
+         Create a new commit that has no parents.
+    - 1: New single-parent commit.
+         Read the next integer as P. Create a new commit with a single parent
+         with ID = <last ID> - P.
+    - 2: New merge commit.
+         Read the next two integers as P, Q. Create a new commit with two
+         parents <last ID> - P, and <last ID> - Q.
+    - 3: New merge commit (fast path 1).
+         Read the next integer as Q. Create a new commit with two parents:
+         <last ID>, and <last ID> - Q.
+    - 4: New merge commit (fast path 2).
+         Read the next integer as P. Create a new commit with two parents:
+         <last ID> - P, and <last ID>.
+    - N: New linear stack of commits (N > 4).
+         Create a stack of N - 4 commits on top of the last commit created.
+    """
+
+    idmap = {}  # {rev: commit id}
+    buf = util.stringio()
+
+    def push(value, encode=vlq.encode, write=buf.write):
+        """Append an integer to the buffer"""
+        write(encode(value))
+
+    pendingcommits = [0]
+
+    def pushpending(push=push):
+        if pendingcommits[0] > 0:
+            push(pendingcommits[0] + 4)
+            pendingcommits[0] = 0
+
+    for rev in revs:
+        nextid = len(idmap)
+        idmap[rev] = nextid
+        p1, p2 = parentrevs(rev)
+        if p1 == -1:
+            assert p2 == -1
+            pushpending()
+            push(0)
+            pendingcommits[0] = 0
+        elif idmap[p1] + 1 == nextid and p2 == -1:
+            pendingcommits[0] += 1
+        else:
+            pushpending()
+            lastid = nextid - 1
+            dp1 = lastid - idmap[p1]
+            if p2 == -1:
+                push(1)
+                push(dp1)
+            else:
+                dp2 = lastid - idmap[p2]
+                if dp1 == 0:
+                    push(3)
+                    push(dp2)
+                elif dp2 == 0:
+                    push(4)
+                    push(dp1)
+                else:
+                    push(2)
+                    push(dp1)
+                    push(dp2)
+
+    pushpending()
+
+    return buf.getvalue()
+
+
+def parsebindag(data):
+    """Reverse of `bindag`. Translated binary DAG to revs and parentrevs.
+
+    The returned revs use integer commit identities starting from 0.
+    """
+
+    def readiter(data, decodeat=vlq.decodeat):
+        offset = 0
+        while offset < len(data):
+            value, size = decodeat(data, offset)
+            yield value
+            offset += size
+
+    it = readiter(data)
+    parents = []  # index: id, value: parentids
+    append = parents.append
+
+    # build dag in-memory
+    while True:
+        i = next(it, None)
+        lastid = len(parents) - 1
+        if i is None:
+            break
+        elif i == 0:
+            append(())
+        elif i == 1:
+            p1 = lastid - next(it)
+            append((p1,))
+        elif i == 2:
+            p1 = lastid - next(it)
+            p2 = lastid - next(it)
+            append((p1, p2))
+        elif i == 3:
+            p1 = lastid
+            p2 = lastid - next(it)
+            append((p1, p2))
+        elif i == 4:
+            p1 = lastid - next(it)
+            p2 = lastid
+            append((p1, p2))
+        else:
+            n = i - 4
+            while n > 0:
+                p1 = len(parents) - 1
+                parents.append((p1,))
+                n -= 1
+
+    revs = range(len(parents))
+    parentrevs = parents.__getitem__
+    return revs, parentrevs

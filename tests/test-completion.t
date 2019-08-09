@@ -80,6 +80,7 @@ Show debug commands if there are no other candidates
   $ hg debugcomplete debug
   debugancestor
   debugapplystreamclonebundle
+  debugbindag
   debugbuilddag
   debugbundle
   debugcapabilities
@@ -120,6 +121,7 @@ Show debug commands if there are no other candidates
   debugobsolete
   debugpathcomplete
   debugpickmergetool
+  debugpreviewbindag
   debugprocesstree
   debugprogress
   debugpushkey
@@ -283,6 +285,7 @@ Show all commands + options
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugapplystreamclonebundle: 
+  debugbindag: rev, output
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, part-type, spec
   debugcapabilities: 
@@ -322,6 +325,7 @@ Show all commands + options
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
+  debugpreviewbindag: 
   debugprocesstree: 
   debugprogress: spinner, nototal, bytes, sleep, nested, with-output
   debugpushkey: 
