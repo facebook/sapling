@@ -2,7 +2,6 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use std::default::Default;
 use std::io::{self, Read, Write};
 
 pub struct IO {
@@ -43,10 +42,8 @@ impl IO {
         }
         Ok(())
     }
-}
 
-impl Default for IO {
-    fn default() -> Self {
+    pub fn stdio() -> Self {
         IO {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),

@@ -298,7 +298,7 @@ impl Dispatcher {
     }
 
     pub fn dispatch(&mut self, args: Vec<String>) -> Result<u8, DispatchError> {
-        let mut io = IO::default();
+        let mut io = IO::stdio();
 
         match self._dispatch(args, &mut io) {
             Ok(ret) => {
