@@ -699,6 +699,7 @@ class fileserverclient(object):
         if edenapi.enabled(self.ui):
             try:
                 self._httpfetchpacks(fileids, fetchdata, fetchhistory)
+                return
             except Exception as e:
                 self.ui.warn(_("encountered error during HTTPS fetching;"))
                 self.ui.warn(_(" falling back to SSH\n"))
