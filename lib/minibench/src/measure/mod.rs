@@ -182,6 +182,27 @@ impl<A, B> Into<(Result<A, String>, Result<B, String>)> for Both<A, B> {
     }
 }
 
+// For ad-hoc messages
+impl Measure for String {
+    type FuncOutput = String;
+
+    fn measure(mut func: impl FnMut() -> Self::FuncOutput) -> Result<Self, String> {
+        Ok(func())
+    }
+
+    fn merge(self, _rhs: Self) -> Self {
+        self
+    }
+
+    fn need_more(&self) -> bool {
+        false
+    }
+
+    fn to_string(&self) -> String {
+        self.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,6 +254,12 @@ mod tests {
     fn test_bytes() {
         let measured = Bytes::measure(|| 10).unwrap();
         assert_eq!(measured.to_string(), "     10 B ");
+    }
+
+    #[test]
+    fn test_string() {
+        let measured = String::measure(|| "abc def".to_string()).unwrap();
+        assert_eq!(measured, "abc def");
     }
 
     #[test]
