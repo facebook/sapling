@@ -35,6 +35,7 @@ use time_ext::DurationExt;
 use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommonConfig, RepoConfig};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use stats::{define_stats, Timeseries};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
@@ -52,6 +53,24 @@ use super::file_stream::IntoFileStream;
 use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryWithSizeAndContentHash};
 use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
+
+define_stats! {
+    prefix = "mononoke.apiserver.repo";
+    get_raw_file: timeseries(RATE, SUM),
+    get_blob_content: timeseries(RATE, SUM),
+    list_directory: timeseries(RATE, SUM),
+    get_tree: timeseries(RATE, SUM),
+    get_changeset: timeseries(RATE, SUM),
+    get_branches: timeseries(RATE, SUM),
+    is_ancestor: timeseries(RATE, SUM),
+    download_large_file: timeseries(RATE, SUM),
+    lfs_batch: timeseries(RATE, SUM),
+    upload_large_file: timeseries(RATE, SUM),
+    eden_get_data: timeseries(RATE, SUM),
+    eden_get_history: timeseries(RATE, SUM),
+    eden_get_trees: timeseries(RATE, SUM),
+    eden_prefetch_trees: timeseries(RATE, SUM),
+}
 
 pub struct MononokeRepo {
     repo: BlobRepo,
@@ -154,6 +173,7 @@ impl MononokeRepo {
         revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_raw_file.add_value(1);
         let mpath = try_boxfuture!(FS::get_mpath(path.clone()));
 
         let repo = self.repo.clone();
@@ -185,6 +205,7 @@ impl MononokeRepo {
         ancestor: Revision,
         descendant: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::is_ancestor.add_value(1);
         let descendant_future = self
             .get_hgchangesetid_from_revision(ctx.clone(), descendant.clone())
             .from_err()
@@ -226,6 +247,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         hash: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_blob_content.add_value(1);
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
 
         self.repo
@@ -242,6 +264,7 @@ impl MononokeRepo {
         revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::list_directory.add_value(1);
         let mpath = if path.is_empty() {
             None
         } else {
@@ -273,6 +296,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         hash: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_tree.add_value(1);
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
         let repoid = self.repo.get_repoid();
@@ -303,6 +327,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         revision: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_changeset.add_value(1);
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
             .and_then(move |changesetid| repo.get_changeset_by_changesetid(ctx, changesetid))
@@ -313,6 +338,7 @@ impl MononokeRepo {
     }
 
     fn get_branches(&self, ctx: CoreContext) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_branches.add_value(1);
         self.repo
             .get_publishing_bookmarks_maybe_stale(ctx)
             .map(|(bookmark, changesetid): (Bookmark, HgChangesetId)| {
@@ -334,6 +360,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         oid: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::download_large_file.add_value(1);
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
 
         // TODO (T47378130): Use a more native filestore interface here.
@@ -357,6 +384,7 @@ impl MononokeRepo {
         oid: String,
         body: Bytes,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::upload_large_file.add_value(1);
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid.clone()));
 
         // TODO (T47378130): Stream files in.
@@ -376,6 +404,7 @@ impl MononokeRepo {
         req: BatchRequest,
         lfs_url: Option<Uri>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::lfs_batch.add_value(1);
         let lfs_address = try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
             "Lfs batch request is not allowed, host address is missing in HttpRequest header"
                 .to_string(),
@@ -394,6 +423,7 @@ impl MononokeRepo {
         keys: Vec<Key>,
         stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::eden_get_data.add_value(1);
         let mut fetches = Vec::new();
         for key in keys {
             let filenode = HgFileNodeId::new(key.node.clone().into());
@@ -435,6 +465,7 @@ impl MononokeRepo {
         depth: Option<u32>,
         stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::eden_get_history.add_value(1);
         let mut fetches = Vec::new();
         for key in keys {
             let ctx = ctx.clone();
@@ -476,6 +507,7 @@ impl MononokeRepo {
         keys: Vec<Key>,
         stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::eden_get_trees.add_value(1);
         let mut fetches = Vec::new();
         for key in keys {
             let manifest_id = HgManifestId::new(key.node.clone().into());
@@ -517,6 +549,7 @@ impl MononokeRepo {
         req: TreeRequest,
         stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::eden_prefetch_trees.add_value(1);
         let entries = gettreepack_entries(ctx.clone(), &self.repo, req.into()).and_then(
             move |(entry, basepath)| {
                 let full_path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
