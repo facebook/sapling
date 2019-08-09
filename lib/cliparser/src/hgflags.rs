@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 use crate::parser::{FlagDefinition, Value};
 
-pub fn global_hg_flag_definitions() -> Vec<FlagDefinition<'static>> {
+pub fn global_hg_flag_definitions() -> Vec<FlagDefinition> {
     let definitions = vec![
         (
             'R',

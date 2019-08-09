@@ -39,7 +39,7 @@ use std::convert::TryInto;
 ///     "silences the output".into(),
 ///     Value::Bool(false));
 /// ```
-pub type FlagDefinition<'a> = (char, Cow<'a, str>, Cow<'a, str>, Value);
+pub type FlagDefinition = (char, Cow<'static, str>, Cow<'static, str>, Value);
 
 #[derive(Debug, Fail)]
 pub enum ParseError {
@@ -197,17 +197,17 @@ impl From<Value> for Vec<String> {
 
 /// Flag holds information about a configurable flag to be used during parsing CLI args.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Flag<'a> {
+pub struct Flag {
     /// short_name of a flag i.e. `q`
     short_name: Option<char>,
     /// long_name of a flag i.e. `quiet`
-    long_name: Cow<'a, str>,
+    long_name: Cow<'static, str>,
     /// description of a flag i.e. `silences the output`
-    description: Cow<'a, str>,
+    description: Cow<'static, str>,
     value_type: Value,
 }
 
-impl<'a> Flag<'a> {
+impl Flag {
     /// Create a new Flag struct from a given FlagDefinition.
     ///
     /// ```
@@ -228,7 +228,7 @@ impl<'a> Flag<'a> {
     /// let def: FlagDefinition = ('q', "quiet".into(), "".into(), Value::Bool(false));
     /// ```
     ///
-    pub fn new(definition: FlagDefinition<'a>) -> Self {
+    pub fn new(definition: FlagDefinition) -> Self {
         let short_name_opt = match definition.0 {
             ' ' => None,
             _ => Some(definition.0),
@@ -259,7 +259,7 @@ impl<'a> Flag<'a> {
     /// let flags = Flag::from_flags(&defs);
     /// assert_eq!(flags.len(), 4);
     /// ```
-    pub fn from_flags(definitions: &'a [FlagDefinition]) -> Vec<Flag<'a>> {
+    pub fn from_flags(definitions: &[FlagDefinition]) -> Vec<Flag> {
         definitions
             .iter()
             .map(|def| Flag::new(def.clone()))
@@ -321,9 +321,9 @@ impl ParseOptions {
 }
 
 /// [`Parser`] keeps flag definitions and uses them to parse string arguments.
-pub struct Parser<'a> {
+pub struct Parser {
     // Flags and ParseOptions define the behavior of the parser.
-    flags: Vec<Flag<'a>>,
+    flags: Vec<Flag>,
     parsing_options: ParseOptions,
 
     // Flag indexed by short_name.
@@ -336,7 +336,7 @@ pub struct Parser<'a> {
     opts: HashMap<String, Value>,
 }
 
-impl<'a> Parser<'a> {
+impl Parser {
     /// initialize and setup a parser with all known flag definitions
     /// ```
     /// use cliparser::parser::*;
@@ -350,7 +350,7 @@ impl<'a> Parser<'a> {
     /// let flags = Flag::from_flags(&definitions);
     /// let parser = Parser::new(flags);
     /// ```
-    pub fn new(flags: Vec<Flag<'a>>) -> Self {
+    pub fn new(flags: Vec<Flag>) -> Self {
         let mut short_map = HashMap::new();
         let mut long_map = BTreeMap::new();
         let mut opts = HashMap::new();
@@ -397,8 +397,8 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
-    pub fn parse_args(&self, args: &'a Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
-        let args: Vec<&'a str> = args.iter().map(AsRef::as_ref).collect();
+    pub fn parse_args(&self, args: &Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
+        let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
 
         let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
@@ -455,7 +455,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    fn parse_double_hyphen_flag(
+    fn parse_double_hyphen_flag<'a>(
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
@@ -557,7 +557,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_single_hyphen_flag(
+    fn parse_single_hyphen_flag<'a>(
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
@@ -691,7 +691,7 @@ impl ParseOutput {
 mod tests {
     use super::*;
 
-    fn definitions() -> Vec<FlagDefinition<'static>> {
+    fn definitions() -> Vec<FlagDefinition> {
         vec![
             (
                 'q',

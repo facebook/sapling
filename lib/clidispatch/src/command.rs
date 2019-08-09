@@ -19,7 +19,7 @@ pub struct CommandDefinition {
     name: String,
     is_python: bool,
     doc: Option<String>,
-    flags: Vec<FlagDefinition<'static>>,
+    flags: Vec<FlagDefinition>,
 }
 
 impl CommandDefinition {
@@ -37,7 +37,7 @@ impl CommandDefinition {
         self
     }
 
-    pub fn add_flag(mut self, def: FlagDefinition<'static>) -> Self {
+    pub fn add_flag(mut self, def: FlagDefinition) -> Self {
         self.flags.push(def);
         self
     }
@@ -47,7 +47,7 @@ impl CommandDefinition {
         self
     }
 
-    pub fn flags(&self) -> &Vec<FlagDefinition<'static>> {
+    pub fn flags(&self) -> &Vec<FlagDefinition> {
         &self.flags
     }
 
