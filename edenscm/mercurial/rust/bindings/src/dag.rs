@@ -10,6 +10,7 @@ use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
     idmap::{Id, IdMap},
     segment::Dag,
+    spanset::SpanSet,
 };
 use encoding::local_bytes_to_path;
 use failure::Fallible;
@@ -19,7 +20,78 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dag"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<dagindex>(py)?;
+    m.add_class::<spans>(py)?;
     Ok(m)
+}
+
+/// A wrapper around [`SpanSet`] with Python integration.
+///
+/// Differences from the `py_class` version:
+/// - Auto converts from a wider range of Python types - smartset, any iterator.
+/// - No need to take the Python GIL to create a new instance of `Set`.
+pub(crate) struct Spans(pub SpanSet);
+
+impl Into<SpanSet> for Spans {
+    fn into(self) -> SpanSet {
+        self.0
+    }
+}
+
+// A wrapper around [`SpanSet`].
+// This is different from `smartset.spanset`.
+// Used in the Python world. The Rust world should use the `Spans` and `SpanSet` types.
+py_class!(pub class spans |py| {
+    data inner: SpanSet;
+
+    def __new__(_cls, obj: PyObject) -> PyResult<spans> {
+        Ok(Spans::extract(py, &obj)?.to_py_object(py))
+    }
+
+    def __contains__(&self, id: Id) -> PyResult<bool> {
+        Ok(self.inner(py).contains(id))
+    }
+
+    def __len__(&self) -> PyResult<usize> {
+        Ok(self.inner(py).count() as usize)
+    }
+
+    def __iter__(&self) -> PyResult<PyObject> {
+        let ids: Vec<Id> = self.inner(py).iter().collect();
+        let list: PyList = ids.into_py_object(py);
+        list.into_object().call_method(py, "__iter__", NoArgs, None)
+    }
+});
+
+impl<'a> FromPyObject<'a> for Spans {
+    fn extract(py: Python, obj: &'a PyObject) -> PyResult<Self> {
+        // If obj already owns Set, then avoid iterating through it.
+        if let Ok(pyset) = obj.extract::<spans>(py) {
+            return Ok(Spans(pyset.inner(py).clone()));
+        }
+
+        // Try to call `sort(reverse=True)` on the object.
+        // - Python smartset.baseset has sort(reverse=False) API.
+        // - The Rust SpanSet is always sorted in reverse order internally.
+        // - Most Python lazy smartsets (smartset.generatorset) are sorted in reverse order.
+        if let Ok(sort) = obj.getattr(py, "sort") {
+            let args = PyDict::new(py);
+            args.set_item(py, "reverse", true)?;
+            sort.call(py, NoArgs, Some(&args))?;
+        }
+
+        // Then iterate through obj and collect all ids.
+        // Collecting ids to a Vec first to preserve error handling.
+        let ids: PyResult<Vec<Id>> = obj.iter(py)?.map(|o| o?.extract(py)).collect();
+        Ok(Spans(SpanSet::from_spans(ids?)))
+    }
+}
+
+impl ToPyObject for Spans {
+    type ObjectType = spans;
+
+    fn to_py_object(&self, py: Python) -> Self::ObjectType {
+        spans::create_instance(py, self.0.clone()).unwrap()
+    }
 }
 
 py_class!(class dagindex |py| {
