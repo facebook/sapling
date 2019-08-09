@@ -3,7 +3,7 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
 use clidispatch::dispatch::Dispatcher;
-use cpython::{exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyResult, Python, PythonObject};
+use cpython::{exc, NoArgs, ObjectProtocol, PyDict, PyResult, Python, PythonObject};
 use cpython_ext::Bytes;
 use encoding::osstring_to_local_cstring;
 use std::env;
@@ -56,31 +56,18 @@ impl HgPython {
         Ok(())
     }
 
+    /// Update the Python command table so it knows commands implemented in Rust.
     pub fn set_command_table(&self, py: Python<'_>, dispatcher: Dispatcher) -> PyResult<()> {
         let table_mod = py.import("edenscm.mercurial.commands")?;
         let table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
 
         let rust_commands = dispatcher.get_command_table();
 
-        for cmd in rust_commands {
-            let command = cmd.clone();
-            let command_name = command.name().clone();
-            let name = PyBytes::new(py, command_name.as_bytes()).into_object();
-
-            if command.is_python() {
-                continue;
+        for command in rust_commands {
+            if !command.is_python() {
+                let doc = Bytes::from(command.doc().to_string());
+                table.set_item(py, command.name(), (doc, command.flags()))?;
             }
-
-            // If there is an entry in the table already,
-            // the command exists in both Rust and Python.
-            // We do not want to overwrite the Python command
-            match table.get_item(py, &name) {
-                Some(_) => continue,
-                None => (),
-            }
-
-            let doc = Bytes::from(command.doc().to_string());
-            table.set_item(py, name, (doc, command.flags()))?;
         }
 
         Ok(())
