@@ -45,12 +45,12 @@ pub fn elapsed(func: impl FnMut()) -> Result<self::measure::WallClock, String> {
 ///     })
 /// })
 /// ```
-pub fn bench<T: Measure, F: Fn() -> Result<T, String>>(name: impl ToString, func: F) {
+pub fn bench<T: Measure, F: FnMut() -> Result<T, String>>(name: impl ToString, mut func: F) {
     let name = name.to_string();
     // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
     let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
     if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
-        let try_func = || -> Result<T, String> {
+        let mut try_func = || -> Result<T, String> {
             let mut measured = func()?;
             while measured.need_more() {
                 measured = measured.merge(func()?);
