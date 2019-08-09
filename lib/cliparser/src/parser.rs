@@ -279,6 +279,23 @@ where
     }
 }
 
+/// Convert [`Flag`] back to tuple.
+///
+/// This is used in a larger function convert [`Flag`] to a Python object
+/// without depending on anything related to rust-cpython due to potential link
+/// errors. Ideally this should be just `impl ToPyObject for Flag` and takes
+/// care of the entire convertion.
+impl From<Flag> for (String, String, String, Value) {
+    fn from(flag: Flag) -> (String, String, String, Value) {
+        (
+            flag.short_name.map(|s| s.to_string()).unwrap_or_default(),
+            flag.long_name.to_string(),
+            flag.description.to_string(),
+            flag.default_value,
+        )
+    }
+}
+
 impl Flag {
     /// Create a new Flag struct from a given FlagDefinition.
     ///

@@ -280,13 +280,11 @@ impl Dispatcher {
         args: &Vec<String>,
         command_name: &String,
     ) -> Result<ParseOutput, DispatchError> {
-        let empty = Vec::new();
-        let command_defs = self
+        let mut command_flags = self
             .commands
             .get(command_name)
-            .map(|command| command.flags())
-            .unwrap_or(&empty);
-        let mut command_flags = Flag::from_flags(command_defs);
+            .map(|command| command.flags().clone())
+            .unwrap_or_default();
         command_flags.extend(HG_GLOBAL_FLAGS.clone());
         let parser = Parser::new(command_flags).with_parsing_options(
             ParseOptions::new()

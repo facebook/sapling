@@ -5,7 +5,7 @@
 use crate::errors::DispatchError;
 use crate::io::IO;
 use crate::repo::Repo;
-use cliparser::parser::{FlagDefinition, ParseOutput};
+use cliparser::parser::{Flag, ParseOutput};
 
 pub enum CommandType {
     NoRepo(Box<dyn Fn(ParseOutput, Vec<String>, &mut IO) -> Result<u8, DispatchError>>),
@@ -19,7 +19,7 @@ pub struct CommandDefinition {
     name: String,
     is_python: bool,
     doc: Option<String>,
-    flags: Vec<FlagDefinition>,
+    flags: Vec<Flag>,
 }
 
 impl CommandDefinition {
@@ -37,8 +37,8 @@ impl CommandDefinition {
         self
     }
 
-    pub fn add_flag(mut self, def: FlagDefinition) -> Self {
-        self.flags.push(def);
+    pub fn add_flag(mut self, def: impl Into<Flag>) -> Self {
+        self.flags.push(def.into());
         self
     }
 
@@ -47,7 +47,7 @@ impl CommandDefinition {
         self
     }
 
-    pub fn flags(&self) -> &Vec<FlagDefinition> {
+    pub fn flags(&self) -> &Vec<Flag> {
         &self.flags
     }
 

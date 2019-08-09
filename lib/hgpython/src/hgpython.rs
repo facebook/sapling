@@ -82,18 +82,17 @@ impl HgPython {
                 None => (),
             }
 
+            // XXX: The code can be greatly simplified if we can use
+            // "impl ToPyObject for Flag" from "cliparser". However,
+            // if this crate depends on "cliparser" that depends on
+            // rust-cpython, then "cargo build" on the main executable
+            // complains about link errors like undefined CPython functions.
             let mut vec = Vec::new();
-            for flagdef in command.flags() {
-                let flag = flagdef.clone();
+            for flag in command.flags() {
+                let flag: (String, String, String, Value) = flag.clone().into();
 
-                let short = if flag.0 == ' ' {
-                    PyBytes::new(py, "".to_string().as_bytes()).into_object()
-                } else {
-                    PyBytes::new(py, flag.0.to_string().as_bytes()).into_object()
-                };
-
+                let short = PyBytes::new(py, flag.0.to_string().as_bytes()).into_object();
                 let long = PyBytes::new(py, flag.1.clone().as_bytes()).into_object();
-
                 let desc = PyBytes::new(py, flag.2.clone().as_bytes()).into_object();
 
                 let val: PyObject = match flag.3 {

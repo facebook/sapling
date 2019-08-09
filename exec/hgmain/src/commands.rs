@@ -6,7 +6,6 @@ use clidispatch::errors::DispatchError;
 use clidispatch::io::IO;
 use clidispatch::repo::Repo;
 use cliparser::parser::ParseOutput;
-use cliparser::parser::Value;
 
 pub fn create_dispatcher() -> Dispatcher {
     let mut dispatcher = Dispatcher::new();
@@ -24,12 +23,7 @@ pub fn dispatch(dispatcher: &mut Dispatcher) -> Result<u8, DispatchError> {
 
 fn root_command() -> CommandDefinition {
     let command = CommandDefinition::new("root")
-        .add_flag((
-            ' ',
-            "shared".into(),
-            "show root of the shared repo".into(),
-            Value::Bool(false),
-        ))
+        .add_flag((' ', "shared", "show root of the shared repo", false))
         .with_doc(
             r#"print the root (top) of the current working directory
         
