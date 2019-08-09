@@ -33,12 +33,10 @@ mod historystorepyext;
 mod pyerror;
 mod pyext;
 mod pythondatastore;
-mod pythonhistorystore;
 mod pythonutil;
 mod repackablepyext;
 
 pub use crate::revisionstore::pythondatastore::PythonDataStore;
-pub use crate::revisionstore::pythonhistorystore::PythonMutableHistoryPack;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
