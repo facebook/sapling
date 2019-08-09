@@ -11,7 +11,6 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{bail, ensure, Fallible};
 use fs2::FileExt;
 use indexedlog::log;
-use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{Cursor, Write};
 use std::ops::{Deref, DerefMut};
@@ -190,17 +189,14 @@ impl IdMap {
     /// reused.
     ///
     /// This function needs roughly `O(N)` heap memory. `N` is the number of
-    /// ids to assign. It also needs `O(M)` stack memory. `M` is the number
-    /// of merges to assign. In case it can stack overflow or OOM, try to
-    /// assign ids to a known ancestor first.
+    /// ids to assign. When `N` is very large, try assigning ids to a known
+    /// ancestor first.
     pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F) -> Fallible<Id>
     where
         F: Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
     {
-        if let Some(id) = self.find_id_by_slice(head)? {
-            return Ok(id);
-        }
-
+        // There are some interesting cases to optimize the numbers:
+        //
         // C     For a merge C, it has choice to assign numbers to A or B
         // |\    first (A and B are abstract branches that have many nodes).
         // A B   Suppose branch A is linear and B have merges, and D is
@@ -232,120 +228,48 @@ impl IdMap {
         //         \   \   \
         //      A---C---E---G
         //
-        //   We use a naive heuristic to detect this case.
+        // The code below is optimized for cases where p1 branch is linear,
+        // but p2 branch is not.
 
-        // Find `::head - ::(head & merge())`.
-        // Store the merge in `result.merge`, the non-merges in `result.names`.
-        fn get_branch_info<F: Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>>(
-            this: &IdMap,
-            head: &[u8],
-            get_parents: &F,
-        ) -> Fallible<BranchInfo> {
-            let mut names = Vec::new();
-            let mut name: Box<[u8]> = head.to_vec().into_boxed_slice();
-            let mut merge = None;
-            while let None = this.find_id_by_slice(&name)? {
-                let parents = get_parents(&name)?;
-                match parents.len() {
-                    0 => {
-                        names.push(name);
-                        break;
-                    }
-                    1 => {
-                        names.push(name);
-                        name = parents[0].clone();
-                    }
-                    _ => {
-                        merge = Some(name);
-                        break;
-                    }
-                }
-            }
-            Ok(BranchInfo { names, merge })
-        };
+        // Emulate the stack in heap to avoid overflow.
+        enum Todo {
+            /// Visit parents. Finally assign self.
+            Visit(Box<[u8]>),
 
-        // Return value of `get_branch_info`.
-        struct BranchInfo {
-            // `names` are sorted: head first, oldest last. `names` do not have
-            // merges.
-            names: Vec<Box<[u8]>>,
-
-            // If `merge` is set, it's the parent of the oldest node in `names`,
-            // or the parent of the given `head` if `names` is empty.
-            //
-            // If `merge` is not set, the last item in `names` has all its
-            // parents assigned already.
-            merge: Option<Box<[u8]>>,
+            /// Assign a number if not assigned. Parents are visited.
+            Assign(Box<[u8]>),
         }
+        use Todo::{Assign, Visit};
 
-        impl BranchInfo {
-            fn is_empty(&self) -> bool {
-                self.names.is_empty() && self.merge.is_none()
-            }
-        }
-
-        let head_parents = parents_by_name(head)?;
-
-        // First pass: Assign flat parent branches if they obviously overlap
-        // with other branches. This is the "naive heuristic" mentioned above.
-        for parent in head_parents.iter() {
-            let branch = get_branch_info(self, parent, parents_by_name)?;
-            if branch.is_empty() {
-                continue;
-            }
-            if branch.merge.is_none() {
-                let names: HashSet<Box<[u8]>> = branch.names.iter().cloned().collect();
-                let mut should_assign = false;
-                'other_parent_loop: for other_parent in head_parents.iter() {
-                    if other_parent == parent {
-                        continue;
-                    }
-                    // PERF: This can be improved if len(parents) > 2.
-                    let other_branch = get_branch_info(self, other_parent, parents_by_name)?;
-                    if let Some(merge) = other_branch.merge {
-                        for parent in parents_by_name(&merge)? {
-                            if names.contains(&parent) {
-                                should_assign = true;
-                                break 'other_parent_loop;
-                            }
+        let mut todo_stack: Vec<Todo> = vec![Visit(head.to_vec().into_boxed_slice())];
+        while let Some(todo) = todo_stack.pop() {
+            match todo {
+                Visit(head) => {
+                    if let None = self.find_id_by_slice(&head)? {
+                        todo_stack.push(Todo::Assign(head.clone()));
+                        for unassigned_parent in parents_by_name(&head)?
+                            .into_iter()
+                            .filter(|p| match self.find_id_by_slice(p) {
+                                Ok(Some(_)) => false,
+                                _ => true,
+                            })
+                            // "rev" is the "optimization"
+                            .rev()
+                        {
+                            todo_stack.push(Todo::Visit(unassigned_parent));
                         }
                     }
                 }
-
-                if should_assign {
-                    for name in branch.names.iter().rev() {
-                        self.insert(self.next_free_id(), name)?;
+                Assign(head) => {
+                    if let None = self.find_id_by_slice(&head)? {
+                        self.insert(self.next_free_id(), &head)?;
                     }
                 }
             }
         }
 
-        // Second pass: Assign parent branches with merges.
-        for parent in head_parents.iter() {
-            // BranchInfo needs to be re-calculated since they might have changed.
-            let branch = get_branch_info(self, parent, parents_by_name)?;
-            if let Some(merge) = branch.merge {
-                self.assign_head(&merge, parents_by_name)?;
-                for name in branch.names.iter().rev() {
-                    self.insert(self.next_free_id(), name)?;
-                }
-            };
-        }
-
-        // Third pass: Assign remaining parent branches.
-        // They should be flat (linear) now.
-        for parent in head_parents.iter() {
-            let branch = get_branch_info(self, parent, parents_by_name)?;
-            assert!(branch.merge.is_none());
-            for name in branch.names.iter().rev() {
-                self.insert(self.next_free_id(), name)?;
-            }
-        }
-
-        // Finally, assign id to this name.
-        let id = self.next_free_id();
-        self.insert(self.next_free_id(), head)?;
-        Ok(id)
+        self.find_id_by_slice(head)
+            .map(|v| v.expect("head should be assigned now"))
     }
 
     /// Translate `get_parents` from taking slices to taking `Id`s.
