@@ -5,6 +5,7 @@
 
 use crate::idmap::IdMap;
 use crate::segment::{Dag, Level};
+use crate::spanset::SpanSet;
 use drawdag;
 use failure::Fallible;
 use tempfile::tempdir;
@@ -226,7 +227,60 @@ Lv1: 0-2[] 3-3[0, 1]"#
     );
 }
 
+#[test]
+fn test_parents() {
+    let result = build_segments(ASCII_DAG1, "L", 3, 2);
+    assert_eq!(
+        result.ascii[0],
+        r#"
+                2-3-\     /--8--9--\
+            0-1------4-5-6-7--------10-11
+Lv0: 0-1[] 2-3[] 4-7[1, 3] 8-9[6] 10-11[7, 9]
+Lv1: 0-7[] 8-11[6, 7]
+Lv2: 0-11[]"#
+    );
+
+    let dag = result.dag;
+
+    let parents =
+        |spans| -> String { format_set(dag.parents(SpanSet::from_spans(spans)).unwrap()) };
+
+    assert_eq!(parents(vec![]), "");
+
+    assert_eq!(parents(vec![0..=0]), "");
+    assert_eq!(parents(vec![0..=1]), "0..=0");
+    assert_eq!(parents(vec![0..=2]), "0..=0");
+    assert_eq!(parents(vec![0..=3]), "2..=2 0..=0");
+    assert_eq!(parents(vec![0..=4]), "0..=3");
+    assert_eq!(parents(vec![0..=5]), "0..=4");
+    assert_eq!(parents(vec![0..=6]), "0..=5");
+    assert_eq!(parents(vec![0..=7]), "0..=6");
+    assert_eq!(parents(vec![0..=8]), "0..=6");
+    assert_eq!(parents(vec![0..=9]), "8..=8 0..=6");
+    assert_eq!(parents(vec![0..=10]), "0..=9");
+    assert_eq!(parents(vec![0..=11]), "0..=10");
+
+    assert_eq!(parents(vec![0..=0, 2..=2]), "");
+    assert_eq!(
+        parents(vec![0..=0, 3..=3, 5..=5, 9..=10]),
+        "7..=9 4..=4 2..=2"
+    );
+    assert_eq!(
+        parents(vec![1..=1, 4..=4, 6..=6, 8..=11]),
+        "5..=10 3..=3 0..=1"
+    );
+}
+
 // Test utilities
+
+fn format_set(set: SpanSet) -> String {
+    let ranges: Vec<String> = set
+        .as_spans()
+        .iter()
+        .map(|s| format!("{}..={}", s.low, s.high))
+        .collect();
+    ranges.join(" ")
+}
 
 impl IdMap {
     /// Replace names in an ASCII DAG using the ids assigned.

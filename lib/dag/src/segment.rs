@@ -411,6 +411,59 @@ impl Dag {
         Ok(result)
     }
 
+    /// Calculate parents of the given set.
+    pub fn parents(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let mut result = SpanSet::empty();
+        let mut set = set.into();
+
+        'outer: while let Some(head) = set.iter().nth(0) {
+            // For high-level segments. If the set covers the entire segment, then
+            // the parents is (the segment - its head + its parents).
+            for level in (1..=self.max_level).rev() {
+                if let Some(seg) = self.find_segment_by_head(head, level)? {
+                    let seg_span = seg.span()?;
+                    if set.contains(seg_span) {
+                        let seg_set = SpanSet::from(seg_span);
+                        let mut parent_set = seg_set.difference(&head.into());
+                        parent_set.push_set(&SpanSet::from_spans(seg.parents()?));
+                        set = set.difference(&seg_set);
+                        result = result.union(&parent_set);
+                        continue 'outer;
+                    }
+                }
+            }
+
+            // A flat segment contains information to calculate
+            // parents(subset of the segment).
+            let seg = self.find_segment_including_id(head, 0)?.expect(
+                "logic error: flat segments are expected to cover everything but they do not",
+            );
+            let seg_span = seg.span()?;
+            let seg_low = seg_span.low;
+            let seg_set: SpanSet = seg_span.into();
+            let seg_set = seg_set.intersection(&set);
+
+            // Get parents for a linear set (ex. parent(i) is (i - 1)).
+            fn parents_linear(set: &SpanSet) -> SpanSet {
+                debug_assert!(!set.contains(0));
+                SpanSet::from_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
+            }
+
+            let parent_set = if seg_set.contains(seg_low) {
+                let mut parent_set = parents_linear(&seg_set.difference(&SpanSet::from(seg_low)));
+                parent_set.push_set(&SpanSet::from_spans(seg.parents()?));
+                parent_set
+            } else {
+                parents_linear(&seg_set)
+            };
+
+            set = set.difference(&seg_set);
+            result = result.union(&parent_set);
+        }
+
+        Ok(result)
+    }
+
     /// Calculate one "greatest common ancestor" of two `Id`s.
     ///
     /// If there are no common ancestors, return None.
