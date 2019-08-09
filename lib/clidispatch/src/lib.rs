@@ -8,5 +8,6 @@
 pub mod command;
 pub mod dispatch;
 pub mod errors;
+pub mod global_flags;
 pub mod io;
 pub mod repo;

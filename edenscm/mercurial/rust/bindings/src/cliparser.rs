@@ -4,8 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::configparser::config;
+use clidispatch::global_flags::HG_GLOBAL_FLAGS;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::hgflags::global_hg_flag_definitions;
 use cliparser::parser::*;
 use cpython::*;
 use cpython_ext::Bytes;
@@ -94,9 +94,7 @@ fn parse_command(
         .flag_alias("repo", "repository")
         .error_on_unknown_opts(true);
     let mut flags = Flag::from_flags(&rust_definitions);
-    let global_defs = global_hg_flag_definitions();
-    let globals = Flag::from_flags(&global_defs);
-    flags.extend(globals);
+    flags.extend(HG_GLOBAL_FLAGS.clone());
     let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser
         .parse_args(&args)
@@ -186,9 +184,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
         .ignore_prefix(true)
         .early_parse(true)
         .flag_alias("repo", "repository");
-    let definitions = global_hg_flag_definitions();
-    let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
     let rust_opts = result.opts().clone();
     let mut opts = HashMap::new();
@@ -202,9 +198,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
 
 fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
     let parsing_options = ParseOptions::new().flag_alias("repo", "repository");
-    let definitions = global_hg_flag_definitions();
-    let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
     let arguments = result.args().clone();
 
@@ -219,9 +213,7 @@ fn parse(
     let parsing_options = ParseOptions::new()
         .flag_alias("repo", "repository")
         .keep_sep(keep_sep);
-    let definitions = global_hg_flag_definitions();
-    let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
 
     let arguments = result.args().iter().cloned().map(Bytes::from).collect();

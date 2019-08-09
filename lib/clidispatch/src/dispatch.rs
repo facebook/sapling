@@ -4,11 +4,11 @@
 // GNU General Public License version 2 or any later version.
 use crate::command::{CommandDefinition, CommandType};
 use crate::errors::{DispatchError, HighLevelError};
+use crate::global_flags::HG_GLOBAL_FLAGS;
 use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::hgflags::global_hg_flag_definitions;
 use cliparser::parser::*;
 use configparser::config::ConfigSet;
 use configparser::hg::{parse_list, ConfigSetHgExt};
@@ -184,9 +184,7 @@ impl Dispatcher {
     }
 
     fn early_parse(&self, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
-        let global_defs = global_hg_flag_definitions();
-        let global_flags = Flag::from_flags(&global_defs);
-        let parser = Parser::new(global_flags).with_parsing_options(
+        let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(
             ParseOptions::new()
                 .ignore_prefix(true)
                 .early_parse(true)
@@ -282,9 +280,6 @@ impl Dispatcher {
         args: &Vec<String>,
         command_name: &String,
     ) -> Result<ParseOutput, DispatchError> {
-        let global_defs = global_hg_flag_definitions();
-        let global_flags = Flag::from_flags(&global_defs);
-
         let empty = Vec::new();
         let command_defs = self
             .commands
@@ -292,7 +287,7 @@ impl Dispatcher {
             .map(|command| command.flags())
             .unwrap_or(&empty);
         let mut command_flags = Flag::from_flags(command_defs);
-        command_flags.extend(global_flags);
+        command_flags.extend(HG_GLOBAL_FLAGS.clone());
         let parser = Parser::new(command_flags).with_parsing_options(
             ParseOptions::new()
                 .error_on_unknown_opts(true)
