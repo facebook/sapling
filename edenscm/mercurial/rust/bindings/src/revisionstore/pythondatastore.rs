@@ -3,30 +3,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::path::PathBuf;
-
 use cpython::{
-    FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyResult, PyTuple,
-    Python, PythonObject,
+    FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python, PythonObject,
 };
-use failure::{format_err, Fallible};
+use failure::Fallible;
 
-use encoding::local_bytes_to_path;
-use revisionstore::{DataStore, Delta, LocalStore, Metadata, MutableDeltaStore};
+use revisionstore::{DataStore, Delta, LocalStore, Metadata};
 use types::Key;
 
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pythonutil::{
-    bytes_from_tuple, from_delta_to_tuple, from_key_to_tuple, from_tuple_to_delta,
-    from_tuple_to_key, to_key, to_metadata, to_pyerr,
+    bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
+    to_metadata,
 };
 
 pub struct PythonDataStore {
     py_store: PyObject,
-}
-
-pub struct PythonMutableDataPack {
-    py_datapack: PythonDataStore,
 }
 
 impl PythonDataStore {
@@ -134,109 +126,5 @@ impl LocalStore for PythonDataStore {
             .map(|k| from_tuple_to_key(py, &k).map_err(|e| pyerr_to_error(py, e).into()))
             .collect::<Fallible<Vec<Key>>>()?;
         Ok(missing)
-    }
-}
-
-impl PythonMutableDataPack {
-    pub fn new(py_datapack: PyObject) -> PyResult<Self> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let py_type = py_datapack.get_type(py);
-        let name = py_type.name(py);
-        if name != "mutabledatapack" {
-            Err(to_pyerr(
-                py,
-                &format_err!(
-                    "A 'mutabledatapack' object was expected but got a '{}' object",
-                    name
-                ),
-            ))
-        } else {
-            Ok(PythonMutableDataPack {
-                py_datapack: PythonDataStore::new(py_datapack),
-            })
-        }
-    }
-
-    fn build_add_tuple(&self, py: Python, delta: &Delta, metadata: &Metadata) -> PyResult<PyTuple> {
-        let py_delta = from_delta_to_tuple(py, delta);
-        let py_delta = PyTuple::extract(py, &py_delta)?;
-        let py_name = PyBytes::extract(py, &py_delta.get_item(py, 0))?;
-        let py_node = PyBytes::extract(py, &py_delta.get_item(py, 1))?;
-        let py_delta_node = PyBytes::extract(py, &py_delta.get_item(py, 3))?;
-        let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
-        let py_meta = PyDict::new(py);
-        if let Some(size) = metadata.size {
-            py_meta.set_item(py, "s", size)?;
-        }
-        if let Some(flags) = metadata.flags {
-            py_meta.set_item(py, "f", flags)?;
-        }
-
-        Ok(PyTuple::new(
-            py,
-            &vec![
-                py_name.into_object(),
-                py_node.into_object(),
-                py_delta_node.into_object(),
-                py_bytes.into_object(),
-                py_meta.into_object(),
-            ],
-        ))
-    }
-}
-
-impl MutableDeltaStore for PythonMutableDataPack {
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let py_tuple = self
-            .build_add_tuple(py, delta, metadata)
-            .map_err(|e| pyerr_to_error(py, e))?;
-
-        self.py_datapack
-            .py_store
-            .call_method(py, "add", py_tuple, None)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        Ok(())
-    }
-
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let py_path = self
-            .py_datapack
-            .py_store
-            .call_method(py, "flush", NoArgs, None)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        let py_path = PyBytes::extract(py, &py_path).map_err(|e| pyerr_to_error(py, e))?;
-        Ok(Some(local_bytes_to_path(py_path.data(py))?.into_owned()))
-    }
-}
-
-impl DataStore for PythonMutableDataPack {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
-        self.py_datapack.get(key)
-    }
-
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        self.py_datapack.get_delta(key)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        self.py_datapack.get_delta_chain(key)
-    }
-
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        self.py_datapack.get_meta(key)
-    }
-}
-
-impl LocalStore for PythonMutableDataPack {
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        self.py_datapack.get_missing(keys)
     }
 }

@@ -16,9 +16,7 @@ use encoding::local_bytes_to_path;
 use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
-use crate::revisionstore::{
-    mutabledeltastore, mutablehistorystore, PythonMutableDataPack, PythonMutableHistoryPack,
-};
+use crate::revisionstore::{mutabledeltastore, mutablehistorystore, PythonMutableHistoryPack};
 
 mod exceptions {
     use super::*;
@@ -65,7 +63,10 @@ fn get_deltastore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableDeltaS
     if let Ok(store) = store.extract::<mutabledeltastore>(py) {
         Ok(Box::new(store))
     } else {
-        Ok(Box::new(PythonMutableDataPack::new(store)?))
+        Err(PyErr::new::<exc::RuntimeError, _>(
+            py,
+            format!("Unknown store {}", store),
+        ))
     }
 }
 
