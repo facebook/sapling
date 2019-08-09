@@ -85,15 +85,14 @@ fn parse_command(
     args: Vec<String>,
     definitions: Vec<(String, String, Value)>,
 ) -> PyResult<(Vec<PyBytes>, HashMap<Bytes, Value>)> {
-    let rust_definitions: Vec<FlagDefinition> = definitions
+    let mut flags: Vec<Flag> = definitions
         .into_iter()
-        .map(|(c, s, v)| (c.chars().next().unwrap_or(' '), s.into(), "".into(), v))
+        .map(|(c, s, v)| (c.chars().nth(0), s, "", v).into())
         .collect();
 
     let parsing_options = ParseOptions::new()
         .flag_alias("repo", "repository")
         .error_on_unknown_opts(true);
-    let mut flags = Flag::from_flags(&rust_definitions);
     flags.extend(HG_GLOBAL_FLAGS.clone());
     let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser
