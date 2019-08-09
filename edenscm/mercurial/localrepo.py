@@ -785,8 +785,7 @@ class localrepository(object):
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
-        # manifestlog. It allows bundlerepo and unionrepo to intercept the
-        # manifest creation.
+        # manifestlog. It allows bundlerepo to intercept the manifest creation.
         return manifest.manifestrevlog(self.svfs)
 
     @storecache("00manifest.i", "00manifesttree.i")

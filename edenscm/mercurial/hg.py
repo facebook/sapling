@@ -36,7 +36,6 @@ from . import (
     sshpeer,
     statichttprepo,
     ui as uimod,
-    unionrepo,
     url,
     util,
     verify as verifymod,
@@ -114,7 +113,6 @@ def parseurl(path, branches=None):
 
 schemes = {
     "bundle": bundlerepo,
-    "union": unionrepo,
     "file": _local,
     "http": httppeer,
     "https": httppeer,

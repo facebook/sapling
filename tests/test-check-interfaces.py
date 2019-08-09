@@ -9,7 +9,6 @@ from edenscm.mercurial import (
     sshpeer,
     statichttprepo,
     ui as uimod,
-    unionrepo,
 )
 
 
@@ -78,7 +77,6 @@ def main():
     checkobject(testingsshpeer(ui, "ssh://localhost/foo"))
     checkobject(bundlerepo.bundlepeer(dummyrepo()))
     checkobject(statichttprepo.statichttppeer(dummyrepo()))
-    checkobject(unionrepo.unionpeer(dummyrepo()))
 
 
 main()
