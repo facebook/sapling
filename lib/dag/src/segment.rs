@@ -15,6 +15,7 @@ use fs2::FileExt;
 use indexedlog::log;
 use indexmap::set::IndexSet;
 use std::collections::{BTreeSet, BinaryHeap};
+use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::ops::{Deref, DerefMut};
@@ -550,6 +551,42 @@ impl<'a> Segment<'a> {
             buf.write_vlq(*parent).unwrap();
         }
         buf
+    }
+}
+
+impl Debug for Dag {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        let mut first = true;
+        let mut last_level = 255;
+        let mut segments = self
+            .log
+            .iter()
+            .map(|e| Segment(e.unwrap()))
+            .collect::<Vec<_>>();
+        segments.sort_by_key(|s| (s.level().unwrap(), s.head().unwrap()));
+
+        for segment in segments {
+            let span = segment.span().unwrap();
+            let level = segment.level().unwrap();
+            if level != last_level {
+                if !first {
+                    write!(f, "\n")?;
+                }
+                first = false;
+                write!(f, "Lv{}: ", level)?;
+                last_level = level;
+            } else {
+                write!(f, " ")?;
+            }
+            write!(
+                f,
+                "{}-{}{:?}",
+                span.low,
+                span.high,
+                segment.parents().unwrap()
+            )?;
+        }
+        Ok(())
     }
 }
 

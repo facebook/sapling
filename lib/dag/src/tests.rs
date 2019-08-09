@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::idmap::IdMap;
-use crate::segment::{Dag, Level, Segment};
+use crate::segment::{Dag, Level};
 use drawdag;
 use failure::Fallible;
 use tempfile::tempdir;
@@ -246,30 +246,7 @@ impl IdMap {
 impl Dag {
     /// Dump segments in a compact string form.
     fn dump(&self) -> String {
-        let mut result = String::new();
-        let mut last_level = 255;
-        let mut segments = self
-            .log
-            .iter()
-            .map(|e| Segment(e.unwrap()))
-            .collect::<Vec<_>>();
-        segments.sort_by_key(|s| (s.level().unwrap(), s.head().unwrap()));
-
-        for segment in segments {
-            let span = segment.span().unwrap();
-            let level = segment.level().unwrap();
-            if level != last_level {
-                if !result.is_empty() {
-                    result.push('\n');
-                }
-                result += &format!("Lv{}: ", level);
-                last_level = level;
-            } else {
-                result.push(' ');
-            }
-            result += &format!("{}-{}{:?}", span.low, span.high, segment.parents().unwrap());
-        }
-        result
+        format!("{:?}", self)
     }
 }
 
