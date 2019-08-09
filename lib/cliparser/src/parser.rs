@@ -394,13 +394,9 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
-    pub fn parse_args(&self, args: &'a Vec<String>) -> Result<ParseOutput, ParseError> {
-        let arg_vec: Vec<&'a str> = args.iter().map(|string| &string[..]).collect();
+    pub fn parse_args(&self, args: &'a Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
+        let args: Vec<&'a str> = args.iter().map(AsRef::as_ref).collect();
 
-        self._parse(arg_vec)
-    }
-
-    fn _parse(&self, args: Vec<&'a str>) -> Result<ParseOutput, ParseError> {
         let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
         let mut iter = args.into_iter().enumerate().peekable();
