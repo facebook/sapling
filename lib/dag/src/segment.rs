@@ -381,14 +381,22 @@ impl Dag {
 
 // Algorithms using SpanSet as output.
 impl Dag {
-    /// Calculate all ancestors reachable from the given `id`.
-    pub fn ancestors(&self, id: Id) -> Fallible<SpanSet> {
+    /// Calculate all ancestors reachable from any id from the given set.
+    ///
+    /// ```plain,ignore
+    /// union(ancestors(i) for i in set)
+    /// ```
+    pub fn ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let mut set: SpanSet = set.into();
+        if set.count() > 2 {
+            // Try to (greatly) reduce the size of the `set` to make calculation cheaper.
+            set = self.heads_ancestors(set)?;
+        }
         let mut result = SpanSet::empty();
-        let mut to_visit = BinaryHeap::new();
-        to_visit.push(id);
-
+        let mut to_visit: BinaryHeap<_> = set.iter().collect();
         'outer: while let Some(id) = to_visit.pop() {
             if result.contains(id) {
+                // If `id` is in `result`, then `ancestors(id)` are all in `result`.
                 continue;
             }
             for level in (0..=self.max_level).rev() {
@@ -470,21 +478,51 @@ impl Dag {
         Ok(set.difference(&self.parents(set.clone())?))
     }
 
-    /// Calculate one "greatest common ancestor" of two `Id`s.
+    /// Calculate one "greatest common ancestor" of the given set.
     ///
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    pub fn gca_one(&self, a: Id, b: Id) -> Fallible<Option<Id>> {
-        let set = self.ancestors(a)?.intersection(&self.ancestors(b)?);
-        Ok(set.iter().nth(0))
+    pub fn gca_one(&self, set: impl Into<SpanSet>) -> Fallible<Option<Id>> {
+        let set = set.into();
+        // The set is sorted in DESC order. Therefore its first item can be used as the result.
+        Ok(self.common_ancestors(set)?.iter().nth(0))
     }
 
-    /// Calculate all "greatest common ancestor"s of two `Id`s.
+    /// Calculate all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    pub fn gca_all(&self, a: Id, b: Id) -> Fallible<SpanSet> {
-        let set = self.ancestors(a)?.intersection(&self.ancestors(b)?);
-        Ok(self.heads_ancestors(set)?)
+    pub fn gca_all(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+        self.heads_ancestors(self.common_ancestors(set)?)
+    }
+
+    /// Calculate all common ancestors of the given set.
+    ///
+    /// ```plain,ignore
+    /// intersect(ancestors(i) for i in set)
+    /// ```
+    pub fn common_ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+        let result = match set.count() {
+            0 => set,
+            1 => self.ancestors(set)?,
+            2 => {
+                // Fast path that does not calculate "heads".
+                let mut iter = set.iter();
+                let a = iter.next().unwrap();
+                let b = iter.next().unwrap();
+                self.ancestors(a)?.intersection(&self.ancestors(b)?)
+            }
+            _ => {
+                // PERF: If the set is too large, `common_ancestors(heads(X))`
+                // might be faster.
+                set.iter()
+                    .fold(Ok(SpanSet::full()), |set: Fallible<SpanSet>, id| {
+                        Ok(set?.intersection(&self.ancestors(id)?))
+                    })?
+            }
+        };
+        Ok(result)
     }
 
     /// Test if `ancestor_id` is an ancestor of `descendant_id`.

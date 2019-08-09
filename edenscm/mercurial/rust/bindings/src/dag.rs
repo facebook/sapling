@@ -123,7 +123,7 @@ py_class!(class dagindex |py| {
         Ok(match (a, b) {
             (Some(a), Some(b)) => {
                 let dag = self.dag(py).borrow();
-                dag.gca_one(a, b).map_pyerr::<exc::IOError>(py)?.map(|id| {
+                dag.gca_one((a, b)).map_pyerr::<exc::IOError>(py)?.map(|id| {
                     let node = map.find_slice_by_id(id).unwrap().unwrap();
                     PyBytes::new(py, node)
                 })

@@ -194,9 +194,9 @@ fn test_segment_ancestors_example1() {
         (9, 2, 2.into()),
         (9, 7, 6.into()),
     ] {
-        assert_eq!(dag.gca_one(a, b).unwrap(), ancestor);
-        assert_eq!(dag.gca_all(a, b).unwrap().iter().nth(0), ancestor);
-        assert_eq!(dag.gca_all(a, b).unwrap().iter().nth(1), None);
+        assert_eq!(dag.gca_one((a, b)).unwrap(), ancestor);
+        assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(0), ancestor);
+        assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(1), None);
         assert_eq!(dag.is_ancestor(b, a).unwrap(), ancestor == Some(b));
         assert_eq!(dag.is_ancestor(a, b).unwrap(), ancestor == Some(a));
     }
@@ -220,9 +220,9 @@ Lv1: 0-2[] 3-3[0, 1]"#
     );
     let dag = result.dag;
     // This is kind of "undefined" whether it's 1 or 0.
-    assert_eq!(dag.gca_one(2, 3).unwrap(), Some(1));
+    assert_eq!(dag.gca_one((2, 3)).unwrap(), Some(1));
     assert_eq!(
-        dag.gca_all(2, 3).unwrap().iter().collect::<Vec<_>>(),
+        dag.gca_all((2, 3)).unwrap().iter().collect::<Vec<_>>(),
         vec![1, 0]
     );
 }
