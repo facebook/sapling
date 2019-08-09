@@ -14,7 +14,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, monitoring};
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use failure_ext::{bail_msg, err_msg, prelude::*};
@@ -209,13 +209,14 @@ fn ensure_small_db_replication_lag(
     })
 }
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = args::MononokeApp {
+fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
+    let app_template = args::MononokeApp {
         safe_writes: true,
         hide_advanced_args: false,
         default_glog: true,
     };
-    app.build("blobstore healer job")
+
+    let app = app_template.build(app_name)
         .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
         .args_from_usage(
@@ -226,11 +227,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
-        )
+    );
+    args::add_fb303_args(app)
 }
 
 fn main() -> Result<()> {
-    let matches = setup_app().get_matches();
+    let app_name = "blobstore_healer";
+    let matches = setup_app(app_name).get_matches();
 
     let storage_id = matches
         .value_of("storage-id")
@@ -278,6 +281,10 @@ fn main() -> Result<()> {
     };
 
     let mut runtime = tokio::runtime::Runtime::new()?;
+
+    // Thread with a thrift service is now detached
+    monitoring::start_fb303_and_stats_agg(&mut runtime, app_name, &logger, &matches)?;
+
     let result = runtime.block_on(healer.map(|_| ()));
     runtime.shutdown_on_idle();
     result

@@ -200,8 +200,12 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         .expect("default style is always specified");
     match log_style {
         "glog" => {
-            let drain = glog_drain().filter_level(severity.as_level()).fuse();
-            Logger::root(drain, o![])
+            let glog_drain = glog_drain().filter_level(severity.as_level()).fuse();
+            if matches.is_present("fb303-thrift-port") {
+                Logger::root(slog_stats::StatsDrain::new(glog_drain), o![])
+            } else {
+                Logger::root(glog_drain, o![])
+            }
         }
         "compact" => {
             let mut builder = TerminalLoggerBuilder::new();
@@ -608,6 +612,10 @@ pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
 
 pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--myrouter-port=[PORT]    'port for local myrouter instance'")
+}
+
+pub fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.args_from_usage(r"--fb303-thrift-port=[PORT]    'port for fb303 service'")
 }
 
 pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
