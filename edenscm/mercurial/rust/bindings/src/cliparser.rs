@@ -90,7 +90,7 @@ fn parse_command(
         .map(|(c, s, v)| (c.chars().next().unwrap_or(' '), s.into(), "".into(), v))
         .collect();
 
-    let parsing_options = OpenOptions::new()
+    let parsing_options = ParseOptions::new()
         .flag_alias("repo", "repository")
         .error_on_unknown_opts(true);
     let mut flags = Flag::from_flags(&rust_definitions);
@@ -182,7 +182,7 @@ fn expand_command_name(name: String) -> Vec<String> {
 }
 
 fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObject>> {
-    let parsing_options = OpenOptions::new()
+    let parsing_options = ParseOptions::new()
         .ignore_prefix(true)
         .early_parse(true)
         .flag_alias("repo", "repository");
@@ -201,7 +201,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
 }
 
 fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
-    let parsing_options = OpenOptions::new().flag_alias("repo", "repository");
+    let parsing_options = ParseOptions::new().flag_alias("repo", "repository");
     let definitions = global_hg_flag_definitions();
     let flags = Flag::from_flags(&definitions);
     let parser = Parser::new(&flags).with_parsing_options(parsing_options);
@@ -216,7 +216,7 @@ fn parse(
     args: Vec<String>,
     keep_sep: bool,
 ) -> PyResult<(Vec<Bytes>, HashMap<Bytes, PyObject>, usize)> {
-    let parsing_options = OpenOptions::new()
+    let parsing_options = ParseOptions::new()
         .flag_alias("repo", "repository")
         .keep_sep(keep_sep);
     let definitions = global_hg_flag_definitions();

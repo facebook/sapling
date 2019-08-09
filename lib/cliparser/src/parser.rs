@@ -268,7 +268,7 @@ impl<'a> Flag<'a> {
     }
 }
 
-pub struct OpenOptions {
+pub struct ParseOptions {
     ignore_prefix: bool,
     ignore_errors: bool,
     early_parse: bool,
@@ -277,9 +277,9 @@ pub struct OpenOptions {
     flag_aliases: HashMap<String, String>,
 }
 
-impl OpenOptions {
+impl ParseOptions {
     pub fn new() -> Self {
-        OpenOptions {
+        ParseOptions {
             ignore_prefix: false,
             ignore_errors: false,
             early_parse: false,
@@ -328,7 +328,7 @@ pub struct Parser<'a> {
     /// map holding &str -> &flag where the str == flag.long_name
     long_map: BTreeMap<String, &'a Flag<'a>>,
     opts: HashMap<String, Value>,
-    parsing_options: OpenOptions,
+    parsing_options: ParseOptions,
 }
 
 impl<'a> Parser<'a> {
@@ -366,11 +366,11 @@ impl<'a> Parser<'a> {
             short_map,
             long_map,
             opts,
-            parsing_options: OpenOptions::new(),
+            parsing_options: ParseOptions::new(),
         }
     }
 
-    pub fn with_parsing_options(mut self, parsing_options: OpenOptions) -> Self {
+    pub fn with_parsing_options(mut self, parsing_options: ParseOptions) -> Self {
         self.parsing_options = parsing_options;
         self
     }
@@ -1402,7 +1402,7 @@ mod tests {
     fn test_no_prefix_match() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parsing_options = OpenOptions::new().ignore_prefix(true);
+        let parsing_options = ParseOptions::new().ignore_prefix(true);
         let parser = Parser::new(&flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--conf", "section.key=val"]);
@@ -1418,7 +1418,7 @@ mod tests {
     fn test_no_errors_match() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parsing_options = OpenOptions::new().ignore_prefix(true).ignore_errors(true);
+        let parsing_options = ParseOptions::new().ignore_prefix(true).ignore_errors(true);
         let parser = Parser::new(&flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--shallow", "--config", "section.key=val"]);
@@ -1434,7 +1434,7 @@ mod tests {
     fn test_aliased_option() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parsing_options = OpenOptions::new()
+        let parsing_options = ParseOptions::new()
             .flag_alias("conf", "config")
             .ignore_prefix(true);
         let parser = Parser::new(&flags).with_parsing_options(parsing_options);
@@ -1452,7 +1452,7 @@ mod tests {
     fn test_early_parse() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parsing_options = OpenOptions::new().early_parse(true).ignore_prefix(true);
+        let parsing_options = ParseOptions::new().early_parse(true).ignore_prefix(true);
         let parser = Parser::new(&flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["-qc."]);
@@ -1468,7 +1468,7 @@ mod tests {
     fn test_keep_sep() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parsing_options = OpenOptions::new()
+        let parsing_options = ParseOptions::new()
             .early_parse(true)
             .ignore_prefix(true)
             .keep_sep(true);

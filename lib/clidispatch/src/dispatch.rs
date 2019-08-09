@@ -187,7 +187,7 @@ impl Dispatcher {
         let global_defs = global_hg_flag_definitions();
         let global_flags = Flag::from_flags(&global_defs);
         let parser = Parser::new(&global_flags).with_parsing_options(
-            OpenOptions::new()
+            ParseOptions::new()
                 .ignore_prefix(true)
                 .early_parse(true)
                 .flag_alias("repo", "repository"),
@@ -294,7 +294,7 @@ impl Dispatcher {
         let mut command_flags = Flag::from_flags(command_defs);
         command_flags.extend(global_flags);
         let parser = Parser::new(&command_flags).with_parsing_options(
-            OpenOptions::new()
+            ParseOptions::new()
                 .error_on_unknown_opts(true)
                 .flag_alias("repo", "repository"),
         );
