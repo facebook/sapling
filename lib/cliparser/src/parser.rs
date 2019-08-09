@@ -323,7 +323,7 @@ impl ParseOptions {
 /// [`Parser`] keeps flag definitions and uses them to parse string arguments.
 pub struct Parser<'a> {
     /// map holding &character -> &flag where the character == flag.short_name
-    short_map: HashMap<&'a char, &'a Flag<'a>>,
+    short_map: HashMap<char, &'a Flag<'a>>,
     /// map holding &str -> &flag where the str == flag.long_name
     long_map: BTreeMap<String, &'a Flag<'a>>,
     opts: HashMap<String, Value>,
@@ -351,7 +351,7 @@ impl<'a> Parser<'a> {
 
         for flag in flags {
             if let Some(ref character) = flag.short_name {
-                short_map.insert(character, flag);
+                short_map.insert(*character, flag);
             }
 
             long_map.insert(flag.long_name.to_string(), flag);
