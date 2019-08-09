@@ -464,6 +464,12 @@ impl Dag {
         Ok(result)
     }
 
+    /// Calculate heads of the given set.
+    pub fn heads(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+        Ok(set.difference(&self.parents(set.clone())?))
+    }
+
     /// Calculate one "greatest common ancestor" of two `Id`s.
     ///
     /// If there are no common ancestors, return None.

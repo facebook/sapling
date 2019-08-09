@@ -271,6 +271,42 @@ Lv2: 0-11[]"#
     );
 }
 
+#[test]
+fn test_heads() {
+    let ascii = r#"
+    C G   K L
+    | |\  |/
+    B E F I J
+    | |/  |/
+    A D   H"#;
+
+    let result = build_segments(ascii, "C G K L J", 2, 2);
+    assert_eq!(
+        result.ascii[4],
+        r#"
+    2 6   9 10
+    | |\  |/
+    1 4 5 8 11
+    | |/  |/
+    0 3   7
+Lv0: 0-2[] 3-4[] 5-5[3] 6-6[4, 5] 7-9[] 10-10[8] 11-11[7]
+Lv1: 0-2[] 3-4[] 5-6[3, 4] 7-9[] 10-10[8] 11-11[7]
+Lv2: 0-2[] 3-6[] 7-9[] 10-10[8] 11-11[7]"#
+    );
+
+    let dag = result.dag;
+    let heads = |spans| -> String { format_set(dag.heads(SpanSet::from_spans(spans)).unwrap()) };
+
+    assert_eq!(heads(vec![]), "");
+    assert_eq!(heads(vec![0..=11]), "9..=11 6..=6 2..=2");
+    assert_eq!(heads(vec![0..=1, 3..=5, 7..=10]), "9..=10 4..=5 1..=1");
+    assert_eq!(heads(vec![0..=0, 2..=2]), "2..=2 0..=0");
+    assert_eq!(
+        heads(vec![1..=2, 4..=6, 7..=7, 11..=11, 9..=9]),
+        "11..=11 9..=9 6..=6 2..=2"
+    );
+}
+
 // Test utilities
 
 fn format_set(set: SpanSet) -> String {
