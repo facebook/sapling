@@ -1154,23 +1154,27 @@ impl BlobRepo {
         }
 
         impl QueryTree {
-            fn new() -> Self {
+            fn new(selected: bool) -> Self {
                 Self {
                     children: HashMap::new(),
-                    selected: false,
+                    selected,
                 }
             }
 
-            fn insert_path(&mut self, path: MPath) {
+            fn insert_path(&mut self, path: MPath, select_all: bool) {
                 let mut node = path.into_iter().fold(self, |tree, element| {
-                    tree.children.entry(element).or_insert_with(QueryTree::new)
+                    tree.children
+                        .entry(element)
+                        .or_insert_with(|| QueryTree::new(select_all))
                 });
                 node.selected = true;
             }
 
-            fn from_paths(paths: impl IntoIterator<Item = MPath>) -> Self {
-                let mut tree = Self::new();
-                paths.into_iter().for_each(|path| tree.insert_path(path));
+            fn from_paths(paths: impl IntoIterator<Item = MPath>, select_all: bool) -> Self {
+                let mut tree = Self::new(select_all);
+                paths
+                    .into_iter()
+                    .for_each(|path| tree.insert_path(path, select_all));
                 tree
             }
         }
@@ -1178,7 +1182,7 @@ impl BlobRepo {
         let output = Arc::new(Mutex::new(HashMap::new()));
         bounded_traversal(
             1024,
-            (QueryTree::from_paths(paths), manifest_id, None),
+            (QueryTree::from_paths(paths, false), manifest_id, None),
             {
                 let repo = self.clone();
                 cloned!(output);
