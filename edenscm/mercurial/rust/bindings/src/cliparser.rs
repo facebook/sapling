@@ -97,7 +97,7 @@ fn parse_command(
     let global_defs = global_hg_flag_definitions();
     let globals = Flag::from_flags(&global_defs);
     flags.extend(globals);
-    let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
@@ -188,7 +188,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
         .flag_alias("repo", "repository");
     let definitions = global_hg_flag_definitions();
     let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
     let rust_opts = result.opts().clone();
     let mut opts = HashMap::new();
@@ -204,7 +204,7 @@ fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
     let parsing_options = ParseOptions::new().flag_alias("repo", "repository");
     let definitions = global_hg_flag_definitions();
     let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
     let arguments = result.args().clone();
 
@@ -221,7 +221,7 @@ fn parse(
         .keep_sep(keep_sep);
     let definitions = global_hg_flag_definitions();
     let flags = Flag::from_flags(&definitions);
-    let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+    let parser = Parser::new(flags).with_parsing_options(parsing_options);
     let result = parser.parse_args(&args).unwrap();
 
     let arguments = result.args().iter().cloned().map(Bytes::from).collect();

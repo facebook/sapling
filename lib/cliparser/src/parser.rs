@@ -322,12 +322,18 @@ impl ParseOptions {
 
 /// [`Parser`] keeps flag definitions and uses them to parse string arguments.
 pub struct Parser<'a> {
-    /// map holding &character -> &flag where the character == flag.short_name
-    short_map: HashMap<char, &'a Flag<'a>>,
-    /// map holding &str -> &flag where the str == flag.long_name
-    long_map: BTreeMap<String, &'a Flag<'a>>,
-    opts: HashMap<String, Value>,
+    // Flags and ParseOptions define the behavior of the parser.
+    flags: Vec<Flag<'a>>,
     parsing_options: ParseOptions,
+
+    // Flag indexed by short_name.
+    short_map: HashMap<char, usize>,
+
+    // Flag indexed by long_name.
+    long_map: BTreeMap<String, usize>,
+
+    // Default parse result.
+    opts: HashMap<String, Value>,
 }
 
 impl<'a> Parser<'a> {
@@ -342,26 +348,24 @@ impl<'a> Parser<'a> {
     /// ];
     ///
     /// let flags = Flag::from_flags(&definitions);
-    /// let parser = Parser::new(&flags);
+    /// let parser = Parser::new(flags);
     /// ```
-    pub fn new(flags: &'a Vec<Flag<'a>>) -> Self {
+    pub fn new(flags: Vec<Flag<'a>>) -> Self {
         let mut short_map = HashMap::new();
         let mut long_map = BTreeMap::new();
         let mut opts = HashMap::new();
 
-        for flag in flags {
-            if let Some(ref character) = flag.short_name {
-                short_map.insert(*character, flag);
+        for (i, flag) in flags.iter().enumerate() {
+            if let Some(character) = flag.short_name {
+                short_map.insert(character, i);
             }
+            long_map.insert(flag.long_name.to_string(), i);
 
-            long_map.insert(flag.long_name.to_string(), flag);
-            let value_opt = match flag.value_type {
-                _ => flag.value_type.clone(),
-            };
-            opts.insert(flag.long_name.to_string(), value_opt);
+            opts.insert(flag.long_name.to_string(), flag.value_type.clone());
         }
 
         Parser {
+            flags,
             short_map,
             long_map,
             opts,
@@ -387,7 +391,7 @@ impl<'a> Parser<'a> {
     /// ];
     ///
     /// let flags = Flag::from_flags(&definitions);
-    /// let parser = Parser::new(&flags);
+    /// let parser = Parser::new(flags);
     ///
     /// parser.parse_args(&env_args);
     /// ```
@@ -474,8 +478,8 @@ impl<'a> Parser<'a> {
             .map(|name| name.as_ref())
             .unwrap_or(clean_arg);
 
-        if let Some(known_flag) = self.long_map.get(clean_arg) {
-            let name = known_flag.long_name.as_ref();
+        if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
+            let name = self.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
                     opts.insert(name.to_string(), Value::Bool(positive_flag));
@@ -494,8 +498,8 @@ impl<'a> Parser<'a> {
 
         let flag_with_no: String = "no-".to_string() + clean_arg;
 
-        if let Some(known_flag) = self.long_map.get(&flag_with_no) {
-            let name = known_flag.long_name.as_ref();
+        if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
+            let name = self.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
                     opts.insert(name.to_string(), Value::Bool(!positive_flag));
@@ -519,22 +523,22 @@ impl<'a> Parser<'a> {
         }
 
         let range = self.long_map.range(get_prefix_bounds(clean_arg));
-        let prefixed_flags: Vec<&Flag> = range.map(|(_, flag)| *flag).collect();
+        let prefixed_flag_ids: Vec<usize> = range.map(|(_, flag)| *flag).collect();
 
-        if prefixed_flags.len() > 1 {
+        if prefixed_flag_ids.len() > 1 {
             return Err(ParseError::OptionAmbiguous {
                 option_name: "--".to_owned() + clean_arg,
-                possibilities: prefixed_flags
-                    .iter()
-                    .map(|f| f.long_name.to_string())
+                possibilities: prefixed_flag_ids
+                    .into_iter()
+                    .map(|i| self.flags[i].long_name.to_string())
                     .collect(),
             });
-        } else if prefixed_flags.len() == 0 {
+        } else if prefixed_flag_ids.len() == 0 {
             return Err(ParseError::OptionNotRecognized {
                 option_name: "--".to_owned() + clean_arg,
             });
         } else {
-            let matched_flag = prefixed_flags[0];
+            let matched_flag = &self.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
@@ -563,8 +567,8 @@ impl<'a> Parser<'a> {
         let mut char_iter = clean_arg.chars().peekable();
 
         while let Some(curr_char) = char_iter.next() {
-            if let Some(known_flag) = self.short_map.get(&curr_char) {
-                let flag_name = known_flag.long_name.to_string();
+            if let Some(&known_flag_id) = self.short_map.get(&curr_char) {
+                let flag_name = self.flags[known_flag_id].long_name.to_string();
                 match opts.get_mut(&flag_name) {
                     Some(Value::OptBool()) => {
                         opts.insert(flag_name, Value::Bool(true));
@@ -805,7 +809,7 @@ mod tests {
     fn test_create_parser() {
         let defs = definitions();
         let flags = Flag::from_flags(&defs);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         assert!(parser.short_map.get(&'v').is_some());
         assert!(parser.short_map.get(&'h').is_some());
@@ -831,7 +835,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
         let args = vec!["-q"];
@@ -853,7 +857,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
         const PATH: &str = "$HOME/path/to/config/file";
 
@@ -868,7 +872,7 @@ mod tests {
         let defs = definitions();
 
         let flags = Flag::from_flags(&defs);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
         const PATH: &str = "$HOME/path/to/config/file";
         const CLUSTER: &str = "-qhvc";
@@ -895,7 +899,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
         let args = vec!["--quiet"];
@@ -917,7 +921,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
         const PATH: &str = "$HOME/path/to/config/file";
 
@@ -942,7 +946,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
         let args = vec!["--number", "60"];
@@ -966,7 +970,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = vec![
             "--number".to_string(),
@@ -998,7 +1002,7 @@ mod tests {
         );
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec![
             "--number", "60", "--number", "59", "-n", "3", "-n5", "foo", "bar",
@@ -1017,7 +1021,7 @@ mod tests {
     fn test_parse_cluster_with_attached_value() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["-qhvcPATH/TO/FILE"]);
 
@@ -1036,7 +1040,7 @@ mod tests {
     fn test_parse_cluster_with_attached_value_first() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["-cqhv"]);
 
@@ -1055,7 +1059,7 @@ mod tests {
     fn test_parse_after_double_hyphen() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["-q", "--", "-v", "--", "-h"]);
 
@@ -1081,7 +1085,7 @@ mod tests {
 
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--config=--config=foo.bar"]);
 
@@ -1103,7 +1107,7 @@ mod tests {
 
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec![
             "--config=--config=foo.bar",
@@ -1137,7 +1141,7 @@ mod tests {
 
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["-c=--config.prop=63"]);
 
@@ -1152,7 +1156,7 @@ mod tests {
     fn test_parse_list_mixed_with_spaces_and_equals() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec![
             "log",
@@ -1182,7 +1186,7 @@ mod tests {
     fn test_parse_flag_with_value_last_token() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--rev"]);
 
@@ -1207,7 +1211,7 @@ mod tests {
 
         let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let template_str = "hg bookmark -ir {node} {tag};\\n";
         // target command is `hg tags -T "hg bookmark -ir {node} {tag};\n"`
@@ -1227,7 +1231,7 @@ mod tests {
     fn test_type_mismatch_try_into_list_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--rev", "test"]);
 
@@ -1243,7 +1247,7 @@ mod tests {
     fn test_type_mismatch_try_into_str_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--config", "some value"]);
 
@@ -1259,7 +1263,7 @@ mod tests {
     fn test_type_mismatch_try_into_int_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--rev", "test"]);
 
@@ -1275,7 +1279,7 @@ mod tests {
     fn test_type_mismatch_try_into_bool_panics() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--rev", "test"]);
 
@@ -1290,7 +1294,7 @@ mod tests {
     fn test_trailing_equals_sign_double_flag() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--config="]);
 
@@ -1305,7 +1309,7 @@ mod tests {
     fn test_prefix_match_double_flag() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--con", "test"]);
 
@@ -1320,7 +1324,7 @@ mod tests {
     fn test_prefix_match_trailing_equals() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--con="]);
 
@@ -1348,7 +1352,7 @@ mod tests {
             ),
         ];
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--co="]); // this is an ambiguous flag
 
@@ -1369,7 +1373,7 @@ mod tests {
     fn test_prefix_match_mixed_with_exact_match_and_short_flags() {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec![
             "--c=",
@@ -1395,7 +1399,7 @@ mod tests {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
         let parsing_options = ParseOptions::new().ignore_prefix(true);
-        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+        let parser = Parser::new(flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--conf", "section.key=val"]);
 
@@ -1411,7 +1415,7 @@ mod tests {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
         let parsing_options = ParseOptions::new().ignore_prefix(true).ignore_errors(true);
-        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+        let parser = Parser::new(flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--shallow", "--config", "section.key=val"]);
 
@@ -1429,7 +1433,7 @@ mod tests {
         let parsing_options = ParseOptions::new()
             .flag_alias("conf", "config")
             .ignore_prefix(true);
-        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+        let parser = Parser::new(flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--shallow", "--conf", "section.key=val"]);
 
@@ -1445,7 +1449,7 @@ mod tests {
         let definitions = definitions();
         let flags = Flag::from_flags(&definitions);
         let parsing_options = ParseOptions::new().early_parse(true).ignore_prefix(true);
-        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+        let parser = Parser::new(flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["-qc."]);
 
@@ -1464,7 +1468,7 @@ mod tests {
             .early_parse(true)
             .ignore_prefix(true)
             .keep_sep(true);
-        let parser = Parser::new(&flags).with_parsing_options(parsing_options);
+        let parser = Parser::new(flags).with_parsing_options(parsing_options);
 
         let args = create_args(vec!["--", "-1", "4"]);
 
@@ -1486,7 +1490,7 @@ mod tests {
             Value::Bool(false),
         )];
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--commit"]);
 
@@ -1508,7 +1512,7 @@ mod tests {
             Value::Bool(false),
         )];
         let flags = Flag::from_flags(&definitions);
-        let parser = Parser::new(&flags);
+        let parser = Parser::new(flags);
 
         let args = create_args(vec!["--no-commit"]);
 

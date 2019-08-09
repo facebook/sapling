@@ -186,7 +186,7 @@ impl Dispatcher {
     fn early_parse(&self, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
         let global_defs = global_hg_flag_definitions();
         let global_flags = Flag::from_flags(&global_defs);
-        let parser = Parser::new(&global_flags).with_parsing_options(
+        let parser = Parser::new(global_flags).with_parsing_options(
             ParseOptions::new()
                 .ignore_prefix(true)
                 .early_parse(true)
@@ -293,7 +293,7 @@ impl Dispatcher {
             .unwrap_or(&empty);
         let mut command_flags = Flag::from_flags(command_defs);
         command_flags.extend(global_flags);
-        let parser = Parser::new(&command_flags).with_parsing_options(
+        let parser = Parser::new(command_flags).with_parsing_options(
             ParseOptions::new()
                 .error_on_unknown_opts(true)
                 .flag_alias("repo", "repository"),
