@@ -113,7 +113,7 @@ py_class!(class dagindex |py| {
             .map_pyerr::<exc::IOError>(py)?)
     }
 
-    def ancestor(&self, a: PyBytes, b: PyBytes) -> PyResult<Option<PyBytes>> {
+    def gca_one(&self, a: PyBytes, b: PyBytes) -> PyResult<Option<PyBytes>> {
         // Calculate ancestor of two nodes.
         let map = self.map(py).borrow();
 
@@ -123,7 +123,7 @@ py_class!(class dagindex |py| {
         Ok(match (a, b) {
             (Some(a), Some(b)) => {
                 let dag = self.dag(py).borrow();
-                dag.ancestor(a, b).map_pyerr::<exc::IOError>(py)?.map(|id| {
+                dag.gca_one(a, b).map_pyerr::<exc::IOError>(py)?.map(|id| {
                     let node = map.find_slice_by_id(id).unwrap().unwrap();
                     PyBytes::new(py, node)
                 })

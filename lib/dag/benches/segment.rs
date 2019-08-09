@@ -121,7 +121,7 @@ fn main() {
                 elapsed(|| {
                     for i in (0..parents.len() as u64).step_by(10079) {
                         for j in (1..parents.len() as u64).step_by(2351) {
-                            dag.ancestor(i, j).unwrap();
+                            dag.gca_one(i, j).unwrap();
                         }
                     }
                 })

@@ -410,14 +410,49 @@ impl Dag {
         Ok(result)
     }
 
-    /// Calculate one "greatest common ancestor" of two given `id`s.
+    /// Calculate one "greatest common ancestor" of two `Id`s.
     ///
     /// If there are no common ancestors, return None.
-    /// If there are multiple greatest common ancestors, return an arbitrarily
-    /// picked one.
-    pub fn ancestor(&self, a: Id, b: Id) -> Fallible<Option<Id>> {
+    /// If there are multiple greatest common ancestors, pick one arbitrarily.
+    /// Use `gca_all` to get all of them.
+    pub fn gca_one(&self, a: Id, b: Id) -> Fallible<Option<Id>> {
         let set = self.ancestors(a)?.intersection(&self.ancestors(b)?);
         Ok(set.iter().nth(0))
+    }
+
+    /// Calculate all "greatest common ancestor"s of two `Id`s.
+    /// `gca_one` is faster if an arbitrary answer is ok.
+    pub fn gca_all(&self, a: Id, b: Id) -> Fallible<SpanSet> {
+        let set = self.ancestors(a)?.intersection(&self.ancestors(b)?);
+        Ok(self.heads_ancestors(set)?)
+    }
+
+    /// Test if `ancestor_id` is an ancestor of `descendant_id`.
+    pub fn is_ancestor(&self, ancestor_id: Id, descendant_id: Id) -> Fallible<bool> {
+        let set = self.ancestors(descendant_id)?;
+        Ok(set.contains(ancestor_id))
+    }
+
+    /// Calculate "heads" of the ancestors of the given [`SpanSet`]. That is,
+    /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
+    /// `ancestors(X)`.
+    ///
+    /// This is faster than calculating `heads(ancestors(set))`.
+    ///
+    /// This is different from `heads`. In case set contains X and Y, and Y is
+    /// an ancestor of X, but not the immediate ancestor, `heads` will include
+    /// Y while this function won't.
+    pub fn heads_ancestors(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+        let mut remaining = set;
+        let mut result = SpanSet::empty();
+        // `iter().nth(0)` returns the "largest" Id, which must be a head.
+        while let Some(id) = remaining.iter().nth(0) {
+            result.push_span((id..=id).into());
+            // Remove ancestors reachable from that head.
+            remaining = remaining.difference(&self.ancestors(id)?);
+        }
+        Ok(result)
     }
 }
 
