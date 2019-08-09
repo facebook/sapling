@@ -185,23 +185,54 @@ py_class!(class dagindex |py| {
             .map_pyerr::<exc::IOError>(py)?)
     }
 
-    def gca_one(&self, a: PyBytes, b: PyBytes) -> PyResult<Option<PyBytes>> {
-        // Calculate ancestor of two nodes.
-        let map = self.map(py).borrow();
+    /// Calculate all ancestors reachable from the set.
+    def ancestors(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.ancestors(set).map_pyerr::<exc::IOError>(py)?))
+    }
 
-        let a = map.find_id_by_slice(&a.data(py)).map_pyerr::<exc::IOError>(py)?;
-        let b = map.find_id_by_slice(&b.data(py)).map_pyerr::<exc::IOError>(py)?;
+    /// Calculate parents of the given set.
+    def parents(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.parents(set).map_pyerr::<exc::IOError>(py)?))
+    }
 
-        Ok(match (a, b) {
-            (Some(a), Some(b)) => {
-                let dag = self.dag(py).borrow();
-                dag.gca_one((a, b)).map_pyerr::<exc::IOError>(py)?.map(|id| {
-                    let node = map.find_slice_by_id(id).unwrap().unwrap();
-                    PyBytes::new(py, node)
-                })
-            }
-            _ => None,
-        })
+    /// Calculate parents of the given set.
+    def heads(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.heads(set).map_pyerr::<exc::IOError>(py)?))
+    }
+
+    /// Calculate one greatest common ancestor of a set.
+    /// If there are multiple greatest common ancestors, pick an arbitrary one.
+    def gcaone(&self, set: Spans) -> PyResult<Option<Id>> {
+        let dag = self.dag(py).borrow();
+        dag.gca_one(set).map_pyerr::<exc::IOError>(py)
+    }
+
+    /// Calculate all greatest common ancestors of a set.
+    def gcaall(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.gca_all(set).map_pyerr::<exc::IOError>(py)?))
+    }
+
+    /// Calculate all common ancestors of a set.
+    def commonancestors(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.common_ancestors(set).map_pyerr::<exc::IOError>(py)?))
+    }
+
+    /// Check if `ancestor` is an ancestor of `descentant`.
+    def isancestor(&self, ancestor: Id, descentant: Id) -> PyResult<bool> {
+        let dag = self.dag(py).borrow();
+        dag.is_ancestor(ancestor, descentant).map_pyerr::<exc::IOError>(py)
+    }
+
+    /// Calculate `heads(ancestors(set))`.
+    /// This is faster than calling `heads` and `ancestors` individually.
+    def headsancestors(&self, set: Spans) -> PyResult<Spans> {
+        let dag = self.dag(py).borrow();
+        Ok(Spans(dag.common_ancestors(set).map_pyerr::<exc::IOError>(py)?))
     }
 });
 
