@@ -799,14 +799,8 @@ mod tests {
 
     #[test]
     fn test_parse_single_no_value_flag() {
-        let definition = (
-            'q',
-            "quiet".into(),
-            "silences the output".into(),
-            Value::Bool(false),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('q', "quiet", "silences the output", false).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
@@ -821,14 +815,8 @@ mod tests {
 
     #[test]
     fn test_parse_single_value_flag() {
-        let definition = (
-            'c',
-            "config".into(),
-            "supply config file".into(),
-            Value::Str("".to_string()),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('c', "config", "supply config file", "").into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
         const PATH: &str = "$HOME/path/to/config/file";
@@ -860,14 +848,8 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_no_value() {
-        let definition = (
-            'q',
-            "quiet".into(),
-            "silences the output".into(),
-            Value::Bool(false),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('q', "quiet", "silences the output", false).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
@@ -882,14 +864,8 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_with_value() {
-        let definition = (
-            'c',
-            "config".into(),
-            "supply config file".into(),
-            Value::Str("".to_string()),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('c', "config", "supply config file", "").into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
         const PATH: &str = "$HOME/path/to/config/file";
@@ -907,14 +883,8 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_int_value() {
-        let definition = (
-            'n',
-            "number".into(),
-            "supply a number".into(),
-            Value::Int(0),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('n', "number", "supply a number", 0).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
         let mut opts = parser.opts.clone();
 
@@ -931,14 +901,8 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_list_value() {
-        let definition = (
-            'n',
-            "number".into(),
-            "supply a list of numbers".into(),
-            Value::List(Vec::new()),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('n', "number", "supply a list of numbers", &[][..]).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let args = vec![
@@ -963,14 +927,8 @@ mod tests {
 
     #[test]
     fn test_parse_long_and_short_single_list_value() {
-        let definition = (
-            'n',
-            "number".into(),
-            "supply a list of numbers".into(),
-            Value::List(Vec::new()),
-        );
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('n', "number", "supply a list of numbers", &[][..]).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let args = create_args(vec![
@@ -1039,15 +997,8 @@ mod tests {
 
     #[test]
     fn test_parse_equals_in_value() {
-        let definition = (
-            'c',
-            "config".into(),
-            "supply a config file".into(),
-            Value::Str("".to_string()),
-        );
-
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('c', "config", "supply a config file", "").into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let args = create_args(vec!["--config=--config=foo.bar"]);
@@ -1061,15 +1012,8 @@ mod tests {
 
     #[test]
     fn test_parse_list_equals_in_values() {
-        let definition = (
-            'c',
-            "config".into(),
-            "supply multiple config files".into(),
-            Value::List(Vec::new()),
-        );
-
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('c', "config", "supply multiple config files", &[][..]).into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let args = create_args(vec![
@@ -1095,15 +1039,8 @@ mod tests {
 
     #[test]
     fn test_parse_list_short_name_with_equals_in_value() {
-        let definition = (
-            'c',
-            "config".into(),
-            "supply multiple config files".into(),
-            Value::Str("".to_string()),
-        );
-
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('c', "config", "supply multiple config files", "").into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let args = create_args(vec!["-c=--config.prop=63"]);
@@ -1161,15 +1098,8 @@ mod tests {
 
     #[test]
     fn test_template_value_long_str_value() {
-        let definition = (
-            'T',
-            "template".into(),
-            "specify a template".into(),
-            Value::Str("".to_string()),
-        );
-
-        let flag = Flag::new(definition);
-        let flags = vec![flag.clone()];
+        let flag = ('T', "template", "specify a template", "").into();
+        let flags = vec![flag];
         let parser = Parser::new(flags);
 
         let template_str = "hg bookmark -ir {node} {tag};\\n";
