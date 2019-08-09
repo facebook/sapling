@@ -27,7 +27,6 @@ impl IO {
     pub fn write(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         self.output.write_all(data)?;
-        self.output.flush()?;
         Ok(())
     }
 
@@ -41,11 +40,25 @@ impl IO {
         Ok(())
     }
 
+    pub fn flush(&mut self) -> io::Result<()> {
+        self.output.flush()?;
+        if let Some(ref mut error) = self.error {
+            error.flush()?;
+        }
+        Ok(())
+    }
+
     pub fn stdio() -> Self {
         IO {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),
             error: Some(Box::new(io::stderr())),
         }
+    }
+}
+
+impl Drop for IO {
+    fn drop(&mut self) {
+        let _ = self.flush();
     }
 }
