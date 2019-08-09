@@ -184,12 +184,12 @@ impl Dispatcher {
     }
 
     fn early_parse(&self, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
-        let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(
-            ParseOptions::new()
-                .ignore_prefix(true)
-                .early_parse(true)
-                .flag_alias("repo", "repository"),
-        );
+        let parser = ParseOptions::new()
+            .ignore_prefix(true)
+            .early_parse(true)
+            .flags(HG_GLOBAL_FLAGS.clone())
+            .flag_alias("repo", "repository")
+            .into_parser();
 
         parser
             .parse_args(args)
@@ -286,11 +286,11 @@ impl Dispatcher {
             .map(|command| command.flags().clone())
             .unwrap_or_default();
         command_flags.extend(HG_GLOBAL_FLAGS.clone());
-        let parser = Parser::new(command_flags).with_parsing_options(
-            ParseOptions::new()
-                .error_on_unknown_opts(true)
-                .flag_alias("repo", "repository"),
-        );
+        let parser = ParseOptions::new()
+            .error_on_unknown_opts(true)
+            .flags(command_flags)
+            .flag_alias("repo", "repository")
+            .into_parser();
 
         parser
             .parse_args(args)

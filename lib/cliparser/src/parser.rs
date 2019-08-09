@@ -285,6 +285,7 @@ pub struct ParseOptions {
     keep_sep: bool,
     error_on_unknown_opts: bool,
     flag_aliases: HashMap<String, String>,
+    flags: Vec<Flag>,
 }
 
 impl ParseOptions {
@@ -296,6 +297,7 @@ impl ParseOptions {
             keep_sep: false,
             error_on_unknown_opts: false,
             flag_aliases: HashMap::new(),
+            flags: Vec::new(),
         }
     }
 
@@ -329,12 +331,24 @@ impl ParseOptions {
         self.error_on_unknown_opts = error_on_unknown_opts;
         self
     }
+
+    pub fn flags(mut self, flags: Vec<Flag>) -> Self {
+        self.flags = flags;
+        self
+    }
+
+    pub fn into_parser(self) -> Parser {
+        Parser::from_options(self)
+    }
+
+    pub fn parse_args(self, args: &Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
+        self.into_parser().parse_args(args)
+    }
 }
 
 /// [`Parser`] keeps flag definitions and uses them to parse string arguments.
 pub struct Parser {
-    // Flags and ParseOptions define the behavior of the parser.
-    flags: Vec<Flag>,
+    // ParseOptions define the behavior of the parser.
     parsing_options: ParseOptions,
 
     // Flag indexed by short_name.
@@ -348,24 +362,22 @@ pub struct Parser {
 }
 
 impl Parser {
-    /// initialize and setup a parser with all known flag definitions
-    /// ```
-    /// use cliparser::parser::*;
+    /// Initialize and setup a parser with all known flags.
     ///
-    /// let flags: Vec<Flag> = vec![
-    ///     ('c', "config", "supply a config", Value::Bool(false)),
-    ///     ('h', "help", "get some help", Value::Bool(false)),
-    ///     ('q', "quiet", "silence the output", Value::Bool(false))
-    /// ].into_iter().map(Into::into).collect();
-    ///
-    /// let parser = Parser::new(flags);
-    /// ```
+    /// Deprecated. Use [`ParseOptions`] instead.
     pub fn new(flags: Vec<Flag>) -> Self {
+        ParseOptions::new().flags(flags).into_parser()
+    }
+
+    /// Prepare to parse arguments using the provided [`ParseOptions`].
+    ///
+    /// This function builds up indexes around flag names.
+    pub fn from_options(parsing_options: ParseOptions) -> Self {
         let mut short_map = HashMap::new();
         let mut long_map = BTreeMap::new();
         let mut opts = HashMap::new();
 
-        for (i, flag) in flags.iter().enumerate() {
+        for (i, flag) in parsing_options.flags.iter().enumerate() {
             if let Some(character) = flag.short_name {
                 short_map.insert(character, i);
             }
@@ -375,20 +387,14 @@ impl Parser {
         }
 
         Parser {
-            flags,
             short_map,
             long_map,
             opts,
-            parsing_options: ParseOptions::new(),
+            parsing_options,
         }
     }
 
-    pub fn with_parsing_options(mut self, parsing_options: ParseOptions) -> Self {
-        self.parsing_options = parsing_options;
-        self
-    }
-
-    /// entry-point for parsing command line arguments from std::env
+    /// Entry-point for parsing command line arguments.
     ///
     /// ```
     /// use std::env;
@@ -488,7 +494,7 @@ impl Parser {
             .unwrap_or(clean_arg);
 
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
-            let name = self.flags[known_flag_id].long_name.as_ref();
+            let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
                     opts.insert(name.to_string(), Value::Bool(positive_flag));
@@ -508,7 +514,7 @@ impl Parser {
         let flag_with_no: String = "no-".to_string() + clean_arg;
 
         if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
-            let name = self.flags[known_flag_id].long_name.as_ref();
+            let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
                     opts.insert(name.to_string(), Value::Bool(!positive_flag));
@@ -539,7 +545,7 @@ impl Parser {
                 option_name: "--".to_owned() + clean_arg,
                 possibilities: prefixed_flag_ids
                     .into_iter()
-                    .map(|i| self.flags[i].long_name.to_string())
+                    .map(|i| self.parsing_options.flags[i].long_name.to_string())
                     .collect(),
             });
         } else if prefixed_flag_ids.len() == 0 {
@@ -547,7 +553,7 @@ impl Parser {
                 option_name: "--".to_owned() + clean_arg,
             });
         } else {
-            let matched_flag = &self.flags[prefixed_flag_ids[0]];
+            let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
             match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
@@ -577,7 +583,9 @@ impl Parser {
 
         while let Some(curr_char) = char_iter.next() {
             if let Some(&known_flag_id) = self.short_map.get(&curr_char) {
-                let flag_name = self.flags[known_flag_id].long_name.to_string();
+                let flag_name = self.parsing_options.flags[known_flag_id]
+                    .long_name
+                    .to_string();
                 match opts.get_mut(&flag_name) {
                     Some(Value::OptBool()) => {
                         opts.insert(flag_name, Value::Bool(true));
@@ -1200,12 +1208,12 @@ mod tests {
 
     #[test]
     fn test_no_prefix_match() {
-        let parsing_options = ParseOptions::new().ignore_prefix(true);
-        let parser = Parser::new(flags()).with_parsing_options(parsing_options);
-
         let args = create_args(vec!["--conf", "section.key=val"]);
-
-        let result = parser.parse_args(&args).unwrap();
+        let result = ParseOptions::new()
+            .ignore_prefix(true)
+            .flags(flags())
+            .parse_args(&args)
+            .unwrap();
 
         let configs: Vec<String> = result.get("config").unwrap().clone().try_into().unwrap();
 
@@ -1214,8 +1222,11 @@ mod tests {
 
     #[test]
     fn test_no_errors_match() {
-        let parsing_options = ParseOptions::new().ignore_prefix(true).ignore_errors(true);
-        let parser = Parser::new(flags()).with_parsing_options(parsing_options);
+        let parser = ParseOptions::new()
+            .ignore_prefix(true)
+            .flags(flags())
+            .ignore_errors(true)
+            .into_parser();
 
         let args = create_args(vec!["--shallow", "--config", "section.key=val"]);
 
@@ -1228,10 +1239,11 @@ mod tests {
 
     #[test]
     fn test_aliased_option() {
-        let parsing_options = ParseOptions::new()
+        let parser = ParseOptions::new()
             .flag_alias("conf", "config")
-            .ignore_prefix(true);
-        let parser = Parser::new(flags()).with_parsing_options(parsing_options);
+            .flags(flags())
+            .ignore_prefix(true)
+            .into_parser();
 
         let args = create_args(vec!["--shallow", "--conf", "section.key=val"]);
 
@@ -1244,8 +1256,11 @@ mod tests {
 
     #[test]
     fn test_early_parse() {
-        let parsing_options = ParseOptions::new().early_parse(true).ignore_prefix(true);
-        let parser = Parser::new(flags()).with_parsing_options(parsing_options);
+        let parser = ParseOptions::new()
+            .early_parse(true)
+            .ignore_prefix(true)
+            .flags(flags())
+            .into_parser();
 
         let args = create_args(vec!["-qc."]);
 
@@ -1258,11 +1273,12 @@ mod tests {
 
     #[test]
     fn test_keep_sep() {
-        let parsing_options = ParseOptions::new()
+        let parser = ParseOptions::new()
             .early_parse(true)
             .ignore_prefix(true)
-            .keep_sep(true);
-        let parser = Parser::new(flags()).with_parsing_options(parsing_options);
+            .keep_sep(true)
+            .flags(flags())
+            .into_parser();
 
         let args = create_args(vec!["--", "-1", "4"]);
 

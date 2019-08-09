@@ -89,13 +89,12 @@ fn parse_command(
         .into_iter()
         .map(|(c, s, v)| (c.chars().nth(0), s, "", v).into())
         .collect();
-
-    let parsing_options = ParseOptions::new()
-        .flag_alias("repo", "repository")
-        .error_on_unknown_opts(true);
     flags.extend(HG_GLOBAL_FLAGS.clone());
-    let parser = Parser::new(flags).with_parsing_options(parsing_options);
-    let result = parser
+
+    let result = ParseOptions::new()
+        .flag_alias("repo", "repository")
+        .flags(flags)
+        .error_on_unknown_opts(true)
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
 
@@ -179,12 +178,13 @@ fn expand_command_name(name: String) -> Vec<String> {
 }
 
 fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObject>> {
-    let parsing_options = ParseOptions::new()
+    let result = ParseOptions::new()
         .ignore_prefix(true)
         .early_parse(true)
-        .flag_alias("repo", "repository");
-    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
-    let result = parser.parse_args(&args).unwrap();
+        .flag_alias("repo", "repository")
+        .flags(HG_GLOBAL_FLAGS.clone())
+        .parse_args(&args)
+        .map_err(|e| map_to_python_err(py, e))?;
     let rust_opts = result.opts().clone();
     let mut opts = HashMap::new();
 
@@ -195,10 +195,12 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
     Ok(opts)
 }
 
-fn parse_args(_py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
-    let parsing_options = ParseOptions::new().flag_alias("repo", "repository");
-    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
-    let result = parser.parse_args(&args).unwrap();
+fn parse_args(py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
+    let result = ParseOptions::new()
+        .flag_alias("repo", "repository")
+        .flags(HG_GLOBAL_FLAGS.clone())
+        .parse_args(&args)
+        .map_err(|e| map_to_python_err(py, e))?;
     let arguments = result.args().clone();
 
     Ok(arguments)
@@ -209,11 +211,12 @@ fn parse(
     args: Vec<String>,
     keep_sep: bool,
 ) -> PyResult<(Vec<Bytes>, HashMap<Bytes, PyObject>, usize)> {
-    let parsing_options = ParseOptions::new()
+    let result = ParseOptions::new()
         .flag_alias("repo", "repository")
-        .keep_sep(keep_sep);
-    let parser = Parser::new(HG_GLOBAL_FLAGS.clone()).with_parsing_options(parsing_options);
-    let result = parser.parse_args(&args).unwrap();
+        .flags(HG_GLOBAL_FLAGS.clone())
+        .keep_sep(keep_sep)
+        .parse_args(&args)
+        .map_err(|e| map_to_python_err(py, e))?;
 
     let arguments = result.args().iter().cloned().map(Bytes::from).collect();
     let opts = result
