@@ -43,7 +43,6 @@ pub use crate::revisionstore::pythonhistorystore::PythonMutableHistoryPack;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add_class::<datastore>(py)?;
     m.add_class::<datapack>(py)?;
     m.add_class::<historypack>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
@@ -140,35 +139,6 @@ fn is_looseonly_repack(py: Python, options: &PyDict) -> bool {
     return false;
 }
 
-py_class!(class datastore |py| {
-    data store: Box<dyn DataStorePyExt + Send>;
-
-    def __new__(
-        _cls,
-        store: &PyObject
-    ) -> PyResult<datastore> {
-        datastore::create_instance(
-            py,
-            Box::new(PythonDataStore::new(store.clone_ref(py))),
-        )
-    }
-
-    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
-        self.store(py).get_py(py, name, node)
-    }
-
-    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        self.store(py).get_delta_chain_py(py, name, node)
-    }
-
-    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        self.store(py).get_meta_py(py, name, node)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
-    }
-});
 py_class!(class datapack |py| {
     data store: PyOptionalRefCell<Box<DataPack>>;
 
