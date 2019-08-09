@@ -10,6 +10,7 @@ dirs = "1.0"
 clidispatch = { path = "../../lib/clidispatch" }
 cliparser = { path = "../../lib/cliparser" }
 configparser = { path = "../../lib/configparser" }
+hgcommands = { path = "../../lib/hgcommands" }
 
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}
@@ -17,9 +18,6 @@ failure = "0.1"
 
 [dependencies.encoding]
 path = "../../lib/encoding"
-
-[dependencies.hgpython]
-path = "../../lib/hgpython"
 
 [features]
 buildinfo = []

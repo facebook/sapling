@@ -4,11 +4,11 @@ extern crate clidispatch;
 #[cfg(feature = "with_chg")]
 extern crate dirs;
 extern crate encoding;
-extern crate hgpython;
+extern crate hgcommands;
 #[cfg(feature = "with_chg")]
 extern crate libc;
 use clidispatch::dispatch::Dispatcher;
-use hgpython::HgPython;
+use hgcommands::HgPython;
 
 mod buildinfo;
 #[cfg(feature = "with_chg")]

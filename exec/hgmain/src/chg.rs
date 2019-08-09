@@ -28,7 +28,7 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
 }
 
 /// Turn `OsString` args into `CString` for ffi
-/// For now, this is just copied from the `hgpython`
+/// For now, this is just copied from the `hgcommands`
 /// crate, but in future this should be a part
 /// of `argparse` crate
 fn args_to_local_cstrings() -> Vec<CString> {
