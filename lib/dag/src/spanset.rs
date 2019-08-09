@@ -97,21 +97,37 @@ impl Span {
 // This is for users who want shorter code than [`Span::new`].
 // Internal logic here should use [`Span::new`], or [`Span::try_from_bounds`],
 // or construct [`Span`] directly.
-impl Into<Span> for RangeInclusive<Id> {
-    fn into(self) -> Span {
-        Span::new(*self.start(), *self.end())
+impl From<RangeInclusive<Id>> for Span {
+    fn from(range: RangeInclusive<Id>) -> Span {
+        Span::new(*range.start(), *range.end())
     }
 }
 
-impl Into<Span> for Id {
-    fn into(self) -> Span {
-        Span::new(self, self)
+impl From<Id> for Span {
+    fn from(id: Id) -> Span {
+        Span::new(id, id)
     }
 }
 
-impl Into<RangeInclusive<Id>> for Span {
-    fn into(self) -> RangeInclusive<Id> {
-        self.low..=self.high
+impl<T: Into<Span>> From<T> for SpanSet {
+    fn from(span: T) -> SpanSet {
+        SpanSet {
+            spans: vec![span.into()],
+        }
+    }
+}
+
+impl From<Span> for RangeInclusive<Id> {
+    fn from(span: Span) -> RangeInclusive<Id> {
+        span.low..=span.high
+    }
+}
+
+// This is used by `gca(set)` where `set` usually contains 2 ids. The code
+// can then be written as `gca((a, b))`.
+impl From<(Id, Id)> for SpanSet {
+    fn from(ids: (Id, Id)) -> SpanSet {
+        SpanSet::from_spans([ids.0, ids.1].iter().cloned())
     }
 }
 
@@ -129,6 +145,12 @@ impl SpanSet {
     /// Construct an empty [`SpanSet`].
     pub fn empty() -> Self {
         let spans = Vec::new();
+        SpanSet { spans }
+    }
+
+    /// Construct a full [`SpanSet`] that contains everything.
+    pub fn full() -> Self {
+        let spans = vec![(0..=u64::max_value()).into()];
         SpanSet { spans }
     }
 
@@ -316,6 +338,23 @@ impl SpanSet {
     /// than existing spans.
     pub(crate) fn push_span(&mut self, span: Span) {
         push_with_union(&mut self.spans, span);
+    }
+
+    /// Internal use only. Append a [`SpanSet`], which must have lower
+    /// boundaries than the existing spans.
+    ///
+    /// This is faster than [`SpanSet::union`]. used when it's known
+    /// that the all ids in `set` being added is below the minimal id
+    /// in the `self` set.
+    pub(crate) fn push_set(&mut self, set: &SpanSet) {
+        for span in &set.spans {
+            self.push_span(*span);
+        }
+    }
+
+    /// Internal use only. Iterate through the spans.
+    pub(crate) fn as_spans(&self) -> &Vec<Span> {
+        &self.spans
     }
 }
 
@@ -553,7 +592,7 @@ mod tests {
         assert!(set.iter().next().is_none());
         assert!(set.iter().rev().next().is_none());
 
-        let set = SpanSet::from_spans(vec![0..=1]);
+        let set = SpanSet::from(0..=1);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![1, 0]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![0, 1]);
 
