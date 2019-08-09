@@ -203,7 +203,7 @@ pub struct Flag<'a> {
     /// long_name of a flag i.e. `quiet`
     long_name: &'a str,
     /// description of a flag i.e. `silences the output`
-    description: Option<&'a str>,
+    description: &'a str,
     value_type: &'a Value,
 }
 
@@ -236,7 +236,7 @@ impl<'a> Flag<'a> {
 
         let long_name = definition.1.as_ref();
 
-        let description = Some(definition.2.as_ref());
+        let description = definition.2.as_ref();
 
         let value_type = &definition.3;
 
@@ -741,7 +741,7 @@ mod tests {
         let flag = Flag::new(&def);
         assert_eq!('q', flag.short_name.unwrap());
         assert_eq!("quiet", flag.long_name);
-        assert_eq!("silences the output", flag.description.unwrap());
+        assert_eq!("silences the output", flag.description);
         assert_eq!(&Value::Bool(false), flag.value_type);
     }
 
