@@ -18,22 +18,22 @@ pub enum CommandType {
 pub struct CommandDefinition {
     name: String,
     is_python: bool,
-    doc: Option<String>,
+    doc: String,
     flags: Vec<Flag>,
 }
 
 impl CommandDefinition {
-    pub fn new<S: Into<String>>(name: S) -> Self {
+    pub fn new(name: impl ToString) -> Self {
         CommandDefinition {
-            name: name.into(),
+            name: name.to_string(),
             is_python: false,
-            doc: None,
+            doc: String::new(),
             flags: Vec::new(),
         }
     }
 
-    pub fn with_doc<S: Into<String>>(mut self, doc: S) -> Self {
-        self.doc = Some(doc.into());
+    pub fn with_doc(mut self, doc: impl ToString) -> Self {
+        self.doc = doc.to_string();
         self
     }
 
@@ -59,7 +59,7 @@ impl CommandDefinition {
         self.is_python
     }
 
-    pub fn doc(&self) -> &Option<String> {
+    pub fn doc(&self) -> &str {
         &self.doc
     }
 }

@@ -3,10 +3,8 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
 use clidispatch::dispatch::Dispatcher;
-use cpython::{
-    exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyObject, PyResult, Python, PythonObject,
-    ToPyObject,
-};
+use cpython::{exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyResult, Python, PythonObject};
+use cpython_ext::Bytes;
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
@@ -81,14 +79,7 @@ impl HgPython {
                 None => (),
             }
 
-            let doc_opt = command.doc().clone();
-            let doc: PyObject = match doc_opt {
-                Some(doc_string) => PyBytes::new(py, doc_string.as_bytes())
-                    .to_py_object(py)
-                    .into_object(),
-                None => py.None().into_object(),
-            };
-
+            let doc = Bytes::from(command.doc().to_string());
             table.set_item(py, name, (doc, command.flags()))?;
         }
 
