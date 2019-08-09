@@ -48,6 +48,7 @@ use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 use crate::from_string as FS;
 
+use super::file_stream::IntoFileStream;
 use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryWithSizeAndContentHash};
 use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
@@ -166,10 +167,8 @@ impl MononokeRepo {
                     Content::File(stream)
                     | Content::Executable(stream)
                     | Content::Symlink(stream) => stream
-                        .concat2() // TODO (T47717165): Stream file contents out.
-                        .map(|file_bytes| MononokeRepoResponse::GetRawFile {
-                            content: file_bytes.into_bytes(),
-                        })
+                        .into_filestream()
+                        .map(MononokeRepoResponse::GetRawFile)
                         .left_future(),
                     _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into())
                         .into_future()
@@ -231,12 +230,8 @@ impl MononokeRepo {
 
         self.repo
             .get_file_content(ctx, HgFileNodeId::new(blobhash))
-            .concat2() // TODO (T47717165): Stream file contents out.
-            .and_then(|file_bytes| {
-                Ok(MononokeRepoResponse::GetBlobContent {
-                    content: file_bytes.into_bytes(),
-                })
-            })
+            .into_filestream()
+            .map(MononokeRepoResponse::GetBlobContent)
             .from_err()
             .boxify()
     }
@@ -344,17 +339,15 @@ impl MononokeRepo {
         // TODO (T47378130): Use a more native filestore interface here.
         self.repo
             .get_file_content_id_by_sha256(ctx.clone(), sha256_oid)
-            .map({
+            .and_then({
                 cloned!(self.repo, ctx);
                 move |content_id| {
-                    let stream = repo
-                        .get_file_content_by_content_id(ctx, content_id)
-                        .map(|s| s.into_bytes())
-                        .boxify();
-                    MononokeRepoResponse::DownloadLargeFile(stream)
+                    repo.get_file_content_by_content_id(ctx, content_id)
+                        .into_filestream()
                 }
             })
             .from_err()
+            .map(MononokeRepoResponse::DownloadLargeFile)
             .boxify()
     }
 

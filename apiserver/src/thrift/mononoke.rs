@@ -23,7 +23,8 @@ use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error};
-use futures::{Future, IntoFuture};
+use futures::{Future, IntoFuture, Stream};
+use futures_ext::FutureExt;
 use futures_preview::compat::Future01CompatExt;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -81,16 +82,17 @@ impl MononokeAPIServiceImpl {
         scuba
     }
 
-    async fn convert_and_call<F, P, Ret, Err>(
+    async fn convert_and_call<Params, Mapper, Mapped, Ret, Err>(
         &self,
         ctx: CoreContext,
-        params: P,
-        mapper: F,
+        params: Params,
+        mapper: Mapper,
     ) -> Result<Ret, Err>
     where
-        F: FnMut(MononokeRepoResponse) -> Result<Ret, ErrorKind>,
-        MononokeQuery: TryFrom<P, Error = Error>,
+        Mapper: FnMut(MononokeRepoResponse) -> Mapped,
+        MononokeQuery: TryFrom<Params, Error = Error>,
         Err: From<MononokeAPIException>,
+        Mapped: IntoFuture<Item = Ret, Error = ErrorKind>,
     {
         params
             .try_into()
@@ -141,11 +143,18 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .convert_and_call(
                 ctx.clone(),
                 params,
-                |resp: MononokeRepoResponse| match resp {
-                    MononokeRepoResponse::GetRawFile { content } => Ok(content.to_vec()),
+                move |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetRawFile(stream) => stream
+                        .into_bytes_stream()
+                        .from_err()
+                        .concat2()
+                        .map(|bytes| bytes.to_vec())
+                        .left_future(),
                     _ => Err(ErrorKind::InternalError(err_msg(
                         "Actor returned wrong response type to query".to_string(),
-                    ))),
+                    )))
+                    .into_future()
+                    .right_future(),
                 },
             )
             .await;
@@ -311,12 +320,18 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                 ctx.clone(),
                 params,
                 |resp: MononokeRepoResponse| match resp {
-                    MononokeRepoResponse::GetBlobContent { content } => Ok(MononokeBlob {
-                        content: content.to_vec(),
-                    }),
+                    MononokeRepoResponse::GetBlobContent(stream) => stream
+                        .into_bytes_stream()
+                        .from_err()
+                        .concat2()
+                        .map(|bytes| bytes.to_vec())
+                        .map(|content| MononokeBlob { content })
+                        .left_future(),
                     _ => Err(ErrorKind::InternalError(err_msg(
                         "Actor returned wrong response type to query".to_string(),
-                    ))),
+                    )))
+                    .into_future()
+                    .right_future(),
                 },
             )
             .await;

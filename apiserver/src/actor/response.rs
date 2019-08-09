@@ -20,21 +20,15 @@ use types::{
     DataEntry, RepoPathBuf, WireHistoryEntry,
 };
 
+use super::file_stream::FileStream;
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
 
 type StreamingDataResponse = BoxStream<DataEntry, Error>;
 type StreamingHistoryResponse = BoxStream<(RepoPathBuf, WireHistoryEntry), Error>;
 
-// WARNING: Do not re-arrange the order of this enum.
 #[derive(Serialize, Deserialize)]
 pub enum MononokeRepoResponse {
-    GetRawFile {
-        content: Bytes,
-    },
-    GetBlobContent {
-        content: Bytes,
-    },
     ListDirectory {
         files: Vec<Entry>,
     },
@@ -57,7 +51,11 @@ pub enum MononokeRepoResponse {
 
     // NOTE: Please add serializable responses before this line
     #[serde(skip)]
-    DownloadLargeFile(BoxStream<Bytes, Error>),
+    GetRawFile(FileStream),
+    #[serde(skip)]
+    GetBlobContent(FileStream),
+    #[serde(skip)]
+    DownloadLargeFile(FileStream),
     #[serde(skip)]
     EdenGetData(DataResponse),
     #[serde(skip)]
@@ -107,11 +105,8 @@ where
         .body(Body::Streaming(stream as BodyStream))
 }
 
-fn streaming_binary_response<S>(stream: S) -> HttpResponse
-where
-    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
-{
-    let stream = stream.from_err().boxify();
+fn streaming_binary_response(stream: FileStream) -> HttpResponse {
+    let stream = stream.into_bytes_stream().from_err().boxify();
 
     HttpResponse::Ok()
         .content_type("application/octet-stream")
@@ -127,7 +122,6 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
             ListDirectory { files } => Json(files).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
@@ -141,6 +135,7 @@ impl Responder for MononokeRepoResponse {
             })),
             LfsBatch { response } => Json(response).respond_to(req),
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
+            GetRawFile(stream) | GetBlobContent(stream) => Ok(streaming_binary_response(stream)),
             DownloadLargeFile(stream) => Ok(streaming_binary_response(stream)),
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),

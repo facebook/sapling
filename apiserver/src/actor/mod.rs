@@ -22,6 +22,7 @@ use metaconfig_parser::RepoConfigs;
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 
+mod file_stream;
 mod lfs;
 mod model;
 mod query;
