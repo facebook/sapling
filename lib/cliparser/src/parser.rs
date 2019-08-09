@@ -201,10 +201,10 @@ pub struct Flag<'a> {
     /// short_name of a flag i.e. `q`
     short_name: Option<char>,
     /// long_name of a flag i.e. `quiet`
-    long_name: &'a str,
+    long_name: Cow<'a, str>,
     /// description of a flag i.e. `silences the output`
-    description: &'a str,
-    value_type: &'a Value,
+    description: Cow<'a, str>,
+    value_type: Value,
 }
 
 impl<'a> Flag<'a> {
@@ -213,7 +213,7 @@ impl<'a> Flag<'a> {
     /// ```
     /// use cliparser::parser::*;
     /// let def: FlagDefinition = ('q', "quiet".into(), "silences the output".into(), Value::Bool(false));
-    /// let flag = Flag::new(&def);
+    /// let flag = Flag::new(def);
     /// ```
     ///
     /// If no short_name should be used, provide an empty char ' '
@@ -228,17 +228,13 @@ impl<'a> Flag<'a> {
     /// let def: FlagDefinition = ('q', "quiet".into(), "".into(), Value::Bool(false));
     /// ```
     ///
-    pub fn new(definition: &'a FlagDefinition) -> Self {
+    pub fn new(definition: FlagDefinition<'a>) -> Self {
         let short_name_opt = match definition.0 {
             ' ' => None,
             _ => Some(definition.0),
         };
 
-        let long_name = definition.1.as_ref();
-
-        let description = definition.2.as_ref();
-
-        let value_type = &definition.3;
+        let (_, long_name, description, value_type) = definition;
 
         Flag {
             short_name: short_name_opt,
@@ -264,7 +260,10 @@ impl<'a> Flag<'a> {
     /// assert_eq!(flags.len(), 4);
     /// ```
     pub fn from_flags(definitions: &'a [FlagDefinition]) -> Vec<Flag<'a>> {
-        definitions.iter().map(|def| Flag::new(def)).collect()
+        definitions
+            .iter()
+            .map(|def| Flag::new(def.clone()))
+            .collect()
     }
 }
 
@@ -476,16 +475,17 @@ impl<'a> Parser<'a> {
             .unwrap_or(clean_arg);
 
         if let Some(known_flag) = self.long_map.get(clean_arg) {
-            match opts.get_mut(known_flag.long_name) {
+            let name = known_flag.long_name.as_ref();
+            match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
-                    opts.insert(known_flag.long_name.to_string(), Value::Bool(positive_flag));
+                    opts.insert(name.to_string(), Value::Bool(positive_flag));
                 }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
-                        .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
+                        .map_err(|e| Parser::inject_option_name("--", name, e))?;
                 }
                 None => unreachable!(),
             }
@@ -495,19 +495,17 @@ impl<'a> Parser<'a> {
         let flag_with_no: String = "no-".to_string() + clean_arg;
 
         if let Some(known_flag) = self.long_map.get(&flag_with_no) {
-            match opts.get_mut(known_flag.long_name) {
+            let name = known_flag.long_name.as_ref();
+            match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
-                    opts.insert(
-                        known_flag.long_name.to_string(),
-                        Value::Bool(!positive_flag),
-                    );
+                    opts.insert(name.to_string(), Value::Bool(!positive_flag));
                 }
                 Some(Value::Bool(ref mut b)) => *b = !positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
-                        .map_err(|e| Parser::inject_option_name("--", known_flag.long_name, e))?;
+                        .map_err(|e| Parser::inject_option_name("--", name, e))?;
                 }
                 None => unreachable!(),
             }
@@ -536,20 +534,18 @@ impl<'a> Parser<'a> {
                 option_name: "--".to_owned() + clean_arg,
             });
         } else {
-            let matched_flag = prefixed_flags.get(0).unwrap();
-            match opts.get_mut(matched_flag.long_name) {
+            let matched_flag = prefixed_flags[0];
+            let name = matched_flag.long_name.as_ref();
+            match opts.get_mut(name) {
                 Some(Value::OptBool()) => {
-                    opts.insert(
-                        matched_flag.long_name.to_string(),
-                        Value::Bool(positive_flag),
-                    );
+                    opts.insert(name.to_string(), Value::Bool(positive_flag));
                 }
                 Some(Value::Bool(ref mut b)) => *b = positive_flag,
                 Some(ref mut value) => {
                     let next = parts.next().or_else(|| iter.next().map(|(_i, arg)| arg));
                     value
                         .accept(next)
-                        .map_err(|e| Parser::inject_option_name("--", matched_flag.long_name, e))?;
+                        .map_err(|e| Parser::inject_option_name("--", name, e))?;
                 }
                 None => unreachable!(),
             }
@@ -738,11 +734,11 @@ mod tests {
             "silences the output".into(),
             Value::Bool(false),
         );
-        let flag = Flag::new(&def);
+        let flag = Flag::new(def);
         assert_eq!('q', flag.short_name.unwrap());
         assert_eq!("quiet", flag.long_name);
         assert_eq!("silences the output", flag.description);
-        assert_eq!(&Value::Bool(false), flag.value_type);
+        assert_eq!(Value::Bool(false), flag.value_type);
     }
 
     #[test]
@@ -753,7 +749,7 @@ mod tests {
             "silences the output".into(),
             Value::Bool(false),
         );
-        let flag = Flag::new(&def);
+        let flag = Flag::new(def);
         assert!(flag.short_name.is_none());
     }
 
@@ -833,7 +829,7 @@ mod tests {
             "silences the output".into(),
             Value::Bool(false),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
         let mut opts = parser.opts.clone();
@@ -855,7 +851,7 @@ mod tests {
             "supply config file".into(),
             Value::Str("".to_string()),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
         let mut opts = parser.opts.clone();
@@ -897,7 +893,7 @@ mod tests {
             "silences the output".into(),
             Value::Bool(false),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
         let mut opts = parser.opts.clone();
@@ -919,7 +915,7 @@ mod tests {
             "supply config file".into(),
             Value::Str("".to_string()),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
         let mut opts = parser.opts.clone();
@@ -944,7 +940,7 @@ mod tests {
             "supply a number".into(),
             Value::Int(0),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
         let mut opts = parser.opts.clone();
@@ -968,7 +964,7 @@ mod tests {
             "supply a list of numbers".into(),
             Value::List(Vec::new()),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
@@ -1000,7 +996,7 @@ mod tests {
             "supply a list of numbers".into(),
             Value::List(Vec::new()),
         );
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
@@ -1083,7 +1079,7 @@ mod tests {
             Value::Str("".to_string()),
         );
 
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
@@ -1105,7 +1101,7 @@ mod tests {
             Value::List(Vec::new()),
         );
 
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
@@ -1139,7 +1135,7 @@ mod tests {
             Value::Str("".to_string()),
         );
 
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
@@ -1209,7 +1205,7 @@ mod tests {
             Value::Str("".to_string()),
         );
 
-        let flag = Flag::new(&definition);
+        let flag = Flag::new(definition);
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
