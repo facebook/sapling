@@ -150,15 +150,30 @@ impl SpanSet {
         self.spans.iter().fold(0, |acc, span| acc + span.count())
     }
 
-    /// Tests if a given value exists in this set.
-    pub fn contains(&self, value: Id) -> bool {
-        match self.spans.binary_search_by(|probe| value.cmp(&probe.low)) {
-            Ok(_) => true,
-            Err(idx) => self
+    /// Tests if a given [`Id`] or [`Span`] is covered by this set.
+    pub fn contains(&self, value: impl Into<Span>) -> bool {
+        let mut span = value.into();
+        loop {
+            let idx = match self
                 .spans
-                .get(idx)
-                .map(|span| span.contains(value))
-                .unwrap_or(false),
+                .binary_search_by(|probe| span.low.cmp(&probe.low))
+            {
+                Ok(idx) => idx,
+                Err(idx) => idx,
+            };
+            if let Some(existing_span) = self.spans.get(idx) {
+                debug_assert!(existing_span.low <= span.low);
+                if existing_span.high < span.low {
+                    return false;
+                } else if existing_span.high >= span.high {
+                    return true;
+                } else {
+                    span.low = existing_span.high + 1;
+                    debug_assert!(span.low <= span.high);
+                }
+            } else {
+                return false;
+            }
         }
     }
 
@@ -401,15 +416,24 @@ mod tests {
         assert!(!set.contains(0));
         assert!(!set.contains(10));
 
-        let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
+        let set = SpanSet::from_spans(vec![1..=1, 2..=9, 10..=10, 20..=20, 31..=35, 36..=40]);
         assert!(!set.contains(0));
         assert!(set.contains(1));
         assert!(set.contains(5));
         assert!(set.contains(10));
         assert!(!set.contains(11));
 
+        assert!(set.contains(1..=10));
+        assert!(set.contains(1..=8));
+        assert!(set.contains(3..=10));
+        assert!(set.contains(3..=7));
+        assert!(!set.contains(1..=11));
+        assert!(!set.contains(0..=10));
+
         assert!(!set.contains(19));
+        assert!(!set.contains(19..=20));
         assert!(set.contains(20));
+        assert!(!set.contains(20..=21));
         assert!(!set.contains(21));
 
         assert!(!set.contains(30));
@@ -418,6 +442,14 @@ mod tests {
         assert!(set.contains(39));
         assert!(set.contains(40));
         assert!(!set.contains(41));
+
+        assert!(set.contains(31..=40));
+        assert!(set.contains(32..=40));
+        assert!(set.contains(31..=39));
+        assert!(set.contains(31..=39));
+        assert!(!set.contains(31..=41));
+        assert!(!set.contains(30..=40));
+        assert!(!set.contains(30..=41));
     }
 
     fn union(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
