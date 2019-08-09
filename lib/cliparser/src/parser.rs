@@ -261,20 +261,20 @@ where
     }
 }
 
-/// Convert [`Flag`] back to tuple.
-///
-/// This is used in a larger function convert [`Flag`] to a Python object
-/// without depending on anything related to rust-cpython due to potential link
-/// errors. Ideally this should be just `impl ToPyObject for Flag` and takes
-/// care of the entire convertion.
-impl From<Flag> for (String, String, String, Value) {
-    fn from(flag: Flag) -> (String, String, String, Value) {
+/// Convert [`Flag`] to Python tuple `(short, long, val, desc)`.
+#[cfg(feature = "python")]
+impl ToPyObject for Flag {
+    type ObjectType = PyObject;
+
+    fn to_py_object(&self, py: Python) -> Self::ObjectType {
         (
-            flag.short_name.map(|s| s.to_string()).unwrap_or_default(),
-            flag.long_name.to_string(),
-            flag.description.to_string(),
-            flag.default_value,
+            Bytes::from(self.short_name.map(|s| s.to_string()).unwrap_or_default()),
+            Bytes::from(self.long_name.to_string()),
+            &self.default_value,
+            Bytes::from(self.description.to_string()),
         )
+            .to_py_object(py)
+            .into_object()
     }
 }
 

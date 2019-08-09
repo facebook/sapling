@@ -3,10 +3,9 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
 use clidispatch::dispatch::Dispatcher;
-use cliparser::parser::Value;
 use cpython::{
-    exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyObject, PyResult, PyTuple, Python,
-    PythonObject, ToPyObject,
+    exc, NoArgs, ObjectProtocol, PyBytes, PyDict, PyObject, PyResult, Python, PythonObject,
+    ToPyObject,
 };
 use encoding::osstring_to_local_cstring;
 use std::env;
@@ -82,35 +81,6 @@ impl HgPython {
                 None => (),
             }
 
-            // XXX: The code can be greatly simplified if we can use
-            // "impl ToPyObject for Flag" from "cliparser". However,
-            // if this crate depends on "cliparser" that depends on
-            // rust-cpython, then "cargo build" on the main executable
-            // complains about link errors like undefined CPython functions.
-            let mut vec = Vec::new();
-            for flag in command.flags() {
-                let flag: (String, String, String, Value) = flag.clone().into();
-
-                let short = PyBytes::new(py, flag.0.to_string().as_bytes()).into_object();
-                let long = PyBytes::new(py, flag.1.clone().as_bytes()).into_object();
-                let desc = PyBytes::new(py, flag.2.clone().as_bytes()).into_object();
-
-                let val: PyObject = match flag.3 {
-                    Value::OptBool() => py.None().into_object(),
-                    Value::Bool(b) => b.to_py_object(py).into_object(),
-                    Value::Str(s) => PyBytes::new(py, s.as_bytes()).into_object(),
-                    Value::Int(i) => i.to_py_object(py).into_object(),
-                    Value::List(vec) => {
-                        let converted: Vec<PyBytes> = vec
-                            .into_iter()
-                            .map(|s| PyBytes::new(py, s.as_bytes()))
-                            .collect();
-                        converted.to_py_object(py).into_object()
-                    }
-                };
-
-                vec.push(PyTuple::new(py, &[short, long, val, desc]));
-            }
             let doc_opt = command.doc().clone();
             let doc: PyObject = match doc_opt {
                 Some(doc_string) => PyBytes::new(py, doc_string.as_bytes())
@@ -119,11 +89,7 @@ impl HgPython {
                 None => py.None().into_object(),
             };
 
-            table.set_item(
-                py,
-                name,
-                PyTuple::new(py, &[doc, vec.to_py_object(py).into_object()]),
-            )?;
+            table.set_item(py, name, (doc, command.flags()))?;
         }
 
         Ok(())
