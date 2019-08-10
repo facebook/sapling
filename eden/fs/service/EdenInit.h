@@ -25,8 +25,14 @@
 namespace facebook {
 namespace eden {
 
+DECLARE_bool(foreground);
+
 class EdenConfig;
 class UserInfo;
+
+PathComponentPiece getDefaultLogFileName();
+AbsolutePath makeDefaultLogDirectory(AbsolutePathPiece edenDir);
+std::string getLogPath(AbsolutePathPiece edenDir);
 
 /**
  * Get the EdenConfig object.

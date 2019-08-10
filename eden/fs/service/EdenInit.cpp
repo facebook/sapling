@@ -23,6 +23,11 @@ DEFINE_string(
     EDEN_ETC_EDEN_DIR,
     "The directory holding all system configuration files");
 
+DEFINE_string(
+    logPath,
+    "",
+    "If set, redirects stdout and stderr to the log file given.");
+
 namespace {
 using namespace facebook::eden;
 
@@ -57,6 +62,38 @@ void findEdenDir(EdenConfig& config) {
 
 namespace facebook {
 namespace eden {
+
+DEFINE_bool(
+    foreground,
+    false,
+    "Run edenfs in the foreground, rather than daemonizing "
+    "as a background process");
+
+PathComponentPiece getDefaultLogFileName() {
+  return "edenfs.log"_pc;
+}
+
+AbsolutePath makeDefaultLogDirectory(AbsolutePathPiece edenDir) {
+  auto logDir = edenDir + "logs"_pc;
+  ensureDirectoryExists(logDir);
+  return logDir;
+}
+
+std::string getLogPath(AbsolutePathPiece edenDir) {
+  // If a log path was explicitly specified as a command line argument use that
+  if (!FLAGS_logPath.empty()) {
+    return FLAGS_logPath;
+  }
+
+  // If we are running in the foreground default to an empty log path
+  // (just log directly to stderr)
+  if (FLAGS_foreground) {
+    return "";
+  }
+
+  auto logDir = makeDefaultLogDirectory(edenDir);
+  return (logDir + getDefaultLogFileName()).value();
+}
 
 std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
   // normalizeBestEffort() to try resolving symlinks in these paths but don't

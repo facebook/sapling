@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/Systemd.h"
 
 #include <folly/Exception.h>
@@ -33,11 +34,6 @@ using namespace std::chrono_literals;
 namespace facebook {
 namespace eden {
 
-DEFINE_bool(
-    foreground,
-    false,
-    "Run edenfs in the foreground, rather than daemonizing "
-    "as a background process");
 DEFINE_string(
     startupLogPath,
     "",
@@ -45,16 +41,6 @@ DEFINE_string(
 
 namespace {
 void writeMessageToFile(folly::File&, folly::StringPiece);
-}
-
-AbsolutePath makeDefaultLogDirectory(AbsolutePathPiece edenDir) {
-  auto logDir = edenDir + "logs"_pc;
-  ensureDirectoryExists(logDir);
-  return logDir;
-}
-
-PathComponentPiece getDefaultLogFileName() {
-  return "edenfs.log"_pc;
 }
 
 std::unique_ptr<StartupLogger> daemonizeIfRequested(

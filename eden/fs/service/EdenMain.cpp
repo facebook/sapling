@@ -39,10 +39,6 @@ DEFINE_bool(
     "This argument must be supplied to confirm you intend to run "
     "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
-DEFINE_string(
-    logPath,
-    "",
-    "If set, redirects stdout and stderr to the log file given.");
 DEFINE_bool(
     noWaitForMounts,
     false,
@@ -55,26 +51,6 @@ using namespace facebook::eden;
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
-
-namespace {
-
-std::string getLogPath(AbsolutePathPiece edenDir) {
-  // If a log path was explicitly specified as a command line argument use that
-  if (!FLAGS_logPath.empty()) {
-    return FLAGS_logPath;
-  }
-
-  // If we are running in the foreground default to an empty log path
-  // (just log directly to stderr)
-  if (FLAGS_foreground) {
-    return "";
-  }
-
-  auto logDir = makeDefaultLogDirectory(edenDir);
-  return (logDir + getDefaultLogFileName()).value();
-}
-
-} // namespace
 
 namespace facebook {
 namespace eden {
