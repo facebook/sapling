@@ -209,7 +209,7 @@ FindResult treemanifest::find(
 
   FindResult result;
 
-  const char* word = NULL;
+  const char* word = "";
   size_t wordlen = 0;
 
   path.next(&word, &wordlen);
