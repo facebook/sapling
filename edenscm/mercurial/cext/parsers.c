@@ -726,7 +726,7 @@ void dirs_module_init(PyObject* mod);
 void manifest_module_init(PyObject* mod);
 void revlog_module_init(PyObject* mod);
 
-static const int version = 4;
+static const int version = 5;
 
 static void module_init(PyObject* mod) {
   PyModule_AddIntConstant(mod, "version", version);

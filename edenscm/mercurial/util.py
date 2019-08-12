@@ -3585,6 +3585,7 @@ def finddirs(path):
     while pos != -1:
         yield path[:pos]
         pos = path.rfind("/", 0, pos)
+    yield ""
 
 
 # compression code

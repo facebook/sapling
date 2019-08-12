@@ -40,6 +40,9 @@ static inline Py_ssize_t _finddir(const char* path, Py_ssize_t pos) {
       break;
     pos -= 1;
   }
+  if (pos == -1) {
+    return 0;
+  }
 
   return pos;
 }

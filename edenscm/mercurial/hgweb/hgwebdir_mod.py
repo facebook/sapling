@@ -271,14 +271,11 @@ class hgwebdir(object):
                     return self.makeindex(req, tmpl, subdir)
 
             def _virtualdirs():
-                # Check the full virtual path, each parent, and the root ('')
-                if virtual != "":
-                    yield virtual
+                # Check the full virtual path and each parent
+                yield virtual
 
-                    for p in util.finddirs(virtual):
-                        yield p
-
-                yield ""
+                for p in util.finddirs(virtual):
+                    yield p
 
             for virtualrepo in _virtualdirs():
                 real = repos.get(virtualrepo)

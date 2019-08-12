@@ -128,8 +128,9 @@ Incorrectly configure origbackuppath to be under a file
   b/c: replacing untracked file
   getting b/c
   creating directory: $TESTTMP/repo/.hg/badorigbackups/b
-  abort: $ENOTDIR$: '$TESTTMP/repo/.hg/badorigbackups/b'
-  [255]
-  $ cat .hg/badorigbackups
-  data
-
+  removing conflicting file: $TESTTMP/repo/.hg/badorigbackups
+  getting d
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark c1)
+  $ ls .hg/badorigbackups/b
+  c

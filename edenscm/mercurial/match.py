@@ -780,8 +780,7 @@ class patternmatcher(basematcher):
         if self._prefix and dir in self._fileset:
             return "all"
         return (
-            "" in self._fileset
-            or dir in self._fileset
+            dir in self._fileset
             or dir in self._dirs
             or any(parentdir in self._fileset for parentdir in util.finddirs(dir))
         )
@@ -824,11 +823,7 @@ class includematcher(basematcher):
         if self._prefix and dir in self._roots:
             return "all"
         return (
-            # "" is added by _buildmatch when there are "re:" patterns.
-            # Note: "re:" pattens also makes self._prefix False, effectively
-            # remove all fast paths.
-            "" in self._roots
-            or dir in self._roots
+            dir in self._roots
             or dir in self._dirs
             or any(parentdir in self._roots for parentdir in util.finddirs(dir))
         )
@@ -1373,14 +1368,14 @@ def _rootsanddirs(kindpats):
     >>> _rootsanddirs(
     ...     [(b'glob', b'g/h/*', b''), (b'glob', b'g/h', b''),
     ...      (b'glob', b'g*', b'')])
-    (['g/h', 'g/h', ''], ['g', ''])
+    (['g/h', 'g/h', ''], ['', 'g'])
     >>> _rootsanddirs(
     ...     [(b'rootfilesin', b'g/h', b''), (b'rootfilesin', b'', b'')])
-    ([], ['g/h', '', 'g', ''])
+    ([], ['g/h', '', '', 'g'])
     >>> _rootsanddirs(
     ...     [(b'relpath', b'r', b''), (b'path', b'p/p', b''),
     ...      (b'path', b'', b'')])
-    (['r', 'p/p', ''], ['p', ''])
+    (['r', 'p/p', ''], ['', 'p'])
     >>> _rootsanddirs(
     ...     [(b'relglob', b'rg*', b''), (b're', b're/', b''),
     ...      (b'relre', b'rr', b'')])
@@ -1392,8 +1387,6 @@ def _rootsanddirs(kindpats):
     # scanned to get to either the roots or the other exact directories.
     d.extend(util.dirs(d))
     d.extend(util.dirs(r))
-    # util.dirs() does not include the root directory, so add it manually
-    d.append("")
 
     return r, d
 
