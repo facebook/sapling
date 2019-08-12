@@ -105,3 +105,12 @@ No new entry in the table
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
   3|content.blake2.5119c9ed8ede459c6992624164307f82dc1edc3efd074481a4cc9afdb7755061|[TASK]Censor g,f|* (glob)
   4|content.blake2.0991063aafe55b2bcbbfa6b349e76ab5d57a102c89e841abdac8ce3f84d55b8a|[TASK]Censor g,f|* (glob)
+
+Uncensor some of the stuff
+  $ mononoke_admin blacklist remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
+  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+
+Fewer entries in the table
+  $ sqlite3 "$TESTTMP/repo/censored_contents" 'SELECT * FROM censored_contents;'
+  1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
+  2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)

@@ -157,9 +157,22 @@ fn blacklist_list(
 }
 
 fn blacklist_remove(
-    _logger: Logger,
-    _matches: &ArgMatches<'_>,
-    _sub_m: &ArgMatches<'_>,
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    future::err(format_err!("removing not yet implemented").into()).boxify()
+    let paths = try_boxfuture!(paths_parser(sub_m));
+    get_ctx_blobrepo_censored_blobs_cs_id(logger.clone(), matches, sub_m)
+        .and_then(move |(ctx, blobrepo, censored_blobs, cs_id)| {
+            content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
+                .and_then(move |content_ids| {
+                    let blobstore_keys: Vec<_> = content_ids
+                        .into_iter()
+                        .map(|content_id| content_id.blobstore_key())
+                        .collect();
+                    censored_blobs.delete_censored_blobs(&blobstore_keys)
+                })
+                .from_err()
+        })
+        .boxify()
 }

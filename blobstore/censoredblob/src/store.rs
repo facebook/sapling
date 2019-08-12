@@ -35,6 +35,11 @@ queries! {
         FROM censored_contents"
     }
 
+    write DeleteCensoredBlobs(>list content_keys: String) {
+        none,
+        "DELETE FROM censored_contents
+         WHERE content_key IN {content_keys}"
+    }
 }
 
 impl SqlConstructors for SqlCensoredContentStore {
@@ -78,5 +83,54 @@ impl SqlCensoredContentStore {
             .map_err(Error::from)
             .map(|_| ())
             .boxify()
+    }
+
+    pub fn delete_censored_blobs(&self, content_keys: &[String]) -> BoxFuture<(), Error> {
+        let ref_vec: Vec<&String> = content_keys.iter().collect();
+        DeleteCensoredBlobs::query(&self.write_connection, &ref_vec[..])
+            .map_err(Error::from)
+            .map(|_| ())
+            .boxify()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_censored_store() {
+        let key_a = "aaaaaaaaaaaaaaaaaaaa".to_string();
+        let key_b = "bbbbbbbbbbbbbbbbbbbb".to_string();
+        let key_c = "cccccccccccccccccccc".to_string();
+        let key_d = "dddddddddddddddddddd".to_string();
+        let task1 = "task1".to_string();
+        let task2 = "task2".to_string();
+        let censored_keys1 = vec![key_a.clone(), key_b.clone()];
+        let censored_keys2 = vec![key_c.clone(), key_d.clone()];
+
+        let mut rt = Runtime::new().unwrap();
+        let store = SqlCensoredContentStore::with_sqlite_in_memory().unwrap();
+
+        rt.block_on(store.insert_censored_blobs(&censored_keys1, &task1, &Timestamp::now()))
+            .expect("insert failed");
+        rt.block_on(store.insert_censored_blobs(&censored_keys2, &task2, &Timestamp::now()))
+            .expect("insert failed");
+
+        let res = rt
+            .block_on(store.get_all_censored_blobs())
+            .expect("select failed");
+        assert_eq!(res.len(), 4);
+
+        rt.block_on(store.delete_censored_blobs(&censored_keys1))
+            .expect("delete failed");
+        let res = rt
+            .block_on(store.get_all_censored_blobs())
+            .expect("select failed");
+
+        assert_eq!(res.contains_key(&key_c), true);
+        assert_eq!(res.contains_key(&key_d), true);
+        assert_eq!(res.len(), 2);
     }
 }
