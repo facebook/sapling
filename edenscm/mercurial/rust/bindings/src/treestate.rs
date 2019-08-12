@@ -831,6 +831,9 @@ fn encoding_error(py: Python) -> PyErr {
 /// Convert "dir1/dir2/file1" to ["dir1/", "dir2/", "file1"]
 fn split_path(path: &[u8]) -> Vec<&[u8]> {
     // convert prefix to a vec like ["dir/", "dir2/", "file"]
+    if path == b"/" {
+        return Vec::new();
+    }
     let mut components = Vec::new();
     let mut next_index = 0;
     for (index, byte) in path.iter().enumerate() {

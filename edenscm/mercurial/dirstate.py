@@ -852,16 +852,14 @@ class dirstate(object):
             normalize = None
 
         files = sorted(match.files())
-        if not files or "." in files:
-            files = ["."]
+        if not files or "" in files:
+            files = [""]
             # constructing the foldmap is expensive, so don't do it for the
-            # common case where files is ['.']
+            # common case where files is ['']
             normalize = None
         results = {".hg": None}
 
         for ff in files:
-            # constructing the foldmap is expensive, so don't do it for the
-            # common case where files is ['.']
             if normalize:
                 nf = normalize(ff, False, True)
             else:
@@ -994,9 +992,7 @@ class dirstate(object):
                 if not match.visitdir(nd):
                     continue
                 skip = None
-                if nd == ".":
-                    nd = ""
-                else:
+                if nd != "":
                     skip = ".hg"
                 try:
                     entries = listdir(join(nd), stat=True, skip=skip)

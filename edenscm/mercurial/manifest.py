@@ -465,9 +465,9 @@ class manifestdict(object):
             if match(fn):
                 yield fn
 
-        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # for dirstate.walk, files=[''] means "walk the whole tree".
         # follow that here, too
-        fset.discard(".")
+        fset.discard("")
 
         for fn in sorted(fset):
             if not self.hasdir(fn):
@@ -959,9 +959,9 @@ class treemanifest(object):
                 fset.remove(fn)
             yield fn
 
-        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # for dirstate.walk, files=[''] means "walk the whole tree".
         # follow that here, too
-        fset.discard(".")
+        fset.discard("")
 
         for fn in sorted(fset):
             if not self.hasdir(fn):
@@ -969,7 +969,7 @@ class treemanifest(object):
 
     def _walk(self, match):
         """Recursively generates matching file names for walk()."""
-        if not match.visitdir(self._dir[:-1] or "."):
+        if not match.visitdir(self._dir[:-1]):
             return
 
         # yield this dir's files and walk its submanifests
@@ -994,7 +994,7 @@ class treemanifest(object):
         """recursively generate a new manifest filtered by the match argument.
         """
 
-        visit = match.visitdir(self._dir[:-1] or ".")
+        visit = match.visitdir(self._dir[:-1])
         if visit == "all":
             return self.copy()
         ret = treemanifest(self._dir)
@@ -1130,7 +1130,7 @@ class treemanifest(object):
 
         If `matcher` is provided, it only returns subtrees that match.
         """
-        if matcher and not matcher.visitdir(self._dir[:-1] or "."):
+        if matcher and not matcher.visitdir(self._dir[:-1]):
             return
         if not matcher or matcher(self._dir[:-1]):
             yield self

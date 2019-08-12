@@ -1,4 +1,4 @@
-# match.py - filename matching
+""  # match.py - filename matching
 #
 #  Copyright 2008, 2009 Matt Mackall <mpm@selenic.com> and others
 #
@@ -93,6 +93,7 @@ def _kindpatsalwaysmatch(kindpats):
     'relpath:.' does.
     """
     for kind, pat, source in kindpats:
+        # TODO: update me?
         if pat != "" or kind not in ["relpath", "glob"]:
             return False
     return True
@@ -385,13 +386,12 @@ class _tree(dict):
 
     def visitdir(self, path):
         """Similar to matcher.visitdir"""
+        path = normalizerootdir(path, "visitdir")
         if self.matchrecursive:
             return "all"
         elif self.unsurerecursive:
             return True
-
-        if path in {"", "."}:
-            # Some code paths passes "." here
+        elif path == "":
             return True
 
         if self._kindpats and self._compiledpats(path):
@@ -741,6 +741,7 @@ class gitignorematcher(basematcher):
         return self._matcher.explain(f, True)
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         matched = self._matcher.match_relative(dir, True)
         if matched:
             # Everything in the directory is selected (ignored)
@@ -753,6 +754,15 @@ class gitignorematcher(basematcher):
         return "<gitignorematcher>"
 
 
+def normalizerootdir(dir, funcname):
+    if dir == ".":
+        util.nouideprecwarn(
+            "match.%s() no longer accepts '.', use '' instead." % funcname, "20190805"
+        )
+        return ""
+    return dir
+
+
 class patternmatcher(basematcher):
     def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
@@ -763,13 +773,14 @@ class patternmatcher(basematcher):
 
     @propertycache
     def _dirs(self):
-        return set(util.dirs(self._fileset)) | {"."}
+        return set(util.dirs(self._fileset)) | {""}
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         if self._prefix and dir in self._fileset:
             return "all"
         return (
-            "." in self._fileset
+            "" in self._fileset
             or dir in self._fileset
             or dir in self._dirs
             or any(parentdir in self._fileset for parentdir in util.finddirs(dir))
@@ -809,13 +820,14 @@ class includematcher(basematcher):
             self.visitdir = visitdir
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         if self._prefix and dir in self._roots:
             return "all"
         return (
-            # "." is added by _buildmatch when there are "re:" patterns.
+            # "" is added by _buildmatch when there are "re:" patterns.
             # Note: "re:" pattens also makes self._prefix False, effectively
             # remove all fast paths.
-            "." in self._roots
+            "" in self._roots
             or dir in self._roots
             or dir in self._dirs
             or any(parentdir in self._roots for parentdir in util.finddirs(dir))
@@ -842,9 +854,10 @@ class exactmatcher(basematcher):
 
     @propertycache
     def _dirs(self):
-        return set(util.dirs(self._fileset)) | {"."}
+        return set(util.dirs(self._fileset)) | {""}
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         return dir in self._dirs
 
     def isexact(self):
@@ -892,6 +905,7 @@ class differencematcher(basematcher):
         return self._m1.files()
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         if self._m2.visitdir(dir) == "all":
             # There's a bug here: If m1 matches file 'dir/file' and m2 excludes
             # 'dir' (recursively), we should still visit 'dir' due to the
@@ -958,6 +972,7 @@ class intersectionmatcher(basematcher):
         return self._m1(f) and self._m2(f)
 
     def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
         visit1 = self._m1.visitdir(dir)
         if visit1 == "all":
             return self._m2.visitdir(dir)
@@ -1040,7 +1055,8 @@ class subdirmatcher(basematcher):
         return self._matcher.matchfn(self._path + "/" + f)
 
     def visitdir(self, dir):
-        if dir == ".":
+        dir = normalizerootdir(dir, "visitdir")
+        if dir == "":
             dir = self._path
         else:
             dir = self._path + "/" + dir
@@ -1214,7 +1230,7 @@ def _globre(pat):
 def _regex(kind, pat, globsuffix):
     """Convert a (normalized) pattern of any kind into a regular expression.
     globsuffix is appended to the regexp of globs."""
-    if not pat:
+    if not pat and kind in ("glob", "relpath"):
         return ""
     if kind == "re":
         return pat
@@ -1326,13 +1342,17 @@ def _patternrootsanddirs(kindpats):
                 if "[" in p or "{" in p or "*" in p or "?" in p:
                     break
                 root.append(p)
-            r.append("/".join(root) or ".")
+            r.append("/".join(root))
         elif kind in ("relpath", "path"):
-            r.append(pat or ".")
+            if pat == ".":
+                pat = ""
+            r.append(pat)
         elif kind in ("rootfilesin",):
-            d.append(pat or ".")
+            if pat == ".":
+                pat = ""
+            d.append(pat)
         else:  # relglob, re, relre
-            r.append(".")
+            r.append("")
     return r, d
 
 
@@ -1353,18 +1373,18 @@ def _rootsanddirs(kindpats):
     >>> _rootsanddirs(
     ...     [(b'glob', b'g/h/*', b''), (b'glob', b'g/h', b''),
     ...      (b'glob', b'g*', b'')])
-    (['g/h', 'g/h', '.'], ['g', '.'])
+    (['g/h', 'g/h', ''], ['g', ''])
     >>> _rootsanddirs(
     ...     [(b'rootfilesin', b'g/h', b''), (b'rootfilesin', b'', b'')])
-    ([], ['g/h', '.', 'g', '.'])
+    ([], ['g/h', '', 'g', ''])
     >>> _rootsanddirs(
     ...     [(b'relpath', b'r', b''), (b'path', b'p/p', b''),
     ...      (b'path', b'', b'')])
-    (['r', 'p/p', '.'], ['p', '.'])
+    (['r', 'p/p', ''], ['p', ''])
     >>> _rootsanddirs(
     ...     [(b'relglob', b'rg*', b''), (b're', b're/', b''),
     ...      (b'relre', b'rr', b'')])
-    (['.', '.', '.'], ['.'])
+    (['', '', ''], [''])
     """
     r, d = _patternrootsanddirs(kindpats)
 
@@ -1373,7 +1393,7 @@ def _rootsanddirs(kindpats):
     d.extend(util.dirs(d))
     d.extend(util.dirs(r))
     # util.dirs() does not include the root directory, so add it manually
-    d.append(".")
+    d.append("")
 
     return r, d
 
