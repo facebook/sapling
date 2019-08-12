@@ -597,9 +597,6 @@ def _fullcopytracing(repo, c1, c2, base):
 
     # generate a directory move map
     d1, d2 = c1.dirs(), c2.dirs()
-    # Hack for adding '', which is not otherwise added, to d1 and d2
-    d1.addpath("/")
-    d2.addpath("/")
     invalid = set()
     dirmove = {}
 
