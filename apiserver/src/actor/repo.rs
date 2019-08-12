@@ -14,6 +14,7 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
+use censorship::{hide_censorship_error, tombstone_hgblob};
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -428,7 +429,14 @@ impl MononokeRepo {
         for key in keys {
             let filenode = HgFileNodeId::new(key.node.clone().into());
             let get_parents = self.repo.get_file_parents(ctx.clone(), filenode);
-            let get_content = self.repo.get_raw_hg_content(ctx.clone(), filenode, false);
+
+            // TODO(T48685378): Handle redacted content in a less hacky way
+            let get_content = hide_censorship_error(
+                self.repo
+                    .clone()
+                    .get_raw_hg_content(ctx.clone(), filenode.clone(), false),
+                tombstone_hgblob,
+            );
 
             // Use `lazy` when writing log messages so that the message is emitted
             // when the Future is polled rather than when it is created.

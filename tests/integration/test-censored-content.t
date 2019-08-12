@@ -28,6 +28,7 @@ setup repo-pull and repo-push
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-fetchpacksv1 --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-fetchpacksv2 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-edenapi --noupdate
   $ cat >> repo-pull-fetchpacksv1/.hg/hgrc << EOF
   > [remotefilelog]
   > fetchpacks=True
@@ -38,7 +39,6 @@ setup repo-pull and repo-push
   > fetchpacks=True
   > getpackversion=2
   > EOF
-
 
 blobimport
   $ blobimport repo-hg/.hg repo
@@ -378,5 +378,25 @@ Updating to a commit with censored files works in getpackv2 repo
   $ cd $TESTTMP/repo-pull-fetchpacksv2
   $ hgmn pull -q
   $ hgmn up -q 064d994d0240
+  $ cat c
+  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+
+Start API server
+  $ setup_no_ssl_apiserver
+  $ cat >> $TESTTMP/repo-pull-edenapi/.hg/hgrc << EOF
+  > [remotefilelog]
+  > reponame = repo
+  > fetchpacks=True
+  > getpackversion=1
+  > [edenapi]
+  > enabled=True
+  > url = $APISERVER
+  > EOF
+
+Updating to a commit with censored files works in edenapi-enabled repo
+  $ cd $TESTTMP/repo-pull-edenapi
+  $ hgmn pull -q
+  $ hgmn up 064d994d0240 |  grep "encountered error during HTTPS fetching"
+  [1]
   $ cat c
   This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
