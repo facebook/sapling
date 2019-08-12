@@ -13,7 +13,7 @@ use futures::sync::{mpsc, oneshot};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use metaconfig_types::BlobstoreId;
-use mononoke_types::{DateTime, RepositoryId, Timestamp};
+use mononoke_types::{DateTime, Timestamp};
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
 use stats::{define_stats, Timeseries};
@@ -117,14 +117,13 @@ pub struct SqlBlobstoreSyncQueue {
 
 queries! {
     write InsertEntry(values: (
-        repo_id: RepositoryId,
         blobstore_key: String,
         blobstore_id: BlobstoreId,
         timestamp: Timestamp,
     )) {
         insert_or_ignore,
         "{insert_or_ignore}
-         INTO blobstore_sync_queue (repo_id, blobstore_key, blobstore_id, add_timestamp)
+         INTO blobstore_sync_queue (blobstore_key, blobstore_id, add_timestamp)
          VALUES {values}"
     }
 
@@ -265,13 +264,13 @@ fn insert_entries(
                 ..
             } = entry;
             let t: Timestamp = timestamp.into();
-            (RepositoryId::new(0), blobstore_key, blobstore_id, t)
+            (blobstore_key, blobstore_id, t)
         })
         .collect();
 
     let entries_ref: Vec<_> = entries
         .iter()
-        .map(|(a, b, c, d)| (a, b, c, d)) // &(a, b, ...) into (&a, &b, ...)
+        .map(|(b, c, d)| (b, c, d)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
     InsertEntry::query(&write_connection, entries_ref.as_ref())
