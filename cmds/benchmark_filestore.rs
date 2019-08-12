@@ -7,18 +7,18 @@
 use blobstore::Blobstore;
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
 use cachelib;
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{Future, Stream};
-use futures_ext::FutureExt;
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
 use memblob;
 use mononoke_types::ContentMetadata;
 use prefixblob::PrefixBlobstore;
+use sqlblob::Sqlblob;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::io::BufReader;
@@ -69,6 +69,27 @@ fn read<B: Blobstore + Clone>(
 }
 
 fn main() -> Result<(), Error> {
+    let manifold_subcommand = SubCommand::with_name("manifold").arg(
+        Arg::with_name("manifold-bucket")
+            .takes_value(true)
+            .required(false),
+    );
+
+    let memory_subcommand = SubCommand::with_name("memory");
+    let xdb_subcommand = SubCommand::with_name("xdb")
+        .arg(Arg::with_name("shardmap").takes_value(true).required(true))
+        .arg(
+            Arg::with_name("shard-count")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("myrouter-port")
+                .long("myrouter-port")
+                .takes_value(true)
+                .required(false),
+        );
+
     let app = App::new(NAME)
         .arg(
             Arg::with_name("input-capacity")
@@ -91,12 +112,6 @@ fn main() -> Result<(), Error> {
                 .required(false)
                 .default_value("1"),
         )
-        .arg(
-            Arg::with_name("manifold-bucket")
-                .long("manifold-bucket")
-                .takes_value(true)
-                .required(false),
-        )
         .arg(Arg::with_name("memcache").long("memcache").required(false))
         .arg(
             Arg::with_name("cachelib-size")
@@ -104,7 +119,10 @@ fn main() -> Result<(), Error> {
                 .takes_value(true)
                 .required(false),
         )
-        .arg(Arg::with_name("input").takes_value(true).required(true));
+        .arg(Arg::with_name("input").takes_value(true).required(true))
+        .subcommand(manifold_subcommand)
+        .subcommand(memory_subcommand)
+        .subcommand(xdb_subcommand);
 
     let matches = app.get_matches();
     let input = matches.value_of("input").unwrap().to_string();
@@ -132,13 +150,34 @@ fn main() -> Result<(), Error> {
         concurrency,
     };
 
-    let blob: Arc<dyn Blobstore> = match matches.value_of("manifold-bucket") {
-        Some(bucket) => {
+    let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
+
+    let blob: Arc<dyn Blobstore> = match matches.subcommand() {
+        ("manifold", Some(sub)) => {
+            let bucket = sub.value_of("manifold-bucket").unwrap();
             let manifold = ThriftManifoldBlob::new(bucket).map_err(|e| -> Error { e.into() })?;
             let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
             Arc::new(blobstore)
         }
-        None => Arc::new(memblob::LazyMemblob::new()),
+        ("memory", Some(_)) => Arc::new(memblob::LazyMemblob::new()),
+        ("xdb", Some(sub)) => {
+            let shardmap = sub.value_of("shardmap").unwrap().to_string();
+            let shard_count = sub
+                .value_of("shard-count")
+                .unwrap()
+                .parse()
+                .map_err(Error::from)?;
+            let fut = match sub.value_of("myrouter-port") {
+                Some(port) => {
+                    let port = port.parse().map_err(Error::from)?;
+                    Sqlblob::with_myrouter(shardmap, port, shard_count)
+                }
+                None => Sqlblob::with_raw_xdb_shardmap(shardmap, shard_count),
+            };
+            let blobstore = runtime.block_on(fut)?;
+            Arc::new(blobstore)
+        }
+        _ => unreachable!(),
     };
 
     let blob: Arc<dyn Blobstore> = if matches.is_present("memcache") {
@@ -199,13 +238,7 @@ fn main() -> Result<(), Error> {
             move |res| read(blob, ctx, res)
         });
 
-    tokio::run(
-        fut.map_err(|e| {
-            eprintln!("Error: {:?}", e);
-            ()
-        })
-        .discard(),
-    );
+    runtime.block_on(fut)?;
 
     Ok(())
 }
