@@ -17,6 +17,7 @@ TODO(alexeyqu): finish docs
 """
 
 import hashlib
+import os
 from collections import defaultdict
 
 from edenscm.mercurial import cmdutil, error, extensions, json, registrar, scmutil
@@ -83,6 +84,7 @@ class snapshotmanifest(object):
         self.oid = oid
         self.deleted = []
         self.unknown = []
+        self.localvfsfiles = []
 
     @property
     def empty(self):
@@ -92,6 +94,7 @@ class snapshotmanifest(object):
         manifest = defaultdict(dict)
         manifest["deleted"] = {d.path: d.serialize() for d in self.deleted}
         manifest["unknown"] = {u.path: u.serialize() for u in self.unknown}
+        manifest["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
         return json.dumps(manifest)
 
     def deserialize(self, json_string):
@@ -102,6 +105,10 @@ class snapshotmanifest(object):
                 filelfswrapper.deserialize(path, data)
                 for path, data in manifest["unknown"].items()
             ]
+            self.localvfsfiles = [
+                filelfswrapper.deserialize(path, data)
+                for path, data in manifest["localvfsfiles"].items()
+            ]
         except ValueError:
             raise error.Abort(_("invalid manifest json: %s") % json_string)
 
@@ -109,19 +116,31 @@ class snapshotmanifest(object):
     def createfromworkingcopy(cls, repo, include_untracked):
         manifest = cls(repo)
         # populate the manifest
-        status = manifest.repo.status(unknown=include_untracked)
+        status = repo.status(unknown=include_untracked)
         manifest.deleted = [filelfswrapper(path) for path in status.deleted]
         manifest.unknown = [filelfswrapper(path) for path in status.unknown]
+        # check merge and rebase info
+        ismergestate = len(repo[None].parents()) > 1
+        isrebasestate = repo.localvfs.exists("rebasestate")
+        if ismergestate or isrebasestate:
+            for root, dirs, files in repo.localvfs.walk(path="merge"):
+                manifest.localvfsfiles += [
+                    filelfswrapper(os.path.join(root, f)) for f in files
+                ]
+        if isrebasestate:
+            manifest.localvfsfiles.append(filelfswrapper("rebasestate"))
         return manifest
 
     @classmethod
     def restorefromlfs(cls, repo, oid, allow_remote=False):
         manifest = cls(repo, oid)
-        checkloadblobbyoid(manifest.repo, oid, "manifest", allow_remote)
-        manifest.deserialize(manifest.repo.svfs.lfslocalblobstore.read(oid))
+        checkloadblobbyoid(repo, oid, "manifest", allow_remote)
+        manifest.deserialize(repo.svfs.lfslocalblobstore.read(oid))
         # validate related files
         for file in manifest.unknown:
-            checkloadblobbyoid(manifest.repo, file.oid, file.path, allow_remote)
+            checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
+        for file in manifest.localvfsfiles:
+            checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
         return manifest
 
     def storetolocallfs(self):
@@ -138,15 +157,24 @@ class snapshotmanifest(object):
         wctx = self.repo[None]
         for f in self.unknown:
             f.oid, f.size = storetolfs(self.repo, wctx[f.path].data())
+        for f in self.localvfsfiles:
+            f.oid, f.size = storetolfs(
+                self.repo, self.repo.localvfs.open(path=f.path).read()
+            )
         oid, size = storetolfs(self.repo, self.serialize())
         return oid, size
 
     def uploadtoremotelfs(self):
+        def checkgetpointer(repo, file, pointers):
+            checkloadblobbyoid(repo, file.oid, file.path)
+            pointers.append(lfs.pointer.gitlfspointer(oid=file.oid, size=file.size))
+
         assert self.oid is not None
         pointers = [lfs.pointer.gitlfspointer(oid=self.oid)]
         for file in self.unknown:
-            checkloadblobbyoid(self.repo, file.oid, file.path)
-            pointers.append(lfs.pointer.gitlfspointer(oid=file.oid, size=file.size))
+            checkgetpointer(self.repo, file, pointers)
+        for file in self.localvfsfiles:
+            checkgetpointer(self.repo, file, pointers)
         lfs.wrapper.uploadblobs(self.repo, pointers)
 
 
@@ -214,4 +242,9 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     for unknown in snapmanifest.unknown:
         ui.note(_("will add %s") % unknown.path)
         repo.wvfs.write(unknown.path, repo.svfs.lfslocalblobstore.read(unknown.oid))
+    # restoring the merge state
+    with repo.wlock():
+        for file in snapmanifest.localvfsfiles:
+            ui.note(_("will add %s") % file.path)
+            repo.localvfs.write(file.path, repo.svfs.lfslocalblobstore.read(file.oid))
     ui.status(_("snapshot checkout complete\n"))
