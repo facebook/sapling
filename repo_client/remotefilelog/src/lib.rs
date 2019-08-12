@@ -16,12 +16,12 @@ use blobrepo::{
     BlobRepo,
 };
 use bytes::{Bytes, BytesMut};
-use censoredblob::ErrorKind::Censored;
+use censorship::{hide_censorship_error, tombstone_filebytes_revflags};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{Error, Fail, Fallible};
 use filenodes::FilenodeInfo;
-use futures::{future, Future, IntoFuture, Stream};
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use lz4_pyframe;
 use mercurial::file::File;
@@ -32,9 +32,6 @@ use metaconfig_types::LfsParams;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
-/// Tombstone string to replace the content of blacklisted files with
-const CENSORED_CONTENT: &str =
-    "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oHAF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNoUI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQV3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -59,28 +56,17 @@ pub fn create_remotefilelog_blob(
     lfs_params: LfsParams,
     validate_hash: bool,
 ) -> BoxFuture<Bytes, Error> {
-    let raw_content_bytes = get_raw_content(
-        ctx.clone(),
-        repo.clone(),
-        node,
-        RepoPath::FilePath(path.clone()),
-        lfs_params,
-        validate_hash,
+    let raw_content_bytes = hide_censorship_error(
+        get_raw_content(
+            ctx.clone(),
+            repo.clone(),
+            node,
+            RepoPath::FilePath(path.clone()),
+            lfs_params,
+            validate_hash,
+        ),
+        tombstone_filebytes_revflags,
     )
-    .or_else(move |err| {
-        let root_cause = err.find_root_cause();
-        let maybe_censored_err = root_cause.downcast_ref::<censoredblob::ErrorKind>();
-
-        // if the error is Censored return a magic string as the new content
-        match maybe_censored_err {
-            Some(Censored(_, _)) => {
-                let meta_key_flag = RevFlags::REVIDX_DEFAULT_FLAGS;
-                let raw_content = FileBytes(CENSORED_CONTENT.as_bytes().into());
-                future::ok((raw_content, meta_key_flag)).right_future()
-            }
-            None => future::err(err).left_future(),
-        }
-    })
     .and_then(move |(raw_content, meta_key_flag)| {
         encode_remotefilelog_file_content(raw_content, meta_key_flag)
     });
