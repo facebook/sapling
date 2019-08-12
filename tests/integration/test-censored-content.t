@@ -26,6 +26,19 @@ setup repo-pull and repo-push
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push2 --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push3 --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-fetchpacksv1 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-fetchpacksv2 --noupdate
+  $ cat >> repo-pull-fetchpacksv1/.hg/hgrc << EOF
+  > [remotefilelog]
+  > fetchpacks=True
+  > getpackversion=1
+  > EOF
+  $ cat >> repo-pull-fetchpacksv2/.hg/hgrc << EOF
+  > [remotefilelog]
+  > fetchpacks=True
+  > getpackversion=2
+  > EOF
+
 
 blobimport
   $ blobimport repo-hg/.hg repo
@@ -353,3 +366,17 @@ Updating from a commit that contains a blacklisted file to another commit should
 File should contain the uncommited change: bb
   $ cat b
   bb
+
+Updating to a commit with censored files works in getpackv1 repo
+  $ cd $TESTTMP/repo-pull-fetchpacksv1
+  $ hgmn pull -q
+  $ hgmn up -q 064d994d0240
+  $ cat c
+  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+
+Updating to a commit with censored files works in getpackv2 repo
+  $ cd $TESTTMP/repo-pull-fetchpacksv2
+  $ hgmn pull -q
+  $ hgmn up -q 064d994d0240
+  $ cat c
+  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.

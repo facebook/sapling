@@ -8,7 +8,7 @@ use censoredblob::ErrorKind::Censored;
 use failure::Error;
 use futures::{future, Future};
 use futures_ext::FutureExt;
-use mercurial_types::{FileBytes, RevFlags};
+use mercurial_types::{FileBytes, HgBlob, RevFlags};
 
 /// Tombstone string to replace the content of blacklisted files with
 const CENSORED_CONTENT: &str =
@@ -37,4 +37,8 @@ pub fn tombstone_filebytes_revflags() -> (FileBytes, RevFlags) {
         FileBytes(CENSORED_CONTENT.as_bytes().into()),
         RevFlags::REVIDX_DEFAULT_FLAGS,
     )
+}
+
+pub fn tombstone_hgblob() -> HgBlob {
+    HgBlob::from(CENSORED_CONTENT.as_bytes().to_vec())
 }

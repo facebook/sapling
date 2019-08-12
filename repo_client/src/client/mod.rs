@@ -11,6 +11,7 @@ use blobrepo::HgBlobChangeset;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
+use censorship::{hide_censorship_error, tombstone_hgblob};
 use cloned::cloned;
 use context::{CoreContext, Metric};
 use failure::{err_msg, format_err};
@@ -532,11 +533,18 @@ impl RepoClient {
                     let contents: Vec<_> = filenodes
                         .iter()
                         .map(|filenode| {
-                            repo.get_raw_hg_content(ctx.clone(), *filenode, validate_hash)
-                                .map({
-                                    cloned!(filenode);
-                                    move |content| (filenode, content.into_inner())
-                                })
+                            hide_censorship_error(
+                                repo.clone().get_raw_hg_content(
+                                    ctx.clone(),
+                                    filenode.clone(),
+                                    validate_hash,
+                                ),
+                                tombstone_hgblob,
+                            )
+                            .map({
+                                cloned!(filenode);
+                                move |content| (filenode, content.into_inner())
+                            })
                         })
                         .collect();
 
