@@ -109,9 +109,12 @@ impl MononokeAPIServiceImpl {
             .await
     }
 
-    fn create_ctx(&self, scuba: ScubaSampleBuilder) -> CoreContext {
+    fn create_ctx(&self, mut scuba: ScubaSampleBuilder) -> CoreContext {
+        let uuid = Uuid::new_v4();
+        scuba.add("session_uuid", uuid.to_string());
+
         CoreContext::new(
-            Uuid::new_v4(),
+            uuid,
             self.logger.clone(),
             scuba,
             None,
