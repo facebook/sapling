@@ -7,12 +7,13 @@
 use clap::ArgMatches;
 use cmdlib::args;
 
+use crate::cmdargs::{BLACKLIST_ADD, BLACKLIST_LIST, BLACKLIST_REMOVE};
 use crate::common::{get_file_nodes, resolve_hg_rev};
 use censoredblob::SqlCensoredContentStore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
-use futures::future::{join_all, Future};
+use futures::future::{self, join_all, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::MPath;
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
@@ -21,6 +22,22 @@ use slog::{debug, Logger};
 use crate::error::SubcommandError;
 
 pub fn subcommand_blacklist(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), SubcommandError> {
+    match sub_m.subcommand() {
+        (BLACKLIST_ADD, Some(sub_sub_m)) => blacklist_add(logger, matches, sub_sub_m),
+        (BLACKLIST_REMOVE, Some(sub_sub_m)) => blacklist_remove(logger, matches, sub_sub_m),
+        (BLACKLIST_LIST, Some(sub_sub_m)) => blacklist_list(logger, matches, sub_sub_m),
+        _ => {
+            eprintln!("{}", matches.usage());
+            ::std::process::exit(1);
+        }
+    }
+}
+
+fn blacklist_add(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -85,4 +102,20 @@ pub fn subcommand_blacklist(
         })
         .from_err()
         .boxify()
+}
+
+fn blacklist_list(
+    _logger: Logger,
+    _matches: &ArgMatches<'_>,
+    _sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), SubcommandError> {
+    future::err(format_err!("listing not yet implemented").into()).boxify()
+}
+
+fn blacklist_remove(
+    _logger: Logger,
+    _matches: &ArgMatches<'_>,
+    _sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), SubcommandError> {
+    future::err(format_err!("removing not yet implemented").into()).boxify()
 }

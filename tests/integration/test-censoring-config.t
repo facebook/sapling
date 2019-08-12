@@ -62,7 +62,7 @@ start mononoke
   $ hgmn up -q 14961831bd3a
 
 Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
-  $ mononoke_admin blacklist --hash 14961831bd3af3a6331fef7e63367d61cb6c9f6b --task "my_task" b
+  $ mononoke_admin blacklist add my_task 14961831bd3af3a6331fef7e63367d61cb6c9f6b b
   * INFO using repo "repo" repoid RepositoryId(0) (glob)
 
 Restart mononoke

@@ -21,10 +21,11 @@ use crate::blacklist::subcommand_blacklist;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLACKLIST, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH,
-    FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE,
-    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
-    HG_SYNC_VERIFY, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
+    ADD_PUBLIC_PHASES, BLACKLIST, BLACKLIST_ADD, BLACKLIST_LIST, BLACKLIST_REMOVE, BLOBSTORE_FETCH,
+    BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
+    HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE,
+    HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, SKIPLIST,
+    SKIPLIST_BUILD, SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::error::SubcommandError;
@@ -253,25 +254,52 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         );
 
     let blacklist = SubCommand::with_name(BLACKLIST)
-        .about("blacklist files. a blacklisted file cannot be fetched")
-        .arg(
-            Arg::with_name("hash")
-                .help("key of the commit")
-                .long("hash")
-                .takes_value(true)
-                .required(true),
+        .about("handle file blacklisting")
+        .subcommand(
+            SubCommand::with_name(BLACKLIST_ADD)
+                .about("add a new blacklisted file at a given commit")
+                .arg(
+                    Arg::with_name("task")
+                        .help("Task tracking the blacklisting request")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .args_from_usage(
+                    r#"
+                        <FILES_LIST>...                             'list of files to be be blacklisted'
+                        "#,
+                )
         )
-        .arg(
-            Arg::with_name("task")
-                .help("Task tracking the blacklisting request")
-                .long("task")
-                .takes_value(true)
-                .required(true),
+        .subcommand(
+            SubCommand::with_name(BLACKLIST_REMOVE)
+                .about("remove a file from the blacklist")
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .args_from_usage(
+                    r#"
+                        <FILES_LIST>...                             'list of files to be be unblacklisted'
+                        "#,
+                )
         )
-        .args_from_usage(
-            r#"
-                <FILES_LIST>...                             'list of files to be be censored'
-                "#,
+        .subcommand(
+            SubCommand::with_name(BLACKLIST_LIST)
+                .about("list all blacklisted file for a given commit")
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash or a bookmark")
+                        .takes_value(true)
+                        .required(true),
+                )
         );
 
     let filenodes = SubCommand::with_name(FILENODES)

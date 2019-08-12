@@ -148,7 +148,7 @@ Update blacklisted blob
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90
 
 Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
-  $ mononoke_admin blacklist --hash 064d994d0240f9738dba1ef7479f0a4ce8486b05 --task "my_task" c
+  $ mononoke_admin blacklist add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c
   * using repo "repo" repoid RepositoryId(0) (glob)
 
 Restart mononoke
