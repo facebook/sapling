@@ -8,6 +8,11 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node, parents::Parents};
 
+/// Tombstone string to replace the content of blacklisted files with
+/// TODO(T48685378): Handle redacted content in a less hacky way
+const CENSORED_CONTENT: &str =
+    "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oHAF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNoUI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQV3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
+
 /// Structure representing source control data (typically
 /// either file content or a tree entry) on the wire.
 /// Includes the information required to add the data to
@@ -44,7 +49,9 @@ impl DataEntry {
     /// will recompute the entry's node hash and verify that it matches the
     /// expected node hash in the entry's key, returning an error otherwise.
     pub fn data(&self, validate: bool) -> Fallible<Bytes> {
-        if validate {
+        // TODO(T48685378): Handle redacted content in a less hacky way
+        if validate && !(self.data.len() == CENSORED_CONTENT.len() && self.data == CENSORED_CONTENT)
+        {
             self.validate()?;
         }
         Ok(self.data.clone())
