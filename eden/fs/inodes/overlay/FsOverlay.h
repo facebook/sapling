@@ -56,7 +56,7 @@ class FsOverlay {
     return bool(infoFile_);
   }
 
-  AbsolutePath getLocalDir() const {
+  const AbsolutePath& getLocalDir() const {
     return localDir_;
   }
 
@@ -65,12 +65,30 @@ class FsOverlay {
    *  specified inode number.
    *
    *  We shard the inode files across the 256 subdirectories using the least
-   *  significant byte.  Inode numbers are anllocated in monotonically
+   *  significant byte.  Inode numbers are allocated in monotonically
    * increasing order, so this helps spread them out across the subdirectories.
+   *
+   * The shard directory paths are always exactly kShardDirPathLength bytes
+   * long: the `subdirPath` argument must point to a buffer exactly
+   * kShardDirPathLength bytes long.  This function will write to those bytes,
+   * and no null terminator is included in the output.
    */
   static void formatSubdirPath(
-      folly::MutableStringPiece subdirPath,
-      InodeNumber inodeNum);
+      InodeNumber inodeNum,
+      folly::MutableStringPiece subdirPath);
+
+  /**
+   * Format the subdir shard path given a shard ID from 0 to 255.
+   *
+   * The shard directory paths are always exactly kShardDirPathLength bytes
+   * long: the `subdirPath` argument must point to a buffer exactly
+   * kShardDirPathLength bytes long.  This function will write to those bytes,
+   * and no null terminator is included in the output.
+   */
+  using ShardID = uint32_t;
+  static void formatSubdirShardPath(
+      ShardID shardID,
+      folly::MutableStringPiece subdirPath);
 
   void initNewOverlay();
 
@@ -152,6 +170,8 @@ class FsOverlay {
   static constexpr folly::StringPiece kHeaderIdentifierFile{"OVFL"};
   static constexpr uint32_t kHeaderVersion = 1;
   static constexpr size_t kHeaderLength = 64;
+  static constexpr uint32_t kNumShards = 256;
+  static constexpr size_t kShardDirPathLength = 2;
 
   /**
    * The number of digits required for a decimal representation of an

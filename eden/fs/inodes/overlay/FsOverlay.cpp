@@ -65,20 +65,28 @@ constexpr folly::StringPiece FsOverlay::kHeaderIdentifierDir;
 constexpr folly::StringPiece FsOverlay::kHeaderIdentifierFile;
 constexpr uint32_t FsOverlay::kHeaderVersion;
 constexpr size_t FsOverlay::kHeaderLength;
+constexpr uint32_t FsOverlay::kNumShards;
 
 static void doFormatSubdirPath(
-    MutableStringPiece subdirPath,
-    uint64_t inodeNum) {
+    uint64_t inodeNum,
+    MutableStringPiece subdirPath) {
   constexpr char hexdigit[] = "0123456789abcdef";
-  DCHECK_EQ(subdirPath.size(), 2);
+  DCHECK_EQ(subdirPath.size(), FsOverlay::kShardDirPathLength);
   subdirPath[0] = hexdigit[(inodeNum >> 4) & 0xf];
   subdirPath[1] = hexdigit[inodeNum & 0xf];
 }
 
 void FsOverlay::formatSubdirPath(
-    MutableStringPiece subdirPath,
-    InodeNumber inodeNum) {
-  return doFormatSubdirPath(subdirPath, inodeNum.get());
+    InodeNumber inodeNum,
+    MutableStringPiece subdirPath) {
+  return doFormatSubdirPath(inodeNum.get(), subdirPath);
+}
+
+void FsOverlay::formatSubdirShardPath(
+    ShardID shardID,
+    MutableStringPiece subdirPath) {
+  DCHECK_LE(shardID, 0xff);
+  return doFormatSubdirPath(shardID, subdirPath);
 }
 
 std::optional<InodeNumber> FsOverlay::initOverlay(bool createIfNonExisting) {
@@ -236,9 +244,9 @@ InodeNumber FsOverlay::scanForNextInodeNumber() {
   // Look through the subdirectories and increment maxInode based on the
   // filenames we see.  This is needed in case there are unlinked inodes
   // present.
-  std::array<char, 2> subdir;
-  for (uint64_t n = 0; n < 256; ++n) {
-    doFormatSubdirPath(MutableStringPiece{subdir.data(), subdir.size()}, n);
+  std::array<char, kShardDirPathLength> subdir;
+  for (ShardID n = 0; n < kNumShards; ++n) {
+    formatSubdirShardPath(n, MutableStringPiece{subdir.data(), subdir.size()});
     auto subdirPath = localDir_ +
         PathComponentPiece{StringPiece{subdir.data(), subdir.size()}};
 
@@ -299,10 +307,11 @@ void FsOverlay::initNewOverlay() {
 
   // We split the inode files across 256 subdirectories.
   // Populate these subdirectories now.
-  std::array<char, 3> subdirPath;
-  subdirPath[2] = '\0';
-  for (uint64_t n = 0; n < 256; ++n) {
-    doFormatSubdirPath(MutableStringPiece{subdirPath.data(), 2}, n);
+  std::array<char, kShardDirPathLength + 1> subdirPath;
+  subdirPath[kShardDirPathLength] = '\0';
+  MutableStringPiece subdirStringPiece{subdirPath.data(), kShardDirPathLength};
+  for (ShardID n = 0; n < kNumShards; ++n) {
+    formatSubdirShardPath(n, subdirStringPiece);
     result = ::mkdirat(localDirFile.fd(), subdirPath.data(), 0755);
     if (result != 0 && errno != EEXIST) {
       folly::throwSystemError(
@@ -355,12 +364,15 @@ void FsOverlay::saveOverlayDir(
 InodePath FsOverlay::getFilePath(InodeNumber inodeNumber) {
   InodePath outPath;
   auto& outPathArray = outPath.rawData();
-  formatSubdirPath(MutableStringPiece{outPathArray.data(), 2}, inodeNumber);
-  outPathArray[2] = '/';
-  auto index =
-      folly::uint64ToBufferUnsafe(inodeNumber.get(), outPathArray.data() + 3);
-  DCHECK_LT(index + 3, outPathArray.size());
-  outPathArray[index + 3] = '\0';
+  formatSubdirPath(
+      inodeNumber,
+      MutableStringPiece{outPathArray.data(), kShardDirPathLength});
+  outPathArray[kShardDirPathLength] = '/';
+  auto numberPathStart = kShardDirPathLength + 1;
+  auto index = folly::uint64ToBufferUnsafe(
+      inodeNumber.get(), outPathArray.data() + numberPathStart);
+  DCHECK_LT(index + numberPathStart, outPathArray.size());
+  outPathArray[index + numberPathStart] = '\0';
   return outPath;
 }
 
