@@ -8,7 +8,7 @@
 
 use std::{
     collections::BTreeMap,
-    convert::{Into, TryFrom, TryInto},
+    convert::{Into, TryFrom},
     str,
 };
 
@@ -21,13 +21,11 @@ use serde_derive::{Deserialize, Serialize};
 use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
 };
-use blobrepo::HgBlobChangeset;
+use blobrepo::{BlobRepo, HgBlobChangeset};
 use context::CoreContext;
 use futures::prelude::*;
-use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::hash::Sha1;
-use mercurial_types::manifest::Content;
-use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, HgEntryId, Type};
 use mononoke_types::RepositoryId;
 
 use crate::cache::CacheManager;
@@ -119,7 +117,7 @@ impl EntryWithSizeAndContentHash {
 
     pub fn materialize_future(
         ctx: CoreContext,
-        repoid: RepositoryId,
+        repo: BlobRepo,
         entry: Box<dyn HgEntry + Sync>,
         cache: Option<CacheManager>,
     ) -> BoxFuture<Self, Error> {
@@ -129,51 +127,44 @@ impl EntryWithSizeAndContentHash {
             .ok_or_else(|| err_msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
         let name = try_boxfuture!(String::from_utf8(Vec::from(name.as_ref())));
+
+        let entry = entry.get_hash();
         let r#type: FileType = entry.get_type().into();
-        let hash = entry.get_hash().to_hex();
 
-        let cache_key = Self::get_cache_key(repoid, hash.as_str());
+        let hash = entry.to_hex();
+        let cache_key = Self::get_cache_key(repo.get_repoid(), hash.as_str());
 
-        // this future computes SHA1 based on content
-        let future = spawn_future(entry.get_content(ctx).and_then({
-            cloned!(name, r#type, hash);
-            move |content| {
-                let inner = match content {
-                    Content::File(stream)
-                    | Content::Executable(stream)
-                    | Content::Symlink(stream) => {
-                        // TODO (T47717165): Use a streaming implementation / get sha in filestore
-                        stream
-                            .concat2()
-                            .map(|file_bytes| {
-                                let bytes = file_bytes.into_bytes();
-
-                                // NOTE: This will only panic with a buffer whose length doesn't
-                                // fit in 64 bits. We don't care to support this.
-                                let size: u64 = bytes.len().try_into().unwrap();
-
-                                let sha1 = Sha1::from(bytes.as_ref());
-                                let sha1 = sha1.to_hex().to_string();
-
-                                (Some(size), Some(sha1))
-                            })
-                            .left_future()
+        let future = match entry {
+            HgEntryId::Manifest(manifestid) => repo
+                .get_manifest_by_nodeid(ctx, manifestid)
+                .map({
+                    cloned!(name, hash);
+                    move |manifest| EntryWithSizeAndContentHash {
+                        name,
+                        r#type: FileType::Tree,
+                        hash: hash.to_string(),
+                        size: Some(manifest.list().count() as u64),
+                        content_sha1: None,
                     }
-                    Content::Tree(manifest) => {
-                        let size = manifest.list().count() as u64;
-                        Ok((Some(size), None)).into_future().right_future()
-                    }
-                };
-
-                inner.map(move |(size, content_sha1)| EntryWithSizeAndContentHash {
-                    name,
-                    r#type,
-                    hash: hash.to_string(),
-                    size,
-                    content_sha1,
                 })
-            }
-        }));
+                .left_future(),
+            HgEntryId::File(_, nodeid) => repo
+                .clone()
+                .get_file_content_id(ctx.clone(), nodeid)
+                .and_then(move |content_id| repo.get_file_content_metadata(ctx, content_id))
+                .map(|metadata| (metadata.total_size, metadata.sha1))
+                .map({
+                    cloned!(r#type, name);
+                    move |(size, sha1)| EntryWithSizeAndContentHash {
+                        name,
+                        r#type,
+                        hash: nodeid.to_string(),
+                        size: Some(size),
+                        content_sha1: Some(sha1.to_hex().to_string()),
+                    }
+                })
+                .right_future(),
+        };
 
         if let Some(cache) = cache {
             cache

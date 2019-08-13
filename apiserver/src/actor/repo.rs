@@ -300,17 +300,16 @@ impl MononokeRepo {
         STATS::get_tree.add_value(1);
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
-        let repoid = self.repo.get_repoid();
 
         self.repo
             .get_manifest_by_nodeid(ctx.clone(), treemanifestid)
             .map({
-                cloned!(self.cache);
+                cloned!(self.cache, self.repo);
                 move |tree| {
                     join_all(tree.list().map(move |entry| {
                         EntryWithSizeAndContentHash::materialize_future(
                             ctx.clone(),
-                            repoid.clone(),
+                            repo.clone(),
                             entry,
                             cache.clone(),
                         )

@@ -26,7 +26,7 @@ use mercurial_types::{
     calculate_hg_node_id, FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId,
     HgNodeHash, HgParents, MPath, MPathElement,
 };
-use mononoke_types::{hash::Sha256, ContentId};
+use mononoke_types::{hash::Sha256, ContentId, ContentMetadata};
 use repo_blobstore::RepoBlobstore;
 
 #[derive(Clone)]
@@ -134,16 +134,23 @@ pub fn fetch_file_content_id_from_blobstore(
     fetch_file_envelope(ctx, blobstore, node_id).map({ |envelope| envelope.content_id() })
 }
 
+pub fn fetch_file_metadata_from_blobstore(
+    ctx: CoreContext,
+    blobstore: &RepoBlobstore,
+    content_id: ContentId,
+) -> impl Future<Item = ContentMetadata, Error = Error> {
+    filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
+        .and_then(move |aliases| aliases.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+        .context("While fetching content metadata")
+        .from_err()
+}
+
 pub fn fetch_file_content_sha256_from_blobstore(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
     content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
-    filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .and_then(move |aliases| aliases.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-        .context("While fetching content metadata")
-        .from_err()
-        .map(|metadata| metadata.sha256)
+    fetch_file_metadata_from_blobstore(ctx, blobstore, content_id).map(|metadata| metadata.sha256)
 }
 
 pub fn fetch_file_parents_from_blobstore(

@@ -11,8 +11,9 @@ use crate::errors::*;
 use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
-    fetch_file_parents_from_blobstore, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
-    get_rename_from_envelope, HgBlobEntry,
+    fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
+    fetch_file_size_from_blobstore, fetch_raw_filenode_bytes, get_rename_from_envelope,
+    HgBlobEntry,
 };
 use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
@@ -308,6 +309,14 @@ impl BlobRepo {
         key: HgFileNodeId,
     ) -> BoxFuture<ContentId, Error> {
         fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key).boxify()
+    }
+
+    pub fn get_file_content_metadata(
+        &self,
+        ctx: CoreContext,
+        key: ContentId,
+    ) -> BoxFuture<ContentMetadata, Error> {
+        fetch_file_metadata_from_blobstore(ctx, &self.blobstore, key).boxify()
     }
 
     pub fn get_file_content_id_by_sha256(
