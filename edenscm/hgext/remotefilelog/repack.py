@@ -89,11 +89,11 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
         return
 
     # In the case of a loose-only repack, fallback to Python, as Rust doesn't support them.
-    if options and options.get(constants.OPTION_LOOSEONLY):
+    if options.get(constants.OPTION_LOOSEONLY):
         return pythonrepack(repo, options, packpath, incremental)
 
     # Similarly, if a loose+pack repack is requested, let's first run the loose-only Python repack.
-    if options and not options.get(constants.OPTION_PACKSONLY):
+    if not options.get(constants.OPTION_PACKSONLY):
         newoptions = dict(options)
         newoptions[constants.OPTION_LOOSEONLY] = True
         pythonrepack(repo, newoptions, packpath, incremental)
@@ -273,8 +273,10 @@ def _manifestrepack(repo, options, incremental):
 
 
 def _dorepack(repo, options, incremental):
-    if options:
-        options["incremental"] = incremental
+    if options is None:
+        options = {}
+
+    options["incremental"] = incremental
 
     try:
         mask = os.umask(0o002)
