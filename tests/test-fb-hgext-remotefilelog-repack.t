@@ -128,8 +128,8 @@
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.dataidx
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.datapack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
@@ -149,8 +149,8 @@
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.dataidx
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.datapack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
@@ -174,8 +174,8 @@
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
-  $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.dataidx
+  $TESTTMP/hgcache/master/packs/78c70662acc13eec7fa17c74b8d324db0bd3620e.datapack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
@@ -186,39 +186,37 @@
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.dataidx
-  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack
+  $TESTTMP/hgcache/master/packs/31644f0145978fff5de678a97e3e302e9d21931d.dataidx
+  $TESTTMP/hgcache/master/packs/31644f0145978fff5de678a97e3e302e9d21931d.datapack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # Test debug commands
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
+  $TESTTMP/hgcache/master/packs/31644f0145978fff5de678a97e3e302e9d21931d:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
-  d4a3ed9310e5  1bb2e6237e03  12            6
-  aee31534993a  d4a3ed9310e5  12            4
+  aee31534993a  000000000000  4             4
+  d4a3ed9310e5  000000000000  6             6
   
-  Total:                      32            18        (77.8% bigger)
+  Total:                      18            18        (0.0% bigger)
   $ hg debugdatapack --long $TESTTMP/hgcache/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
+  $TESTTMP/hgcache/master/packs/31644f0145978fff5de678a97e3e302e9d21931d:
   x:
   Node                                      Delta Base                                Delta Length  Blob Size
   1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  8             8
-  d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  12            6
-  aee31534993a501858fb6dd96a065671922e7d51  d4a3ed9310e5bd9887e3bf779da5077efab28216  12            4
+  aee31534993a501858fb6dd96a065671922e7d51  0000000000000000000000000000000000000000  4             4
+  d4a3ed9310e5bd9887e3bf779da5077efab28216  0000000000000000000000000000000000000000  6             6
   
-  Total:                                                                              32            18        (77.8% bigger)
+  Total:                                                                              18            18        (0.0% bigger)
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack --node-delta d4a3ed9310e5bd9887e3bf779da5077efab28216
-  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
+  $TESTTMP/hgcache/master/packs/31644f0145978fff5de678a97e3e302e9d21931d:
   
   x
   Node                                      Delta Base                                Delta SHA1                                Delta Length
-  d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  77029ab56e83ea2115dd53ff87483682abe5d7ca  12
-  Node                                      Delta Base                                Delta SHA1                                Delta Length
-  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  7ca8c71a64f7b56380e77573da2f7a5fdd2ecdb5  8
+  d4a3ed9310e5bd9887e3bf779da5077efab28216  0000000000000000000000000000000000000000  86e1b96c0167d9d28fe9bd21ea208d21033c869c  6
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx
   
   x
@@ -261,8 +259,8 @@
   2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ hg repack
   $ ls $TESTTMP/hgcache/master/packs
-  e8fdf7ae22b772dcc291f905b9c6e5f381d28739.dataidx
-  e8fdf7ae22b772dcc291f905b9c6e5f381d28739.datapack
+  1b9924fa45d3206101b16b754571b44fef1b0914.dataidx
+  1b9924fa45d3206101b16b754571b44fef1b0914.datapack
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histidx
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histpack
   repacklock
@@ -294,14 +292,14 @@
   $ rm -rf $CACHEDIR/master/packs/*hist*
   $ hg repack
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/a8d86ff8e1a11a77a85f5fea567f56a757583eda:
+  $TESTTMP/hgcache/master/packs/055c02949317b8507cdb7aaf2e00cc00fd0c5716:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
-  d4a3ed9310e5  1bb2e6237e03  12            6
-  aee31534993a  d4a3ed9310e5  12            4
+  aee31534993a  000000000000  4             4
+  d4a3ed9310e5  000000000000  6             6
   
-  Total:                      32            18        (77.8% bigger)
+  Total:                      18            18        (0.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   577959738234  000000000000  70            8
@@ -362,32 +360,23 @@ incremental repacking. As for the history packs, setting repackmaxpacksize to be
   $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=64 \
   > --config remotefilelog.history.repackmaxpacksize=0
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack
-  -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
-  -r--r--r--      67 384bdd4f40c2a4fc8f60ab4612381b9052ebe917.datapack
-  -r--r--r--      65 887690f1138ae5b99c50d754ed02262874bf8ecb.datapack
+  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     254 077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-  -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
-  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
 
 Setting limit for the repackmaxpacksize to be the size of the biggest pack file
 which ensures that it is effectively ignored in the incremental repacking.
   $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=65 \
   > --config remotefilelog.history.repackmaxpacksize=336
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack
-  -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
-  -r--r--r--      67 384bdd4f40c2a4fc8f60ab4612381b9052ebe917.datapack
-  -r--r--r--      65 887690f1138ae5b99c50d754ed02262874bf8ecb.datapack
+  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
 1 gen3 pack, 1 gen0 pack - does nothing
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--     301 09b8bf49256b3fc2175977ba97d6402e91a9a604.datapack
+  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
@@ -424,7 +413,7 @@ Pull should run background repack
   $ sleep 0.5
   $ hg debugwaitonrepack >/dev/null 2>&1
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--     301 09b8bf49256b3fc2175977ba97d6402e91a9a604.datapack
+  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
@@ -462,53 +451,24 @@ Test local remotefilelog blob is correct when based on a pack
 Test limiting the max delta chain length
   $ hg repack --config packs.maxchainlen=1
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.dataidx
-  $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f:
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  1bb2e6237e03  000000000000  8             8
-  d4a3ed9310e5  1bb2e6237e03  12            6
-  aee31534993a  000000000000  4             4
-  1406e7411862  aee31534993a  12            2
-  
-  Total:                      36            20        (80.0% bigger)
+  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812:
   y:
   Node          Delta Base    Delta Length  Blob Size
-  577959738234  000000000000  70            70
+  577959738234  000000000000  70            (missing)
   
-  Total:                      70            70        (0.0% bigger)
+  x:
+  Node          Delta Base    Delta Length  Blob Size
+  1406e7411862  000000000000  2             (missing)
+  aee31534993a  000000000000  4             (missing)
+  d4a3ed9310e5  000000000000  6             (missing)
+  1bb2e6237e03  000000000000  8             (missing)
+  
 
 Test huge pack cleanup using different values of packs.maxpacksize:
   $ hg repack --incremental --debug
   $ hg repack --incremental --debug --config packs.maxpacksize=512
-  removing oversize packfile $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f.datapack (426 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f.dataidx (1.21 KB)
-
-Do a repack where the new pack reuses a delta from the old pack
-  $ clearcache
-  $ hg prefetch -r '2::3'
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
-  $ hg repack
-  $ hg debugdatapack $CACHEDIR/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/abf210f6c3aa4dd0ecc7033633ad73591be16c95:
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  1bb2e6237e03  000000000000  8             8
-  d4a3ed9310e5  1bb2e6237e03  12            6
-  
-  Total:                      20            14        (42.9% bigger)
-  $ hg prefetch -r '0::1'
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
-  $ hg repack
-  $ hg debugdatapack $CACHEDIR/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604:
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  1bb2e6237e03  000000000000  8             8
-  d4a3ed9310e5  1bb2e6237e03  12            6
-  aee31534993a  d4a3ed9310e5  12            4
-  1406e7411862  aee31534993a  12            2
-  
-  Total:                      44            20        (120.0% bigger)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack (390 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx (1.21 KB)
 
 # Test repacking loose files
   $ findfilessorted .hg/store/data
@@ -545,13 +505,11 @@ Do a repack where the new pack reuses a delta from the old pack
   $ findfilessorted .hg/store/packs
   .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histidx
   .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histpack
-  .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.dataidx
-  .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.datapack
+  .hg/store/packs/c048acb992171ba60c7f272a6cd74199e487d3f6.dataidx
+  .hg/store/packs/c048acb992171ba60c7f272a6cd74199e487d3f6.datapack
 
 # incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
   $ hg repack --incremental --debug --config packs.maxpacksize=1
-  removing oversize packfile $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604.datapack (301 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604.dataidx (1.17 KB)
 
 # check the commit data
   $ hg cat -r . new_file
@@ -560,12 +518,12 @@ Do a repack where the new pack reuses a delta from the old pack
 # Verify that temporary datapacks are removed
   $ touch -a -t 201901010000 $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
-  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
+  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
   $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $TESTTMP/hgcache/master/packs/repacklock
   $ hg repack
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
-  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
+  $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
   $TESTTMP/hgcache/master/packs/repacklock

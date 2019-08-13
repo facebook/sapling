@@ -237,10 +237,10 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
+  $TESTTMP/hgcache/master/packs/81474ad80722381ab760fb7ccf400b15e87a0151.dataidx
+  $TESTTMP/hgcache/master/packs/81474ad80722381ab760fb7ccf400b15e87a0151.datapack
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histidx
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
-  $TESTTMP/hgcache/master/packs/faa267575712c2ee0a4ff7e9c09bf75e10055c04.dataidx
-  $TESTTMP/hgcache/master/packs/faa267575712c2ee0a4ff7e9c09bf75e10055c04.datapack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 

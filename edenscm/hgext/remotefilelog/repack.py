@@ -81,7 +81,7 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
 
 
 def _userustrepack(repo):
-    return repo.ui.configbool("remotefilelog", "userustrepack", False)
+    return repo.ui.configbool("remotefilelog", "userustrepack", True)
 
 
 def _runrustrepack(repo, options, packpath, incremental, pythonrepack):

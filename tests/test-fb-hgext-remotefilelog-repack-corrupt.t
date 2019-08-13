@@ -77,10 +77,9 @@ Truncate the historypack file in the middle of the filename length for "y"
 
 Repack
   $ hg repack
-  detected corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
-  detected corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440' - ignoring it
-  cleaning up corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
   $ findfilessorted $CACHEDIR/master
+  $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
+  $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
   $TESTTMP/hgcache/master/packs/4033e474e920b8b5d47d0904080195064445cee8.dataidx
   $TESTTMP/hgcache/master/packs/4033e474e920b8b5d47d0904080195064445cee8.datapack
   $TESTTMP/hgcache/master/packs/8335018efaefd765d52fad1c07f44addc0371202.histidx
@@ -89,6 +88,7 @@ Repack
 
 The history for y has to be refetched from the server.
   $ hg log -f y -T '{desc}\n'
+  deleting corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
   xy2
   xy
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
@@ -113,26 +113,16 @@ Truncate the history in the middle of the filename length for "n"
   $ python $TESTDIR/truncate.py --size 173 .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
 
 Truncate the data in the middle of the filename length for "o"
-  $ chmod +w .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack
-  $ python $TESTDIR/truncate.py --size 290 .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack
+  $ chmod +w .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.datapack
+  $ python $TESTDIR/truncate.py --size 130 .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.datapack
 
 Repack
   $ hg repack
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862'
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318'
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
-  cleaning up corrupt pack '$TESTTMP/shallow/.hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862'
-  cleaning up corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318'
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/810f1fbc77fb7265f92c289887e1dffa39a24b50.histidx
-  .hg/store/packs/810f1fbc77fb7265f92c289887e1dffa39a24b50.histpack
-  .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histidx.corrupt
-  .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack.corrupt
-  .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.dataidx.corrupt
-  .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack.corrupt
-  .hg/store/packs/ca7e26aba72774cccd733102b30cb409a508549b.dataidx
-  .hg/store/packs/ca7e26aba72774cccd733102b30cb409a508549b.datapack
+  .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histidx
+  .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
+  .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.dataidx
+  .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.datapack
 
 The local data and history for m is still available
   $ hg cat m
@@ -149,6 +139,7 @@ The local data for n is still available
 
 The history for n is lost
   $ hg log -qf n
+  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
   abort: error downloading file contents:
   'connection closed early for filename n and node c972a0820002b32c6fec4b7ca47d3aecdad8e1c5'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
@@ -156,11 +147,13 @@ The history for n is lost
 
 The local data and history for o is lost
   $ hg cat -q o
+  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf' - ignoring it
   abort: error downloading file contents:
   'connection closed early for filename o and node fd94f81d01bf8c9d960bb57abdd4e8375309ae43'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
   [255]
   $ hg log -qf o
+  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
   abort: error downloading file contents:
   'connection closed early for filename o and node fd94f81d01bf8c9d960bb57abdd4e8375309ae43'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)

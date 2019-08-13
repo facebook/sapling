@@ -89,8 +89,8 @@
   .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.datapack
   $ hg repack
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/7edafc4e8f1fcf89ce1abe2046a76ffff61d9e18.dataidx
-  .hg/store/packs/7edafc4e8f1fcf89ce1abe2046a76ffff61d9e18.datapack
+  .hg/store/packs/7f818eed999b52efef9b2bb175ef2bd01f7edec6.dataidx
+  .hg/store/packs/7f818eed999b52efef9b2bb175ef2bd01f7edec6.datapack
   .hg/store/packs/ba63ac333b14fd0bac5b28ffcf28c465a6d8e93a.histidx
   .hg/store/packs/ba63ac333b14fd0bac5b28ffcf28c465a6d8e93a.histpack
 
@@ -174,7 +174,7 @@
   (not found)
   .hg/store/packs/35f801efb2af8c02fe003127b71ce4b2083a20e1:
   (not found)
-  .hg/store/packs/7edafc4e8f1fcf89ce1abe2046a76ffff61d9e18:
+  .hg/store/packs/7f818eed999b52efef9b2bb175ef2bd01f7edec6:
   (not found)
   .hg/store/packs/c5539d8d2a5eb7fc3b412e76a12bcd882f797e58:
   \x01 (esc)
