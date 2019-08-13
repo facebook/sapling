@@ -2286,9 +2286,12 @@ class localrepository(object):
                 drop = [f for f in removed if f in m]
                 for f in drop:
                     del m[f]
-                mn = mctx.write(
-                    trp, linkrev, p1.manifestnode(), p2.manifestnode(), added, drop
-                )
+                if added or drop:
+                    mn = mctx.write(
+                        trp, linkrev, p1.manifestnode(), p2.manifestnode(), added, drop
+                    )
+                else:
+                    mn = p1.manifestnode()
                 files = changed + removed
             else:
                 mn = p1.manifestnode()

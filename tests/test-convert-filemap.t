@@ -569,7 +569,7 @@ example because filemap changed.
   converting...
   0 3
   $ hg -R .-hg log -G -T '{shortest(node)} {desc}\n{files % "- {file}\n"}\n'
-  o    e9ed 3
+  o    bbfe 3
   |\
   | o  33a0 2
   | |  - f

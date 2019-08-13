@@ -40,4 +40,4 @@ Create an empty commit with a misconstructed memctx in the same transaction as a
   >         ).commit()
   > EOF
   $ hg repro --config extensions.repro="$TESTTMP/repro.py" 2>&1 | grep SystemError
-  SystemError: Rust panic
+  [1]
