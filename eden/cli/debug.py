@@ -46,6 +46,7 @@ from facebook.eden.ttypes import (
 from . import cmd_util, stats_print, subcmd as subcmd_mod, ui as ui_mod
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
+from .util import split_inodes_by_operation_type
 
 
 debug_cmd = subcmd_mod.Decorator()
@@ -393,6 +394,53 @@ class InodeCmd(Subcmd):
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
             _print_inode_info(inode_info, out)
+        return 0
+
+
+@debug_cmd("file_stats", "Show data about loaded and written files")
+class FileStatsCMD(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("path", help="The path to the eden mount point")
+        parser.add_argument(
+            "--reads-output", help="File to store the stats about read files"
+        )
+        parser.add_argument(
+            "--writes-output", help="File to store the stats about written files"
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        request_root = args.path
+        reads_output = args.reads_output
+        writes_output = args.writes_output
+        instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
+
+        with instance.get_thrift_client() as client:
+            inode_results = client.debugInodeStatus(
+                bytes(checkout.path), bytes(rel_path)
+            )
+
+        read_files, written_files = split_inodes_by_operation_type(inode_results)
+
+        if reads_output:
+            with open(reads_output, "w") as f:
+                for path in read_files:
+                    f.write(path)
+                    f.write("\n")
+        else:
+            print("READ FILES")
+            print(*read_files, sep="\n")
+
+        if not reads_output and read_files and not writes_output and written_files:
+            print()
+
+        if writes_output:
+            with open(writes_output, "w") as f:
+                for path in written_files:
+                    f.write(path)
+                    f.write("\n")
+        else:
+            print("WRITTEN FILES")
+            print(*written_files, sep="\n")
         return 0
 
 

@@ -11,6 +11,7 @@ import getpass
 import json
 import os
 import random
+import stat
 import subprocess
 import sys
 import time
@@ -20,6 +21,7 @@ from typing import Any, Callable, List, Optional, TypeVar, Union
 
 import eden.thrift
 import thrift.transport
+from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
@@ -491,3 +493,26 @@ def get_eden_mount_name(path_arg: str) -> str:
 
 def get_username() -> str:
     return getpass.getuser()
+
+
+class LoadedNode(typing.NamedTuple):
+    path: str
+    is_write: bool
+
+
+def split_inodes_by_operation_type(
+    inode_results: typing.Sequence[TreeInodeDebugInfo]
+) -> typing.Tuple[typing.List[str], typing.List[str]]:
+    loaded_node_info = [
+        LoadedNode(
+            path=os.path.join(os.fsdecode(tree.path), os.fsdecode(n.name)),
+            is_write=n.materialized or not n.hash,
+        )
+        for tree in inode_results
+        for n in tree.entries
+        if n.loaded and stat.S_IFMT(n.mode) == stat.S_IFREG
+    ]
+
+    read_files = [o.path for o in loaded_node_info if not o.is_write]
+    written_files = [o.path for o in loaded_node_info if o.is_write]
+    return read_files, written_files
