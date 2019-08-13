@@ -85,9 +85,6 @@ def _userustrepack(repo):
 
 
 def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
-    if not os.path.isdir(packpath):
-        return
-
     # In the case of a loose-only repack, fallback to Python, as Rust doesn't support them.
     if options.get(constants.OPTION_LOOSEONLY):
         return pythonrepack(repo, options, packpath, incremental)
@@ -97,6 +94,9 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
         newoptions = dict(options)
         newoptions[constants.OPTION_LOOSEONLY] = True
         pythonrepack(repo, newoptions, packpath, incremental)
+
+    if not os.path.isdir(packpath):
+        return
 
     failed = False
 
