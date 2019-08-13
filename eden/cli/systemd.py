@@ -458,7 +458,7 @@ class SystemdUserBus:
         # [1] https://github.com/systemd/systemd/blob/78a562ee4bcbc7b0e8b58b475ff656f646e95e40/src/shared/bus-util.c#L594
         socket_path = pathlib.Path(xdg_runtime_dir) / "systemd" / "private"
         return pystemd.dbuslib.DBusAddress(  # pyre-ignore[16]: T32805591
-            b"unix:path=" + escape_dbus_address(bytes(socket_path))
+            b"unix:path=" + escape_dbus_address(bytes(socket_path)), peer_to_peer=True
         )
 
     def open(self) -> None:
