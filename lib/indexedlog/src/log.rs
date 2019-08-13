@@ -164,11 +164,6 @@ pub enum ChecksumType {
     /// Choose xxhash64 or xxhash32 automatically based on data size.
     Auto,
 
-    /// No checksum. Suitable for data that have their own checksum logic.
-    /// For example, source control commit data might have SHA1 that can
-    /// verify themselves.
-    None,
-
     /// Use xxhash64 checksum algorithm. Efficient on 64bit platforms.
     Xxhash64,
 
@@ -357,7 +352,6 @@ impl Log {
         // extending the entry type.
         let mut entry_flags = 0;
         entry_flags |= match checksum_type {
-            ChecksumType::None => 0,
             ChecksumType::Xxhash64 => ENTRY_FLAG_HAS_XXHASH64,
             ChecksumType::Xxhash32 => ENTRY_FLAG_HAS_XXHASH32,
             ChecksumType::Auto => unreachable!(),
@@ -367,7 +361,6 @@ impl Log {
         self.mem_buf.write_vlq(data.len())?;
 
         match checksum_type {
-            ChecksumType::None => (),
             ChecksumType::Xxhash64 => {
                 self.mem_buf.write_u64::<LittleEndian>(xxhash(data))?;
             }
@@ -1051,7 +1044,6 @@ impl Log {
         // Depends on entry_flags, some of them have a checksum field.
         let checksum_flags = entry_flags & (ENTRY_FLAG_HAS_XXHASH64 | ENTRY_FLAG_HAS_XXHASH32);
         let (checksum, offset) = match checksum_flags {
-            0 => (0, offset),
             ENTRY_FLAG_HAS_XXHASH64 => {
                 let checksum = LittleEndian::read_u64(
                     &buf.get(offset as usize..offset as usize + 8)
@@ -1072,7 +1064,7 @@ impl Log {
             }
             _ => {
                 return Err(data_error(format!(
-                    "entry at {} cannot have multiple checksums",
+                    "entry at {} has malformed checksum metadata",
                     offset
                 )));
             }
@@ -1711,11 +1703,6 @@ mod tests {
         expected.push(long_bytes.clone());
         log.sync().unwrap();
 
-        let mut log = open(ChecksumType::None);
-        log.append(&short_bytes).unwrap();
-        expected.push(short_bytes.clone());
-        log.sync().unwrap();
-
         let mut log = open(ChecksumType::Xxhash32);
         log.append(&long_bytes).unwrap();
         expected.push(long_bytes.clone());
@@ -1733,7 +1720,7 @@ mod tests {
         );
 
         // Reload and verify
-        assert_eq!(log.sync().unwrap(), 508);
+        assert_eq!(log.sync().unwrap(), 486);
 
         let log = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(
@@ -2272,6 +2259,37 @@ mod tests {
         unsafe { log.repair() }.unwrap();
         let meta_after = LogMetadata::read_file(dir.path().join(META_FILE)).unwrap();
         assert_eq!(meta_before, meta_after);
+    }
+
+    #[test]
+    fn test_zero_data() {
+        // Emulating the case where meta was written, but log was zeroed out.
+        // This should be captured by checksums.
+        let dir = tempdir().unwrap();
+        let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+        log.append(b"abcd").unwrap();
+        log.flush().unwrap();
+
+        let len_before = dir.path().join(PRIMARY_FILE).metadata().unwrap().len();
+        log.append(b"efgh").unwrap();
+        log.flush().unwrap();
+
+        let len_after = dir.path().join(PRIMARY_FILE).metadata().unwrap().len();
+
+        // Zero-out the second entry
+        {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .read(true)
+                .open(dir.path().join(PRIMARY_FILE))
+                .unwrap();
+            file.seek(SeekFrom::Start(len_before)).unwrap();
+            file.write_all(&vec![0; (len_after - len_before) as usize])
+                .unwrap();
+        }
+
+        let log = Log::open(dir.path(), Vec::new()).unwrap();
+        assert!(log.iter().any(|e| e.is_err()));
     }
 
     quickcheck! {

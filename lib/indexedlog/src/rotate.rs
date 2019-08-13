@@ -491,7 +491,7 @@ mod tests {
         assert!(OpenOptions::new().create(false).open(&path).is_err());
         assert!(OpenOptions::new().create(true).open(&path).is_ok());
         assert!(OpenOptions::new()
-            .checksum_type(log::ChecksumType::None)
+            .checksum_type(log::ChecksumType::Xxhash64)
             .create(false)
             .open(&path)
             .is_ok());
