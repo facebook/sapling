@@ -271,6 +271,22 @@ TEST(Fsck, testNoErrors) {
   checker.scanForErrors();
   EXPECT_EQ(0, checker.getErrors().size());
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
+
+  // Test path computation
+  EXPECT_EQ("src", checker.computePath(layout.src.number()).toString());
+  EXPECT_EQ(
+      "src/foo/x/y/z.txt",
+      checker.computePath(layout.src_foo_x_y_zTxt.number()).toString());
+  EXPECT_EQ(
+      "src/foo/x/y/z.txt",
+      checker
+          .computePath(
+              layout.src_foo_x_y.number(), layout.src_foo_x_y_zTxt.number())
+          .toString());
+  EXPECT_EQ(
+      "src/foo/x/y/another_child.txt",
+      checker.computePath(layout.src_foo_x_y.number(), "another_child.txt"_pc)
+          .toString());
 }
 
 TEST(Fsck, testMissingNextInodeNumber) {
@@ -340,6 +356,14 @@ TEST(Fsck, testTruncatedDirData) {
           folly::to<string>("found orphan inode ", layout.src_foo.number()),
           folly::to<string>(
               "found orphan inode ", layout.src_todoTxt.number())));
+
+  // Test path computation for one of the orphaned inodes
+  EXPECT_EQ(
+      folly::to<string>(
+          "[unlinked(", layout.src_foo.number(), ")]/x/y/another_child.txt"),
+      checker.computePath(layout.src_foo_x_y.number(), "another_child.txt"_pc)
+          .toString());
+
   overlay->fs().close(checker.getNextInodeNumber());
 }
 
@@ -382,7 +406,7 @@ TEST(Fsck, testHardLink) {
           "found hard linked inode ",
           layout.src_foo_x_y_zTxt.number(),
           ":\n",
-          "- TODO\n",
-          "- TODO")));
+          "- src/foo/also_z.txt\n",
+          "- src/foo/x/y/z.txt")));
   overlay->fs().close(checker.getNextInodeNumber());
 }

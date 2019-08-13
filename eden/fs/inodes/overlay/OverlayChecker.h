@@ -84,6 +84,46 @@ class OverlayChecker {
     return InodeNumber(maxInodeNumber_ + 1);
   }
 
+  /**
+   * A structure to represent best-effort computed paths for inodes.
+   *
+   * We cannot always compute the full path to some inodes if some of their
+   * ancestors have been unlinked or orphaned.
+   *
+   * If we can compute the full path to an inode, parent will be kRootNodeId.
+   * Otherwise, parent will be the inode number for the first ancestor that is
+   * unlinked or orphaned (such that we cannot determine its path).
+   *
+   * path will be the path to this inode, relative to parent.
+   * path may be empty if computePath() was called on an orphaned inode.
+   */
+  struct PathInfo {
+    explicit PathInfo(InodeNumber number) : parent(number) {}
+    explicit PathInfo(const PathInfo& parentInfo, PathComponentPiece child)
+        : parent(parentInfo.parent), path(parentInfo.path + child) {}
+
+    std::string toString() const;
+
+    InodeNumber parent{kRootNodeId};
+    RelativePath path;
+  };
+
+  /**
+   * Compute the path to a given inode.
+   *
+   * scanForErrors() must have been called first to scan the inode data.
+   */
+  PathInfo computePath(InodeNumber number);
+  PathInfo computePath(InodeNumber parent, PathComponentPiece child);
+
+  /**
+   * Compute the path to a given child inode number in a parent directory.
+   *
+   * This version is primarily useful only when there are hard links and you
+   * wish to identify a specific path to the linked child inode.
+   */
+  PathInfo computePath(InodeNumber parent, InodeNumber child);
+
  private:
   class ShardDirectoryEnumerationError;
   class UnexpectedOverlayFile;
@@ -115,10 +155,10 @@ class OverlayChecker {
   OverlayChecker(OverlayChecker const&) = delete;
   OverlayChecker& operator=(OverlayChecker const&) = delete;
 
-  // Compute the path to a given child inode number in a parent directory
-  RelativePath computePath(InodeNumber parent, PathComponentPiece child) const;
-  // Compute the path to a given child inode number in a parent directory
-  RelativePath computePath(InodeNumber parent, InodeNumber child) const;
+  PathInfo computePath(const InodeInfo& info);
+  PathComponent findChildName(const InodeInfo& parentInfo, InodeNumber child);
+  template <typename Fn>
+  PathInfo cachedPathComputation(InodeNumber number, Fn&& fn);
 
   using ShardID = uint32_t;
   void readInodes();
@@ -148,6 +188,8 @@ class OverlayChecker {
   std::unordered_map<InodeNumber, std::unique_ptr<InodeInfo>> inodes_;
   std::vector<std::unique_ptr<Error>> errors_;
   uint64_t maxInodeNumber_{0};
+
+  std::unordered_map<InodeNumber, PathInfo> pathCache_;
 };
 
 } // namespace eden

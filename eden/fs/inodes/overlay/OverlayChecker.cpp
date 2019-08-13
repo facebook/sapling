@@ -115,7 +115,7 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
         " inode ",
         childInfo_.inodeNumber,
         " (",
-        path,
+        path.toString(),
         ")");
   }
 
@@ -151,7 +151,7 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
   string getMessage(OverlayChecker* checker) const override {
     auto msg = folly::to<string>("found hard linked inode ", number_, ":");
     for (auto parent : parents_) {
-      msg += "\n- " + checker->computePath(parent, number_).value();
+      msg += "\n- " + checker->computePath(parent, number_).toString();
     }
     return msg;
   }
@@ -215,22 +215,103 @@ void OverlayChecker::logErrors() {
   }
 }
 
-RelativePath OverlayChecker::computePath(
-    InodeNumber parent,
-    PathComponentPiece child) const {
+std::string OverlayChecker::PathInfo::toString() const {
   if (parent == kRootNodeId) {
-    return RelativePath(child);
+    return path.value();
   }
-
-  // TODO
-  return RelativePath("TODO");
+  return folly::to<string>("[unlinked(", parent.get(), ")]/", path.value());
 }
 
-RelativePath OverlayChecker::computePath(
-    InodeNumber /* parent */,
-    InodeNumber /* child */) const {
-  // TODO
-  return RelativePath("TODO");
+template <typename Fn>
+OverlayChecker::PathInfo OverlayChecker::cachedPathComputation(
+    InodeNumber number,
+    Fn&& fn) {
+  if (number == kRootNodeId) {
+    return PathInfo(kRootNodeId);
+  }
+  auto cacheIter = pathCache_.find(number);
+  if (cacheIter != pathCache_.end()) {
+    return cacheIter->second;
+  }
+
+  auto result = fn();
+  pathCache_.emplace(number, result);
+  return result;
+}
+
+OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {
+  return cachedPathComputation(number, [&]() {
+    auto iter = inodes_.find(number);
+    if (iter == inodes_.end()) {
+      // We don't normally expect computePath() to be called on unknown inode
+      // numbers.
+      XLOG(WARN) << "computePath() called on unknown inode " << number;
+      return PathInfo(number);
+    } else if (iter->second->parents.empty()) {
+      // This inode is unlinked/orphaned
+      return PathInfo(number);
+    } else {
+      auto parentNumber = InodeNumber(iter->second->parents[0]);
+      return computePath(parentNumber, number);
+    }
+  });
+}
+
+OverlayChecker::PathInfo OverlayChecker::computePath(const InodeInfo& info) {
+  return cachedPathComputation(info.number, [&]() {
+    if (info.parents.empty()) {
+      return PathInfo(info.number);
+    } else {
+      return computePath(InodeNumber(info.parents[0]), info.number);
+    }
+  });
+}
+
+OverlayChecker::PathInfo OverlayChecker::computePath(
+    InodeNumber parent,
+    PathComponentPiece child) {
+  return PathInfo(computePath(parent), child);
+}
+
+OverlayChecker::PathInfo OverlayChecker::computePath(
+    InodeNumber parent,
+    InodeNumber child) {
+  auto iter = inodes_.find(parent);
+  if (iter == inodes_.end()) {
+    // This shouldn't ever happen unless we have a bug in the fsck code somehow.
+    // The parent relationships are only set up if we found both inodes.
+    XLOG(DFATAL) << "bug in fsck code: previously found parent " << parent
+                 << " of " << child << " but can no longer find parent";
+    return PathInfo(child);
+  }
+
+  const auto& parentInfo = *(iter->second);
+  auto childName = findChildName(parentInfo, child);
+  return PathInfo(computePath(parentInfo), childName);
+}
+
+PathComponent OverlayChecker::findChildName(
+    const InodeInfo& parentInfo,
+    InodeNumber child) {
+  // We just scan through all of the parents children to find the matching
+  // entry.  While we could build a full map of children information during
+  // linkInodeChildren(), we only need this information when we actually find an
+  // error, which is hopefully rare.  Therefore we avoid doing as much work as
+  // possible during linkInodeChildren(), at the cost of doing extra work here
+  // if we do actually need to compute paths.
+  for (const auto& entry : parentInfo.children.entries) {
+    if (static_cast<uint64_t>(entry.second.inodeNumber) == child.get()) {
+      return PathComponent(entry.first);
+    }
+  }
+
+  // This shouldn't ever happen unless we have a bug in the fsck code somehow.
+  // We should only get here if linkInodeChildren() found a parent-child
+  // relationship between these two inodes, and that relationship shouldn't ever
+  // change during the fsck run.
+  XLOG(DFATAL) << "bug in fsck code: cannot find child " << child
+               << " in directory listing of parent " << parentInfo.number;
+  return PathComponent(folly::to<string>("[missing_child(", child, ")]"));
 }
 
 void OverlayChecker::readInodes() {
