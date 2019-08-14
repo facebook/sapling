@@ -785,7 +785,7 @@ class dirstate(object):
         self._dirty = False
 
     def _dirignore(self, f):
-        if f == ".":
+        if f == "":
             return False
         visitdir = self._ignore.visitdir
         if visitdir(f) == "all":
