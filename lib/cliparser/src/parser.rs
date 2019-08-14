@@ -188,15 +188,21 @@ impl From<&str> for Value {
     }
 }
 
+impl From<String> for Value {
+    fn from(v: String) -> Self {
+        Value::Str(v)
+    }
+}
+
 impl From<&[&str]> for Value {
     fn from(v: &[&str]) -> Self {
         Value::List(v.iter().map(|s| s.to_string()).collect())
     }
 }
 
-impl From<()> for Value {
-    fn from(_: ()) -> Self {
-        Value::List(Vec::new())
+impl From<Vec<String>> for Value {
+    fn from(v: Vec<String>) -> Self {
+        Value::List(v)
     }
 }
 

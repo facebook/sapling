@@ -45,6 +45,16 @@ macro_rules! _define_flags_impl {
     // Match a field like:
     //
     //    /// description
+    //    name: type,
+    ( [ #[doc=$doc:expr] $field:ident : $type:ty, $($rest:tt)* ] [ $( $parsed:tt )* ] $tail:tt ) => {
+        $crate::_define_flags_impl!( [ $( $rest )* ]
+                                     [ $( $parsed )* (' ', $field, $doc, $type, (<$type>::default())) ]
+                                     $tail);
+    };
+
+    // Match a field like:
+    //
+    //    /// description
     //    name: type = default,
     ( [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ] [ $( $parsed:tt )* ] $tail:tt ) => {
         $crate::_define_flags_impl!( [ $( $rest )* ]
@@ -60,6 +70,9 @@ mod tests {
             /// bool value
             boo: bool = true,
 
+            /// foo
+            foo: bool,
+
             /// int value
             count: i64 = 12,
 
@@ -67,7 +80,7 @@ mod tests {
             name: String = "alice",
 
             /// revisions
-            rev: Vec<String> = (),
+            rev: Vec<String>,
         }
     }
 
@@ -78,9 +91,10 @@ mod tests {
         let flags = TestOptions::flags();
         let expected: Vec<Flag> = vec![
             (None, "boo", "bool value", Value::from(true)),
+            (None, "foo", "foo", Value::from(false)),
             (None, "count", "int value", Value::from(12)),
             (None, "name", "name", Value::from("alice")),
-            (None, "rev", "revisions", Value::from(())),
+            (None, "rev", "revisions", Value::from(Vec::new())),
         ]
         .into_iter()
         .map(Into::into)
@@ -106,6 +120,7 @@ mod tests {
             .unwrap();
         let parsed = TestOptions::from(parsed);
         assert_eq!(parsed.boo, false);
+        assert_eq!(parsed.foo, false);
         assert_eq!(parsed.count, 12);
         assert_eq!(parsed.name, "bob");
         assert_eq!(parsed.rev, vec!["b", "a"]);
