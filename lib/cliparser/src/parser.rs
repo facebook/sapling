@@ -194,6 +194,12 @@ impl From<&[&str]> for Value {
     }
 }
 
+impl From<()> for Value {
+    fn from(_: ()) -> Self {
+        Value::List(Vec::new())
+    }
+}
+
 /// [`Flag`] defines a command line flag, including:
 ///
 /// - Optional short flag name
@@ -276,6 +282,11 @@ impl ToPyObject for Flag {
             .to_py_object(py)
             .into_object()
     }
+}
+
+/// Get flag definitions from a struct. Used by `define_flags!` macro.
+pub trait StructFlags {
+    fn flags() -> Vec<Flag>;
 }
 
 pub struct ParseOptions {
