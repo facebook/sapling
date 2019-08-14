@@ -681,8 +681,12 @@ impl ParseOutput {
         }
     }
 
-    pub fn get<T: From<Value>>(&self, long_name: &str) -> Option<T> {
-        self.opts.get(long_name).cloned().map(Into::into)
+    /// Get parsed value by name.
+    ///
+    /// The callsite must make sure the name and type are correct (i.e. they
+    /// were provided by `ParseOptions::flags).
+    pub fn pick<T: From<Value>>(&self, long_name: &str) -> T {
+        self.opts.get(long_name).cloned().map(Into::into).unwrap()
     }
 
     pub fn opts(&self) -> &HashMap<String, Value> {
@@ -865,7 +869,7 @@ mod tests {
 
         assert_eq!(result.first_arg_index(), 4);
 
-        let list: Vec<String> = result.get("number").unwrap();
+        let list: Vec<String> = result.pick("number");
 
         assert_eq!(list, vec!["60", "59", "3"]);
     }
@@ -884,7 +888,7 @@ mod tests {
 
         assert_eq!(result.first_arg_index(), 7);
 
-        let list: Vec<String> = result.get("number").unwrap();
+        let list: Vec<String> = result.pick("number");
 
         assert_eq!(list, vec!["60", "59", "3", "5"]);
     }
@@ -897,7 +901,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let config_path: Vec<String> = result.get("config").unwrap();
+        let config_path: Vec<String> = result.pick("config");
 
         assert!(result.opts.get("quiet").is_some());
         assert!(result.opts.get("help").is_some());
@@ -914,11 +918,11 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let config_path: Vec<String> = result.get("config").unwrap();
+        let config_path: Vec<String> = result.pick("config");
 
-        assert!(result.get::<Value>("quiet").is_some());
-        assert!(result.get::<Value>("help").is_some());
-        assert!(result.get::<Value>("verbose").is_some());
+        result.pick::<Value>("quiet");
+        result.pick::<Value>("help");
+        result.pick::<Value>("verbose");
 
         assert_eq!(config_path[0], "qhv".to_string());
     }
@@ -931,9 +935,9 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        assert!(result.get::<Value>("quiet").is_some());
-        assert!(result.get::<Value>("verbose").is_some());
-        assert!(result.get::<Value>("help").is_some());
+        result.pick::<Value>("quiet");
+        result.pick::<Value>("help");
+        result.pick::<Value>("verbose");
 
         let pos_args = vec!["-v", "--", "-h"];
 
@@ -950,7 +954,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let config_val: String = result.get("config").unwrap();
+        let config_val: String = result.pick("config");
 
         assert_eq!("--config=foo.bar", config_val);
     }
@@ -970,7 +974,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let config_values: Vec<String> = result.get("config").unwrap();
+        let config_values: Vec<String> = result.pick("config");
 
         assert_eq!(
             config_values,
@@ -992,7 +996,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let config_value: String = result.get("config").unwrap();
+        let config_value: String = result.pick("config");
 
         assert_eq!(config_value, "=--config.prop=63");
     }
@@ -1016,9 +1020,9 @@ mod tests {
 
         assert_eq!(result.first_arg_index(), 0);
 
-        let config_values: Vec<String> = result.get("config").unwrap();
+        let config_values: Vec<String> = result.pick("config");
 
-        let rev_value: String = result.get("rev").unwrap();
+        let rev_value: String = result.pick("rev");
 
         assert_eq!(config_values, vec!["--rev=e45ab", "--rev=test"]);
 
@@ -1033,7 +1037,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let rev_value: String = result.get("rev").unwrap();
+        let rev_value: String = result.pick("rev");
 
         assert_eq!(rev_value, "");
         // TODO for now this is expected to be the default flag val, but later a Value
@@ -1055,7 +1059,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let template_val: String = result.get("template").unwrap();
+        let template_val: String = result.pick("template");
 
         assert_eq!(template_val, template_str);
     }
@@ -1069,7 +1073,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let _: Vec<String> = result.get("rev").unwrap();
+        let _: Vec<String> = result.pick("rev");
         // This is either a definition error (incorrectly configured) or
         // a programmer error at the callsite ( mismatched types ).
     }
@@ -1083,7 +1087,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let _: String = result.get("config").unwrap();
+        let _: String = result.pick("config");
         // This is either a definition error (incorrectly configured) or
         // a programmer error at the callsite ( mismatched types ).
     }
@@ -1097,7 +1101,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let _: i64 = result.get("rev").unwrap();
+        let _: i64 = result.pick("rev");
         // This is either a definition error (incorrectly configured) or
         // a programmer error at the callsite ( mismatched types ).
     }
@@ -1111,7 +1115,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let _: bool = result.get("rev").unwrap();
+        let _: bool = result.pick("rev");
         // This is either a definition error (incorrectly configured) or
         // a programmer error at the callsite ( mismatched types ).
     }
@@ -1124,7 +1128,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
         assert_eq!(configs.get(0).unwrap(), "");
     }
@@ -1137,7 +1141,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
         assert_eq!(configs.get(0).unwrap(), "test");
     }
@@ -1150,7 +1154,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
         assert_eq!(configs.get(0).unwrap(), "");
     }
@@ -1170,8 +1174,8 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
-        let configfiles: Vec<String> = result.get("configfile").unwrap();
+        let configs: Vec<String> = result.pick("config");
+        let configfiles: Vec<String> = result.pick("configfile");
         assert_eq!(configs.len(), 0);
         assert_eq!(configfiles.len(), 0);
     }
@@ -1192,7 +1196,7 @@ mod tests {
 
         assert_eq!(result.first_arg_index(), 5);
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
 
         let expected = vec!["", "section.key=val", "=", "section.key=val"];
 
@@ -1208,7 +1212,7 @@ mod tests {
             .parse_args(&args)
             .unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
 
         assert_eq!(configs.len(), 0);
     }
@@ -1225,7 +1229,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
 
         assert_eq!(configs, vec!["section.key=val"]);
     }
@@ -1242,7 +1246,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
 
         assert_eq!(configs, vec!["section.key=val"]);
     }
@@ -1259,7 +1263,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        let configs: Vec<String> = result.get("config").unwrap();
+        let configs: Vec<String> = result.pick("config");
 
         assert_eq!(configs.len(), 0);
     }
@@ -1299,7 +1303,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        if let Value::Bool(no_commit) = result.get("no-commit").unwrap() {
+        if let Value::Bool(no_commit) = result.pick("no-commit") {
             assert!(!no_commit);
         } else {
             assert!(false);
@@ -1321,7 +1325,7 @@ mod tests {
 
         let result = parser.parse_args(&args).unwrap();
 
-        if let Value::Bool(no_commit) = result.get("no-commit").unwrap() {
+        if let Value::Bool(no_commit) = result.pick("no-commit") {
             assert!(no_commit);
         } else {
             assert!(false);

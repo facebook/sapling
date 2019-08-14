@@ -172,11 +172,11 @@ impl Dispatcher {
     }
 
     fn last_chance_to_abort(opts: &ParseOutput) -> Result<(), DispatchError> {
-        if opts.get::<bool>("profile").unwrap() {
+        if opts.pick::<bool>("profile") {
             return Err(DispatchError::ProfileFlagNotSupported);
         }
 
-        if opts.get::<bool>("help").unwrap() {
+        if opts.pick::<bool>("help") {
             return Err(DispatchError::HelpFlagNotSupported);
         }
 

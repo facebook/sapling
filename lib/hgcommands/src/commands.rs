@@ -45,7 +45,7 @@ pub struct RootCommand {
 
 impl From<ParseOutput> for RootCommand {
     fn from(opts: ParseOutput) -> Self {
-        let shared: bool = opts.get("shared").unwrap();
+        let shared: bool = opts.pick("shared");
 
         RootCommand { shared }
     }
