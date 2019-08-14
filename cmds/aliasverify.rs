@@ -354,8 +354,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let ctx = CoreContext::test_mock();
     let logger = args::get_logger(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     args::init_cachelib(&matches);
     let sqlchangesets = args::open_sql::<SqlChangesets>(&matches);

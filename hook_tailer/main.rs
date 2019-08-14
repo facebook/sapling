@@ -102,13 +102,10 @@ fn main() -> Result<()> {
     let id = "ManifoldBlob";
 
     let manifold_client = ManifoldHttpClient::new(id, rc)?;
-
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let fut = blobrepo.and_then({
         cloned!(logger, config);
         move |blobrepo| {
-            // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
-            let ctx = CoreContext::test_mock();
-
             blobrepo
                 .get_hg_bonsai_mapping(ctx.clone(), excludes)
                 .and_then({

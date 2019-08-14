@@ -41,7 +41,7 @@ pub fn subcommand_skiplist(
                 .to_string();
 
             args::init_cachelib(&matches);
-            let ctx = CoreContext::test_mock();
+            let ctx = CoreContext::new_with_logger(logger.clone());
             let sql_changesets = args::open_sql::<SqlChangesets>(&matches);
             let repo = args::open_repo(&logger, &matches);
             repo.join(sql_changesets)

@@ -84,8 +84,7 @@ pub fn repo_handlers(
                 root_log,
                 "Start warming for repo {}, type {:?}", reponame, config.storage_config.blobstore
             );
-            // TODO(T37478150, luk): this is not a test use case, need to address this later
-            let ctx = CoreContext::test_mock();
+            let ctx = CoreContext::new_with_logger(root_log.clone());
 
             let ready_handle = ready.create_handle(reponame.clone());
 

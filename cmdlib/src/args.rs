@@ -90,7 +90,6 @@ impl MononokeApp {
         };
 
         let name = name.into();
-        let default_log = if self.default_glog { "glog" } else { "compact" };
 
         let mut app = App::new(name)
             .args_from_usage(
@@ -106,23 +105,6 @@ impl MononokeApp {
                     .value_name("ID")
                     .default_value("0")
                     .help("numeric ID of repository")
-            )
-            .arg(
-                Arg::with_name("log-style")
-                    .short("l")
-                    .long("log-style")
-                    .value_name("STYLE")
-                    .possible_values(&["compact", "glog"])
-                    .default_value(default_log)
-                    .help("log style to use for output")
-            )
-            .arg(
-                Arg::with_name("panic-fate")
-                    .long("panic-fate")
-                    .value_name("PANIC_FATE")
-                    .possible_values(&["continue", "exit", "abort"])
-                    .default_value("abort")
-                    .help("fate of the process when a panic happens")
             )
             .arg(
                 Arg::with_name("mononoke-config-path")
@@ -165,11 +147,33 @@ impl MononokeApp {
                 .long("filenode-shards").value_name("SHARD_COUNT").help("number of shards to spread filenodes across")
             );
 
+        app = add_logger_args(app, self.default_glog);
         app = add_myrouter_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
 
         app
     }
+}
+
+pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>, default_glog: bool) -> App<'a, 'b> {
+    let default_log = if default_glog { "glog" } else { "compact" };
+    app.arg(
+        Arg::with_name("log-style")
+            .short("l")
+            .long("log-style")
+            .value_name("STYLE")
+            .possible_values(&["compact", "glog"])
+            .default_value(default_log)
+            .help("log style to use for output"),
+    )
+    .arg(
+        Arg::with_name("panic-fate")
+            .long("panic-fate")
+            .value_name("PANIC_FATE")
+            .possible_values(&["continue", "exit", "abort"])
+            .default_value("abort")
+            .help("fate of the process when a panic happens"),
+    )
 }
 
 pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {

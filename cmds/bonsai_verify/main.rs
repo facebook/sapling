@@ -92,7 +92,7 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
     let logger = args::get_logger(&matches);
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     match matches.subcommand() {
         ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger, &matches, sub_m),

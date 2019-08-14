@@ -30,11 +30,10 @@ pub fn subcommand_hg_changeset(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
+    let ctx = CoreContext::new_with_logger(logger.clone());
+
     match sub_m.subcommand() {
         (HG_CHANGESET_DIFF, Some(sub_m)) => {
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
-
             let left_cs = sub_m
                 .value_of("LEFT_CS")
                 .ok_or(format_err!("LEFT_CS argument expected"))
@@ -70,9 +69,6 @@ pub fn subcommand_hg_changeset(
                 .value_of("STOP_CS")
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
-
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
 
             args::init_cachelib(&matches);
             args::open_repo(&logger, &matches)

@@ -87,7 +87,7 @@ pub fn subcommand_add_public_phases(
         .value_of("chunk-size")
         .and_then(|chunk_size| chunk_size.parse::<usize>().ok())
         .unwrap_or(16384);
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
     args::init_cachelib(&matches);
 
     let phases = args::open_sql::<SqlPhases>(&matches)

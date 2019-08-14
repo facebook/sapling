@@ -20,7 +20,7 @@ use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use tokio::runtime::Runtime;
 
-fn run(rng_seed: u64) -> impl Future<Item = (), Error = Error> {
+fn run(ctx: CoreContext, rng_seed: u64) -> impl Future<Item = (), Error = Error> {
     println!("rng seed: {}", rng_seed);
     let mut rng = XorShiftRng::seed_from_u64(rng_seed); // reproducable Rng
 
@@ -29,7 +29,6 @@ fn run(rng_seed: u64) -> impl Future<Item = (), Error = Error> {
         Err(err) => return future::err(err).left_future(),
         Ok(repo) => repo,
     };
-    let ctx = CoreContext::test_mock();
     let mut gen = GenManifest::new();
     let settings = Default::default();
     gen.gen_stack(
@@ -66,15 +65,18 @@ fn main() -> Result<()> {
                 .value_name("SEED")
                 .help("seed changeset generator for u64 seed"),
         );
+        let app = args::add_logger_args(app, true /* use glog */);
         args::add_cachelib_args(app, true /* hide_advanced_args */)
     };
     let matches = app.get_matches();
     args::init_cachelib(&matches);
+    let logger = args::get_logger(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let seed = matches
         .value_of("seed")
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or_else(|| rand::random());
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on(run(seed))
+    runtime.block_on(run(ctx, seed))
 }

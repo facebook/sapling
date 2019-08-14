@@ -29,8 +29,7 @@ pub fn subcommand_bonsai_fetch(
 
     args::init_cachelib(&matches);
 
-    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let json_flag = sub_m.is_present("json");
 
     args::open_repo(&logger, &matches)

@@ -46,7 +46,7 @@ pub fn subcommand_filenodes(
         .collect();
 
     let paths: Vec<_> = try_boxfuture!(paths);
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
     args::init_cachelib(&matches);
 
     args::open_repo(&logger, &matches)

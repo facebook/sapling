@@ -32,8 +32,7 @@ pub fn subcommand_hash_convert(
         "source and target should be different"
     );
     args::init_cachelib(&matches);
-    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
     args::open_repo(&logger, &matches)
         .and_then(move |repo| {
             if source == "hg" {

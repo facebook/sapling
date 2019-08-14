@@ -95,7 +95,7 @@ pub fn subcommand_blobstore_fetch(
     let scuba_censored_table = common_config.scuba_censored_table;
     let scuba_censorship_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let key = sub_m.value_of("KEY").unwrap().to_string();
     let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());

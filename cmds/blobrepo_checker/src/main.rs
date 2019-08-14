@@ -52,7 +52,7 @@ fn main() {
 
     let logger = args::get_logger(&matches);
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let repo_fut = args::open_scrub_repo(&logger, &matches);
 

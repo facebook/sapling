@@ -83,13 +83,14 @@ fn get_ctx_blobrepo_censored_blobs_cs_id(
         None => return future::err(SubcommandError::InvalidArgs).boxify(),
     };
 
-    let ctx = CoreContext::test_mock();
     args::init_cachelib(&matches);
 
     let blobrepo = args::open_repo(&logger, &matches);
     let censored_blobs = args::open_sql::<SqlCensoredContentStore>(&matches)
         .context("While opening SqlCensoredContentStore")
         .from_err();
+
+    let ctx = CoreContext::new_with_logger(logger);
 
     blobrepo
         .and_then({

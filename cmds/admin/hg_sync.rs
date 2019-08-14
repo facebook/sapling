@@ -33,7 +33,7 @@ pub fn subcommand_process_hg_sync(
     let repo_id =
         try_boxfuture!(args::get_repo_id(&matches).map_err(|e| SubcommandError::Error(e)));
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(&matches)
         .context("While opening SqlMutableCounters")

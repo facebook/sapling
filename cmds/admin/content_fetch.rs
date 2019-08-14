@@ -31,8 +31,7 @@ pub fn subcommand_content_fetch(
 
     args::init_cachelib(&matches);
 
-    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     args::open_repo(&logger, &matches)
         .and_then(move |blobrepo| fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path))

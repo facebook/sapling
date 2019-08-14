@@ -9,6 +9,7 @@ use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease
 use cachelib;
 use clap::{App, Arg, SubCommand};
 use cloned::cloned;
+use cmdlib::args;
 use context::CoreContext;
 use failure::Error;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
@@ -124,6 +125,7 @@ fn main() -> Result<(), Error> {
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
 
+    let app = args::add_logger_args(app, true /* use glog */);
     let matches = app.get_matches();
     let input = matches.value_of("input").unwrap().to_string();
 
@@ -207,7 +209,8 @@ fn main() -> Result<(), Error> {
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
-    let ctx = CoreContext::test_mock();
+    let logger = args::get_logger(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let fut = File::open(input)
         .and_then(|file| file.metadata())

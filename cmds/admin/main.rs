@@ -355,8 +355,7 @@ fn main() -> ExitCode {
         (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(logger, &matches, sub_m),
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
+            let ctx = CoreContext::new_with_logger(logger.clone());
             let repo_fut = args::open_repo(&logger, &matches).boxify();
             bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
         }

@@ -76,7 +76,7 @@ pub fn execute_command(
 ) -> BoxFuture<(), SubcommandError> {
     args::init_cachelib(&matches);
     let blobrepo = args::open_repo(&logger, &matches);
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     match sub_matches.subcommand() {
         (COMMAND_METADATA, Some(matches)) => (blobrepo, extract_fetch_key(matches).into_future())
