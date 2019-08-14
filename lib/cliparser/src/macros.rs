@@ -36,7 +36,7 @@ macro_rules! _define_flags_impl {
         impl From<$crate::parser::ParseOutput> for $name {
             fn from(out: $crate::parser::ParseOutput) -> Self {
                 Self {
-                    $( $field : out.get(&stringify!($field).replace("_", "-")).cloned().unwrap().into() , )*
+                    $( $field : out.get::<$type>(&stringify!($field).replace("_", "-")).unwrap(), )*
                 }
             }
         }
