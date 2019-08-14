@@ -685,17 +685,6 @@ impl ParseOutput {
         self.opts.get(long_name).cloned().map(Into::into)
     }
 
-    pub fn get_or_default<T>(&self, long_name: &str, default: T) -> T
-    where
-        T: std::convert::From<Value>,
-    {
-        self.opts
-            .get(long_name)
-            .cloned()
-            .map(Into::into)
-            .unwrap_or(default)
-    }
-
     pub fn opts(&self) -> &HashMap<String, Value> {
         &self.opts
     }
