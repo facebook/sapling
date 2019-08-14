@@ -3241,7 +3241,7 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
         for f in files:
             prog.value += 1
             isdir = f in deleteddirs or wctx.hasdir(f)
-            if f in repo.dirstate or isdir or f == ".":
+            if f in repo.dirstate or isdir or f == "":
                 continue
 
             if repo.wvfs.exists(f):

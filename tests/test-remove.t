@@ -472,3 +472,19 @@ handling of untracked directories and missing files
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
   [1]
+
+handling root path in remove with matcher
+
+  $ newrepo
+  $ mkdir dir
+  $ echo abc > dir/abc.txt
+  $ hg ci -m "abc" -Aq
+  $ hg remove -f 'glob:**.txt' -X dir
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  $ hg remove -f 'glob:**.txt' -I dir
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/1 files (100.00%)
+  removing dir/abc.txt
+  progress: deleting (end)
