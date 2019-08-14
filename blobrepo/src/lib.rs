@@ -35,6 +35,7 @@ pub use blob_changeset::{ChangesetMetadata, HgBlobChangeset, HgChangesetContent}
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
 pub use crate::repo_commit::compute_changed_files;
+pub use utils::UnittestOverride;
 
 pub mod internal {
     pub use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};

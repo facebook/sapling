@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use failure::Error;
@@ -16,6 +18,12 @@ mod derive_impl;
 /// Trait for the data that can be derived from bonsai changeset.
 /// Examples of that are hg changeset id, unodes root manifest id, git changeset ids etc
 pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
+    /// Name of derived data
+    ///
+    /// Should be unique string (among derived data types), which is used to identify or
+    /// name data (for example lease keys) assoicated with particular derived data type.
+    const NAME: &'static str;
+
     /// Defines how to derive new representation for bonsai having derivations
     /// for parents and having a current bonsai object.
     ///

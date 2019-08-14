@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes, UnittestOverride};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
@@ -126,7 +126,7 @@ pub struct BlobRepo {
     // (for example, revsets).
     changeset_fetcher_factory:
         Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
-    hg_generation_lease: Arc<dyn LeaseOps>,
+    derived_data_lease: Arc<dyn LeaseOps>,
     filestore_config: FilestoreConfig,
 }
 
@@ -137,7 +137,7 @@ impl BlobRepo {
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-        hg_generation_lease: Arc<dyn LeaseOps>,
+        derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
@@ -160,7 +160,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
-            hg_generation_lease,
+            derived_data_lease,
             filestore_config,
         }
     }
@@ -174,7 +174,7 @@ impl BlobRepo {
         changeset_fetcher_factory: Arc<
             dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
         >,
-        hg_generation_lease: Arc<dyn LeaseOps>,
+        derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
@@ -186,7 +186,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory,
-            hg_generation_lease,
+            derived_data_lease,
             filestore_config,
         }
     }
@@ -208,7 +208,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
-            hg_generation_lease,
+            derived_data_lease,
             filestore_config,
             ..
         } = self;
@@ -224,7 +224,7 @@ impl BlobRepo {
             filenodes,
             changesets,
             bonsai_hg_mapping,
-            hg_generation_lease,
+            derived_data_lease,
             filestore_config,
         )
     }
@@ -1433,9 +1433,13 @@ impl BlobRepo {
             })
     }
 
+    pub fn get_derived_data_lease_ops(&self) -> Arc<dyn LeaseOps> {
+        self.derived_data_lease.clone()
+    }
+
     fn generate_lease_key(&self, bcs_id: &ChangesetId) -> String {
         let repoid = self.get_repoid();
-        format!("repoid.{}.bonsai.{}", repoid.id(), bcs_id)
+        format!("repoid.{}.hg-changeset.{}", repoid.id(), bcs_id)
     }
 
     fn take_hg_generation_lease(
@@ -1446,16 +1450,16 @@ impl BlobRepo {
         let key = self.generate_lease_key(&bcs_id);
         let repoid = self.get_repoid();
 
-        cloned!(self.bonsai_hg_mapping, self.hg_generation_lease);
+        cloned!(self.bonsai_hg_mapping, self.derived_data_lease);
         let repo = self.clone();
 
         loop_fn((), move |()| {
             cloned!(ctx, key);
-            hg_generation_lease
+            derived_data_lease
                 .try_add_put_lease(&key)
                 .or_else(|_| Ok(false))
                 .and_then({
-                    cloned!(bcs_id, bonsai_hg_mapping, hg_generation_lease, repo);
+                    cloned!(bcs_id, bonsai_hg_mapping, derived_data_lease, repo);
                     move |leased| {
                         let maybe_hg_cs =
                             bonsai_hg_mapping.get_hg_from_bonsai(ctx.clone(), repoid, bcs_id);
@@ -1475,7 +1479,7 @@ impl BlobRepo {
                                     Some(hg_cs_id) => {
                                         future::ok(Loop::Break(Some(hg_cs_id))).left_future()
                                     }
-                                    None => hg_generation_lease
+                                    None => derived_data_lease
                                         .wait_for_other_leases(&key)
                                         .then(|_| Ok(Loop::Continue(())))
                                         .right_future(),
@@ -1493,7 +1497,7 @@ impl BlobRepo {
         put_success: bool,
     ) -> impl Future<Item = (), Error = ()> + Send {
         let key = self.generate_lease_key(&bcs_id);
-        self.hg_generation_lease.release_lease(&key, put_success)
+        self.derived_data_lease.release_lease(&key, put_success)
     }
 
     fn generate_hg_changeset(
@@ -2610,7 +2614,7 @@ impl Clone for BlobRepo {
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
-            hg_generation_lease: self.hg_generation_lease.clone(),
+            derived_data_lease: self.derived_data_lease.clone(),
             filestore_config: self.filestore_config.clone(),
         }
     }
@@ -2635,4 +2639,17 @@ where
             }
         })
         .buffer_unordered(100)
+}
+
+impl UnittestOverride<Arc<dyn LeaseOps>> for BlobRepo {
+    fn unittest_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn LeaseOps>) -> Arc<dyn LeaseOps>,
+    {
+        let derived_data_lease = modify(self.derived_data_lease.clone());
+        BlobRepo {
+            derived_data_lease,
+            ..self.clone()
+        }
+    }
 }

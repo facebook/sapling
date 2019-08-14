@@ -50,6 +50,8 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
 }
 
 impl BonsaiDerived for RootUnodeManifestId {
+    const NAME: &'static str = "unodes";
+
     fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,

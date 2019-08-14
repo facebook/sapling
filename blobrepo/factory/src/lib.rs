@@ -4,31 +4,26 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{sync::Arc, time::Duration};
-
-use cloned::cloned;
-use failure_ext::prelude::*;
-use failure_ext::{Error, Result};
-use futures::{future::IntoFuture, Future};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use std::collections::HashMap;
-
-use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
-
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
+use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
-    dummy::DummyLease, new_cachelib_blobstore_no_lease, new_memcache_blobstore, MemcacheOps,
+    new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
 };
 use censoredblob::SqlCensoredContentStore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
+use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
+use failure_ext::prelude::*;
+use failure_ext::{Error, Result};
 use filenodes::CachingFilenodes;
 use filestore::FilestoreConfig;
+use futures::{future::IntoFuture, Future};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use memblob::EagerMemblob;
 use metaconfig_types::{
     self, BlobConfig, Censoring, FilestoreParams, MetadataDBConfig, StorageConfig,
@@ -38,7 +33,7 @@ use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_ext::myrouter_ready;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
-use std::iter::FromIterator;
+use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
@@ -184,7 +179,7 @@ pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRe
             SqlBonsaiHgMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
-        Arc::new(DummyLease {}),
+        Arc::new(InProcessLease::new()),
         FilestoreConfig::default(),
     ))
 }
@@ -231,7 +226,7 @@ fn new_development<T: SqlFactory>(
                     filenodes,
                     changesets,
                     bonsai_hg_mapping,
-                    Arc::new(DummyLease {}),
+                    Arc::new(InProcessLease::new()),
                     filestore_config,
                 )
             }
@@ -274,7 +269,7 @@ fn new_production<T: SqlFactory>(
     let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
     let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
 
-    let hg_generation_lease = try_boxfuture!(MemcacheOps::new("bonsai-hg-generation", ""));
+    let derive_data_lease = try_boxfuture!(MemcacheOps::new("derived-data-lease", ""));
 
     let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
     let bookmarks = sql_factory.open::<SqlBookmarks>();
@@ -325,7 +320,7 @@ fn new_production<T: SqlFactory>(
                     changesets,
                     Arc::new(bonsai_hg_mapping),
                     Arc::new(changeset_fetcher_factory),
-                    Arc::new(hg_generation_lease),
+                    Arc::new(derive_data_lease),
                     filestore_config,
                 )
             },

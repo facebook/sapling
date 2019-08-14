@@ -84,3 +84,13 @@ impl IncompleteFilenodes {
             .map(move |_| cs_id)
     }
 }
+
+/// Create new instance of implementing object with overridden field of spcecified type.
+///
+/// This trait only supposed to be used from unittests, when it is necessary to replace
+/// some of the fields to better tests specific behaviour.
+pub trait UnittestOverride<T> {
+    fn unittest_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(T) -> T;
+}

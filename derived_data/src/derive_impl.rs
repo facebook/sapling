@@ -10,11 +10,14 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
-use futures::{future, stream, Future, Stream};
-use futures_ext::{bounded_traversal, FutureExt};
+use futures::{
+    future::{self, Loop},
+    stream, Future, IntoFuture, Stream,
+};
+use futures_ext::{bounded_traversal, FutureExt, StreamExt};
 use mononoke_types::ChangesetId;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::{Arc, Mutex},
 };
 use topo_sort::sort_topological;
@@ -24,8 +27,6 @@ use topo_sort::sort_topological;
 /// nothing will be generated. Otherwise this function will generate data for this commit and for
 /// all it's ancestors that didn't have this derived data.
 ///
-/// TODO(T47650154) - add memcache leases to prevent deriving the data for the same commit at
-///     the same time
 /// TODO(T47650184) - log to scuba and ods how long it took to generate derived data
 pub(crate) fn derive_impl<
     Derived: BonsaiDerived,
@@ -73,10 +74,10 @@ pub(crate) fn derive_impl<
         }
     })
     .filter_map(|x| x) // Remove all None
-    .collect()
+    .collect_to()
     .map(|v| {
         stream::iter_ok(
-            sort_topological(&v.into_iter().collect::<HashMap<_, _>>())
+            sort_topological(&v)
                 .expect("commit graph has cycles!")
                 .into_iter()
                 .rev(),
@@ -103,6 +104,14 @@ where
 {
     let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id.clone());
 
+    let lease = repo.get_derived_data_lease_ops();
+    let lease_key = Arc::new(format!(
+        "repo{}.{}.{}",
+        repo.get_repoid().id(),
+        Derived::NAME,
+        bcs_id
+    ));
+
     let changeset_fetcher = repo.get_changeset_fetcher();
     let derived_parents =
         changeset_fetcher
@@ -116,13 +125,70 @@ where
                 }
             });
 
-    bcs_fut
-        .join(derived_parents)
-        .and_then({
-            cloned!(ctx);
-            move |(bcs, parents)| Derived::derive_from_parents(ctx, repo, bcs, parents)
-        })
-        .and_then(move |derived| derived_mapping.put(ctx, bcs_id, derived))
+    bcs_fut.join(derived_parents).and_then({
+        cloned!(ctx);
+        move |(bcs, parents)| {
+            future::loop_fn((), move |()| {
+                lease
+                    .try_add_put_lease(&lease_key)
+                    .then(|result| {
+                        // In case of lease unavailability we do not want to stall
+                        // generation of all derived data, since lease is a soft lock
+                        // it is safe to assume that we successfuly acquired it
+                        match result {
+                            Ok(leased) => Ok((leased, false)),
+                            Err(_) => Ok((false, true)),
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx, repo, derived_mapping, lease, lease_key, bcs, parents);
+                        move |(leased, ignored)| {
+                            derived_mapping
+                                .get(ctx.clone(), vec![bcs_id])
+                                .map(move |mut vs| vs.remove(&bcs_id))
+                                .and_then({
+                                    cloned!(derived_mapping, lease, lease_key);
+                                    move |derived| match derived {
+                                        Some(_) => future::ok(Loop::Break(())).left_future(),
+                                        None => {
+                                            if leased || ignored {
+                                                Derived::derive_from_parents(
+                                                    ctx.clone(),
+                                                    repo,
+                                                    bcs,
+                                                    parents,
+                                                )
+                                                .and_then(move |derived| {
+                                                    derived_mapping.put(ctx, bcs_id, derived)
+                                                })
+                                                .map(|_| Loop::Break(()))
+                                                .left_future()
+                                                .right_future()
+                                            } else {
+                                                lease
+                                                    .wait_for_other_leases(&lease_key)
+                                                    .then(|_| Ok(Loop::Continue(())))
+                                                    .right_future()
+                                                    .right_future()
+                                            }
+                                        }
+                                    }
+                                })
+                                .then(move |result| {
+                                    if leased {
+                                        lease
+                                            .release_lease(&lease_key, result.is_ok())
+                                            .then(|_| result)
+                                            .right_future()
+                                    } else {
+                                        result.into_future().left_future()
+                                    }
+                                })
+                        }
+                    })
+            })
+        }
+    })
 }
 
 fn fetch_derived_may_panic<Derived, Mapping>(
@@ -176,23 +242,34 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
 mod test {
     use super::*;
 
+    use blobrepo::UnittestOverride;
     use bookmarks::BookmarkName;
+    use cacheblob::LeaseOps;
+    use failure::err_msg;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures_ext::BoxFuture;
+    use lock_ext::LockExt;
     use maplit::hashmap;
+    use mercurial_types::HgChangesetId;
     use mononoke_types::BonsaiChangeset;
     use revset::AncestorsNodeStream;
-    use std::collections::HashMap;
-    use std::sync::{Arc, Mutex};
+    use std::{
+        collections::HashMap,
+        str::FromStr,
+        sync::{Arc, Mutex},
+        time::Duration,
+    };
     use tokio::runtime::Runtime;
 
-    #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd)]
+    #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
     struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);
 
     impl BonsaiDerived for TestGenNum {
+        const NAME: &'static str = "test_gen_num";
+
         fn derive_from_parents(
             _ctx: CoreContext,
             _repo: BlobRepo,
@@ -210,6 +287,7 @@ mod test {
         }
     }
 
+    #[derive(Debug)]
     struct TestMapping {
         mapping: Arc<Mutex<HashMap<ChangesetId, TestGenNum>>>,
     }
@@ -304,9 +382,9 @@ mod test {
     }
 
     #[test]
-    fn test_derive_linear() {
+    fn test_derive_linear() -> Result<(), Error> {
         let ctx = CoreContext::test_mock();
-        let mut runtime = Runtime::new().unwrap();
+        let mut runtime = Runtime::new()?;
 
         let repo = branch_even::getrepo();
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
@@ -337,5 +415,150 @@ mod test {
 
         let repo = many_diamonds::getrepo(&mut runtime);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_leases() -> Result<(), Error> {
+        let ctx = CoreContext::test_mock();
+        let mut runtime = Runtime::new()?;
+        let mapping = Arc::new(TestMapping::new());
+        let repo = linear::getrepo();
+
+        let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+        let csid = runtime
+            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
+            .ok_or(err_msg("known hg does not have bonsai csid"))?;
+
+        let lease = repo.get_derived_data_lease_ops();
+        let lease_key = Arc::new(format!(
+            "repo{}.{}.{}",
+            repo.get_repoid().id(),
+            TestGenNum::NAME,
+            csid
+        ));
+
+        // take lease
+        assert_eq!(
+            runtime.block_on(lease.try_add_put_lease(&lease_key)),
+            Ok(true)
+        );
+        assert_eq!(
+            runtime.block_on(lease.try_add_put_lease(&lease_key)),
+            Ok(false)
+        );
+
+        let output = Arc::new(Mutex::new(Vec::new()));
+        runtime.spawn(
+            TestGenNum::derive(ctx.clone(), repo.clone(), mapping.clone(), csid).then({
+                cloned!(output);
+                move |result| {
+                    output.with(move |output| output.push(result));
+                    Ok::<_, ()>(())
+                }
+            }),
+        );
+
+        // schedule derivation
+        runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
+        assert_eq!(
+            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            HashMap::new()
+        );
+
+        // release lease
+        runtime
+            .block_on(lease.release_lease(&lease_key, false))
+            .map_err(|_| err_msg("failed to release a lease"))?;
+
+        runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
+        let result = match output.with(|output| output.pop()) {
+            Some(result) => result?,
+            None => panic!("scheduled derivation should have been completed"),
+        };
+        assert_eq!(
+            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            hashmap! { csid => result.clone() }
+        );
+
+        // take lease
+        assert_eq!(
+            runtime.block_on(lease.try_add_put_lease(&lease_key)),
+            Ok(true),
+        );
+        // should succed as lease should not be request
+        assert_eq!(
+            runtime.block_on(TestGenNum::derive(
+                ctx.clone(),
+                repo.clone(),
+                mapping.clone(),
+                csid
+            ))?,
+            result
+        );
+        runtime
+            .block_on(lease.release_lease(&lease_key, false))
+            .map_err(|_| err_msg("failed to release a lease"))?;
+
+        Ok(())
+    }
+
+    #[derive(Debug)]
+    struct FailingLease;
+
+    impl LeaseOps for FailingLease {
+        fn try_add_put_lease(&self, _key: &str) -> BoxFuture<bool, ()> {
+            future::err(()).boxify()
+        }
+
+        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
+            future::err(()).boxify()
+        }
+
+        fn release_lease(&self, _key: &str, _put_success: bool) -> BoxFuture<(), ()> {
+            future::err(()).boxify()
+        }
+    }
+
+    #[test]
+    fn test_always_failing_lease() -> Result<(), Error> {
+        let ctx = CoreContext::test_mock();
+        let mut runtime = Runtime::new()?;
+        let mapping = Arc::new(TestMapping::new());
+        let repo = linear::getrepo().unittest_override(|_| Arc::new(FailingLease));
+
+        let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+        let csid = runtime
+            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
+            .ok_or(err_msg("known hg does not have bonsai csid"))?;
+
+        let lease = repo.get_derived_data_lease_ops();
+        let lease_key = Arc::new(format!(
+            "repo{}.{}.{}",
+            repo.get_repoid().id(),
+            TestGenNum::NAME,
+            csid
+        ));
+
+        // takig lease should fail
+        assert_eq!(
+            runtime.block_on(lease.try_add_put_lease(&lease_key)),
+            Err(())
+        );
+
+        // should succeed even though lease always fails
+        let result = runtime.block_on(TestGenNum::derive(
+            ctx.clone(),
+            repo.clone(),
+            mapping.clone(),
+            csid,
+        ))?;
+        assert_eq!(
+            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            hashmap! { csid => result },
+        );
+
+        Ok(())
     }
 }

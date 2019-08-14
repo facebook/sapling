@@ -12,6 +12,7 @@ pub use crate::cachelib_cache::{new_cachelib_blobstore, new_cachelib_blobstore_n
 pub mod dummy;
 
 mod in_process_lease;
+pub use in_process_lease::InProcessLease;
 
 mod locking_cache;
 pub use crate::locking_cache::{
