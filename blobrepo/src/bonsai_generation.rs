@@ -22,8 +22,8 @@ use mononoke_types::{
 };
 use repo_blobstore::RepoBlobstore;
 
+use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
-use crate::file::get_rename_from_envelope;
 use crate::BlobRepo;
 use crate::HgBlobChangeset;
 
@@ -173,8 +173,8 @@ fn get_copy_info(
 ) -> impl Future<Item = Option<(MPath, ChangesetId)>, Error = Error> {
     let node_id = envelope.node_id();
 
-    let maybecopy = try_boxfuture!(get_rename_from_envelope(envelope));
-    let maybecopy = maybecopy.map(|(path, hash)| (RepoPath::FilePath(path), hash));
+    let maybecopy = try_boxfuture!(envelope.get_copy_info())
+        .map(|(path, hash)| (RepoPath::FilePath(path), hash));
 
     match maybecopy {
         Some((repopath, copyfromnode)) => {

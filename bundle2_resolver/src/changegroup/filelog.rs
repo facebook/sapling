@@ -6,7 +6,6 @@
 
 use std::collections::HashMap;
 use std::mem;
-use std::sync::Arc;
 
 use bytes::Bytes;
 use cloned::cloned;
@@ -29,6 +28,7 @@ use mercurial_types::{
     delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
     RevFlags, NULL_HASH,
 };
+use remotefilelog::create_raw_filenode_blob;
 
 use crate::errors::*;
 use crate::stats::*;
@@ -100,7 +100,7 @@ impl UploadableHgBlob for Filelog {
 
 pub fn convert_to_revlog_filelog<S>(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     deltaed: S,
 ) -> BoxStream<Filelog, Error>
 where
@@ -158,7 +158,7 @@ where
 
 fn generate_lfs_meta_data(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     data: Bytes,
 ) -> impl Future<Item = ContentBlobMeta, Error = Error> {
     // TODO(anastasiyaz): check size
@@ -181,7 +181,7 @@ fn generate_lfs_meta_data(
 
 fn get_filelog_data(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     data: Bytes,
     flags: RevFlags,
 ) -> impl Future<Item = FilelogData, Error = Error> {
@@ -195,12 +195,12 @@ fn get_filelog_data(
 }
 
 struct DeltaCache {
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     bytes_cache: HashMap<HgNodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
 }
 
 impl DeltaCache {
-    fn new(repo: Arc<BlobRepo>) -> Self {
+    fn new(repo: BlobRepo) -> Self {
         Self {
             repo,
             bytes_cache: HashMap::new(),
@@ -243,20 +243,20 @@ impl DeltaCache {
                                 .boxify(),
                             None => {
                                 let validate_hash = false;
-                                self.repo
-                                    .get_raw_hg_content(ctx, HgFileNodeId::new(base), validate_hash)
-                                    .and_then(move |blob| {
-                                        let bytes = blob.into_inner();
-                                        delta::apply(bytes.as_ref(), &delta)
-                                            .with_context(|_| {
-                                                format!(
-                                                    "File content: {:?} delta: {:?}",
-                                                    bytes, delta
-                                                )
-                                            })
-                                            .map_err(Error::from)
-                                    })
-                                    .boxify()
+                                create_raw_filenode_blob(
+                                    ctx,
+                                    self.repo.clone(),
+                                    HgFileNodeId::new(base),
+                                    validate_hash,
+                                )
+                                .and_then(move |bytes| {
+                                    delta::apply(bytes.as_ref(), &delta)
+                                        .with_context(|_| {
+                                            format!("File content: {:?} delta: {:?}", bytes, delta)
+                                        })
+                                        .map_err(Error::from)
+                                })
+                                .boxify()
                             }
                         };
                         fut.map_err(move |err| {
@@ -399,7 +399,7 @@ mod tests {
     {
         let result = convert_to_revlog_filelog(
             ctx,
-            Arc::new(new_memblob_empty(None).unwrap()),
+            new_memblob_empty(None).unwrap(),
             iter_ok(inp.into_iter().collect::<Vec<_>>()),
         )
         .collect()
@@ -554,13 +554,9 @@ mod tests {
             vec![f2_deltaed, f1_deltaed]
         };
 
-        let result = convert_to_revlog_filelog(
-            ctx,
-            Arc::new(new_memblob_empty(None).unwrap()),
-            iter_ok(inp),
-        )
-        .collect()
-        .wait();
+        let result = convert_to_revlog_filelog(ctx, new_memblob_empty(None).unwrap(), iter_ok(inp))
+            .collect()
+            .wait();
 
         match result {
             Ok(_) => assert!(

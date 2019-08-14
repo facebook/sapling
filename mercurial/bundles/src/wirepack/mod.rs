@@ -7,11 +7,13 @@
 //! Wire packs. The format is currently undocumented.
 
 use std::fmt;
+use std::io::Cursor;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
+use revisionstore::Metadata;
 
 use crate::delta;
 use crate::errors::*;
@@ -156,7 +158,6 @@ impl HistoryEntry {
 
     // This would ideally be generic over any BufMut, but that won't be very useful until
     // https://github.com/carllerche/bytes/issues/170 is fixed.
-    #[allow(dead_code)]
     pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
         self.verify(kind).with_context(|_| {
             ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
@@ -221,11 +222,18 @@ pub struct DataEntry {
     pub node: HgNodeHash,
     pub delta_base: HgNodeHash,
     pub delta: Delta,
-    pub version: u8,
+    /// Metadata presence implies a getpack protocol version that supports it (i.e. version 2)
+    pub metadata: Option<Metadata>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum DataEntryVersion {
+    V1,
+    V2,
 }
 
 impl DataEntry {
-    pub(crate) fn decode(buf: &mut BytesMut) -> Result<Option<Self>> {
+    pub(crate) fn decode(buf: &mut BytesMut, version: DataEntryVersion) -> Result<Option<Self>> {
         if buf.len() < DATA_HEADER_SIZE {
             return Ok(None);
         }
@@ -247,9 +255,28 @@ impl DataEntry {
         // There's a bit of a wart in the current format: if delta base is NULL_HASH, instead of
         // storing a delta with start = 0 and end = 0, we store the full text directly. This
         // should be fixed in a future wire protocol revision.
+
+        // First, check that we have enough data to proceed.
         let delta_len = BigEndian::read_u64(&buf[DATA_DELTA_OFFSET..DATA_HEADER_SIZE]) as usize;
-        if buf.len() < DATA_HEADER_SIZE + delta_len {
-            return Ok(None);
+        match version {
+            DataEntryVersion::V1 => {
+                if buf.len() < DATA_HEADER_SIZE + delta_len {
+                    return Ok(None);
+                }
+            }
+            DataEntryVersion::V2 => {
+                let meta_offset = DATA_HEADER_SIZE + delta_len;
+                let meta_header_size = 4; // Metadata header is a u32.
+                if buf.len() < meta_offset + meta_header_size {
+                    return Ok(None);
+                }
+
+                let meta_header_slice = &buf[meta_offset..meta_offset + meta_header_size];
+                let meta_size = BigEndian::read_u32(meta_header_slice) as usize;
+                if buf.len() < meta_offset + meta_header_size + meta_size {
+                    return Ok(None);
+                }
+            }
         }
 
         let node = buf.drain_node();
@@ -263,17 +290,32 @@ impl DataEntry {
             delta::decode_delta(delta)?
         };
 
+        let metadata = match version {
+            DataEntryVersion::V1 => None,
+            DataEntryVersion::V2 => {
+                let mut cursor = Cursor::new(buf.as_ref());
+                let metadata = Metadata::read(&mut cursor)?;
+
+                // Metadata::read doesn't consume bytes (it just reads them), but our
+                // implementation here wants to consume bytes we read. We work around this here.
+                let pos = cursor.position();
+                std::mem::drop(cursor);
+                let _ = buf.split_to(pos as usize);
+
+                Some(metadata)
+            }
+        };
+
         Ok(Some(Self {
             node,
             delta_base,
             delta,
-            version: 1,
+            metadata,
         }))
     }
 
     // This would ideally be generic over any BufMut, but that won't be very useful until
     // https://github.com/carllerche/bytes/issues/170 is fixed.
-    #[allow(dead_code)]
     pub(crate) fn encode(&self, buf: &mut Vec<u8>) -> Result<()> {
         self.verify()?;
         buf.put_slice(self.node.as_ref());
@@ -292,12 +334,10 @@ impl DataEntry {
             delta::encode_delta(&self.delta, buf);
         }
 
-        if self.version == 2 {
-            // Since Mononoke doesn't support LFS, we don't need to send any metadata over the
-            // wire.
-            // TODO: LFS support
-            buf.put_u32_be(0);
+        if let Some(ref metadata) = self.metadata {
+            metadata.write(buf)?
         }
+
         Ok(())
     }
 
@@ -437,7 +477,7 @@ mod test {
                 node: BS_HASH,
                 delta_base,
                 delta,
-                version: 1,
+                metadata: None,
             };
             let result = entry.verify();
             if is_valid {
@@ -454,6 +494,12 @@ mod test {
         }
 
         fn test_data_roundtrip(entry: DataEntry) -> bool {
+            let version = if entry.metadata.is_none() {
+                DataEntryVersion::V1
+            } else {
+                DataEntryVersion::V2
+            };
+
             let mut rng = StdGen::new(rand::thread_rng(), 100);
 
             let mut encoded = vec![];
@@ -468,7 +514,7 @@ mod test {
                 encoded_bytes.set_len(reduced_len);
                 reduced_len
             };
-            let decoded = DataEntry::decode(&mut encoded_bytes)
+            let decoded = DataEntry::decode(&mut encoded_bytes, version)
                 .expect("decoding this data entry should succeed");
             assert_eq!(decoded, None);
             // Ensure that no bytes in encoded actually got read.
@@ -479,7 +525,7 @@ mod test {
                 encoded_bytes.set_len(bytes_len);
             }
 
-            let decoded = DataEntry::decode(&mut encoded_bytes)
+            let decoded = DataEntry::decode(&mut encoded_bytes, version)
                 .expect("decoding this history entry should succeed");
             assert_eq!(Some(entry), decoded);
             assert_eq!(encoded_bytes.len(), 0);

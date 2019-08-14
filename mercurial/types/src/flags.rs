@@ -15,8 +15,6 @@ bitflags! {
         const REVIDX_EXTSTORED = 1 << 13;  // data is stored externally
         // Unused, not supported yet
         const REVIDX_ELLIPSIS = 1 << 14;  // revision hash does not match data (narrowhg)
-        // Unused, not supported yet
-        const REVIDX_ISCENSORED = 1 << 15; // revision has censor metadata, must be verified
     }
 }
 
@@ -36,5 +34,11 @@ pub fn parse_rev_flags(flags: Option<u16>) -> Result<RevFlags> {
 impl fmt::Display for RevFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.bits())
+    }
+}
+
+impl Into<u64> for RevFlags {
+    fn into(self) -> u64 {
+        self.bits().into()
     }
 }

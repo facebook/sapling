@@ -7,13 +7,13 @@
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes, UnittestOverride};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
+use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
 use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
     fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
-    fetch_file_size_from_blobstore, fetch_raw_filenode_bytes, get_rename_from_envelope,
-    HgBlobEntry,
+    fetch_file_size_from_blobstore, HgBlobEntry,
 };
 use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
@@ -47,9 +47,9 @@ use maplit::hashmap;
 use mercurial_revlog::file::{File, META_SZ};
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    calculate_hg_node_id_stream, Changeset, Entry, FileBytes, HgBlob, HgBlobNode, HgChangesetId,
-    HgEntryId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut,
-    HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
+    calculate_hg_node_id_stream, Changeset, Entry, FileBytes, HgBlobNode, HgChangesetId, HgEntryId,
+    HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut, HgManifestId,
+    HgNodeHash, HgParents, Manifest, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
@@ -359,21 +359,6 @@ impl BlobRepo {
             .flatten_stream()
             .map(FileBytes)
             .boxify()
-    }
-
-    // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper
-    // around a Chain, but it isn't because of API deficiencies in bytes::Buf. See D8412210.
-
-    /// The raw filenode content is crucial for operation like delta application. It is stored in
-    /// untouched represenation that came from Mercurial client.
-    pub fn get_raw_hg_content(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-        validate_hash: bool,
-    ) -> BoxFuture<HgBlob, Error> {
-        STATS::get_raw_hg_content.add_value(1);
-        fetch_raw_filenode_bytes(ctx, &self.blobstore, key, validate_hash)
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
@@ -731,7 +716,8 @@ impl BlobRepo {
                 cloned!(path, linknode);
                 move |envelope| {
                     let (p1, p2) = envelope.parents();
-                    let copyfrom = get_rename_from_envelope(envelope)
+                    let copyfrom = envelope
+                        .get_copy_info()
                         .with_context({
                             cloned!(path);
                             move |_| format!("While parsing copy information for {} {}", path, node)

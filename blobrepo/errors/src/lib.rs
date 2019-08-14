@@ -158,6 +158,7 @@ pub enum ErrorKind {
     },
     #[fail(display = "Case conflict in a commit")]
     CaseConflict(MPath),
+    // TODO (torozco) T48791324: Remove this once fetch_raw_filenode_bytes is gone from blobrepo.
     #[fail(display = "Corrupt hg filenode returned: {} != {}", _0, _1)]
     CorruptHgFileNode {
         expected: HgFileNodeId,

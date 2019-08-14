@@ -6,69 +6,87 @@
 
 #![deny(warnings)]
 
+mod redaction;
+
 use std::{
     collections::HashSet,
     io::{Cursor, Write},
 };
 
-use blobrepo::{
-    file_history::{get_file_history, get_maybe_draft_filenode},
-    BlobRepo,
-};
-use bytes::{Bytes, BytesMut};
-use censorship::{hide_censorship_error, tombstone_filebytes_revflags};
+use blobrepo::{file_history::get_file_history, BlobRepo};
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{Error, Fail, Fallible};
-use filenodes::FilenodeInfo;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use lz4_pyframe;
 use mercurial_revlog::file::File;
 use mercurial_types::{
-    FileBytes, HgBlobNode, HgFileHistoryEntry, HgFileNodeId, MPath, RepoPath, RevFlags,
+    calculate_hg_node_id, FileBytes, HgFileEnvelopeMut, HgFileHistoryEntry, HgFileNodeId,
+    HgParents, MPath, RevFlags,
 };
-use metaconfig_types::LfsParams;
+use revisionstore::Metadata;
+
+use redaction::RedactionFutureExt;
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(
-        display = "Data corruption for {}: expected {}, actual {}!",
-        _0, _1, _2
-    )]
-    DataCorruption {
-        path: RepoPath,
+    #[fail(display = "Corrupt hg filenode returned: {} != {}", _0, _1)]
+    CorruptHgFileNode {
         expected: HgFileNodeId,
         actual: HgFileNodeId,
     },
+
+    #[fail(display = "Invalid blob kind returned: {:?}", _0)]
+    InvalidKind { kind: RemotefilelogBlobKind },
+}
+
+#[derive(Debug)]
+pub enum RemotefilelogBlobKind {
+    /// An inline filenode. This represents its size.
+    Inline(u64),
+    /// An LFS filenode.
+    Lfs,
+}
+
+struct RemotefilelogBlob {
+    kind: RemotefilelogBlobKind,
+    /// data is a future of the metadata bytes and file bytes. For LFS blobs, the metadata bytes
+    /// will be empty and the file bytes will contain a serialized LFS pointer.
+    data: BoxFuture<(Bytes, FileBytes), Error>,
 }
 
 /// Remotefilelog blob consists of file content in `node` revision and all the history
 /// of the file up to `node`
-pub fn create_remotefilelog_blob(
+pub fn create_getfiles_blob(
     ctx: CoreContext,
     repo: BlobRepo,
     node: HgFileNodeId,
     path: MPath,
-    lfs_params: LfsParams,
+    lfs_threshold: Option<u64>,
     validate_hash: bool,
-) -> BoxFuture<Bytes, Error> {
-    let raw_content_bytes = hide_censorship_error(
-        get_raw_content(
-            ctx.clone(),
-            repo.clone(),
-            node,
-            RepoPath::FilePath(path.clone()),
-            lfs_params,
-            validate_hash,
-        ),
-        tombstone_filebytes_revflags,
+) -> impl Future<Item = Bytes, Error = Error> {
+    let raw_content_bytes = prepare_blob(
+        ctx.clone(),
+        repo.clone(),
+        node,
+        lfs_threshold,
+        validate_hash,
     )
-    .and_then(move |(raw_content, meta_key_flag)| {
-        encode_remotefilelog_file_content(raw_content, meta_key_flag)
+    .and_then(|RemotefilelogBlob { kind, data }| (Ok(kind).into_future(), data.rescue_redacted()))
+    .and_then(move |(kind, (_meta_bytes, file_bytes))| {
+        use RemotefilelogBlobKind::*;
+
+        let revlog_flags = match kind {
+            Inline(_) => RevFlags::REVIDX_DEFAULT_FLAGS,
+            Lfs => RevFlags::REVIDX_EXTSTORED,
+        };
+
+        encode_getfiles_file_content(file_bytes, revlog_flags)
     });
 
     let file_history_bytes = get_file_history(ctx, repo, node, path, None)
@@ -86,100 +104,7 @@ pub fn create_remotefilelog_blob(
         .boxify()
 }
 
-fn extract_copy_from<'a>(filenode: &'a FilenodeInfo) -> Option<(MPath, HgFileNodeId)> {
-    filenode
-        .copyfrom
-        .clone()
-        .map(|(path, node)| (path.into_mpath().unwrap(), node))
-}
-
-fn validate_content(
-    content: &FileBytes,
-    filenode: FilenodeInfo,
-    repopath: RepoPath,
-    actual: HgFileNodeId,
-) -> Result<(), Error> {
-    let mut out: Vec<u8> = vec![];
-    File::generate_metadata(extract_copy_from(&filenode).as_ref(), content, &mut out)?;
-    let mut bytes = BytesMut::from(out);
-    bytes.extend_from_slice(content.as_bytes());
-
-    let p1 = filenode.p1.map(|p| p.into_nodehash());
-    let p2 = filenode.p2.map(|p| p.into_nodehash());
-    let expected = HgFileNodeId::new(HgBlobNode::new(bytes.freeze(), p1, p2).nodeid());
-    if actual == expected {
-        Ok(())
-    } else {
-        Err(ErrorKind::DataCorruption {
-            path: repopath,
-            expected,
-            actual,
-        }
-        .into())
-    }
-}
-
-/// Get the raw content of a file or content hash in the case of LFS files.
-/// Can also optionally validate a hash hg filenode
-fn get_raw_content(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    node: HgFileNodeId,
-    repopath: RepoPath,
-    lfs_params: LfsParams,
-    validate_hash: bool,
-) -> impl Future<Item = (FileBytes, RevFlags), Error = Error> {
-    let filenode_fut =
-        get_maybe_draft_filenode(ctx.clone(), repo.clone(), repopath.clone(), node.clone());
-
-    repo.get_file_envelope(ctx.clone(), node)
-        .join(filenode_fut)
-        .and_then({
-            cloned!(ctx, repo);
-            move |(envelope, filenode_info)| {
-                let file_size = envelope.content_size();
-
-                let direct_fetching_file = match lfs_params.threshold {
-                    Some(threshold) => (file_size <= threshold),
-                    None => true,
-                };
-
-                if direct_fetching_file {
-                    (
-                        repo.get_file_content(ctx, node)
-                            .concat2()
-                            .and_then(move |content| {
-                                if validate_hash {
-                                    validate_content(&content, filenode_info, repopath, node)
-                                        .map(|()| content)
-                                } else {
-                                    Ok(content)
-                                }
-                            })
-                            .left_future(),
-                        Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
-                    )
-                } else {
-                    let copy_from =
-                        extract_copy_from(&filenode_info).map(|copy_from| copy_from.clone());
-
-                    let file_fut = repo
-                        .get_file_sha256(ctx, envelope.content_id())
-                        .and_then(move |oid| {
-                            File::generate_lfs_file(oid, envelope.content_size(), copy_from)
-                        })
-                        .map(|bytes| FileBytes(bytes));
-
-                    (
-                        file_fut.right_future(),
-                        Ok(RevFlags::REVIDX_EXTSTORED).into_future(),
-                    )
-                }
-            }
-        })
-}
-
-fn encode_remotefilelog_file_content(
+fn encode_getfiles_file_content(
     raw_content: FileBytes,
     meta_key_flag: RevFlags,
 ) -> Result<Vec<u8>, Error> {
@@ -203,6 +128,115 @@ fn encode_remotefilelog_file_content(
     res.and_then(|_| writer.write_all(&raw_content))
         .map_err(Error::from)
         .map(|_| writer.into_inner())
+}
+
+/// Create a blob for getpack v1. This returns a future that resolves with an estimated weight for
+/// this blob (this is NOT trying to be correct, it's just a rough estimate!), and the blob's
+/// bytes.
+pub fn create_getpack_v1_blob(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    node: HgFileNodeId,
+    validate_hash: bool,
+) -> impl Future<
+    Item = (
+        u64,
+        impl Future<Item = (HgFileNodeId, Bytes), Error = Error>,
+    ),
+    Error = Error,
+> {
+    prepare_blob(ctx, repo, node, None, validate_hash).map(
+        move |RemotefilelogBlob { kind, data }| {
+            use RemotefilelogBlobKind::*;
+
+            let weight = match kind {
+                Inline(size) => size,
+                Lfs => unreachable!(), // lfs_threshold = None implies no LFS blobs.
+            };
+
+            let fut = data
+                .rescue_redacted()
+                .map(move |(mut meta_bytes, file_bytes)| {
+                    // TODO (T30456231): Avoid this copy
+                    meta_bytes.extend_from_slice(&file_bytes.as_bytes());
+                    (node, meta_bytes)
+                });
+
+            (weight, fut)
+        },
+    )
+}
+
+/// Create a blob for getpack v2. See v1 above for general details. This also returns Metadata,
+/// which is present in the v2 version of the protocol.
+pub fn create_getpack_v2_blob(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    node: HgFileNodeId,
+    lfs_threshold: Option<u64>,
+    validate_hash: bool,
+) -> impl Future<
+    Item = (
+        u64,
+        impl Future<Item = (HgFileNodeId, Bytes, Metadata), Error = Error>,
+    ),
+    Error = Error,
+> {
+    prepare_blob(ctx, repo, node, lfs_threshold, validate_hash).map(
+        move |RemotefilelogBlob { kind, data }| {
+            use RemotefilelogBlobKind::*;
+
+            let (weight, metadata) = match kind {
+                Inline(size) => (
+                    size,
+                    Metadata {
+                        size: None,
+                        flags: None,
+                    },
+                ),
+                Lfs => {
+                    let flags = Some(RevFlags::REVIDX_EXTSTORED.into());
+                    (0, Metadata { size: None, flags })
+                }
+            };
+
+            let fut = data
+                .rescue_redacted()
+                .map(move |(mut meta_bytes, file_bytes)| {
+                    // TODO (T30456231): Avoid this copy
+                    meta_bytes.extend_from_slice(&file_bytes.as_bytes());
+                    (node, meta_bytes, metadata)
+                });
+
+            (weight, fut)
+        },
+    )
+}
+
+/// Retrieve the raw contents of a filenode. This does not substitute censored content
+/// (it'll just let the censoring error fall through).
+pub fn create_raw_filenode_blob(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    node: HgFileNodeId,
+    validate_hash: bool,
+) -> impl Future<Item = Bytes, Error = Error> {
+    prepare_blob(ctx, repo, node, None, validate_hash)
+        .and_then(|RemotefilelogBlob { kind, data }| {
+            use RemotefilelogBlobKind::*;
+
+            match kind {
+                Inline(_) => data.left_future(),
+                kind @ _ => Err(ErrorKind::InvalidKind { kind }.into())
+                    .into_future()
+                    .right_future(),
+            }
+        })
+        .map(|(mut meta_bytes, file_bytes)| {
+            // TODO (T30456231): Avoid this copy
+            meta_bytes.extend_from_slice(&file_bytes.as_bytes());
+            meta_bytes
+        })
 }
 
 /// Get ancestors of all filenodes
@@ -237,4 +271,94 @@ fn serialize_history(history: Vec<HgFileHistoryEntry>) -> Fallible<Vec<u8>> {
     }
 
     Ok(writer.into_inner())
+}
+
+fn prepare_blob(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    node: HgFileNodeId,
+    lfs_threshold: Option<u64>,
+    validate_hash: bool,
+) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
+    repo.get_file_envelope(ctx.clone(), node).map({
+        cloned!(repo);
+        move |envelope| {
+            let file_size = envelope.content_size();
+
+            let inline_file = match lfs_threshold {
+                Some(lfs_threshold) => (file_size <= lfs_threshold),
+                None => true,
+            };
+
+            // NOTE: It'd be nice if we could hoist up redaction checks to this point. Doing so
+            // would let us return a different kind based on whether the content is redacted or
+            // not, and therefore would make it more obvious which methods do redaction or not
+            // (based on their signature).
+
+            if inline_file {
+                let content_fut = repo
+                    .get_file_content_by_content_id(ctx, envelope.content_id())
+                    .concat2();
+
+                let blob_fut = if validate_hash {
+                    content_fut
+                        .and_then(move |file_bytes| {
+                            let HgFileEnvelopeMut {
+                                p1, p2, metadata, ..
+                            } = envelope.into_mut();
+
+                            let mut validation_bytes =
+                                Bytes::with_capacity(metadata.len() + file_bytes.as_bytes().len());
+                            validation_bytes.extend_from_slice(&metadata);
+                            validation_bytes.extend_from_slice(file_bytes.as_bytes());
+
+                            let p1 = p1.map(|p| p.into_nodehash());
+                            let p2 = p2.map(|p| p.into_nodehash());
+                            let actual = HgFileNodeId::new(calculate_hg_node_id(
+                                &validation_bytes,
+                                &HgParents::new(p1, p2),
+                            ));
+
+                            if actual != node {
+                                return Err(ErrorKind::CorruptHgFileNode {
+                                    expected: node,
+                                    actual,
+                                }
+                                .into());
+                            }
+
+                            Ok((metadata, file_bytes))
+                        })
+                        .boxify()
+                } else {
+                    content_fut
+                        .map(move |file_bytes| (envelope.into_mut().metadata, file_bytes))
+                        .boxify()
+                };
+
+                RemotefilelogBlob {
+                    kind: RemotefilelogBlobKind::Inline(file_size),
+                    data: blob_fut,
+                }
+            } else {
+                // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
+                // metadata encoded for LFS blobs (it's in the LFS pointer instead).
+                let blob_fut = (
+                    repo.get_file_sha256(ctx, envelope.content_id()),
+                    File::extract_copied_from(envelope.metadata()).into_future(),
+                )
+                    .into_future()
+                    .and_then(move |(oid, copy_from)| {
+                        File::generate_lfs_file(oid, file_size, copy_from)
+                    })
+                    .map(|bytes| (Bytes::new(), FileBytes(bytes)))
+                    .boxify();
+
+                RemotefilelogBlob {
+                    kind: RemotefilelogBlobKind::Lfs,
+                    data: blob_fut,
+                }
+            }
+        }
+    })
 }

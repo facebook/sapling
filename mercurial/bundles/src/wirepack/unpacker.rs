@@ -15,7 +15,7 @@ use tokio_codec::Decoder;
 use context::CoreContext;
 use mercurial_types::RepoPath;
 
-use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
+use super::{DataEntry, DataEntryVersion, HistoryEntry, Kind, Part, WIREPACK_END};
 use crate::errors::*;
 use crate::utils::BytesExt;
 
@@ -230,7 +230,7 @@ impl UnpackerInner {
 
     #[inline]
     fn decode_data(&mut self, buf: &mut BytesMut) -> Result<Option<DataEntry>> {
-        DataEntry::decode(buf)
+        DataEntry::decode(buf, DataEntryVersion::V1)
     }
 }
 

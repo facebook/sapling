@@ -14,7 +14,6 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
-use censorship::{hide_censorship_error, tombstone_hgblob};
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -28,6 +27,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use http::uri::Uri;
 use mononoke_api;
+use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
 use serde_json;
 use slog::{debug, Logger};
@@ -429,13 +429,10 @@ impl MononokeRepo {
             let filenode = HgFileNodeId::new(key.node.clone().into());
             let get_parents = self.repo.get_file_parents(ctx.clone(), filenode);
 
-            // TODO(T48685378): Handle redacted content in a less hacky way
-            let get_content = hide_censorship_error(
-                self.repo
-                    .clone()
-                    .get_raw_hg_content(ctx.clone(), filenode.clone(), false),
-                tombstone_hgblob,
-            );
+            let get_content =
+                create_getpack_v1_blob(ctx.clone(), self.repo.clone(), filenode.clone(), false)
+                    .and_then(|(_size, fut)| fut)
+                    .map(|(_filenode, bytes)| bytes);
 
             // Use `lazy` when writing log messages so that the message is emitted
             // when the Future is polled rather than when it is created.
@@ -444,9 +441,7 @@ impl MononokeRepo {
                 debug!(&logger, "fetching data for key: {}", &key);
 
                 get_parents.and_then(move |parents| {
-                    get_content.map(move |content| {
-                        DataEntry::new(key, content.into_inner(), parents.into())
-                    })
+                    get_content.map(move |bytes| DataEntry::new(key, bytes, parents.into()))
                 })
             });
 

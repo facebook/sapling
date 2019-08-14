@@ -6,9 +6,10 @@
 
 //! QuickCheck support for wire packs.
 
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
+use revisionstore::Metadata;
 
 use super::{DataEntry, HistoryEntry, Kind};
 
@@ -143,23 +144,49 @@ impl Arbitrary for DataEntry {
             }
             (delta_base, Delta::arbitrary(g))
         };
+
+        // 50% chance of having metadata (i.e. being v2)
+        let metadata = if g.gen_weighted_bool(2) {
+            // 50% chance of flags being present
+            let flags = if g.gen_weighted_bool(2) {
+                Some(1)
+            } else {
+                None
+            };
+            // 50% chance of size being present
+            let size = if g.gen_weighted_bool(2) {
+                Some(2)
+            } else {
+                None
+            };
+            Some(Metadata { flags, size })
+        } else {
+            None
+        };
+
         Self {
             node: HgNodeHash::arbitrary(g),
             delta_base,
             delta,
-            version: 1,
+            metadata,
         }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        // The delta is the only shrinkable here.
-        let node = self.node;
-        let delta_base = self.delta_base;
-        Box::new(self.delta.shrink().map(move |delta| Self {
-            node,
-            delta_base,
-            delta,
-            version: 1,
-        }))
+        // The delta is the only shrinkable here. However, we cannot shrink it if we don't have
+        // base (this might generate a non-fulltext delta).
+        if self.delta_base == NULL_HASH {
+            empty_shrinker()
+        } else {
+            let node = self.node;
+            let delta_base = self.delta_base;
+            let metadata = self.metadata;
+            Box::new(self.delta.shrink().map(move |delta| Self {
+                node,
+                delta_base,
+                delta,
+                metadata,
+            }))
+        }
     }
 }

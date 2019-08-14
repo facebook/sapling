@@ -940,7 +940,6 @@ impl Bundle2Resolver {
                     .collect()
                     .and_then({
                         cloned!(repo, ctx);
-                        let repo = Arc::new(repo);
                         move |changesets| {
                             upload_hg_blobs(
                                 ctx.clone(),
@@ -1066,7 +1065,7 @@ impl Bundle2Resolver {
                 Some(Bundle2Item::B2xTreegroup2(_, parts))
                 | Some(Bundle2Item::B2xRebasePack(_, parts)) => upload_hg_blobs(
                     ctx,
-                    Arc::new(repo),
+                    repo,
                     TreemanifestBundle2Parser::new(parts),
                     UploadBlobsType::IgnoreDuplicates,
                 )

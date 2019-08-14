@@ -19,12 +19,11 @@ use futures::{
     stream::Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial_revlog::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{
     calculate_hg_node_id, FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId,
-    HgNodeHash, HgParents, MPath, MPathElement,
+    HgNodeHash, HgParents, MPathElement,
 };
 use mononoke_types::{hash::Sha256, ContentId, ContentMetadata};
 use repo_blobstore::RepoBlobstore;
@@ -224,16 +223,6 @@ pub fn fetch_file_contents(
         .from_err()
 }
 
-pub(crate) fn get_rename_from_envelope(
-    envelope: HgFileEnvelope,
-) -> Result<Option<(MPath, HgFileNodeId)>, Error> {
-    let envelope = envelope.into_mut();
-
-    // This is a bit of a hack because metadata is not the complete file. However, it's
-    // equivalent to a zero-length file.
-    file::File::new(envelope.metadata, envelope.p1, envelope.p2).copied_from()
-}
-
 impl HgBlobEntry {
     pub fn new(blobstore: RepoBlobstore, name: MPathElement, nodeid: HgNodeHash, ty: Type) -> Self {
         Self {
@@ -261,6 +250,9 @@ impl HgBlobEntry {
                 fetch_raw_manifest_bytes(ctx, &self.blobstore, manifest_id)
             }
             HgEntryId::File(_, filenode_id) => {
+                // TODO (torozco) T48791324: Identify if get_raw_content is being used at all on
+                // filenodes, and remove callers so we can remove it. As-is, if called, this could
+                // try to access arbitrarily large files.
                 fetch_raw_filenode_bytes(ctx, &self.blobstore, filenode_id, validate_hash)
             }
         }

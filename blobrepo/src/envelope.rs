@@ -4,8 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::file::get_rename_from_envelope;
 use failure_ext::Result;
+use mercurial_revlog::file::File;
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath};
 
 pub trait HgBlobEnvelope {
@@ -24,7 +24,7 @@ impl HgBlobEnvelope for HgFileEnvelope {
     }
 
     fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
-        get_rename_from_envelope(self.clone())
+        File::extract_copied_from(self.metadata())
     }
 
     fn get_size(&self) -> Option<u64> {

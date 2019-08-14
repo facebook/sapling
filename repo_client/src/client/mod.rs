@@ -11,7 +11,6 @@ use blobrepo::HgBlobChangeset;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
-use censorship::{hide_censorship_error, tombstone_hgblob};
 use cloned::cloned;
 use context::{CoreContext, Metric};
 use failure::{err_msg, format_err};
@@ -41,7 +40,11 @@ use percent_encoding;
 use phases::Phases;
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
-use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
+use remotefilelog::{
+    create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
+    get_unordered_file_history_for_multiple_nodes,
+};
+use revisionstore::Metadata;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json::{self, json};
@@ -495,17 +498,28 @@ impl RepoClient {
             .boxify()
     }
 
-    fn getpack(
+    fn getpack<WeightedContent, Content, GetpackHandler>(
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
-        version: u8,
+        handler: GetpackHandler,
         mut wireproto_logger: WireprotoLogger,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<Bytes, Error>
+    where
+        WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
+        Content:
+            Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
+        GetpackHandler:
+            Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
+                + Send
+                + 'static,
+    {
         // We buffer all parameters in memory so that we can log them.
         // That shouldn't be a problem because requests are quite small
         let getpack_params = Arc::new(Mutex::new(vec![]));
         let ctx = self.ctx.clone();
         let repo = self.repo.blobrepo().clone();
+
+        let lfs_threshold = self.repo.lfs_params().threshold;
 
         let validate_hash =
             rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
@@ -524,27 +538,17 @@ impl RepoClient {
                         let mut getpack_params = getpack_params.lock().unwrap();
                         getpack_params.push((path.clone(), filenodes.clone()));
                     }
-                    let mut sizes_futs = vec![];
-                    for filenode in filenodes.iter() {
-                        let f = repo.get_file_size(ctx.clone(), *filenode);
-                        sizes_futs.push(f);
-                    }
 
-                    let contents: Vec<_> = filenodes
+                    let blob_futs: Vec<_> = filenodes
                         .iter()
                         .map(|filenode| {
-                            hide_censorship_error(
-                                repo.clone().get_raw_hg_content(
-                                    ctx.clone(),
-                                    filenode.clone(),
-                                    validate_hash,
-                                ),
-                                tombstone_hgblob,
+                            handler(
+                                ctx.clone(),
+                                repo.clone(),
+                                *filenode,
+                                lfs_threshold,
+                                validate_hash,
                             )
-                            .map({
-                                cloned!(filenode);
-                                move |content| (filenode, content.into_inner())
-                            })
                         })
                         .collect();
 
@@ -556,13 +560,15 @@ impl RepoClient {
                     )
                     .collect();
 
-                    let contents_fut = future::join_all(contents.into_iter())
-                        .join(history_fut)
-                        .map(move |(contents, history)| (path, contents, history))
-                        .boxify();
+                    future::join_all(blob_futs.into_iter()).map(move |blobs| {
+                        let total_weight = blobs.iter().map(|(size, _)| size).sum();
+                        let content_futs = blobs.into_iter().map(|(_, fut)| fut);
+                        let contents_and_history = future::join_all(content_futs)
+                            .join(history_fut)
+                            .map(move |(contents, history)| (path, contents, history));
 
-                    future::join_all(sizes_futs.into_iter())
-                        .map(move |filenode_sizes| (contents_fut, filenode_sizes.into_iter().sum()))
+                        (contents_and_history, total_weight)
+                    })
                 }
             })
             .buffered(getpack_buffer_size);
@@ -603,7 +609,7 @@ impl RepoClient {
                         path: RepoPath::FilePath(path),
                         entry_count: contents.len() as u32,
                     });
-                    for (filenode, content) in contents {
+                    for (filenode, content, metadata) in contents {
                         let content = content.to_vec();
                         ctx.perf_counters()
                             .set_max_counter("getpack_max_file_size", content.len() as i64);
@@ -611,7 +617,7 @@ impl RepoClient {
                             node: filenode.into_nodehash(),
                             delta_base: NULL_HASH,
                             delta: Delta::new_fulltext(content),
-                            version,
+                            metadata,
                         }));
                     }
                     stream::iter_ok(res.into_iter())
@@ -1336,12 +1342,12 @@ impl HgCommands for RepoClient {
                 cloned!(self.ctx);
                 move |(node, path)| {
                     let repo = this.repo.clone();
-                    create_remotefilelog_blob(
+                    create_getfiles_blob(
                         ctx.clone(),
                         repo.blobrepo().clone(),
                         node,
                         path.clone(),
-                        repo.lfs_params().clone(),
+                        repo.lfs_params().threshold,
                         validate_hash,
                     )
                     .traced(
@@ -1535,7 +1541,17 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "{}", ops::GETPACKV1);
         let wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
 
-        self.getpack(params, 1, wireproto_logger)
+        self.getpack(
+            params,
+            |ctx, repo, node, _lfs_thresold, validate_hash| {
+                create_getpack_v1_blob(ctx, repo, node, validate_hash).map(|(size, fut)| {
+                    // GetpackV1 has no metadata.
+                    let fut = fut.map(|(id, bytes)| (id, bytes, None));
+                    (size, fut)
+                })
+            },
+            wireproto_logger,
+        )
     }
 
     // @wireprotocommand('getpackv2')
@@ -1546,7 +1562,19 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "{}", ops::GETPACKV2);
         let wireproto_logger = self.wireproto_logger(ops::GETPACKV2, None);
 
-        self.getpack(params, 2, wireproto_logger)
+        self.getpack(
+            params,
+            |ctx, repo, node, lfs_thresold, validate_hash| {
+                create_getpack_v2_blob(ctx, repo, node, lfs_thresold, validate_hash).map(
+                    |(size, fut)| {
+                        // GetpackV2 always has metadata.
+                        let fut = fut.map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
+                        (size, fut)
+                    },
+                )
+            },
+            wireproto_logger,
+        )
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore

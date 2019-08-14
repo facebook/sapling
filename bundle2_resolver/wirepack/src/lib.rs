@@ -292,7 +292,7 @@ mod test {
             node,
             delta_base: NULL_HASH,
             delta: delta::Delta::new_fulltext(data),
-            version: 1,
+            metadata: None,
         })
     }
 

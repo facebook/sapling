@@ -45,6 +45,7 @@ start mononoke
 Pull from Mononoke
   $ cd repo2
   $ setconfig remotefilelog.fetchpacks=True
+  $ setconfig remotefilelog.getpackversion=2
   $ setconfig extensions.pushrebase=
   $ hgmn pull -q
   warning: stream clone requested but client is missing requirements: lz4revlog
@@ -54,10 +55,10 @@ Make sure that cache is empty
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
   [1]
 
-  $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep "getpackv1 command"
-  sending getpackv1 command
+  $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep "getpackv2 command"
+  sending getpackv2 command
 
-Make sure that `hg update` succeeds after prefetching
+Make sure that `hg update` succeeds
   $ hg up --config paths.default=badpath 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -70,11 +71,12 @@ Go to repo3 and prefetch both revisions that modified file A.
 Then make sure update succeeds
   $ cd $TESTTMP/repo3
   $ setconfig remotefilelog.fetchpacks=True
+  $ setconfig remotefilelog.getpackversion=2
   $ hgmn pull -q
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
-  $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep "getpackv1 command"
-  sending getpackv1 command
+  $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep "getpackv2 command"
+  sending getpackv2 command
   $ hg up --config paths.default=badpath 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat A
@@ -116,8 +118,8 @@ Rename a file and then prefetch it
   added 0 changesets with 0 changes to 0 files
   $ cd $TESTTMP/repo3
   $ hgmn pull -q
-  $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv1 command"
-  sending getpackv1 command
+  $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv2 command"
+  sending getpackv2 command
   $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
   $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
   \x01 (esc)

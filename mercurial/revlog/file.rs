@@ -108,8 +108,7 @@ impl File {
 
     pub fn copied_from(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
         let buf = self.node.as_blob().as_slice();
-
-        Self::get_copied_from(&Self::parse_meta(buf))
+        Self::extract_copied_from(&buf)
     }
 
     fn get_copied_from_with_keys(
@@ -129,10 +128,9 @@ impl File {
         }
     }
 
-    pub(crate) fn get_copied_from(
-        meta: &HashMap<&[u8], &[u8]>,
-    ) -> Result<Option<(MPath, HgFileNodeId)>> {
-        Self::get_copied_from_with_keys(meta, COPY_PATH_KEY, COPY_REV_KEY)
+    pub fn extract_copied_from(buf: &[u8]) -> Result<Option<(MPath, HgFileNodeId)>> {
+        let meta = Self::parse_meta(buf);
+        Self::get_copied_from_with_keys(&meta, COPY_PATH_KEY, COPY_REV_KEY)
     }
 
     pub fn generate_metadata<T>(
@@ -657,7 +655,7 @@ mod test {
             let mut buf = Vec::new();
             let result = File::generate_metadata(copy_info.as_ref(), &file_bytes, &mut buf)
                 .and_then(|_| {
-                    File::get_copied_from(&File::parse_meta(&buf))
+                    File::extract_copied_from(&buf)
                 });
             match result {
                 Ok(out_copy_info) => copy_info == out_copy_info,

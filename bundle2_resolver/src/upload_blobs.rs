@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use failure::Compat;
 use failure_ext::ensure_msg;
@@ -38,7 +37,7 @@ use self::UploadBlobsType::*;
 
 pub fn upload_hg_blobs<S, B>(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     blobs: S,
     ubtype: UploadBlobsType,
 ) -> BoxFuture<HashMap<HgNodeKey, B::Value>, Error>
