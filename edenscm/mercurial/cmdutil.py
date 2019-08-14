@@ -33,6 +33,7 @@ from . import (
     obsolete,
     patch,
     pathutil,
+    perftrace,
     progress,
     pycompat,
     registrar,
@@ -3472,15 +3473,17 @@ def amend(ui, repo, old, extra, pats, opts):
             # we can discard X from our list of files. Likewise if X
             # was removed, it's no longer relevant. If X is missing (aka
             # deleted), old X must be preserved.
-            files.update(filestoamend)
-            files = [
-                f
-                for f in files
-                if (
-                    not samefile(f, wctx, base, m1=wctx.buildstatusmanifest(status))
-                    or f in status.deleted
-                )
-            ]
+            with perftrace.trace("Prune files reverted by amend"):
+                files.update(filestoamend)
+                statusmanifest = wctx.buildstatusmanifest(status)
+                files = [
+                    f
+                    for f in files
+                    if (
+                        not samefile(f, wctx, base, m1=statusmanifest)
+                        or f in status.deleted
+                    )
+                ]
 
             def filectxfn(repo, ctx_, path):
                 try:
