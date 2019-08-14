@@ -61,6 +61,28 @@ macro_rules! _define_flags_impl {
                                      [ $( $parsed )* (' ', $field, $doc, $type, $default) ]
                                      $tail);
     };
+
+    // Match a field like:
+    //
+    //    /// description
+    //    #[short('s')]
+    //    name: type,
+    ( [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ] [ $( $parsed:tt )* ] $tail:tt ) => {
+        $crate::_define_flags_impl!( [ $( $rest )* ]
+                                     [ $( $parsed )* ($short, $field, $doc, $type, (<$type>::default())) ]
+                                     $tail);
+    };
+
+    // Match a field like:
+    //
+    //    /// description
+    //    #[short('s')]
+    //    name: type = default,
+    ( [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ] [ $( $parsed:tt )* ] $tail:tt ) => {
+        $crate::_define_flags_impl!( [ $( $rest )* ]
+                                     [ $( $parsed )* ($short, $field, $doc, $type, $default) ]
+                                     $tail);
+    };
 }
 
 #[cfg(test)]
@@ -80,6 +102,7 @@ mod tests {
             name: String = "alice",
 
             /// revisions
+            #[short('r')]
             rev: Vec<String>,
         }
     }
@@ -94,7 +117,7 @@ mod tests {
             (None, "foo", "foo", Value::from(false)),
             (None, "count", "int value", Value::from(12)),
             (None, "name", "name", Value::from("alice")),
-            (None, "rev", "revisions", Value::from(Vec::new())),
+            (Some('r'), "rev", "revisions", Value::from(Vec::new())),
         ]
         .into_iter()
         .map(Into::into)
@@ -116,7 +139,7 @@ mod tests {
 
         let parsed = ParseOptions::new()
             .flags(TestOptions::flags())
-            .parse_args(&vec!["--no-boo", "--name=bob", "--rev=b", "--rev", "a"])
+            .parse_args(&vec!["--no-boo", "--name=bob", "--rev=b", "-r", "a"])
             .unwrap();
         let parsed = TestOptions::from(parsed);
         assert_eq!(parsed.boo, false);
