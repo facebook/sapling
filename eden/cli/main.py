@@ -47,7 +47,9 @@ from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
 
 
-if os.name != "nt":
+if os.name == "nt":
+    from . import winproc
+else:
     from . import daemon, fsck as fsck_mod, rage as rage_mod
 
 
@@ -1023,16 +1025,22 @@ class StartCmd(Subcmd):
             return self.start(args, instance)
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
-        daemon.exec_daemon(
-            instance,
-            args.daemon_binary,
-            args.edenfs_args,
-            takeover=args.takeover,
-            gdb=args.gdb,
-            gdb_args=args.gdb_arg,
-            strace_file=args.strace,
-            foreground=args.foreground,
-        )
+        if os.name == "nt":
+            winproc.start_process(instance, args.daemon_binary, args.edenfs_args)
+        else:
+            daemon.exec_daemon(
+                instance,
+                args.daemon_binary,
+                args.edenfs_args,
+                takeover=args.takeover,
+                gdb=args.gdb,
+                gdb_args=args.gdb_arg,
+                strace_file=args.strace,
+                foreground=args.foreground,
+            )
+
+        # Return success if no is exception is raised
+        return 0
 
     def start_using_systemd(
         self, args: argparse.Namespace, instance: EdenInstance
