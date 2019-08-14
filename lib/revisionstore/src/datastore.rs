@@ -25,7 +25,7 @@ pub struct Delta {
     pub key: Key,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Metadata {
     pub size: Option<u64>,
     pub flags: Option<u64>,
