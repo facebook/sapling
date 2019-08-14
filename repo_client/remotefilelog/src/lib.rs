@@ -24,7 +24,7 @@ use filenodes::FilenodeInfo;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use lz4_pyframe;
-use mercurial::file::File;
+use mercurial_revlog::file::File;
 use mercurial_types::{
     FileBytes, HgBlobNode, HgFileHistoryEntry, HgFileNodeId, MPath, RepoPath, RevFlags,
 };

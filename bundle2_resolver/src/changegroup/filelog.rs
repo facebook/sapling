@@ -23,8 +23,8 @@ use blobrepo::{
     BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgFileContents,
     UploadHgFileEntry, UploadHgNodeHash,
 };
-use mercurial::file::File;
 use mercurial_bundles::changegroup::CgDeltaChunk;
+use mercurial_revlog::file::File;
 use mercurial_types::{
     delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
     RevFlags, NULL_HASH,

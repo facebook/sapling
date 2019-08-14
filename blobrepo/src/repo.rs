@@ -44,7 +44,7 @@ use futures_ext::{
 use futures_stats::{FutureStats, Timed};
 use lock_ext::LockExt;
 use maplit::hashmap;
-use mercurial::file::{File, META_SZ};
+use mercurial_revlog::file::{File, META_SZ};
 use mercurial_types::manifest::Content;
 use mercurial_types::{
     calculate_hg_node_id_stream, Changeset, Entry, FileBytes, HgBlob, HgBlobNode, HgChangesetId,

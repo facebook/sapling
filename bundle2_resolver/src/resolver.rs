@@ -27,11 +27,11 @@ use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use lazy_static::lazy_static;
-use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::{
     create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item, PartHeader, PartHeaderInner,
     PartHeaderType, PartId,
 };
+use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgNodeKey, RepoPath};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};

@@ -9,8 +9,8 @@ use failure_ext::ensure_msg;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
-use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
+use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{delta, HgBlob, HgBlobNode, HgChangesetId, NULL_HASH};
 
 use crate::errors::*;

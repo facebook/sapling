@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-include "scm/mononoke/mercurial_types/if/mercurial_thrift.thrift"
+include "scm/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache

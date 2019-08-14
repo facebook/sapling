@@ -22,7 +22,7 @@ use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use mercurial::RevlogRepo;
+use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgNodeHash;
 use phases::Phases;
 

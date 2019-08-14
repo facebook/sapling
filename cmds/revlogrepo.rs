@@ -6,18 +6,10 @@
 
 #![deny(warnings)]
 
-extern crate clap;
-
-extern crate mercurial;
-extern crate mercurial_types;
-
-use std::path::PathBuf;
-use std::str::FromStr;
-
 use clap::{App, SubCommand};
-
-use mercurial::{revlog::Revlog, RevlogChangeset};
+use mercurial_revlog::{revlog::Revlog, RevlogChangeset};
 use mercurial_types::HgNodeHash;
+use std::{path::PathBuf, str::FromStr};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     App::new("read revlog repo content")

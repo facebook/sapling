@@ -12,9 +12,9 @@ use failure::{Error, Fail};
 use failure_ext::Result;
 use futures::{Poll, Stream};
 
-use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
+use mercurial_revlog::manifest::ManifestContent;
 use mercurial_types::{delta, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
 
 #[derive(Debug, Fail)]
@@ -173,7 +173,7 @@ mod test {
     use futures::{stream, Future};
 
     use maplit::btreemap;
-    use mercurial::manifest::Details;
+    use mercurial_revlog::manifest::Details;
     use mercurial_types::manifest::Type;
     use mercurial_types::{FileType, MPath};
     use mercurial_types_mocks::nodehash::*;

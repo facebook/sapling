@@ -22,7 +22,7 @@ use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use memblob::LazyMemblob;
-use mercurial::file::File;
+use mercurial_revlog::file::File;
 use mercurial_types::{
     manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,

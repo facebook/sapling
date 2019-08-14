@@ -31,7 +31,7 @@ use blobrepo::{
     HgBlobChangeset, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     UploadHgTreeEntry,
 };
-use mercurial::{
+use mercurial_revlog::{
     file::{File, LFSContent},
     manifest, RevlogChangeset, RevlogEntry, RevlogRepo,
 };

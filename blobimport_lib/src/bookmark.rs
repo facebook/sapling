@@ -17,7 +17,7 @@ use slog::{info, Logger};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use mercurial::RevlogRepo;
+use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 

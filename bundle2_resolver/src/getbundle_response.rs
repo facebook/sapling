@@ -12,8 +12,8 @@ use context::CoreContext;
 use failure::err_msg;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
-use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
+use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
 use mononoke_types::ChangesetId;
 use phases::Phases;
@@ -133,7 +133,7 @@ pub fn create_getbundle_response(
             );
 
             let mut v = Vec::new();
-            mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
+            mercurial_revlog::changeset::serialize_cs(&revlogcs, &mut v)?;
             Ok((
                 node,
                 HgBlobNode::new(Bytes::from(v), revlogcs.p1(), revlogcs.p2()),

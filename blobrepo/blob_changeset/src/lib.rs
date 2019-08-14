@@ -14,11 +14,12 @@ use futures::future::{Either, Future, IntoFuture};
 use blobstore::Blobstore;
 
 use context::CoreContext;
-use mercurial;
-use mercurial::changeset::Extra;
-use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
+use mercurial_revlog::{
+    changeset::{serialize_extras, Extra},
+    revlogrepo::RevlogChangeset,
+};
 use mercurial_types::{
+    nodehash::{HgChangesetId, HgManifestId, NULL_HASH},
     Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents,
     MPath,
 };
@@ -103,7 +104,7 @@ impl HgChangesetContent {
 
         if !self.extra.is_empty() {
             write!(out, " ")?;
-            mercurial::changeset::serialize_extras(&self.extra, out)?;
+            serialize_extras(&self.extra, out)?;
         }
 
         write!(out, "\n")?;

@@ -18,8 +18,10 @@ use futures::future::{self, ok, Shared};
 use futures::Future;
 use futures::{stream, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial::changeset::RevlogChangeset;
-use mercurial::manifest::{Details, ManifestContent};
+use mercurial_revlog::{
+    changeset::RevlogChangeset,
+    manifest::{Details, ManifestContent},
+};
 use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };

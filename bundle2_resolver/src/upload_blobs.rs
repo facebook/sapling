@@ -15,7 +15,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobrepo::BlobRepo;
 use blobrepo::{HgBlobEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use context::CoreContext;
-use mercurial::manifest::ManifestContent;
+use mercurial_revlog::manifest::ManifestContent;
 use mercurial_types::{HgNodeHash, HgNodeKey};
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;

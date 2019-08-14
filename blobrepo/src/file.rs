@@ -19,7 +19,7 @@ use futures::{
     stream::Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial::file;
+use mercurial_revlog::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{

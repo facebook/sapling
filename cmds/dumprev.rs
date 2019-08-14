@@ -4,22 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate clap;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate mercurial;
-
-// Import symbols from std:: (standard library)
-use std::fs::File;
-use std::io::Write;
-use std::str::FromStr;
-
-// Just need `App` from clap
 use clap::App;
-
-// Get `Revlog` from the mercurial revlog module
-use crate::failure::{Error, Result, ResultExt};
-use mercurial::revlog::Revlog;
+use failure_ext::{bail_msg, Error, Result, ResultExt};
+use mercurial_revlog::revlog::Revlog;
+use std::{fs::File, io::Write, str::FromStr};
 
 fn run() -> Result<()> {
     // Define command line args and parse command line
