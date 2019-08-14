@@ -135,7 +135,7 @@ fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> Fallible<()>
 // Reduce instruction count in `verify_checksum`.
 #[inline(never)]
 fn checksum_error() -> Fallible<()> {
-    let msg = "integiryt check failed";
+    let msg = "integrity check failed";
     Err(data_error(msg))
 }
 
@@ -1109,7 +1109,7 @@ impl MemLeaf {
 
                 Ok(true)
             } else {
-                // InlineLeaf only supports ExtKey, not embeeded Key.
+                // InlineLeaf only supports ExtKey, not embedded Key.
                 Ok(false)
             }
         } else {
@@ -1503,7 +1503,7 @@ impl OpenOptions {
     /// Set checksum behavior.
     ///
     /// If `checksum_chunk_size` is set to 0, do not use checksums. Otherwise,
-    /// it's the size of a chunk to be checksumed, in bytes. Rounded to `2 ** n`
+    /// it's the size of a chunk to be checksummed, in bytes. Rounded to `2 ** n`
     /// for performance reasons.
     ///
     /// Disabling checksum can help with performance.
@@ -1730,7 +1730,7 @@ impl Index {
     /// - Flush Y. Get new length LY.
     /// - Open using LY as `logical_len`. Get Index Z.
     ///
-    /// Then key "p" does not exist in Z. This allows some advanced usecases.
+    /// Then key "p" does not exist in Z. This allows some advanced use cases.
     /// On the other hand, if "merging changes" is the desired behavior, the
     /// caller needs to take another lock, re-instantiate [`Index`] and re-insert
     /// keys.
