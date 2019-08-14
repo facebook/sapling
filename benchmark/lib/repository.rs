@@ -209,6 +209,19 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         delay(self.put_dist, self.inner.add_filenodes(ctx, info, repo_id)).boxify()
     }
 
+    fn add_or_replace_filenodes(
+        &self,
+        ctx: CoreContext,
+        info: BoxStream<FilenodeInfo, Error>,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(), Error> {
+        delay(
+            self.put_dist,
+            self.inner.add_or_replace_filenodes(ctx, info, repo_id),
+        )
+        .boxify()
+    }
+
     fn get_filenode(
         &self,
         ctx: CoreContext,

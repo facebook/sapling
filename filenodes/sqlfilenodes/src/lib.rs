@@ -80,6 +80,29 @@ queries! {
         ) VALUES {values}"
     }
 
+    write ReplaceFilenodes(values: (
+        repo_id: RepositoryId,
+        path_hash: Vec<u8>,
+        is_tree: i8,
+        filenode: HgFileNodeId,
+        linknode: HgChangesetId,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+        has_copyinfo: i8,
+    )) {
+        none,
+        "REPLACE INTO filenodes (
+            repo_id
+            , path_hash
+            , is_tree
+            , filenode
+            , linknode
+            , p1
+            , p2
+            , has_copyinfo
+        ) VALUES {values}"
+    }
+
     write InsertFixedcopyinfo(values: (
         repo_id: RepositoryId,
         topath_hash: Vec<u8>,
@@ -262,14 +285,12 @@ impl SqlFilenodes {
             read_master_connection: Arc::new(read_master_connection),
         })
     }
-}
 
-impl Filenodes for SqlFilenodes {
-    fn add_filenodes(
+    fn do_insert(
         &self,
-        _ctx: CoreContext,
         filenodes: BoxStream<FilenodeInfo, Error>,
         repo_id: RepositoryId,
+        replace: bool,
     ) -> BoxFuture<(), Error> {
         cloned!(self.write_connection);
         cloned!(self.read_connection);
@@ -295,11 +316,31 @@ impl Filenodes for SqlFilenodes {
                 )
                 .and_then({
                     cloned!(write_connection);
-                    move |()| insert_filenodes(&write_connection, repo_id, &filenodes)
+                    move |()| insert_filenodes(&write_connection, repo_id, &filenodes, replace)
                 })
             })
             .for_each(|()| Ok(()))
             .boxify()
+    }
+}
+
+impl Filenodes for SqlFilenodes {
+    fn add_filenodes(
+        &self,
+        _ctx: CoreContext,
+        filenodes: BoxStream<FilenodeInfo, Error>,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(), Error> {
+        self.do_insert(filenodes, repo_id, false)
+    }
+
+    fn add_or_replace_filenodes(
+        &self,
+        _ctx: CoreContext,
+        filenodes: BoxStream<FilenodeInfo, Error>,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(), Error> {
+        self.do_insert(filenodes, repo_id, true)
     }
 
     fn get_filenode(
@@ -437,6 +478,7 @@ fn insert_filenodes(
     connections: &Vec<Connection>,
     repo_id: RepositoryId,
     filenodes: &Vec<(FilenodeInfo, PathWithHash)>,
+    replace: bool,
 ) -> impl Future<Item = (), Error = Error> {
     let mut filenode_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     let mut copydata_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
@@ -508,10 +550,13 @@ fn insert_filenodes(
         .enumerate()
         .filter_map(|(shard, connection)| {
             if filenode_rows[shard].len() != 0 {
-                Some(InsertFilenodes::query(
-                    &connection.clone(),
-                    &filenode_rows[shard],
-                ))
+                Some(if replace {
+                    ReplaceFilenodes::query(&connection.clone(), &filenode_rows[shard])
+                        .left_future()
+                } else {
+                    InsertFilenodes::query(&connection.clone(), &filenode_rows[shard])
+                        .right_future()
+                })
             } else {
                 None
             }

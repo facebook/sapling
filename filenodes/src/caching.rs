@@ -88,6 +88,15 @@ impl Filenodes for CachingFilenodes {
         self.filenodes.add_filenodes(ctx, info, repo_id)
     }
 
+    fn add_or_replace_filenodes(
+        &self,
+        ctx: CoreContext,
+        info: BoxStream<FilenodeInfo, Error>,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(), Error> {
+        self.filenodes.add_or_replace_filenodes(ctx, info, repo_id)
+    }
+
     fn get_filenode(
         &self,
         ctx: CoreContext,

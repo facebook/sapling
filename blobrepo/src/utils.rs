@@ -11,7 +11,7 @@ use cloned::cloned;
 use failure_ext::Error;
 use futures::future::Future;
 use futures::stream;
-use futures_ext::StreamExt;
+use futures_ext::{BoxStream, StreamExt};
 
 use super::repo::BlobRepo;
 use context::CoreContext;
@@ -70,6 +70,25 @@ impl IncompleteFilenodes {
         cs_id: HgChangesetId,
         repo: &BlobRepo,
     ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
+        repo.get_filenodes()
+            .add_filenodes(ctx, self.prepare_filenodes(cs_id), repo.get_repoid())
+            .map(move |_| cs_id)
+    }
+
+    /// Filenodes shouldn't normally be replaced
+    /// This function should only be used if we need to fix up filenodes
+    pub fn replace_filenodes(
+        &self,
+        ctx: CoreContext,
+        cs_id: HgChangesetId,
+        repo: &BlobRepo,
+    ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
+        repo.get_filenodes()
+            .add_or_replace_filenodes(ctx, self.prepare_filenodes(cs_id), repo.get_repoid())
+            .map(move |_| cs_id)
+    }
+
+    fn prepare_filenodes(&self, cs_id: HgChangesetId) -> BoxStream<FilenodeInfo, Error> {
         let filenodes = {
             let mut filenodes = self.filenodes.lock().expect("lock poisoned");
             mem::replace(&mut *filenodes, Vec::new())
@@ -79,9 +98,8 @@ impl IncompleteFilenodes {
             cloned!(cs_id);
             move |node_info| node_info.with_linknode(cs_id)
         });
-        repo.get_filenodes()
-            .add_filenodes(ctx, stream::iter_ok(filenodes).boxify(), repo.get_repoid())
-            .map(move |_| cs_id)
+
+        stream::iter_ok(filenodes).boxify()
     }
 }
 

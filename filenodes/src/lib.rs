@@ -158,6 +158,13 @@ pub trait Filenodes: Send + Sync {
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 
+    fn add_or_replace_filenodes(
+        &self,
+        ctx: CoreContext,
+        info: BoxStream<FilenodeInfo, Error>,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(), Error>;
+
     fn get_filenode(
         &self,
         ctx: CoreContext,
