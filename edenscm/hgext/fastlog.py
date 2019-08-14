@@ -14,6 +14,10 @@ Config::
 
     [fastlog]
     enabled=true
+
+    # Also use fastlog for files. Otherwise only use fastlog for directories.
+    # (default: false)
+    files=true
 """
 
 import heapq
@@ -123,22 +127,29 @@ def lazyparents(rev, public, parentfunc):
 def dirmatches(files, paths):
     """dirmatches(files, paths)
     Return true if any files match directories in paths
-    Expects paths to be appended by '/'
+    Expects paths to end in '/' if they are directories.
 
     >>> dirmatches(['holy/grail'], ['holy/'])
     True
     >>> dirmatches(['holy/grail'], ['holly/'])
     False
-    >>> try: dirmatches(['holy/grail'], ['holy'])
-    ... except AssertionError, e: print('caught')
-    caught
+    >>> dirmatches(['holy/grail'], ['holy/grail'])
+    True
+    >>> dirmatches(['holy/grail'], ['holy/grail1'])
+    False
+    >>> dirmatches(['holy/grail1'], ['holy/grail'])
+    False
     """
     assert paths
     for path in paths:
-        assert path[-1] == "/"
-        for f in files:
-            if f.startswith(path):
-                return True
+        if path[-1] == "/":
+            for f in files:
+                if f.startswith(path):
+                    return True
+        else:
+            for f in files:
+                if f == path:
+                    return True
     return False
 
 
@@ -212,12 +223,17 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
         if wvfs.isdir(path) and not wvfs.islink(path):
             dirs.update([path + "/"])
         else:
-            # bail on symlinks, and also bail on files for now
-            # with follow behavior, for files, we are supposed
-            # to track copies / renames, but it isn't convenient
-            # to do this through scmquery
-            repo.ui.debug("fastlog: not used because %s is not a directory\n" % path)
-            return orig(repo, subset, x, name, followfirst)
+            if repo.ui.configbool("fastlog", "files"):
+                dirs.update([path])
+            else:
+                # bail on symlinks, and also bail on files for now
+                # with follow behavior, for files, we are supposed
+                # to track copies / renames, but it isn't convenient
+                # to do this through scmquery
+                repo.ui.debug(
+                    "fastlog: not used because %s is not a directory\n" % path
+                )
+                return orig(repo, subset, x, name, followfirst)
 
     rev = startrev
 
