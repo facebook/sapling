@@ -28,7 +28,7 @@ macro_rules! _define_flags_impl {
         impl $crate::parser::StructFlags for $name {
             fn flags() -> Vec<$crate::parser::Flag> {
                 vec![
-                    $( ($short, stringify!($field), $doc.trim(), $crate::parser::Value::from($default)), )*
+                    $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default)), )*
                 ].into_iter().map(Into::into).collect()
             }
         }
@@ -36,7 +36,7 @@ macro_rules! _define_flags_impl {
         impl From<$crate::parser::ParseOutput> for $name {
             fn from(out: $crate::parser::ParseOutput) -> Self {
                 Self {
-                    $( $field : out.get(stringify!($field)).cloned().unwrap().into() , )*
+                    $( $field : out.get(&stringify!($field).replace("_", "-")).cloned().unwrap().into() , )*
                 }
             }
         }
@@ -99,7 +99,7 @@ mod tests {
             count: i64 = 12,
 
             /// name
-            name: String = "alice",
+            long_name: String = "alice",
 
             /// revisions
             #[short('r')]
@@ -116,7 +116,7 @@ mod tests {
             (None, "boo", "bool value", Value::from(true)),
             (None, "foo", "foo", Value::from(false)),
             (None, "count", "int value", Value::from(12)),
-            (None, "name", "name", Value::from("alice")),
+            (None, "long-name", "name", Value::from("alice")),
             (Some('r'), "rev", "revisions", Value::from(Vec::new())),
         ]
         .into_iter()
@@ -134,18 +134,18 @@ mod tests {
         let parsed = TestOptions::from(parsed);
         assert_eq!(parsed.boo, true);
         assert_eq!(parsed.count, 3);
-        assert_eq!(parsed.name, "alice");
+        assert_eq!(parsed.long_name, "alice");
         assert!(parsed.rev.is_empty());
 
         let parsed = ParseOptions::new()
             .flags(TestOptions::flags())
-            .parse_args(&vec!["--no-boo", "--name=bob", "--rev=b", "-r", "a"])
+            .parse_args(&vec!["--no-boo", "--long-name=bob", "--rev=b", "-r", "a"])
             .unwrap();
         let parsed = TestOptions::from(parsed);
         assert_eq!(parsed.boo, false);
         assert_eq!(parsed.foo, false);
         assert_eq!(parsed.count, 12);
-        assert_eq!(parsed.name, "bob");
+        assert_eq!(parsed.long_name, "bob");
         assert_eq!(parsed.rev, vec!["b", "a"]);
     }
 }
