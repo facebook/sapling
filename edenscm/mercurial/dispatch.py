@@ -618,6 +618,7 @@ def _runcatch(req):
 
             # enter the debugger before command execution
             if req.earlyoptions["debugger"]:
+                ui.disablepager()
                 ui.warn(
                     _(
                         "entering debugger - "
