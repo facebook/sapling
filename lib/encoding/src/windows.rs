@@ -26,6 +26,9 @@ const WC_COMPOSITECHECK: winapi::DWORD = 0x00000200;
 /// "more native" from Windows' perspective and is more performant.
 #[inline]
 pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
+    if bytes.len() == 0 {
+        return Ok(Cow::Owned(OsString::new()));
+    }
     let codepage = winapi::CP_ACP;
     let len = unsafe {
         kernel32::MultiByteToWideChar(

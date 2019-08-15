@@ -90,6 +90,7 @@ mod tests {
     #[test]
     fn test_ascii7bit_roundtrip() {
         check_roundtrip(b"/var/log/a.log").expect("roundtrip");
+        check_roundtrip(b"").expect("roundtrip");
     }
 
     #[test]
