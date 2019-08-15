@@ -9,7 +9,6 @@ add_library(
     ${CONFIG_SRCS}
 )
 
-
 target_link_libraries(
   eden_win_mount
   PUBLIC
@@ -17,4 +16,10 @@ target_link_libraries(
     streamingeden_thrift
     Folly::folly
     ProjectedFS
+)
+
+target_include_directories(
+  eden_win_mount
+  PRIVATE
+    ${CPPTOML_INCLUDE_DIR}
 )

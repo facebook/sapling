@@ -7,6 +7,7 @@
 #include "eden/fs/win/mount/EdenMount.h"
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
@@ -14,6 +15,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/win/mount/RepoConfig.h"
 
 #include <folly/logging/xlog.h>
 
@@ -89,6 +91,8 @@ std::shared_ptr<const Tree> EdenMount::getRootTree() const {
 
 void EdenMount::start() {
   fsChannel_.start();
+  createRepoConfig(
+      getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
 }
 
 void EdenMount::stop() {
