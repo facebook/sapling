@@ -183,8 +183,8 @@ class bundlerevlog(revlog.revlog):
 
 
 class bundlechangelog(bundlerevlog, changelog.changelog):
-    def __init__(self, opener, cgunpacker):
-        changelog.changelog.__init__(self, opener)
+    def __init__(self, opener, cgunpacker, uiconfig):
+        changelog.changelog.__init__(self, opener, uiconfig)
         linkmapper = lambda x: x
         bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker, linkmapper)
         self._visibleheads.addbundleheads([self.node(r) for r in self.bundleheads])
@@ -394,7 +394,7 @@ class bundlerepository(localrepo.localrepository):
     def changelog(self):
         # consume the header if it exists
         self._cgunpacker.changelogheader()
-        c = bundlechangelog(self.svfs, self._cgunpacker)
+        c = bundlechangelog(self.svfs, self._cgunpacker, self.ui.uiconfig())
         self.manstart = self._cgunpacker.tell()
         return c
 

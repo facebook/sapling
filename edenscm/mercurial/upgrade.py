@@ -487,7 +487,7 @@ def _revlogfrompath(repo, path):
     An instance of the appropriate class is returned.
     """
     if path == "00changelog.i":
-        return changelog.changelog(repo.svfs)
+        return changelog.changelog(repo.svfs, uiconfig=repo.ui.uiconfig())
     elif path.endswith("00manifest.i"):
         mandir = path[: -len("00manifest.i")]
         return manifest.manifestrevlog(repo.svfs, dir=mandir)

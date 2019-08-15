@@ -547,7 +547,7 @@ def perftags(ui, repo, **opts):
     repocleartagscache = repocleartagscachefunc(repo)
 
     def t():
-        repo.changelog = changelog.changelog(svfs)
+        repo.changelog = changelog.changelog(svfs, uiconfig=ui.uiconfig())
         repo.manifestlog = manifest.manifestlog(svfs, repo)
         repocleartagscache()
         return len(repo.tags())

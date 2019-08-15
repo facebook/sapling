@@ -339,8 +339,8 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
 
 
 class readonlychangelog(object):
-    def __init__(self, opener):
-        self._changelog = changelog.changelog(opener)
+    def __init__(self, *args, **kwargs):
+        self._changelog = changelog.changelog(*args, **kwargs)
 
     def parentrevs(self, rev):
         return self._changelog.parentrevs(rev)
@@ -390,7 +390,7 @@ class LocalIteratorThread(Thread):
 
         # Create a private instance of changelog to avoid trampling
         # internal caches of other threads
-        c = readonlychangelog(repo.svfs)
+        c = readonlychangelog(repo.svfs, uiconfig=repo.ui.uiconfig())
         self.generator = originator(c.parentrevs, rev)
         self.filefunc = c.readfiles
         self.ui = repo.ui
@@ -450,7 +450,7 @@ class FastLogThread(Thread):
         self.rev = rev
         self.paths = list(paths)
         self.ui = repo.ui
-        self.changelog = readonlychangelog(repo.svfs)
+        self.changelog = readonlychangelog(repo.svfs, uiconfig=repo.ui.uiconfig())
         self._stop = Event()
         self._paths_to_fetch = 0
 

@@ -27,7 +27,7 @@ We approximate that by reducing the read buffer to 1 byte.
   summary:     change foo
   
   $ cat >> test.py << EOF
-  > from edenscm.mercurial import changelog, vfs
+  > from edenscm.mercurial import changelog, uiconfig, vfs
   > from edenscm.mercurial.node import *
   > 
   > class singlebyteread(object):
@@ -49,7 +49,7 @@ We approximate that by reducing the read buffer to 1 byte.
   >         return singlebyteread(f)
   >     return wrapper
   > 
-  > cl = changelog.changelog(opener('.hg/store'))
+  > cl = changelog.changelog(opener('.hg/store'), uiconfig.uiconfig())
   > print len(cl), 'revisions:'
   > for r in cl:
   >     print short(cl.node(r))
@@ -68,8 +68,8 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   $ cd a
 
   $ $PYTHON <<EOF
-  > from edenscm.mercurial import changelog, vfs
-  > cl = changelog.changelog(vfs.vfs('.hg/store'))
+  > from edenscm.mercurial import changelog, uiconfig, vfs
+  > cl = changelog.changelog(vfs.vfs('.hg/store'), uiconfig.uiconfig())
   > print 'good heads:'
   > for head in [0, len(cl) - 1, -1]:
   >     print'%s: %r' % (head, cl.reachableroots(0, [head], [0]))
@@ -148,8 +148,8 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
   $ cat <<EOF > test.py
   > import sys
-  > from edenscm.mercurial import changelog, vfs
-  > cl = changelog.changelog(vfs.vfs(sys.argv[1]))
+  > from edenscm.mercurial import changelog, uiconfig, vfs
+  > cl = changelog.changelog(vfs.vfs(sys.argv[1]), uiconfig.uiconfig())
   > n0, n1 = cl.node(0), cl.node(1)
   > ops = [
   >     ('reachableroots',

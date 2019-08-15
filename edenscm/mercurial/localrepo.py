@@ -780,6 +780,7 @@ class localrepository(object):
     def changelog(self):
         return changelog.changelog(
             self.svfs,
+            uiconfig=self.ui.uiconfig(),
             trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
         )
 

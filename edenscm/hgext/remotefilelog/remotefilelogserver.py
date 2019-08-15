@@ -235,7 +235,7 @@ class trivialserializer(object):
 def readvalue(repo, path, node):
     filectx = repo.filectx(path, fileid=node)
     if filectx.node() == nullid:
-        repo.changelog = changelog.changelog(repo.svfs)
+        repo.changelog = changelog.changelog(repo.svfs, uiconfig=repo.ui.uiconfig())
         filectx = repo.filectx(path, fileid=node)
     return lz4wrapper.lz4compresshc(createfileblob(filectx))
 

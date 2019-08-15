@@ -274,7 +274,7 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-    def __init__(self, opener, trypending=False):
+    def __init__(self, opener, uiconfig, trypending=False):
         """Load a changelog revlog using an opener.
 
         If ``trypending`` is true, we attempt to load the index from a
@@ -284,6 +284,7 @@ class changelog(revlog.revlog):
         It exists in a separate file to facilitate readers (such as
         hooks processes) accessing data before a transaction is finalized.
         """
+        self._uiconfig = uiconfig
         self._visibleheads = self._loadvisibleheads(opener)
 
         if trypending and opener.exists("00changelog.i.a"):
