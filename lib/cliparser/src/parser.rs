@@ -296,7 +296,6 @@ pub trait StructFlags {
 
 pub struct ParseOptions {
     ignore_prefix: bool,
-    ignore_errors: bool,
     early_parse: bool,
     keep_sep: bool,
     error_on_unknown_opts: bool,
@@ -308,7 +307,6 @@ impl ParseOptions {
     pub fn new() -> Self {
         ParseOptions {
             ignore_prefix: false,
-            ignore_errors: false,
             early_parse: false,
             keep_sep: false,
             error_on_unknown_opts: false,
@@ -319,11 +317,6 @@ impl ParseOptions {
 
     pub fn ignore_prefix(mut self, ignore_prefix: bool) -> Self {
         self.ignore_prefix = ignore_prefix;
-        self
-    }
-
-    pub fn ignore_errors(mut self, ignore_errors: bool) -> Self {
-        self.ignore_errors = ignore_errors;
         self
     }
 
@@ -485,8 +478,10 @@ impl Parser {
         opts: &mut HashMap<String, Value>,
     ) -> Result<(), ParseError> {
         let arg = iter.next().unwrap().1;
+
         debug_assert!(arg.starts_with("--"));
         let arg = &arg[2..];
+
         let (arg, positive_flag) = if arg.starts_with("no-") {
             (&arg[3..], false)
         } else {
@@ -1207,23 +1202,6 @@ mod tests {
         let configs: Vec<String> = result.pick("config");
 
         assert_eq!(configs.len(), 0);
-    }
-
-    #[test]
-    fn test_no_errors_match() {
-        let parser = ParseOptions::new()
-            .ignore_prefix(true)
-            .flags(flags())
-            .ignore_errors(true)
-            .into_parser();
-
-        let args = vec!["--shallow", "--config", "section.key=val"];
-
-        let result = parser.parse_args(&args).unwrap();
-
-        let configs: Vec<String> = result.pick("config");
-
-        assert_eq!(configs, vec!["section.key=val"]);
     }
 
     #[test]
