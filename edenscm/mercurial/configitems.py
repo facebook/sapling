@@ -16,7 +16,7 @@ from . import encoding, error
 def loadconfigtable(ui, extname, configtable):
     """update config item known to the ui with the extension ones"""
     for section, items in configtable.items():
-        knownitems = ui._knownconfig.setdefault(section, itemregister())
+        knownitems = ui.uiconfig()._knownconfig.setdefault(section, itemregister())
         knownkeys = set(knownitems)
         newkeys = set(items)
         for key in sorted(knownkeys & newkeys):

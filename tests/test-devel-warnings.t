@@ -203,10 +203,5 @@ Test warning on config option access and registration
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
   devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at:*mercurial/extensions.py:* (_loadextra) (glob)
   devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at:*mercurial/extensions.py:* (_loadextra) (glob)
-  devel-warn: specifying a mismatched default value for a registered config item: 'ui.quiet' 'True' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: specifying a mismatched default value for a registered config item: 'ui.interactive' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: specifying a mismatched default value for a registered config item: 'test.some' 'bar' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: config item requires an explicit default value: 'test.dynamic' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: specifying a mismatched default value for a registered config item: 'test.callable' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..

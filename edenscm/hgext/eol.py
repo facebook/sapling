@@ -272,7 +272,7 @@ def ensureenabled(ui):
     never loaded. This function ensure the extension is enabled when running
     hooks.
     """
-    if "eol" in ui._knownconfig:
+    if "eol" in ui.uiconfig()._knownconfig:
         return
     ui.setconfig("extensions", "eol", "", source="internal")
     extensions.loadall(ui, ["eol"])

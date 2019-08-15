@@ -27,7 +27,6 @@ from edenscmnative.bindings import configparser
 from . import (
     blackbox,
     color,
-    configitems,
     encoding,
     error,
     formatter,
@@ -37,6 +36,7 @@ from . import (
     pycompat,
     rcutil,
     scmutil,
+    uiconfig,
     util,
 )
 from .i18n import _
@@ -166,7 +166,7 @@ def _catchterm(*args):
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
-_unset = object()
+_unset = uiconfig._unset
 
 # _reqexithandlers: callbacks run at the end of a request
 _reqexithandlers = []
@@ -188,22 +188,16 @@ class ui(object):
         # When a buffer is active, defines whether we are expanding labels.
         # This exists to prevent an extra list lookup.
         self._bufferapplylabels = None
-        self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
-        self._knownconfig = configitems.coreitems
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
-        # Measured times
-        self.logmeasuredtimes = False
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
         self._terminfoparams = {}
         self._styles = {}
 
         if src:
-            self._rcfg = src._rcfg.clone()
-            self._unserializable = src._unserializable.copy()
-            self._pinnedconfigs = src._pinnedconfigs.copy()
+            self._uiconfig = src._uiconfig.copy()
 
             self.fout = src.fout
             self.ferr = src.ferr
@@ -219,19 +213,12 @@ class ui(object):
             self._terminfoparams = src._terminfoparams.copy()
             self._styles = src._styles.copy()
 
-            self.fixconfig()
-
             self.httppasswordmgrdb = src.httppasswordmgrdb
             self._measuredtimes = src._measuredtimes
 
             self.metrics = src.metrics
         else:
-            self._rcfg = configparser.config()
-            # map from IDs to unserializable Python objects.
-            self._unserializable = {}
-            # config "pinned" that cannot be loaded from files.
-            # ex. --config flags
-            self._pinnedconfigs = set()
+            self._uiconfig = uiconfig.uiconfig()
 
             self.fout = util.stdout
             self.ferr = util.stderr
@@ -261,11 +248,7 @@ class ui(object):
     def load(cls):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._rcfg, errors = configparser.config.load()
-        if errors:
-            raise error.ParseError("\n\n".join(errors))
-        root = os.path.expanduser("~")
-        u.fixconfig(root=root)
+        u._uiconfig = uiconfig.uiconfig.load()
         return u
 
     def copy(self):
@@ -305,152 +288,17 @@ class ui(object):
         remap=None,
         source="ui.readconfig",
     ):
-        cfg = self._rcfg
-        errors = cfg.readpath(
-            filename,
-            source,
-            sections,
-            remap and remap.items(),
-            list(self._pinnedconfigs),
-        )
-        if errors:
-            raise error.ParseError("\n\n".join(errors))
-
-        if root is None:
-            root = os.path.expanduser("~")
-
-        self.fixconfig(root=root)
-
-    def fixconfig(self, root=None, section=None):
-        if section in (None, "paths"):
-            # expand vars and ~
-            # translate paths relative to root (or home) into absolute paths
-            root = root or pycompat.getcwd()
-            c = self._rcfg
-            for n in c.names("paths"):
-                if ":" in n:
-                    continue
-                p = origp = c.get("paths", n)
-                if not p:
-                    continue
-                if "%%" in p:
-                    s = self.configsource("paths", n) or "none"
-                    self.warn(
-                        _("(deprecated '%%' in path %s=%s from %s)\n") % (n, p, s)
-                    )
-                    p = p.replace("%%", "%")
-                p = util.expandpath(p)
-                if not util.hasscheme(p) and not os.path.isabs(p):
-                    p = os.path.normpath(os.path.join(root, p))
-                if origp != p:
-                    c.set("paths", n, p, "ui.fixconfig")
-
-        if section in (None, "ui"):
-            # update ui options
-            self.debugflag = self.configbool("ui", "debug")
-            self.verbose = self.debugflag or self.configbool("ui", "verbose")
-            self.quiet = not self.debugflag and self.configbool("ui", "quiet")
-            if self.verbose and self.quiet:
-                self.quiet = self.verbose = False
-            self.tracebackflag = self.configbool("ui", "traceback")
-            self.logmeasuredtimes = self.configbool("ui", "logmeasuredtimes")
+        return self._uiconfig.readconfig(filename, root, trust, sections, remap, source)
 
     def setconfig(self, section, name, value, source=""):
-        if util.safehasattr(value, "__iter__"):
-
-            def escape(v):
-                if '"' in v:
-                    v = v.replace('"', '\\"')
-                return '"%s"' % v
-
-            value = ",".join(escape(v) for v in value)
-        elif isinstance(value, (str, int, float, bool)):
-            value = str(value)
-        elif value is None:
-            pass
-        else:
-            # XXX Sad - Some code depends on setconfig a Python object.
-            # That cannot be represented in the Rust config object. So
-            # we translate them here in a very hacky way.
-            # TODO remove those users and make this a ProgrammingError.
-            replacement = "@%x" % id(value)
-            self._unserializable[replacement] = value
-            value = replacement
-
-        self._pinnedconfigs.add((section, name))
-        self._rcfg.set(section, name, value, source or "ui.setconfig")
-        self.fixconfig(section=section)
+        return self._uiconfig.setconfig(section, name, value, source)
 
     def configsource(self, section, name, untrusted=False):
-        sources = self._rcfg.sources(section, name)
-        if sources:
-            # Skip "ui.fixconfig" sources
-            for value, filesource, strsource in reversed(sources):
-                if strsource == "ui.fixconfig":
-                    continue
-                if filesource:
-                    path, _start, _end, line = filesource
-                    return "%s:%s" % (path, line)
-                else:
-                    return strsource
-        return ""
+        return self._uiconfig.configsource(section, name, untrusted)
 
     def config(self, section, name, default=_unset, untrusted=False):
         """return the plain string version of a config"""
-        value = self._config(section, name, default=default, untrusted=untrusted)
-        if value is _unset:
-            return None
-        return value
-
-    def _config(self, section, name, default=_unset, untrusted=False):
-        value = itemdefault = default
-        item = self._knownconfig.get(section, {}).get(name)
-        alternates = [(section, name)]
-
-        if item is not None:
-            alternates.extend(item.alias)
-            if callable(item.default):
-                itemdefault = item.default()
-            else:
-                itemdefault = item.default
-        # fbonly: disabled in a hotfix because it's so expensive to fix
-        elif False:
-            msg = "accessing unregistered config item: '%s.%s'"
-            msg %= (section, name)
-            self.develwarn(msg, 2, "warn-config-unknown")
-
-        if default is _unset:
-            if item is None:
-                value = default
-            elif item.default is configitems.dynamicdefault:
-                value = None
-                msg = "config item requires an explicit default value: '%s.%s'"
-                msg %= (section, name)
-                self.develwarn(msg, 2, "warn-config-default")
-            else:
-                value = itemdefault
-        elif (
-            item is not None
-            and item.default is not configitems.dynamicdefault
-            and default != itemdefault
-        ):
-            msg = (
-                "specifying a mismatched default value for a registered "
-                "config item: '%s.%s' '%s'"
-            )
-            msg %= (section, name, default)
-            self.develwarn(msg, 2, "warn-config-default")
-
-        for s, n in alternates:
-            candidate = self._rcfg.get(s, n)
-            if candidate is not None:
-                value = candidate
-                value = self._unserializable.get(value, value)
-                section = s
-                name = n
-                break
-
-        return value
+        return self._uiconfig.config(section, name, default, untrusted)
 
     def configsuboptions(self, section, name, default=_unset, untrusted=False):
         """Get a config option and all sub-options.
@@ -462,28 +310,11 @@ class ui(object):
         Returns a 2-tuple of ``(option, sub-options)``, where `sub-options``
         is a dict of defined sub-options where keys and values are strings.
         """
-        main = self.config(section, name, default, untrusted=untrusted)
-        cfg = self._rcfg
-        sub = {}
-        prefix = "%s:" % name
-        for k in cfg.names(section):
-            if k.startswith(prefix):
-                v = cfg.get(section, k)
-                v = self._unserializable.get(v, v)
-                sub[k[len(prefix) :]] = v
-        return main, sub
+        return self._uiconfig.configsuboptions(section, name, default, untrusted)
 
     def configpath(self, section, name, default=_unset, untrusted=False):
         "get a path config item, expanded relative to repo root or config file"
-        v = self.config(section, name, default, untrusted)
-        if v is None:
-            return None
-        if not os.path.isabs(v) or "://" not in v:
-            src = self.configsource(section, name, untrusted)
-            if ":" in src:
-                base = os.path.dirname(src.rsplit(":")[0])
-                v = os.path.join(base, os.path.expanduser(v))
-        return v
+        return self._uiconfig.configpath(section, name, default, untrusted)
 
     def configbool(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a boolean
@@ -505,22 +336,7 @@ class ui(object):
             ...
         ConfigError: foo.invalid is not a boolean ('somevalue')
         """
-
-        v = self._config(section, name, default, untrusted=untrusted)
-        if v is None:
-            return v
-        if v is _unset:
-            if default is _unset:
-                return False
-            return default
-        if isinstance(v, bool):
-            return v
-        b = util.parsebool(v)
-        if b is None:
-            raise error.ConfigError(
-                _("%s.%s is not a boolean ('%s')") % (section, name, v)
-            )
-        return b
+        return self._uiconfig.configbool(section, name, default, untrusted)
 
     def configwith(
         self, convert, section, name, default=_unset, desc=None, untrusted=False
@@ -546,18 +362,9 @@ class ui(object):
             ...
         ConfigError: foo.invalid is not a valid womble ('somevalue')
         """
-
-        v = self.config(section, name, default, untrusted)
-        if v is None:
-            return v  # do not attempt to convert None
-        try:
-            return convert(v)
-        except (ValueError, error.ParseError):
-            if desc is None:
-                desc = pycompat.sysbytes(convert.__name__)
-            raise error.ConfigError(
-                _("%s.%s is not a valid %s ('%s')") % (section, name, desc, v)
-            )
+        return self._uiconfig.configwith(
+            convert, section, name, default, desc, untrusted
+        )
 
     def configint(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as an integer
@@ -577,8 +384,7 @@ class ui(object):
             ...
         ConfigError: foo.invalid is not a valid integer ('somevalue')
         """
-
-        return self.configwith(int, section, name, default, "integer", untrusted)
+        return self._uiconfig.configint(section, name, default, untrusted)
 
     def configbytes(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a quantity in bytes
@@ -601,20 +407,7 @@ class ui(object):
             ...
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
         """
-
-        value = self._config(section, name, default, untrusted)
-        if value is _unset:
-            if default is _unset:
-                default = 0
-            value = default
-        if not isinstance(value, bytes):
-            return value
-        try:
-            return util.sizetoint(value)
-        except error.ParseError:
-            raise error.ConfigError(
-                _("%s.%s is not a byte quantity ('%s')") % (section, name, value)
-            )
+        return self._uiconfig.configbytes(section, name, default, untrusted)
 
     def configlist(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a list of comma/space separated
@@ -628,13 +421,7 @@ class ui(object):
         >>> u.configlist(s, b'list2')
         ['this', 'is', 'a small', 'test']
         """
-        # default is not always a list
-        v = self.configwith(parselist, section, name, default, "list", untrusted)
-        if isinstance(v, bytes):
-            return parselist(v)
-        elif v is None:
-            return []
-        return v
+        return self._uiconfig.configlist(section, name, default, untrusted)
 
     def configdate(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a tuple of ints
@@ -644,43 +431,23 @@ class ui(object):
         >>> u.configdate(s, b'date')
         (0, 0)
         """
-        if self.config(section, name, default, untrusted):
-            return self.configwith(
-                util.parsedate, section, name, default, "date", untrusted
-            )
-        if default is _unset:
-            return None
-        return default
+        return self._uiconfig.configdate(section, name, default, untrusted)
 
     def hasconfig(self, section, name, untrusted=False):
-        return self._rcfg.get(section, name) is not None
+        return self._uiconfig.hasconfig(section, name, untrusted)
 
     def has_section(self, section, untrusted=False):
         """tell whether section exists in config."""
-        return section in self._rcfg.sections()
+        return self._uiconfig.has_section(section, untrusted)
 
     def configsections(self):
-        return self._rcfg.sections()
+        return self._uiconfig.configsections()
 
     def configitems(self, section, untrusted=False, ignoresub=False):
-        cfg = self._rcfg
-        items = []
-        for name in cfg.names(section):
-            value = cfg.get(section, name)
-            value = self._unserializable.get(value, value)
-            if value is not None:
-                if not ignoresub or ":" not in name:
-                    items.append((name, value))
-        return items
+        return self._uiconfig.configitems(section, untrusted, ignoresub)
 
     def walkconfig(self, untrusted=False):
-        cfg = self._rcfg
-        for section in sorted(cfg.sections()):
-            for name in cfg.names(section):
-                value = cfg.get(section, name)
-                value = self._unserializable.get(value, value)
-                if value is not None:
-                    yield section, name, value
+        return self._uiconfig.walkconfig(untrusted)
 
     def plain(self, feature=None):
         """is plain mode active?
@@ -1654,22 +1421,43 @@ class ui(object):
         """Context manager for temporary config overrides
         `overrides` must be a dict of the following structure:
         {(section, name) : value}"""
-        backup = self._rcfg.clone()
-        unserializablebackup = dict(self._unserializable)
-        pinnedbackup = set(self._pinnedconfigs)
-        try:
-            for (section, name), value in overrides.items():
-                self.setconfig(section, name, value, source)
+        with self._uiconfig.configoverride(overrides, source):
             yield
-        finally:
-            self._rcfg = backup
-            self._unserializable = unserializablebackup
-            self._pinnedconfigs = pinnedbackup
 
-            # just restoring ui.quiet config to the previous value is not enough
-            # as it does not update ui.quiet class member
-            if ("ui", "quiet") in overrides:
-                self.fixconfig(section="ui")
+    def uiconfig(self):
+        return self._uiconfig
+
+    @property
+    def _rcfg(self):
+        return self._uiconfig._rcfg
+
+    @property
+    def quiet(self):
+        return self._uiconfig.quiet
+
+    @quiet.setter
+    def quiet(self, value):
+        self._uiconfig.quiet = value
+
+    @property
+    def verbose(self):
+        return self._uiconfig.verbose
+
+    @verbose.setter
+    def verbose(self, value):
+        self._uiconfig.verbose = value
+
+    @property
+    def debugflag(self):
+        return self._uiconfig.debugflag
+
+    @property
+    def tracebackflag(self):
+        return self._uiconfig.tracebackflag
+
+    @property
+    def logmeasuredtimes(self):
+        return self._uiconfig.logmeasuredtimes
 
 
 class paths(dict):
@@ -1848,10 +1636,3 @@ class path(object):
             if value is not None:
                 d[subopt] = value
         return d
-
-
-def parselist(value):
-    if isinstance(value, bytes):
-        return configparser.parselist(value)
-    else:
-        return value
