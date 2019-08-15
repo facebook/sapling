@@ -17,7 +17,7 @@ use serde_derive::Serialize;
 
 use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
-use mononoke_api::errors::ErrorKind as ApiError;
+use mononoke_api::legacy::ErrorKind as ApiError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
 #[derive(Serialize, Debug)]
@@ -161,7 +161,6 @@ impl From<ApiError> for ErrorKind {
 
         match e {
             NotFound(t) => ErrorKind::NotFound(t, None),
-            InvalidInput(t) => ErrorKind::InvalidInput(t, None),
         }
     }
 }
