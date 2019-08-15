@@ -27,6 +27,11 @@ hinttable = {
         "It always prints 'default' for now. "
         "Check fburl.com/why-no-named-branches for details."
     ),
+    "revnum-deprecate": lambda rev: _(
+        "Local revision numbers (ex. %s) are being deprecated and will stop working by the end of 2019. "
+        "Please use commit hashes instead."
+    )
+    % rev,
 }
 messages = []
 triggered = set()

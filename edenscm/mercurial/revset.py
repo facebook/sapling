@@ -16,6 +16,7 @@ from . import (
     encoding,
     error,
     hbisect,
+    hintutil,
     match as matchmod,
     mutation,
     node,
@@ -161,8 +162,26 @@ def parseagerange(agerange):
 # operator methods
 
 
+def _warnrevnum(ui, x):
+    # 'devel.legacy.revnum:real' is set by scmutil.revrange to scope the
+    # check to user-provided inputs (i.e. excluding internal APIs like
+    # repo.revs(...)).
+    config = ui.config("devel", "legacy.revnum:real")
+    if config == "warn":
+        hintutil.trigger("revnum-deprecate", x)
+    elif config == "abort":
+        raise error.Abort(_("local revision number is disabled in this repo"))
+    # Log the usage anyway.
+    ui.log("revnum_used", revnum_used=1)
+
+
 def stringset(repo, subset, x, order):
-    x = scmutil.intrev(repo[x])
+    i = scmutil.intrev(repo[x])
+    if x.startswith("-") or x == str(i):
+        # 'x' was used as a revision number. Maybe warn and log it.
+        _warnrevnum(repo.ui, x)
+
+    x = i
     if x in subset or x == node.nullrev and isinstance(subset, fullreposet):
         return baseset([x])
     return baseset()
@@ -1884,6 +1903,7 @@ def rev(repo, subset, x):
     try:
         # i18n: "rev" is a keyword
         l = int(getstring(l[0], _("rev requires a number")))
+        _warnrevnum(repo.ui, l)
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))

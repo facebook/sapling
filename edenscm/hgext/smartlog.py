@@ -652,7 +652,7 @@ def _smartlog(ui, repo, *pats, **opts):
         "smartlog(heads=%r, master=%r)", headspec, masterstring
     )
 
-    revs = set(scmutil.revrange(repo, [revstring]))
+    revs = set(repo.anyrevs([revstring], user=True))
 
     if -1 in revs:
         revs.remove(-1)

@@ -519,7 +519,9 @@ def revrange(repo, specs, localalias=None):
         if isinstance(spec, int):
             spec = revsetlang.formatspec("rev(%d)", spec)
         allspecs.append(spec)
-    return repo.anyrevs(allspecs, user=True, localalias=localalias)
+    legacyrevnum = repo.ui.config("devel", "legacy.revnum")
+    with repo.ui.configoverride({("devel", "legacy.revnum:real"): legacyrevnum}):
+        return repo.anyrevs(allspecs, user=True, localalias=localalias)
 
 
 def meaningfulparents(repo, ctx):

@@ -3468,9 +3468,7 @@ Changeset, child
     changeset may have.
 
 Changeset id
-    A SHA-1 hash that uniquely identifies a changeset. It may be
-    represented as either a "long" 40 hexadecimal digit string, or a
-    "short" 12 hexadecimal digit string.
+    See 'Commit hash'.
 
 Changeset, merge
     A changeset with two parents. This occurs when a merge is
@@ -3527,6 +3525,11 @@ Commit
     changeset, creating a new changeset in the repository.
 
     Example: "You should commit those changes now."
+
+Commit hash
+    A SHA-1 hash that uniquely identifies a changeset. It may be
+    represented as either a "long" 40 hexadecimal digit string, or a
+    "short" 12 hexadecimal digit string.
 
 Cset
     A common abbreviation of the term changeset.
@@ -3717,6 +3720,8 @@ Revision
     number'; See also 'Changeset'.
 
 Revision number
+    Deprecated. Use 'Commit hash' instead.
+
     This integer uniquely identifies a changeset in a specific
     repository. It represents the order in which changesets were added
     to a repository, starting with revision number 0. Note that the
@@ -4196,10 +4201,6 @@ revisions = r"""Mercurial supports several ways to specify revisions.
 
 Specifying single revisions
 ===========================
-
-A plain integer is treated as a revision number. Negative integers are
-treated as sequential offsets from the tip, with -1 denoting the tip,
--2 denoting the revision prior to the tip, and so forth.
 
 A 40-digit hexadecimal string is treated as a unique revision identifier.
 A hexadecimal string less than 40 characters long is treated as a
