@@ -479,16 +479,29 @@ def get_eden_mount_name(path_arg: str) -> str:
     """
     Get the path to the Eden checkout containing the specified path
     """
-    path = os.path.join(path_arg, ".eden", "root")
-    try:
-        return readlink_retry_estale(path)
-    except OSError as ex:
-        if ex.errno == errno.ENOTDIR:
-            path = os.path.join(os.path.dirname(path_arg), ".eden", "root")
+    if os.name == "nt":
+        path = path_arg
+        parent = os.path.dirname(path)
+        while path != parent:
+            if os.path.isdir(os.path.join(path, ".eden")):
+                return path
+            if os.path.exists(os.path.join(path, ".hg")):
+                break
+            path = parent
+            parent = os.path.dirname(path)
+
+        raise NotAnEdenMountError(path_arg)
+    else:
+        path = os.path.join(path_arg, ".eden", "root")
+        try:
             return readlink_retry_estale(path)
-        elif ex.errno == errno.ENOENT:
-            raise NotAnEdenMountError(path_arg)
-        raise
+        except OSError as ex:
+            if ex.errno == errno.ENOTDIR:
+                path = os.path.join(os.path.dirname(path_arg), ".eden", "root")
+                return readlink_retry_estale(path)
+            elif ex.errno == errno.ENOENT:
+                raise NotAnEdenMountError(path_arg)
+            raise
 
 
 def get_username() -> str:
