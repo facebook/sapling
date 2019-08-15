@@ -401,17 +401,9 @@ class InodeCmd(Subcmd):
 class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the eden mount point")
-        parser.add_argument(
-            "--reads-output", help="File to store the stats about read files"
-        )
-        parser.add_argument(
-            "--writes-output", help="File to store the stats about written files"
-        )
 
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
-        reads_output = args.reads_output
-        writes_output = args.writes_output
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
 
         with instance.get_thrift_client() as client:
@@ -420,27 +412,8 @@ class FileStatsCMD(Subcmd):
             )
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)
-
-        if reads_output:
-            with open(reads_output, "w") as f:
-                for path in read_files:
-                    f.write(path)
-                    f.write("\n")
-        else:
-            print("READ FILES")
-            print(*read_files, sep="\n")
-
-        if not reads_output and read_files and not writes_output and written_files:
-            print()
-
-        if writes_output:
-            with open(writes_output, "w") as f:
-                for path in written_files:
-                    f.write(path)
-                    f.write("\n")
-        else:
-            print("WRITTEN FILES")
-            print(*written_files, sep="\n")
+        operations = {"read_files": read_files, "written_files": written_files}
+        json.dump(operations, fp=sys.stdout, indent=4, separators=(",", ": "))
         return 0
 
 
