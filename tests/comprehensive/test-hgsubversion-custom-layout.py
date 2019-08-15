@@ -44,10 +44,11 @@ def buildmethod(case, name, stupid):
 attrs = {"_do_case": _do_case}
 for case in test_hgsubversion_util.custom:
     name = "test_" + case[: -len(".svndump")].replace("-", "_")
-    attrs[name] = buildmethod(case, name, stupid=False)
-    if svnwrap.subversion_version < (1, 9, 0):
-        name += "_stupid"
-        attrs[name] = buildmethod(case, name, stupid=True)
+    if name != "test_rename_branch_parent_dir":
+        attrs[name] = buildmethod(case, name, stupid=False)
+        if svnwrap.subversion_version < (1, 9, 0):
+            name += "_stupid"
+            attrs[name] = buildmethod(case, name, stupid=True)
 
 CustomPullTests = type("CustomPullTests", (test_hgsubversion_util.TestBase,), attrs)
 
