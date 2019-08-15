@@ -1324,4 +1324,27 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_no_arg_for_no_boolean() {
+        // XXX: --no-foo should not affect non-boolean values.
+        let flags = vec![(None, "foo", "foo desc", "").into()];
+        let parsed = ParseOptions::new()
+            .flags(flags)
+            .parse_args(&vec!["--no-foo", "bar"])
+            .unwrap();
+        let foo: String = parsed.pick("foo");
+        assert_eq!(foo, "bar");
+    }
+
+    #[test]
+    fn test_no_flag_for_no_boolean() {
+        // XXX: --foo should not affect non-boolean values.
+        let flags = vec![(None, "no-foo", "foo desc", "").into()];
+        let parsed = ParseOptions::new()
+            .flags(flags)
+            .parse_args(&vec!["--foo", "bar"])
+            .unwrap();
+        let foo: String = parsed.pick("no-foo");
+        assert_eq!(foo, "bar");
+    }
 }
