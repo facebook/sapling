@@ -158,3 +158,19 @@ class LocalService(baseservice.BaseService):
             return self._makefakedag(nodes, repo), 42, 1562690787
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
+
+    def updatecheckoutlocations(
+        self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
+    ):
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+            "hostname": hostname,
+            "commit": commit,
+            "checkout_path": checkoutpath,
+            "shared_path": sharedpath,
+            "unixname": unixname,
+        }
+        filename = os.path.join(self.path, "checkoutlocations")
+        with open(filename, "w+") as f:
+            json.dump(data, f)

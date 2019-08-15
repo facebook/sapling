@@ -157,6 +157,7 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
+    checkoutlocations,
     commands as cccommands,
     dependencies,
     obsmarkers,
@@ -185,6 +186,7 @@ configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "backuplimitnocheck", default=4)
 configitem("commitcloud", "automigrate", default=False)
 configitem("commitcloud", "automigratehostworkspace", default=False)
+configitem("commitcloud", "synccheckoutlocations", default=False)
 configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
@@ -211,6 +213,19 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
+    synccheckout = ui.configbool("commitcloud", "synccheckoutlocations")
+
+    def _sendlocation(orig, self, ui, prefix, *args, **kwargs):
+        if prefix == "post":
+            parents = [nodemod.hex(p) if p != nodemod.nullid else "" for p in self._pl]
+            p1 = parents[0]
+            # TODO(T52387128): do it asynchronously in the background
+            checkoutlocations.send(ui, repo, p1, **kwargs)
+            return orig(self, ui, prefix)
+
+    if synccheckout:
+        extensions.wrapfunction(localrepo.dirstate.dirstate, "loginfo", _sendlocation)
+
     class commitcloudrepo(repo.__class__):
         def transaction(self, *args, **kwargs):
             def finalize(tr):

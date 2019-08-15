@@ -47,6 +47,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ testrepohg files . | egrep -v '^tests/' | egrep '\.(py|txt)$' | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
   undocumented: clone.requestfullclone (bool)
+  undocumented: commitcloud.synccheckoutlocations (bool)
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.enabled (bool)
   undocumented: fastmanifest.cachecutoffdays (int) [60]

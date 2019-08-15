@@ -439,3 +439,32 @@ class HttpsCommitCloudService(baseservice.BaseService):
             return versions
         except Exception as e:
             raise ccerror.UnexpectedError(self.ui, e)
+
+    @perftrace.tracefunc("update checkout locations")
+    def updatecheckoutlocations(
+        self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
+    ):
+        self.ui.debug(
+            "sending 'update_checkout_locations' request\n", component="commitcloud"
+        )
+        path = "/commit_cloud/update_checkout_locations"
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+            "hostname": hostname,
+            "commit": commit,
+            "checkout_path": checkoutpath,
+            "shared_path": sharedpath,
+            "unixname": unixname,
+        }
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+
+        if "error" in response:
+            raise ccerror.ServiceError(self.ui, response["error"])
+
+        self.ui.debug("'update_checkout_locations' successful", component="commitcloud")
