@@ -137,3 +137,73 @@
 # Check the contents of the manifest file
   $ cat .hg/store/lfs/objects/"${MANIFESTOID:0:2}"/"${MANIFESTOID:2}"
   {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "e90e991d748d9353959e5225d6e85ebb7723aaeb7fef5d7c276c38c282a8a996", "size": "166"}, "merge/state2": {"oid": "e86a25de18c4f6428242d0f64e30b4ec458f2d148c9f23319631d0e9859f87f2", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}} (no-eol)
+
+# Drop everything
+  $ hg update --clean
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "e4654c28458b: merge #2"
+  1 other heads for branch "default"
+  $ rm mergefile.orig
+  $ hg status
+  ? untrackedfile
+
+# Check out on the snapshot
+  $ hg debugcheckoutsnapshot --hidden "$OID"
+  abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
+  
+  [255]
+
+# Oops!
+  $ rm untrackedfile
+  $ hg debugcheckoutsnapshot somebadid
+  somebadid is not a valid revision id
+  abort: unknown revision 'somebadid'!
+  (if somebadid is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
+# Oops!
+  $ hg debugcheckoutsnapshot e4654c28458b
+  abort: e4654c28458b is not a valid snapshot id
+  
+  [255]
+# Oops!
+  $ hg debugcheckoutsnapshot --hidden "$OID"
+  will checkout on 75dd4272716b5316ce1d60d6c451b0f32fa749af
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  checkout complete
+  $ hg status --verbose
+  M barfile
+  M mergefile
+  R foofile
+  ? mergefile.orig
+  ? untrackedfile
+  # The repository is in an unfinished *merge* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     mergefile
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  
+# Finally, resolve the conflict
+  $ hg resolve --mark mergefile
+  (no more unresolved files)
+  $ hg status --verbose
+  M barfile
+  M mergefile
+  R foofile
+  ? mergefile.orig
+  ? untrackedfile
+  # The repository is in an unfinished *merge* state.
+  
+  # No unresolved merge conflicts.
+  
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  
+  $ hg commit -m "merge commit"
+  $ hg status --verbose
+  ? mergefile.orig
+  ? untrackedfile

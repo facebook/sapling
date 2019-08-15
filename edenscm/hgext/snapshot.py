@@ -25,6 +25,7 @@ from edenscm.mercurial import (
     context,
     error,
     extensions,
+    hg,
     json,
     registrar,
     scmutil,
@@ -226,6 +227,54 @@ def createsnapshotcommit(ui, repo, opts):
         return repo.commitctx(cctx, error=True)
 
 
+@command(
+    "debugcheckoutsnapshot",
+    [("f", "force", False, _("force checkout"))],
+    _("REV"),
+    inferrepo=True,
+)
+def debugcheckoutsnapshot(ui, repo, *args, **opts):
+    """
+    Checks out the working copy to the snapshot state, given its revision id.
+    Downloads the snapshot manifest from remote lfs if needed.
+
+    """
+    if lfs is None:
+        raise error.Abort(_("lfs is not initialised\n"))
+    if not args or len(args) != 1:
+        raise error.Abort(_("you must specify a snapshot revision id\n"))
+    force = opts.get("force")
+    node = args[0]
+    try:
+        cctx = repo.unfiltered()[node]
+    except error.RepoLookupError:
+        ui.status(_("%s is not a valid revision id\n") % node)
+        raise
+    if "snapshotmanifestid" not in cctx.extra():
+        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    # This is a temporary safety check that WC is clean.
+    if sum(map(len, repo.status(unknown=True))) != 0 and not force:
+        raise error.Abort(
+            _(
+                "You must have a clean working copy to checkout on a snapshot. "
+                "Use --force to bypass that.\n"
+            )
+        )
+    ui.status(_("will checkout on %s\n") % cctx.hex())
+    with repo.wlock():
+        # TODO(alexeyqu): support EdenFS and possibly make it more efficient
+        hg.update(repo, node)
+        with repo.dirstate.parentchange():
+            newparents = [p.node() for p in cctx.parents()]
+            ui.debug("setting parents to %s\n" % newparents)
+            repo.setparents(*newparents)
+    snapshotmanifestid = cctx.extra().get("snapshotmanifestid")
+    if snapshotmanifestid:
+        snapmanifest = snapshotmanifest.restorefromlfs(repo, snapshotmanifestid)
+        checkouttosnapshotmanifest(ui, repo, snapmanifest, force)
+    ui.status(_("checkout complete\n"))
+
+
 @command("debugcreatesnapshotmanifest", inferrepo=True)
 def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
     """
@@ -269,7 +318,7 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
 
 @command(
     "debugcheckoutsnapshotmanifest",
-    [("f", "force", None, _("force checkout"))],
+    [("f", "force", False, _("force checkout"))],
     _("OID"),
     inferrepo=True,
 )
