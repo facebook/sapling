@@ -920,7 +920,7 @@ class PrefetchCmd(Subcmd):
                 )
                 if not args.silent:
                     for name in result.matchingFiles:
-                        print(name)
+                        print(os.fsdecode(name))
 
         return 0
 
