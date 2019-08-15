@@ -11,7 +11,8 @@
 
 # Add a file to the store
   $ echo "foo" > existingfile
-  $ hg commit -Aqm "add some file"
+  $ hg add existingfile
+  $ hg commit -m "add some file"
   $ hg push
   pushing to $TESTTMP/server
   searching for changes

@@ -20,7 +20,16 @@ import hashlib
 import os
 from collections import defaultdict
 
-from edenscm.mercurial import cmdutil, error, extensions, json, registrar, scmutil
+from edenscm.mercurial import (
+    cmdutil,
+    context,
+    error,
+    extensions,
+    json,
+    registrar,
+    scmutil,
+    visibility,
+)
 from edenscm.mercurial.i18n import _
 
 
@@ -113,10 +122,10 @@ class snapshotmanifest(object):
             raise error.Abort(_("invalid manifest json: %s") % json_string)
 
     @classmethod
-    def createfromworkingcopy(cls, repo, include_untracked):
+    def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
         manifest = cls(repo)
         # populate the manifest
-        status = repo.status(unknown=include_untracked)
+        status = status or repo.status(unknown=include_untracked)
         manifest.deleted = [filelfswrapper(path) for path in status.deleted]
         manifest.unknown = [filelfswrapper(path) for path in status.unknown]
         # check merge and rebase info
@@ -178,6 +187,43 @@ class snapshotmanifest(object):
         lfs.wrapper.uploadblobs(self.repo, pointers)
 
 
+@command("debugsnapshot", inferrepo=True)
+def debugsnapshot(ui, repo, *args, **opts):
+    """
+    Creates a snapshot of the working copy.
+    TODO(alexeyqu): finish docs
+    """
+    if lfs is None:
+        raise error.Abort(_("lfs is not initialised"))
+    with repo.wlock(), repo.lock():
+        node = createsnapshotcommit(ui, repo, opts)
+        if not node:
+            ui.status(_("nothing changed\n"))
+            return
+        ui.status(_("snapshot %s created\n") % (repo[node].hex()))
+        if visibility.enabled(repo):
+            visibility.remove(repo, [node])
+
+
+def createsnapshotcommit(ui, repo, opts):
+    status = repo.status(unknown=True)
+    snapmanifest = snapshotmanifest.createfromworkingcopy(repo, status=status)
+    emptymanifest = snapmanifest.empty
+    oid = None
+    if not emptymanifest:
+        oid, size = snapmanifest.storetolocallfs()
+    extra = {"snapshotmanifestid": oid}
+    ui.debug("snapshot extra %s\n" % extra)
+    # TODO(alexeyqu): deal with unfinished merge state case
+    cctx = context.workingcommitctx(
+        repo, status, "snapshot", opts.get("user"), opts.get("date"), extra=extra
+    )
+    if len(cctx.files()) == 0 and emptymanifest:  # don't need an empty snapshot
+        return None
+    with repo.transaction("snapshot"):
+        return repo.commitctx(cctx, error=True)
+
+
 @command("debugcreatesnapshotmanifest", inferrepo=True)
 def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
     """
@@ -189,7 +235,7 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
     """
     if lfs is None:
         raise error.Abort(_("lfs is not initialised"))
-    snapmanifest = snapshotmanifest.createfromworkingcopy(repo, include_untracked=True)
+    snapmanifest = snapshotmanifest.createfromworkingcopy(repo)
     if snapmanifest.empty:
         ui.status(
             _(
