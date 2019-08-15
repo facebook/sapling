@@ -525,7 +525,6 @@ def _runcatch(req):
     def _runcatchfunc():
         realcmd = None
         try:
-            cmdargs = fancyopts.fancyopts(req.args[:], commands.globalopts, {})
             cmdargs = cliparser.parseargs(req.args[:])
             cmd = cmdargs[0]
             aliases, entry = cmdutil.findcmd(cmd, commands.table, False)
@@ -1146,15 +1145,6 @@ def _parseconfig(ui, config):
 
 
 def _earlyparseopts(ui, args):
-    options = {}
-    fancyopts.fancyopts(
-        args,
-        commands.globalopts,
-        options,
-        gnu=True,
-        early=True,
-        optaliases={"repository": ["repo"]},
-    )
     try:
         return cliparser.earlyparse(args)
     except UnicodeDecodeError:
