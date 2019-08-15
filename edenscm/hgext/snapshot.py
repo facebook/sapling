@@ -44,7 +44,7 @@ def extsetup(ui):
     try:
         lfs = extensions.find("lfs")
     except KeyError:
-        ui.warning("snapshot extension requires lfs to be enabled")
+        raise error.Abort(_("snapshot extension requires lfs to be enabled\n"))
 
 
 def checkloadblobbyoid(repo, oid, path, allow_remote=False):
@@ -56,7 +56,7 @@ def checkloadblobbyoid(repo, oid, path, allow_remote=False):
         repo.svfs.lfsremoteblobstore.readbatch([p], localstore)
     else:
         raise error.Abort(
-            _("file %s with oid %s not found in local blobstorage") % (path, oid)
+            _("file %s with oid %s not found in local blobstorage\n") % (path, oid)
         )
 
 
@@ -81,7 +81,7 @@ class filelfswrapper(object):
         try:
             return cls(path, data["oid"], data["size"])
         except ValueError:
-            raise error.Abort(_("invalid file description: %s") % data)
+            raise error.Abort(_("invalid file description: %s\n") % data)
 
 
 class snapshotmanifest(object):
@@ -122,7 +122,7 @@ class snapshotmanifest(object):
                 for path, data in sorted(manifest["localvfsfiles"].items())
             ]
         except ValueError:
-            raise error.Abort(_("invalid manifest json: %s") % json_string)
+            raise error.Abort(_("invalid manifest json: %s\n") % json_string)
 
     @classmethod
     def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
@@ -196,8 +196,6 @@ def debugsnapshot(ui, repo, *args, **opts):
     Creates a snapshot of the working copy.
     TODO(alexeyqu): finish docs
     """
-    if lfs is None:
-        raise error.Abort(_("lfs is not initialised"))
     with repo.wlock(), repo.lock():
         node = createsnapshotcommit(ui, repo, opts)
         if not node:
@@ -239,8 +237,6 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     Downloads the snapshot manifest from remote lfs if needed.
 
     """
-    if lfs is None:
-        raise error.Abort(_("lfs is not initialised\n"))
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a snapshot revision id\n"))
     force = opts.get("force")
@@ -284,8 +280,6 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
 
     Be careful, snapshot manifest internal structure may change.
     """
-    if lfs is None:
-        raise error.Abort(_("lfs is not initialised"))
     snapmanifest = snapshotmanifest.createfromworkingcopy(repo)
     if snapmanifest.empty:
         ui.status(
@@ -307,10 +301,8 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
 
     This command does not validate contents of the snapshot manifest.
     """
-    if lfs is None:
-        raise error.Abort(_("lfs not initialised"))
     if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a manifest oid"))
+        raise error.Abort(_("you must specify a manifest oid\n"))
     snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0])
     snapmanifest.uploadtoremotelfs()
     ui.status(_("upload complete\n"))
@@ -330,10 +322,8 @@ def debugcheckoutsnapshotmanifest(ui, repo, *args, **opts):
 
     This command does not validate contents of the snapshot manifest.
     """
-    if lfs is None:
-        raise error.Abort(_("lfs not initialised"))
     if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a manifest oid"))
+        raise error.Abort(_("you must specify a manifest oid\n"))
     snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0], allow_remote=True)
     checkouttosnapshotmanifest(ui, repo, snapmanifest, force=opts.get("force"))
     ui.status(_("snapshot checkout complete\n"))

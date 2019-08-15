@@ -56,6 +56,7 @@
 
   $ hg debuguploadsnapshotmanifest 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5
   abort: file manifest with oid 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5 not found in local blobstorage
+  
   [255]
 
   $ hg debuguploadsnapshotmanifest "$OID"
