@@ -723,10 +723,6 @@ mod tests {
         .collect()
     }
 
-    fn create_args(strings: Vec<&str>) -> Vec<String> {
-        strings.iter().map(|s| s.to_string()).collect()
-    }
-
     #[test]
     fn test_create_parser() {
         let flags = flags();
@@ -880,9 +876,9 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec![
+        let args = vec![
             "--number", "60", "--number", "59", "-n", "3", "-n5", "foo", "bar",
-        ]);
+        ];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -897,7 +893,7 @@ mod tests {
     fn test_parse_cluster_with_attached_value() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["-qhvcPATH/TO/FILE"]);
+        let args = vec!["-qhvcPATH/TO/FILE"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -914,7 +910,7 @@ mod tests {
     fn test_parse_cluster_with_attached_value_first() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["-cqhv"]);
+        let args = vec!["-cqhv"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -931,7 +927,7 @@ mod tests {
     fn test_parse_after_double_hyphen() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["-q", "--", "-v", "--", "-h"]);
+        let args = vec!["-q", "--", "-v", "--", "-h"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -950,7 +946,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec!["--config=--config=foo.bar"]);
+        let args = vec!["--config=--config=foo.bar"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -965,12 +961,12 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec![
+        let args = vec![
             "--config=--config=foo.bar",
             "--config",
             "-c=some.value.long",
             "--config=--config=bar.foo",
-        ]);
+        ];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -978,11 +974,7 @@ mod tests {
 
         assert_eq!(
             config_values,
-            create_args(vec![
-                "--config=foo.bar",
-                "-c=some.value.long",
-                "--config=bar.foo"
-            ])
+            vec!["--config=foo.bar", "-c=some.value.long", "--config=bar.foo"]
         );
     }
 
@@ -992,7 +984,7 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec!["-c=--config.prop=63"]);
+        let args = vec!["-c=--config.prop=63"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1005,7 +997,7 @@ mod tests {
     fn test_parse_list_mixed_with_spaces_and_equals() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec![
+        let args = vec![
             "log",
             "--rev",
             ".",
@@ -1014,7 +1006,7 @@ mod tests {
             "--rev=test",
             "--",
             "arg",
-        ]);
+        ];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1033,7 +1025,7 @@ mod tests {
     fn test_parse_flag_with_value_last_token() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--rev"]);
+        let args = vec!["--rev"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1055,7 +1047,7 @@ mod tests {
         // target command is `hg tags -T "hg bookmark -ir {node} {tag};\n"`
         // taken from hg/tests/test-rebase-bookmarks.t
 
-        let args = create_args(vec!["tags", "-T", template_str]);
+        let args = vec!["tags", "-T", template_str];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1069,7 +1061,7 @@ mod tests {
     fn test_type_mismatch_try_into_list_panics() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--rev", "test"]);
+        let args = vec!["--rev", "test"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1083,7 +1075,7 @@ mod tests {
     fn test_type_mismatch_try_into_str_panics() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--config", "some value"]);
+        let args = vec!["--config", "some value"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1097,7 +1089,7 @@ mod tests {
     fn test_type_mismatch_try_into_int_panics() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--rev", "test"]);
+        let args = vec!["--rev", "test"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1111,7 +1103,7 @@ mod tests {
     fn test_type_mismatch_try_into_bool_panics() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--rev", "test"]);
+        let args = vec!["--rev", "test"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1124,7 +1116,7 @@ mod tests {
     fn test_trailing_equals_sign_double_flag() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--config="]);
+        let args = vec!["--config="];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1137,7 +1129,7 @@ mod tests {
     fn test_prefix_match_double_flag() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--con", "test"]);
+        let args = vec!["--con", "test"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1150,7 +1142,7 @@ mod tests {
     fn test_prefix_match_trailing_equals() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec!["--con="]);
+        let args = vec!["--con="];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1170,7 +1162,7 @@ mod tests {
         .collect();
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec!["--co="]); // this is an ambiguous flag
+        let args = vec!["--co="]; // this is an ambiguous flag
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1184,13 +1176,13 @@ mod tests {
     fn test_prefix_match_mixed_with_exact_match_and_short_flags() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
 
-        let args = create_args(vec![
+        let args = vec![
             "--c=",
             "--config",
             "section.key=val",
             "-c=",
             "--conf=section.key=val",
-        ]);
+        ];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1205,7 +1197,7 @@ mod tests {
 
     #[test]
     fn test_no_prefix_match() {
-        let args = create_args(vec!["--conf", "section.key=val"]);
+        let args = vec!["--conf", "section.key=val"];
         let result = ParseOptions::new()
             .ignore_prefix(true)
             .flags(flags())
@@ -1225,7 +1217,7 @@ mod tests {
             .ignore_errors(true)
             .into_parser();
 
-        let args = create_args(vec!["--shallow", "--config", "section.key=val"]);
+        let args = vec!["--shallow", "--config", "section.key=val"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1242,7 +1234,7 @@ mod tests {
             .ignore_prefix(true)
             .into_parser();
 
-        let args = create_args(vec!["--shallow", "--conf", "section.key=val"]);
+        let args = vec!["--shallow", "--conf", "section.key=val"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1259,7 +1251,7 @@ mod tests {
             .flags(flags())
             .into_parser();
 
-        let args = create_args(vec!["-qc."]);
+        let args = vec!["-qc."];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1277,7 +1269,7 @@ mod tests {
             .flags(flags())
             .into_parser();
 
-        let args = create_args(vec!["--", "-1", "4"]);
+        let args = vec!["--", "-1", "4"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1299,7 +1291,7 @@ mod tests {
         let flags = flags.into_iter().map(Into::into).collect();
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec!["--commit"]);
+        let args = vec!["--commit"];
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -1321,7 +1313,7 @@ mod tests {
         let flags = flags.into_iter().map(Into::into).collect();
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        let args = create_args(vec!["--no-commit"]);
+        let args = vec!["--no-commit"];
 
         let result = parser.parse_args(&args).unwrap();
 
