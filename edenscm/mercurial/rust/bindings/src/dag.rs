@@ -108,13 +108,13 @@ py_class!(class dagindex |py| {
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map), segment_size, max_segment_level)
     }
 
-    def build_disk(&self, nodes: Vec<PyBytes>, parent_func: PyObject) -> PyResult<Option<u8>> {
+    def builddisk(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Save state on disk.
         // Must be called from a clean state (ex. `build_mem` is not called).
         if nodes.is_empty() {
             return Ok(None);
         }
-        let get_parents = translate_get_parents(py, parent_func);
+        let get_parents = translate_get_parents(py, parentfunc);
         let mut map = self.map(py).borrow_mut();
         let id = {
             let mut map = map.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
@@ -141,12 +141,12 @@ py_class!(class dagindex |py| {
         Ok(None)
     }
 
-    def build_mem(&self, nodes: Vec<PyBytes>, parent_func: PyObject) -> PyResult<Option<u8>> {
+    def buildmem(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Do not save state to disk.
         if nodes.is_empty() {
             return Ok(None);
         }
-        let get_parents = translate_get_parents(py, parent_func);
+        let get_parents = translate_get_parents(py, parentfunc);
         let mut map = self.map(py).borrow_mut();
         let id = {
             let mut id = 0;
