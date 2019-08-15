@@ -872,8 +872,6 @@ class PrefetchCmd(Subcmd):
             return None
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-
         if args.repo:
             repo_root = self._repo_root(args.repo)
             if not repo_root:
@@ -893,19 +891,36 @@ class PrefetchCmd(Subcmd):
                 # pyre-fixme[16]: `Namespace` has no attribute `PATTERN`.
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
-        with instance.get_thrift_client() as client:
-            result = client.globFiles(
-                GlobParams(
-                    mountPoint=os.fsencode(repo_root),
-                    globs=args.PATTERN,
-                    includeDotfiles=False,
-                    prefetchFiles=not args.no_prefetch,
-                    suppressFileList=args.silent,
+        if os.name == "nt":
+            if args.no_prefetch:
+                # Not implementing --no-prefetch option right now because no
+                # one is using it. Will come back it.
+                raise NotImplementedError(
+                    "Eden prefetch --no-prefetch is not implemented on Windows."
+                    "You could use hg files to get the similar info from Mercurial"
                 )
-            )
-            if not args.silent:
-                for name in result.matchingFiles:
-                    print(name)
+
+            cmd = ["hg", "prefetch", "-r", ".", "--cwd", repo_root, "--"] + args.PATTERN
+            if args.silent:
+                cmd += ["--quiet"]
+
+            subprocess.check_call(cmd)
+        else:
+            instance = get_eden_instance(args)
+
+            with instance.get_thrift_client() as client:
+                result = client.globFiles(
+                    GlobParams(
+                        mountPoint=os.fsencode(repo_root),
+                        globs=args.PATTERN,
+                        includeDotfiles=False,
+                        prefetchFiles=not args.no_prefetch,
+                        suppressFileList=args.silent,
+                    )
+                )
+                if not args.silent:
+                    for name in result.matchingFiles:
+                        print(name)
 
         return 0
 
