@@ -861,7 +861,7 @@ class PrefetchCmd(Subcmd):
             action="store_true",
         )
         parser.add_argument(
-            "PATTERN", nargs="+", help="Filename patterns to match via fnmatch"
+            "PATTERN", nargs="*", help="Filename patterns to match via fnmatch"
         )
 
     def _repo_root(self, path: str) -> Optional[str]:
