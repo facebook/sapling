@@ -57,6 +57,33 @@ _CREATE_NO_WINDOW = 0x08000000
 _SW_HIDE = 0
 
 
+# This is deliberately untyped because the type checker on
+# linux cannot reason about windll
+def _create_process_shim(cmd_str):
+    si = _STARTUPINFO()
+    si.cb = ctypes.sizeof(_STARTUPINFO)
+    pi = _PROCESS_INFORMATION()
+
+    res = ctypes.windll.kernel32.CreateProcessW(
+        None,
+        cmd_str,
+        None,
+        None,
+        False,
+        _CREATE_NO_WINDOW,
+        None,
+        None,
+        ctypes.byref(si),
+        ctypes.byref(pi),
+    )
+
+    if not res:
+        raise ctypes.WinError()
+
+    ctypes.windll.kernel32.CloseHandle(pi.hProcess)
+    ctypes.windll.kernel32.CloseHandle(pi.hThread)
+
+
 def start_process(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
@@ -80,26 +107,6 @@ def start_process(
     ]
     cmd_str = " ".join(cmd)
 
-    si = _STARTUPINFO()
-    si.cb = ctypes.sizeof(_STARTUPINFO)
-    pi = _PROCESS_INFORMATION()
+    _create_process_shim(cmd_str)
 
-    res = ctypes.windll.kernel32.CreateProcessW(
-        None,
-        cmd_str,
-        None,
-        None,
-        False,
-        _CREATE_NO_WINDOW,
-        None,
-        None,
-        ctypes.byref(si),
-        ctypes.byref(pi),
-    )
-
-    if not res:
-        raise ctypes.WinError()
-
-    ctypes.windll.kernel32.CloseHandle(pi.hProcess)
-    ctypes.windll.kernel32.CloseHandle(pi.hThread)
     print("Edenfs started")
