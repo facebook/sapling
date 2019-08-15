@@ -541,6 +541,43 @@ impl Log {
         self.sync()
     }
 
+    /// Make sure on-disk indexes are up-to-date with the primary log, regardless
+    /// of `lag_threshold`.
+    ///
+    /// This is used internally by [`RotateLog`] to make sure a [`Log`] has
+    /// complate indexes before rotating.
+    pub(crate) fn finalize_indexes(&mut self) -> Fallible<()> {
+        if let Some(ref dir) = self.dir {
+            let dir = dir.clone();
+            if !self.mem_buf.is_empty() {
+                return Err(parameter_error(
+                    "sync() should be called before finalize_indexes()",
+                ));
+            }
+
+            let mut dir_file = open_dir(&dir)?;
+            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
+            let meta = Self::load_or_create_meta(&dir, false)?;
+            if self.meta != meta {
+                return Err(parameter_error(
+                    "callsite should use lock to prevent write race",
+                ));
+            }
+
+            // Flush all indexes.
+            for i in 0..self.indexes.len() {
+                let new_length = self.indexes[i].flush();
+                let new_length = self.maybe_set_index_error(new_length)?;
+                let name = self.open_options.index_defs[i].name.to_string();
+                self.meta.indexes.insert(name, new_length);
+            }
+
+            self.meta.write_file(dir.join(META_FILE))?;
+        }
+        Ok(())
+    }
+
     /// Rebuild indexes.
     ///
     /// This is an expensive operation. It can be useful for repairing a broken

@@ -224,6 +224,7 @@ impl RotateLog {
                 self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
                 self.latest = latest;
             }
+            self.writable_log().sync()?;
         } else {
             // Read-write path. Take the directory lock.
             let mut lock_file = open_dir(self.dir.as_ref().unwrap())?;
@@ -262,12 +263,15 @@ impl RotateLog {
                 self.logs = new_logs;
                 self.latest = latest;
             }
-        }
 
-        let size = self.writable_log().flush()?;
-
-        if size >= self.open_options.max_bytes_per_log {
-            self.rotate_assume_locked()?;
+            let size = self.writable_log().flush()?;
+            if size >= self.open_options.max_bytes_per_log {
+                // `self.writable_log()` will be rotated (i.e., becomes immutable).
+                // Make sure indexes are up-to-date so reading it would not require
+                // building missing indexes in-memory.
+                self.writable_log().finalize_indexes()?;
+                self.rotate_assume_locked()?;
+            }
         }
 
         Ok(self.latest)
@@ -806,5 +810,41 @@ mod tests {
 
         let _ = OpenOptions::new().create(true).open(&dir)?;
         Ok(())
+    }
+
+    #[test]
+    fn test_index_lag() {
+        let dir = tempdir().unwrap();
+        let opts = OpenOptions::new()
+            .create(true)
+            .index_defs(vec![IndexDef::new("idx", |_| {
+                vec![IndexOutput::Reference(0..2)]
+            })
+            .lag_threshold(u64::max_value())])
+            .max_bytes_per_log(100)
+            .max_log_count(3);
+
+        let size = |name: &str| dir.path().join(name).metadata().unwrap().len();
+
+        let mut rotate = opts.clone().open(&dir).unwrap();
+        rotate.append(vec![b'x'; 200]).unwrap();
+        rotate.sync().unwrap();
+        rotate.append(vec![b'y'; 200]).unwrap();
+        rotate.sync().unwrap();
+        rotate.append(vec![b'z'; 10]).unwrap();
+        rotate.sync().unwrap();
+
+        // First 2 logs become immutable, indexes are written regardless of
+        // lag_threshold.
+        assert!(size("0/index-idx") > 0);
+        assert!(size("0/log") > 100);
+
+        assert!(size("1/index-idx") > 0);
+        assert!(size("1/log") > 100);
+
+        // The "current" log is still mutable. Its index respects lag_threshold,
+        // and is empty.
+        assert!(size("2/index-idx") == 0);
+        assert!(size("2/log") < 100);
     }
 }
