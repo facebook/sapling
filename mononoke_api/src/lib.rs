@@ -13,7 +13,6 @@ use futures::{future, Future};
 use futures_ext::FutureExt;
 
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use mercurial_types::manifest::Content;
@@ -45,22 +44,4 @@ pub fn get_content_by_path(
             }
         })
         .and_then(move |entry_id| repo.get_content_by_entryid(ctx, entry_id))
-}
-
-pub fn get_changeset_by_bookmark(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark: BookmarkName,
-) -> impl Future<Item = HgChangesetId, Error = Error> {
-    repo.get_bookmark(ctx, &bookmark)
-        .map_err({
-            cloned!(bookmark);
-            move |_| ErrorKind::InvalidInput(bookmark.to_string()).into()
-        })
-        .and_then({
-            cloned!(bookmark);
-            move |node_cs_maybe| {
-                node_cs_maybe.ok_or_else(move || ErrorKind::NotFound(bookmark.to_string()).into())
-            }
-        })
 }
