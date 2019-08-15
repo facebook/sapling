@@ -1302,15 +1302,19 @@ impl HgCommands for RepoClient {
             });
 
         throttle
-            .and_then(move |throttle| {
-                if throttle {
-                    Err(ErrorKind::RequestThrottled {
-                        request_name: ops::GETTREEPACK.into(),
+            .then(move |throttle| match throttle {
+                Ok(throttle) => {
+                    if throttle {
+                        let err: Error = ErrorKind::RequestThrottled {
+                            request_name: ops::GETTREEPACK.into(),
+                        }
+                        .into();
+                        Err(err)
+                    } else {
+                        Ok(s)
                     }
-                    .into())
-                } else {
-                    Ok(s)
                 }
+                Err(never_type) => never_type,
             })
             .flatten_stream()
             .boxify()

@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![feature(never_type)]
+
 use chashmap::CHashMap;
 use failure_ext::Error;
 use fbwhoami::FbWhoAmI;
@@ -348,9 +350,18 @@ impl CoreContext {
         &self,
         metric: Metric,
         duration: Duration,
-    ) -> impl Future<Item = bool, Error = Error> {
+    ) -> impl Future<Item = bool, Error = !> {
         match &self.inner.load_limiter {
-            Some(limiter) => limiter.should_throttle(metric, duration).left_future(),
+            Some(limiter) => limiter
+                .should_throttle(metric, duration)
+                .then(|res| {
+                    let r: Result<_, !> = match res {
+                        Ok(res) => Ok(res),
+                        Err(_) => Ok(false),
+                    };
+                    r
+                })
+                .left_future(),
             None => Ok(false).into_future().right_future(),
         }
     }
