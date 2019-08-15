@@ -109,14 +109,16 @@ class snapshotmanifest(object):
     def deserialize(self, json_string):
         try:
             manifest = json.loads(json_string)
-            self.deleted = [filelfswrapper(path) for path in manifest["deleted"]]
+            self.deleted = [
+                filelfswrapper(path) for path in sorted(manifest["deleted"].keys())
+            ]
             self.unknown = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in manifest["unknown"].items()
+                for path, data in sorted(manifest["unknown"].items())
             ]
             self.localvfsfiles = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in manifest["localvfsfiles"].items()
+                for path, data in sorted(manifest["localvfsfiles"].items())
             ]
         except ValueError:
             raise error.Abort(_("invalid manifest json: %s") % json_string)
@@ -265,10 +267,15 @@ def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
     ui.status(_("upload complete\n"))
 
 
-@command("debugcheckoutsnapshot", [], _("OID"), inferrepo=True)
-def debugcheckoutsnapshot(ui, repo, *args, **opts):
+@command(
+    "debugcheckoutsnapshotmanifest",
+    [("f", "force", None, _("force checkout"))],
+    _("OID"),
+    inferrepo=True,
+)
+def debugcheckoutsnapshotmanifest(ui, repo, *args, **opts):
     """
-    Checks out the working copy to the snapshot state, given its manifest oid.
+    Checks out the working copy to the snapshot manifest state, given its manifest oid.
     Downloads the snapshot manifest from remote lfs if needed.
     Takes in an oid of the manifest.
 
@@ -279,18 +286,28 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a manifest oid"))
     snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0], allow_remote=True)
+    checkouttosnapshotmanifest(ui, repo, snapmanifest, force=opts.get("force"))
+    ui.status(_("snapshot checkout complete\n"))
+
+
+def checkouttosnapshotmanifest(ui, repo, snapmanifest, force=True):
+    def checkaddfile(store, file, vfs, force):
+        if not force and vfs.exists(file.path):
+            ui.note(_("skip adding %s, it exists\n") % file.path)
+            return
+        ui.note(_("will add %s\n") % file.path)
+        vfs.write(file.path, store.read(file.oid))
+
     # deleting files that should be missing
     todelete = [f.path for f in snapmanifest.deleted]
-    ui.note(_("will delete %s") % ",".join(todelete))
-    m = scmutil.match(repo[None], todelete)
-    cmdutil.remove(ui, repo, m, "", after=False, force=False)
+    if todelete:
+        ui.note(_("will delete %s\n") % ",".join(todelete))
+        m = scmutil.match(repo[None], todelete)
+        cmdutil.remove(ui, repo, m, "", after=False, force=False)
     # populating the untracked files
-    for unknown in snapmanifest.unknown:
-        ui.note(_("will add %s") % unknown.path)
-        repo.wvfs.write(unknown.path, repo.svfs.lfslocalblobstore.read(unknown.oid))
+    for file in snapmanifest.unknown:
+        checkaddfile(repo.svfs.lfslocalblobstore, file, repo.wvfs, force)
     # restoring the merge state
     with repo.wlock():
         for file in snapmanifest.localvfsfiles:
-            ui.note(_("will add %s") % file.path)
-            repo.localvfs.write(file.path, repo.svfs.lfslocalblobstore.read(file.oid))
-    ui.status(_("snapshot checkout complete\n"))
+            checkaddfile(repo.svfs.lfslocalblobstore, file, repo.localvfs, force)

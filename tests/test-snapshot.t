@@ -84,7 +84,10 @@
   $ ls
   existingfile
 
-  $ hg debugcheckoutsnapshot "$OID"
+  $ hg debugcheckoutsnapshotmanifest --verbose "$OID"
+  will delete existingfile
+  removing existingfile
+  will add untrackedfile
   snapshot checkout complete
 
   $ ls
@@ -137,7 +140,13 @@
   $ hg status
   R existingfile
   ? untrackedfile
-  $ hg debugcheckoutsnapshot "$MERGEOID"
+  $ hg debugcheckoutsnapshotmanifest --verbose "$MERGEOID"
+  will add new.orig
+  skip adding untrackedfile, it exists
+  will add merge/c2a6b03f190dfb2b4aa91f8af8d477a9bc3401dc
+  will add merge/state
+  will add merge/state2
+  will add rebasestate
   snapshot checkout complete
   $ hg status --verbose
   R existingfile
