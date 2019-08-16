@@ -92,6 +92,13 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
+function mononoke_rechunker {
+    "$MONONOKE_RECHUNKER" \
+    "${CACHING_ARGS[@]}" \
+    --mononoke-config-path mononoke-config \
+    "$@"
+}
+
 function mononoke_hg_sync_with_retry {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
@@ -362,6 +369,14 @@ CONFIG
 if [[ -v READ_ONLY_REPO ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 readonly=true
+CONFIG
+fi
+
+if [[ -v FILESTORE ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[filestore]
+chunk_size = ${FILESTORE_CHUNK_SIZE:-10}
+concurrency = 24
 CONFIG
 fi
 
