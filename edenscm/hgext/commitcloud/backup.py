@@ -25,13 +25,15 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
         # No revs specified.  Back up all visible commits that are not already
         # backed up.
         heads = unfi.revs(
-            "heads(draft() - hidden() - (draft() & ::%ln))", backupstate.heads
+            "heads(not public() - hidden() - (not public() & ::%ln))", backupstate.heads
         )
     else:
         # Some revs were specified.  Back up all of those commits that are not
         # already backed up.
         heads = unfi.revs(
-            "heads((draft() & ::%ld) - (draft() & ::%ln))", revs, backupstate.heads
+            "heads((not public() & ::%ld) - (not public() & ::%ln))",
+            revs,
+            backupstate.heads,
         )
 
     if not heads:
@@ -65,7 +67,7 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
         # minus any commits that we know are already backed up anyway.
         badnodes = list(
             unfi.nodes(
-                "(draft() & ::%ld) & (%ls::) - (draft() & ::%ln)",
+                "(not public() & ::%ld) & (%ls::) - (not public() & ::%ln)",
                 heads,
                 badnodes,
                 backupstate.heads,
@@ -76,7 +78,7 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
                 _("not backing up commits marked as bad: %s\n")
                 % ", ".join([nodemod.hex(node) for node in badnodes])
             )
-            heads = unfi.revs("heads((draft() & ::%ld) - %ln)", heads, badnodes)
+            heads = unfi.revs("heads((not public() & ::%ld) - %ln)", heads, badnodes)
 
     # Limit the number of heads we backup in a single operation.
     backuplimit = repo.ui.configint("infinitepushbackup", "maxheadstobackup")
@@ -94,7 +96,7 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
 
     # Back up the new heads.
     backingup = unfi.nodes(
-        "(draft() & ::%ld) - (draft() & ::%ln)", heads, backupstate.heads
+        "(not public() & ::%ld) - (not public() & ::%ln)", heads, backupstate.heads
     )
     backuplock.progressbackingup(repo, list(backingup))
     with perftrace.trace("Push Backup Bundles"):
@@ -108,13 +110,13 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
     # The commits that got backed up are all the ancestors of the new backup
     # heads, minus any commits that were already backed up at the start.
     backedup = unfi.revs(
-        "(draft() & ::%ls) - (draft() & ::%ln)", newheads, backupstate.heads
+        "(not public() & ::%ls) - (not public() & ::%ln)", newheads, backupstate.heads
     )
     # The commits that failed to get backed up are the ancestors of the failed
     # heads, except for commits that are also ancestors of a successfully backed
     # up head, or commits that were already known to be backed up.
     failed = unfi.revs(
-        "(draft() & ::%ls) - (draft() & ::%ls) - (draft() & ::%ln)",
+        "(not public() & ::%ls) - (not public() & ::%ls) - (not public() & ::%ln)",
         failedheads,
         newheads,
         backupstate.heads,

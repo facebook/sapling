@@ -355,7 +355,7 @@ Make sure cloud backup works
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
 
 Make secret commit and bookmark on top of it. Then run cloud backup.
-Make sure it wasn't backed up.
+Make sure it was backed up.
 t
   $ hg book bookonsecret
   $ echo secret >> secret
@@ -363,8 +363,12 @@ t
   $ hg ci -Am secret
   $ hg phase -qfs '.'
   $ hg cloud backup
-  nothing to back up
+  backing up stack rooted at dc80aa94cb8b
+  remote: pushing 1 commit:
+  remote:     dc80aa94cb8b  secret
+  commitcloud: backed up 1 commit
   $ scratchbookmarks
+  infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
 
 Create two heads, set maxheadstobackup to 1, make sure only latest head was backed up
@@ -379,6 +383,7 @@ Create two heads, set maxheadstobackup to 1, make sure only latest head was back
   remote:     6c4f4b30ae4c  headtwo
   commitcloud: backed up 1 commit
   $ scratchbookmarks
+  infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/testhost$TESTTMP/client/heads/6c4f4b30ae4c2dd928d551836c70c741ee836650 6c4f4b30ae4c2dd928d551836c70c741ee836650
 
@@ -387,6 +392,7 @@ Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up n
   backing up only the most recent 0 heads
   nothing to back up
   $ scratchbookmarks
+  infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/testhost$TESTTMP/client/heads/6c4f4b30ae4c2dd928d551836c70c741ee836650 6c4f4b30ae4c2dd928d551836c70c741ee836650
 
@@ -442,6 +448,7 @@ Test hostname option
   $ hg cloud backup --config infinitepushbackup.hostname=hostname
   nothing to back up
   $ scratchbookmarks | grep test/hostname
+  infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/hostname$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846
 

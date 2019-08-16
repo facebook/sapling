@@ -125,6 +125,9 @@ def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     )
     # Get the heads of visible draft commits that are already backed up,
     # including commits made visible by bookmarks.
+    #
+    # For historical compatibility, we ignore obsolete and secret commits
+    # as they are normally excluded from backup bookmarks.
     with perftrace.trace("Compute Heads"):
         revset = "heads((draft() & ::((draft() - obsolete() - hidden()) + bookmark())) & (draft() & ::%ln))"
         heads = [nodemod.hex(head) for head in unfi.nodes(revset, backupstate.heads)]

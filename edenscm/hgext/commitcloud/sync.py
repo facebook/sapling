@@ -382,7 +382,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         # ancestors of the cloud heads but are hidden locally.
         cloudvisibleonly = list(
             unfi.set(
-                "draft() & ::%ls & hidden()",
+                "not public() & ::%ls & hidden()",
                 [head for head in cloudrefs.heads if head not in omittedheads],
             )
         )
@@ -391,7 +391,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         # current cloud heads, but have not been hidden or obsoleted locally.
         cloudhiddenonly = list(
             unfi.set(
-                "(draft() & ::%ls) - (draft() & ::%ls) - hidden() - obsolete()",
+                "(not public() & ::%ls) - (not public() & ::%ls) - hidden() - obsolete()",
                 [
                     head
                     for head in lastsyncstate.heads

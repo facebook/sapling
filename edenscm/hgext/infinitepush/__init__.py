@@ -269,15 +269,17 @@ def isbackedupnodes(getconnection, nodes):
 
 def pushbackupbundledraftheads(ui, repo, getconnection, heads):
     """
-    push a backup bundle containing draft heads to the server
+    push a backup bundle containing non-public heads to the server
 
-    Pushes an infinitepush bundle containing the commits that are draft
+    Pushes an infinitepush bundle containing the commits that are non-public
     ancestors of `heads`, to the `other` server.
     """
     if heads:
         # Calculate the commits to back-up.  The bundle needs to cleanly
         # apply to the server, so we need to include the whole draft stack.
-        commitstobackup = [ctx.node() for ctx in repo.set("draft() & ::%ln", heads)]
+        commitstobackup = [
+            ctx.node() for ctx in repo.set("not public() & ::%ln", heads)
+        ]
 
         # Calculate the parent commits of the commits we are backing up.
         # These are the public commits that should be on the server.
@@ -312,7 +314,7 @@ def pushbackupbundlestacks(ui, repo, getconnection, heads):
     # bundle for each stack (commits that share a single root).  If a stack is
     # too large, or if the push fails, and the stack has multiple heads, push
     # head-by-head.
-    roots = repo.set("roots(draft() & ::%ls)", heads)
+    roots = repo.set("roots(not public() & ::%ls)", heads)
     newheads = set()
     failedheads = set()
     for root in roots:

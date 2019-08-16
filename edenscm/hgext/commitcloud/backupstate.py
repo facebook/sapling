@@ -58,7 +58,9 @@ class BackupState(object):
         unfi = repo.unfiltered()
         unknown = [
             nodemod.hex(n)
-            for n in unfi.nodes("draft() - hidden() - (draft() & ::%ln)", self.heads)
+            for n in unfi.nodes(
+                "not public() - hidden() - (not public() & ::%ln)", self.heads
+            )
         ]
 
         def getconnection():
@@ -86,7 +88,7 @@ class BackupState(object):
         unfi = self.repo.unfiltered()
         hasnode = unfi.changelog.hasnode
         heads = [head for head in self.heads if hasnode(head)]
-        return set(unfi.nodes("draft() & ::%ln", heads))
+        return set(unfi.nodes("not public() & ::%ln", heads))
 
     def _write(self, f):
         f.write("%s\n" % FORMAT_VERSION)
@@ -100,7 +102,9 @@ class BackupState(object):
         # were backed up plus the newly backed up commits.
         self.heads = list(
             unfi.nodes(
-                "heads((draft() & ::%ln) + (draft() & ::%ln))", self.heads, newnodes
+                "heads((not public() & ::%ln) + (not public() & ::%ln))",
+                self.heads,
+                newnodes,
             )
         )
 

@@ -345,7 +345,7 @@ def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo.unfiltered()
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
-    backedup = unfi.revs("draft() and ::%ln", state.heads)
+    backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
 
 
@@ -354,9 +354,9 @@ def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo.unfiltered()
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
-    backedup = unfi.revs("draft() and ::%ln", state.heads)
+    backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(
-        subset & repo.revs("draft() - hidden()"), lambda r: r not in backedup
+        subset & repo.revs("not public() - hidden()"), lambda r: r not in backedup
     )
 
 
