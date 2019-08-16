@@ -27,6 +27,7 @@ from edenscm.mercurial import (
     extensions,
     hg,
     json,
+    pathutil,
     registrar,
     scmutil,
     visibility,
@@ -137,7 +138,7 @@ class snapshotmanifest(object):
         if ismergestate or isrebasestate:
             for root, dirs, files in repo.localvfs.walk(path="merge"):
                 manifest.localvfsfiles += [
-                    filelfswrapper(os.path.join(root, f)) for f in files
+                    filelfswrapper(pathutil.join(root, f)) for f in files
                 ]
         if isrebasestate:
             manifest.localvfsfiles.append(filelfswrapper("rebasestate"))
