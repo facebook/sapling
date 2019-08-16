@@ -870,3 +870,220 @@ fn filestore_store_error() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn filestore_test_rechunk() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let small = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    let large = FilestoreConfig {
+        chunk_size: Some(3),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock();
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Store in 3-byte chunks
+    rt.block_on(filestore::store(
+        &blob,
+        &large,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    // Verify that the chunks are 3 bytes in size.
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx.clone(), &FetchKey::Canonical(full_id))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
+
+    assert_eq!(res?, Some(expected));
+
+    // Rechunk the file into 1 byte sections
+    rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        small,
+        ctx.clone(),
+        full_id,
+    ))?;
+
+    // Verify that we can still read the full thing.
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
+        .into_iter()
+        .map(Bytes::from)
+        .collect();
+
+    println!("res = {:#?}", res);
+    assert_eq!(res?, Some(expected));
+    Ok(())
+}
+
+#[test]
+fn filestore_test_rechunk_larger() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let small = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    let large = FilestoreConfig {
+        chunk_size: Some(3),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock();
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Store in 1 byte chunks
+    rt.block_on(filestore::store(
+        &blob,
+        &small,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    // Verify that the chunks are 1 byte in size.
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx.clone(), &FetchKey::Canonical(full_id))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
+        .into_iter()
+        .map(Bytes::from)
+        .collect();
+
+    assert_eq!(res?, Some(expected));
+
+    // Rechunk the file into 3 byte sections
+    rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        large,
+        ctx.clone(),
+        full_id,
+    ))?;
+
+    // Verify that we can still read the full thing.
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
+
+    println!("res = {:#?}", res);
+    assert_eq!(res?, Some(expected));
+    Ok(())
+}
+
+#[test]
+fn filestore_test_rechunk_unchunked() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let small = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    // This is large enough that the data we upload won't be chunked.
+    let large = FilestoreConfig {
+        chunk_size: Some(100),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock();
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Don't chunk
+    rt.block_on(filestore::store(
+        &blob,
+        &large,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    // Rechunk the file into 1 byte sections
+    rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        small,
+        ctx.clone(),
+        full_id,
+    ))?;
+
+    // Verify that we can still read the full thing.
+    let res = rt.block_on(
+        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
+            .map(|maybe_str| maybe_str.map(|s| s.collect()))
+            .flatten(),
+    );
+
+    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
+        .into_iter()
+        .map(Bytes::from)
+        .collect();
+
+    println!("res = {:#?}", res);
+    assert_eq!(res?, Some(expected));
+    Ok(())
+}
+
+#[test]
+fn filestore_test_rechunk_missing_content() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let conf = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock();
+
+    let full_data = &b"foobar"[..];
+    let full_id = canonical(full_data);
+
+    // Attempt to rechunk the file into 1 byte sections
+    let res = rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        conf,
+        ctx.clone(),
+        full_id,
+    ));
+
+    println!("res = {:#?}", res);
+    assert_matches!(
+        res.unwrap_err().downcast::<filestore::rechunk::ErrorKind>(),
+        Ok(filestore::rechunk::ErrorKind::ContentNotFound(..))
+    );
+
+    Ok(())
+}

@@ -29,10 +29,12 @@ mod incremental_hash;
 mod metadata;
 mod multiplexer;
 mod prepare;
+mod rechunk;
 mod spawn;
 mod streamhash;
 
 pub use fetch_key::{Alias, AliasBlob, FetchKey};
+pub use rechunk::rechunk;
 
 #[cfg(test)]
 mod test;
