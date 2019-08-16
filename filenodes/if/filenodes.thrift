@@ -9,7 +9,7 @@ include "scm/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries
-const i32 MC_CODEVER = 1
+const i32 MC_CODEVER = 2
 const i32 MC_SITEVER = 0
 
 union FilenodeInfoList {
