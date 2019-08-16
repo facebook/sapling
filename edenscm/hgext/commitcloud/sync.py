@@ -358,6 +358,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
                 prog.value = (index, headgroupstr)
                 pullopts["rev"] = headgroup
                 pullcmd(repo.ui, repo, remotepath, **pullopts)
+                repo.connectionpool.close()
 
     omittedbookmarks.extend(
         _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
