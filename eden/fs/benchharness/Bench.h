@@ -16,46 +16,6 @@ namespace facebook {
 namespace eden {
 
 /**
- * Allows the test driver to wait until all threads are ready to go, and then
- * it wakes them all.
- */
-class StartingGate {
- public:
-  /**
-   * Number of threads that will call wait() must be specified up front.
-   */
-  explicit StartingGate(size_t threadCount);
-
-  /**
-   * Called by thread and waits until open() is called.
-   */
-  void wait();
-
-  /**
-   * Waits until all threads have called wait(). Useful for removing thread
-   * setup from benchmark time when using folly benchmark.
-   */
-  void waitForWaitingThreads();
-
-  /**
-   * Allows all threads to proceed.
-   */
-  void open();
-
-  void waitThenOpen() {
-    waitForWaitingThreads();
-    open();
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  size_t waitingThreads_{0};
-  bool ready_{false};
-  const size_t totalThreads_;
-};
-
-/**
  * Accumulates data points, tracking their average and minimum.
  *
  * This type is a monoid.

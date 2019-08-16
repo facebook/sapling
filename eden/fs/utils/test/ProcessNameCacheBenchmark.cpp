@@ -6,6 +6,7 @@
  */
 #include "eden/fs/utils/ProcessNameCache.h"
 
+#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include "eden/fs/benchharness/Bench.h"
 
@@ -21,7 +22,7 @@ BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
 
   ProcessNameCache processNameCache;
   std::vector<std::thread> threads;
-  StartingGate gate{kThreadCount};
+  facebook::fb303::StartingGate gate{kThreadCount};
 
   size_t remainingIterations = iters;
   size_t totalIterations = 0;

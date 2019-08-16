@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include <folly/init/Init.h>
 #include "eden/fs/benchharness/Bench.h"
@@ -24,7 +25,7 @@ BENCHMARK(Tracer_repeatedly_create_trace_points, n) {
 BENCHMARK(Tracer_repeatedly_create_trace_points_from_multiple_threads, n) {
   constexpr unsigned threadCount = 8;
   std::vector<std::thread> threads;
-  StartingGate gate{threadCount};
+  facebook::fb303::StartingGate gate{threadCount};
   {
     folly::BenchmarkSuspender suspender;
     enableTracing();

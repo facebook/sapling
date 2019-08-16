@@ -6,11 +6,13 @@
  */
 #include "eden/fs/utils/ProcessAccessLog.h"
 
+#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
+using namespace facebook::fb303;
 
 /**
  * A high but realistic amount of contention.

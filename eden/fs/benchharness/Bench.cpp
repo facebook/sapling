@@ -12,26 +12,6 @@
 namespace facebook {
 namespace eden {
 
-StartingGate::StartingGate(size_t threadCount) : totalThreads_{threadCount} {}
-
-void StartingGate::wait() {
-  std::unique_lock lock{mutex_};
-  ++waitingThreads_;
-  cv_.notify_all();
-  cv_.wait(lock, [&] { return ready_; });
-}
-
-void StartingGate::waitForWaitingThreads() {
-  std::unique_lock lock{mutex_};
-  cv_.wait(lock, [&] { return waitingThreads_ == totalThreads_; });
-}
-
-void StartingGate::open() {
-  std::unique_lock lock{mutex_};
-  ready_ = true;
-  cv_.notify_all();
-}
-
 uint64_t getTime() noexcept {
   timespec ts;
   // CLOCK_MONOTONIC is subject in NTP adjustments. CLOCK_MONOTONIC_RAW would be

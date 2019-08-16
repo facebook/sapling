@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 #include <boost/filesystem.hpp>
+#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include <folly/File.h>
 #include <folly/container/Array.h>
@@ -20,6 +21,7 @@
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 
 using namespace facebook::eden;
+using namespace facebook::fb303;
 using namespace boost::filesystem;
 
 DEFINE_uint64(threads, 1, "The number of concurrent Thrift client threads");
