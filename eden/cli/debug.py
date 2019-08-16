@@ -401,9 +401,21 @@ class InodeCmd(Subcmd):
 class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the eden mount point")
+        parser.add_argument("--sizes", action="store_true", help="Compute file sizes")
+
+    def make_file_entries(
+        self, base_path: str, paths: List[str], get_sizes: bool
+    ) -> List[Dict[str, Any]]:
+        if get_sizes:
+            return [
+                {"path": path, "size": os.path.getsize(os.path.join(base_path, path))}
+                for path in paths
+            ]
+        return [{"path": path} for path in paths]
 
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
+        get_sizes = args.sizes
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
 
         with instance.get_thrift_client() as client:
@@ -412,7 +424,14 @@ class FileStatsCMD(Subcmd):
             )
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)
-        operations = {"read_files": read_files, "written_files": written_files}
+        operations = {
+            "read_files": self.make_file_entries(
+                base_path=request_root, paths=read_files, get_sizes=get_sizes
+            ),
+            "written_files": self.make_file_entries(
+                base_path=request_root, paths=written_files, get_sizes=get_sizes
+            ),
+        }
         json.dump(operations, fp=sys.stdout, indent=4, separators=(",", ": "))
         return 0
 
