@@ -8,6 +8,8 @@ libc = "0.2"
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
+types = { path = "../types" }
+revisionstore = { path = "../revisionstore"}
 
 [dependencies.encoding]
 path = "../encoding"

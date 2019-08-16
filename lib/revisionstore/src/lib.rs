@@ -6,7 +6,6 @@ mod ancestors;
 mod dataindex;
 mod fanouttable;
 mod historyindex;
-mod packstore;
 mod sliceext;
 mod unionstore;
 mod vfs;
@@ -23,6 +22,7 @@ pub mod multiplexstore;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
 pub mod mutablepack;
+pub mod packstore;
 pub mod packwriter;
 pub mod repack;
 pub mod uniondatastore;
@@ -37,7 +37,9 @@ pub use crate::localstore::LocalStore;
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
+pub use crate::packstore::DataPackStore;
 pub use crate::repack::IterableStore;
+pub use crate::uniondatastore::UnionDataStore;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
