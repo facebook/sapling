@@ -27,9 +27,11 @@ class cached_property(object):
 
     def __get__(self, instance: "FindExeClass", owner: Type["FindExeClass"]) -> str:
         assert self.name is not None
+        # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
         result = instance._cache.get(self.name, None)
         if result is None:
             result = self.find(instance)
+            # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
             instance._cache[self.name] = result
         return result
 
@@ -49,6 +51,7 @@ class FindExeClass(object):
         if self._BUCK_OUT is None:
             self._find_repo_root_and_buck_out()
             assert self._BUCK_OUT is not None
+        # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
         return self._BUCK_OUT
 
     @property
@@ -56,6 +59,7 @@ class FindExeClass(object):
         if self._REPO_ROOT is None:
             self._find_repo_root_and_buck_out()
             assert self._REPO_ROOT is not None
+        # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
         return self._REPO_ROOT
 
     @cached_property

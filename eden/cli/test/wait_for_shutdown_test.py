@@ -114,6 +114,7 @@ class AutoReapingChildProcess:
             while self.__returncode is None:
                 self.__condition.wait()
             assert self.__returncode is not None
+            # pyre-fixme[7]: Expected `int` but got `Optional[int]`.
             return self.__returncode
 
     def __wait_for_process_start(self) -> None:
@@ -121,6 +122,8 @@ class AutoReapingChildProcess:
             while self.__pid is None and self.__error is None:
                 self.__condition.wait()
             if self.__error is not None:
+                # pyre-fixme[48]: Expression `self.__error` has type
+                #  `Optional[BaseException]` but must extend BaseException.
                 raise self.__error
             assert self.__pid is not None
 

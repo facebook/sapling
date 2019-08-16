@@ -263,6 +263,8 @@ class UnexpectedType(Exception):
     @property
     def human_expected_type(self) -> str:
         assert self.expected_type is not None
+        # pyre-fixme[6]: Expected `Type[Any]` for 1st param but got
+        #  `Optional[Type[Union[Strs, bool, str]]]`.
         return _toml_type_name(self.expected_type)
 
     @property

@@ -899,6 +899,7 @@ class ConfigUpdater(object):
         # opened our lock file will see that it isn't the current file on disk
         # once they acquire the lock.
         os.unlink(self._lock_path)
+        # pyre-fixme[16]: `Optional` has no attribute `close`.
         self._lock_file.close()
         self._lock_file = None
 

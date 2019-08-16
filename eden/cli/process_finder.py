@@ -121,6 +121,7 @@ class LinuxProcessFinder(ProcessFinder):
             if info.eden_dir is None:
                 continue
             if info.eden_dir not in info_by_eden_dir:
+                # pyre-fixme[6]: Expected `Path` for 1st param but got `Optional[Path]`.
                 info_by_eden_dir[info.eden_dir] = []
             info_by_eden_dir[info.eden_dir].append(info)
 

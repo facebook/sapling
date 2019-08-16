@@ -47,6 +47,8 @@ class RestartTestBase(ServiceTestCaseBase):
         restart_cmd = (
             [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
+            # pyre-fixme[6]: Expected `List[str]` for 1st param but got
+            #  `List[Union[() -> str, str]]`.
             + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         restart_cmd.extend(args)

@@ -83,6 +83,7 @@ class EdenClient(EdenService.Client):
         # type: () -> None
         try:
             assert self._transport is not None
+            # pyre-fixme[16]: `Optional` has no attribute `open`.
             self._transport.open()
         except TTransportException as ex:
             self.close()
@@ -93,6 +94,7 @@ class EdenClient(EdenService.Client):
     def close(self):
         # type: () -> None
         if self._transport is not None:
+            # pyre-fixme[16]: `Optional` has no attribute `close`.
             self._transport.close()
             self._transport = None
 

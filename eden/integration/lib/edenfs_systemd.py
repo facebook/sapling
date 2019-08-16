@@ -31,6 +31,7 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
 
     def get_edenfs_systemd_service(self, eden_dir: pathlib.Path) -> SystemdService:
         assert self.systemd is not None
+        # pyre-fixme[16]: Optional type has no attribute `get_service`.
         return self.systemd.get_service(edenfs_systemd_service_name(eden_dir))
 
     @abc.abstractmethod

@@ -200,6 +200,8 @@ class ListMountInfo(typing.NamedTuple):
     def to_json_dict(self) -> Dict[str, Any]:
         return {
             "data_dir": str(self.data_dir),
+            # pyre-fixme[6]: Expected `MountState` for 1st param but got
+            #  `Optional[MountState]`.
             "state": MountState._VALUES_TO_NAMES.get(self.state)
             if self.state is not None
             else "NOT_RUNNING",
@@ -300,6 +302,8 @@ class ListCmd(Subcmd):
                 # We only show the state if the mount is in an unusual state.
                 state_str = ""
             else:
+                # pyre-fixme[6]: Expected `MountState` for 1st param but got
+                #  `Optional[MountState]`.
                 state_name = MountState._VALUES_TO_NAMES[mount_info.state]
                 state_str = f" ({state_name})"
 
@@ -1164,6 +1168,7 @@ class RestartCmd(Subcmd):
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 return self._graceful_restart(instance)
             else:
+                # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
                 return self._full_restart(instance, health.pid)
         elif health.pid is None:
             # The daemon is not running
@@ -1200,6 +1205,7 @@ class RestartCmd(Subcmd):
             if self.args.restart_type != RESTART_MODE_FORCE:
                 print(f"Use --force if you want to forcibly restart the current daemon")
                 return 1
+            # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
             return self._force_restart(instance, health.pid, stop_timeout)
 
     def _graceful_restart(self, instance: EdenInstance) -> int:

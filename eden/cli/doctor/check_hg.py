@@ -154,14 +154,19 @@ class DirstateChecker(HgFileChecker):
         else:
             if (
                 self._old_snapshot is not None
+                # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
                 and self._old_snapshot != self._old_dirstate_parents[0]
             ):
                 p0_hex = self._commit_hex(self._old_dirstate_parents[0])
+                # pyre-fixme[6]: Expected `bytes` for 1st param but got
+                #  `Optional[bytes]`.
                 snapshot_hex = self._commit_hex(self._old_snapshot)
                 errors.append(
                     f"mercurial's parent commit is {p0_hex}, but Eden's internal "
                     f"parent commit is {snapshot_hex}"
                 )
+            # pyre-fixme[7]: Expected `Tuple[bytes, bytes]` but got
+            #  `Optional[Tuple[bytes, bytes]]`.
             return self._old_dirstate_parents
 
     def repair(self) -> None:
@@ -177,6 +182,7 @@ class DirstateChecker(HgFileChecker):
                     f, self._new_parents, self._tuples_dict, self._copymap
                 )
 
+        # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
         if self._new_parents[0] != self._old_snapshot:
             parents = eden_ttypes.WorkingDirectoryParents(parent1=self._new_parents[0])
             if self._new_parents[1] != self._null_commit_id:
@@ -346,6 +352,7 @@ class HgDirectoryError(FixableProblem):
 
     def description(self) -> str:
         if self._description is not None:
+            # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
             return self._description
         all_errors = []
         for checker in self._checkers:

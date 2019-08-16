@@ -185,6 +185,7 @@ class MountTest(testcase.EdenRepoTest):
                     if self.eden.get_mount_state(Path(self.mount), client) is not None:
                         return True
                 assert self.eden._process is not None
+                # pyre-fixme[16]: `Optional` has no attribute `poll`.
                 if self.eden._process.poll():
                     self.fail("eden exited before becoming healthy")
                 return None

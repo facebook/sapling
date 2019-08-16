@@ -147,6 +147,8 @@ class Redirection:
     def expand_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
         if self.type == RedirectionType.LEGACY:
             assert self.target is not None
+            # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but
+            #  got `Optional[Path]`.
             return checkout.state_dir / "bind-mounts" / self.target
         elif self.type in (RedirectionType.SYMLINK, RedirectionType.BIND):
             return make_scratch_dir(checkout, str(self.repo_path))

@@ -47,6 +47,7 @@ class Subcmd(abc.ABC):
     def get_name(self) -> str:
         if self.NAME is None:
             raise NotImplementedError("Subcmd subclasses must set NAME")
+        # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
         return self.NAME
 
     def get_help(self) -> Optional[str]:
@@ -55,6 +56,7 @@ class Subcmd(abc.ABC):
     def get_aliases(self) -> List[str]:
         if self.ALIASES is None:
             return []
+        # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
         return self.ALIASES[:]
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

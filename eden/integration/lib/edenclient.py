@@ -120,6 +120,7 @@ class EdenFS(object):
 
     def kill(self) -> None:
         """Stops and unmounts this instance."""
+        # pyre-fixme[16]: `Optional` has no attribute `returncode`.
         if self._process is None or self._process.returncode is not None:
             return
         self.shutdown()
@@ -215,6 +216,7 @@ class EdenFS(object):
 
         assert self._process is not None
         util.wait_for_daemon_healthy(
+            # pyre-fixme[6]: Expected `Popen` for 1st param but got `Optional[Popen]`.
             proc=self._process,
             config_dir=self._eden_dir,
             get_client=lambda: self.get_thrift_client(),
@@ -242,10 +244,13 @@ class EdenFS(object):
         if self._logging_settings:
             logging_arg = ",".join(
                 "%s=%s" % (module, level)
+                # pyre-fixme[16]: `Optional` has no attribute `items`.
                 for module, level in sorted(self._logging_settings.items())
             )
             extra_daemon_args.extend(["--logging=" + logging_arg])
         if self._extra_args:
+            # pyre-fixme[6]: Expected `Iterable[str]` for 1st param but got
+            #  `Optional[List[str]]`.
             extra_daemon_args.extend(self._extra_args)
 
         return extra_daemon_args
@@ -316,6 +321,7 @@ class EdenFS(object):
         assert self._process is not None
 
         self.run_cmd("shutdown", "-t", "30")
+        # pyre-fixme[16]: `Optional` has no attribute `wait`.
         return_code = self._process.wait()
         self._process = None
         if return_code != 0:
@@ -345,6 +351,7 @@ class EdenFS(object):
         self.start(timeout=timeout, takeover_from=old_pid)
 
         # Check the return code from the old edenfs process
+        # pyre-fixme[16]: `Optional` has no attribute `wait`.
         return_code = old_process.wait()
         if return_code != 0:
             raise Exception(
@@ -369,6 +376,7 @@ class EdenFS(object):
         old_process = self._process
         self._process = None
 
+        # pyre-fixme[16]: `Optional` has no attribute `wait`.
         return_code = old_process.wait()
         if return_code != 0:
             raise Exception(

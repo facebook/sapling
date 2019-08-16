@@ -155,6 +155,7 @@ class CloneTest(testcase.EdenRepoTest):
         if self.repo.get_type() == "hg":
             assert isinstance(self.repo, HgRepository)
             head_rev = self.repo.get_head_hash()
+            # pyre-fixme[16]: `Repository` has no attribute `update`.
             self.repo.update(before_arcconfig)
             alt_eden_clone = self.make_temporary_directory()
             self.eden.run_cmd("clone", "-r", head_rev, self.repo.path, alt_eden_clone)

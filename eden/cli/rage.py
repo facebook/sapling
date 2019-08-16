@@ -42,6 +42,7 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
     print_running_eden_process(out)
 
     if health_status.is_healthy() and health_status.pid is not None:
+        # pyre-fixme[6]: Expected `int` for 1st param but got `Optional[int]`.
         print_edenfs_process_tree(health_status.pid, out)
 
     out.write(b"\nList of mount points:\n")

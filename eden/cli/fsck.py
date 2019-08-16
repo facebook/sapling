@@ -381,6 +381,7 @@ class FilesystemChecker:
         exc_traceback: Optional[types.TracebackType],
     ) -> Optional[bool]:
         assert self._overlay_lock is not None
+        # pyre-fixme[16]: `Optional` has no attribute `__exit__`.
         return self._overlay_lock.__exit__(exc_type, exc_value, exc_traceback)
 
     def _add_error(self, error: Error) -> None:
