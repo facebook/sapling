@@ -44,7 +44,7 @@ where
             (selector, None, self.clone()),
             move |(PathTree { subentries, .. }, path, manifest_id)| {
                 manifest_id
-                    .load(ctx.clone(), blobstore.clone())
+                    .load(ctx.clone(), &blobstore)
                     .map(move |manifest| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
@@ -83,8 +83,8 @@ where
             Diff::Changed(None, self.clone(), other),
             move |input| match input {
                 Diff::Changed(path, left, right) => left
-                    .load(ctx.clone(), blobstore.clone())
-                    .join(right.load(ctx.clone(), blobstore.clone()))
+                    .load(ctx.clone(), &blobstore)
+                    .join(right.load(ctx.clone(), &blobstore))
                     .map(move |(left_mf, right_mf)| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
@@ -132,38 +132,36 @@ where
                     })
                     .left_future(),
                 Diff::Added(path, tree) => {
-                    tree.load(ctx.clone(), blobstore.clone())
-                        .map(move |manifest| {
-                            let mut output = Vec::new();
-                            let mut recurse = Vec::new();
-                            for (name, entry) in manifest.list() {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
-                                    _ => output.push(Diff::Added(path, entry)),
-                                }
+                    tree.load(ctx.clone(), &blobstore).map(move |manifest| {
+                        let mut output = Vec::new();
+                        let mut recurse = Vec::new();
+                        for (name, entry) in manifest.list() {
+                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                            match entry {
+                                Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
+                                _ => output.push(Diff::Added(path, entry)),
                             }
-                            output.push(Diff::Added(path, Entry::Tree(tree)));
-                            (output, recurse)
-                        })
+                        }
+                        output.push(Diff::Added(path, Entry::Tree(tree)));
+                        (output, recurse)
+                    })
                 }
                 .left_future()
                 .right_future(),
                 Diff::Removed(path, tree) => {
-                    tree.load(ctx.clone(), blobstore.clone())
-                        .map(move |manifest| {
-                            let mut output = Vec::new();
-                            let mut recurse = Vec::new();
-                            for (name, entry) in manifest.list() {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
-                                    _ => output.push(Diff::Removed(path, entry)),
-                                }
+                    tree.load(ctx.clone(), &blobstore).map(move |manifest| {
+                        let mut output = Vec::new();
+                        let mut recurse = Vec::new();
+                        for (name, entry) in manifest.list() {
+                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                            match entry {
+                                Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
+                                _ => output.push(Diff::Removed(path, entry)),
                             }
-                            output.push(Diff::Removed(path, Entry::Tree(tree)));
-                            (output, recurse)
-                        })
+                        }
+                        output.push(Diff::Removed(path, Entry::Tree(tree)));
+                        (output, recurse)
+                    })
                 }
                 .right_future()
                 .right_future(),

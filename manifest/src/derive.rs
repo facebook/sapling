@@ -346,7 +346,7 @@ where
         future::join_all(
             parent_subtrees
                 .iter()
-                .map(move |tree_id| tree_id.load(ctx.clone(), blobstore.clone()))
+                .map(move |tree_id| tree_id.load(ctx.clone(), &blobstore))
                 .collect::<Vec<_>>(),
         )
         .map(move |manifests| {

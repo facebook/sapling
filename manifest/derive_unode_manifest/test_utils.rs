@@ -44,11 +44,11 @@ where
     LId: Send + Clone + 'static,
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
-    let blobstore = repo.get_blobstore();
+    let blobstore = repo.get_blobstore().clone();
     bounded_traversal_stream(256, (None, entry), move |(path, entry)| match entry {
         Entry::Leaf(_) => future::ok((vec![(path, entry.clone())], vec![])).left_future(),
         Entry::Tree(tree) => tree
-            .load(ctx.clone(), blobstore.clone())
+            .load(ctx.clone(), &blobstore)
             .map(move |mf| {
                 let recurse = mf
                     .list()

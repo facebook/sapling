@@ -38,10 +38,10 @@ impl<T> Id<T> {
 impl Loadable for Id<HgManifestId> {
     type Value = ManifestContent;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         let manifest_id = self.0;
         blobstore

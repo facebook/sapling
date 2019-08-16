@@ -76,25 +76,6 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
             })
             .boxify()
     }
-    /// Fetch a typed value, or None if no value is present.
-    fn fetch<Id>(&self, ctx: CoreContext, id: Id) -> BoxFuture<Option<Id::Value>, Error>
-    where
-        Id: MononokeId,
-        Self: Sized,
-    {
-        let blobstore_key = id.blobstore_key();
-
-        self.get(ctx, blobstore_key.clone())
-            .and_then(move |bytes| {
-                bytes
-                    .map(move |bytes| {
-                        let blob: Blob<Id> = Blob::new(id, bytes.into_bytes());
-                        <Id::Value>::from_blob(blob)
-                    })
-                    .transpose()
-            })
-            .boxify()
-    }
 }
 
 impl Blobstore for Arc<dyn Blobstore> {
@@ -145,19 +126,66 @@ impl Blobstore for Box<dyn Blobstore> {
 pub trait Loadable: Sized + 'static {
     type Value;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error>;
 }
 
 pub trait Storable: Sized + 'static {
     type Key;
 
-    fn store(
+    fn store<B: Blobstore + Clone>(
+        self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Key, Error>;
+}
+
+impl<T> Loadable for T
+where
+    T: MononokeId,
+{
+    type Value = Option<T::Value>;
+
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
-    ) -> BoxFuture<Self::Key, Error>;
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, Error> {
+        let id = *self;
+        let blobstore_key = id.blobstore_key();
+
+        blobstore
+            .get(ctx, blobstore_key.clone())
+            .and_then(move |bytes| {
+                bytes
+                    .map(move |bytes| {
+                        let blob: Blob<T> = Blob::new(id, bytes.into_bytes());
+                        <T::Value>::from_blob(blob)
+                    })
+                    .transpose()
+            })
+            .boxify()
+    }
+}
+
+impl<T> Storable for Blob<T>
+where
+    T: MononokeId,
+{
+    type Key = T;
+
+    fn store<B: Blobstore + Clone>(
+        self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Key, Error> {
+        let id = *self.id();
+        blobstore
+            .put(ctx, id.blobstore_key(), self.into())
+            .map(move |_| id)
+            .boxify()
+    }
 }

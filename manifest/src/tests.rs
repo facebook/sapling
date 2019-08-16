@@ -33,10 +33,10 @@ struct TestLeaf(String);
 impl Loadable for TestLeafId {
     type Value = TestLeaf;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         blobstore
             .get(ctx, self.0.to_string())
@@ -51,20 +51,16 @@ impl Loadable for TestLeafId {
 impl Storable for TestLeaf {
     type Key = TestLeafId;
 
-    fn store(
-        &self,
+    fn store<B: Blobstore + Clone>(
+        self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Key, Error> {
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestLeafId(hasher.finish());
         blobstore
-            .put(
-                ctx,
-                key.0.to_string(),
-                BlobstoreBytes::from_bytes(self.0.clone()),
-            )
+            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0))
             .map(move |_| key)
             .boxify()
     }
@@ -79,10 +75,10 @@ struct TestManifest(BTreeMap<MPathElement, Entry<TestManifestId, TestLeafId>>);
 impl Loadable for TestManifestId {
     type Value = TestManifest;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         blobstore
             .get(ctx, self.0.to_string())
@@ -95,15 +91,16 @@ impl Loadable for TestManifestId {
 impl Storable for TestManifest {
     type Key = TestManifestId;
 
-    fn store(
-        &self,
+    fn store<B: Blobstore + Clone>(
+        self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Key, Error> {
+        let blobstore = blobstore.clone();
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestManifestId(hasher.finish());
-        serde_cbor::to_vec(self)
+        serde_cbor::to_vec(&self)
             .into_future()
             .from_err()
             .and_then(move |bytes| {
@@ -149,12 +146,12 @@ fn derive_test_manifest(
                 let ctx = ctx.clone();
                 let blobstore = blobstore.clone();
                 move |TreeInfo { subentries, .. }| {
-                    TestManifest(subentries).store(ctx.clone(), blobstore.clone())
+                    TestManifest(subentries).store(ctx.clone(), &blobstore)
                 }
             },
             move |leaf_info| match leaf_info.leaf {
                 None => future::err(err_msg("leaf only conflict")).left_future(),
-                Some(leaf) => leaf.store(ctx.clone(), blobstore.clone()).right_future(),
+                Some(leaf) => leaf.store(ctx.clone(), &blobstore).right_future(),
             },
         )
     })
@@ -165,14 +162,16 @@ struct Files(TestManifestId);
 impl Loadable for Files {
     type Value = BTreeMap<MPath, String>;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
+        let blobstore = blobstore.clone();
+
         bounded_traversal_stream(256, (None, Entry::Tree(self.0)), move |(path, entry)| {
             entry
-                .load(ctx.clone(), blobstore.clone())
+                .load(ctx.clone(), &blobstore)
                 .map(move |content| match content {
                     Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
                     Entry::Tree(tree) => {
@@ -250,9 +249,7 @@ fn test_derive_manifest() -> Result<(), Error> {
 
     // load all files for specified manifest
     let files = |manifest_id| {
-        runtime.with(|runtime| {
-            runtime.block_on(Files(manifest_id).load(ctx.clone(), blobstore.clone()))
-        })
+        runtime.with(|runtime| runtime.block_on(Files(manifest_id).load(ctx.clone(), &blobstore)))
     };
 
     // clean merge of two directories

@@ -32,7 +32,7 @@ use crate::{
 // Option type, or perhaps a list as desired.
 
 /// An identifier used throughout Mononoke.
-pub trait MononokeId: Copy + Send + 'static {
+pub trait MononokeId: Copy + Sync + Send + 'static {
     /// Blobstore value type associated with given MononokeId type
     type Value: BlobstoreValue<Key = Self>;
 

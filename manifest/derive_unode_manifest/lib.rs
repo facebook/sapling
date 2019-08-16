@@ -44,10 +44,10 @@ pub struct Id<T>(T);
 impl Loadable for Id<ManifestUnodeId> {
     type Value = Id<ManifestUnode>;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         let unode_id = self.0;
         blobstore
@@ -63,10 +63,10 @@ impl Loadable for Id<ManifestUnodeId> {
 impl Loadable for Id<FileUnodeId> {
     type Value = Id<FileUnode>;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         let unode_id = self.0;
         blobstore
@@ -262,7 +262,7 @@ fn create_unode_file(
         }
         future::join_all(parents.clone().into_iter().map({
             cloned!(blobstore, ctx);
-            move |id| Id(id).load(ctx.clone(), blobstore.clone())
+            move |id| Id(id).load(ctx.clone(), &blobstore)
         }))
         .and_then(
             move |parent_unodes| match return_if_unique_filenode(&parent_unodes) {
@@ -349,7 +349,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             runtime
-                .block_on(Id(unode_id).load(ctx.clone(), repo.get_blobstore()))
+                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
                 .unwrap();
             let all_unodes = runtime
                 .block_on(
@@ -386,7 +386,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             let root_unode = runtime
-                .block_on(Id(unode_id).load(ctx.clone(), repo.get_blobstore()))
+                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
                 .unwrap();
             assert_eq!(root_unode.0.parents(), &vec![parent_unode_id]);
 
@@ -441,7 +441,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
 
             let unode_mf = runtime
-                .block_on(Id(unode_id).load(ctx.clone(), repo.get_blobstore()))
+                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
                 .unwrap();
 
             // Unodes should be unique even if content is the same. Check it
@@ -763,7 +763,7 @@ mod tests {
         ) -> BoxFuture<Vec<UnodeEntry>, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
-                    .load(ctx, repo.get_blobstore())
+                    .load(ctx, &repo.get_blobstore())
                     .map(|unode_mf| {
                         unode_mf
                             .0
@@ -775,7 +775,7 @@ mod tests {
                     })
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
-                    .load(ctx, repo.get_blobstore())
+                    .load(ctx, &repo.get_blobstore())
                     .map(|unode_mf| {
                         unode_mf
                             .0
@@ -792,11 +792,11 @@ mod tests {
         fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
-                    .load(ctx, repo.get_blobstore())
+                    .load(ctx, &repo.get_blobstore())
                     .map(|unode_file| unode_file.0.linknode().clone())
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
-                    .load(ctx, repo.get_blobstore())
+                    .load(ctx, &repo.get_blobstore())
                     .map(|unode_mf| unode_mf.0.linknode().clone())
                     .boxify(),
             }

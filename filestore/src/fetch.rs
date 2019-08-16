@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -46,8 +46,8 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
             stream::iter_ok(chunked.into_chunks().into_iter().map(move |c| {
                 let chunk_id = c.chunk_id();
 
-                let fut = blobstore
-                    .fetch(ctx.clone(), chunk_id)
+                let fut = chunk_id
+                    .load(ctx.clone(), &blobstore)
                     .and_then({
                         cloned!(chunk_id);
                         move |maybe_chunk| {
@@ -71,7 +71,7 @@ pub fn fetch<B: Blobstore + Clone>(
     ctx: CoreContext,
     content_id: ContentId,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-    blobstore.fetch(ctx.clone(), content_id).map({
+    content_id.load(ctx.clone(), &blobstore).map({
         cloned!(blobstore, ctx);
         move |maybe_file_contents| {
             maybe_file_contents

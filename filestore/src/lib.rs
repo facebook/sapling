@@ -23,6 +23,7 @@ mod chunk;
 mod errors;
 mod expected_size;
 mod fetch;
+mod fetch_key;
 mod finalize;
 mod incremental_hash;
 mod metadata;
@@ -30,6 +31,8 @@ mod multiplexer;
 mod prepare;
 mod spawn;
 mod streamhash;
+
+pub use fetch_key::FetchKey;
 
 #[cfg(test)]
 mod test;
@@ -63,28 +66,6 @@ impl Default for FilestoreConfig {
         FilestoreConfig {
             chunk_size: None,
             concurrency: 1,
-        }
-    }
-}
-
-/// Key for fetching - we can access with any of the supported key types
-#[derive(Debug, Clone)]
-pub enum FetchKey {
-    Canonical(ContentId),
-    Sha1(hash::Sha1),
-    Sha256(hash::Sha256),
-    GitSha1(hash::GitSha1),
-}
-
-impl FetchKey {
-    pub fn blobstore_key(&self) -> String {
-        use FetchKey::*;
-
-        match self {
-            Canonical(contentid) => contentid.blobstore_key(),
-            GitSha1(gitkey) => format!("alias.gitsha1.{}", gitkey.to_hex()),
-            Sha1(sha1) => format!("alias.sha1.{}", sha1.to_hex()),
-            Sha256(sha256) => format!("alias.sha256.{}", sha256.to_hex()),
         }
     }
 }
@@ -262,7 +243,7 @@ pub fn peek<B: Blobstore + Clone>(
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).
 pub fn store<B: Blobstore + Clone>(
-    blobstore: &B, // TODO: Check: is this the right signature?
+    blobstore: &B,
     config: &FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,

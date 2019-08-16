@@ -4,16 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Storable};
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_left_future, FutureExt};
-use mononoke_types::{
-    BlobstoreBytes, BlobstoreValue, ContentAlias, ContentMetadata, ContentMetadataId, MononokeId,
-};
+use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata};
 
 use crate::errors::{ErrorKind, InvalidHash};
+use crate::fetch_key::AliasBlob;
 use crate::prepare::Prepared;
 use crate::FetchKey;
 use crate::StoreRequest;
@@ -75,31 +74,17 @@ pub fn finalize<B: Blobstore + Clone>(
         }
     }
 
-    let alias = ContentAlias::from_content_id(content_id).into_blob();
+    let put_contents = blob.store(ctx.clone(), &blobstore);
 
-    let put_contents = blobstore.put(
-        ctx.clone(),
-        content_id.blobstore_key(),
-        BlobstoreBytes::from(blob),
-    );
+    let alias = ContentAlias::from_content_id(content_id);
 
-    let put_sha1 = blobstore.put(
-        ctx.clone(),
-        FetchKey::Sha1(sha1).blobstore_key(),
-        alias.clone(),
-    );
+    let put_sha1 = AliasBlob(FetchKey::Sha1(sha1), alias.clone()).store(ctx.clone(), &blobstore);
 
-    let put_sha256 = blobstore.put(
-        ctx.clone(),
-        FetchKey::Sha256(sha256).blobstore_key(),
-        alias.clone(),
-    );
+    let put_sha256 =
+        AliasBlob(FetchKey::Sha256(sha256), alias.clone()).store(ctx.clone(), &blobstore);
 
-    let put_git_sha1 = blobstore.put(
-        ctx.clone(),
-        FetchKey::GitSha1(git_sha1).blobstore_key(),
-        alias.clone(),
-    );
+    let put_git_sha1 =
+        AliasBlob(FetchKey::GitSha1(git_sha1), alias.clone()).store(ctx.clone(), &blobstore);
 
     let metadata = ContentMetadata {
         total_size,
@@ -109,11 +94,7 @@ pub fn finalize<B: Blobstore + Clone>(
         sha256,
     };
 
-    let put_metadata = {
-        let blob = metadata.clone().into_blob();
-        let key = ContentMetadataId::from(content_id);
-        blobstore.put(ctx, key.blobstore_key(), BlobstoreBytes::from(blob))
-    };
+    let put_metadata = metadata.clone().into_blob().store(ctx, &blobstore);
 
     // Since we don't have atomicity for puts, we need to make sure they're ordered
     // correctly:

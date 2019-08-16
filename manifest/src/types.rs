@@ -50,10 +50,10 @@ where
 {
     type Value = Entry<T::Value, L::Value>;
 
-    fn load(
+    fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Value, Error> {
         match self {
             Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map(Entry::Tree).boxify(),
@@ -69,10 +69,10 @@ where
 {
     type Key = Entry<T::Key, L::Key>;
 
-    fn store(
-        &self,
+    fn store<B: Blobstore + Clone>(
+        self,
         ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
+        blobstore: &B,
     ) -> BoxFuture<Self::Key, Error> {
         match self {
             Entry::Tree(tree) => tree.store(ctx, blobstore).map(Entry::Tree).boxify(),

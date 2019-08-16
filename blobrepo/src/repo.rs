@@ -19,7 +19,7 @@ use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPo
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable, Storable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -237,11 +237,9 @@ impl BlobRepo {
     where
         Id: MononokeId,
     {
-        let blobstore_key = id.blobstore_key();
-
-        self.blobstore
-            .fetch(ctx, id)
-            .and_then(move |ret| ret.ok_or(ErrorKind::MissingTypedKeyEntry(blobstore_key).into()))
+        id.load(ctx, &self.blobstore).and_then(move |ret| {
+            ret.ok_or(ErrorKind::MissingTypedKeyEntry(id.blobstore_key()).into())
+        })
     }
 
     // this is supposed to be used only from unittest
@@ -261,11 +259,7 @@ impl BlobRepo {
         V: BlobstoreValue<Key = K>,
         K: MononokeId<Value = V>,
     {
-        let blob = value.into_blob();
-        let key = *blob.id();
-        self.blobstore
-            .put(ctx, key.blobstore_key(), blob.into())
-            .map(move |_| key)
+        value.into_blob().store(ctx, &self.blobstore)
     }
 
     // this is supposed to be used only from unittest

@@ -4,16 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable, Storable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
 use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
-use mononoke_types::{
-    BlobstoreBytes, BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId, FileContents,
-    MononokeId,
-};
+use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
 
 use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;
@@ -36,32 +33,33 @@ pub fn get_metadata<B: Blobstore + Clone>(
     ctx: CoreContext,
     content_id: ContentId,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-    let id = ContentMetadataId::from(content_id);
-    blobstore.fetch(ctx.clone(), id).and_then({
-        cloned!(blobstore, ctx);
-        move |maybe_metadata| match maybe_metadata {
-            // We found the metadata. Return it.
-            Some(metadata) => Ok(Some(metadata)).into_future().left_future(),
+    ContentMetadataId::from(content_id)
+        .load(ctx.clone(), &blobstore)
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |maybe_metadata| match maybe_metadata {
+                // We found the metadata. Return it.
+                Some(metadata) => Ok(Some(metadata)).into_future().left_future(),
 
-            // We didn't find the metadata. Try to recompute it. This might fail if the
-            // content doesn't exist, or due to an internal error.
-            None => rebuild_metadata(blobstore, ctx, content_id)
-                .map(Some)
-                .or_else({
-                    use RebuildBackmappingError::*;
-                    |e| match e {
-                        // If we didn't find the ContentId we're rebuilding the metadata for,
-                        // then there is nothing else to do but indicate this metadata does not
-                        // exist.
-                        NotFound(_) => Ok(None),
-                        // If we ran into some error rebuilding the metadata that isn't not
-                        // having found the content, then we pass it up.
-                        e @ InternalError(..) => Err(e.into()),
-                    }
-                })
-                .right_future(),
-        }
-    })
+                // We didn't find the metadata. Try to recompute it. This might fail if the
+                // content doesn't exist, or due to an internal error.
+                None => rebuild_metadata(blobstore, ctx, content_id)
+                    .map(Some)
+                    .or_else({
+                        use RebuildBackmappingError::*;
+                        |e| match e {
+                            // If we didn't find the ContentId we're rebuilding the metadata for,
+                            // then there is nothing else to do but indicate this metadata does not
+                            // exist.
+                            NotFound(_) => Ok(None),
+                            // If we ran into some error rebuilding the metadata that isn't not
+                            // having found the content, then we pass it up.
+                            e @ InternalError(..) => Err(e.into()),
+                        }
+                    })
+                    .right_future(),
+            }
+        })
 }
 
 /// If the metadata is missing, we can rebuild it on the fly, since all that's needed to do so
@@ -76,15 +74,11 @@ fn rebuild_metadata<B: Blobstore + Clone>(
 ) -> impl Future<Item = ContentMetadata, Error = RebuildBackmappingError> {
     use RebuildBackmappingError::*;
 
-    blobstore
-        .get(ctx.clone(), content_id.blobstore_key())
+    content_id
+        .load(ctx.clone(), &blobstore)
         .from_err()
         .map_err(move |e| InternalError(content_id, e))
-        .and_then(move |maybe_bytes| maybe_bytes.ok_or(NotFound(content_id)))
-        .and_then(move |bytes| {
-            FileContents::from_encoded_bytes(bytes.into_bytes())
-                .map_err(move |e| InternalError(content_id, e))
-        })
+        .and_then(move |maybe_file_contents| maybe_file_contents.ok_or(NotFound(content_id)))
         .and_then({
             cloned!(blobstore, ctx);
             move |file_contents| {
@@ -113,9 +107,8 @@ fn rebuild_metadata<B: Blobstore + Clone>(
                 };
 
                 let blob = metadata.clone().into_blob();
-                let key = ContentMetadataId::from(content_id);
-                blobstore
-                    .put(ctx, key.blobstore_key(), BlobstoreBytes::from(blob))
+
+                blob.store(ctx, &blobstore)
                     .map_err(move |e| InternalError(content_id, e))
                     .map(|_| metadata)
             }
