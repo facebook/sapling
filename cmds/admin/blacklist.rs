@@ -10,17 +10,112 @@ use cmdlib::args;
 
 use crate::cmdargs::{BLACKLIST_ADD, BLACKLIST_LIST, BLACKLIST_REMOVE};
 use crate::common::{get_file_nodes, resolve_hg_rev};
+use blob_changeset::HgBlobChangeset;
 use censoredblob::SqlCensoredContentStore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
 use futures::future::{self, join_all, Future};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, MPath};
+use futures::stream::Stream;
+use futures_ext::{
+    bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
+};
+use itertools::{Either, Itertools};
+use mercurial_types::{Changeset, HgChangesetId, HgEntryId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
-use slog::Logger;
+use slog::{info, Logger};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::error::SubcommandError;
+
+fn find_files_with_given_content_id_blobstore_keys(
+    logger: Logger,
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs: HgBlobChangeset,
+    keys_to_tasks: HashMap<String, String>,
+) -> impl Future<Item = Vec<(String, String)>, Error = Error> {
+    let manifest_id = cs.manifestid();
+    let keys_to_tasks: Arc<HashMap<String, String>> = Arc::new(keys_to_tasks);
+    bounded_traversal_stream(4096, (repo.clone(), manifest_id, None), {
+        cloned!(ctx);
+        move |(repo, manifest_id, path)| {
+            repo.clone()
+                .get_manifest_by_nodeid(ctx.clone(), manifest_id)
+                .map({
+                    cloned!(repo);
+                    move |manifest| {
+                        let (manifests, filenodes): (Vec<_>, Vec<_>) =
+                            manifest.list().partition_map(|child| {
+                                let full_path =
+                                    MPath::join_element_opt(path.as_ref(), child.get_name());
+                                match child.get_hash() {
+                                    HgEntryId::File(_, filenode_id) => {
+                                        Either::Right((full_path, filenode_id.clone()))
+                                    }
+                                    HgEntryId::Manifest(manifest_id) => {
+                                        Either::Left((full_path, manifest_id.clone()))
+                                    }
+                                }
+                            });
+
+                        let children_manifests: Vec<_> = manifests
+                            .into_iter()
+                            .map(|(fp, mid)| (repo.clone(), mid, fp))
+                            .collect();
+                        (filenodes, children_manifests)
+                    }
+                })
+        }
+    })
+    .map({
+        cloned!(ctx, repo);
+        move |filenodes| {
+            let blobstore_key_futs = filenodes.into_iter().map({
+                cloned!(ctx, repo);
+                move |(full_path, filenode_id)| {
+                    repo.get_file_content_id(ctx.clone(), filenode_id)
+                        .map(|content_id| (content_id.blobstore_key(), full_path))
+                }
+            });
+            join_all(blobstore_key_futs)
+        }
+    })
+    .buffered(100)
+    .fold((vec![], 0), {
+        cloned!(logger, keys_to_tasks,);
+        move |(mut collected_tasks_and_pairs, processed_files_count), keys_and_paths| {
+            let mut pfc = processed_files_count;
+            let filtered_tasks_and_pairs = keys_and_paths
+                .into_iter()
+                .filter_map({
+                    |(key, full_path)| {
+                        pfc += 1;
+                        if pfc % 100_000 == 0 {
+                            info!(logger.clone(), "Processed files: {}", pfc);
+                        }
+                        keys_to_tasks
+                            .clone()
+                            .get(&key)
+                            .map(|task| (task.clone(), full_path.clone()))
+                    }
+                })
+                .map({
+                    move |(task, full_path)| {
+                        let full_path =
+                            format!("{}", full_path.expect("None MPath, yet not a root"));
+                        (task, full_path)
+                    }
+                })
+                .collect::<Vec<_>>();
+            collected_tasks_and_pairs.extend(filtered_tasks_and_pairs);
+            let res: Result<(Vec<_>, usize), Error> = Ok((collected_tasks_and_pairs, pfc));
+            res
+        }
+    })
+    .map(|(res, _)| res)
+}
 
 /// Entrypoint for blacklist subcommand handling
 pub fn subcommand_blacklist(
@@ -150,11 +245,49 @@ fn blacklist_add(
 }
 
 fn blacklist_list(
-    _logger: Logger,
-    _matches: &ArgMatches<'_>,
-    _sub_m: &ArgMatches<'_>,
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    future::err(format_err!("listing not yet implemented").into()).boxify()
+    get_ctx_blobrepo_censored_blobs_cs_id(logger.clone(), matches, sub_m)
+        .and_then(move |(ctx, blobrepo, censored_blobs, cs_id)| {
+            info!(
+                logger,
+                "Listing blacklisted files for ChangesetId: {:?}", cs_id
+            );
+            info!(logger, "Please be patient.");
+            let changeset_fut = blobrepo.get_changeset_by_changesetid(ctx.clone(), cs_id);
+            censored_blobs
+                .get_all_censored_blobs()
+                .join(changeset_fut)
+                .and_then({
+                    cloned!(logger);
+                    move |(censored_blobs, hg_cs)| {
+                        find_files_with_given_content_id_blobstore_keys(
+                            logger.clone(),
+                            ctx,
+                            blobrepo,
+                            hg_cs,
+                            censored_blobs,
+                        )
+                        .map({
+                            cloned!(logger);
+                            move |mut res| {
+                                if res.len() == 0 {
+                                    info!(logger, "No files are blacklisted at this commit");
+                                } else {
+                                    res.sort();
+                                    res.into_iter().for_each(|(task_id, file_path)| {
+                                        info!(logger, "{:20}: {}", task_id, file_path);
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                .from_err()
+        })
+        .boxify()
 }
 
 fn blacklist_remove(
