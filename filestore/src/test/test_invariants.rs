@@ -103,7 +103,7 @@ fn test_invariants() -> Result<()> {
 
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
         let res = rt.block_on(filestore::store(
-            &blob,
+            blob.clone(),
             &config,
             ctx.clone(),
             &req,

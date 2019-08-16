@@ -61,7 +61,7 @@ fn filestore_put_alias() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -100,7 +100,7 @@ fn filestore_put_get_canon() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -130,7 +130,7 @@ fn filestore_put_get_sha1() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -163,7 +163,7 @@ fn filestore_put_get_git_sha1() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -196,7 +196,7 @@ fn filestore_put_get_sha256() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -235,7 +235,7 @@ fn filestore_chunked_put_get() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -279,7 +279,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
 
     // Store in 3-byte chunks
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &large,
         ctx.clone(),
         &full_key,
@@ -288,7 +288,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
 
     // Now, go and split up one chunk into 1-byte parts.
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &small,
         ctx.clone(),
         &part_key,
@@ -352,7 +352,7 @@ fn filestore_chunk_not_found() -> Result<()> {
     let part_id = chunk(part);
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -388,7 +388,7 @@ fn filestore_put_invalid_size() -> Result<()> {
     let req = StoreRequest::new(123);
 
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         ctx.clone(),
         &req,
@@ -416,7 +416,7 @@ fn filestore_put_content_id() -> Result<()> {
     // Bad Content Id should fail
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -431,7 +431,7 @@ fn filestore_put_content_id() -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, canonical(HELLO_WORLD));
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         ctx.clone(),
         &req,
@@ -457,7 +457,7 @@ fn filestore_put_sha1() -> Result<()> {
     // Bad Content Id should fail
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -472,7 +472,7 @@ fn filestore_put_sha1() -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA1);
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         ctx.clone(),
         &req,
@@ -501,7 +501,7 @@ fn filestore_put_git_sha1() -> Result<()> {
         hash::GitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
     );
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -516,7 +516,7 @@ fn filestore_put_git_sha1() -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_git_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_GIT_SHA1);
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         ctx.clone(),
         &req,
@@ -545,7 +545,7 @@ fn filestore_put_sha256() -> Result<()> {
         hash::Sha256::from_byte_array([0x00; 32]),
     );
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &config,
         ctx.clone(),
         &req,
@@ -560,7 +560,7 @@ fn filestore_put_sha256() -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_sha256(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA256);
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         ctx.clone(),
         &req,
@@ -592,7 +592,7 @@ fn filestore_rebuild_metadata() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -696,7 +696,7 @@ fn filestore_test_peek() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -733,7 +733,7 @@ fn filestore_test_chunked_peek() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &small,
         ctx.clone(),
         &req,
@@ -765,7 +765,7 @@ fn filestore_test_short_peek() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -798,7 +798,7 @@ fn filestore_test_empty_peek() -> Result<()> {
     let ctx = CoreContext::test_mock();
 
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &DEFAULT_CONFIG,
         ctx.clone(),
         &req,
@@ -825,7 +825,8 @@ fn filestore_store_bytes() -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let ctx = CoreContext::test_mock();
-    let (contents, fut) = filestore::store_bytes(&blob, ctx.clone(), Bytes::from(HELLO_WORLD));
+    let (contents, fut) =
+        filestore::store_bytes(blob.clone(), ctx.clone(), Bytes::from(HELLO_WORLD));
     let content_id = *contents.into_blob().id();
     assert_eq!(content_id, canonical(HELLO_WORLD));
 
@@ -856,7 +857,7 @@ fn filestore_store_error() -> Result<()> {
     };
 
     let res = rt.block_on(filestore::store(
-        &blob,
+        blob,
         &config,
         CoreContext::test_mock(),
         &request(HELLO_WORLD),
@@ -893,7 +894,7 @@ fn filestore_test_rechunk() -> Result<()> {
 
     // Store in 3-byte chunks
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &large,
         ctx.clone(),
         &full_key,
@@ -958,7 +959,7 @@ fn filestore_test_rechunk_larger() -> Result<()> {
 
     // Store in 1 byte chunks
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &small,
         ctx.clone(),
         &full_key,
@@ -1024,7 +1025,7 @@ fn filestore_test_rechunk_unchunked() -> Result<()> {
 
     // Don't chunk
     rt.block_on(filestore::store(
-        &blob,
+        blob.clone(),
         &large,
         ctx.clone(),
         &full_key,

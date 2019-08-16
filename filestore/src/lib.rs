@@ -221,7 +221,7 @@ pub fn peek<B: Blobstore + Clone>(
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).
 pub fn store<B: Blobstore + Clone>(
-    blobstore: &B,
+    blobstore: B,
     config: &FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
@@ -252,7 +252,7 @@ pub fn store<B: Blobstore + Clone>(
 /// to not expect to be able to obtain the ContentId for the content they uploaded immediately.
 /// Avoid adding new callsites.
 pub fn store_bytes<B: Blobstore + Clone>(
-    blobstore: &B,
+    blobstore: B,
     ctx: CoreContext,
     bytes: Bytes,
 ) -> (FileContents, impl Future<Item = (), Error = Error>) {
@@ -260,6 +260,6 @@ pub fn store_bytes<B: Blobstore + Clone>(
 
     (
         prepared.contents.clone(),
-        finalize::finalize(blobstore.clone(), ctx, None, prepared).map(|_| ()),
+        finalize::finalize(blobstore, ctx, None, prepared).map(|_| ()),
     )
 }

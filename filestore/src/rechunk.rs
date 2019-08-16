@@ -37,7 +37,7 @@ pub fn rechunk<B: Blobstore + Clone>(
             Some(file_contents) => {
                 let req = StoreRequest::with_canonical(file_contents.size(), content_id);
                 let file_stream = stream_file_bytes(blobstore.clone(), ctx.clone(), file_contents);
-                store(&blobstore, &config, ctx, &req, file_stream).left_future()
+                store(blobstore, &config, ctx, &req, file_stream).left_future()
             }
             None => Err(ErrorKind::ContentNotFound(content_id).into())
                 .into_future()

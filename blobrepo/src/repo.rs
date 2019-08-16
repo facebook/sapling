@@ -892,7 +892,13 @@ impl BlobRepo {
         req: &StoreRequest,
         data: impl Stream<Item = Bytes, Error = Error>,
     ) -> impl Future<Item = ContentMetadata, Error = Error> {
-        filestore::store(&self.blobstore, &self.filestore_config, ctx, req, data)
+        filestore::store(
+            self.blobstore.clone(),
+            &self.filestore_config,
+            ctx,
+            req,
+            data,
+        )
     }
 
     // This is used by tests
@@ -1989,8 +1995,11 @@ impl UploadHgFileContents {
                 let file_bytes = f.file_contents();
 
                 STATS::upload_blob.add_value(1);
-                let (contents, upload_fut) =
-                    filestore::store_bytes(&repo.blobstore, ctx.clone(), file_bytes.into_bytes());
+                let (contents, upload_fut) = filestore::store_bytes(
+                    repo.blobstore.clone(),
+                    ctx.clone(),
+                    file_bytes.into_bytes(),
+                );
 
                 let upload_fut = upload_fut.timed({
                     cloned!(path);
