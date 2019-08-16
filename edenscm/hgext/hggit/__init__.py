@@ -523,6 +523,9 @@ def gitnodekw(**args):
     hexadecimal digit string."""
     node = args["ctx"]
     repo = args["repo"]
+    fromextra = node.extra().get("convert_revision", "")
+    if fromextra:
+        return fromextra
     gitnode = repo.githandler.map_git_get(node.hex())
     if gitnode is None:
         gitnode = ""

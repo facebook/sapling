@@ -60,4 +60,4 @@ git cleanup cleans nodemap
   git commit map cleaned
   $ hg unbundle -q ../mybundle.hg
   $ hg log -r tip -T '{gitnode}\n'
-  
+  9497a4ee62e16ee641860d7677cdb2589ea15554
