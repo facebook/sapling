@@ -9,7 +9,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail, Result};
-use filestore::{self, FetchKey, StoreRequest};
+use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     future::{loop_fn, Loop},
     Future, IntoFuture, Stream,
@@ -56,45 +56,46 @@ fn do_lfs_upload(
 ) -> BoxFuture<ContentMetadata, Error> {
     let blobstore = blobrepo.get_blobstore();
 
-    filestore::get_metadata(&blobstore, ctx.clone(), &FetchKey::Sha256(lfs.oid()))
-        .and_then({
-            move |metadata| match metadata {
-                Some(metadata) => {
-                    info!(
-                        ctx.logger(),
-                        "lfs_upload: reusing blob {:?}", metadata.sha256
-                    );
-                    Ok(metadata).into_future()
-                }
-                .left_future(),
-                None => {
-                    info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
-                    let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
-
-                    lfs_stream(&lfs_helper, &lfs)
-                        .into_future()
-                        .and_then(move |(child, stream)| {
-                            let upload_fut = blobrepo.upload_file(ctx.clone(), &req, stream);
-
-                            // NOTE: We ignore the child exit code here. Since the Filestore validates the object
-                            // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
-                            // if it gave us exactly the content we wanted).
-                            (upload_fut, child.from_err()).into_future().map({
-                                cloned!(ctx);
-                                move |(meta, _)| {
-                                    info!(
-                                        ctx.logger(),
-                                        "lfs_upload: imported blob {:?}", meta.sha256
-                                    );
-                                    meta
-                                }
-                            })
-                        })
-                }
-                .right_future(),
+    filestore::get_metadata(
+        &blobstore,
+        ctx.clone(),
+        &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
+    )
+    .and_then({
+        move |metadata| match metadata {
+            Some(metadata) => {
+                info!(
+                    ctx.logger(),
+                    "lfs_upload: reusing blob {:?}", metadata.sha256
+                );
+                Ok(metadata).into_future()
             }
-        })
-        .boxify()
+            .left_future(),
+            None => {
+                info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
+                let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
+
+                lfs_stream(&lfs_helper, &lfs)
+                    .into_future()
+                    .and_then(move |(child, stream)| {
+                        let upload_fut = blobrepo.upload_file(ctx.clone(), &req, stream);
+
+                        // NOTE: We ignore the child exit code here. Since the Filestore validates the object
+                        // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
+                        // if it gave us exactly the content we wanted).
+                        (upload_fut, child.from_err()).into_future().map({
+                            cloned!(ctx);
+                            move |(meta, _)| {
+                                info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
+                                meta
+                            }
+                        })
+                    })
+            }
+            .right_future(),
+        }
+    })
+    .boxify()
 }
 
 pub fn lfs_upload(

@@ -14,9 +14,9 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
-use mononoke_types::{hash, ContentAlias, ContentId, ContentMetadata, FileContents, MononokeId};
+use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, MononokeId};
 
 mod alias;
 mod chunk;
@@ -32,7 +32,7 @@ mod prepare;
 mod spawn;
 mod streamhash;
 
-pub use fetch_key::FetchKey;
+pub use fetch_key::{Alias, AliasBlob, FetchKey};
 
 #[cfg(test)]
 mod test;
@@ -142,30 +142,6 @@ impl StoreRequest {
     }
 }
 
-/// Return the canonical ID for a key. It doesn't check if the corresponding content
-/// actually exists (its possible for an alias to exist before the ID if there was an
-/// interrupted store operation).
-pub fn get_canonical_id<B: Blobstore + Clone>(
-    blobstore: &B,
-    ctx: CoreContext,
-    key: &FetchKey,
-) -> impl Future<Item = Option<ContentId>, Error = Error> {
-    match key {
-        FetchKey::Canonical(canonical) => Ok(Some(*canonical)).into_future().left_future(),
-        aliaskey => blobstore
-            .get(ctx, aliaskey.blobstore_key())
-            .and_then(|maybe_alias| {
-                maybe_alias
-                    .map(|blob| {
-                        ContentAlias::from_bytes(blob.into_bytes().into())
-                            .map(|alias| alias.content_id())
-                    })
-                    .transpose()
-            })
-            .right_future(),
-    }
-}
-
 /// Fetch the metadata for the underlying content. This will return None if the content does
 /// not exist. It might recompute metadata on the fly if the content exists but the metadata does
 /// not.
@@ -174,7 +150,7 @@ pub fn get_metadata<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-    get_canonical_id(blobstore, ctx.clone(), key).and_then({
+    key.load(ctx.clone(), blobstore).and_then({
         cloned!(blobstore, ctx);
         move |maybe_id| match maybe_id {
             Some(id) => metadata::get_metadata(blobstore, ctx, id).left_future(),
@@ -190,7 +166,7 @@ pub fn exists<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = bool, Error = Error> {
-    get_canonical_id(blobstore, ctx.clone(), &key)
+    key.load(ctx.clone(), blobstore)
         .and_then({
             cloned!(blobstore, ctx);
             move |maybe_id| maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()))
@@ -209,7 +185,7 @@ pub fn fetch<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-    get_canonical_id(blobstore, ctx.clone(), key).and_then({
+    key.load(ctx.clone(), blobstore).and_then({
         cloned!(blobstore, ctx);
         move |content_id| match content_id {
             Some(content_id) => fetch::fetch(blobstore, ctx, content_id).left_future(),

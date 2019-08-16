@@ -21,7 +21,7 @@ use crate::incremental_hash::{
     hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
     Sha256IncrementalHasher,
 };
-use crate::{FetchKey, FilestoreConfig};
+use crate::{Alias, FetchKey, FilestoreConfig};
 
 use super::failing_blobstore::FailingBlobstore;
 use super::request;
@@ -39,9 +39,21 @@ fn check_consistency<B: Blobstore + Clone>(
 
     let futs = vec![
         filestore::fetch(blobstore, ctx.clone(), &FetchKey::Canonical(content_id)),
-        filestore::fetch(blobstore, ctx.clone(), &FetchKey::Sha1(sha1)),
-        filestore::fetch(blobstore, ctx.clone(), &FetchKey::Sha256(sha256)),
-        filestore::fetch(blobstore, ctx.clone(), &FetchKey::GitSha1(git_sha1)),
+        filestore::fetch(
+            blobstore,
+            ctx.clone(),
+            &FetchKey::Aliased(Alias::Sha1(sha1)),
+        ),
+        filestore::fetch(
+            blobstore,
+            ctx.clone(),
+            &FetchKey::Aliased(Alias::Sha256(sha256)),
+        ),
+        filestore::fetch(
+            blobstore,
+            ctx.clone(),
+            &FetchKey::Aliased(Alias::GitSha1(git_sha1)),
+        ),
     ];
 
     let futs: Vec<_> = futs.into_iter().map(|f| f.map(|r| r.is_some())).collect();

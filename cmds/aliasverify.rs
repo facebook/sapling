@@ -38,11 +38,11 @@ use slog::Logger;
 use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::Storable;
 use changesets::SqlChangesets;
 use cmdlib::args;
 use context::CoreContext;
-use filestore::{self, FetchKey};
+use filestore::{self, Alias, AliasBlob, FetchKey};
 use mononoke_types::{
     hash::{self, Sha256},
     ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
@@ -167,13 +167,12 @@ impl AliasVerification {
                         cloned!(blobstore);
                         move |meta| {
                             if meta.sha256 == alias {
-                                blobstore
-                                    .put(
-                                        ctx.clone(),
-                                        FetchKey::Sha256(meta.sha256).blobstore_key(),
-                                        ContentAlias::from_content_id(content_id).into_blob(),
-                                    )
-                                    .left_future()
+                                AliasBlob(
+                                    Alias::Sha256(meta.sha256),
+                                    ContentAlias::from_content_id(content_id),
+                                )
+                                .store(ctx.clone(), &blobstore)
+                                .left_future()
                             } else {
                                 Err(format_err!(
                                     "Inconsistent hashes for {:?}, got {:?}, meta is {:?}",

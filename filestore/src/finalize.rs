@@ -12,9 +12,8 @@ use futures_ext::{try_left_future, FutureExt};
 use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata};
 
 use crate::errors::{ErrorKind, InvalidHash};
-use crate::fetch_key::AliasBlob;
+use crate::fetch_key::{Alias, AliasBlob};
 use crate::prepare::Prepared;
-use crate::FetchKey;
 use crate::StoreRequest;
 
 // Verify that a given $expected hash matches the $effective hash, and otherwise return a left
@@ -78,13 +77,12 @@ pub fn finalize<B: Blobstore + Clone>(
 
     let alias = ContentAlias::from_content_id(content_id);
 
-    let put_sha1 = AliasBlob(FetchKey::Sha1(sha1), alias.clone()).store(ctx.clone(), &blobstore);
+    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx.clone(), &blobstore);
 
-    let put_sha256 =
-        AliasBlob(FetchKey::Sha256(sha256), alias.clone()).store(ctx.clone(), &blobstore);
+    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx.clone(), &blobstore);
 
     let put_git_sha1 =
-        AliasBlob(FetchKey::GitSha1(git_sha1), alias.clone()).store(ctx.clone(), &blobstore);
+        AliasBlob(Alias::GitSha1(git_sha1), alias.clone()).store(ctx.clone(), &blobstore);
 
     let metadata = ContentMetadata {
         total_size,

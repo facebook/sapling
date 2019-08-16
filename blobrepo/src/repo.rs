@@ -32,7 +32,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use filenodes::{FilenodeInfo, Filenodes};
-use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
+use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{self, once, FuturesUnordered, Stream};
 use futures::sync::oneshot;
@@ -318,7 +318,8 @@ impl BlobRepo {
         ctx: CoreContext,
         key: Sha256,
     ) -> BoxFuture<ContentId, Error> {
-        filestore::get_canonical_id(&self.blobstore, ctx, &FetchKey::Sha256(key))
+        FetchKey::Aliased(Alias::Sha256(key))
+            .load(ctx, &self.blobstore)
             .and_then(move |content_id| {
                 content_id.ok_or(ErrorKind::ContentBlobByAliasMissing(key).into())
             })
@@ -344,15 +345,17 @@ impl BlobRepo {
     pub fn get_file_content_by_alias(
         &self,
         ctx: CoreContext,
-        alias: Sha256,
+        sha256: Sha256,
     ) -> BoxStream<FileBytes, Error> {
-        filestore::fetch(&self.blobstore, ctx, &FetchKey::Sha256(alias))
-            .and_then(move |stream| {
-                stream.ok_or(ErrorKind::ContentBlobByAliasMissing(alias).into())
-            })
-            .flatten_stream()
-            .map(FileBytes)
-            .boxify()
+        filestore::fetch(
+            &self.blobstore,
+            ctx,
+            &FetchKey::Aliased(Alias::Sha256(sha256)),
+        )
+        .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobByAliasMissing(sha256).into()))
+        .flatten_stream()
+        .map(FileBytes)
+        .boxify()
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.

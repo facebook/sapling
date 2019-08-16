@@ -9,7 +9,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Result};
-use filestore::{self, FetchKey, StoreRequest};
+use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{
@@ -139,23 +139,31 @@ pub fn execute_command(
                     .and_then({
                         cloned!(blobstore, ctx);
                         move |metadata| {
-                            use FetchKey::*;
+                            use Alias::*;
 
                             (
                                 filestore::fetch(
                                     &blobstore,
                                     ctx.clone(),
-                                    &Canonical(metadata.content_id),
+                                    &FetchKey::Canonical(metadata.content_id),
                                 )
                                 .then(Ok),
-                                filestore::fetch(&blobstore, ctx.clone(), &Sha1(metadata.sha1))
-                                    .then(Ok),
-                                filestore::fetch(&blobstore, ctx.clone(), &Sha256(metadata.sha256))
-                                    .then(Ok),
                                 filestore::fetch(
                                     &blobstore,
                                     ctx.clone(),
-                                    &GitSha1(metadata.git_sha1),
+                                    &FetchKey::Aliased(Sha1(metadata.sha1)),
+                                )
+                                .then(Ok),
+                                filestore::fetch(
+                                    &blobstore,
+                                    ctx.clone(),
+                                    &FetchKey::Aliased(Sha256(metadata.sha256)),
+                                )
+                                .then(Ok),
+                                filestore::fetch(
+                                    &blobstore,
+                                    ctx.clone(),
+                                    &FetchKey::Aliased(GitSha1(metadata.git_sha1)),
                                 )
                                 .then(Ok),
                             )
@@ -183,8 +191,8 @@ fn extract_fetch_key(matches: &ArgMatches<'_>) -> Result<FetchKey> {
 
     match matches.value_of(ARG_KIND).unwrap() {
         "id" => Ok(FetchKey::Canonical(ContentId::from_str(id)?)),
-        "sha1" => Ok(FetchKey::Sha1(Sha1::from_str(id)?)),
-        "sha256" => Ok(FetchKey::Sha256(Sha256::from_str(id)?)),
+        "sha1" => Ok(FetchKey::Aliased(Alias::Sha1(Sha1::from_str(id)?))),
+        "sha256" => Ok(FetchKey::Aliased(Alias::Sha256(Sha256::from_str(id)?))),
         kind => Err(format_err!("Invalid kind: {}", kind)),
     }
 }

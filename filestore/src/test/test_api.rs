@@ -6,7 +6,7 @@
 
 use super::{canonical, chunk, request};
 use crate as filestore;
-use crate::{errors, FetchKey, FilestoreConfig, StoreRequest};
+use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
 
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use assert_matches::assert_matches;
@@ -138,9 +138,13 @@ fn filestore_put_get_sha1() -> Result<()> {
     ))?;
 
     let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Sha1(*HELLO_WORLD_SHA1))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
+        filestore::fetch(
+            &blob,
+            ctx,
+            &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
+        )
+        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+        .flatten(),
     );
 
     println!("res = {:#?}", res);
@@ -167,9 +171,13 @@ fn filestore_put_get_git_sha1() -> Result<()> {
     ))?;
 
     let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
+        filestore::fetch(
+            &blob,
+            ctx,
+            &FetchKey::Aliased(Alias::GitSha1(*HELLO_WORLD_GIT_SHA1)),
+        )
+        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+        .flatten(),
     );
 
     println!("res = {:#?}", res);
@@ -196,9 +204,13 @@ fn filestore_put_get_sha256() -> Result<()> {
     ))?;
 
     let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Sha256(*HELLO_WORLD_SHA256))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
+        filestore::fetch(
+            &blob,
+            ctx,
+            &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
+        )
+        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
+        .flatten(),
     );
 
     println!("res = {:#?}", res);
@@ -649,7 +661,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
-        &FetchKey::Sha1(*HELLO_WORLD_SHA1),
+        &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
@@ -657,7 +669,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
-        &FetchKey::Sha256(*HELLO_WORLD_SHA256),
+        &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
@@ -665,7 +677,7 @@ fn filestore_test_missing_metadata() -> Result<()> {
     let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
-        &FetchKey::GitSha1(*HELLO_WORLD_GIT_SHA1),
+        &FetchKey::Aliased(Alias::GitSha1(*HELLO_WORLD_GIT_SHA1)),
     ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
