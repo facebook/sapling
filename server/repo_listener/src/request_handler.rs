@@ -6,7 +6,7 @@
 
 use std::mem;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::failure::{prelude::*, SlogKVError};
 use configerator::ConfigeratorAPI;
@@ -46,7 +46,7 @@ lazy_static! {
 
 // It's made public so that the code that creates ConfigeratorAPI can subscribe to this category
 pub const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
-const CONFIGERATOR_TIMEOUT_MS: usize = 25;
+const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 const DEFAULT_PERCENTAGE: f64 = 100.0;
 
 define_stats! {
@@ -213,7 +213,7 @@ fn loadlimiting_configs(
     client_hostname: String,
 ) -> Option<MononokeThrottleLimit> {
     let data = configerator_api
-        .get_entity(CONFIGERATOR_LIMITS_CONFIG, CONFIGERATOR_TIMEOUT_MS)
+        .get_entity(CONFIGERATOR_LIMITS_CONFIG, CONFIGERATOR_TIMEOUT)
         .ok();
     data.and_then(|data| {
         let config: Option<MononokeThrottleLimits> = serde_json::from_str(&data.contents).ok();
