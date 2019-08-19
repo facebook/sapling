@@ -1,7 +1,7 @@
 #require test-repo normal-layout
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-  $ enable undo
+  $ enable amend undo
   $ cat <<'EOF' > scanhelptopics.py
   > from __future__ import absolute_import, print_function
   > import re
@@ -31,5 +31,4 @@ Check if ":hg:`help TOPIC`" is valid:
 Remove subversion from the list; it does not work on macOS and casuses this test
 to print errors.
   $ grep -v subversion $TESTTMP/topics > $TESTTMP/topics_filtered
-  $ cat $TESTTMP/topics_filtered | xargs -n1 -P $NPROC hg --cwd / help >/dev/null 2>$TESTTMP/results
-  $ sort $TESTTMP/results
+  $ cat $TESTTMP/topics_filtered | xargs -n1 -P $NPROC hg --cwd / help >/dev/null
