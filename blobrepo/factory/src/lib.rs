@@ -200,9 +200,10 @@ fn new_development<T: SqlFactory>(
         .from_err();
 
     let filenodes = sql_factory
-        .open::<SqlFilenodes>()
+        .open_filenodes()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))
-        .from_err();
+        .from_err()
+        .map(|(_tier, filenodes)| filenodes);
 
     let changesets = sql_factory
         .open::<SqlChangesets>()

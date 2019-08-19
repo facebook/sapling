@@ -141,10 +141,6 @@ impl MononokeApp {
                     .value_name("SHARD_NUM")
                     .default_value("100")
                     .help("mysql blobstore shard num"),
-            )
-            .arg(
-                Arg::with_name("filenode-shards")
-                .long("filenode-shards").value_name("SHARD_COUNT").help("number of shards to spread filenodes across")
             );
 
         app = add_logger_args(app, self.default_glog);
