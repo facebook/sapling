@@ -4,13 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
 use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
-use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
+use mononoke_types::{
+    BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId, Loadable, Storable,
+};
 
 use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;

@@ -19,7 +19,7 @@ use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPo
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -53,8 +53,8 @@ use mercurial_types::{
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
-    ContentMetadata, FileChange, FileType, Generation, MPath, MPathElement, MononokeId,
-    RepositoryId, Timestamp,
+    ContentMetadata, FileChange, FileType, Generation, Loadable, MPath, MPathElement, MononokeId,
+    RepositoryId, Storable, Timestamp,
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};

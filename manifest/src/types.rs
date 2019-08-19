@@ -4,12 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::Blobstore;
 use context::CoreContext;
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{MPath, MPathElement};
+use mononoke_types::{Loadable, MPath, MPathElement, Storable};
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BTreeMap, iter::FromIterator};
 

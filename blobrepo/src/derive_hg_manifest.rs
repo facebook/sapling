@@ -12,7 +12,7 @@ use crate::repo::{
     UploadHgTreeEntry,
 };
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, format_err, Error};
@@ -22,7 +22,7 @@ use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
 use mercurial_types::{
     Entry as HgEntry, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId,
 };
-use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
+use mononoke_types::{FileType, Loadable, MPath, MPathElement, RepoPath};
 use repo_blobstore::RepoBlobstore;
 use std::io::Write;
 

@@ -7,7 +7,7 @@
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
-use mononoke_types::BlobstoreBytes;
+use blobstore::BlobstoreBytes;
 
 // This used to have an Extern state earlier, which stood for the hash
 // being present but the content not. This state ended up never being used in

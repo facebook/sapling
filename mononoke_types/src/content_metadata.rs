@@ -6,13 +6,14 @@
 
 use std::convert::TryInto;
 
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use failure_ext::{bail_err, chain::*};
 use quickcheck::{Arbitrary, Gen};
 use rust_thrift::compact_protocol;
 
 use crate::{
-    blob::{Blob, BlobstoreBytes, BlobstoreValue, ContentMetadataBlob},
+    blob::{Blob, BlobstoreValue, ContentMetadataBlob},
     errors::*,
     hash, thrift, thrift_field,
     typed_hash::{ContentId, ContentMetadataId},

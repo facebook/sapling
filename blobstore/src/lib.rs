@@ -6,14 +6,15 @@
 
 #![deny(warnings)]
 
+use bytes::Bytes;
 use std::fmt;
 use std::sync::Arc;
 
 use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, MononokeId};
 
+use asyncmemo::Weight;
 use context::CoreContext;
 
 mod counted_blobstore;
@@ -24,6 +25,44 @@ pub use crate::errors::ErrorKind;
 
 mod disabled;
 pub use crate::disabled::DisabledBlob;
+
+/// A type representing bytes written to or read from a blobstore. The goal here is to ensure
+/// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
+/// stored in the blob store.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BlobstoreBytes(Bytes);
+
+impl BlobstoreBytes {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
+        BlobstoreBytes(bytes.into())
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn into_bytes(self) -> Bytes {
+        self.0
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn as_bytes(&self) -> &Bytes {
+        &self.0
+    }
+}
+
+impl Weight for BlobstoreBytes {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.len()
+    }
+}
 
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:
@@ -120,72 +159,5 @@ impl Blobstore for Box<dyn Blobstore> {
     }
     fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
         self.as_ref().assert_present(ctx, key)
-    }
-}
-
-pub trait Loadable: Sized + 'static {
-    type Value;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error>;
-}
-
-pub trait Storable: Sized + 'static {
-    type Key;
-
-    fn store<B: Blobstore + Clone>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error>;
-}
-
-impl<T> Loadable for T
-where
-    T: MononokeId,
-{
-    type Value = Option<T::Value>;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
-        let id = *self;
-        let blobstore_key = id.blobstore_key();
-
-        blobstore
-            .get(ctx, blobstore_key.clone())
-            .and_then(move |bytes| {
-                bytes
-                    .map(move |bytes| {
-                        let blob: Blob<T> = Blob::new(id, bytes.into_bytes());
-                        <T::Value>::from_blob(blob)
-                    })
-                    .transpose()
-            })
-            .boxify()
-    }
-}
-
-impl<T> Storable for Blob<T>
-where
-    T: MononokeId,
-{
-    type Key = T;
-
-    fn store<B: Blobstore + Clone>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
-        let id = *self.id();
-        blobstore
-            .put(ctx, id.blobstore_key(), self.into())
-            .map(move |_| id)
-            .boxify()
     }
 }

@@ -26,7 +26,10 @@ pub mod sql_types;
 pub mod typed_hash;
 pub mod unode;
 
-pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob, RawBundle2Blob};
+pub use blob::{
+    Blob, BlobstoreValue, ChangesetBlob, ContentBlob, Loadable, RawBundle2Blob, Storable,
+};
+pub use blobstore::BlobstoreBytes;
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
 pub use content_chunk::ContentChunk;
 pub use content_metadata::{ContentAlias, ContentMetadata};

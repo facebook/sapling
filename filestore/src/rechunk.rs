@@ -9,9 +9,9 @@ use futures::future::IntoFuture;
 use futures::Future;
 use futures_ext::FutureExt;
 
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{ContentId, ContentMetadata};
+use mononoke_types::{ContentId, ContentMetadata, Loadable};
 
 use crate::fetch::stream_file_bytes;
 use crate::{store, FilestoreConfig, StoreRequest};
