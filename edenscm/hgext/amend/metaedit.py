@@ -90,31 +90,36 @@ def editmessages(repo, revs):
 def metaedit(ui, repo, templ, *revs, **opts):
     """edit commit message and other metadata
 
-    Edits the commit information for the specified revisions. By default, edits
-    commit information for the working directory parent.
+    Edit commit message for the current commit. By default, opens your default
+    editor so that you can edit the commit message interactively. Specify -m
+    to specify the commit message on the command line.
 
-    With --fold, also folds multiple revisions into one if necessary. In this
-    case, the given revisions must form a linear unbroken chain.
+    To edit the message for a different commit, specify -r. To edit the
+    messages of multiple commits, specify --batch.
+
+    You can edit other pieces of commit metadata, namely the user or date,
+    by specifying -u or -d, respectively. The expected format for user is
+    'Full Name <user@example.com>'.
+
+    .. note::
+
+        You can specify --fold to fold multiple revisions into one when the
+        given revisions form a linear unbroken chain. However, :hg:`fold` is
+        the preferred command for this purpose. See :hg:`help fold` for more
+        information.
 
     .. container:: verbose
 
      Some examples:
 
-     - Edit the commit message for the working directory parent::
+     - Edit the commit message for the current commit::
 
          hg metaedit
 
-     - Change the username for the working directory parent::
+     - Change the username for the current commit::
 
          hg metaedit --user 'New User <new-email@example.com>'
 
-     - Combine all draft revisions that are ancestors of foo but not of @ into
-       one::
-
-         hg metaedit --fold 'draft() and only(foo,@)'
-
-       See :hg:`help phases` for more about draft revisions, and
-       :hg:`help revsets` for more about the `draft()` and `only()` keywords.
     """
     revs = list(revs)
     revs.extend(opts["rev"])
