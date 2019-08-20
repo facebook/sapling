@@ -95,7 +95,7 @@ fn main() -> Result<()> {
     let blobrepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(&ctx.logger(), &matches).left_future()
     } else {
-        args::create_repo(&ctx.logger(), &matches).right_future()
+        args::create_repo_unredacted(&ctx.logger(), &matches).right_future()
     };
 
     let blobimport = blobrepo

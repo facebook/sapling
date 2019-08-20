@@ -316,6 +316,23 @@ pub fn create_repo<'a>(
     )
 }
 
+/// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
+/// Make sure that the opened repo has redaction disabled
+#[inline]
+pub fn create_repo_unredacted<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal(
+        logger,
+        matches,
+        true,
+        parse_caching(matches),
+        Scrubbing::Disabled,
+        Some(Redaction::Disabled),
+    )
+}
+
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
 pub fn open_repo<'a>(
