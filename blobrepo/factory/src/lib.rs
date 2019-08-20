@@ -13,7 +13,6 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
 };
-use censoredblob::SqlCensoredContentStore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use cloned::cloned;
@@ -26,9 +25,10 @@ use futures::{future::IntoFuture, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use memblob::EagerMemblob;
 use metaconfig_types::{
-    self, BlobConfig, Censoring, FilestoreParams, MetadataDBConfig, StorageConfig,
+    self, BlobConfig, FilestoreParams, MetadataDBConfig, Redaction, StorageConfig,
 };
 use mononoke_types::RepositoryId;
+use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_ext::myrouter_ready;
@@ -54,7 +54,7 @@ pub fn open_blobrepo(
     myrouter_port: Option<u16>,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
-    censoring: Censoring,
+    redaction: Redaction,
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
 ) -> BoxFuture<BlobRepo, Error> {
@@ -81,7 +81,7 @@ pub fn open_blobrepo(
                 repoid,
                 myrouter_port,
                 bookmarks_cache_ttl,
-                censoring,
+                redaction,
                 scuba_censored_table,
                 filestore_config,
             )
@@ -96,7 +96,7 @@ pub fn open_blobrepo(
                 repoid,
                 myrouter_port,
                 bookmarks_cache_ttl,
-                censoring,
+                redaction,
                 scuba_censored_table,
                 filestore_config,
             )
@@ -112,40 +112,40 @@ fn do_open_blobrepo<T: SqlFactory>(
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
-    censoring: Censoring,
+    redaction: Redaction,
     scuba_censored_table: Option<String>,
     filestore_config: FilestoreConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let uncensored_blobstore = make_blobstore(&blobconfig, &sql_factory, myrouter_port);
+    let unredacted_blobstore = make_blobstore(&blobconfig, &sql_factory, myrouter_port);
 
-    let censored_blobs = match censoring {
-        Censoring::Enabled => sql_factory
-            .open::<SqlCensoredContentStore>()
-            .and_then(move |censored_store| {
-                let censored_blobs = censored_store
-                    .get_all_censored_blobs()
+    let redacted_blobs = match redaction {
+        Redaction::Enabled => sql_factory
+            .open::<SqlRedactedContentStore>()
+            .and_then(move |redacted_store| {
+                let redacted_blobs = redacted_store
+                    .get_all_redacted_blobs()
                     .map_err(Error::from)
                     .map(HashMap::from_iter);
-                Some(censored_blobs)
+                Some(redacted_blobs)
             })
             .left_future(),
-        Censoring::Disabled => Ok(None).into_future().right_future(),
+        Redaction::Disabled => Ok(None).into_future().right_future(),
     };
 
-    uncensored_blobstore.join(censored_blobs).and_then(
-        move |(uncensored_blobstore, censored_blobs)| match caching {
+    unredacted_blobstore.join(redacted_blobs).and_then(
+        move |(unredacted_blobstore, redacted_blobs)| match caching {
             Caching::Disabled => new_development(
                 &sql_factory,
-                uncensored_blobstore,
-                censored_blobs,
+                unredacted_blobstore,
+                redacted_blobs,
                 scuba_censored_table,
                 repoid,
                 filestore_config,
             ),
             Caching::Enabled => new_production(
                 &sql_factory,
-                uncensored_blobstore,
-                censored_blobs,
+                unredacted_blobstore,
+                redacted_blobs,
                 scuba_censored_table,
                 repoid,
                 bookmarks_cache_ttl,
@@ -189,7 +189,7 @@ pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRe
 fn new_development<T: SqlFactory>(
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
-    censored_blobs: Option<HashMap<String, String>>,
+    redacted_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
@@ -223,7 +223,7 @@ fn new_development<T: SqlFactory>(
 
                 BlobRepo::new(
                     bookmarks,
-                    RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
+                    RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
                     filenodes,
                     changesets,
                     bonsai_hg_mapping,
@@ -240,7 +240,7 @@ fn new_development<T: SqlFactory>(
 fn new_production<T: SqlFactory>(
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
-    censored_blobs: Option<HashMap<String, String>>,
+    redacted_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
@@ -316,7 +316,7 @@ fn new_production<T: SqlFactory>(
 
                 BlobRepo::new_with_changeset_fetcher_factory(
                     bookmarks,
-                    RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
+                    RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
                     Arc::new(filenodes),
                     changesets,
                     Arc::new(bonsai_hg_mapping),

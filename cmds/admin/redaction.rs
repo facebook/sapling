@@ -8,10 +8,9 @@ use blobrepo::BlobRepo;
 use clap::ArgMatches;
 use cmdlib::args;
 
-use crate::cmdargs::{BLACKLIST_ADD, BLACKLIST_LIST, BLACKLIST_REMOVE};
+use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::{get_file_nodes, resolve_hg_rev};
 use blob_changeset::HgBlobChangeset;
-use censoredblob::SqlCensoredContentStore;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
@@ -23,6 +22,7 @@ use futures_ext::{
 use itertools::{Either, Itertools};
 use mercurial_types::{Changeset, HgChangesetId, HgEntryId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
+use redactedblobstore::SqlRedactedContentStore;
 use slog::{info, Logger};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -117,16 +117,16 @@ fn find_files_with_given_content_id_blobstore_keys(
     .map(|(res, _)| res)
 }
 
-/// Entrypoint for blacklist subcommand handling
-pub fn subcommand_blacklist(
+/// Entrypoint for redaction subcommand handling
+pub fn subcommand_redaction(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     match sub_m.subcommand() {
-        (BLACKLIST_ADD, Some(sub_sub_m)) => blacklist_add(logger, matches, sub_sub_m),
-        (BLACKLIST_REMOVE, Some(sub_sub_m)) => blacklist_remove(logger, matches, sub_sub_m),
-        (BLACKLIST_LIST, Some(sub_sub_m)) => blacklist_list(logger, matches, sub_sub_m),
+        (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(logger, matches, sub_sub_m),
+        (REDACTION_REMOVE, Some(sub_sub_m)) => redaction_remove(logger, matches, sub_sub_m),
+        (REDACTION_LIST, Some(sub_sub_m)) => redaction_list(logger, matches, sub_sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
@@ -160,7 +160,7 @@ fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>),
 }
 
 /// Boilerplate to prepare a bunch of prerequisites for the rest of blaclisting operations
-fn get_ctx_blobrepo_censored_blobs_cs_id(
+fn get_ctx_blobrepo_redacted_blobs_cs_id(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -168,7 +168,7 @@ fn get_ctx_blobrepo_censored_blobs_cs_id(
     Item = (
         CoreContext,
         BlobRepo,
-        SqlCensoredContentStore,
+        SqlRedactedContentStore,
         HgChangesetId,
     ),
     Error = SubcommandError,
@@ -181,8 +181,8 @@ fn get_ctx_blobrepo_censored_blobs_cs_id(
     args::init_cachelib(&matches);
 
     let blobrepo = args::open_repo(&logger, &matches);
-    let censored_blobs = args::open_sql::<SqlCensoredContentStore>(&matches)
-        .context("While opening SqlCensoredContentStore")
+    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(&matches)
+        .context("While opening SqlRedactedContentStore")
         .from_err();
 
     let ctx = CoreContext::new_with_logger(logger);
@@ -194,8 +194,8 @@ fn get_ctx_blobrepo_censored_blobs_cs_id(
                 resolve_hg_rev(ctx.clone(), &blobrepo, &rev).map(|cs_id| (blobrepo, cs_id))
             }
         })
-        .join(censored_blobs)
-        .map(move |((blobrepo, cs_id), censored_blobs)| (ctx, blobrepo, censored_blobs, cs_id))
+        .join(redacted_blobs)
+        .map(move |((blobrepo, cs_id), redacted_blobs)| (ctx, blobrepo, redacted_blobs, cs_id))
         .from_err()
         .boxify()
 }
@@ -222,14 +222,14 @@ fn content_ids_for_paths(
         .from_err()
 }
 
-fn blacklist_add(
+fn redaction_add(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let (task, paths) = try_boxfuture!(task_and_paths_parser(sub_m));
-    get_ctx_blobrepo_censored_blobs_cs_id(logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, censored_blobs, cs_id)| {
+    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
                 .and_then(move |content_ids| {
                     let blobstore_keys = content_ids
@@ -237,38 +237,38 @@ fn blacklist_add(
                         .map(|content_id| content_id.blobstore_key())
                         .collect();
                     let timestamp = Timestamp::now();
-                    censored_blobs.insert_censored_blobs(&blobstore_keys, &task, &timestamp)
+                    redacted_blobs.insert_redacted_blobs(&blobstore_keys, &task, &timestamp)
                 })
                 .from_err()
         })
         .boxify()
 }
 
-fn blacklist_list(
+fn redaction_list(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    get_ctx_blobrepo_censored_blobs_cs_id(logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, censored_blobs, cs_id)| {
+    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             info!(
                 logger,
                 "Listing blacklisted files for ChangesetId: {:?}", cs_id
             );
             info!(logger, "Please be patient.");
             let changeset_fut = blobrepo.get_changeset_by_changesetid(ctx.clone(), cs_id);
-            censored_blobs
-                .get_all_censored_blobs()
+            redacted_blobs
+                .get_all_redacted_blobs()
                 .join(changeset_fut)
                 .and_then({
                     cloned!(logger);
-                    move |(censored_blobs, hg_cs)| {
+                    move |(redacted_blobs, hg_cs)| {
                         find_files_with_given_content_id_blobstore_keys(
                             logger.clone(),
                             ctx,
                             blobrepo,
                             hg_cs,
-                            censored_blobs,
+                            redacted_blobs,
                         )
                         .map({
                             cloned!(logger);
@@ -290,21 +290,21 @@ fn blacklist_list(
         .boxify()
 }
 
-fn blacklist_remove(
+fn redaction_remove(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let paths = try_boxfuture!(paths_parser(sub_m));
-    get_ctx_blobrepo_censored_blobs_cs_id(logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, censored_blobs, cs_id)| {
+    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
                 .and_then(move |content_ids| {
                     let blobstore_keys: Vec<_> = content_ids
                         .into_iter()
                         .map(|content_id| content_id.blobstore_key())
                         .collect();
-                    censored_blobs.delete_censored_blobs(&blobstore_keys)
+                    redacted_blobs.delete_redacted_blobs(&blobstore_keys)
                 })
                 .from_err()
         })

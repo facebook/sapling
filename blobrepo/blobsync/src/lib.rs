@@ -32,11 +32,11 @@ pub fn copy_blob(
 #[cfg(test)]
 mod test {
     use super::*;
-    use censoredblob::CensoredBlob;
     use context::CoreContext;
     use memblob::EagerMemblob;
     use mononoke_types::BlobstoreBytes;
     use prefixblob::PrefixBlobstore;
+    use redactedblobstore::RedactedBlobstore;
     use scuba_ext::ScubaSampleBuilder;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -51,13 +51,13 @@ mod test {
         let inner1 = Arc::new(EagerMemblob::new());
         let inner2 = Arc::new(EagerMemblob::new());
 
-        let bs1: RepoBlobstore = CensoredBlob::new(
+        let bs1: RepoBlobstore = RedactedBlobstore::new(
             PrefixBlobstore::new(inner1, "prefix1"),
             Some(HashMap::new()),
             ScubaSampleBuilder::with_discard(),
         );
 
-        let bs2: RepoBlobstore = CensoredBlob::new(
+        let bs2: RepoBlobstore = RedactedBlobstore::new(
             PrefixBlobstore::new(inner2, "prefix2"),
             Some(HashMap::new()),
             ScubaSampleBuilder::with_discard(),

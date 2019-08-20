@@ -99,7 +99,7 @@ pub fn repo_handlers(
                 myrouter_port,
                 caching,
                 config.bookmarks_cache_ttl,
-                config.censoring,
+                config.redaction,
                 scuba_censored_table.clone(),
                 config.filestore.clone(),
             )

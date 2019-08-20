@@ -15,15 +15,15 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, SqliteFactory, XdbFactory};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
-use censoredblob::{CensoredBlob, SqlCensoredContentStore};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use futures::future;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, BlobstoreId, Censoring, MetadataDBConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, Redaction, StorageConfig};
 use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
+use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
@@ -86,14 +86,14 @@ pub fn subcommand_blobstore_fetch(
 ) -> BoxFuture<(), SubcommandError> {
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
     let (_, config) = try_boxfuture!(args::get_config(&matches));
-    let censoring = config.censoring;
+    let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
     let blobstore_fut = get_blobstore(storage_config, inner_blobstore_id);
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;
-    let scuba_censorship_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+    let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
 
     let ctx = CoreContext::new_with_logger(logger.clone());
     let key = sub_m.value_of("KEY").unwrap().to_string();
@@ -101,22 +101,22 @@ pub fn subcommand_blobstore_fetch(
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
     let no_prefix = sub_m.is_present("no-prefix");
 
-    let maybe_censored_blobs_fut = match censoring {
-        Censoring::Enabled => args::open_sql::<SqlCensoredContentStore>(&matches)
-            .and_then(|censored_blobs| {
-                censored_blobs
-                    .get_all_censored_blobs()
+    let maybe_redacted_blobs_fut = match redaction {
+        Redaction::Enabled => args::open_sql::<SqlRedactedContentStore>(&matches)
+            .and_then(|redacted_blobs| {
+                redacted_blobs
+                    .get_all_redacted_blobs()
                     .map_err(Error::from)
                     .map(HashMap::from_iter)
                     .map(Some)
             })
             .left_future(),
-        Censoring::Disabled => future::ok(None).right_future(),
+        Redaction::Disabled => future::ok(None).right_future(),
     };
 
-    let value_fut = blobstore_fut.join(maybe_censored_blobs_fut).and_then({
+    let value_fut = blobstore_fut.join(maybe_redacted_blobs_fut).and_then({
         cloned!(logger, key, ctx);
-        move |(blobstore, maybe_censored_blobs)| {
+        move |(blobstore, maybe_redacted_blobs)| {
             info!(logger, "using blobstore: {:?}", blobstore);
             get_from_sources(
                 use_memcache,
@@ -124,8 +124,8 @@ pub fn subcommand_blobstore_fetch(
                 no_prefix,
                 key.clone(),
                 ctx,
-                maybe_censored_blobs,
-                scuba_censorship_builder,
+                maybe_redacted_blobs,
+                scuba_redaction_builder,
                 repo_id,
             )
         }
@@ -169,8 +169,8 @@ fn get_from_sources<T: Blobstore + Clone>(
     no_prefix: bool,
     key: String,
     ctx: CoreContext,
-    censored_blobs: Option<HashMap<String, String>>,
-    scuba_censorship_builder: ScubaSampleBuilder,
+    redacted_blobs: Option<HashMap<String, String>>,
+    scuba_redaction_builder: ScubaSampleBuilder,
     repo_id: RepositoryId,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
     let empty_prefix = "".to_string();
@@ -182,7 +182,8 @@ fn get_from_sources<T: Blobstore + Clone>(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censorship_builder);
+            let blobstore =
+                RedactedBlobstore::new(blobstore, redacted_blobs, scuba_redaction_builder);
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
         None => {
@@ -190,7 +191,8 @@ fn get_from_sources<T: Blobstore + Clone>(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censorship_builder);
+            let blobstore =
+                RedactedBlobstore::new(blobstore, redacted_blobs, scuba_redaction_builder);
             blobstore.get(ctx, key.clone()).boxify()
         }
     }

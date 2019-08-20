@@ -198,7 +198,7 @@ impl BlobRepo {
     /// ------------
     /// Currently this applies to the blobstore *ONLY*. A future improvement would be to also
     /// do database writes in-memory.
-    /// This function produces a blobrepo which DOES NOT HAVE ANY CENSORSHIP ENABLED
+    /// This function produces a blobrepo which DOES NOT HAVE ANY REDACTION ENABLED
     #[allow(non_snake_case)]
     pub fn in_memory_writes_READ_DOC_COMMENT(self) -> BlobRepo {
         let BlobRepo {

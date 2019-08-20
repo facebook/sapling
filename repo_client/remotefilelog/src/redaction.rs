@@ -10,10 +10,10 @@ use failure_ext::Error;
 use futures::{Async, Future, Poll};
 use mercurial_types::FileBytes;
 
-use censoredblob::ErrorKind;
+use redactedblobstore::ErrorKind;
 
-/// Tombstone string to replace the content of blacklisted files with
-const CENSORED_CONTENT: &str =
+/// Tombstone string to replace the content of redacted files with
+const REDACTED_CONTENT: &str =
     "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oHAF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNoUI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQV3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
 
 impl<T> RedactionFutureExt for T where T: Future {}
@@ -43,13 +43,13 @@ where
             Ok(Async::Ready(r)) => Ok(Async::Ready(r)),
             Err(e) => {
                 let root_cause = e.find_root_cause();
-                let maybe_censored = root_cause.downcast_ref::<ErrorKind>();
+                let maybe_redacted = root_cause.downcast_ref::<ErrorKind>();
 
                 // If the error was caused by redaction, then return a tombstone instead of the
                 // content.
-                match maybe_censored {
+                match maybe_redacted {
                     Some(ErrorKind::Censored(_, _)) => {
-                        let ret = (Bytes::new(), FileBytes(CENSORED_CONTENT.as_bytes().into()));
+                        let ret = (Bytes::new(), FileBytes(REDACTED_CONTENT.as_bytes().into()));
                         Ok(Async::Ready(ret))
                     }
                     None => Err(e),

@@ -24,8 +24,8 @@ use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
-    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, Censoring, HookConfig,
-    HookParams, HookType, InfinitepushParams, MetadataDBConfig, RepoConfig, RepoReadOnly,
+    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams,
+    HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
     StorageConfig,
 };
 use mononoke_types::FileType;
@@ -1242,7 +1242,7 @@ fn default_repo_config() -> RepoConfig {
         wireproto_scribe_category: None,
         hash_validation_percentage: 0,
         readonly: RepoReadOnly::ReadWrite,
-        censoring: Censoring::Enabled,
+        redaction: Redaction::Enabled,
         skiplist_index_blobstore_key: None,
         bundle2_replay_params: Bundle2ReplayParams::default(),
         infinitepush: InfinitepushParams::default(),

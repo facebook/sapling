@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use blobstore::{Blobstore, CountedBlobstore};
-use censoredblob::{config::GET_OPERATION, CensoredBlob};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
@@ -13,6 +12,7 @@ use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
+use redactedblobstore::{config::GET_OPERATION, RedactedBlobstore};
 use slog::debug;
 use std::fmt;
 use std::sync::Arc;
@@ -402,22 +402,22 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
     }
 }
 
-impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
+impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
     #[inline]
     fn get_no_cache_fill(
         &self,
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_censored(&key)
+        self.err_if_redacted(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
                     debug!(
                         ctx.logger(),
-                        "Accessing censored blobstore with key {:?}", key
+                        "Accessing redacted blobstore with key {:?}", key
                     );
-                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, GET_OPERATION);
+                    self.to_scuba_redacted_blob_accessed(&ctx, &key, GET_OPERATION);
                     err
                 }
             })
@@ -435,15 +435,15 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_censored(&key)
+        self.err_if_redacted(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
                     debug!(
                         ctx.logger(),
-                        "Accessing censored blobstore with key {:?}", key
+                        "Accessing redacted blobstore with key {:?}", key
                     );
-                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, GET_OPERATION);
+                    self.to_scuba_redacted_blob_accessed(&ctx, &key, GET_OPERATION);
                     err
                 }
             })

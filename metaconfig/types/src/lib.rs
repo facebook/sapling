@@ -45,7 +45,7 @@ pub struct CommonConfig {
     pub security_config: Vec<WhitelistEntry>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
-    /// Scuba table for logging censored file accesses
+    /// Scuba table for logging redacted file accesses
     pub scuba_censored_table: Option<String>,
 }
 
@@ -88,8 +88,8 @@ pub struct RepoConfig {
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
     pub readonly: RepoReadOnly,
-    /// Should files be checked for censored
-    pub censoring: Censoring,
+    /// Should files be checked for redaction
+    pub redaction: Redaction,
     /// Params for the hook manager
     pub hook_manager_params: Option<HookManagerParams>,
     /// Skiplist blobstore key (used to make revset faster)
@@ -110,17 +110,17 @@ impl RepoConfig {
 }
 
 #[derive(Eq, Copy, Clone, Debug, PartialEq, Deserialize)]
-/// Should the censored verification be enabled?
-pub enum Censoring {
-    /// Censored files cannot be accessed
+/// Should the redaction verification be enabled?
+pub enum Redaction {
+    /// Redacted files cannot be accessed
     Enabled,
     /// All the files can be fetched
     Disabled,
 }
 
-impl Default for Censoring {
+impl Default for Redaction {
     fn default() -> Self {
-        Censoring::Enabled
+        Redaction::Enabled
     }
 }
 

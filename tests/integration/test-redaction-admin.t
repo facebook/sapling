@@ -59,14 +59,14 @@ Push files
   
 
 Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
-  $ mononoke_admin blacklist add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b
   * using repo "repo" repoid RepositoryId(0) (glob)
 
   $ sqlite3 "$TESTTMP/repo/censored_contents" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
 
 Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
-  $ mononoke_admin blacklist add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c
+  $ mononoke_admin redaction add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c
   * using repo "repo" repoid RepositoryId(0) (glob)
 
   $ sqlite3 "$TESTTMP/repo/censored_contents" 'SELECT * FROM censored_contents;'
@@ -74,7 +74,7 @@ Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
 Censor multiple files
-  $ mononoke_admin blacklist add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
+  $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
 
   $ sqlite3 "$TESTTMP/repo/censored_contents" 'SELECT * FROM censored_contents;'
@@ -84,13 +84,13 @@ Censor multiple files
   4|content.blake2.0991063aafe55b2bcbbfa6b349e76ab5d57a102c89e841abdac8ce3f84d55b8a|[TASK]Censor g,f|* (glob)
 
 Expect error when censoring tree
-  $ mononoke_admin blacklist add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir
+  $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir
   * using repo "repo" repoid RepositoryId(0) (glob)
   * ERRO ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir\")]" } (glob)
   [1]
 
 Expect error when trying to censor nonexisting file
-  $ mononoke_admin blacklist add "[TASK]Censor nofile" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir/nofile
+  $ mononoke_admin redaction add "[TASK]Censor nofile" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir/nofile
   * using repo "repo" repoid RepositoryId(0) (glob)
   * ERRO ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir/nofile\")]" } (glob)
   [1]
@@ -103,7 +103,7 @@ No new entry in the table
   4|content.blake2.0991063aafe55b2bcbbfa6b349e76ab5d57a102c89e841abdac8ce3f84d55b8a|[TASK]Censor g,f|* (glob)
 
 Uncensor some of the stuff
-  $ mononoke_admin blacklist remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
+  $ mononoke_admin redaction remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
   * INFO using repo "repo" repoid RepositoryId(0) (glob)
 
 Fewer entries in the table
@@ -112,11 +112,11 @@ Fewer entries in the table
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
 Let's make sure multiple files can be blacklisted under the same task
-  $ mononoke_admin blacklist add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
 
 List blacklisted files:
-  $ mononoke_admin blacklist list 2cc2702dde1d7133c30a1ed763ee82c04befb237
+  $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(2cc2702dde1d7133c30a1ed763ee82c04befb237))) (glob)
   * Please be patient. (glob)
@@ -125,7 +125,7 @@ List blacklisted files:
   * [TASK]Censor c      : dir/c (glob)
 
 List blacklisted files for a commit without any
-  $ mononoke_admin blacklist list ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+  $ mononoke_admin redaction list ac82d8b1f7c418c61a493ed229ffaa981bda8e90
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
   * Please be patient. (glob)

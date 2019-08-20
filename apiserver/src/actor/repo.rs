@@ -102,7 +102,7 @@ impl MononokeRepo {
             myrouter_port,
             with_cachelib,
             config.bookmarks_cache_ttl,
-            config.censoring,
+            config.redaction,
             common_config.scuba_censored_table,
             config.filestore,
         )

@@ -62,7 +62,7 @@ start mononoke
   $ hgmn up -q 14961831bd3a
 
 Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
-  $ mononoke_admin blacklist add my_task 14961831bd3af3a6331fef7e63367d61cb6c9f6b b
+  $ mononoke_admin redaction add my_task 14961831bd3af3a6331fef7e63367d61cb6c9f6b b
   * INFO using repo "repo" repoid RepositoryId(0) (glob)
 
 Restart mononoke
@@ -103,10 +103,10 @@ Should not succeed since the commit modifies a blacklisted file
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Restart mononoke and disable censorship verification
+Restart mononoke and disable redaction verification
   $ kill $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ export CENSORING_DISABLED=1
+  $ export REDACTION_DISABLED=1
   $ setup_common_config blob:files
   $ mononoke
   $ wait_for_mononoke "$TESTTMP/repo"
@@ -121,7 +121,7 @@ Restart mononoke and disable censorship verification
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Even is file b is blacklisted, push won't fail because censorship verification is disabled
+Even is file b is blacklisted, push won't fail because redaction verification is disabled
   $ hgmn push -q -r .  --to master_bookmark
 
   $ tglogpnr

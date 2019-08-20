@@ -23,10 +23,10 @@ use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
-    CacheWarmupParams, Censoring, CommonConfig, FilestoreParams, HookBypass, HookConfig,
-    HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
-    MetadataDBConfig, PushParams, PushrebaseParams, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
+    CacheWarmupParams, CommonConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+    HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
+    PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, ShardedFilenodesParams,
+    StorageConfig, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -451,10 +451,10 @@ impl RepoConfigs {
             RepoReadOnly::ReadWrite
         };
 
-        let censoring = if this.censoring {
-            Censoring::Enabled
+        let redaction = if this.redaction {
+            Redaction::Enabled
         } else {
-            Censoring::Disabled
+            Redaction::Disabled
         };
 
         let infinitepush = this
@@ -497,7 +497,7 @@ impl RepoConfigs {
             wireproto_scribe_category,
             hash_validation_percentage,
             readonly,
-            censoring,
+            redaction,
             skiplist_index_blobstore_key,
             bundle2_replay_params,
             write_lock_db_address: this.write_lock_db_address,
@@ -514,7 +514,7 @@ struct RawCommonConfig {
     whitelist_entry: Option<Vec<RawWhitelistEntry>>,
     loadlimiter_category: Option<String>,
 
-    /// Scuba table for logging censored file accesses
+    /// Scuba table for logging redacted file access attempts
     scuba_censored_table: Option<String>,
 }
 
@@ -571,7 +571,7 @@ struct RawRepoConfig {
 
     /// This enables or disables verification for censored blobstores
     #[serde(default = "is_true")]
-    censoring: bool,
+    redaction: bool,
 
     // TODO: work out what these all are
     generation_cache_size: Option<usize>,
@@ -1143,7 +1143,7 @@ mod test {
                 wireproto_scribe_category: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
-                censoring: Censoring::Enabled,
+                redaction: Redaction::Enabled,
                 skiplist_index_blobstore_key: Some("skiplist_key".into()),
                 bundle2_replay_params: Bundle2ReplayParams {
                     preserve_raw_bundle2: true,
@@ -1186,7 +1186,7 @@ mod test {
                 wireproto_scribe_category: Some("category".to_string()),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
-                censoring: Censoring::Enabled,
+                redaction: Redaction::Enabled,
                 skiplist_index_blobstore_key: None,
                 bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: InfinitepushParams::default(),

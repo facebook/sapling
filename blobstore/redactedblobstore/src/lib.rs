@@ -25,7 +25,7 @@ use std::sync::{
 };
 
 mod store;
-pub use crate::store::SqlCensoredContentStore;
+pub use crate::store::SqlRedactedContentStore;
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";
@@ -33,35 +33,35 @@ pub mod config {
     pub const MIN_REPORT_TIME_DIFFERENCE_NS: i64 = 1_000_000_000;
 }
 
-// A wrapper for any blobstore, which provides a verification layer for the blacklisted blobs.
+// A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
 #[derive(Debug, Clone)]
-pub struct CensoredBlob<T: Blobstore + Clone> {
+pub struct RedactedBlobstore<T: Blobstore + Clone> {
     blobstore: T,
-    censored: Option<HashMap<String, String>>,
+    redacted: Option<HashMap<String, String>>,
     scuba_builder: ScubaSampleBuilder,
     timestamp: Arc<AtomicI64>,
 }
 
-impl<T: Blobstore + Clone> CensoredBlob<T> {
+impl<T: Blobstore + Clone> RedactedBlobstore<T> {
     pub fn new(
         blobstore: T,
-        censored: Option<HashMap<String, String>>,
+        redacted: Option<HashMap<String, String>>,
         scuba_builder: ScubaSampleBuilder,
     ) -> Self {
         let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
 
         Self {
             blobstore,
-            censored,
+            redacted,
             scuba_builder,
             timestamp,
         }
     }
 
-    pub fn err_if_censored(&self, key: &String) -> Result<(), Error> {
-        match &self.censored {
-            Some(censored) => censored.get(key).map_or(Ok(()), |task| {
+    pub fn err_if_redacted(&self, key: &String) -> Result<(), Error> {
+        match &self.redacted {
+            Some(redacted) => redacted.get(key).map_or(Ok(()), |task| {
                 Err(ErrorKind::Censored(key.to_string(), task.to_string()).into())
             }),
             None => Ok(()),
@@ -78,7 +78,7 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
         &self.blobstore
     }
 
-    pub fn to_scuba_censored_blobstore_accessed(
+    pub fn to_scuba_redacted_blob_accessed(
         &self,
         ctx: &CoreContext,
         key: &String,
@@ -114,21 +114,21 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
 
     #[inline]
     pub fn into_parts(self) -> (T, Option<HashMap<String, String>>, ScubaSampleBuilder) {
-        (self.blobstore, self.censored, self.scuba_builder)
+        (self.blobstore, self.redacted, self.scuba_builder)
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {
+impl<T: Blobstore + Clone> Blobstore for RedactedBlobstore<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_censored(&key)
+        self.err_if_redacted(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
                     debug!(
                         ctx.logger(),
-                        "Accessing censored blobstore with key {:?}", key
+                        "Accessing redacted blobstore with key {:?}", key
                     );
-                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, config::GET_OPERATION);
+                    self.to_scuba_redacted_blob_accessed(&ctx, &key, config::GET_OPERATION);
                     err
                 }
             })
@@ -141,16 +141,16 @@ impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.err_if_censored(&key)
+        self.err_if_redacted(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
                     debug!(
                         ctx.logger(),
-                        "Updating censored blobstore with key {:?}", key
+                        "Updating redacted blobstore with key {:?}", key
                     );
 
-                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, config::PUT_OPERATION);
+                    self.to_scuba_redacted_blob_accessed(&ctx, &key, config::PUT_OPERATION);
                     err
                 }
             })
@@ -183,56 +183,56 @@ mod test {
     use tokio::runtime::Runtime;
 
     #[test]
-    fn test_censored_key() {
+    fn test_redacted_key() {
         let mut rt = Runtime::new().unwrap();
 
-        let uncensored_key = "foo".to_string();
-        let censored_key = "bar".to_string();
-        let censored_task = "bar task".to_string();
+        let unredacted_key = "foo".to_string();
+        let redacted_key = "bar".to_string();
+        let redacted_task = "bar task".to_string();
 
         let ctx = CoreContext::test_mock();
 
         let inner = EagerMemblob::new();
-        let censored_pairs = hashmap! {
-            censored_key.clone() => censored_task.clone(),
+        let redacted_pairs = hashmap! {
+            redacted_key.clone() => redacted_task.clone(),
         };
 
-        let blob = CensoredBlob::new(
+        let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
-            Some(censored_pairs),
+            Some(redacted_pairs),
             ScubaSampleBuilder::with_discard(),
         );
 
-        //Test put with blacklisted key
+        //Test put with redacted key
         let res = rt.block_on(blob.put(
             ctx.clone(),
-            censored_key.clone(),
+            redacted_key.clone(),
             BlobstoreBytes::from_bytes("test bar"),
         ));
 
         assert_matches!(
-            res.expect_err("the key should be blacklisted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Censored(_, ref task)) if task == &censored_task
+            res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
+            Ok(ErrorKind::Censored(_, ref task)) if task == &redacted_task
         );
 
         //Test key added to the blob
         let res = rt.block_on(blob.put(
             ctx.clone(),
-            uncensored_key.clone(),
+            unredacted_key.clone(),
             BlobstoreBytes::from_bytes("test foo"),
         ));
         assert!(res.is_ok(), "the key should be added successfully");
 
-        // Test accessing a key which is censored
-        let res = rt.block_on(blob.get(ctx.clone(), censored_key.clone()));
+        // Test accessing a key which is redacted
+        let res = rt.block_on(blob.get(ctx.clone(), redacted_key.clone()));
 
         assert_matches!(
-            res.expect_err("the key should be censored").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Censored(_, ref task)) if task == &censored_task
+            res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
+            Ok(ErrorKind::Censored(_, ref task)) if task == &redacted_task
         );
 
         // Test accessing a key which exists and is accesible
-        let res = rt.block_on(blob.get(ctx.clone(), uncensored_key.clone()));
+        let res = rt.block_on(blob.get(ctx.clone(), unredacted_key.clone()));
         assert!(res.is_ok(), "the key should be found and available");
     }
 }

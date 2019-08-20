@@ -17,15 +17,14 @@ use cmdlib::args;
 use context::CoreContext;
 use slog::error;
 
-use crate::blacklist::subcommand_blacklist;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLACKLIST, BLACKLIST_ADD, BLACKLIST_LIST, BLACKLIST_REMOVE, BLOBSTORE_FETCH,
-    BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
-    HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE,
-    HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, SKIPLIST,
-    SKIPLIST_BUILD, SKIPLIST_READ,
+    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FILENODES,
+    FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE,
+    HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
+    REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD,
+    SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::error::SubcommandError;
@@ -34,9 +33,9 @@ use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 use crate::hg_sync::subcommand_process_hg_sync;
 use crate::public_phases::subcommand_add_public_phases;
+use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
-mod blacklist;
 mod blobstore_fetch;
 mod bonsai_fetch;
 mod bookmarks_manager;
@@ -50,6 +49,7 @@ mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
 mod public_phases;
+mod redaction;
 mod skiplist_subcommand;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -253,14 +253,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true),
         );
 
-    let blacklist = SubCommand::with_name(BLACKLIST)
-        .about("handle file blacklisting")
+    let redaction = SubCommand::with_name(REDACTION)
+        .about("handle file redaction")
         .subcommand(
-            SubCommand::with_name(BLACKLIST_ADD)
-                .about("add a new blacklisted file at a given commit")
+            SubCommand::with_name(REDACTION_ADD)
+                .about("add a new redacted file at a given commit")
                 .arg(
                     Arg::with_name("task")
-                        .help("Task tracking the blacklisting request")
+                        .help("Task tracking the redaction request")
                         .takes_value(true)
                         .required(true),
                 )
@@ -272,13 +272,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 )
                 .args_from_usage(
                     r#"
-                        <FILES_LIST>...                             'list of files to be be blacklisted'
+                        <FILES_LIST>...                             'list of files to be be redacted'
                         "#,
                 )
         )
         .subcommand(
-            SubCommand::with_name(BLACKLIST_REMOVE)
-                .about("remove a file from the blacklist")
+            SubCommand::with_name(REDACTION_REMOVE)
+                .about("remove a file from the redaction")
                 .arg(
                     Arg::with_name("hash")
                         .help("hg commit hash")
@@ -287,13 +287,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 )
                 .args_from_usage(
                     r#"
-                        <FILES_LIST>...                             'list of files to be be unblacklisted'
+                        <FILES_LIST>...                             'list of files to be be unredacted'
                         "#,
                 )
         )
         .subcommand(
-            SubCommand::with_name(BLACKLIST_LIST)
-                .about("list all blacklisted file for a given commit")
+            SubCommand::with_name(REDACTION_LIST)
+                .about("list all redacted file for a given commit")
                 .arg(
                     Arg::with_name("hash")
                         .help("hg commit hash or a bookmark")
@@ -338,7 +338,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(convert)
         .subcommand(hg_sync)
         .subcommand(add_public_phases)
-        .subcommand(blacklist)
+        .subcommand(redaction)
         .subcommand(filenodes)
         .subcommand(filestore::build_subcommand(FILESTORE))
 }
@@ -366,7 +366,7 @@ fn main() -> ExitCode {
         (SKIPLIST, Some(sub_m)) => subcommand_skiplist(logger, &matches, sub_m),
         (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
         (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
-        (BLACKLIST, Some(sub_m)) => subcommand_blacklist(logger, &matches, sub_m),
+        (REDACTION, Some(sub_m)) => subcommand_redaction(logger, &matches, sub_m),
         (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
         (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),

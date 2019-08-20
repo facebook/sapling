@@ -213,8 +213,8 @@ pub fn create_getpack_v2_blob(
     )
 }
 
-/// Retrieve the raw contents of a filenode. This does not substitute censored content
-/// (it'll just let the censoring error fall through).
+/// Retrieve the raw contents of a filenode. This does not substitute redacted content
+/// (it'll just let the redacted error fall through).
 pub fn create_raw_filenode_blob(
     ctx: CoreContext,
     repo: BlobRepo,

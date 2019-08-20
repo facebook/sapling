@@ -380,9 +380,9 @@ concurrency = 24
 CONFIG
 fi
 
-if [[ -v CENSORING_DISABLED ]]; then
+if [[ -v REDACTION_DISABLED ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
-censoring=false
+redaction=false
 CONFIG
 fi
 
