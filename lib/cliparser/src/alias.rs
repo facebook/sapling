@@ -40,8 +40,17 @@ pub fn expand_aliases<S: ToString>(
         }
         replaced.push(command_name.clone());
 
-        let alias_args: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
-        args = expand_alias_args(&args, alias_args);
+        args = if alias.starts_with("!") {
+            // Alias starting with "!" is "shell alias". It is a string that should
+            // be passed "as-is" to the shell (after $1/$2/$@ substitutions).
+            // Round-trip through shlex::split and shlex::quote is not lossless.
+            // Therefore use a different alias handling function that does not
+            // use shlex::split.
+            expand_shell_alias_args(&args, &alias[1..])
+        } else {
+            let alias_args: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
+            expand_alias_args(&args, alias_args)
+        };
 
         let next_command_name = args.first().cloned().ok_or_else(bad_alias)?;
         if next_command_name == command_name {
@@ -99,6 +108,77 @@ fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<St
         // TODO: This might be an error case.
     }
     args
+}
+
+/// Expand a single shell alias.
+///
+/// This is similar to `expand_alias_args`, but the "shell alias" is not split,
+/// and the rest of `command_args` is not appeneded to the expanded result
+/// automatically.
+///
+/// In theory, this is incorrect in corner cases. Unfortunately it is the only
+/// way to preserve Mercurial's behavior.
+///
+/// Return ["debugrunshell", "--cmd=<shell command>"].
+fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<String> {
+    // Imitates "aliasinterpolate" in mercurial/dispatch.py
+
+    let mut cmd = String::new();
+    let mut buf = String::new();
+    let mut arg_index = 1;
+
+    for ch in shell_alias.chars() {
+        match (buf.as_ref(), ch) {
+            // "$@"
+            ("", '"') | ("\"", '$') | ("\"$", '@') => {
+                buf.push(ch);
+            }
+            ("\"$@", '"') => {
+                cmd += &command_args
+                    .iter()
+                    .skip(1)
+                    .map(|s| shlex::quote(s))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                buf.clear();
+            }
+
+            // $@, $$, $0 ... $9
+            // XXX: Does not support $10 or larger indexes.
+            ("", '$') => {
+                buf.push(ch);
+            }
+            ("$", '@') => {
+                cmd += &command_args
+                    .iter()
+                    .skip(1)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                buf.clear();
+            }
+            ("$", '$') => {
+                cmd.push('$');
+                buf.clear();
+            }
+            ("$", i) if i.is_digit(10) => {
+                let i: usize = i.to_string().parse().unwrap();
+                cmd += &command_args.get(i).cloned().unwrap_or_default();
+                buf.clear();
+                arg_index = arg_index.max(i);
+            }
+
+            // other cases
+            _ => {
+                cmd += &buf;
+                cmd.push(ch);
+                buf.clear();
+            }
+        }
+    }
+    cmd += &buf;
+
+    vec!["debugrunshell".into(), format!("--cmd={}", cmd)]
 }
 
 /// Prefix match commands to their full command name.  If a prefix is not unique an Error::AmbiguousCommand
@@ -377,5 +457,39 @@ mod tests {
         // Insufficient args
         let expanded = expand_aliases(|x| cfg.get(x), &["a", "x"]).unwrap().0;
         assert_eq!(expanded, vec!["$2", "c", "d", "x"]);
+    }
+
+    #[test]
+    fn test_expand_shell_alias() {
+        let expand = |alias: &str, mut args: Vec<&str>| -> String {
+            let mut cfg = BTreeMap::new();
+            cfg.insert("aliasname", format!("!{}", alias));
+            args.insert(0, "aliasname");
+            let args = expand_aliases(|x| cfg.get(x), &args).unwrap().0;
+            // args = ["debugrunshell", "--cmd=command", ...]
+            // Mostly interested in the "--cmd" part.
+            args[1][6..].to_string()
+        };
+
+        assert_eq!(expand("echo \"foo\"", vec!["bar"]), "echo \"foo\"");
+        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo \"a b\" c");
+        assert_eq!(expand("echo $@", vec!["a b", "c"]), "echo a b c");
+        assert_eq!(
+            expand("$0 $1 $2", vec!["echo -n", "a b", "c d"]),
+            "aliasname echo -n a b"
+        );
+
+        assert_eq!(expand(
+            r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#, vec![]),
+            r#"cat /etc/mercurial/hgrc /etc/mercurial/hgrc.d/*.rc ~/.hgrc "`hg root`/.hg/hgrc" 2>/dev/null"#);
+        assert_eq!(expand(
+            r#"for x in `hg log -r 'only(descendants(.) and bookmark(), master)' --template "{node}\n"`;
+            do echo "Changing to $(hg log -r $x -T '{rev} {desc|firstline}')" && hg up $x && $@;
+            if [ "$?" != "0" ]; then break; fi;
+            done"#, vec!["echo", "1"]),
+            r#"for x in `hg log -r 'only(descendants(.) and bookmark(), master)' --template "{node}\n"`;
+            do echo "Changing to $(hg log -r $x -T '{rev} {desc|firstline}')" && hg up $x && echo 1;
+            if [ "$?" != "0" ]; then break; fi;
+            done"#);
     }
 }

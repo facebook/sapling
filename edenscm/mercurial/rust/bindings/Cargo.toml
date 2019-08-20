@@ -32,6 +32,7 @@ mutationstore = { path = "../../../../lib/mutationstore" }
 nodemap = { path = "../../../../lib/nodemap" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 revisionstore = { path = "../../../../lib/revisionstore" }
+shlex = "0.1"
 stackdesc = { path = "../../../../lib/stackdesc/" }
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
