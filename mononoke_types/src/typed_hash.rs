@@ -197,57 +197,10 @@ macro_rules! impl_typed_hash_no_context {
     }
 }
 
-macro_rules! impl_typed_hash {
+macro_rules! impl_typed_hash_loadable_storable {
     {
         hash_type => $typed: ident,
-        value_type => $value_type: ident,
-        context_type => $typed_context: ident,
-        context_key => $key: expr,
     } => {
-        impl_typed_hash_no_context! {
-            hash_type => $typed,
-            value_type => $value_type,
-        }
-
-        /// Context for incrementally computing a hash.
-        #[derive(Clone)]
-        pub struct $typed_context(Context);
-
-        impl $typed_context {
-            /// Construct a context.
-            #[inline]
-            pub fn new() -> Self {
-                $typed_context(Context::new($key.as_bytes()))
-            }
-
-            #[inline]
-            pub fn update<T>(&mut self, data: T)
-            where
-                T: AsRef<[u8]>,
-            {
-                self.0.update(data)
-            }
-
-            #[inline]
-            pub fn finish(self) -> $typed {
-                $typed(self.0.finish())
-            }
-        }
-
-        impl MononokeId for $typed {
-            type Value = $value_type;
-
-            #[inline]
-            fn blobstore_key(&self) -> String {
-                format!(concat!($key, ".blake2.{}"), self.0)
-            }
-
-            #[inline]
-            fn blobstore_key_prefix() -> String {
-                concat!($key, ".blake2.").to_string()
-            }
-        }
-
         impl Loadable for $typed
         {
             type Value = Option<<$typed as MononokeId>::Value>;
@@ -288,6 +241,63 @@ macro_rules! impl_typed_hash {
                     .put(ctx, id.blobstore_key(), self.into())
                     .map(move |_| id)
                     .boxify()
+            }
+        }
+    }
+}
+
+macro_rules! impl_typed_hash {
+    {
+        hash_type => $typed: ident,
+        value_type => $value_type: ident,
+        context_type => $typed_context: ident,
+        context_key => $key: expr,
+    } => {
+        impl_typed_hash_no_context! {
+            hash_type => $typed,
+            value_type => $value_type,
+        }
+
+        impl_typed_hash_loadable_storable! {
+            hash_type => $typed,
+        }
+
+        /// Context for incrementally computing a hash.
+        #[derive(Clone)]
+        pub struct $typed_context(Context);
+
+        impl $typed_context {
+            /// Construct a context.
+            #[inline]
+            pub fn new() -> Self {
+                $typed_context(Context::new($key.as_bytes()))
+            }
+
+            #[inline]
+            pub fn update<T>(&mut self, data: T)
+            where
+                T: AsRef<[u8]>,
+            {
+                self.0.update(data)
+            }
+
+            #[inline]
+            pub fn finish(self) -> $typed {
+                $typed(self.0.finish())
+            }
+        }
+
+        impl MononokeId for $typed {
+            type Value = $value_type;
+
+            #[inline]
+            fn blobstore_key(&self) -> String {
+                format!(concat!($key, ".blake2.{}"), self.0)
+            }
+
+            #[inline]
+            fn blobstore_key_prefix() -> String {
+                concat!($key, ".blake2.").to_string()
             }
         }
 
@@ -341,6 +351,10 @@ impl_typed_hash_no_context! {
     value_type => ContentMetadata,
 }
 
+impl_typed_hash_loadable_storable! {
+    hash_type => ContentMetadataId,
+}
+
 impl ContentMetadataId {
     const PREFIX: &'static str = "content_metadata.blake2";
 }
@@ -362,47 +376,6 @@ impl MononokeId for ContentMetadataId {
     #[inline]
     fn blobstore_key_prefix() -> String {
         Self::PREFIX.to_string()
-    }
-}
-
-impl Loadable for ContentMetadataId {
-    type Value = Option<<ContentMetadataId as MononokeId>::Value>;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
-        let id = *self;
-        let blobstore_key = id.blobstore_key();
-
-        blobstore
-            .get(ctx, blobstore_key.clone())
-            .and_then(move |bytes| {
-                bytes
-                    .map(move |bytes| {
-                        let blob: Blob<Self> = Blob::new(id, bytes.into_bytes());
-                        <Self as MononokeId>::Value::from_blob(blob)
-                    })
-                    .transpose()
-            })
-            .boxify()
-    }
-}
-
-impl Storable for Blob<ContentMetadataId> {
-    type Key = ContentMetadataId;
-
-    fn store<B: Blobstore + Clone>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
-        let id = *self.id();
-        blobstore
-            .put(ctx, id.blobstore_key(), self.into())
-            .map(move |_| id)
-            .boxify()
     }
 }
 
