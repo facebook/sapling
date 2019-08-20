@@ -898,8 +898,8 @@ def _rebaserestoredcommit(
             ui,
             repo,
             **{
-                "rev": [shelvectx.rev()],
-                "dest": str(tmpwctx.rev()),
+                "rev": [shelvectx.hex()],
+                "dest": str(tmpwctx.hex()),
                 "keep": not obsshelve,
                 "tool": opts.get("tool", ""),
                 "extrafn": extrafn if obsshelve else None,
