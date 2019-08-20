@@ -1085,6 +1085,8 @@ Test list of internal help commands
    debugrename   dump rename information
    debugrevlog   show data and statistics about a revlog
    debugrevspec  parse and apply a revision specification
+   debugrunshell
+                 run a shell command
    debugsetparents
                  manually set the parents of the current working directory
    debugshell    (no help text available)

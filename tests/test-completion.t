@@ -131,6 +131,7 @@ Show debug commands if there are no other candidates
   debugrename
   debugrevlog
   debugrevspec
+  debugrunshell
   debugsetparents
   debugshell
   debugssl
@@ -336,6 +337,7 @@ Show all commands + options
   debugrename: rev
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
+  debugrunshell: cmd
   debugsetparents: 
   debugshell: command
   debugssl: 

@@ -70,6 +70,7 @@ with hgdemandimport.disabled():
         debug,
         debugcheckoutidentifier,
         debugmutation,
+        debugrunshell,
         debugstatus,
         debugstrip,
         eden,
