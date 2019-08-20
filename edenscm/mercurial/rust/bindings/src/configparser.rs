@@ -101,14 +101,9 @@ py_class!(pub class config |py| {
                 let bytes = path_to_local_bytes(&path).unwrap();
                 let pypath = if bytes.is_empty() {
                     PyBytes::new(py, b"<builtin>")
-                } else if cfg!(windows) && bytes.starts_with(b"\\\\?\\") {
-                    // path.caonicalize() used internally by configparser
-                    // adds "\\?\" prefix on Windows.
-                    // It's unfriendly to users. Strip them.
-                    // Related: https://github.com/rust-lang/rust/issues/42869
-                    PyBytes::new(py, &bytes[4..bytes.len()])
                 } else {
-                    PyBytes::new(py, &bytes)
+                    let path = util::path::normalize_for_display_bytes(&bytes);
+                    PyBytes::new(py, path)
                 };
                 (pypath, range.start, range.end, line)
             });
