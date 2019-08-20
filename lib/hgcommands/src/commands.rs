@@ -71,7 +71,10 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError
         repo.path().to_owned()
     };
 
-    io.write(format!("{}\n", path.canonicalize()?.to_string_lossy()))?;
+    io.write(format!(
+        "{}\n",
+        util::path::normalize_for_display(&path.to_string_lossy())
+    ))?;
     Ok(0)
 }
 

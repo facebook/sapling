@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-libc = "0.2"
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
-types = { path = "../types" }
+libc = "0.2"
 revisionstore = { path = "../revisionstore"}
+types = { path = "../types" }
+util = { path = "../util" }
 
 [dependencies.encoding]
 path = "../encoding"
