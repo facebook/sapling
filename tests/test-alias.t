@@ -1,6 +1,6 @@
   $ setconfig extensions.treemanifest=!
   $ HGFOO=BAR; export HGFOO
-  $ cat >> $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<'EOF'
   > [alias]
   > # should clobber ci but not commit (issue2993)
   > ci = version
@@ -22,29 +22,29 @@
   > mylog = log
   > lognull = log -r null
   > shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
-  > positional = log --template '{\$2} {\$1} | {date|isodate}\n'
+  > positional = log --template '{$2} {$1} | {date|isodate}\n'
   > dln = lognull --debug
   > nousage = rollback
-  > put = export -r 0 -o "\$FOO/%R.diff"
-  > blank = !printf '\n'
-  > self = !printf '\$0\n'
-  > echoall = !printf '\$@\n'
-  > echo1 = !printf '\$1\n'
-  > echo2 = !printf '\$2\n'
-  > echo13 = !printf '\$1 \$3\n'
-  > echotokens = !printf "%s\n" "\$@"
-  > count = !hg log -r "\$@" --template=. | wc -c | sed -e 's/ //g'
-  > mcount = !hg log \$@ --template=. | wc -c | sed -e 's/ //g'
+  > put = export -r 0 -o "$FOO/%R.diff"
+  > blank = !echo
+  > self = !echo $0
+  > echoall = !echo "$@"
+  > echo1 = !echo $1
+  > echo2 = !echo $2
+  > echo13 = !echo $1 $3
+  > echotokens = !printf "%s\n" "$@"
+  > count = !hg log -r "$@" --template=. | wc -c | sed -e 's/ //g'
+  > mcount = !hg log $@ --template=. | wc -c | sed -e 's/ //g'
   > rt = root
   > idalias = id
   > idaliaslong = id
   > idaliasshell = !echo test
   > parentsshell1 = !echo one
   > parentsshell2 = !echo two
-  > escaped1 = !printf 'test\$\$test\n'
-  > escaped2 = !sh -c 'echo "HGFOO is \$\$HGFOO"'
-  > escaped3 = !sh -c 'echo "\$1 is \$\$\$1"'
-  > escaped4 = !printf '\$\$0 \$\$@\n'
+  > escaped1 = !echo 'test$$test'
+  > escaped2 = !echo "HGFOO is $$HGFOO"
+  > escaped3 = !echo $1 is $$$1
+  > escaped4 = !echo \$$0 \$$@
   > exit1 = !sh -c 'exit 1'
   > documented = id
   > documented:doc = an alias for the id command
