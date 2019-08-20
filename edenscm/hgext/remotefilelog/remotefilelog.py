@@ -344,8 +344,8 @@ class remotefilelog(object):
         rawtext = store.get(self.filename, node)
         if raw:
             return rawtext
-        if rawtext == constants.BLACKLISTED_CONTENT:
-            return constants.BLACKLISTED_MESSAGE
+        if rawtext == constants.REDACTED_CONTENT:
+            return constants.REDACTED_MESSAGE
         flags = store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
         if flags == 0:
             return rawtext

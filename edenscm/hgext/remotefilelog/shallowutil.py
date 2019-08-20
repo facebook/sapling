@@ -33,7 +33,7 @@ if not pycompat.iswindows:
 
 # An enum representing the result of file data validation
 ValidationResult = util.Enum(
-    "ValidationResult", "Valid Invalid Censored", module=__name__
+    "ValidationResult", "Valid Invalid Redacted", module=__name__
 )
 
 
@@ -333,8 +333,8 @@ def verifyfilenode(ui, raw, hexexpectedfilenode, validatehashes):
     offset, size, flags = parsesizeflags(raw)
     text = raw[offset : offset + size]
 
-    if verifycensoreddata(text):
-        return ValidationResult.Censored
+    if verifyredacteddata(text):
+        return ValidationResult.Redacted
 
     # Do not check lfs data since hash verification would fail
     if validatehashes and flags == 0:
@@ -367,14 +367,11 @@ def verifyfilenode(ui, raw, hexexpectedfilenode, validatehashes):
     return ValidationResult.Valid
 
 
-def verifycensoreddata(data):
+def verifyredacteddata(data):
     # Check if text is the same as the magic string used
     # in blacklisted files. When a file is blacklisted,
     # it's content is replaced by a default string.
-    if (
-        len(data) == len(constants.BLACKLISTED_CONTENT)
-        and data == constants.BLACKLISTED_CONTENT
-    ):
+    if data == constants.REDACTED_CONTENT:
         return True
 
     return False

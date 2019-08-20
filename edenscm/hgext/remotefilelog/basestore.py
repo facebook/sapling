@@ -410,12 +410,12 @@ class basestore(object):
                 offset, size, flags = shallowutil.parsesizeflags(data)
                 text = data[offset : offset + size]
                 validationresult = (
-                    shallowutil.ValidationResult.Censored
-                    if shallowutil.verifycensoreddata(text)
+                    shallowutil.ValidationResult.Redacted
+                    if shallowutil.verifyredacteddata(text)
                     else shallowutil.ValidationResult.Valid
                 )
 
-            if validationresult == shallowutil.ValidationResult.Censored:
+            if validationresult == shallowutil.ValidationResult.Redacted:
                 data = self.createcensoredfileblob(data)
         except IOError:
             raise KeyError(
@@ -430,7 +430,7 @@ class basestore(object):
         """
         offset, size, flags = shallowutil.parsesizeflags(raw)
         ancestortext = raw[offset + size :]
-        text = constants.BLACKLISTED_MESSAGE
+        text = constants.REDACTED_MESSAGE
         revlogflags = revlog.REVIDX_DEFAULT_FLAGS
         header = shallowutil.buildfileblobheader(len(text), revlogflags)
 
