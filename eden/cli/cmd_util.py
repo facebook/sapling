@@ -38,6 +38,7 @@ def require_checkout(
 ) -> Tuple[EdenInstance, EdenCheckout, Path]:
     instance, checkout, rel_path = find_checkout(args, path)
     if checkout is None:
-        raise subcmd_mod.CmdError(f"no Eden checkout found at {path}")
+        msg_path = path if path is not None else os.getcwd()
+        raise subcmd_mod.CmdError(f"no Eden checkout found at {msg_path}")
     assert rel_path is not None
     return instance, checkout, rel_path

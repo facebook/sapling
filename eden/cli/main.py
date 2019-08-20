@@ -876,19 +876,10 @@ class PrefetchCmd(Subcmd):
             return None
 
     def run(self, args: argparse.Namespace) -> int:
-        if args.repo:
-            repo_root = self._repo_root(args.repo)
-            if not repo_root:
-                print(f"{args.repo} does not appear to be an eden repo")
-                return 1
-            if repo_root != os.path.realpath(args.repo):
-                print(f"{args.repo} is not the root of an eden repo")
-                return 1
-        else:
-            repo_root = self._repo_root(os.getcwd())
-            if not repo_root:
-                print("current directory does not appear to be an eden repo")
-                return 1
+        instance, checkout, rel_path = require_checkout(args, args.repo)
+        if args.repo and rel_path != Path("."):
+            print(f"{args.repo} is not the root of an eden repo")
+            return 1
 
         if args.pattern_file is not None:
             with open(args.pattern_file) as f:
@@ -904,18 +895,24 @@ class PrefetchCmd(Subcmd):
                     "You could use hg files to get the similar info from Mercurial"
                 )
 
-            cmd = ["hg", "prefetch", "-r", ".", "--cwd", repo_root, "--"] + args.PATTERN
+            cmd = [
+                "hg",
+                "prefetch",
+                "-r",
+                ".",
+                "--cwd",
+                str(checkout.path),
+                "--",
+            ] + args.PATTERN
             if args.silent:
                 cmd += ["--quiet"]
 
             subprocess.check_call(cmd)
         else:
-            instance = get_eden_instance(args)
-
             with instance.get_thrift_client() as client:
                 result = client.globFiles(
                     GlobParams(
-                        mountPoint=os.fsencode(repo_root),
+                        mountPoint=bytes(checkout.path),
                         globs=args.PATTERN,
                         includeDotfiles=False,
                         prefetchFiles=not args.no_prefetch,
