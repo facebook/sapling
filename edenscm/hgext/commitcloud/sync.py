@@ -323,35 +323,38 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
     if remotebookmarknodes or newheads:
-        # Disable pulling of bookmarks.
-        def _pullbookmarks(orig, pullop):
-            pass
-
-        # Disable pulling of obsmarkers.
-        def _pullobsolete(orig, pullop):
-            pass
-
-        # Disable pulling of remotenames.
-        def _pullremotenames(orig, repo, remote, bookmarks):
-            pass
-
         # Partition the heads into groups we can pull together.
         headgroups = (
             [remotebookmarknodes] if remotebookmarknodes else []
         ) + _partitionheads(newheads, cloudrefs.headdates)
 
-        with extensions.wrappedfunction(
-            exchange, "_pullobsolete", _pullobsolete
-        ), extensions.wrappedfunction(
-            exchange, "_pullbookmarks", _pullbookmarks
-        ), extensions.wrappedfunction(
-            remotenames, "pullremotenames", _pullremotenames
-        ) if remotenames else util.nullcontextmanager(), repo.ui.configoverride(
+        def disabled(*args, **kwargs):
+            pass
+
+        # Disable pulling of obsmarkers
+        wrapobs = extensions.wrappedfunction(exchange, "_pullobsolete", disabled)
+
+        # Disable pulling of bookmarks
+        wrapbook = extensions.wrappedfunction(exchange, "_pullbookmarks", disabled)
+
+        # Disable pulling of remote bookmarks
+        if remotenames:
+            wrapremotenames = extensions.wrappedfunction(
+                remotenames, "pullremotenames", disabled
+            )
+        else:
+            wrapremotenames = util.nullcontextmanager()
+
+        # Disable automigration and prefetching of trees
+        configoverride = repo.ui.configoverride(
             {("pull", "automigrate"): False, ("treemanifest", "pullprefetchrevs"): ""},
             "cloudsyncpull",
-        ), progress.bar(
+        )
+
+        prog = progress.bar(
             repo.ui, _("pulling from commit cloud"), total=len(headgroups)
-        ) as prog:
+        )
+        with wrapobs, wrapbook, wrapremotenames, configoverride, prog:
             for index, headgroup in enumerate(headgroups):
                 headgroupstr = " ".join([head[:12] for head in headgroup])
                 repo.ui.status(_("pulling %s\n") % headgroupstr)
