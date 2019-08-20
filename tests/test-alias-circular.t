@@ -49,6 +49,10 @@ Alias cannot form a cycle.
   [255]
   $ hg log -r null -T 'x\n'
   x
+
+Prefix matching is disabled in aliases
+
   $ hg logwithsuffix
-  abort: circular aliases: logwithsuffix
+  unknown command 'logwithsuff'
+  (use 'hg help' to get help)
   [255]

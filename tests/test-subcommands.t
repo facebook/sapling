@@ -29,22 +29,21 @@
   > def othertestalphabeta(ui, repo):
   >     """other test subcommand alpha subcommand beta"""
   >     ui.status("other test command alpha/beta called\n")
-  > def uisetup(ui):
-  >     for alias, cmd in [
-  >             (b'xt', b'test'),
-  >             (b'xt1', b'test one'),
-  >             (b'xt0', b'test nonexistent'),
-  >             (b'yt', b'othertest'),
-  >             (b'yta', b'othertest alpha'),
-  >             (b'ytf', b'othertest foo')]:
-  >         ui.setconfig(b'alias', alias, cmd, b'testcommandsext')
+  > EOF
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > testcommands=$TESTTMP/testcommands.py
+  > [alias]
+  > xt = test
+  > xt1 = test one
+  > xt0 = test nonexistent
+  > yt = othertest
+  > yta = othertest alpha
+  > ytf = othertest foo
   > EOF
 
   $ hg init
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > testcommands=$TESTTMP/testcommands.py
-  > EOF
 
   $ hg test
   hg test: subcommand required
@@ -64,11 +63,6 @@
   
   (some details hidden, use --verbose to show complete help)
   [255]
-
-
-
-
-
 
 
   $ hg test one
@@ -95,12 +89,6 @@
   [255]
 
 
-
-
-
-
-
-
   $ hg tes o
   test subcommand one called
 
@@ -124,13 +112,6 @@
   [255]
 
 
-
-
-
-
-
-
-
   $ hg xt one
   test subcommand one called
   $ hg xt too
@@ -139,10 +120,25 @@
   [255]
   $ hg xt1
   test subcommand one called
-TODO:  alias resolving to subcommands is temporarily not working
-$ hg xt0
-abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
-[255]
+
+  $ hg xt0
+  hg test: unknown subcommand 'nonexistent'
+  hg test SUBCOMMAND
+  
+  test command
+  
+  First Category:
+  
+   one           first test subcommand
+  
+  Other Subcommands:
+  
+   two           second test subcommand
+  
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
+  
+  (some details hidden, use --verbose to show complete help)
+  [255]
 
   $ hg othertest
   hg othertest: invalid arguments
@@ -185,11 +181,6 @@ abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
   (some details hidden, use --verbose to show complete help)
 
 
-
-
-
-
-
   $ hg help test --quiet
   hg test SUBCOMMAND
   
@@ -202,9 +193,6 @@ abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
   Other Subcommands:
   
    two           second test subcommand
-
-
-
 
 
   $ hg help test one
@@ -297,19 +285,12 @@ abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
   (use 'hg help othertest SUBCOMMAND' to show complete subcommand help)
 
 
-
-
-
-
-
   $ hg help xt
-  hg xt SUBCOMMAND
+  alias for: test
   
-  alias for: hg test
+  hg test SUBCOMMAND
   
   test command
-  
-  defined by: testcommandsext
   
   First Category:
   
@@ -319,20 +300,15 @@ abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
   
    two           second test subcommand
   
-  (use 'hg help xt SUBCOMMAND' to show complete subcommand help)
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
 
 
-
-
-
-
-
-
-
   $ hg help xt one
-  hg xt one
+  alias for: test one
+  
+  hg test one
   
   first test subcommand
   
@@ -340,17 +316,13 @@ abort: alias 'xt0' resolves to unknown subcommand 'test nonexistent'
 
 
   $ hg help xt1
-  hg xt1
+  alias for: test one
   
-  alias for: hg test one
+  hg test one
   
   first test subcommand
   
-  defined by: testcommandsext
-  
   (some details hidden, use --verbose to show complete help)
-
-
 
 
   $ hg othertest alpha beta --help

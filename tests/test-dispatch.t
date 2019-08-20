@@ -100,8 +100,7 @@ Early options can't be specified in [aliases] and [defaults] because they are
 applied before the command name is resolved:
 
   $ hg log -b '--config=alias.log=log --config=hooks.pre-log=false'
-  hg log: option -b not recognized
-  (use 'hg log -h' to get help)
+  abort: option --config may not be abbreviated!
   [255]
 
   $ hg log -b '--config=defaults.log=--config=hooks.pre-log=false'

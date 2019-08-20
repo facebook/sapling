@@ -523,15 +523,11 @@ Test help on a self-referencing alias that is a rust command
   
   hg root
   
-  alias for: hg root --shared
-  
   print the root (top) of the current working directory
   
       Print the root directory of the current repository.
   
       Returns 0 on success.
-  
-  defined by: --config
   
   Options:
   
@@ -543,15 +539,11 @@ Test help on a self-referencing alias that is a rust command
   
   hg root
   
-  alias for: hg root --shared
-  
   print the root (top) of the current working directory
   
       Print the root directory of the current repository.
   
       Returns 0 on success.
-  
-  defined by: --config
   
   Options:
   
@@ -2229,13 +2221,6 @@ Dish up an empty repo; serve it cold.
   show help for a given topic or a help overview
   </td></tr>
   <tr><td>
-  <a href="/help/hgalias">
-  hgalias
-  </a>
-  </td><td>
-  summarize working directory state
-  </td></tr>
-  <tr><td>
   <a href="/help/hint">
   hint
   </a>
@@ -2339,13 +2324,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   print the root (top) of the current working directory
-  </td></tr>
-  <tr><td>
-  <a href="/help/shellalias">
-  shellalias
-  </a>
-  </td><td>
-  (no help text available)
   </td></tr>
   <tr><td>
   <a href="/help/tag">

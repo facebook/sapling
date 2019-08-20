@@ -13,8 +13,8 @@ sh % "hg d" == ""
 
 sh % "hg d --config alias.do=root" == r"""
     hg: command 'd' is ambiguous:
-     diff
-     do
+    	diff
+    	do
     [255]"""
 
 sh % "hg debugf" == r"""

@@ -132,6 +132,17 @@ fn expand_args(
                 command_map.insert(multiple, if is_debug { -i } else { i });
             }
         }
+
+        // Add command names from the alias configuration.
+        // XXX: This duplicates with clidispatch. They should be de-duplicated.
+        for name in cfg.keys("alias") {
+            if let Ok(name) = String::from_utf8(name.to_vec()) {
+                let is_debug = name.starts_with("debug");
+                let i = command_map.len() as isize;
+                command_map.insert(name, if is_debug { -i } else { i });
+            }
+        }
+
         args[0] =
             expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }

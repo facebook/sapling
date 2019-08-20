@@ -78,9 +78,7 @@ ambiguous
 
   $ hg ambiguous
   hg: command 's' is ambiguous:
-  	self
   	serve
-  	shortlog
   	show
   	showconfig
   	status
@@ -91,9 +89,7 @@ ambiguous
   
   Commands:
   
-   self          (no help text available)
    serve         start stand-alone webserver
-   shortlog      show commit history
    show          show commit in detail
    status        list files with pending changes
    summary       summarize working directory state
@@ -102,10 +98,13 @@ ambiguous
 recursive
 
   $ hg recursive
-  abort: alias 'recursive' resolves to unknown command 'recursive'
+  unknown command 'recursive'
+  (use 'hg help' to get help)
   [255]
   $ hg help recursive
-  alias 'recursive' resolves to unknown command 'recursive'
+  abort: no such help topic: recursive
+  (try 'hg help --keyword recursive')
+  [255]
 
 
 disabled
@@ -714,6 +713,7 @@ command provided extension, should be aborted.
   	rebase
   	rebate
   [255]
+
   $ hg rebat
   this is rebate
   $ hg rebat --foo-bar
@@ -740,32 +740,6 @@ invalid global arguments for normal commands, aliases, and shell aliases
   unknown command '--invalid'
   (use 'hg help' to get help)
   [255]
-
-environment variable changes in alias commands
-
-  $ cat > $TESTTMP/expandalias.py <<EOF
-  > import os
-  > from edenscm.mercurial import cmdutil, commands, registrar
-  > cmdtable = {}
-  > command = registrar.command(cmdtable)
-  > @command('expandalias')
-  > def expandalias(ui, repo, name):
-  >     alias = cmdutil.findcmd(name, commands.table)[1][0]
-  >     ui.write('%s args: %s\n' % (name, ' '.join(alias.args)))
-  >     os.environ['COUNT'] = '2'
-  >     ui.write('%s args: %s (with COUNT=2)\n' % (name, ' '.join(alias.args)))
-  > EOF
-
-  $ cat >> $HGRCPATH <<'EOF'
-  > [extensions]
-  > expandalias = $TESTTMP/expandalias.py
-  > [alias]
-  > showcount = log -T "$COUNT" -r .
-  > EOF
-
-  $ COUNT=1 hg expandalias showcount
-  showcount args: -T 1 -r .
-  showcount args: -T 2 -r . (with COUNT=2)
 
 This should show id:
 
@@ -847,4 +821,4 @@ documented aliases
 
 
   $ hg help commands | grep documented
-   documented    an alias for the id command
+  [1]

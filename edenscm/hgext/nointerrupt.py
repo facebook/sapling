@@ -49,8 +49,6 @@ def nointerruptcmd(orig, ui, options, cmd, cmdfunc):
             return orig(ui, options, cmd, cmdfunc)
 
     cmds, _cmdtableentry = cmdutil.findcmd(cmd, commands.table)
-    if isinstance(_cmdtableentry[0], dispatch.cmdalias):
-        cmds.append(_cmdtableentry[0].cmdname)
 
     shouldpreventinterrupt = ui.configbool("nointerrupt", "default-attend", False)
     for cmd in cmds:
