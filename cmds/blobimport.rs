@@ -93,7 +93,7 @@ fn main() -> Result<()> {
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
     let blobrepo = if matches.is_present("no-create") {
-        args::open_repo(&ctx.logger(), &matches).left_future()
+        args::open_repo_unredacted(&ctx.logger(), &matches).left_future()
     } else {
         args::create_repo(&ctx.logger(), &matches).right_future()
     };

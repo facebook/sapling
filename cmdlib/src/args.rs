@@ -40,7 +40,9 @@ use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{BlobConfig, CommonConfig, MetadataDBConfig, RepoConfig, StorageConfig};
+use metaconfig_types::{
+    BlobConfig, CommonConfig, MetadataDBConfig, Redaction, RepoConfig, StorageConfig,
+};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -310,6 +312,7 @@ pub fn create_repo<'a>(
         true,
         parse_caching(matches),
         Scrubbing::Disabled,
+        None,
     )
 }
 
@@ -325,6 +328,24 @@ pub fn open_repo<'a>(
         false,
         parse_caching(matches),
         Scrubbing::Disabled,
+        None,
+    )
+}
+
+/// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
+/// Make sure that the opened repo has redaction disabled
+#[inline]
+pub fn open_repo_unredacted<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal(
+        logger,
+        matches,
+        false,
+        parse_caching(matches),
+        Scrubbing::Disabled,
+        Some(Redaction::Disabled),
     )
 }
 
@@ -342,6 +363,7 @@ pub fn open_scrub_repo<'a>(
         false,
         parse_caching(matches),
         Scrubbing::Enabled,
+        None,
     )
 }
 
@@ -689,6 +711,7 @@ fn open_repo_internal<'a>(
     create: bool,
     caching: Caching,
     scrub: Scrubbing,
+    redaction_override: Option<Redaction>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
 
@@ -725,7 +748,7 @@ fn open_repo_internal<'a>(
                 myrouter_port,
                 caching,
                 config.bookmarks_cache_ttl,
-                config.redaction,
+                redaction_override.unwrap_or(config.redaction),
                 common_config.scuba_censored_table,
                 config.filestore,
             )
