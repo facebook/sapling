@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![cfg_attr(test, type_length_limit = "2097152")]
+#![cfg_attr(test, type_length_limit = "2434476")]
 #![deny(warnings)]
 
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
@@ -166,19 +166,44 @@ pub fn do_pushrebase(
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
-        .and_then(|pushed| {
-            let head = find_only_head_or_fail(&pushed)?;
-            let roots = find_roots(&pushed)?;
-
-            Ok((head, roots))
-        })
         .and_then({
-            cloned!(ctx, config, repo, onto_bookmark);
-            move |(head, roots)| {
-                find_closest_root(ctx, &repo, config, onto_bookmark, roots)
-                    .map(move |root| (head, root))
+            cloned!(ctx);
+            move |pushed| {
+                do_pushrebase_bonsai(
+                    ctx,
+                    repo,
+                    config,
+                    onto_bookmark,
+                    pushed,
+                    maybe_raw_bundle2_id,
+                )
             }
         })
+        .traced(&ctx.trace(), "do_pushrebase", trace_args!())
+}
+
+/// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
+/// The commits from the pushed set should already be committed to the blobrepo
+/// Returns updated bookmark value.
+pub fn do_pushrebase_bonsai(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    config: PushrebaseParams,
+    onto_bookmark: OntoBookmarkParams,
+    pushed: Vec<BonsaiChangeset>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
+    let head = find_only_head_or_fail(&pushed).into_future();
+    let roots = find_roots(&pushed).into_future();
+    head.join(roots).and_then(move |(head, roots)| {
+        find_closest_root(
+            ctx.clone(),
+            &repo,
+            config.clone(),
+            onto_bookmark.clone(),
+            roots,
+        )
+        .map(move |root| (head, root))
         .and_then({
             cloned!(ctx, repo);
             move |(head, root)| {
@@ -209,7 +234,7 @@ pub fn do_pushrebase(
                     })
             }
         })
-        .traced(&ctx.trace(), "do_pushrebase", trace_args!())
+    })
 }
 
 fn rebase_in_loop(
