@@ -519,6 +519,8 @@ Test the textwidth config option
 Test help on a self-referencing alias that is a rust command
 
   $ hg --config "alias.root=root --shared" help root
+  alias for: root --shared
+  
   hg root
   
   alias for: hg root --shared
@@ -537,6 +539,8 @@ Test help on a self-referencing alias that is a rust command
   
   (some details hidden, use --verbose to show complete help)
   $ hg --config "alias.root=root --shared" root -h
+  alias for: root --shared
+  
   hg root
   
   alias for: hg root --shared
@@ -866,9 +870,11 @@ this is a section and erroring out weirdly.
 Test for aliases
 
   $ hg help hgalias
-  hg hgalias [--remote]
+  alias for: summary
   
-  alias for: hg summary
+  hg summary [--remote]
+  
+  aliases: sum
   
   summarize working directory state
   
@@ -880,17 +886,24 @@ Test for aliases
   
       Returns 0 on success.
   
-  defined by: helpext
-  
   Options:
   
     --remote check for push and pull
   
   (some details hidden, use --verbose to show complete help)
 
-FIXME: This is suboptimal.
   $ hg help shellalias
-  alias 'shellalias' resolves to unknown command '!echo'
+  alias for: debugrunshell --cmd=echo hi
+  
+  hg debugrunshell
+  
+  run a shell command
+  
+  Options:
+  
+    --cmd VALUE command to run
+  
+  (some details hidden, use --verbose to show complete help)
 
 Test command with no help text
 

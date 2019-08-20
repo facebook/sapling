@@ -118,7 +118,11 @@ unknown
    templating    customizing output with templates
   [255]
   $ hg help unknown
-  alias 'unknown' resolves to unknown command 'bargle'
+  alias for: bargle
+  
+  abort: no such help topic: unknown
+  (try 'hg help --keyword unknown')
+  [255]
 
 
 ambiguous
@@ -134,7 +138,16 @@ ambiguous
   	summary
   [255]
   $ hg help ambiguous
-  alias 'ambiguous' resolves to ambiguous command 's'
+  alias for: s
+  
+  Commands:
+  
+   self          (no help text available)
+   serve         start stand-alone webserver
+   shortlog      show commit history
+   show          show commit in detail
+   status        list files with pending changes
+   summary       summarize working directory state
 
 
 recursive
@@ -157,13 +170,11 @@ disabled
   (use 'hg help extensions' for information on enabling extensions)
   [255]
   $ hg help disabled
-  alias 'disabled' resolves to unknown command 'purge'
+  alias for: purge
   
-  'purge' is provided by the following extension:
-  
-      purge         command to delete untracked files from the working directory
-  
-  (use 'hg help extensions' for information on enabling extensions)
+  abort: no such help topic: disabled
+  (try 'hg help --keyword disabled')
+  [255]
 
 
 
@@ -175,7 +186,8 @@ no definition
   abort: alias definition nodefinition = "" cannot be parsed
   [255]
   $ hg help nodef
-  no definition for alias 'nodefinition'
+  abort: alias definition nodefinition = "" cannot be parsed
+  [255]
 
 
 no closing quotation
@@ -184,7 +196,8 @@ no closing quotation
   abort: alias definition noclosingquotation = "\'" cannot be parsed
   [255]
   $ hg help noclosing
-  error in definition for alias 'noclosingquotation': No closing quotation
+  abort: alias definition noclosingquotation = "\'" cannot be parsed
+  [255]
 
 "--" in alias definition should be preserved
 
@@ -199,25 +212,278 @@ invalid options
   abort: option --cwd may not be abbreviated!
   [255]
   $ hg help no--cwd
-  error in definition for alias 'no--cwd': --cwd may only be given on the
-  command line
+  alias for: status --cwd elsewhere
+  
+  hg status [OPTION]... [FILE]...
+  
+  aliases: st
+  
+  list files with pending changes
+  
+      Show status of files in the repository using the following status
+      indicators:
+  
+        M = modified
+        A = added
+        R = removed
+        C = clean
+        ! = missing (deleted by a non-hg command, but still tracked)
+        ? = not tracked
+        I = ignored
+          = origin of the previous file (with --copies)
+  
+      By default, shows files that have been modified, added, removed, deleted,
+      or that are unknown (corresponding to the options -mardu). Files that are
+      unmodified, ignored, or the source of a copy/move operation are not
+      listed.
+  
+      To control the exact statuses that are shown, specify the relevant flags
+      (like -rd to show only files that are removed or deleted). Additionally,
+      specify -q/--quiet to hide both unknown and ignored files.
+  
+      To show the status of specific files, provide an explicit list of files to
+      match. To include or exclude files using regular expressions, use -I or
+      -X.
+  
+      If --rev is specified, and only one revision is given, it is used as the
+      base revision. If two revisions are given, the differences between them
+      are shown. The --change option can also be used as a shortcut to list the
+      changed files of a revision from its first parent.
+  
+      Note:
+         'hg status' might appear to disagree with 'hg diff' if permissions have
+         changed or a merge has occurred, because the standard diff format does
+         not report permission changes and 'hg diff' only reports changes
+         relative to one merge parent.
+  
+      Returns 0 on success.
+  
+  Options ([+] can be repeated):
+  
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+  
+  (some details hidden, use --verbose to show complete help)
   $ hg no-R
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no-R
-  error in definition for alias 'no-R': -R may only be given on the command line
+  alias for: status -R elsewhere
+  
+  hg status [OPTION]... [FILE]...
+  
+  aliases: st
+  
+  list files with pending changes
+  
+      Show status of files in the repository using the following status
+      indicators:
+  
+        M = modified
+        A = added
+        R = removed
+        C = clean
+        ! = missing (deleted by a non-hg command, but still tracked)
+        ? = not tracked
+        I = ignored
+          = origin of the previous file (with --copies)
+  
+      By default, shows files that have been modified, added, removed, deleted,
+      or that are unknown (corresponding to the options -mardu). Files that are
+      unmodified, ignored, or the source of a copy/move operation are not
+      listed.
+  
+      To control the exact statuses that are shown, specify the relevant flags
+      (like -rd to show only files that are removed or deleted). Additionally,
+      specify -q/--quiet to hide both unknown and ignored files.
+  
+      To show the status of specific files, provide an explicit list of files to
+      match. To include or exclude files using regular expressions, use -I or
+      -X.
+  
+      If --rev is specified, and only one revision is given, it is used as the
+      base revision. If two revisions are given, the differences between them
+      are shown. The --change option can also be used as a shortcut to list the
+      changed files of a revision from its first parent.
+  
+      Note:
+         'hg status' might appear to disagree with 'hg diff' if permissions have
+         changed or a merge has occurred, because the standard diff format does
+         not report permission changes and 'hg diff' only reports changes
+         relative to one merge parent.
+  
+      Returns 0 on success.
+  
+  Options ([+] can be repeated):
+  
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+  
+  (some details hidden, use --verbose to show complete help)
   $ hg no--repo
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no--repo
-  error in definition for alias 'no--repo': --repo may only be given on the
-  command line
+  alias for: status --repo elsewhere
+  
+  hg status [OPTION]... [FILE]...
+  
+  aliases: st
+  
+  list files with pending changes
+  
+      Show status of files in the repository using the following status
+      indicators:
+  
+        M = modified
+        A = added
+        R = removed
+        C = clean
+        ! = missing (deleted by a non-hg command, but still tracked)
+        ? = not tracked
+        I = ignored
+          = origin of the previous file (with --copies)
+  
+      By default, shows files that have been modified, added, removed, deleted,
+      or that are unknown (corresponding to the options -mardu). Files that are
+      unmodified, ignored, or the source of a copy/move operation are not
+      listed.
+  
+      To control the exact statuses that are shown, specify the relevant flags
+      (like -rd to show only files that are removed or deleted). Additionally,
+      specify -q/--quiet to hide both unknown and ignored files.
+  
+      To show the status of specific files, provide an explicit list of files to
+      match. To include or exclude files using regular expressions, use -I or
+      -X.
+  
+      If --rev is specified, and only one revision is given, it is used as the
+      base revision. If two revisions are given, the differences between them
+      are shown. The --change option can also be used as a shortcut to list the
+      changed files of a revision from its first parent.
+  
+      Note:
+         'hg status' might appear to disagree with 'hg diff' if permissions have
+         changed or a merge has occurred, because the standard diff format does
+         not report permission changes and 'hg diff' only reports changes
+         relative to one merge parent.
+  
+      Returns 0 on success.
+  
+  Options ([+] can be repeated):
+  
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+  
+  (some details hidden, use --verbose to show complete help)
   $ hg no--repository
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg help no--repository
-  error in definition for alias 'no--repository': --repository may only be given
-  on the command line
+  alias for: status --repository elsewhere
+  
+  hg status [OPTION]... [FILE]...
+  
+  aliases: st
+  
+  list files with pending changes
+  
+      Show status of files in the repository using the following status
+      indicators:
+  
+        M = modified
+        A = added
+        R = removed
+        C = clean
+        ! = missing (deleted by a non-hg command, but still tracked)
+        ? = not tracked
+        I = ignored
+          = origin of the previous file (with --copies)
+  
+      By default, shows files that have been modified, added, removed, deleted,
+      or that are unknown (corresponding to the options -mardu). Files that are
+      unmodified, ignored, or the source of a copy/move operation are not
+      listed.
+  
+      To control the exact statuses that are shown, specify the relevant flags
+      (like -rd to show only files that are removed or deleted). Additionally,
+      specify -q/--quiet to hide both unknown and ignored files.
+  
+      To show the status of specific files, provide an explicit list of files to
+      match. To include or exclude files using regular expressions, use -I or
+      -X.
+  
+      If --rev is specified, and only one revision is given, it is used as the
+      base revision. If two revisions are given, the differences between them
+      are shown. The --change option can also be used as a shortcut to list the
+      changed files of a revision from its first parent.
+  
+      Note:
+         'hg status' might appear to disagree with 'hg diff' if permissions have
+         changed or a merge has occurred, because the standard diff format does
+         not report permission changes and 'hg diff' only reports changes
+         relative to one merge parent.
+  
+      Returns 0 on success.
+  
+  Options ([+] can be repeated):
+  
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+  
+  (some details hidden, use --verbose to show complete help)
   $ hg no--config
   abort: option --config may not be abbreviated!
   [255]
@@ -743,11 +1009,13 @@ return code of command and shell aliases:
 documented aliases
 
   $ hg help documented
-  hg documented [-nibtB] [-r REV] [SOURCE]
+  [^ ].* (re) (?)
   
   an alias for the id command
   
-  alias for: hg id
+  hg identify [-nibtB] [-r REV] [SOURCE]
+  
+  aliases: id
   
   identify the working directory or specified revision
   
@@ -765,9 +1033,6 @@ documented aliases
       including full hash identifiers.
   
       Returns 0 if successful.
-  
-  defined by: * (glob)
-  [^ ].* (re) (?)
   
   Options:
   

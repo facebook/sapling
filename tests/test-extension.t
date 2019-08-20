@@ -582,6 +582,8 @@ hide outer repo
   $ echo "debugextension = $debugpath" >> $HGRCPATH
 
   $ hg help debugextension
+  alias for: debugextensions
+  
   hg debugextensions
   
   show information about active extensions
@@ -594,6 +596,8 @@ hide outer repo
 
 
   $ hg --verbose help debugextension
+  alias for: debugextensions
+  
   hg debugextensions
   
   show information about active extensions
@@ -636,6 +640,8 @@ hide outer repo
 
 
   $ hg --debug help debugextension
+  alias for: debugextensions
+  
   hg debugextensions
   
   show information about active extensions

@@ -11,6 +11,8 @@ import itertools
 import os
 import textwrap
 
+from edenscmnative.bindings import cliparser
+
 from . import (
     cmdutil,
     encoding,
@@ -423,6 +425,27 @@ class _helpdispatch(object):
                 raise error.Abort(msg, hint=hint)
 
     def helpcmd(self, name, subtopic=None):
+        ui = self.ui
+        try:
+            # Try to expand 'name' as an alias
+            resolvedargs = cliparser.expandargs(
+                ui._rcfg, list(self.commands.table), name.split(), False
+            )[0]
+        except cliparser.AmbiguousCommand:
+            select = lambda c: c.lstrip("^").partition("|")[0].startswith(name)
+            rst = self.helplist(name, select)
+            return rst
+        except cliparser.MalformedAlias as ex:
+            raise error.Abort(ex.args[0])
+        if " ".join(resolvedargs) != name:
+            self.ui.write(_("alias for: %s\n\n") % " ".join(resolvedargs))
+            # Try to print ":doc" from alias configs
+            doc = ui.config("alias", "%s:doc" % name)
+            if doc:
+                self.ui.write("%s\n\n" % doc)
+            # Continue with the resolved (non-alias) name
+            name = " ".join(resolvedargs)
+
         try:
             cmd, args, aliases, entry, _level = cmdutil.findsubcmd(
                 name.split(), self.commands.table, strict=self.unknowncmd, partial=True
