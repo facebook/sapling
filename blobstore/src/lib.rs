@@ -10,7 +10,7 @@ use bytes::Bytes;
 use std::fmt;
 use std::sync::Arc;
 
-use failure_ext::Error;
+use failure_ext::{err_msg, Error};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -162,6 +162,29 @@ impl Blobstore for Box<dyn Blobstore> {
     }
 }
 
+#[derive(Debug)]
+pub enum LoadableError {
+    Error(Error),
+    Missing,
+}
+
+impl From<LoadableError> for Error {
+    fn from(error: LoadableError) -> Self {
+        use LoadableError::*;
+
+        match error {
+            Error(e) => e,
+            Missing => err_msg("Blob is missing"),
+        }
+    }
+}
+
+impl From<Error> for LoadableError {
+    fn from(error: Error) -> Self {
+        LoadableError::Error(error)
+    }
+}
+
 pub trait Loadable: Sized + 'static {
     type Value;
 
@@ -169,7 +192,7 @@ pub trait Loadable: Sized + 'static {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error>;
+    ) -> BoxFuture<Self::Value, LoadableError>;
 }
 
 pub trait Storable: Sized + 'static {

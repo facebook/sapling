@@ -595,7 +595,7 @@ impl<K> StoreFetchTestable<K> {
 
 impl<K, V> Testable for StoreFetchTestable<K>
 where
-    K: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+    K: Loadable<Value = V> + ::std::fmt::Debug + Send,
     V: BlobstoreValue<Key = K> + PartialEq + Arbitrary + Send,
     Blob<K>: Storable<Key = K>,
 {

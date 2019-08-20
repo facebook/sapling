@@ -12,7 +12,7 @@ use crate::repo::{
     UploadHgTreeEntry,
 };
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, format_err, Error};
@@ -40,15 +40,18 @@ impl Loadable for Id<HgManifestId> {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         let manifest_id = self.0;
         blobstore
             .get(ctx, manifest_id.blobstore_key())
+            .from_err()
             .and_then(move |bytes| match bytes {
-                None => Err(ErrorKind::ManifestMissing(manifest_id).into()),
+                None => Err(LoadableError::Missing),
                 Some(bytes) => {
-                    let envelope = HgManifestEnvelope::from_blob(bytes.into())?;
+                    let envelope = HgManifestEnvelope::from_blob(bytes.into())
+                        .map_err(LoadableError::Error)?;
                     ManifestContent::parse(envelope.contents().as_ref())
+                        .map_err(LoadableError::Error)
                 }
             })
             .boxify()

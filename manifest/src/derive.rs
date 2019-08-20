@@ -349,6 +349,7 @@ where
                 .map(move |tree_id| tree_id.load(ctx.clone(), &blobstore))
                 .collect::<Vec<_>>(),
         )
+        .from_err()
         .map(move |manifests| {
             let mut deps: BTreeMap<MPathElement, Self> = Default::default();
             // add subentries from all parents

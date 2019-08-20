@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
@@ -35,6 +35,11 @@ pub fn get_metadata<B: Blobstore + Clone>(
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
     ContentMetadataId::from(content_id)
         .load(ctx.clone(), &blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Ok(None),
+        })
         .and_then({
             cloned!(blobstore, ctx);
             move |maybe_metadata| match maybe_metadata {
@@ -76,9 +81,10 @@ fn rebuild_metadata<B: Blobstore + Clone>(
 
     content_id
         .load(ctx.clone(), &blobstore)
-        .from_err()
-        .map_err(move |e| InternalError(content_id, e))
-        .and_then(move |maybe_file_contents| maybe_file_contents.ok_or(NotFound(content_id)))
+        .or_else(move |err| match err {
+            LoadableError::Error(err) => Err(InternalError(content_id, err)),
+            LoadableError::Missing => Err(NotFound(content_id)),
+        })
         .and_then({
             cloned!(blobstore, ctx);
             move |file_contents| {

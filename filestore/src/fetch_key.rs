@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{Future, IntoFuture};
@@ -26,7 +26,7 @@ pub enum Alias {
 }
 
 impl Loadable for FetchKey {
-    type Value = Option<ContentId>;
+    type Value = ContentId;
 
     /// Return the canonical ID for a key. It doesn't check if the corresponding content actually
     /// exists (its possible for an alias to exist before the ID if there was an interrupted store
@@ -35,9 +35,9 @@ impl Loadable for FetchKey {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         match self {
-            FetchKey::Canonical(content_id) => Ok(Some(*content_id)).into_future().boxify(),
+            FetchKey::Canonical(content_id) => Ok(*content_id).into_future().boxify(),
             FetchKey::Aliased(alias) => alias.load(ctx, blobstore),
         }
     }
@@ -54,22 +54,22 @@ impl Alias {
 }
 
 impl Loadable for Alias {
-    type Value = Option<ContentId>;
+    type Value = ContentId;
 
     fn load<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         blobstore
             .get(ctx, self.blobstore_key())
+            .from_err()
             .and_then(|maybe_alias| {
-                maybe_alias
-                    .map(|blob| {
-                        ContentAlias::from_bytes(blob.into_bytes().into())
-                            .map(|alias| alias.content_id())
-                    })
-                    .transpose()
+                let blob = maybe_alias.ok_or(LoadableError::Missing)?;
+
+                ContentAlias::from_bytes(blob.into_bytes().into())
+                    .map(|alias| alias.content_id())
+                    .map_err(LoadableError::Error)
             })
             .boxify()
     }

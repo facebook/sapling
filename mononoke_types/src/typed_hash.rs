@@ -10,7 +10,7 @@ use std::str::FromStr;
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use asyncmemo;
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure_ext::bail_err;
 use futures::Future;
@@ -203,25 +203,24 @@ macro_rules! impl_typed_hash_loadable_storable {
     } => {
         impl Loadable for $typed
         {
-            type Value = Option<<$typed as MononokeId>::Value>;
+            type Value = <$typed as MononokeId>::Value;
 
             fn load<B: Blobstore + Clone>(
                 &self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<Self::Value, Error> {
+            ) -> BoxFuture<Self::Value, LoadableError> {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
 
                 blobstore
                     .get(ctx, blobstore_key.clone())
+                    .from_err()
                     .and_then(move |bytes| {
-                        bytes
-                            .map(move |bytes| {
-                                let blob: Blob<$typed> = Blob::new(id, bytes.into_bytes());
-                                <$typed as MononokeId>::Value::from_blob(blob)
-                            })
-                            .transpose()
+                        let bytes = bytes.ok_or(LoadableError::Missing)?;
+
+                        let blob: Blob<$typed> = Blob::new(id, bytes.into_bytes());
+                        <$typed as MononokeId>::Value::from_blob(blob).map_err(LoadableError::Error)
                     })
                     .boxify()
             }

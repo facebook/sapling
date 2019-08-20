@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure::Error;
 use futures::Future;
@@ -54,7 +54,7 @@ where
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         match self {
             Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map(Entry::Tree).boxify(),
             Entry::Leaf(leaf_id) => leaf_id.load(ctx, blobstore).map(Entry::Leaf).boxify(),

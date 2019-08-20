@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{derive_manifest, Diff, Entry, Manifest, ManifestOps, PathTree, TreeInfo};
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture, Stream};
@@ -37,12 +37,15 @@ impl Loadable for TestLeafId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         blobstore
             .get(ctx, self.0.to_string())
+            .from_err()
             .and_then(|bytes| {
-                let bytes = bytes.ok_or_else(|| err_msg("failed to load a leaf"))?;
-                Ok(TestLeaf(std::str::from_utf8(bytes.as_bytes())?.to_owned()))
+                let bytes = bytes.ok_or(LoadableError::Missing)?;
+                let bytes = std::str::from_utf8(bytes.as_bytes())
+                    .map_err(|err| LoadableError::Error(Error::from(err)))?;
+                Ok(TestLeaf(bytes.to_owned()))
             })
             .boxify()
     }
@@ -79,11 +82,16 @@ impl Loadable for TestManifestId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         blobstore
             .get(ctx, self.0.to_string())
-            .and_then(|data| data.ok_or_else(|| err_msg("failed to load a manifest")))
-            .and_then(|bytes| Ok(serde_cbor::from_slice(bytes.as_bytes().as_ref())?))
+            .from_err()
+            .and_then(|data| data.ok_or(LoadableError::Missing))
+            .and_then(|bytes| {
+                let mf = serde_cbor::from_slice(bytes.as_bytes().as_ref())
+                    .map_err(|err| LoadableError::Error(Error::from(err)))?;
+                Ok(mf)
+            })
             .boxify()
     }
 }
@@ -166,7 +174,7 @@ impl Loadable for Files {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         let blobstore = blobstore.clone();
 
         bounded_traversal_stream(256, (None, Entry::Tree(self.0)), move |(path, entry)| {
@@ -191,7 +199,7 @@ impl Loadable for Files {
         })
         .fold(BTreeMap::new(), |mut acc, (path, leaf)| {
             acc.insert(path, leaf);
-            Ok::<_, Error>(acc)
+            Ok::<_, LoadableError>(acc)
         })
         .boxify()
     }

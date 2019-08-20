@@ -5,11 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 use failure_ext::{Error, Fail};
-use futures::future::IntoFuture;
 use futures::Future;
-use futures_ext::FutureExt;
 
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
 use mononoke_types::{ContentId, ContentMetadata};
 
@@ -33,14 +31,13 @@ pub fn rechunk<B: Blobstore + Clone>(
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
     content_id
         .load(ctx.clone(), &blobstore)
-        .and_then(move |maybe_file_contents| match maybe_file_contents {
-            Some(file_contents) => {
-                let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-                let file_stream = stream_file_bytes(blobstore.clone(), ctx.clone(), file_contents);
-                store(blobstore, &config, ctx, &req, file_stream).left_future()
-            }
-            None => Err(ErrorKind::ContentNotFound(content_id).into())
-                .into_future()
-                .right_future(),
+        .or_else(move |err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Err(ErrorKind::ContentNotFound(content_id).into()),
+        })
+        .and_then(move |file_contents| {
+            let req = StoreRequest::with_canonical(file_contents.size(), content_id);
+            let file_stream = stream_file_bytes(blobstore.clone(), ctx.clone(), file_contents);
+            store(blobstore, &config, ctx, &req, file_stream)
         })
 }

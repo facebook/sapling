@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
@@ -48,13 +48,16 @@ impl Loadable for Id<ManifestUnodeId> {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         let unode_id = self.0;
         blobstore
             .get(ctx, unode_id.blobstore_key())
+            .map_err(LoadableError::Error)
             .and_then(move |bytes| match bytes {
-                None => Err(ErrorKind::FailFetchManifestUnode(unode_id).into()),
-                Some(bytes) => ManifestUnode::from_bytes(bytes.as_bytes().as_ref()).map(Id),
+                None => Err(LoadableError::Missing),
+                Some(bytes) => ManifestUnode::from_bytes(bytes.as_bytes().as_ref())
+                    .map_err(LoadableError::Error)
+                    .map(Id),
             })
             .boxify()
     }
@@ -67,13 +70,16 @@ impl Loadable for Id<FileUnodeId> {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         let unode_id = self.0;
         blobstore
             .get(ctx, unode_id.blobstore_key())
+            .map_err(LoadableError::Error)
             .and_then(move |bytes| match bytes {
-                None => Err(ErrorKind::FailFetchFileUnode(unode_id).into()),
-                Some(bytes) => FileUnode::from_bytes(bytes.as_bytes().as_ref()).map(Id),
+                None => Err(LoadableError::Missing),
+                Some(bytes) => FileUnode::from_bytes(bytes.as_bytes().as_ref())
+                    .map_err(LoadableError::Error)
+                    .map(Id),
             })
             .boxify()
     }
@@ -264,6 +270,7 @@ fn create_unode_file(
             cloned!(blobstore, ctx);
             move |id| Id(id).load(ctx.clone(), &blobstore)
         }))
+        .from_err()
         .and_then(
             move |parent_unodes| match return_if_unique_filenode(&parent_unodes) {
                 Some((content_id, file_type)) => save_unode(
@@ -764,6 +771,7 @@ mod tests {
             match self {
                 UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
                     .load(ctx, &repo.get_blobstore())
+                    .from_err()
                     .map(|unode_mf| {
                         unode_mf
                             .0
@@ -776,6 +784,7 @@ mod tests {
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
                     .load(ctx, &repo.get_blobstore())
+                    .from_err()
                     .map(|unode_mf| {
                         unode_mf
                             .0
@@ -793,10 +802,12 @@ mod tests {
             match self {
                 UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
                     .load(ctx, &repo.get_blobstore())
+                    .from_err()
                     .map(|unode_file| unode_file.0.linknode().clone())
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
                     .load(ctx, &repo.get_blobstore())
+                    .from_err()
                     .map(|unode_mf| unode_mf.0.linknode().clone())
                     .boxify(),
             }

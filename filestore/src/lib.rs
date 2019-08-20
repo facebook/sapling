@@ -14,7 +14,7 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
 use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, MononokeId};
 
@@ -152,13 +152,19 @@ pub fn get_metadata<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-    key.load(ctx.clone(), blobstore).and_then({
-        cloned!(blobstore, ctx);
-        move |maybe_id| match maybe_id {
-            Some(id) => metadata::get_metadata(blobstore, ctx, id).left_future(),
-            None => Ok(None).into_future().right_future(),
-        }
-    })
+    key.load(ctx.clone(), blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Ok(None),
+        })
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |maybe_id| match maybe_id {
+                Some(id) => metadata::get_metadata(blobstore, ctx, id).left_future(),
+                None => Ok(None).into_future().right_future(),
+            }
+        })
 }
 
 /// Return true if the given key exists. A successful return means the key definitely
@@ -169,6 +175,11 @@ pub fn exists<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = bool, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Ok(None),
+        })
         .and_then({
             cloned!(blobstore, ctx);
             move |maybe_id| maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()))
@@ -187,13 +198,19 @@ pub fn fetch<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-    key.load(ctx.clone(), blobstore).and_then({
-        cloned!(blobstore, ctx);
-        move |content_id| match content_id {
-            Some(content_id) => fetch::fetch(blobstore, ctx, content_id).left_future(),
-            None => Ok(None).into_future().right_future(),
-        }
-    })
+    key.load(ctx.clone(), blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Ok(None),
+        })
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |content_id| match content_id {
+                Some(content_id) => fetch::fetch(blobstore, ctx, content_id).left_future(),
+                None => Ok(None).into_future().right_future(),
+            }
+        })
 }
 
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was

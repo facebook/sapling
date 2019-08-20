@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -48,12 +48,9 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
 
                 let fut = chunk_id
                     .load(ctx.clone(), &blobstore)
-                    .and_then({
-                        cloned!(chunk_id);
-                        move |maybe_chunk| {
-                            let e = ErrorKind::ChunkNotFound(chunk_id);
-                            maybe_chunk.ok_or(e.into())
-                        }
+                    .or_else(move |err| match err {
+                        LoadableError::Error(err) => Err(err),
+                        LoadableError::Missing => Err(ErrorKind::ChunkNotFound(chunk_id).into()),
                     })
                     .map(ContentChunk::into_bytes);
 
@@ -71,11 +68,18 @@ pub fn fetch<B: Blobstore + Clone>(
     ctx: CoreContext,
     content_id: ContentId,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
-    content_id.load(ctx.clone(), &blobstore).map({
-        cloned!(blobstore, ctx);
-        move |maybe_file_contents| {
-            maybe_file_contents
-                .map(|file_contents| stream_file_bytes(blobstore, ctx, file_contents))
-        }
-    })
+    content_id
+        .load(ctx.clone(), &blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing => Ok(None),
+        })
+        .map({
+            cloned!(blobstore, ctx);
+            move |maybe_file_contents| {
+                maybe_file_contents
+                    .map(|file_contents| stream_file_bytes(blobstore, ctx, file_contents))
+            }
+        })
 }

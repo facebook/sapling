@@ -19,7 +19,7 @@ use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPo
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
-use blobstore::{Blobstore, Loadable, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -231,12 +231,10 @@ impl BlobRepo {
 
     fn fetch<Id, V>(&self, ctx: CoreContext, id: Id) -> impl Future<Item = V, Error = Error> + Send
     where
-        Id: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+        Id: Loadable<Value = V> + ::std::fmt::Debug + Send,
         V: Send,
     {
-        id.load(ctx, &self.blobstore).and_then(move |ret| {
-            ret.ok_or(ErrorKind::MissingTypedKeyEntry(format!("{:?}", id)).into())
-        })
+        id.load(ctx, &self.blobstore).from_err()
     }
 
     // this is supposed to be used only from unittest
@@ -246,7 +244,7 @@ impl BlobRepo {
         id: Id,
     ) -> impl Future<Item = V, Error = Error> + Send
     where
-        Id: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+        Id: Loadable<Value = V> + ::std::fmt::Debug + Send,
         V: Send,
     {
         self.fetch(ctx, id)
@@ -331,8 +329,9 @@ impl BlobRepo {
     ) -> BoxFuture<ContentId, Error> {
         FetchKey::Aliased(Alias::Sha256(key))
             .load(ctx, &self.blobstore)
-            .and_then(move |content_id| {
-                content_id.ok_or(ErrorKind::ContentBlobByAliasMissing(key).into())
+            .or_else(move |err| match err {
+                LoadableError::Error(err) => Err(err),
+                LoadableError::Missing => Err(ErrorKind::ContentBlobByAliasMissing(key).into()),
             })
             .boxify()
     }
