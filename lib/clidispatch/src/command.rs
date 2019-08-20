@@ -15,7 +15,6 @@ pub enum CommandFunc {
 
 pub struct CommandDefinition {
     name: String,
-    is_python: bool,
     doc: String,
     flags: Vec<Flag>,
 }
@@ -24,7 +23,6 @@ impl CommandDefinition {
     pub fn new(name: impl ToString) -> Self {
         CommandDefinition {
             name: name.to_string(),
-            is_python: false,
             doc: String::new(),
             flags: Vec::new(),
         }
@@ -40,21 +38,12 @@ impl CommandDefinition {
         self
     }
 
-    pub fn mark_as_python(mut self) -> Self {
-        self.is_python = true;
-        self
-    }
-
     pub fn flags(&self) -> &Vec<Flag> {
         &self.flags
     }
 
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn is_python(&self) -> bool {
-        self.is_python
     }
 
     pub fn doc(&self) -> &str {

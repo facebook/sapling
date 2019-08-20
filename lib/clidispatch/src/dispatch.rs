@@ -235,23 +235,6 @@ impl Dispatcher {
             .collect()
     }
 
-    fn load_python_commands(&mut self, cfg: &ConfigSet) -> Result<(), DispatchError> {
-        let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
-
-        for b_name in config_commands {
-            if let Ok(name) = String::from_utf8(b_name.to_vec()) {
-                name.trim_start_matches("^")
-                    .split("|")
-                    .map(|n| CommandDefinition::new(n))
-                    .for_each(|c| {
-                        self.add_command(c.mark_as_python());
-                    });
-            }
-        }
-
-        Ok(())
-    }
-
     fn command_map(&self, cfg: &ConfigSet) -> BTreeMap<String, isize> {
         let mut command_map = BTreeMap::new();
         let mut i = 1;
@@ -268,6 +251,19 @@ impl Dispatcher {
             if let Ok(name) = String::from_utf8(name.to_vec()) {
                 let is_debug = name.starts_with("debug");
                 command_map.insert(name, if is_debug { -i } else { i });
+                i = i + 1;
+            }
+        }
+
+        // Names from `commands.name` config.
+        // This is a fast (but inaccurate) way to know Python command names.
+        let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
+        for b_name in config_commands {
+            if let Ok(name) = String::from_utf8(b_name.to_vec()) {
+                let is_debug = name.starts_with("debug");
+                for name in name.split("|") {
+                    command_map.insert(name.to_string(), if is_debug { -i } else { i });
+                }
                 i = i + 1;
             }
         }
@@ -345,8 +341,6 @@ impl Dispatcher {
         let configfiles = Dispatcher::configfiles(&early_opts);
 
         let config_set = override_config(config_set, &configfiles[..], &configs)?;
-
-        self.load_python_commands(&config_set)?;
 
         let alias_lookup = |name: &str| match (
             config_set.get("alias", name),

@@ -64,10 +64,8 @@ impl HgPython {
         let rust_commands = dispatcher.get_command_table();
 
         for command in rust_commands {
-            if !command.is_python() {
-                let doc = Bytes::from(command.doc().to_string());
-                table.set_item(py, command.name(), (doc, command.flags()))?;
-            }
+            let doc = Bytes::from(command.doc().to_string());
+            table.set_item(py, command.name(), (doc, command.flags()))?;
         }
 
         Ok(())
