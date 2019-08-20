@@ -39,13 +39,13 @@ Alias cannot form a cycle.
   > EOF
 
   $ hg a
-  abort: circular aliases: a b c
+  abort: circular alias: a
   [255]
   $ hg b
-  abort: circular aliases: a b c
+  abort: circular alias: b
   [255]
   $ hg c
-  abort: circular aliases: a b c
+  abort: circular alias: c
   [255]
   $ hg log -r null -T 'x\n'
   x

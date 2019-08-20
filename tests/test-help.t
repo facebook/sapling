@@ -888,16 +888,9 @@ Test for aliases
   
   (some details hidden, use --verbose to show complete help)
 
+FIXME: This is suboptimal.
   $ hg help shellalias
-  hg shellalias
-  
-  shell alias for:
-  
-    echo hi
-  
-  defined by: helpext
-  
-  (some details hidden, use --verbose to show complete help)
+  alias 'shellalias' resolves to unknown command '!echo'
 
 Test command with no help text
 

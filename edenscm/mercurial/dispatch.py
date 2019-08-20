@@ -747,28 +747,6 @@ def aliascmdnameandargs(fn, givenargs):
     return getattr(fn, "cmdname", None), (args + givenargs)
 
 
-def aliasinterpolate(name, args, cmd):
-    """interpolate args into cmd for shell aliases
-
-    This also handles $0, $@ and "$@".
-    """
-    # util.interpolate can't deal with "$@" (with quotes) because it's only
-    # built to match prefix + patterns.
-    replacemap = dict(("$%d" % (i + 1), arg) for i, arg in enumerate(args))
-    replacemap["$0"] = name
-    replacemap["$$"] = "$"
-    replacemap["$@"] = " ".join(args)
-    # Typical Unix shells interpolate "$@" (with quotes) as all the positional
-    # parameters, separated out into words. Emulate the same behavior here by
-    # quoting the arguments individually. POSIX shells will then typically
-    # tokenize each argument into exactly one word.
-    replacemap['"$@"'] = " ".join(util.shellquote(arg) for arg in args)
-    # escape '\$' for regex
-    regex = "|".join(replacemap.keys()).replace("$", br"\$")
-    r = re.compile(regex)
-    return r.sub(lambda x: replacemap[x.group()], cmd)
-
-
 class cmdalias(object):
     def __init__(self, name, definition, cmdtable, source, aliasdoc=None):
         self.name = self.cmd = name
@@ -794,32 +772,6 @@ class cmdalias(object):
 
         if not self.definition:
             self.badalias = _("no definition for alias '%s'") % self.name
-            return
-
-        if self.definition.startswith("!"):
-            self.shell = True
-
-            def fn(ui, *args):
-                env = {"HG_ARGS": " ".join((self.name,) + args)}
-
-                def _checkvar(m):
-                    if m.groups()[0] == "$":
-                        return m.group()
-                    elif int(m.groups()[0]) <= len(args):
-                        return m.group()
-                    else:
-                        ui.debug(
-                            "No argument found for substitution "
-                            "of %i variable in alias '%s' definition."
-                            % (int(m.groups()[0]), self.name)
-                        )
-                        return ""
-
-                cmd = re.sub(br"\$(\d+|\$)", _checkvar, self.definition[1:])
-                cmd = aliasinterpolate(self.name, args, cmd)
-                return ui.system(cmd, environ=env, blockedtag="alias")
-
-            self.fn = fn
             return
 
         try:
@@ -899,7 +851,7 @@ class cmdalias(object):
         }
         if name not in adefaults:
             raise AttributeError(name)
-        if self.badalias or util.safehasattr(self, "shell"):
+        if self.badalias:
             return adefaults[name]
         return getattr(self.fn, name)
 
@@ -918,15 +870,12 @@ class cmdalias(object):
         ui.log(
             "command_alias", "alias '%s' expands to '%s'\n", self.name, self.definition
         )
-        if util.safehasattr(self, "shell"):
-            return self.fn(ui, *args, **opts)
-        else:
-            try:
-                return util.checksignature(self.fn)(ui, *args, **opts)
-            except error.SignatureError:
-                args = " ".join([self.cmdname] + self.args)
-                ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
-                raise
+        try:
+            return util.checksignature(self.fn)(ui, *args, **opts)
+        except error.SignatureError:
+            args = " ".join([self.cmdname] + self.args)
+            ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
+            raise
 
 
 class lazyaliasentry(object):
@@ -1251,37 +1200,6 @@ def _getlocal(ui, rpath, wd=None):
     return path, lui
 
 
-def _checkshellalias(lui, ui, args):
-    """Return the function to run the shell alias, if it is required"""
-    options = {}
-
-    try:
-        args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except getopt.GetoptError:
-        return
-
-    if not args:
-        return
-
-    cmdtable = commands.table
-
-    cmd = args[0]
-    try:
-        strict = ui.configbool("ui", "strict")
-        aliases, entry = cmdutil.findcmd(cmd, cmdtable, strict)
-    except (error.AmbiguousCommand, error.UnknownCommand):
-        return
-
-    cmd = aliases[0]
-    fn = entry[0]
-
-    if cmd and util.safehasattr(fn, "shell"):
-        # shell alias shouldn't receive early options which are consumed by hg
-        _earlyopts, args = _earlysplitopts(args)
-        d = lambda: fn(ui, *args[1:])
-        return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
-
-
 def _dispatch(req):
     args = req.args
     ui = req.ui
@@ -1323,12 +1241,6 @@ def _dispatch(req):
         # (reposetup is handled in hg.repository)
 
         addaliases(lui, commands.table)
-
-        # All aliases and commands are completely defined, now.
-        # Check abbreviation/ambiguity of shell alias.
-        shellaliasfn = _checkshellalias(lui, ui, args)
-        if shellaliasfn:
-            return shellaliasfn()
 
         # check for fallback encoding
         fallback = lui.config("ui", "fallbackencoding")

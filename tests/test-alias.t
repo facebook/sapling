@@ -415,11 +415,16 @@ shell aliases with global options
   $ hg -v count 'branch(default)'
   0
   $ hg -R .. count 'branch(default)'
+  warning: --repository ignored
   0
   $ hg --cwd .. count 'branch(default)'
   2
+
+global flags after the shell alias name is passed to the shell command, not handled by hg
+
   $ hg echoall --cwd ..
-  
+  abort: option --cwd may not be abbreviated!
+  [255]
 
 
 "--" passed to shell alias should be preserved
@@ -460,6 +465,7 @@ shell alias defined in other repo
   (did you mean idalias?)
   [255]
   $ hg -R .. mainalias
+  warning: --repository ignored
   main
   $ hg --cwd .. mainalias
   main
@@ -488,17 +494,10 @@ command provided extension, should be aborted.
   > [extensions]
   > rebase =
   > EOF
-#if windows
-  $ cat >> .hg/hgrc <<EOF
+  $ cat >> .hg/hgrc <<'EOF'
   > [alias]
-  > rebate = !echo this is %HG_ARGS%
+  > rebate = !echo this is rebate $@
   > EOF
-#else
-  $ cat >> .hg/hgrc <<EOF
-  > [alias]
-  > rebate = !echo this is \$HG_ARGS
-  > EOF
-#endif
   $ hg reba
   hg: command 'reba' is ambiguous:
   	rebase

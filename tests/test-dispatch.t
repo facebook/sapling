@@ -108,10 +108,12 @@ applied before the command name is resolved:
   abort: option --config may not be abbreviated!
   [255]
 
+XXX: Should we support this?
 Shell aliases bypass any command parsing rules but for the early one:
 
   $ hg log -b '--config=alias.log=!echo howdy'
-  howdy
+  abort: option --config may not be abbreviated!
+  [255]
 
 For compatibility reasons, HGPLAIN=+strictflags is not enabled by plain HGPLAIN:
 
