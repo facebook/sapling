@@ -30,7 +30,6 @@ from . import (
     encoding,
     error,
     extensions,
-    fancyopts,
     help,
     hg,
     hintutil,
@@ -846,16 +845,6 @@ def _earlyparseopts(ui, args):
         return cliparser.earlyparse(args)
     except UnicodeDecodeError:
         raise error.Abort(_("cannot decode command line arguments"))
-
-
-def _earlysplitopts(args):
-    """Split args into a list of possible early options and remainder args"""
-    shortoptions = "R:"
-    # TODO: perhaps 'debugger' should be included
-    longoptions = ["cwd=", "repository=", "repo=", "config="]
-    return fancyopts.earlygetopt(
-        args, shortoptions, longoptions, gnu=True, keepsep=True
-    )
 
 
 def _joinfullargs(fullargs):

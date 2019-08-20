@@ -114,8 +114,7 @@ class command(_funcregistrarbase):
     The first argument is the command name (as bytes).
 
     The `options` keyword argument is an iterable of tuples defining command
-    arguments. See ``mercurial.fancyopts.fancyopts()`` for the format of each
-    tuple.
+    arguments. See existing commands for the format of each tuple.
 
     The `synopsis` argument defines a short, one line summary of how to use the
     command. This shows up in the help output.
