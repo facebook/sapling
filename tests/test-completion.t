@@ -74,7 +74,7 @@ Show all commands that start with "a"
 
 Do not show debug commands if there are other candidates
   $ hg debugcomplete d
-  diff
+  d
 
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
@@ -258,7 +258,6 @@ Show all commands + options
   annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
   clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
-  diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   export: output, switch-parent, rev, text, git, binary, nodates
   forget: include, exclude
   githelp: 
@@ -352,6 +351,7 @@ Show all commands + options
   debugvisibility: 
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
+  diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   files: rev, print0, include, exclude, template
   fs: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run

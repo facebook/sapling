@@ -608,6 +608,8 @@ Test command without options
   $ hg help diff
   hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
   
+  aliases: d
+  
   show differences between commits
   
       Show the differences between two commits. If only one commit is specified,
@@ -1985,13 +1987,6 @@ Dish up an empty repo; serve it cold.
   save all pending changes or specified files in a new commit
   </td></tr>
   <tr><td>
-  <a href="/help/diff">
-  diff
-  </a>
-  </td><td>
-  show differences between commits
-  </td></tr>
-  <tr><td>
   <a href="/help/export">
   export
   </a>
@@ -2177,6 +2172,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   mark files as copied for the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/diff">
+  diff
+  </a>
+  </td><td>
+  show differences between commits
   </td></tr>
   <tr><td>
   <a href="/help/files">

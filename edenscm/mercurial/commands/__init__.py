@@ -1970,7 +1970,7 @@ def debugcomplete(ui, cmd="", **opts):
 
 
 @command(
-    "^diff",
+    "diff|d",
     [
         ("r", "rev", [], _("revision"), _("REV")),
         ("c", "change", "", _("change made by revision"), _("REV")),

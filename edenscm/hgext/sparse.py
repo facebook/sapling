@@ -628,7 +628,7 @@ def _setupdirstate(ui):
 
 
 def _setupdiff(ui):
-    entry = commands.table["^diff"]
+    entry = commands.table["diff|d"]
     entry[1].append(
         ("s", "sparse", None, "only show changes in files in the sparse config")
     )

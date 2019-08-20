@@ -11,10 +11,10 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "newrepo"
 sh % "hg d" == ""
 
-sh % "hg d --config alias.do=root" == r"""
-    hg: command 'd' is ambiguous:
-    	diff
-    	do
+sh % "hg di --config alias.did=root" == r"""
+    hg: command 'di' is ambiguous:
+     did
+     diff
     [255]"""
 
 sh % "hg debugf" == r"""
