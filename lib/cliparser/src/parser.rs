@@ -660,7 +660,7 @@ pub struct ParseOutput {
     /// The opts
     opts: HashMap<String, Value>,
     /// The positional args
-    args: Vec<String>,
+    pub args: Vec<String>,
     first_arg_index: usize,
 }
 
