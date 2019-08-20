@@ -5,8 +5,8 @@
 
 #[macro_export]
 macro_rules! define_flags {
-    ($vis:vis struct $name:ident { $( $token:tt )* } ) => {
-        $crate::_define_flags_impl!([ $( $token )* ] [] ($vis $name) );
+    ( $( $vis:vis struct $name:ident { $( $token:tt )* } )*  ) => {
+        $( $crate::_define_flags_impl!([ $( $token )* ] [] ($vis $name) ); )*
     };
 }
 
@@ -105,6 +105,11 @@ mod tests {
             #[short('r')]
             rev: Vec<String>,
         }
+
+        struct AnotherTestOptions {
+            /// follow renames
+            follow: bool,
+        }
     }
 
     use crate::parser::{Flag, ParseOptions, StructFlags, Value};
@@ -123,6 +128,9 @@ mod tests {
         .map(Into::into)
         .collect();
         assert_eq!(flags, expected);
+
+        let flags = AnotherTestOptions::flags();
+        assert_eq!(flags.len(), 1);
     }
 
     #[test]
@@ -147,5 +155,12 @@ mod tests {
         assert_eq!(parsed.count, 12);
         assert_eq!(parsed.long_name, "bob");
         assert_eq!(parsed.rev, vec!["b", "a"]);
+
+        let parsed = ParseOptions::new()
+            .flags(AnotherTestOptions::flags())
+            .parse_args(&vec!["--no-follow", "--follow"])
+            .unwrap();
+        let parsed = AnotherTestOptions::from(parsed);
+        assert_eq!(parsed.follow, true);
     }
 }
