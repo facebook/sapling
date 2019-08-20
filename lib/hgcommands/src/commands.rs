@@ -5,7 +5,8 @@ use clidispatch::dispatch::*;
 use clidispatch::errors::DispatchError;
 use clidispatch::io::IO;
 use clidispatch::repo::Repo;
-use cliparser::parser::ParseOutput;
+use cliparser::define_flags;
+use cliparser::parser::StructFlags;
 
 use revisionstore::{DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore};
 use types::{Key, Node, RepoPathBuf};
@@ -30,7 +31,7 @@ pub fn dispatch(dispatcher: &mut Dispatcher) -> Result<u8, DispatchError> {
 
 fn root_command() -> CommandDefinition {
     let command = CommandDefinition::new("root")
-        .add_flag((' ', "shared", "show root of the shared repo", false))
+        .add_flag(RootOpts::flags()[0].clone())
         .with_doc(
             r#"print the root (top) of the current working directory
 
@@ -44,25 +45,27 @@ fn root_command() -> CommandDefinition {
     command
 }
 
-pub struct RootCommand {
-    shared: bool,
-}
+define_flags! {
+    pub struct RootOpts {
+        /// show root of the shared repo
+        shared: bool,
 
-impl From<ParseOutput> for RootCommand {
-    fn from(opts: ParseOutput) -> Self {
-        let shared: bool = opts.pick("shared");
+        #[args]
+        args: Vec<String>,
+    }
 
-        RootCommand { shared }
+    pub struct DebugstoreOpts {
+        /// print blob contents
+        content: bool,
+
+        #[args]
+        args: Vec<String>,
     }
 }
 
-pub fn root(
-    cmd: RootCommand,
-    args: Vec<String>,
-    io: &mut IO,
-    repo: Repo,
-) -> Result<u8, DispatchError> {
-    if args.len() > 0 {
+pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {
+    let args = opts.args;
+    if args != vec!["root"] {
         return Err(DispatchError::InvalidArguments {
             command_name: "root".to_string(),
         }); // root doesn't support arguments
@@ -70,7 +73,7 @@ pub fn root(
 
     let shared = repo.sharedpath()?;
 
-    let path = if cmd.shared {
+    let path = if opts.shared {
         shared.unwrap_or(repo.path().to_owned())
     } else {
         repo.path().to_owned()
@@ -93,25 +96,9 @@ fn debugstore_command() -> CommandDefinition {
     command
 }
 
-pub struct DebugstoreCommand {
-    content: bool,
-}
-
-impl From<ParseOutput> for DebugstoreCommand {
-    fn from(opts: ParseOutput) -> Self {
-        let content: bool = opts.pick("shared");
-
-        DebugstoreCommand { content }
-    }
-}
-
-pub fn debugstore(
-    cmd: DebugstoreCommand,
-    args: Vec<String>,
-    io: &mut IO,
-    repo: Repo,
-) -> Result<u8, DispatchError> {
-    if args.len() != 2 || !cmd.content {
+pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {
+    let args = opts.args;
+    if args.len() != 2 || !opts.content {
         return Err(DispatchError::InvalidArguments {
             command_name: "debugstore".to_string(),
         }); // debugstore requires arguments

@@ -413,8 +413,6 @@ impl Dispatcher {
 
         Dispatcher::last_chance_to_abort(&result)?;
 
-        let command_length = command_name.split(" ").count();
-
         let handler = self.command_table.get(&command_name).unwrap();
 
         let res = match handler {
@@ -427,8 +425,7 @@ impl Dispatcher {
                 })?;
 
                 r.set_config(config_set);
-                let args = result.args().iter().skip(command_length).cloned().collect();
-                f(result, args, io, r)
+                f(result, io, r)
             }
             CommandType::InferRepo(f) => {
                 let r = match repo {
@@ -438,13 +435,9 @@ impl Dispatcher {
                     }
                     None => None,
                 };
-                let args = args.iter().skip(command_length).cloned().collect();
-                f(result, args, io, r)
+                f(result, io, r)
             }
-            CommandType::NoRepo(f) => {
-                let args = result.args().clone();
-                f(result, args, io)
-            }
+            CommandType::NoRepo(f) => f(result, io),
         };
 
         res
@@ -458,13 +451,13 @@ pub trait Register<FN, T> {
 // No Repo
 impl<S, FN> Register<FN, (S,)> for Dispatcher
 where
-    S: From<ParseOutput>,
-    FN: Fn(S, Vec<String>, &mut IO) -> Result<u8, DispatchError> + 'static,
+    S: From<ParseOutput> + StructFlags,
+    FN: Fn(S, &mut IO) -> Result<u8, DispatchError> + 'static,
 {
     fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped = move |opts: ParseOutput, args: Vec<String>, io: &mut IO| {
+        let wrapped = move |opts: ParseOutput, io: &mut IO| {
             let translated_opts = opts.into();
-            inner_func(translated_opts, args, io)
+            inner_func(translated_opts, io)
         };
         self.command_table.insert(
             command.name().to_owned(),
@@ -477,15 +470,14 @@ where
 // Infer Repo
 impl<S, FN> Register<FN, ((), (((S,),),))> for Dispatcher
 where
-    S: From<ParseOutput>,
-    FN: Fn(S, Vec<String>, &mut IO, Option<Repo>) -> Result<u8, DispatchError> + 'static,
+    S: From<ParseOutput> + StructFlags,
+    FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8, DispatchError> + 'static,
 {
     fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped =
-            move |opts: ParseOutput, args: Vec<String>, io: &mut IO, repo: Option<Repo>| {
-                let translated_opts = opts.into();
-                inner_func(translated_opts, args, io, repo)
-            };
+        let wrapped = move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| {
+            let translated_opts = opts.into();
+            inner_func(translated_opts, io, repo)
+        };
         self.command_table.insert(
             command.name().to_owned(),
             CommandType::InferRepo(Box::new(wrapped)),
@@ -497,13 +489,13 @@ where
 // Repo
 impl<S, FN> Register<FN, ((), (), ((S,),))> for Dispatcher
 where
-    S: From<ParseOutput>,
-    FN: Fn(S, Vec<String>, &mut IO, Repo) -> Result<u8, DispatchError> + 'static,
+    S: From<ParseOutput> + StructFlags,
+    FN: Fn(S, &mut IO, Repo) -> Result<u8, DispatchError> + 'static,
 {
     fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped = move |opts: ParseOutput, args: Vec<String>, io: &mut IO, repo: Repo| {
+        let wrapped = move |opts: ParseOutput, io: &mut IO, repo: Repo| {
             let translated_opts = opts.into();
-            inner_func(translated_opts, args, io, repo)
+            inner_func(translated_opts, io, repo)
         };
         self.command_table.insert(
             command.name().to_owned(),

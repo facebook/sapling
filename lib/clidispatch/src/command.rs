@@ -8,11 +8,9 @@ use crate::repo::Repo;
 use cliparser::parser::{Flag, ParseOutput};
 
 pub enum CommandType {
-    NoRepo(Box<dyn Fn(ParseOutput, Vec<String>, &mut IO) -> Result<u8, DispatchError>>),
-    InferRepo(
-        Box<dyn Fn(ParseOutput, Vec<String>, &mut IO, Option<Repo>) -> Result<u8, DispatchError>>,
-    ),
-    Repo(Box<dyn Fn(ParseOutput, Vec<String>, &mut IO, Repo) -> Result<u8, DispatchError>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Result<u8, DispatchError>>),
+    InferRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8, DispatchError>>),
+    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8, DispatchError>>),
 }
 
 pub struct CommandDefinition {
