@@ -5,19 +5,19 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
+use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
+use mononoke_types::MPath;
 use mononoke_types::{
     BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPathHash, ManifestUnodeId,
     MononokeId,
 };
-use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
 use std::collections::BTreeMap;
 
@@ -35,74 +35,6 @@ pub enum ErrorKind {
     InvalidBonsai(String),
 }
 
-// Id type is added so that we can implement Loadable trait for ManifestUnodeId
-// We can't do it now because ManifestUnodeId and Loadable are defined in different crates.
-// TODO(stash): move Loadable trait implementation into mononoke_types?
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
-pub struct Id<T>(T);
-
-impl Loadable for Id<ManifestUnodeId> {
-    type Value = Id<ManifestUnode>;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
-        let unode_id = self.0;
-        blobstore
-            .get(ctx, unode_id.blobstore_key())
-            .map_err(LoadableError::Error)
-            .and_then(move |bytes| match bytes {
-                None => Err(LoadableError::Missing),
-                Some(bytes) => ManifestUnode::from_bytes(bytes.as_bytes().as_ref())
-                    .map_err(LoadableError::Error)
-                    .map(Id),
-            })
-            .boxify()
-    }
-}
-
-impl Loadable for Id<FileUnodeId> {
-    type Value = Id<FileUnode>;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
-        let unode_id = self.0;
-        blobstore
-            .get(ctx, unode_id.blobstore_key())
-            .map_err(LoadableError::Error)
-            .and_then(move |bytes| match bytes {
-                None => Err(LoadableError::Missing),
-                Some(bytes) => FileUnode::from_bytes(bytes.as_bytes().as_ref())
-                    .map_err(LoadableError::Error)
-                    .map(Id),
-            })
-            .boxify()
-    }
-}
-
-impl Manifest for Id<ManifestUnode> {
-    type TreeId = Id<ManifestUnodeId>;
-    type LeafId = FileUnodeId;
-
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.lookup(name).map(convert_unode)
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let v: Vec<_> = self
-            .0
-            .list()
-            .map(|(basename, entry)| (basename.clone(), convert_unode(entry)))
-            .collect();
-        Box::new(v.into_iter())
-    }
-}
-
 /// Derives unode manifests for bonsai changeset `cs_id` given parent unode manifests.
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to
 /// provide only functions to create a single unode file or single unode tree (
@@ -114,7 +46,7 @@ pub fn derive_unode_manifest(
     parents: impl IntoIterator<Item = ManifestUnodeId>,
     changes: impl IntoIterator<Item = (MPath, Option<(ContentId, FileType)>)>,
 ) -> impl Future<Item = ManifestUnodeId, Error = Error> {
-    let parents: Vec<_> = parents.into_iter().map(Id).collect();
+    let parents: Vec<_> = parents.into_iter().collect();
 
     derive_manifest(
         ctx.clone(),
@@ -133,7 +65,7 @@ pub fn derive_unode_manifest(
         },
     )
     .and_then(move |maybe_tree_id| match maybe_tree_id {
-        Some(tree_id) => future::ok(tree_id.0).left_future(),
+        Some(tree_id) => future::ok(tree_id).left_future(),
         None => {
             // All files have been deleted, generate empty **root** manifest
             let tree_info = TreeInfo {
@@ -141,9 +73,7 @@ pub fn derive_unode_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_unode_manifest(ctx, cs_id, repo.get_blobstore(), tree_info)
-                .map(|id| id.0)
-                .right_future()
+            create_unode_manifest(ctx, cs_id, repo.get_blobstore(), tree_info).right_future()
         }
     })
 }
@@ -168,27 +98,27 @@ fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
-    tree_info: TreeInfo<Id<ManifestUnodeId>, FileUnodeId>,
-) -> impl Future<Item = Id<ManifestUnodeId>, Error = Error> {
+    tree_info: TreeInfo<ManifestUnodeId, FileUnodeId>,
+) -> impl Future<Item = ManifestUnodeId, Error = Error> {
     let mut subentries = BTreeMap::new();
     for (basename, entry) in tree_info.subentries {
         match entry {
             Entry::Tree(mf_unode) => {
-                subentries.insert(basename, UnodeEntry::Directory(mf_unode.0));
+                subentries.insert(basename, UnodeEntry::Directory(mf_unode));
             }
             Entry::Leaf(file_unode) => {
                 subentries.insert(basename, UnodeEntry::File(file_unode));
             }
         }
     }
-    let parents: Vec<_> = tree_info.parents.into_iter().map(|id| id.0).collect();
+    let parents: Vec<_> = tree_info.parents.into_iter().collect();
     let mf_unode = ManifestUnode::new(parents, subentries, linknode);
     let mf_unode_id = mf_unode.get_unode_id();
     let key = mf_unode_id.blobstore_key();
     let blob = mf_unode.into_blob();
     blobstore
         .put(ctx, key, blob.into())
-        .map(move |()| Id(mf_unode_id))
+        .map(move |()| mf_unode_id)
 }
 
 fn create_unode_file(
@@ -268,7 +198,7 @@ fn create_unode_file(
         }
         future::join_all(parents.clone().into_iter().map({
             cloned!(blobstore, ctx);
-            move |id| Id(id).load(ctx.clone(), &blobstore)
+            move |id| id.load(ctx.clone(), &blobstore.clone())
         }))
         .from_err()
         .and_then(
@@ -296,22 +226,15 @@ fn create_unode_file(
 }
 
 // If all elements in `unodes` are the same than this element is returned, otherwise None is returned
-fn return_if_unique_filenode(unodes: &Vec<Id<FileUnode>>) -> Option<(&ContentId, &FileType)> {
+fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &FileType)> {
     let mut iter = unodes
         .iter()
-        .map(|elem| (elem.0.content_id(), elem.0.file_type()));
+        .map(|elem| (elem.content_id(), elem.file_type()));
     let first_elem = iter.next()?;
     if iter.all(|next_elem| next_elem == first_elem) {
         Some(first_elem)
     } else {
         None
-    }
-}
-
-fn convert_unode(unode_entry: &UnodeEntry) -> Entry<Id<ManifestUnodeId>, FileUnodeId> {
-    match unode_entry {
-        UnodeEntry::File(file_unode_id) => Entry::Leaf(file_unode_id.clone()),
-        UnodeEntry::Directory(mf_unode_id) => Entry::Tree(Id(mf_unode_id.clone())),
     }
 }
 
@@ -326,7 +249,6 @@ mod tests {
     use failure_ext::Result;
     use fixtures::linear;
     use futures::Stream;
-    use manifest::Manifest;
     use maplit::btreemap;
     use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
     use mononoke_types::{
@@ -356,12 +278,11 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             runtime
-                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
+                .block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()))
                 .unwrap();
             let all_unodes = runtime
                 .block_on(
-                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(Id(unode_id)))
-                        .collect(),
+                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(unode_id)).collect(),
                 )
                 .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
@@ -392,10 +313,10 @@ mod tests {
 
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            let root_unode = runtime
-                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
-                .unwrap();
-            assert_eq!(root_unode.0.parents(), &vec![parent_unode_id]);
+            let root_unode: ::std::result::Result<_, Error> =
+                runtime.block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()).from_err());
+            let root_unode = root_unode.unwrap();
+            assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
             let root_filenode_id = fetch_root_filenode_id(&mut runtime, repo.clone(), bcs_id);
             assert_eq!(
@@ -405,8 +326,7 @@ mod tests {
 
             let all_unodes = runtime
                 .block_on(
-                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(Id(unode_id)))
-                        .collect(),
+                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(unode_id)).collect(),
                 )
                 .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
@@ -447,9 +367,9 @@ mod tests {
             );
             let unode_id = runtime.block_on(f).unwrap();
 
-            let unode_mf = runtime
-                .block_on(Id(unode_id).load(ctx.clone(), &repo.get_blobstore()))
-                .unwrap();
+            let unode_mf: ::std::result::Result<_, Error> =
+                runtime.block_on(unode_id.load(ctx.clone(), &repo.get_blobstore()).from_err());
+            let unode_mf = unode_mf.unwrap();
 
             // Unodes should be unique even if content is the same. Check it
             let vals: Vec<_> = unode_mf.list().collect();
@@ -769,12 +689,11 @@ mod tests {
             repo: BlobRepo,
         ) -> BoxFuture<Vec<UnodeEntry>, Error> {
             match self {
-                UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
+                UnodeEntry::File(file_unode_id) => file_unode_id
                     .load(ctx, &repo.get_blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
-                            .0
                             .parents()
                             .into_iter()
                             .cloned()
@@ -782,12 +701,11 @@ mod tests {
                             .collect()
                     })
                     .boxify(),
-                UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
+                UnodeEntry::Directory(mf_unode_id) => mf_unode_id
                     .load(ctx, &repo.get_blobstore())
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
-                            .0
                             .parents()
                             .into_iter()
                             .cloned()
@@ -800,15 +718,16 @@ mod tests {
 
         fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error> {
             match self {
-                UnodeEntry::File(file_unode_id) => Id(file_unode_id.clone())
+                UnodeEntry::File(file_unode_id) => file_unode_id
+                    .clone()
                     .load(ctx, &repo.get_blobstore())
                     .from_err()
-                    .map(|unode_file| unode_file.0.linknode().clone())
+                    .map(|unode_file| unode_file.linknode().clone())
                     .boxify(),
-                UnodeEntry::Directory(mf_unode_id) => Id(mf_unode_id.clone())
+                UnodeEntry::Directory(mf_unode_id) => mf_unode_id
                     .load(ctx, &repo.get_blobstore())
                     .from_err()
-                    .map(|unode_mf| unode_mf.0.linknode().clone())
+                    .map(|unode_mf| unode_mf.linknode().clone())
                     .boxify(),
             }
         }
