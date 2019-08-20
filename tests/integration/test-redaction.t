@@ -194,7 +194,7 @@ Restart mononoke
 
 The content of the blacklisted file is replaced by a string
   $ cat c
-  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 Diff and Status should not see any change made to file c, even if it contains the magic string
   $ hgmn status
@@ -372,14 +372,14 @@ Updating to a commit with censored files works in getpackv1 repo
   $ hgmn pull -q
   $ hgmn up -q 064d994d0240
   $ cat c
-  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 Updating to a commit with censored files works in getpackv2 repo
   $ cd $TESTTMP/repo-pull-fetchpacksv2
   $ hgmn pull -q
   $ hgmn up -q 064d994d0240
   $ cat c
-  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 Start API server
   $ setup_no_ssl_apiserver
@@ -399,4 +399,4 @@ Updating to a commit with censored files works in edenapi-enabled repo
   $ hgmn up 064d994d0240 |  grep "encountered error during HTTPS fetching"
   [1]
   $ cat c
-  This version of the file is blacklisted and you are not allowed to access it. Update or rebase to a newer commit.
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
