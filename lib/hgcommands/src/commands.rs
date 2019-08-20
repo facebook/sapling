@@ -1,12 +1,10 @@
 // Copyright Facebook, Inc. 2019
 
-use clidispatch::command::CommandDefinition;
 use clidispatch::dispatch::*;
 use clidispatch::errors::DispatchError;
 use clidispatch::io::IO;
 use clidispatch::repo::Repo;
 use cliparser::define_flags;
-use cliparser::parser::StructFlags;
 
 use revisionstore::{DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore};
 use types::{Key, Node, RepoPathBuf};
@@ -14,10 +12,20 @@ use types::{Key, Node, RepoPathBuf};
 #[allow(dead_code)]
 pub fn create_dispatcher() -> Dispatcher {
     let mut dispatcher = Dispatcher::new();
-    let root_command = root_command();
-    let debugstore_command = debugstore_command();
-    dispatcher.register(root_command, root);
-    dispatcher.register(debugstore_command, debugstore);
+    dispatcher.register(
+        root,
+        "root",
+        r#"print the root (top) of the current working directory
+
+    Print the root directory of the current repository.
+
+    Returns 0 on success."#,
+    );
+    dispatcher.register(
+        debugstore,
+        "debugstore",
+        "print information about blobstore",
+    );
 
     dispatcher
 }
@@ -27,22 +35,6 @@ pub fn dispatch(dispatcher: &mut Dispatcher) -> Result<u8, DispatchError> {
     let args = args()?;
 
     dispatcher.dispatch(args)
-}
-
-fn root_command() -> CommandDefinition {
-    let command = CommandDefinition::new("root")
-        .add_flag(RootOpts::flags()[0].clone())
-        .with_doc(
-            r#"print the root (top) of the current working directory
-
-    Print the root directory of the current repository.
-
-    Returns 0 on success.
-
-        "#,
-        );
-
-    command
 }
 
 define_flags! {
@@ -81,19 +73,6 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError
 
     io.write(format!("{}\n", path.canonicalize()?.to_string_lossy()))?;
     Ok(0)
-}
-
-fn debugstore_command() -> CommandDefinition {
-    let command = CommandDefinition::new("debugstore")
-        .add_flag((' ', "content", "print out contents of blob", false))
-        .with_doc(
-            r#"Print out information about blob from store.
-            hg debugstore filepath hash --content
-            returns 0 on success
-        "#,
-        );
-
-    command
 }
 
 pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {

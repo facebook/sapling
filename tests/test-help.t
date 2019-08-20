@@ -1033,7 +1033,7 @@ Test list of internal help commands
    debugshell    (no help text available)
    debugssl      test a secure connection to a server
    debugstatus   common performance issues for status
-   debugstore    Print out information about blob from store.
+   debugstore    print information about blobstore
    debugstrip    strip commits and all their descendants from the repository
    debugsuccessorssets
                  show set of successors for revision

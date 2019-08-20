@@ -17,25 +17,22 @@ pub struct CommandDefinition {
     name: String,
     doc: String,
     flags: Vec<Flag>,
+    func: CommandFunc,
 }
 
 impl CommandDefinition {
-    pub fn new(name: impl ToString) -> Self {
+    pub fn new(
+        name: impl ToString,
+        doc: impl ToString,
+        flags: Vec<Flag>,
+        func: CommandFunc,
+    ) -> Self {
         CommandDefinition {
             name: name.to_string(),
-            doc: String::new(),
-            flags: Vec::new(),
+            doc: doc.to_string(),
+            flags,
+            func,
         }
-    }
-
-    pub fn with_doc(mut self, doc: impl ToString) -> Self {
-        self.doc = doc.to_string();
-        self
-    }
-
-    pub fn add_flag(mut self, def: impl Into<Flag>) -> Self {
-        self.flags.push(def.into());
-        self
     }
 
     pub fn flags(&self) -> &Vec<Flag> {
@@ -48,5 +45,9 @@ impl CommandDefinition {
 
     pub fn doc(&self) -> &str {
         &self.doc
+    }
+
+    pub fn func(&self) -> &CommandFunc {
+        &self.func
     }
 }

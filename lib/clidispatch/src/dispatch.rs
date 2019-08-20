@@ -9,7 +9,7 @@ use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::parser::*;
+use cliparser::parser::{ParseOptions, ParseOutput, StructFlags, Value};
 use configparser::config::ConfigSet;
 use configparser::hg::{parse_list, ConfigSetHgExt};
 use std::collections::BTreeMap;
@@ -104,19 +104,17 @@ pub fn args() -> Result<Vec<String>, DispatchError> {
 }
 
 pub struct Dispatcher {
-    command_table: BTreeMap<String, CommandFunc>,
     commands: BTreeMap<String, CommandDefinition>,
 }
 
 impl Dispatcher {
     pub fn new() -> Self {
         Dispatcher {
-            command_table: BTreeMap::new(),
             commands: BTreeMap::new(),
         }
     }
 
-    pub fn add_command(&mut self, command: CommandDefinition) {
+    fn add_command(&mut self, command: CommandDefinition) {
         let name = command.name();
         if !self.commands.contains_key(name) {
             self.commands.insert(name.to_string(), command);
@@ -131,7 +129,7 @@ impl Dispatcher {
         let mut command_name = None;
         for arg in args {
             if command_name.is_none() {
-                if self.command_table.contains_key(&arg) {
+                if self.commands.contains_key(&arg) {
                     command_name = Some(arg);
                 } else {
                     return None;
@@ -143,7 +141,7 @@ impl Dispatcher {
                 // $ hg cloud sync -> will become Some("cloud") then attempt "cloud sync".
                 let orig = command_name.unwrap();
                 let curr = orig.clone() + &arg;
-                if self.command_table.contains_key(&curr) {
+                if self.commands.contains_key(&curr) {
                     command_name = Some(curr.to_string())
                 } else {
                     return Some(orig);
@@ -407,9 +405,9 @@ impl Dispatcher {
 
         Dispatcher::last_chance_to_abort(&result)?;
 
-        let handler = self.command_table.get(&command_name).unwrap();
+        let handler = self.commands.get(&command_name).unwrap().func();
 
-        let res = match handler {
+        match handler {
             CommandFunc::Repo(f) => {
                 let mut r = repo.ok_or_else(|| DispatchError::RepoRequired {
                     cwd: env::current_dir()
@@ -432,14 +430,12 @@ impl Dispatcher {
                 f(result, io, r)
             }
             CommandFunc::NoRepo(f) => f(result, io),
-        };
-
-        res
+        }
     }
 }
 
 pub trait Register<FN, T> {
-    fn register(&mut self, command: CommandDefinition, f: FN);
+    fn register(&mut self, f: FN, name: &str, doc: &str);
 }
 
 // No Repo
@@ -448,54 +444,40 @@ where
     S: From<ParseOutput> + StructFlags,
     FN: Fn(S, &mut IO) -> Result<u8, DispatchError> + 'static,
 {
-    fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped = move |opts: ParseOutput, io: &mut IO| {
-            let translated_opts = opts.into();
-            inner_func(translated_opts, io)
-        };
-        self.command_table.insert(
-            command.name().to_owned(),
-            CommandFunc::NoRepo(Box::new(wrapped)),
-        );
-        self.add_command(command);
+    fn register(&mut self, f: FN, name: &str, doc: &str) {
+        let func = move |opts: ParseOutput, io: &mut IO| f(opts.into(), io);
+        let func = CommandFunc::NoRepo(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        self.add_command(def);
     }
 }
 
 // Infer Repo
-impl<S, FN> Register<FN, ((), (((S,),),))> for Dispatcher
+impl<S, FN> Register<FN, ((), S)> for Dispatcher
 where
     S: From<ParseOutput> + StructFlags,
     FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8, DispatchError> + 'static,
 {
-    fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped = move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| {
-            let translated_opts = opts.into();
-            inner_func(translated_opts, io, repo)
-        };
-        self.command_table.insert(
-            command.name().to_owned(),
-            CommandFunc::InferRepo(Box::new(wrapped)),
-        );
-        self.add_command(command);
+    fn register(&mut self, f: FN, name: &str, doc: &str) {
+        let func =
+            move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.into(), io, repo);
+        let func = CommandFunc::InferRepo(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        self.add_command(def);
     }
 }
 
 // Repo
-impl<S, FN> Register<FN, ((), (), ((S,),))> for Dispatcher
+impl<S, FN> Register<FN, ((), (), S)> for Dispatcher
 where
     S: From<ParseOutput> + StructFlags,
     FN: Fn(S, &mut IO, Repo) -> Result<u8, DispatchError> + 'static,
 {
-    fn register(&mut self, command: CommandDefinition, inner_func: FN) {
-        let wrapped = move |opts: ParseOutput, io: &mut IO, repo: Repo| {
-            let translated_opts = opts.into();
-            inner_func(translated_opts, io, repo)
-        };
-        self.command_table.insert(
-            command.name().to_owned(),
-            CommandFunc::Repo(Box::new(wrapped)),
-        );
-        self.add_command(command);
+    fn register(&mut self, f: FN, name: &str, doc: &str) {
+        let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.into(), io, repo);
+        let func = CommandFunc::Repo(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        self.add_command(def);
     }
 }
 
