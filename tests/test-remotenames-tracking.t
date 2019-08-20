@@ -12,12 +12,8 @@ Set up extension and repos
 Make sure we don't fail when rebase doesn't exist
 
   $ hg rebase
-  hg: unknown command 'rebase'
-  'rebase' is provided by the following extension:
-  
-      rebase        command to move sets of revisions to a different ancestor
-  
-  (use 'hg help extensions' for information on enabling extensions)
+  unknown command 'rebase'
+  (use 'hg help' to get help)
   [255]
   $ echo "rebase=" >> $HGRCPATH
 

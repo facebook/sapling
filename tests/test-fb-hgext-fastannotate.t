@@ -125,8 +125,8 @@ config option "fastannotate.modes"
   0: 1
   1: 2
   $ hg fastannotate --config fastannotate.modes=fctx -h -q
-  hg: unknown command 'fastannotate'
-  (did you mean *) (glob)
+  unknown command 'fastannotate'
+  (use 'hg help' to get help)
   [255]
 
 rename

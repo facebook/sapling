@@ -63,59 +63,8 @@ basic
 unknown
 
   $ hg unknown
-  hg: unknown command 'bargle'
-  Mercurial Distributed SCM
-  
-  hg COMMAND [OPTIONS]
-  
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
-  commands, and 'hg help COMMAND' to get help on a specific command.
-  
-  Get the latest commits from the server:
-  
-   pull          pull changes from the specified source
-  
-  View commits:
-  
-   show          show commit in detail
-   diff          show differences between commits
-  
-  Check out a commit:
-  
-   checkout      check out a specific commit
-  
-  Work with your checkout:
-  
-   status        list files with pending changes
-   add           start tracking the specified files
-   remove        delete the specified tracked files
-   forget        stop tracking the specified files
-   revert        change the specified files to match a commit
-  
-  Commit changes and modify commits:
-  
-   commit        save all pending changes or specified files in a new commit
-  
-  Rearrange commits:
-  
-   graft         copy commits from a different location
-  
-  Undo changes:
-  
-   uncommit      uncommit part or all of the current commit
-  
-  Other commands:
-  
-   config        show config settings
-   grep          search for a pattern in tracked files in the working directory
-  
-  Additional help topics:
-  
-   filesets      specifying files by their characteristics
-   glossary      common terms
-   patterns      specifying files by file name pattern
-   revisions     specifying commits
-   templating    customizing output with templates
+  unknown command 'bargle'
+  (use 'hg help' to get help)
   [255]
   $ hg help unknown
   alias for: bargle
@@ -162,12 +111,8 @@ recursive
 disabled
 
   $ hg disabled
-  hg: unknown command 'purge'
-  'purge' is provided by the following extension:
-  
-      purge         command to delete untracked files from the working directory
-  
-  (use 'hg help extensions' for information on enabling extensions)
+  unknown command 'purge'
+  (use 'hg help' to get help)
   [255]
   $ hg help disabled
   alias for: purge
@@ -488,12 +433,12 @@ invalid options
   abort: option --config may not be abbreviated!
   [255]
   $ hg no --config alias.no='--repo elsewhere --cwd elsewhere status'
-  hg: unknown command '--repo'
-  (did you mean no--repo?)
+  unknown command '--repo'
+  (use 'hg help' to get help)
   [255]
   $ hg no --config alias.no='--repo elsewhere'
-  hg: unknown command '--repo'
-  (did you mean no--repo?)
+  unknown command '--repo'
+  (use 'hg help' to get help)
   [255]
 
 optional repository
@@ -715,20 +660,20 @@ shell alias defined in current repo
   $ hg subalias
   sub
   $ hg --cwd .. subalias > /dev/null
-  hg: unknown command 'subalias'
-  (did you mean idalias?)
+  unknown command 'subalias'
+  (use 'hg help' to get help)
   [255]
   $ hg -R .. subalias > /dev/null
-  hg: unknown command 'subalias'
-  (did you mean idalias?)
+  unknown command 'subalias'
+  (use 'hg help' to get help)
   [255]
 
 
 shell alias defined in other repo
 
   $ hg mainalias > /dev/null
-  hg: unknown command 'mainalias'
-  (did you mean idalias?)
+  unknown command 'mainalias'
+  (use 'hg help' to get help)
   [255]
   $ hg -R .. mainalias
   warning: --repository ignored
@@ -738,8 +683,8 @@ shell alias defined in other repo
 
 typos get useful suggestions
   $ hg --cwd .. manalias
-  hg: unknown command 'manalias'
-  (did you mean one of idalias, mainalias, manifest?)
+  unknown command 'manalias'
+  (use 'hg help' to get help)
   [255]
 
 shell aliases with escaped $ chars
@@ -784,172 +729,16 @@ invalid arguments
 invalid global arguments for normal commands, aliases, and shell aliases
 
   $ hg --invalid root
-  hg: unknown command '--invalid'
-  Mercurial Distributed SCM
-  
-  hg COMMAND [OPTIONS]
-  
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
-  commands, and 'hg help COMMAND' to get help on a specific command.
-  
-  Get the latest commits from the server:
-  
-   pull          pull changes from the specified source
-  
-  View commits:
-  
-   show          show commit in detail
-   diff          show differences between commits
-  
-  Check out a commit:
-  
-   checkout      check out a specific commit
-  
-  Work with your checkout:
-  
-   status        list files with pending changes
-   add           start tracking the specified files
-   remove        delete the specified tracked files
-   forget        stop tracking the specified files
-   revert        change the specified files to match a commit
-  
-  Commit changes and modify commits:
-  
-   commit        save all pending changes or specified files in a new commit
-  
-  Rearrange commits:
-  
-   rebase        move commits from one location to another
-   graft         copy commits from a different location
-  
-  Undo changes:
-  
-   uncommit      uncommit part or all of the current commit
-  
-  Other commands:
-  
-   config        show config settings
-   grep          search for a pattern in tracked files in the working directory
-  
-  Additional help topics:
-  
-   filesets      specifying files by their characteristics
-   glossary      common terms
-   patterns      specifying files by file name pattern
-   revisions     specifying commits
-   templating    customizing output with templates
+  unknown command '--invalid'
+  (use 'hg help' to get help)
   [255]
   $ hg --invalid mylog
-  hg: unknown command '--invalid'
-  Mercurial Distributed SCM
-  
-  hg COMMAND [OPTIONS]
-  
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
-  commands, and 'hg help COMMAND' to get help on a specific command.
-  
-  Get the latest commits from the server:
-  
-   pull          pull changes from the specified source
-  
-  View commits:
-  
-   show          show commit in detail
-   diff          show differences between commits
-  
-  Check out a commit:
-  
-   checkout      check out a specific commit
-  
-  Work with your checkout:
-  
-   status        list files with pending changes
-   add           start tracking the specified files
-   remove        delete the specified tracked files
-   forget        stop tracking the specified files
-   revert        change the specified files to match a commit
-  
-  Commit changes and modify commits:
-  
-   commit        save all pending changes or specified files in a new commit
-  
-  Rearrange commits:
-  
-   rebase        move commits from one location to another
-   graft         copy commits from a different location
-  
-  Undo changes:
-  
-   uncommit      uncommit part or all of the current commit
-  
-  Other commands:
-  
-   config        show config settings
-   grep          search for a pattern in tracked files in the working directory
-  
-  Additional help topics:
-  
-   filesets      specifying files by their characteristics
-   glossary      common terms
-   patterns      specifying files by file name pattern
-   revisions     specifying commits
-   templating    customizing output with templates
+  unknown command '--invalid'
+  (use 'hg help' to get help)
   [255]
   $ hg --invalid blank
-  hg: unknown command '--invalid'
-  Mercurial Distributed SCM
-  
-  hg COMMAND [OPTIONS]
-  
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
-  commands, and 'hg help COMMAND' to get help on a specific command.
-  
-  Get the latest commits from the server:
-  
-   pull          pull changes from the specified source
-  
-  View commits:
-  
-   show          show commit in detail
-   diff          show differences between commits
-  
-  Check out a commit:
-  
-   checkout      check out a specific commit
-  
-  Work with your checkout:
-  
-   status        list files with pending changes
-   add           start tracking the specified files
-   remove        delete the specified tracked files
-   forget        stop tracking the specified files
-   revert        change the specified files to match a commit
-  
-  Commit changes and modify commits:
-  
-   commit        save all pending changes or specified files in a new commit
-  
-  Rearrange commits:
-  
-   rebase        move commits from one location to another
-   graft         copy commits from a different location
-  
-  Undo changes:
-  
-   uncommit      uncommit part or all of the current commit
-  
-  Other commands:
-  
-   config        show config settings
-   grep          search for a pattern in tracked files in the working directory
-  
-  Additional help topics:
-  
-   filesets      specifying files by their characteristics
-   glossary      common terms
-   patterns      specifying files by file name pattern
-   revisions     specifying commits
-   templating    customizing output with templates
+  unknown command '--invalid'
+  (use 'hg help' to get help)
   [255]
 
 environment variable changes in alias commands
