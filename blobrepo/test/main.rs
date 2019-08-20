@@ -14,6 +14,7 @@ use blobrepo::{
     compute_changed_files, BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
     UploadHgNodeHash,
 };
+use blobstore::{Loadable, Storable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
@@ -30,8 +31,8 @@ use mercurial_types::{
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
-    blob::BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange,
-    FileContents, MononokeId,
+    blob::BlobstoreValue, Blob, BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange,
+    FileContents,
 };
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
 use rand::{distributions::Normal, SeedableRng};
@@ -592,14 +593,15 @@ impl<K> StoreFetchTestable<K> {
     }
 }
 
-impl<K> Testable for StoreFetchTestable<K>
+impl<K, V> Testable for StoreFetchTestable<K>
 where
-    K: MononokeId,
-    K::Value: PartialEq + Arbitrary,
+    K: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+    V: BlobstoreValue<Key = K> + PartialEq + Arbitrary + Send,
+    Blob<K>: Storable<Key = K>,
 {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
         let ctx = CoreContext::test_mock();
-        let value = <K::Value as Arbitrary>::arbitrary(g);
+        let value = <V as Arbitrary>::arbitrary(g);
         let value_cloned = value.clone();
         let store_fetch_future = self
             .repo

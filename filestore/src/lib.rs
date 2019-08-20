@@ -14,9 +14,9 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
-use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, Loadable, MononokeId};
+use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, MononokeId};
 
 mod alias;
 mod chunk;

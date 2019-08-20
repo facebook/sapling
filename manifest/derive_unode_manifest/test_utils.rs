@@ -5,13 +5,14 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, FutureExt};
 use manifest::{Entry, Manifest};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{BonsaiChangeset, ChangesetId, Loadable, MPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 use std::str::FromStr;
 use tokio::runtime::Runtime;
 

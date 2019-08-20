@@ -4,12 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Storable};
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_left_future, FutureExt};
-use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata, Storable};
+use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata};
 
 use crate::errors::{ErrorKind, InvalidHash};
 use crate::fetch_key::{Alias, AliasBlob};

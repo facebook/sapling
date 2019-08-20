@@ -38,13 +38,14 @@ use slog::Logger;
 use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;
+use blobstore::Storable;
 use changesets::SqlChangesets;
 use cmdlib::args;
 use context::CoreContext;
 use filestore::{self, Alias, AliasBlob, FetchKey};
 use mononoke_types::{
     hash::{self, Sha256},
-    ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId, Storable,
+    ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
 };
 
 pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {

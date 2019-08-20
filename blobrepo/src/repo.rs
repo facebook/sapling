@@ -19,7 +19,7 @@ use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPo
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable, Storable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -53,8 +53,8 @@ use mercurial_types::{
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
-    ContentMetadata, FileChange, FileType, Generation, Loadable, MPath, MPathElement, MononokeId,
-    RepositoryId, Storable, Timestamp,
+    ContentMetadata, FileChange, FileType, Generation, MPath, MPathElement, MononokeId,
+    RepositoryId, Timestamp,
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -229,27 +229,25 @@ impl BlobRepo {
         )
     }
 
-    fn fetch<Id>(
-        &self,
-        ctx: CoreContext,
-        id: Id,
-    ) -> impl Future<Item = Id::Value, Error = Error> + Send
+    fn fetch<Id, V>(&self, ctx: CoreContext, id: Id) -> impl Future<Item = V, Error = Error> + Send
     where
-        Id: MononokeId,
+        Id: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+        V: Send,
     {
         id.load(ctx, &self.blobstore).and_then(move |ret| {
-            ret.ok_or(ErrorKind::MissingTypedKeyEntry(id.blobstore_key()).into())
+            ret.ok_or(ErrorKind::MissingTypedKeyEntry(format!("{:?}", id)).into())
         })
     }
 
     // this is supposed to be used only from unittest
-    pub fn unittest_fetch<Id>(
+    pub fn unittest_fetch<Id, V>(
         &self,
         ctx: CoreContext,
         id: Id,
-    ) -> impl Future<Item = Id::Value, Error = Error> + Send
+    ) -> impl Future<Item = V, Error = Error> + Send
     where
-        Id: MononokeId,
+        Id: Loadable<Value = Option<V>> + ::std::fmt::Debug + Send,
+        V: Send,
     {
         self.fetch(ctx, id)
     }
@@ -257,7 +255,7 @@ impl BlobRepo {
     fn store<K, V>(&self, ctx: CoreContext, value: V) -> impl Future<Item = K, Error = Error> + Send
     where
         V: BlobstoreValue<Key = K>,
-        K: MononokeId<Value = V>,
+        Blob<K>: Storable<Key = K>,
     {
         value.into_blob().store(ctx, &self.blobstore)
     }
@@ -270,7 +268,7 @@ impl BlobRepo {
     ) -> impl Future<Item = K, Error = Error> + Send
     where
         V: BlobstoreValue<Key = K>,
-        K: MononokeId<Value = V>,
+        Blob<K>: Storable<Key = K>,
     {
         self.store(ctx, value)
     }

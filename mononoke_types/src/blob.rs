@@ -6,17 +6,14 @@
 
 //! Support for converting Mononoke data structures into in-memory blobs.
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
-use context::CoreContext;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
 
 use crate::{
     errors::*,
     typed_hash::{
         ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId,
-        MononokeId, RawBundle2Id,
+        RawBundle2Id,
     },
 };
 
@@ -64,71 +61,4 @@ pub trait BlobstoreValue: Sized + Send {
     type Key;
     fn into_blob(self) -> Blob<Self::Key>;
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self>;
-}
-
-pub trait Loadable: Sized + 'static {
-    type Value;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error>;
-}
-
-pub trait Storable: Sized + 'static {
-    type Key;
-
-    fn store<B: Blobstore + Clone>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error>;
-}
-
-impl<T> Loadable for T
-where
-    T: MononokeId,
-{
-    type Value = Option<T::Value>;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, Error> {
-        let id = *self;
-        let blobstore_key = id.blobstore_key();
-
-        blobstore
-            .get(ctx, blobstore_key.clone())
-            .and_then(move |bytes| {
-                bytes
-                    .map(move |bytes| {
-                        let blob: Blob<T> = Blob::new(id, bytes.into_bytes());
-                        <T::Value>::from_blob(blob)
-                    })
-                    .transpose()
-            })
-            .boxify()
-    }
-}
-
-impl<T> Storable for Blob<T>
-where
-    T: MononokeId,
-{
-    type Key = T;
-
-    fn store<B: Blobstore + Clone>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
-        let id = *self.id();
-        blobstore
-            .put(ctx, id.blobstore_key(), self.into())
-            .map(move |_| id)
-            .boxify()
-    }
 }

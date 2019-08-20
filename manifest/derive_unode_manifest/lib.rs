@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
@@ -14,8 +14,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, Loadable, MPathHash,
-    ManifestUnodeId, MononokeId,
+    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPathHash, ManifestUnodeId,
+    MononokeId,
 };
 use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;

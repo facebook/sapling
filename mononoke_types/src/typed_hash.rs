@@ -10,13 +10,17 @@ use std::str::FromStr;
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use asyncmemo;
+use blobstore::{Blobstore, Loadable, Storable};
+use context::CoreContext;
 use failure_ext::bail_err;
+use futures::Future;
+use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde;
 
 use crate::{
-    blob::BlobstoreValue,
+    blob::{Blob, BlobstoreValue},
     bonsai_changeset::BonsaiChangeset,
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
@@ -189,6 +193,7 @@ macro_rules! impl_typed_hash_no_context {
                 serializer.serialize_str(self.to_hex().as_str())
             }
         }
+
     }
 }
 
@@ -242,6 +247,50 @@ macro_rules! impl_typed_hash {
                 concat!($key, ".blake2.").to_string()
             }
         }
+
+        impl Loadable for $typed
+        {
+            type Value = Option<<$typed as MononokeId>::Value>;
+
+            fn load<B: Blobstore + Clone>(
+                &self,
+                ctx: CoreContext,
+                blobstore: &B,
+            ) -> BoxFuture<Self::Value, Error> {
+                let id = *self;
+                let blobstore_key = id.blobstore_key();
+
+                blobstore
+                    .get(ctx, blobstore_key.clone())
+                    .and_then(move |bytes| {
+                        bytes
+                            .map(move |bytes| {
+                                let blob: Blob<$typed> = Blob::new(id, bytes.into_bytes());
+                                <$typed as MononokeId>::Value::from_blob(blob)
+                            })
+                            .transpose()
+                    })
+                    .boxify()
+            }
+        }
+
+        impl Storable for Blob<$typed>
+        {
+            type Key = $typed;
+
+            fn store<B: Blobstore + Clone>(
+                self,
+                ctx: CoreContext,
+                blobstore: &B,
+            ) -> BoxFuture<Self::Key, Error> {
+                let id = *self.id();
+                blobstore
+                    .put(ctx, id.blobstore_key(), self.into())
+                    .map(move |_| id)
+                    .boxify()
+            }
+        }
+
     }
 }
 
@@ -313,6 +362,47 @@ impl MononokeId for ContentMetadataId {
     #[inline]
     fn blobstore_key_prefix() -> String {
         Self::PREFIX.to_string()
+    }
+}
+
+impl Loadable for ContentMetadataId {
+    type Value = Option<<ContentMetadataId as MononokeId>::Value>;
+
+    fn load<B: Blobstore + Clone>(
+        &self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, Error> {
+        let id = *self;
+        let blobstore_key = id.blobstore_key();
+
+        blobstore
+            .get(ctx, blobstore_key.clone())
+            .and_then(move |bytes| {
+                bytes
+                    .map(move |bytes| {
+                        let blob: Blob<Self> = Blob::new(id, bytes.into_bytes());
+                        <Self as MononokeId>::Value::from_blob(blob)
+                    })
+                    .transpose()
+            })
+            .boxify()
+    }
+}
+
+impl Storable for Blob<ContentMetadataId> {
+    type Key = ContentMetadataId;
+
+    fn store<B: Blobstore + Clone>(
+        self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Key, Error> {
+        let id = *self.id();
+        blobstore
+            .put(ctx, id.blobstore_key(), self.into())
+            .map(move |_| id)
+            .boxify()
     }
 }
 

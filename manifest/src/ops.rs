@@ -5,12 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{Entry, Manifest, PathTree};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use failure::Error;
 use futures::{stream, Future, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxStream, FutureExt, StreamExt};
-use mononoke_types::{Loadable, MPath};
+use mononoke_types::MPath;
 use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

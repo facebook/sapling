@@ -4,14 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Fail};
 use futures::{stream, Future, Stream};
 use futures_ext::{BufferedParams, StreamExt};
-use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents, Loadable};
+use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents};
 
 // TODO: Make this configurable? Perhaps as a global, since it's something that only makes sense at
 // the program level (as opposed to e;g. chunk size, which makes sense at the repo level).

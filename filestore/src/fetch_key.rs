@@ -4,12 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable, Storable};
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{hash, ContentAlias, ContentId, Loadable, Storable};
+use mononoke_types::{hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Clone)]

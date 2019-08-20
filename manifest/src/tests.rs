@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{derive_manifest, Diff, Entry, Manifest, ManifestOps, PathTree, TreeInfo};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture, Stream};
@@ -13,7 +13,7 @@ use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, Future
 use lock_ext::LockExt;
 use maplit::btreemap;
 use memblob::LazyMemblob;
-use mononoke_types::{BlobstoreBytes, Loadable, MPath, MPathElement, Storable};
+use mononoke_types::{BlobstoreBytes, MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
