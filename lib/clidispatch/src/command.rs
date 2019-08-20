@@ -7,7 +7,7 @@ use crate::io::IO;
 use crate::repo::Repo;
 use cliparser::parser::{Flag, ParseOutput};
 
-pub enum CommandType {
+pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Result<u8, DispatchError>>),
     InferRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8, DispatchError>>),
     Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8, DispatchError>>),

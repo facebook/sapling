@@ -2,7 +2,7 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use crate::command::{CommandDefinition, CommandType};
+use crate::command::{CommandDefinition, CommandFunc};
 use crate::errors::{DispatchError, HighLevelError};
 use crate::global_flags::HG_GLOBAL_FLAGS;
 use crate::io::IO;
@@ -104,7 +104,7 @@ pub fn args() -> Result<Vec<String>, DispatchError> {
 }
 
 pub struct Dispatcher {
-    command_table: BTreeMap<String, CommandType>,
+    command_table: BTreeMap<String, CommandFunc>,
     commands: BTreeMap<String, CommandDefinition>,
 }
 
@@ -416,7 +416,7 @@ impl Dispatcher {
         let handler = self.command_table.get(&command_name).unwrap();
 
         let res = match handler {
-            CommandType::Repo(f) => {
+            CommandFunc::Repo(f) => {
                 let mut r = repo.ok_or_else(|| DispatchError::RepoRequired {
                     cwd: env::current_dir()
                         .ok()
@@ -427,7 +427,7 @@ impl Dispatcher {
                 r.set_config(config_set);
                 f(result, io, r)
             }
-            CommandType::InferRepo(f) => {
+            CommandFunc::InferRepo(f) => {
                 let r = match repo {
                     Some(mut re) => {
                         re.set_config(config_set);
@@ -437,7 +437,7 @@ impl Dispatcher {
                 };
                 f(result, io, r)
             }
-            CommandType::NoRepo(f) => f(result, io),
+            CommandFunc::NoRepo(f) => f(result, io),
         };
 
         res
@@ -461,7 +461,7 @@ where
         };
         self.command_table.insert(
             command.name().to_owned(),
-            CommandType::NoRepo(Box::new(wrapped)),
+            CommandFunc::NoRepo(Box::new(wrapped)),
         );
         self.add_command(command);
     }
@@ -480,7 +480,7 @@ where
         };
         self.command_table.insert(
             command.name().to_owned(),
-            CommandType::InferRepo(Box::new(wrapped)),
+            CommandFunc::InferRepo(Box::new(wrapped)),
         );
         self.add_command(command);
     }
@@ -499,7 +499,7 @@ where
         };
         self.command_table.insert(
             command.name().to_owned(),
-            CommandType::Repo(Box::new(wrapped)),
+            CommandFunc::Repo(Box::new(wrapped)),
         );
         self.add_command(command);
     }
