@@ -19,7 +19,7 @@ from edenscm.mercurial import (
     scmutil,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullrev, short
+from edenscm.mercurial.node import hex, nullrev, short
 
 from . import common
 
@@ -88,7 +88,7 @@ def previous(ui, repo, *args, **opts):
     + moveopts,
     _("[OPTIONS]... [STEPS]"),
 )
-def next(ui, repo, *args, **opts):
+def next_(ui, repo, *args, **opts):
     """check out a child commit"""
     _moverelative(ui, repo, args, opts, reverse=False)
 
@@ -175,13 +175,13 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             commands.update(
                 ui,
                 repo,
-                rev=target,
+                rev=hex(target),
                 clean=opts.get("clean", False),
                 merge=opts.get("merge", False),
             )
 
             # Print out the changeset we landed on.
-            _showchangesets(ui, repo, revs=[target])
+            _showchangesets(ui, repo, nodes=[target])
 
             # Activate the bookmark on the new changeset.
             if not noactivate and not movebookmark:
@@ -262,7 +262,7 @@ def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
         # Get the parent with the highest revision number.
         ctx = max(parents, key=lambda x: x.rev())
 
-    return ctx.rev()
+    return ctx.node()
 
 
 def _findnexttarget(
@@ -282,7 +282,7 @@ def _findnexttarget(
        option is specified, potentially rebase unstable children as we
        walk up the stack.
     """
-    rev = repo["."].rev()
+    node = repo["."].node()
 
     # The caller must specify a stopping condition -- either a number
     # of steps to walk, a bookmark to search for, or --top.
@@ -291,7 +291,7 @@ def _findnexttarget(
 
     # Precompute child relationships to avoid expensive ctx.children() calls.
     if not rebase:
-        childrenof = common.getchildrelationships(repo, [rev])
+        childrenof = common.getchildrelationships(repo, [node])
 
     # If we're moving towards a rev, get the chain of revs up to that rev.
     line = set()
@@ -300,7 +300,7 @@ def _findnexttarget(
         if len(towardsrevs) > 1:
             raise error.Abort(_("'%s' refers to multiple changesets") % towards)
         towardsrev = towardsrevs.first()
-        line = set(repo.revs(".::%d", towardsrev))
+        line = set(repo.nodes(".::%d", towardsrev))
         if not line:
             raise error.Abort(
                 _("the current changeset is not an ancestor of '%s'") % towards
@@ -311,7 +311,7 @@ def _findnexttarget(
         # node with a bookmark if the bookmark option was specified.
         # If top is specified, loop until we reach a head.
         if bookmark:
-            if i > 0 and repo[rev].bookmarks():
+            if i > 0 and repo[node].bookmarks():
                 break
         elif i >= n and not top:
             break
@@ -319,17 +319,17 @@ def _findnexttarget(
         # If the rebase flag is present, rebase any unstable children.
         # This means we can't rely on precomputed child relationships.
         if rebase:
-            common.restackonce(ui, repo, rev, childrenonly=True)
-            children = set(c.rev() for c in repo[rev].children())
+            common.restackonce(ui, repo, repo[node].rev(), childrenonly=True)
+            children = set(c.node() for c in repo[node].children())
         else:
-            children = childrenof[rev]
+            children = childrenof[node]
 
         # Remove children not along the specified line.
         children = (children & line) or children
 
         # Have we reached a head?
         if not children:
-            if rev == repo["."].rev():
+            if node == repo["."].node():
                 raise error.Abort(_("current changeset has no children"))
             if not top:
                 ui.status(_("reached head changeset\n"))
@@ -337,25 +337,17 @@ def _findnexttarget(
 
         # Are there multiple children?
         if len(children) > 1 and not newest:
-            ui.status(
-                _("changeset %s has multiple children, namely:\n")
-                % short(repo[rev].node())
-            )
-            _showchangesets(ui, repo, revs=children)
+            ui.status(_("changeset %s has multiple children, namely:\n") % short(node))
+            _showchangesets(ui, repo, nodes=children)
             # if theres only one nonobsolete we're guessing it's the one
             nonobschildren = filter(lambda c: not repo[c].obsolete(), children)
             draftchildren = filter(lambda c: repo[c].mutable(), children)
             if len(nonobschildren) == 1:
-                rev = nonobschildren[0]
-                ui.status(
-                    _("choosing the only non-obsolete child: %s\n")
-                    % short(repo[rev].node())
-                )
+                node = nonobschildren[0]
+                ui.status(_("choosing the only non-obsolete child: %s\n") % short(node))
             elif preferdraft and len(draftchildren) == 1:
-                rev = draftchildren[0]
-                ui.status(
-                    _("choosing the only draft child: %s\n") % short(repo[rev].node())
-                )
+                node = draftchildren[0]
+                ui.status(_("choosing the only draft child: %s\n") % short(node))
             else:
                 raise error.Abort(
                     _("ambiguous next changeset"),
@@ -366,14 +358,14 @@ def _findnexttarget(
                 )
         else:
             # Get the child with the highest revision number.
-            rev = max(children)
+            node = max(children, key=lambda childnode: repo[childnode].rev())
 
-    return rev
+    return node
 
 
 def _findstacktop(ui, repo, newest=False):
     """Find the head of the current stack."""
-    heads = repo.revs("heads(.::)")
+    heads = list(repo.nodes("heads(.::)"))
     if len(heads) > 1:
         if newest:
             # We can't simply return heads.max() since this might give
@@ -384,37 +376,40 @@ def _findstacktop(ui, repo, newest=False):
             # would result in different destination changesets.
             return _findnexttarget(ui, repo, newest=True, top=True)
         ui.warn(_("current stack has multiple heads, namely:\n"))
-        _showchangesets(ui, repo, revs=heads)
+        _showchangesets(ui, repo, nodes=heads)
         raise error.Abort(
             _("ambiguous next changeset"),
             hint=_(
-                "use the --newest flag to always " "pick the newest child at each step"
+                "use the --newest flag to always pick the newest child at each step"
             ),
         )
-    return heads.first()
+    return next(iter(heads), None)
 
 
 def _findstackbottom(ui, repo):
     """Find the lowest non-public ancestor of the current changeset."""
     if repo["."].phase() == phases.public:
         raise error.Abort(_("current changeset is public"))
-    return repo.revs("draft() & ::.").first()
+    return next(repo.nodes("first(draft() & ::.)"), None)
 
 
-def _showchangesets(ui, repo, contexts=None, revs=None):
-    """Pretty print a list of changesets. Can take either a list of
-       change contexts or a list of revision numbers.
+def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None):
+    """Pretty print a list of changesets. Can take a list of
+       change contexts, a list of revision numbers, or a list of
+       commit hashes.
     """
     if contexts is None:
         contexts = []
     if revs is not None:
         contexts.extend(repo[r] for r in revs)
+    if nodes is not None:
+        contexts.extend(repo[n] for n in nodes)
     showopts = {
         "template": '[{shortest(node, 6)}] {if(bookmarks, "({bookmarks}) ")}'
         "{desc|firstline}\n"
     }
     displayer = cmdutil.show_changeset(ui, repo, showopts)
-    for ctx in contexts:
+    for ctx in sorted(contexts, key=lambda c: c.rev()):
         displayer.show(ctx)
 
 
@@ -425,11 +420,10 @@ def _setbookmark(repo, tr, bookmark, rev):
     repo._bookmarks.recordchange(tr)
 
 
-def _activate(ui, repo, rev):
+def _activate(ui, repo, node):
     """Activate the bookmark on the given revision if it only has one bookmark.
     """
-    ctx = repo[rev]
-    marks = repo.nodebookmarks(ctx.node())
+    marks = repo.nodebookmarks(node)
     if len(marks) == 1:
         b = ui.label(marks[0], "bookmarks.active")
         ui.status(_("(activating bookmark %s)\n") % b)

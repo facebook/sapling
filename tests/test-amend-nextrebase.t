@@ -352,8 +352,8 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   changeset dc00accb61d3 has multiple children, namely:
-  [fe8ffc] r2
   [4e13d3] add a
+  [fe8ffc] r2
   transaction abort!
   rollback completed
   abort: ambiguous next changeset

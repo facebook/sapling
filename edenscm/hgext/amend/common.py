@@ -20,20 +20,20 @@ from edenscm.mercurial import (
     mutation,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullrev
+from edenscm.mercurial.node import nullid
 
 
-def getchildrelationships(repo, revs):
+def getchildrelationships(repo, nodes):
     """Build a defaultdict of child relationships between all descendants of
-       revs. This information will prevent us from having to repeatedly
+       nodes. This information will prevent us from having to repeatedly
        perform children that reconstruct these relationships each time.
     """
     cl = repo.changelog
     children = defaultdict(set)
-    for rev in repo.revs("(%ld)::", revs):
-        for parent in cl.parentrevs(rev):
-            if parent != nullrev:
-                children[parent].add(rev)
+    for node in repo.nodes("(%ln)::", nodes):
+        for parent in cl.parents(node):
+            if parent != nullid:
+                children[parent].add(node)
     return children
 
 
