@@ -15,7 +15,7 @@ use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::manifest::Content;
-use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
+use mercurial_types::{Changeset, HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
 use crate::common::resolve_hg_rev;
@@ -77,7 +77,7 @@ pub fn subcommand_content_fetch(
 fn fetch_content_from_manifest(
     ctx: CoreContext,
     logger: Logger,
-    mf: Box<dyn Manifest + Sync>,
+    mf: Box<dyn HgManifest + Sync>,
     element: MPathElement,
 ) -> BoxFuture<Content, Error> {
     match mf.lookup(&element) {

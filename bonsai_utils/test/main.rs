@@ -10,7 +10,7 @@ use async_unit::tokio_unit_test;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use context::CoreContext;
 use futures::{Future, Stream};
-use mercurial_types::{Entry, HgFileNodeId};
+use mercurial_types::{HgEntry, HgFileNodeId};
 use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash::*;
 use mononoke_types::{path::check_pcf, FileType, MPath, RepoPath};
@@ -94,7 +94,7 @@ fn diff_merge1() {
     })
 }
 
-fn root_entry(mf: &ManifestFixture) -> Box<dyn Entry + Sync> {
+fn root_entry(mf: &ManifestFixture) -> Box<dyn HgEntry + Sync> {
     let path_hashes = mf.path_hashes.iter().cloned();
     let dir_hashes = mf.dir_hashes.iter().cloned();
     let mock_manifest =
@@ -106,9 +106,9 @@ fn root_entry(mf: &ManifestFixture) -> Box<dyn Entry + Sync> {
 
 fn compute_diff(
     ctx: CoreContext,
-    working_entry: Box<dyn Entry + Sync>,
-    p1_entry: Option<Box<dyn Entry + Sync>>,
-    p2_entry: Option<Box<dyn Entry + Sync>>,
+    working_entry: Box<dyn HgEntry + Sync>,
+    p1_entry: Option<Box<dyn HgEntry + Sync>>,
+    p2_entry: Option<Box<dyn HgEntry + Sync>>,
 ) -> Vec<BonsaiDiffResult> {
     let diff_stream = bonsai_diff(ctx, working_entry, p1_entry, p2_entry);
     let mut paths = diff_stream.collect().wait().expect("computing diff failed");

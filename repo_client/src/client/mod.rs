@@ -32,8 +32,8 @@ use mercurial_types::manifest_utils::{
     Pruner,
 };
 use mercurial_types::{
-    convert_parents_to_remotefilelog_format, percent_encode, Delta, Entry, HgBlobNode,
-    HgChangesetId, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
+    convert_parents_to_remotefilelog_format, percent_encode, Delta, HgBlobNode, HgChangesetId,
+    HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
 use percent_encoding;
@@ -1591,7 +1591,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(Box<dyn Entry + Sync>, Option<MPath>), Error> {
+) -> BoxStream<(Box<dyn HgEntry + Sync>, Option<MPath>), Error> {
     if !params.directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
         return stream::once(Err(err_msg("directories param is not supported"))).boxify();
@@ -1655,10 +1655,10 @@ fn get_changed_manifests_stream(
     rootpath: Option<MPath>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
-) -> BoxStream<(Box<dyn Entry + Sync>, Option<MPath>), Error> {
+) -> BoxStream<(Box<dyn HgEntry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid);
     let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid);
-    let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(mfid));
+    let entry: Box<dyn HgEntry + Sync> = Box::new(repo.get_root_entry(mfid));
     let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
 
     if max_depth == 1 {
@@ -1702,7 +1702,7 @@ fn get_changed_manifests_stream(
 fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
-    entry: Box<dyn Entry + Sync>,
+    entry: Box<dyn HgEntry + Sync>,
     basepath: Option<MPath>,
     validate_content: bool,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {

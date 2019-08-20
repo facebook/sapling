@@ -9,4 +9,4 @@ mod revlog;
 
 pub use self::manifest_utils::new_entry_intersection_stream;
 pub use self::revlog::{Details, EntryContent, ManifestContent, RevlogEntry, RevlogManifest};
-pub use mercurial_types::Manifest;
+pub use mercurial_types::HgManifest;

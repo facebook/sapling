@@ -18,8 +18,8 @@ use itertools::{EitherOrBoth, Itertools};
 
 use context::CoreContext;
 use futures_ext::{select_all, BoxStream, StreamExt};
-use mercurial_types::manifest::{Content, EmptyManifest};
-use mercurial_types::{Entry, HgFileNodeId, Manifest, Type};
+use mercurial_types::manifest::{Content, HgEmptyManifest};
+use mercurial_types::{HgEntry, HgFileNodeId, HgManifest, Type};
 use mononoke_types::{FileType, MPath};
 
 use crate::composite::CompositeEntry;
@@ -30,9 +30,9 @@ use crate::composite::CompositeEntry;
 /// Items may be returned in arbitrary order.
 pub fn bonsai_diff(
     ctx: CoreContext,
-    root_entry: Box<dyn Entry + Sync>,
-    p1_entry: Option<Box<dyn Entry + Sync>>,
-    p2_entry: Option<Box<dyn Entry + Sync>>,
+    root_entry: Box<dyn HgEntry + Sync>,
+    p1_entry: Option<Box<dyn HgEntry + Sync>>,
+    p2_entry: Option<Box<dyn HgEntry + Sync>>,
 ) -> impl Stream<Item = BonsaiDiffResult, Error = Error> + Send {
     let mut composite_entry = CompositeEntry::new();
     if let Some(entry) = p1_entry {
@@ -132,13 +132,13 @@ impl<'a> From<&'a BonsaiDiffResult> for DiffResultCmp<'a> {
 /// Represents a specific entry, or the lack of one, in the working manifest.
 enum WorkingEntry {
     Absent,
-    File(FileType, Box<dyn Entry + Sync>),
-    Tree(Box<dyn Entry + Sync>),
+    File(FileType, Box<dyn HgEntry + Sync>),
+    Tree(Box<dyn HgEntry + Sync>),
 }
 
 impl WorkingEntry {
     #[inline]
-    fn new(entry: Box<dyn Entry + Sync>) -> Self {
+    fn new(entry: Box<dyn HgEntry + Sync>) -> Self {
         match entry.get_type() {
             Type::File(ft) => WorkingEntry::File(ft, entry),
             Type::Tree => WorkingEntry::Tree(entry),
@@ -154,7 +154,7 @@ impl WorkingEntry {
     fn manifest(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = Box<dyn Manifest + Sync + 'static>, Error = Error> + Send {
+    ) -> impl Future<Item = Box<dyn HgManifest + Sync + 'static>, Error = Error> + Send {
         match self {
             WorkingEntry::Tree(entry) => {
                 Either::A(entry.get_content(ctx).map(|content| match content {
@@ -162,7 +162,7 @@ impl WorkingEntry {
                     _ => unreachable!("tree entries can only return manifests"),
                 }))
             }
-            _other => Either::B(future::ok(EmptyManifest::new().boxed())),
+            _other => Either::B(future::ok(HgEmptyManifest::new().boxed())),
         }
     }
 

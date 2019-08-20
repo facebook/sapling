@@ -18,7 +18,7 @@ use mercurial_types::blobnode::HgParents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::{HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mercurial_types::{
-    Entry, FileBytes, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type,
+    FileBytes, FileType, HgBlob, HgEntry, HgManifest, MPath, MPathElement, RepoPath, Type,
 };
 
 use crate::errors::*;
@@ -192,11 +192,11 @@ fn finalize_dirs(
     Ok(())
 }
 
-impl Manifest for MockManifest {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
+impl HgManifest for MockManifest {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
         self.entries.get(path).map(|e| e.clone().boxed())
     }
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
         Box::new(self.entries.clone().into_iter().map(|e| e.1.boxed()))
     }
 }
@@ -255,7 +255,7 @@ impl MockEntry {
     }
 }
 
-impl Entry for MockEntry {
+impl HgEntry for MockEntry {
     fn get_type(&self) -> Type {
         self.ty.expect("ty is not set!")
     }

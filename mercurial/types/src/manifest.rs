@@ -10,7 +10,7 @@ use std::iter;
 use failure::Error;
 
 use context::CoreContext;
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::{BoxFuture, BoxStream};
 use mononoke_types::{FileType, MPathElement};
 use serde_derive::Serialize;
 
@@ -29,21 +29,23 @@ use crate::nodehash::HgEntryId;
 /// each directory ("tree manifest"). As a result, operations on a manifest are path element at
 /// a time.
 ///
-pub trait Manifest: Send + 'static {
+/// NOTE: We have similar `Manifest` trait which is generic over different kinds of manifests
+/// (unodes, hg manifests etc). Prefer to use `Manifest` trait over HgManifest is possible.
+pub trait HgManifest: Send + 'static {
     /// Look up a specific entry in the Manifest by name
     ///
     /// If the name exists, return it as Some(entry). If it doesn't exist, return None.
     /// If it returns an error, it indicates something went wrong with the underlying
     /// infrastructure.
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>>;
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>>;
 
     /// List all the entries in the Manifest.
     ///
     /// Entries are returned in canonical order.
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send>;
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send>;
 
     /// Return self as a type-erased boxed trait (still needed as a trait method? T25577105)
-    fn boxed(self) -> Box<dyn Manifest + Sync>
+    fn boxed(self) -> Box<dyn HgManifest + Sync>
     where
         Self: Sync + Sized,
     {
@@ -51,45 +53,45 @@ pub trait Manifest: Send + 'static {
     }
 }
 
-pub fn get_empty_manifest() -> Box<dyn Manifest + Sync> {
-    Box::new(EmptyManifest::new())
+pub fn get_empty_manifest() -> Box<dyn HgManifest + Sync> {
+    Box::new(HgEmptyManifest::new())
 }
 
-pub struct EmptyManifest;
+pub struct HgEmptyManifest;
 
-impl EmptyManifest {
+impl HgEmptyManifest {
     #[inline]
     pub fn new() -> Self {
-        EmptyManifest
+        HgEmptyManifest
     }
 }
 
-impl Manifest for EmptyManifest {
-    fn lookup(&self, _path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
+impl HgManifest for HgEmptyManifest {
+    fn lookup(&self, _path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
         None
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
         Box::new(iter::empty())
     }
 }
 
-impl Manifest for Box<dyn Manifest + Sync> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
+impl HgManifest for Box<dyn HgManifest + Sync> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
         (**self).list()
     }
 }
 
-impl Manifest for Box<dyn Manifest> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
+impl HgManifest for Box<dyn HgManifest> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
         (**self).list()
     }
 }
@@ -144,7 +146,7 @@ pub enum Content {
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
     Symlink(BoxStream<FileBytes, Error>),
-    Tree(Box<dyn Manifest + Sync>),
+    Tree(Box<dyn HgManifest + Sync>),
 }
 
 impl Content {
@@ -172,7 +174,7 @@ impl fmt::Debug for Content {
 ///
 /// The Entry has at least a name, a type, and the identity of the object it refers to
 
-pub trait Entry: Send + 'static {
+pub trait HgEntry: Send + 'static {
     /// Type of the object this entry refers to
     fn get_type(&self) -> Type;
 
@@ -197,7 +199,7 @@ pub trait Entry: Send + 'static {
 
     /// Return an Entry as a type-erased trait object.
     /// (Do we still need this as a trait method? T25577105)
-    fn boxed(self) -> Box<dyn Entry + Sync>
+    fn boxed(self) -> Box<dyn HgEntry + Sync>
     where
         Self: Sync + Sized,
     {
@@ -205,59 +207,7 @@ pub trait Entry: Send + 'static {
     }
 }
 
-/// Wrapper for boxing an instance of Entry
-///
-/// TODO: (jsgf) T25577105 Are the Box variants of Manifest/Entry traits still needed?
-pub struct BoxEntry<Ent>
-where
-    Ent: Entry,
-{
-    entry: Ent,
-}
-
-impl<Ent> BoxEntry<Ent>
-where
-    Ent: Entry + Sync + Send + 'static,
-{
-    pub fn new(entry: Ent) -> Box<dyn Entry + Sync> {
-        Box::new(BoxEntry { entry })
-    }
-}
-
-impl<Ent> Entry for BoxEntry<Ent>
-where
-    Ent: Entry + Sync + Send + 'static,
-{
-    fn get_type(&self) -> Type {
-        self.entry.get_type()
-    }
-
-    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
-        self.entry.get_parents(ctx).boxify()
-    }
-
-    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
-        self.entry.get_raw_content(ctx).boxify()
-    }
-
-    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
-        self.entry.get_content(ctx).boxify()
-    }
-
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
-        self.entry.get_size(ctx).boxify()
-    }
-
-    fn get_hash(&self) -> HgEntryId {
-        self.entry.get_hash()
-    }
-
-    fn get_name(&self) -> Option<&MPathElement> {
-        self.entry.get_name()
-    }
-}
-
-impl Entry for Box<dyn Entry + Sync> {
+impl HgEntry for Box<dyn HgEntry + Sync> {
     fn get_type(&self) -> Type {
         (**self).get_type()
     }
@@ -287,7 +237,7 @@ impl Entry for Box<dyn Entry + Sync> {
     }
 }
 
-impl fmt::Debug for Box<dyn Entry + Sync> {
+impl fmt::Debug for Box<dyn HgEntry + Sync> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Entry")
             .field("name", &self.get_name())

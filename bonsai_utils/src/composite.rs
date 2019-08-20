@@ -10,13 +10,13 @@ use crate::failure::Error;
 use futures::{future, stream, Future, Stream};
 
 use context::CoreContext;
-use mercurial_types::{manifest::Content, Entry, HgEntryId, HgFileNodeId, HgManifestId};
+use mercurial_types::{manifest::Content, HgEntry, HgEntryId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, MPathElement};
 
 /// An entry representing composite state formed by multiple parents.
 pub struct CompositeEntry {
-    files: HashMap<(FileType, HgFileNodeId), Box<dyn Entry + Sync>>,
-    trees: HashMap<HgManifestId, Box<dyn Entry + Sync>>,
+    files: HashMap<(FileType, HgFileNodeId), Box<dyn HgEntry + Sync>>,
+    trees: HashMap<HgManifestId, Box<dyn HgEntry + Sync>>,
 }
 
 impl CompositeEntry {
@@ -29,7 +29,7 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn add_parent(&mut self, entry: Box<dyn Entry + Sync>) {
+    pub fn add_parent(&mut self, entry: Box<dyn HgEntry + Sync>) {
         match entry.get_hash() {
             HgEntryId::Manifest(mf) => self.trees.insert(mf, entry),
             HgEntryId::File(ft, h) => self.files.insert((ft, h), entry),
@@ -109,7 +109,7 @@ impl CompositeManifest {
         }
     }
 
-    pub fn add(&mut self, entry: Box<dyn Entry + Sync>) {
+    pub fn add(&mut self, entry: Box<dyn HgEntry + Sync>) {
         self.entries
             .entry(entry.get_name().expect("entry cannot be root").clone())
             .or_insert_with(|| CompositeEntry::new())

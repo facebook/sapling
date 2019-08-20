@@ -22,7 +22,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
-use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
+use mercurial_types::{Changeset, HgChangesetId, HgEntry, HgManifestId, HgNodeHash, Type};
 use mononoke_types::DateTime;
 use slog::{debug, Logger};
 use std::{collections::HashSet, fmt, sync::Arc};
@@ -375,7 +375,7 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
 }
 
 #[inline]
-fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<dyn Entry + Sync> {
+fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<dyn HgEntry + Sync> {
     let manifest_id = changeset.manifestid();
     Box::new(repo.get_root_entry(manifest_id))
 }

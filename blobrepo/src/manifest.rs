@@ -16,8 +16,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use context::CoreContext;
 use mercurial_types::nodehash::{HgNodeHash, NULL_HASH};
 use mercurial_types::{
-    Entry, FileType, HgBlob, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId,
-    MPathElement, Manifest, Type,
+    FileType, HgBlob, HgEntry, HgEntryId, HgFileNodeId, HgManifest, HgManifestEnvelope,
+    HgManifestId, MPathElement, Type,
 };
 
 use blobstore::Blobstore;
@@ -225,8 +225,8 @@ impl BlobManifest {
     }
 }
 
-impl Manifest for BlobManifest {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
+impl HgManifest for BlobManifest {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
         self.content.files.get(path).map({
             move |entry_id| {
                 HgBlobEntry::new(
@@ -240,7 +240,7 @@ impl Manifest for BlobManifest {
         })
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
         let list_iter = self.content.files.clone().into_iter().map({
             let blobstore = self.blobstore.clone();
             move |(path, entry_id)| {

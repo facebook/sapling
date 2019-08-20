@@ -14,8 +14,8 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
-use super::manifest::{Content, EmptyManifest, Type};
-use super::{Entry, MPath, MPathElement, Manifest};
+use super::manifest::{Content, HgEmptyManifest, Type};
+use super::{HgEntry, HgManifest, MPath, MPathElement};
 use crate::errors::*;
 
 // Note that:
@@ -24,13 +24,13 @@ use crate::errors::*;
 //   its parent, or the other way round
 #[derive(Debug)]
 pub enum EntryStatus {
-    Added(Box<dyn Entry + Sync>),
-    Deleted(Box<dyn Entry + Sync>),
+    Added(Box<dyn HgEntry + Sync>),
+    Deleted(Box<dyn HgEntry + Sync>),
     // Entries will always either be File or Tree. However, it's possible for one of the entries
     // to be Regular and the other to be Symlink, etc.
     Modified {
-        to_entry: Box<dyn Entry + Sync>,
-        from_entry: Box<dyn Entry + Sync>,
+        to_entry: Box<dyn HgEntry + Sync>,
+        from_entry: Box<dyn HgEntry + Sync>,
     },
 }
 
@@ -73,14 +73,14 @@ pub struct ChangedEntry {
 }
 
 impl ChangedEntry {
-    pub fn new_added(dirname: Option<MPath>, entry: Box<dyn Entry + Sync>) -> Self {
+    pub fn new_added(dirname: Option<MPath>, entry: Box<dyn HgEntry + Sync>) -> Self {
         ChangedEntry {
             dirname,
             status: EntryStatus::Added(entry),
         }
     }
 
-    pub fn new_deleted(dirname: Option<MPath>, entry: Box<dyn Entry + Sync>) -> Self {
+    pub fn new_deleted(dirname: Option<MPath>, entry: Box<dyn HgEntry + Sync>) -> Self {
         ChangedEntry {
             dirname,
             status: EntryStatus::Deleted(entry),
@@ -89,8 +89,8 @@ impl ChangedEntry {
 
     pub fn new_modified(
         dirname: Option<MPath>,
-        to_entry: Box<dyn Entry + Sync>,
-        from_entry: Box<dyn Entry + Sync>,
+        to_entry: Box<dyn HgEntry + Sync>,
+        from_entry: Box<dyn HgEntry + Sync>,
     ) -> Self {
         ChangedEntry {
             dirname,
@@ -165,7 +165,7 @@ impl fmt::Display for ChangedEntry {
 
 struct NewEntry {
     dirname: Option<MPath>,
-    entry: Box<dyn Entry + Sync>,
+    entry: Box<dyn HgEntry + Sync>,
 }
 
 impl NewEntry {
@@ -180,7 +180,7 @@ impl NewEntry {
         }
     }
 
-    fn into_tuple(self) -> (Option<MPath>, Box<dyn Entry + Sync>) {
+    fn into_tuple(self) -> (Option<MPath>, Box<dyn HgEntry + Sync>) {
         (self.dirname, self.entry)
     }
 }
@@ -217,11 +217,11 @@ pub fn new_entry_intersection_stream<M, P1M, P2M>(
     root: &M,
     p1: Option<&P1M>,
     p2: Option<&P2M>,
-) -> BoxStream<(Option<MPath>, Box<dyn Entry + Sync>), Error>
+) -> BoxStream<(Option<MPath>, Box<dyn HgEntry + Sync>), Error>
 where
-    M: Manifest,
-    P1M: Manifest,
-    P2M: Manifest,
+    M: HgManifest,
+    P1M: HgManifest,
+    P2M: HgManifest,
 {
     if p1.is_none() || p2.is_none() {
         let ces = if let Some(p1) = p1 {
@@ -229,7 +229,7 @@ where
         } else if let Some(p2) = p2 {
             changed_entry_stream(ctx, root, p2, None)
         } else {
-            changed_entry_stream(ctx, root, &EmptyManifest {}, None)
+            changed_entry_stream(ctx, root, &HgEmptyManifest {}, None)
         };
 
         ces.filter_map(NewEntry::from_changed_entry)
@@ -318,8 +318,8 @@ pub fn changed_entry_stream<TM, FM>(
     path: Option<MPath>,
 ) -> BoxStream<ChangedEntry, Error>
 where
-    TM: Manifest,
-    FM: Manifest,
+    TM: HgManifest,
+    FM: HgManifest,
 {
     changed_entry_stream_with_pruner(ctx, to, from, path, NoopPruner, None).boxify()
 }
@@ -331,8 +331,8 @@ pub fn changed_file_stream<TM, FM>(
     path: Option<MPath>,
 ) -> BoxStream<ChangedEntry, Error>
 where
-    TM: Manifest,
-    FM: Manifest,
+    TM: HgManifest,
+    FM: HgManifest,
 {
     changed_entry_stream_with_pruner(ctx, to, from, path, NoopPruner, None)
         .filter(|changed_entry| !changed_entry.status.is_tree())
@@ -348,8 +348,8 @@ pub fn changed_entry_stream_with_pruner<TM, FM>(
     max_depth: Option<usize>,
 ) -> impl Stream<Item = ChangedEntry, Error = Error>
 where
-    TM: Manifest,
-    FM: Manifest,
+    TM: HgManifest,
+    FM: HgManifest,
 {
     if max_depth == Some(0) {
         return empty().boxify();
@@ -394,7 +394,7 @@ fn recursive_changed_entry_stream(
 
     let (to_mf, from_mf, path) = match &changed_entry.status {
         EntryStatus::Added(entry) => {
-            let empty_mf: Box<dyn Manifest> = Box::new(EmptyManifest {});
+            let empty_mf: Box<dyn HgManifest> = Box::new(HgEmptyManifest {});
             let to_mf = entry
                 .get_content(ctx.clone())
                 .map(get_tree_content)
@@ -408,7 +408,7 @@ fn recursive_changed_entry_stream(
             (to_mf, from_mf, path)
         }
         EntryStatus::Deleted(entry) => {
-            let empty_mf: Box<dyn Manifest> = Box::new(EmptyManifest {});
+            let empty_mf: Box<dyn HgManifest> = Box::new(HgEmptyManifest {});
             let to_mf = Ok(empty_mf).into_future().boxify();
             let from_mf = entry
                 .get_content(ctx.clone())
@@ -480,8 +480,8 @@ fn recursive_changed_entry_stream(
 pub fn recursive_entry_stream(
     ctx: CoreContext,
     rootpath: Option<MPath>,
-    entry: Box<dyn Entry + Sync>,
-) -> BoxStream<(Option<MPath>, Box<dyn Entry + Sync>), Error> {
+    entry: Box<dyn HgEntry + Sync>,
+) -> BoxStream<(Option<MPath>, Box<dyn HgEntry + Sync>), Error> {
     let subentries =
         match entry.get_type() {
             Type::File(_) => empty().boxify(),
@@ -512,8 +512,8 @@ fn diff_manifests<TM, FM>(
     from: &FM,
 ) -> BoxFuture<Vec<ChangedEntry>, Error>
 where
-    TM: Manifest,
-    FM: Manifest,
+    TM: HgManifest,
+    FM: HgManifest,
 {
     let to_vec: Vec<_> = to.list().collect();
     let from_vec: Vec<_> = from.list().collect();
@@ -529,8 +529,8 @@ where
 // We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
     path: Option<MPath>,
-    to: Vec<Box<dyn Entry + Sync>>,
-    from: Vec<Box<dyn Entry + Sync>>,
+    to: Vec<Box<dyn HgEntry + Sync>>,
+    from: Vec<Box<dyn HgEntry + Sync>>,
 ) -> Vec<ChangedEntry> {
     let mut to = VecDeque::from(to);
     let mut from = VecDeque::from(from);
@@ -583,7 +583,7 @@ pub fn diff_sorted_vecs(
     res
 }
 
-fn get_tree_content(content: Content) -> Box<dyn Manifest> {
+fn get_tree_content(content: Content) -> Box<dyn HgManifest> {
     match content {
         Content::Tree(manifest) => manifest,
         _ => panic!("Tree entry was expected"),

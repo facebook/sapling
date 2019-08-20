@@ -33,7 +33,7 @@ use serde_json;
 use slog::{debug, Logger};
 use time_ext::DurationExt;
 
-use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
+use mercurial_types::{manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommonConfig, RepoConfig};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::{define_stats, Timeseries};

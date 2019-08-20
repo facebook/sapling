@@ -18,14 +18,14 @@ use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
 use maplit::{btreemap, hashset};
-use mercurial_types::manifest::{Content, EmptyManifest};
+use mercurial_types::manifest::{Content, HgEmptyManifest};
 use mercurial_types::manifest_utils::{
     changed_entry_stream_with_pruner, diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
     DeletedPruner, EntryStatus, FilePruner, NoopPruner, Pruner,
 };
 use mercurial_types::nodehash::{HgChangesetId, HgNodeHash};
 use mercurial_types::{
-    Changeset, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type, NULL_HASH,
+    Changeset, FileType, HgEntry, HgManifest, MPath, MPathElement, RepoPath, Type, NULL_HASH,
 };
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
@@ -34,7 +34,7 @@ fn get_root_manifest(
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
     changesetid: HgChangesetId,
-) -> Box<dyn Manifest> {
+) -> Box<dyn HgManifest> {
     let cs = repo
         .get_changeset_by_changesetid(ctx.clone(), changesetid)
         .wait()
@@ -48,7 +48,7 @@ fn get_hash(c: char) -> HgNodeHash {
     HgNodeHash::from_str(&hash).unwrap()
 }
 
-fn get_entry(ty: Type, hash: HgNodeHash, path: RepoPath) -> Box<dyn Entry + Sync> {
+fn get_entry(ty: Type, hash: HgNodeHash, path: RepoPath) -> Box<dyn HgEntry + Sync> {
     let content_factory: ContentFactory = Arc::new(|| -> Content {
         panic!("should not be called");
     });
@@ -189,8 +189,8 @@ fn test_diff_sorted_vecs_one_empty() {
 
 fn find_changed_entry_status_stream(
     ctx: CoreContext,
-    manifest: Box<dyn Manifest>,
-    basemanifest: Box<dyn Manifest>,
+    manifest: Box<dyn HgManifest>,
+    basemanifest: Box<dyn HgManifest>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> Vec<ChangedEntry> {
@@ -774,7 +774,7 @@ fn test_file_pruner() {
         let stream = changed_entry_stream_with_pruner(
             ctx.clone(),
             &root_manifest,
-            &EmptyManifest {},
+            &HgEmptyManifest {},
             None,
             pruner,
             None,
@@ -803,7 +803,7 @@ fn test_deleted_pruner() {
         let stream = changed_entry_stream_with_pruner(
             ctx.clone(),
             &root_manifest,
-            &EmptyManifest {},
+            &HgEmptyManifest {},
             None,
             pruner,
             None,
@@ -820,7 +820,7 @@ fn test_deleted_pruner() {
         let pruner = DeletedPruner;
         let stream = changed_entry_stream_with_pruner(
             ctx.clone(),
-            &EmptyManifest {},
+            &HgEmptyManifest {},
             &root_manifest,
             None,
             pruner,

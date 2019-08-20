@@ -47,9 +47,9 @@ use maplit::hashmap;
 use mercurial_revlog::file::{File, META_SZ};
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    calculate_hg_node_id_stream, Changeset, Entry, FileBytes, HgBlobNode, HgChangesetId, HgEntryId,
-    HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut, HgManifestId,
-    HgNodeHash, HgParents, Manifest, RepoPath, Type,
+    calculate_hg_node_id_stream, Changeset, FileBytes, HgBlobNode, HgChangesetId, HgEntry,
+    HgEntryId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifest, HgManifestEnvelopeMut,
+    HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
@@ -528,7 +528,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         manifestid: HgManifestId,
-    ) -> BoxFuture<Box<dyn Manifest + Sync>, Error> {
+    ) -> BoxFuture<Box<dyn HgManifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
         BlobManifest::load(ctx, &self.blobstore, manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into()))

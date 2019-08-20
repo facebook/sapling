@@ -16,7 +16,7 @@ use blobstore::Blobstore;
 use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::HgFileEnvelope;
-use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, MPath, RepoPath};
+use mercurial_types::{Changeset, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
@@ -100,9 +100,9 @@ fn find_file_changes(
 
     let p1_root_entry = parent_manifests
         .get(0)
-        .map(|root_mf| -> Box<dyn Entry + Sync> { Box::new(repo.get_root_entry(*root_mf)) });
-    let p2_root_entry: Option<Box<dyn Entry + Sync>> = parent_manifests.get(1).map(|root_mf| {
-        let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(*root_mf));
+        .map(|root_mf| -> Box<dyn HgEntry + Sync> { Box::new(repo.get_root_entry(*root_mf)) });
+    let p2_root_entry: Option<Box<dyn HgEntry + Sync>> = parent_manifests.get(1).map(|root_mf| {
+        let entry: Box<dyn HgEntry + Sync> = Box::new(repo.get_root_entry(*root_mf));
         entry
     });
 

@@ -24,7 +24,7 @@ use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_revlog::file::File;
 use mercurial_types::{
-    manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
+    manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
@@ -835,7 +835,7 @@ fn test_get_manifest_from_bonsai() {
         };
         let get_entries = {
             cloned!(ctx, repo);
-            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn Entry + Sync>>, Error> {
+            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn HgEntry + Sync>>, Error> {
                 repo.get_manifest_by_nodeid(ctx.clone(), ms_hash)
                     .map(|ms| {
                         ms.list()

@@ -29,8 +29,8 @@ use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 use mercurial_types::{
-    Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey, HgParents, MPath, Manifest,
-    RepoPath, NULL_HASH,
+    Changeset, HgChangesetId, HgEntry, HgEntryId, HgManifest, HgNodeHash, HgNodeKey, HgParents,
+    MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 use stats::define_stats;
@@ -495,8 +495,8 @@ fn compute_copy_from_info(
 
 fn compute_changed_files_pair(
     ctx: CoreContext,
-    to: &Box<dyn Manifest + Sync>,
-    from: &Box<dyn Manifest + Sync>,
+    to: &Box<dyn HgManifest + Sync>,
+    from: &Box<dyn HgManifest + Sync>,
 ) -> BoxFuture<HashSet<MPath>, Error> {
     changed_entry_stream(ctx, to, from, None)
         .filter_map(|change| match change.status {
@@ -565,11 +565,11 @@ pub fn compute_changed_files(
 
 fn compute_changed_files_impl(
     ctx: CoreContext,
-    root: &Box<dyn Manifest + Sync>,
-    p1: Option<&Box<dyn Manifest + Sync>>,
-    p2: Option<&Box<dyn Manifest + Sync>>,
+    root: &Box<dyn HgManifest + Sync>,
+    p1: Option<&Box<dyn HgManifest + Sync>>,
+    p2: Option<&Box<dyn HgManifest + Sync>>,
 ) -> BoxFuture<Vec<MPath>, Error> {
-    let empty = manifest::EmptyManifest {}.boxed();
+    let empty = manifest::HgEmptyManifest {}.boxed();
     match (p1, p2) {
         (None, None) => compute_changed_files_pair(ctx, &root, &empty),
         (Some(manifest), None) | (None, Some(manifest)) => {
@@ -605,8 +605,8 @@ fn compute_changed_files_impl(
 
 fn compute_removed_files(
     ctx: CoreContext,
-    child: &Box<dyn Manifest + Sync>,
-    parent: Option<&Box<dyn Manifest + Sync>>,
+    child: &Box<dyn HgManifest + Sync>,
+    parent: Option<&Box<dyn HgManifest + Sync>>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     compute_files_with_status(ctx, child, parent, move |change| match change.status {
         EntryStatus::Deleted(entry) => {
@@ -622,14 +622,14 @@ fn compute_removed_files(
 
 fn compute_files_with_status(
     ctx: CoreContext,
-    child: &Box<dyn Manifest + Sync>,
-    parent: Option<&Box<dyn Manifest + Sync>>,
+    child: &Box<dyn HgManifest + Sync>,
+    parent: Option<&Box<dyn HgManifest + Sync>>,
     filter_map: impl Fn(ChangedEntry) -> Option<MPath>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     let s = match parent {
         Some(parent) => changed_entry_stream(ctx, child, parent, None).boxify(),
         None => {
-            let empty = manifest::EmptyManifest {};
+            let empty = manifest::HgEmptyManifest {};
             changed_entry_stream(ctx, child, &empty, None).boxify()
         }
     };

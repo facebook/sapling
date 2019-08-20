@@ -19,7 +19,7 @@ use futures::{
     stream::Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial_types::manifest::{Content, Entry, Manifest, Type};
+use mercurial_types::manifest::{Content, HgEntry, HgManifest, Type};
 use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{
     calculate_hg_node_id, FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId,
@@ -271,7 +271,7 @@ impl HgBlobEntry {
     }
 }
 
-impl Entry for HgBlobEntry {
+impl HgEntry for HgBlobEntry {
     fn get_type(&self) -> Type {
         self.id.get_type()
     }

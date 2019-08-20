@@ -10,7 +10,7 @@ use context::CoreContext;
 use failure::Error;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
-use mercurial_types::manifest::{Entry, Type};
+use mercurial_types::manifest::{HgEntry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
 use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath, RepoPath};
 use metaconfig_types::CacheWarmupParams;
