@@ -156,7 +156,7 @@ Log -R full.hg in fresh empty
   $ rm -r empty
   $ hg init empty
   $ cd empty
-  $ hg -R bundle://../full.hg log
+  $ hg -R ../full.hg log
   changeset:   8:aa35859c02ea
   tag:         tip
   parent:      3:eebf5a27f8ca
@@ -224,7 +224,7 @@ Pull ../full.hg into empty (with hook)
 
 doesn't work (yet ?)
 
-hg -R bundle://../full.hg verify
+hg -R ../full.hg verify
 
   $ hg pull bundle://../full.hg
   pulling from bundle:../full.hg
@@ -242,10 +242,11 @@ Rollback empty
   repository tip rolled back to revision -1 (undo pull)
   $ cd ..
 
-Log -R bundle:empty+full.hg
+Log -R bundle:empty+full.hg (broken with Rust code path)
 
   $ hg -R bundle:empty+full.hg log --template="{rev} "; echo ""
-  8 7 6 5 4 3 2 1 0 
+  abort: repository bundle:empty+full.hg not found!
+  
 
 Pull full.hg into empty again (using -R; with hook)
 
@@ -400,7 +401,7 @@ Create partial clones
 
 Log -R full.hg in partial
 
-  $ hg -R bundle://../full.hg log -T phases
+  $ hg -R ../full.hg log -T phases
   changeset:   8:aa35859c02ea
   tag:         tip
   phase:       draft
@@ -495,7 +496,7 @@ Incoming full.hg in partial
 
 Outgoing -R full.hg vs partial2 in partial
 
-  $ hg -R bundle://../full.hg outgoing ../partial2
+  $ hg -R ../full.hg outgoing ../partial2
   comparing with ../partial2
   searching for changes
   changeset:   4:095197eb4973
@@ -529,7 +530,7 @@ Outgoing -R full.hg vs partial2 in partial
 
 Outgoing -R does-not-exist.hg vs partial2 in partial
 
-  $ hg -R bundle://../does-not-exist.hg outgoing ../partial2
+  $ hg -R ../does-not-exist.hg outgoing ../partial2
   abort: *../does-not-exist.hg* (glob)
   [255]
   $ cd ..

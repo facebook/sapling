@@ -583,21 +583,22 @@ shadowing
 
   $ hg i
   hg: command 'i' is ambiguous:
-  	id or identify
-  	idalias
-  	idaliaslong
-  	idaliasshell
-  	import
-  	in or incoming
-  	init
+       id or identify
+       idalias
+       idaliaslong
+       idaliasshell
+       import
+       in or incoming
+       init
+       isbackedup
   [255]
   $ hg id
   c0c7cf58edc5 tip
   $ hg ida
   hg: command 'ida' is ambiguous:
-  	idalias
-  	idaliaslong
-  	idaliasshell
+       idalias
+       idaliaslong
+       idaliasshell
   [255]
   $ hg idalias
   c0c7cf58edc5 tip
@@ -607,8 +608,8 @@ shadowing
   test
   $ hg parentsshell
   hg: command 'parentsshell' is ambiguous:
-  	parentsshell1
-  	parentsshell2
+       parentsshell1
+       parentsshell2
   [255]
   $ hg parentsshell1
   one
@@ -710,8 +711,8 @@ command provided extension, should be aborted.
   > EOF
   $ hg reba
   hg: command 'reba' is ambiguous:
-  	rebase
-  	rebate
+       rebase
+       rebate
   [255]
 
   $ hg rebat
@@ -722,8 +723,8 @@ command provided extension, should be aborted.
 invalid arguments
 
   $ hg rt foo
-  hg root: invalid arguments
-  (use 'hg root -h' to get help)
+  abort: invalid arguments
+  (use '--help' to get help)
   [255]
 
 invalid global arguments for normal commands, aliases, and shell aliases

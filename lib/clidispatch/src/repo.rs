@@ -2,8 +2,9 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use crate::errors::DispatchError;
+use crate::errors;
 use configparser::config::ConfigSet;
+use failure::Fallible;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -11,10 +12,11 @@ use std::path::PathBuf;
 pub struct Repo {
     path: PathBuf,
     config: ConfigSet,
+    bundle_path: Option<PathBuf>,
 }
 
 impl Repo {
-    pub fn new<P>(path: P) -> Self
+    pub fn new<P>(path: P, bundle_path: Option<PathBuf>) -> Self
     where
         P: Into<PathBuf>,
     {
@@ -23,10 +25,11 @@ impl Repo {
         Repo {
             path: path_buf,
             config: ConfigSet::new(),
+            bundle_path,
         }
     }
 
-    pub fn sharedpath(&self) -> Result<Option<PathBuf>, DispatchError> {
+    pub fn sharedpath(&self) -> Fallible<Option<PathBuf>> {
         let mut sharedpath = fs::read_to_string(self.path.join(".hg/sharedpath"))
             .ok()
             .map(|s| PathBuf::from(s))
@@ -34,9 +37,10 @@ impl Repo {
 
         if let Some(possible_path) = sharedpath {
             if possible_path.is_absolute() && !possible_path.exists() {
-                return Err(DispatchError::SharedPathNotReal {
-                    path: possible_path.join(".hg").to_string_lossy().to_string(),
-                });
+                return Err(errors::InvalidSharedPath(
+                    possible_path.join(".hg").to_string_lossy().to_string(),
+                )
+                .into());
             } else if possible_path.is_absolute() {
                 sharedpath = Some(possible_path)
             } else {
@@ -44,13 +48,14 @@ impl Repo {
                 let new_possible = self.path.join(".hg").join(possible_path);
 
                 if !new_possible.join(".hg").exists() {
-                    return Err(DispatchError::SharedPathNotReal {
-                        path: new_possible
+                    return Err(errors::InvalidSharedPath(
+                        new_possible
                             .canonicalize()
                             .ok()
                             .map(|r| r.to_string_lossy().to_string())
                             .unwrap_or("".to_string()),
-                    });
+                    )
+                    .into());
                 }
                 sharedpath = Some(new_possible)
             }

@@ -87,8 +87,9 @@ However, we can't prevent it from loading extensions and configs:
     = expected equal_sign
   [255]
 
+(XXX: Rust io::Error does not contain path information)
   $ hg log -b --cwd=inexistent default
-  abort: $ENOENT$: 'inexistent'
+  abort: $ENOENT$ (os error *) (glob)
   [255]
 
   $ hg log -b '--config=ui.traceback=yes' 2>&1 | grep '^Traceback'

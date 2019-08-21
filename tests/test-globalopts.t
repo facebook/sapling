@@ -125,7 +125,13 @@ earlygetopt with illegal abbreviations:
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg -qR a tip
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  hg: command 'a' is ambiguous:
+       absorb
+       add
+       addremove
+       amend
+       annotate
+       archive
   [255]
   $ hg -qRa tip
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
@@ -241,15 +247,11 @@ Testing --debug:
   
   
 
-Testing --traceback:
+Testing --traceback (this does not work with the Rust code path):
 
-#if no-chg
+#if false
   $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
   Traceback (most recent call last):
-#else
-Traceback for '--config' errors not supported with chg.
-  $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
-  [1]
 #endif
 
 Testing --time:

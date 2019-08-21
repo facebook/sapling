@@ -1,9 +1,12 @@
 // Copyright Facebook, Inc. 2019
 
-use clidispatch::command::{CommandTable, Register};
-use clidispatch::errors::DispatchError;
-use clidispatch::io::IO;
-use clidispatch::repo::Repo;
+use clidispatch::{
+    command::{CommandTable, Register},
+    errors,
+    failure::Fallible,
+    io::IO,
+    repo::Repo,
+};
 use cliparser::define_flags;
 
 use revisionstore::{DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore};
@@ -49,12 +52,10 @@ define_flags! {
     }
 }
 
-pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {
+pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     let args = opts.args;
     if args != vec!["root"] {
-        return Err(DispatchError::InvalidArguments {
-            command_name: "root".to_string(),
-        }); // root doesn't support arguments
+        return Err(errors::InvalidArguments.into());
     }
 
     let shared = repo.sharedpath()?;
@@ -72,21 +73,19 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError
     Ok(0)
 }
 
-pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {
+pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     let args = opts.args;
     if args.len() != 2 || !opts.content {
-        return Err(DispatchError::InvalidArguments {
-            command_name: "debugstore".to_string(),
-        }); // debugstore requires arguments
+        return Err(errors::InvalidArguments.into());
     }
     let config = repo.get_config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
         Some(c) => c,
-        None => return Err(DispatchError::ConfigIssue),
+        None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),
     };
     let reponame = match config.get("remotefilelog", "reponame") {
         Some(c) => c,
-        None => return Err(DispatchError::ConfigIssue),
+        None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
     };
     let cachepath = String::from_utf8_lossy(&cachepath[..]);
     let reponame = String::from_utf8_lossy(&reponame[..]);

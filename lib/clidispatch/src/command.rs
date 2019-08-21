@@ -2,14 +2,15 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use crate::{errors::DispatchError, io::IO, repo::Repo};
+use crate::{io::IO, repo::Repo};
 use cliparser::parser::{Flag, ParseOutput, StructFlags};
+use failure::Fallible;
 use std::{collections::BTreeMap, ops::Deref};
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Result<u8, DispatchError>>),
-    InferRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8, DispatchError>>),
-    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8, DispatchError>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Fallible<u8>>),
+    InferRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Fallible<u8>>),
+    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Fallible<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -79,7 +80,7 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
     S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO) -> Result<u8, DispatchError> + 'static,
+    FN: Fn(S, &mut IO) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func = move |opts: ParseOutput, io: &mut IO| f(opts.into(), io);
@@ -93,7 +94,7 @@ where
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8, DispatchError> + 'static,
+    FN: Fn(S, &mut IO, Option<Repo>) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func =
@@ -108,7 +109,7 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO, Repo) -> Result<u8, DispatchError> + 'static,
+    FN: Fn(S, &mut IO, Repo) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.into(), io, repo);
