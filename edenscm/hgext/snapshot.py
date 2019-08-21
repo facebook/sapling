@@ -366,11 +366,12 @@ def checkouttosnapshotmanifest(ui, repo, snapmanifest, force=True):
         vfs.write(file.path, store.read(file.oid))
 
     # deleting files that should be missing
-    todelete = [f.path for f in snapmanifest.deleted]
-    if todelete:
-        ui.note(_("will delete %s\n") % ",".join(todelete))
-        m = scmutil.match(repo[None], todelete)
-        cmdutil.remove(ui, repo, m, "", after=False, force=False)
+    for file in snapmanifest.deleted:
+        try:
+            ui.note(_("will delete %s\n") % file.path)
+            util.unlink(repo.wjoin(file.path))
+        except OSError:
+            ui.warn(_("%s cannot be removed\n") % file.path)
     # populating the untracked files
     for file in snapmanifest.unknown:
         checkaddfile(repo.svfs.lfslocalblobstore, file, repo.wvfs, force)

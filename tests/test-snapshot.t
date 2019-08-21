@@ -87,7 +87,6 @@
 
   $ hg debugcheckoutsnapshotmanifest --verbose "$OID"
   will delete existingfile
-  removing existingfile
   will add untrackedfile
   snapshot checkout complete
 
@@ -139,7 +138,7 @@
   $ hg update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
-  R existingfile
+  ! existingfile
   ? untrackedfile
   $ hg debugcheckoutsnapshotmanifest --verbose "$MERGEOID"
   will add new.orig
@@ -150,7 +149,7 @@
   will add rebasestate
   snapshot checkout complete
   $ hg status --verbose
-  R existingfile
+  ! existingfile
   ? new.orig
   ? untrackedfile
   # The repository is in an unfinished *rebase* state.

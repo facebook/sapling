@@ -179,7 +179,7 @@
   $ hg status --verbose
   M bar/file
   M mergefile
-  R foofile
+  ! foofile
   ? bar/untracked
   ? mergefile.orig
   ? untrackedfile
@@ -202,7 +202,7 @@
   .hg/merge/state
   .hg/merge/state2
   $ hg debugsnapshot --clean
-  snapshot e203bc3b0e5140c52ec5ba01fcb7071af5ea40de created
+  snapshot ccdff83036b6b05c657a1eebff7dc523b865f6ce created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
@@ -215,6 +215,7 @@
 # Finally, resolve the conflict
   $ hg resolve --mark mergefile
   (no more unresolved files)
+  $ hg remove foofile
   $ hg status --verbose
   M bar/file
   M mergefile
