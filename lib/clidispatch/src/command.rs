@@ -9,7 +9,7 @@ use std::{collections::BTreeMap, ops::Deref};
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Fallible<u8>>),
-    InferRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Fallible<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Fallible<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Fallible<u8>>),
 }
 
@@ -90,7 +90,7 @@ where
     }
 }
 
-// InferRepo commands.
+// OptionalRepo commands.
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: From<ParseOutput> + StructFlags,
@@ -99,7 +99,7 @@ where
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func =
             move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.into(), io, repo);
-        let func = CommandFunc::InferRepo(Box::new(func));
+        let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
     }

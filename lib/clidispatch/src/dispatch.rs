@@ -293,6 +293,7 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
 
     match handler {
         CommandFunc::Repo(f) => {
+            // FIXME: Try "infer repo".
             let repo = repo.ok_or_else(|| {
                 errors::RepoRequired(
                     env::current_dir()
@@ -303,7 +304,7 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
             })?;
             f(parsed, io, repo)
         }
-        CommandFunc::InferRepo(f) => f(parsed, io, repo),
+        CommandFunc::OptionalRepo(f) => f(parsed, io, repo),
         CommandFunc::NoRepo(f) => f(parsed, io),
     }
 }
