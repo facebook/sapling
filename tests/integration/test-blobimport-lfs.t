@@ -63,7 +63,7 @@
 # Create the blobimport LFS helper
   $ cat > "$LFS_HELPER" <<EOF
   > #!/bin/bash
-  > echo "lfs: $*" >&2
+  > echo "lfs: \$*" >&2
   > exec hg --config extensions.lfs= debuglfsreceive "\$@" "$LFS_URL"
   > EOF
   $ chmod +x "$LFS_HELPER"

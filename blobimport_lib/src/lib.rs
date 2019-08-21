@@ -9,7 +9,6 @@
 mod bookmark;
 mod changeset;
 mod concurrency;
-mod lfs;
 
 use std::cmp;
 use std::path::PathBuf;

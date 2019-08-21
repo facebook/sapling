@@ -557,6 +557,11 @@ function bonsai_verify {
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
+function lfs_import {
+  "$MONONOKE_LFS_IMPORT" --repo_id 0 \
+  --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
+}
+
 function setup_no_ssl_apiserver {
   APISERVER_PORT=$(get_free_socket)
   no_ssl_apiserver --http-host "127.0.0.1" --http-port "$APISERVER_PORT"

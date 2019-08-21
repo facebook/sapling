@@ -31,6 +31,7 @@ use blobrepo::{
     HgBlobChangeset, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     UploadHgTreeEntry,
 };
+use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{
     file::{File, LFSContent},
     manifest, RevlogChangeset, RevlogEntry, RevlogRepo,
@@ -42,7 +43,6 @@ use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use phases::Phases;
 
 use crate::concurrency::JobProcessor;
-use crate::lfs::lfs_upload;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
