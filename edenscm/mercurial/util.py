@@ -4551,3 +4551,64 @@ def describe(describefunc, _describecall=bindings.stackdesc.describecall):
 
 
 renderstack = bindings.stackdesc.renderstack
+
+
+def smarttraceback():
+    """Get a friendly traceback as a string.
+
+    Based on some methods in the traceback.format_stack.
+    The friendly traceback shows some local variables.
+    """
+    # No need to pay the import overhead for other use-cases.
+    import linecache
+
+    # Get the frame. See traceback.format_stack
+    try:
+        raise ZeroDivisionError
+    except ZeroDivisionError:
+        frame = sys.exc_info()[2].tb_frame.f_back
+
+    # Similar to traceback.extract_stack
+    frameinfos = []
+    while frame is not None:
+        lineno = frame.f_lineno
+        co = frame.f_code
+        filename = co.co_filename
+        shortfilename = "/".join(filename.rsplit("/", 2)[-2:])
+        name = co.co_name
+        linecache.checkcache(filename)
+        line = linecache.getline(filename, lineno, frame.f_globals)
+        localargs = []
+        if line:
+            line = line.strip()
+            # Different from traceback.extract_stack. Try to get more information.
+            for argname in sorted(set(remod.findall("[a-z][a-z0-9_]*", line))):
+                # argname is potentially an interesting local variable
+                value = frame.f_locals.get(argname, None)
+                if value is None:
+                    continue
+                if isinstance(value, (str, int)) or (
+                    isinstance(value, (list, tuple))
+                    and all(isinstance(i, (str, int)) for i in value)
+                ):
+                    reprvalue = repr(value)
+                    if len(reprvalue) > 1024:
+                        reprvalue = reprvalue[:1021] + "..."
+                    localargs.append("%s = %s" % (argname, reprvalue))
+        else:
+            line = None
+        frameinfos.append((shortfilename, lineno, name, line, localargs))
+        frame = frame.f_back
+
+    frameinfos.reverse()
+
+    # Similar to traceback.format_stack
+    result = ""
+    for filename, lineno, name, line, localargs in frameinfos:
+        item = 'File "%s", line %d, in %s\n' % (filename, lineno, name)
+        if line:
+            item += "  %s\n" % line.strip()
+        for localarg in localargs:
+            item += "  # %s\n" % localarg
+        result += item
+    return result
