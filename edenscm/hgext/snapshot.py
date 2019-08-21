@@ -30,6 +30,7 @@ from edenscm.mercurial import (
     pathutil,
     registrar,
     scmutil,
+    util,
     visibility,
 )
 from edenscm.mercurial.i18n import _
@@ -191,12 +192,30 @@ class snapshotmanifest(object):
         lfs.wrapper.uploadblobs(self.repo, pointers)
 
 
-@command("debugsnapshot", inferrepo=True)
+@command(
+    "debugsnapshot", [("", "clean", False, _("clean the working copy"))], inferrepo=True
+)
 def debugsnapshot(ui, repo, *args, **opts):
     """
     Creates a snapshot of the working copy.
     TODO(alexeyqu): finish docs
     """
+
+    def removeuntrackedfiles(ui, repo):
+        """
+        Removes all untracked files from the repo.
+        """
+        # the same behavior is implemented better in the purge extension
+        # more corner cases are handled there
+        # e.g. directories that became empty during purge get deleted too
+        # TODO(alexeyqu): use code from purge, probable move it to core code
+        status = repo.status(unknown=True)
+        for file in status.unknown:
+            try:
+                util.tryunlink(repo.wjoin(file))
+            except OSError:
+                ui.warn(_("%s cannot be removed") % file)
+
     with repo.wlock(), repo.lock():
         node = createsnapshotcommit(ui, repo, opts)
         if not node:
@@ -205,6 +224,14 @@ def debugsnapshot(ui, repo, *args, **opts):
         ui.status(_("snapshot %s created\n") % (repo[node].hex()))
         if visibility.enabled(repo):
             visibility.remove(repo, [node])
+        if opts.get("clean"):
+            try:
+                # We want to bring the working copy to the p1 state
+                rev = repo[None].p1()
+                hg.updatetotally(ui, repo, rev, rev, clean=True)
+                removeuntrackedfiles(ui, repo)
+            except (KeyboardInterrupt, Exception) as exc:
+                ui.warn(_("failed to clean the working copy: %s\n") % exc)
 
 
 def createsnapshotcommit(ui, repo, opts):

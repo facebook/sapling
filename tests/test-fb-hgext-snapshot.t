@@ -31,12 +31,13 @@
 
 # Snapshot with empty manifest (changes only in tracked files)
   $ hg rm bar/file
-  $ EMPTYOID="$(hg debugsnapshot | cut -f2 -d' ')"
+  $ EMPTYOID="$(hg debugsnapshot --clean | head -n 1 | cut -f2 -d' ')"
+  $ echo "$EMPTYOID"
+  669ab2753dcee94dbdb1aec45db328db0f1d81f5
   $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmanifestid
   snapshotmanifestid=None
 
 # Merge conflict!
-  $ hg revert bar/file
   $ echo "a" > mergefile
   $ hg add mergefile
   $ hg commit -m "merge #1"
@@ -193,6 +194,24 @@
   # To continue:                hg commit
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
   
+
+# Oh wait, we need to clean all that for some reason
+  $ find .hg/merge | sort
+  .hg/merge
+  .hg/merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4
+  .hg/merge/state
+  .hg/merge/state2
+  $ hg debugsnapshot --clean
+  snapshot e203bc3b0e5140c52ec5ba01fcb7071af5ea40de created
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status --verbose
+  $ test -d .hg/merge
+  [1]
+  $ hg debugcheckoutsnapshot --hidden "$OID"
+  will checkout on ccdff83036b6b05c657a1eebff7dc523b865f6ce
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  checkout complete
+
 # Finally, resolve the conflict
   $ hg resolve --mark mergefile
   (no more unresolved files)
