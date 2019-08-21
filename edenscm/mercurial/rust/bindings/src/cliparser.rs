@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::configparser::config;
-use clidispatch::global_flags::HG_GLOBAL_FLAGS;
+use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::parser::*;
 use cpython::*;
@@ -89,7 +89,7 @@ fn parse_command(
         .into_iter()
         .map(|(c, s, v)| (c.chars().nth(0), s, "", v).into())
         .collect();
-    flags.extend(HG_GLOBAL_FLAGS.clone());
+    flags.extend(HgGlobalOpts::flags());
 
     let result = ParseOptions::new()
         .flag_alias("repo", "repository")
@@ -194,7 +194,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
         .ignore_prefix(true)
         .early_parse(true)
         .flag_alias("repo", "repository")
-        .flags(HG_GLOBAL_FLAGS.clone())
+        .flags(HgGlobalOpts::flags())
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
     let rust_opts = result.opts().clone();
@@ -210,7 +210,7 @@ fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObje
 fn parse_args(py: Python, args: Vec<String>) -> PyResult<Vec<String>> {
     let result = ParseOptions::new()
         .flag_alias("repo", "repository")
-        .flags(HG_GLOBAL_FLAGS.clone())
+        .flags(HgGlobalOpts::flags())
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;
     let arguments = result.args().clone();
@@ -225,7 +225,7 @@ fn parse(
 ) -> PyResult<(Vec<Bytes>, HashMap<Bytes, PyObject>, usize)> {
     let result = ParseOptions::new()
         .flag_alias("repo", "repository")
-        .flags(HG_GLOBAL_FLAGS.clone())
+        .flags(HgGlobalOpts::flags())
         .keep_sep(keep_sep)
         .parse_args(&args)
         .map_err(|e| map_to_python_err(py, e))?;

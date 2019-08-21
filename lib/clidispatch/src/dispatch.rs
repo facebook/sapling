@@ -4,12 +4,12 @@
 // GNU General Public License version 2 or any later version.
 use crate::command::{CommandDefinition, CommandFunc, CommandTable};
 use crate::errors::{DispatchError, HighLevelError};
-use crate::global_flags::HG_GLOBAL_FLAGS;
+use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::parser::{ParseOptions, ParseOutput, Value};
+use cliparser::parser::{ParseOptions, ParseOutput, StructFlags, Value};
 use configparser::config::ConfigSet;
 use configparser::hg::{parse_list, ConfigSetHgExt};
 use std::collections::{BTreeMap, HashMap};
@@ -154,7 +154,7 @@ fn early_parse(args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
     ParseOptions::new()
         .ignore_prefix(true)
         .early_parse(true)
-        .flags(HG_GLOBAL_FLAGS.clone())
+        .flags(HgGlobalOpts::flags())
         .flag_alias("repo", "repository")
         .parse_args(args)
         .map_err(|_| DispatchError::EarlyParseFailed)
@@ -241,7 +241,7 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
     let flags = definition
         .flags()
         .iter()
-        .chain(HG_GLOBAL_FLAGS.iter())
+        .chain(HgGlobalOpts::flags().iter())
         .cloned()
         .collect();
     ParseOptions::new()
