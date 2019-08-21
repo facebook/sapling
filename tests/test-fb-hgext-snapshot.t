@@ -154,7 +154,7 @@
   ? untrackedfile
 
 # Check out on the snapshot
-  $ hg debugcheckoutsnapshot --hidden "$OID"
+  $ hg debugcheckoutsnapshot "$OID"
   abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
   
   [255]
@@ -172,7 +172,7 @@
   
   [255]
 # Oops!
-  $ hg debugcheckoutsnapshot --hidden "$OID"
+  $ hg debugcheckoutsnapshot "$OID"
   will checkout on ccdff83036b6b05c657a1eebff7dc523b865f6ce
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
@@ -207,7 +207,7 @@
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
-  $ hg debugcheckoutsnapshot --hidden "$OID"
+  $ hg debugcheckoutsnapshot "$OID"
   will checkout on ccdff83036b6b05c657a1eebff7dc523b865f6ce
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete

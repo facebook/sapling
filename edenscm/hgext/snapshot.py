@@ -287,7 +287,7 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     ui.status(_("will checkout on %s\n") % cctx.hex())
     with repo.wlock():
         # TODO(alexeyqu): support EdenFS and possibly make it more efficient
-        hg.update(repo, node)
+        hg.update(repo.unfiltered(), node)
         with repo.dirstate.parentchange():
             newparents = [p.node() for p in cctx.parents()]
             ui.debug("setting parents to %s\n" % newparents)
