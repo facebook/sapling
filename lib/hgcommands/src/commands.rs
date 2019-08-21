@@ -78,7 +78,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     if args.len() != 2 || !opts.content {
         return Err(errors::InvalidArguments.into());
     }
-    let config = repo.get_config();
+    let config = repo.config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
         Some(c) => c,
         None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),

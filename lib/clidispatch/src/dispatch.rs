@@ -6,7 +6,7 @@ use crate::command::{CommandDefinition, CommandFunc, CommandTable};
 use crate::errors;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
-use crate::repo::Repo;
+use crate::repo::OptionalRepo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
@@ -76,16 +76,6 @@ where
     Ok(())
 }
 
-pub fn find_hg_repo_root(current_path: &Path) -> Option<&Path> {
-    if current_path.join(".hg").is_dir() {
-        Some(current_path)
-    } else if let Some(parent) = current_path.parent() {
-        find_hg_repo_root(parent)
-    } else {
-        None
-    }
-}
-
 fn find_command_name(has_command: impl Fn(&str) -> bool, args: Vec<String>) -> Option<String> {
     let mut command_name = None;
     for arg in args {
@@ -110,33 +100,6 @@ fn find_command_name(has_command: impl Fn(&str) -> bool, args: Vec<String>) -> O
         }
     }
     command_name
-}
-
-fn create_repo(repository_path: String) -> Fallible<Option<Repo>> {
-    if repository_path == ""
-        || repository_path.starts_with("bundle:")
-        || repository_path.starts_with("file:")
-    {
-        // --repo is not specified
-        let cwd = env::current_dir().unwrap();
-        let root = match find_hg_repo_root(&cwd) {
-            Some(r) => r,
-            None => return Ok(None),
-        };
-        return Ok(Some(Repo::new(root, None)));
-    } else if let Ok(path) = Path::new(&repository_path).canonicalize() {
-        if path.join(".hg").is_dir() {
-            // `path` is a directory with `.hg`.
-            return Ok(Some(Repo::new(path, None)));
-        } else if path.is_file() {
-            // 'path' is a bundle path
-            let cwd = env::current_dir().unwrap();
-            if let Some(root) = find_hg_repo_root(&cwd) {
-                return Ok(Some(Repo::new(root, Some(path))));
-            }
-        }
-    }
-    Err(errors::RepoNotFound(repository_path).into())
 }
 
 fn last_chance_to_abort(opts: &HgGlobalOpts) -> Fallible<()> {
@@ -220,19 +183,20 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
         env::set_current_dir(global_opts.cwd)?;
     }
 
-    let mut repo = create_repo(global_opts.repository)?;
-    let config = {
-        let mut config = load_config()?;
-        if let Some(ref repo) = repo {
-            config.load_hgrc(repo.path().join(".hg/hgrc"), "repository");
-        }
-        override_config(&mut config, &global_opts.configfile, &global_opts.config)?;
-        if let Some(ref mut repo) = repo {
-            repo.set_config(config.clone());
-        }
-        config
-    };
+    // Load repo and configuration.
+    let mut optional_repo = OptionalRepo::from_repository_path_and_cwd(
+        &global_opts.repository,
+        &env::current_dir()?,
+        load_config()?,
+    )?;
+    override_config(
+        optional_repo.config_mut(),
+        &global_opts.configfile,
+        &global_opts.config,
+    )?;
+    let config = optional_repo.config();
 
+    // Prepare alias handling.
     let alias_lookup = |name: &str| match (config.get("alias", name), config.get("defaults", name))
     {
         (None, None) => None,
@@ -293,18 +257,24 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
 
     match handler {
         CommandFunc::Repo(f) => {
-            // FIXME: Try "infer repo".
-            let repo = repo.ok_or_else(|| {
-                errors::RepoRequired(
-                    env::current_dir()
-                        .ok()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_default(),
-                )
-            })?;
-            f(parsed, io, repo)
+            match optional_repo {
+                OptionalRepo::Some(repo) => f(parsed, io, repo),
+                OptionalRepo::None(_config) => {
+                    // FIXME: Try to "infer repo" here.
+                    Err(errors::RepoRequired(
+                        env::current_dir()
+                            .ok()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_default(),
+                    )
+                    .into())
+                }
+            }
         }
-        CommandFunc::OptionalRepo(f) => f(parsed, io, repo),
+        CommandFunc::OptionalRepo(f) => match optional_repo {
+            OptionalRepo::Some(repo) => f(parsed, io, Some(repo)),
+            OptionalRepo::None(_config) => f(parsed, io, None),
+        },
         CommandFunc::NoRepo(f) => f(parsed, io),
     }
 }

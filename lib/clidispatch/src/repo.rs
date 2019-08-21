@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 use crate::errors;
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use failure::Fallible;
 use std::fs;
 use std::path::Path;
@@ -15,17 +15,96 @@ pub struct Repo {
     bundle_path: Option<PathBuf>,
 }
 
+/// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
+/// without a repo.
+pub enum OptionalRepo {
+    Some(Repo),
+    None(ConfigSet),
+}
+
+impl OptionalRepo {
+    /// Optionally load a repo from the specified "current directory".
+    ///
+    /// Return None if there is no repo found from the current directory or its
+    /// parent directories.
+    pub fn from_cwd(cwd: impl AsRef<Path>, config: ConfigSet) -> Fallible<OptionalRepo> {
+        if let Some(path) = cwd
+            .as_ref()
+            .canonicalize()
+            .ok()
+            .and_then(|cwd| find_hg_repo_root(&cwd))
+        {
+            let repo = Repo::from_raw_path(path, config)?;
+            Ok(OptionalRepo::Some(repo))
+        } else {
+            Ok(OptionalRepo::None(config))
+        }
+    }
+
+    /// Load the repo from a --repository (or --repo, -R) flag.
+    ///
+    /// The path can be either a directory or a bundle file.
+    pub fn from_repository_path_and_cwd(
+        repository_path: impl AsRef<Path>,
+        cwd: impl AsRef<Path>,
+        config: ConfigSet,
+    ) -> Fallible<OptionalRepo> {
+        let repository_path = repository_path.as_ref();
+        if repository_path.as_os_str().is_empty() {
+            // --repo is not specified, only use cwd.
+            return Self::from_cwd(cwd, config);
+        }
+
+        if let Ok(path) = repository_path.canonicalize() {
+            if path.join(".hg").is_dir() {
+                // `path` is a directory with `.hg`.
+                let repo = Repo::from_raw_path(path, config)?;
+                return Ok(OptionalRepo::Some(repo));
+            } else if path.is_file() {
+                // 'path' is a bundle path
+                if let OptionalRepo::Some(mut repo) = Self::from_cwd(cwd, config)? {
+                    repo.bundle_path = Some(path);
+                    return Ok(OptionalRepo::Some(repo));
+                }
+            }
+        }
+        Err(errors::RepoNotFound(repository_path.to_string_lossy().to_string()).into())
+    }
+
+    pub fn config_mut(&mut self) -> &mut ConfigSet {
+        match self {
+            OptionalRepo::Some(ref mut repo) => &mut repo.config,
+            OptionalRepo::None(ref mut config) => config,
+        }
+    }
+
+    pub fn config(&mut self) -> &ConfigSet {
+        match self {
+            OptionalRepo::Some(ref repo) => &repo.config,
+            OptionalRepo::None(ref config) => config,
+        }
+    }
+}
+
 impl Repo {
-    pub fn new<P>(path: P, bundle_path: Option<PathBuf>) -> Self
+    /// Load the repo from explicit path.
+    ///
+    /// Load repo configurations.
+    fn from_raw_path<P>(path: P, mut config: ConfigSet) -> Fallible<Self>
     where
         P: Into<PathBuf>,
     {
-        let path_buf: PathBuf = path.into();
-
-        Repo {
-            path: path_buf,
-            config: ConfigSet::new(),
-            bundle_path,
+        let path = path.into();
+        assert!(path.is_absolute());
+        let mut errors = config.load_hgrc(path.join(".hg/hgrc"), "repository");
+        if let Some(error) = errors.pop() {
+            Err(error.into())
+        } else {
+            Ok(Repo {
+                path,
+                config,
+                bundle_path: None,
+            })
         }
     }
 
@@ -64,15 +143,22 @@ impl Repo {
         Ok(sharedpath)
     }
 
-    pub fn set_config(&mut self, config: ConfigSet) {
-        self.config = config
-    }
-
-    pub fn get_config(&self) -> &ConfigSet {
-        &self.config
-    }
-
     pub fn path(&self) -> &Path {
         self.path.as_path()
+    }
+
+    pub fn config(&self) -> &ConfigSet {
+        &self.config
+    }
+}
+
+fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
+    assert!(current_path.is_absolute());
+    if current_path.join(".hg").is_dir() {
+        Some(current_path.to_path_buf())
+    } else if let Some(parent) = current_path.parent() {
+        find_hg_repo_root(parent)
+    } else {
+        None
     }
 }
