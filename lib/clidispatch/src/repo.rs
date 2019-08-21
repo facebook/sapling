@@ -13,6 +13,7 @@ pub struct Repo {
     path: PathBuf,
     config: ConfigSet,
     bundle_path: Option<PathBuf>,
+    shared_path: Option<PathBuf>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -100,47 +101,21 @@ impl Repo {
         if let Some(error) = errors.pop() {
             Err(error.into())
         } else {
+            let shared_path = read_sharedpath(&path)?;
             Ok(Repo {
                 path,
                 config,
                 bundle_path: None,
+                shared_path,
             })
         }
     }
 
-    pub fn sharedpath(&self) -> Fallible<Option<PathBuf>> {
-        let mut sharedpath = fs::read_to_string(self.path.join(".hg/sharedpath"))
-            .ok()
-            .map(|s| PathBuf::from(s))
-            .and_then(|p| Some(PathBuf::from(p.parent()?)));
-
-        if let Some(possible_path) = sharedpath {
-            if possible_path.is_absolute() && !possible_path.exists() {
-                return Err(errors::InvalidSharedPath(
-                    possible_path.join(".hg").to_string_lossy().to_string(),
-                )
-                .into());
-            } else if possible_path.is_absolute() {
-                sharedpath = Some(possible_path)
-            } else {
-                // join relative path from the REPO/.hg path
-                let new_possible = self.path.join(".hg").join(possible_path);
-
-                if !new_possible.join(".hg").exists() {
-                    return Err(errors::InvalidSharedPath(
-                        new_possible
-                            .canonicalize()
-                            .ok()
-                            .map(|r| r.to_string_lossy().to_string())
-                            .unwrap_or("".to_string()),
-                    )
-                    .into());
-                }
-                sharedpath = Some(new_possible)
-            }
+    pub fn shared_path(&self) -> Option<&Path> {
+        match &self.shared_path {
+            Some(path) => Some(path),
+            None => None,
         }
-
-        Ok(sharedpath)
     }
 
     pub fn path(&self) -> &Path {
@@ -161,4 +136,37 @@ fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
     } else {
         None
     }
+}
+
+fn read_sharedpath(path: &Path) -> Fallible<Option<PathBuf>> {
+    let mut sharedpath = fs::read_to_string(path.join(".hg/sharedpath"))
+        .ok()
+        .map(|s| PathBuf::from(s))
+        .and_then(|p| Some(PathBuf::from(p.parent()?)));
+
+    if let Some(possible_path) = sharedpath {
+        if possible_path.is_absolute() && !possible_path.is_dir() {
+            return Err(errors::InvalidSharedPath(
+                possible_path.join(".hg").to_string_lossy().to_string(),
+            )
+            .into());
+        } else if possible_path.is_absolute() {
+            sharedpath = Some(possible_path)
+        } else {
+            // join relative path from the REPO/.hg path
+            let new_possible = path.join(".hg").join(possible_path);
+            if !new_possible.join(".hg").exists() {
+                return Err(errors::InvalidSharedPath(
+                    new_possible
+                        .canonicalize()
+                        .ok()
+                        .map(|r| r.to_string_lossy().to_string())
+                        .unwrap_or("".to_string()),
+                )
+                .into());
+            }
+            sharedpath = Some(new_possible)
+        }
+    }
+    Ok(sharedpath)
 }

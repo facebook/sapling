@@ -58,10 +58,10 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
         return Err(errors::InvalidArguments.into());
     }
 
-    let shared = repo.sharedpath()?;
-
     let path = if opts.shared {
-        shared.unwrap_or(repo.path().to_owned())
+        repo.shared_path()
+            .map(|p| p.to_owned())
+            .unwrap_or(repo.path().to_owned())
     } else {
         repo.path().to_owned()
     };
