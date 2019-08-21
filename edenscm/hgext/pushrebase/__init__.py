@@ -1032,7 +1032,7 @@ def _addpushbackparts(op, replacements, markers, markerdate, clientobsmarkervers
 def resolveonto(repo, ontoarg):
     try:
         if ontoarg != donotrebasemarker:
-            return scmutil.revsingle(repo, ontoarg)
+            return repo[ontoarg]
     except error.RepoLookupError:
         # Probably a new bookmark. Leave onto as None to not do any rebasing
         pass

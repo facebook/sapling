@@ -1321,7 +1321,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         opargs["pushvars"] = pushvars
 
     if revs:
-        revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+        revs = [repo.lookup(r) for r in repo.anyrevs(revs, user=True)]
     else:
         revs = _pushrevs(repo, ui, ".")
     if len(revs) != 1:

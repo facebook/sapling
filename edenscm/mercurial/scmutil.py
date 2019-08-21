@@ -445,6 +445,15 @@ def formatrevnode(ui, rev, node):
 
 
 def revsingle(repo, revspec, default=".", localalias=None):
+    """Resolve a single revset with user-defined revset aliases.
+
+    This should only be used for resolving user-provided command-line flags or
+    arguments.
+
+    For internal code paths not interacting with user-provided arguments,
+    use repo.revs (ignores user-defined revset aliases) or repo.anyrevs
+    (respects user-defined revset aliases) instead.
+    """
     if not revspec and revspec != 0:
         return repo[default]
 
@@ -513,6 +522,13 @@ def revrange(repo, specs, localalias=None):
 
     Returns a ``revset.abstractsmartset`` which is a list-like interface over
     integer revisions.
+
+    This should only be used for resolving user-provided command-line flags or
+    arguments.
+
+    For internal code paths not interacting with user-provided arguments,
+    use repo.revs (ignores user-defined revset aliases) or repo.anyrevs
+    (respects user-defined revset aliases) instead.
     """
     allspecs = []
     for spec in specs:
