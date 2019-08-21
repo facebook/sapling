@@ -672,21 +672,6 @@ class HgServer(object):
                 )
             raise ResetRepoError(e)
 
-    def prefetch(self, rev):
-        if not util.safehasattr(self.repo, "prefetch"):
-            # This repo isn't using remotefilelog, so nothing to do.
-            return
-
-        try:
-            rev_range = scmutil.revrange(self.repo, rev)
-        except Exception:
-            self.repo.invalidate()
-            rev_range = scmutil.revrange(self.repo, rev)
-
-        self.debug("prefetching")
-        self.repo.prefetch(rev_range)
-        self.debug("done prefetching")
-
     @cmd(CMD_PREFETCH_FILES)
     def prefetch_files(self, request):
         self._do_prefetch(request)
