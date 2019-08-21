@@ -166,6 +166,10 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 tr.close()
                 raise
 
+            # Convert to commit hash. This avoids false positive detection
+            # of "revision number used".
+            target = repo.unfiltered()[target].hex()
+
             # Move the active bookmark if necessary. Needs to happen before
             # we update to avoid getting a 'leaving bookmark X' message.
             if movebookmark and bookmark is not None:
