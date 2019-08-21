@@ -1,6 +1,6 @@
 // Copyright Facebook, Inc. 2019
 
-use clidispatch::dispatch::*;
+use clidispatch::command::{CommandTable, Register};
 use clidispatch::errors::DispatchError;
 use clidispatch::io::IO;
 use clidispatch::repo::Repo;
@@ -10,9 +10,10 @@ use revisionstore::{DataPackStore, DataStore, IndexedLogDataStore, UnionDataStor
 use types::{Key, Node, RepoPathBuf};
 
 #[allow(dead_code)]
-pub fn create_dispatcher() -> Dispatcher {
-    let mut dispatcher = Dispatcher::new();
-    dispatcher.register(
+/// Return the main command table including all Rust commands.
+pub fn table() -> CommandTable {
+    let mut table = CommandTable::new();
+    table.register(
         root,
         "root",
         r#"print the root (top) of the current working directory
@@ -21,20 +22,13 @@ pub fn create_dispatcher() -> Dispatcher {
 
     Returns 0 on success."#,
     );
-    dispatcher.register(
+    table.register(
         debugstore,
         "debugstore",
         "print information about blobstore",
     );
 
-    dispatcher
-}
-
-#[allow(dead_code)]
-pub fn dispatch(dispatcher: &mut Dispatcher) -> Result<u8, DispatchError> {
-    let args = args()?;
-
-    dispatcher.dispatch(args)
+    table
 }
 
 define_flags! {

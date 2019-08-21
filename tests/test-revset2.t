@@ -1566,36 +1566,6 @@ test author/desc/keyword in problematic encoding
   > EOF
   $ sh < setup.sh
 
-test in problematic encoding
-  $ $PYTHON > test.sh <<EOF
-  > print u'''
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'author(\u30A2)'
-  > echo ====
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'author(\u30C2)'
-  > echo ====
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'desc(\u30A2)'
-  > echo ====
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'desc(\u30C2)'
-  > echo ====
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'keyword(\u30A2)'
-  > echo ====
-  > hg --encoding cp932 log --template '{rev}\\n' -r 'keyword(\u30C2)'
-  > '''.encode('cp932')
-  > EOF
-  $ sh < test.sh
-  abort: cannot decode command line arguments
-  ====
-  abort: cannot decode command line arguments
-  ====
-  abort: cannot decode command line arguments
-  ====
-  abort: cannot decode command line arguments
-  ====
-  abort: cannot decode command line arguments
-  ====
-  abort: cannot decode command line arguments
-  [255]
-
 test error message of bad revset
   $ hg log -r 'foo\\'
   hg: parse error at 3: syntax error in revset 'foo\\'

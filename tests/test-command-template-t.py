@@ -4181,19 +4181,10 @@ sh % "'HGENCODING=ascii' hg log -T '{desc|json}\\n' -r0" == '"non-ascii branch: 
 # json filter takes input as utf-8b:
 
 sh % ("'HGENCODING=ascii' hg log -T '{'\\''%s'\\''|json}\\n' -l1" % utf8) == '"\\u00e9"'
-sh % (
-    "'HGENCODING=ascii' hg log -T '{'\\''%s'\\''|json}\\n' -l1" % latin1
-) == "abort: cannot decode command line arguments\n[255]"
 
 # utf8 filter:
 
 sh % "'HGENCODING=ascii' hg log -T 'round-trip: {bookmarks % '\\''{bookmark|utf8|hex}'\\''}\\n' -r0" == "round-trip: c3a9"
-sh % (
-    "'HGENCODING=latin1' hg log -T 'decoded: {'\\''%s'\\''|utf8|hex}\\n' -l1" % latin1
-) == "abort: cannot decode command line arguments\n[255]"
-sh % (
-    "'HGENCODING=ascii' hg log -T 'replaced: {'\\''%s'\\''|utf8|hex}\\n' -l1" % latin1
-) == "abort: cannot decode command line arguments\n[255]"
 sh % "hg log -T 'invalid type: {rev|utf8}\\n' -r0" == r"""
     abort: template filter 'utf8' is not compatible with keyword 'rev'
     [255]"""

@@ -39,9 +39,6 @@ these should work
   $ HGENCODING=latin-1 hg ci -l latin-1
   $ echo "utf-8" > a
   $ HGENCODING=utf-8 hg ci -l utf-8
-  $ HGENCODING=latin-1 hg tag `cat latin-1-tag`
-  abort: cannot decode command line arguments
-  [255]
 
 hg log (ascii)
 
@@ -178,12 +175,6 @@ hg log (dolphin)
   [255]
   $ cp latin-1-tag .hg/branch
   $ HGENCODING=latin-1 hg ci -m 'auto-promote legacy name'
-
-Test roundtrip encoding of lookup tables when not using UTF-8 (issue2763)
-
-  $ HGENCODING=latin-1 hg up `cat latin-1-tag`
-  abort: cannot decode command line arguments
-  [255]
 
   $ cd ..
 

@@ -1,6 +1,6 @@
 // Copyright Facebook, Inc. 2018
 
-use clidispatch::dispatch::Dispatcher;
+use clidispatch::dispatch;
 use hgcommands::{commands, HgPython};
 
 mod buildinfo;
@@ -8,8 +8,6 @@ mod buildinfo;
 mod chg;
 #[cfg(feature = "with_chg")]
 use chg::maybe_call_chg;
-
-use commands::{create_dispatcher, dispatch};
 
 use std::env;
 
@@ -20,10 +18,10 @@ use windows::disable_standard_handle_inheritability;
 
 /// Execute a command, using an embedded interpreter
 /// This function does not return
-fn call_embedded_python(dispatcher: Dispatcher) {
+fn call_embedded_python() {
     let code = {
         let hgpython = HgPython::new();
-        hgpython.run(dispatcher)
+        hgpython.run()
     };
     std::process::exit(code);
 }
@@ -47,10 +45,10 @@ fn main() {
     disable_standard_handle_inheritability().unwrap();
 
     let cwd = env::current_dir().unwrap();
+    let table = commands::table();
+    let args: Vec<String> = env::args().skip(1).collect();
 
-    let mut dispatcher = create_dispatcher();
-
-    match dispatch(&mut dispatcher) {
+    match dispatch::dispatch(&table, args) {
         Ok(ret) => std::process::exit(ret as i32),
         Err(_e) => {
             // Change the current dir back to the original so it is not surprising to the Python
@@ -60,7 +58,7 @@ fn main() {
             #[cfg(feature = "with_chg")]
             maybe_call_chg();
 
-            call_embedded_python(dispatcher);
+            call_embedded_python();
         }
     }
 }

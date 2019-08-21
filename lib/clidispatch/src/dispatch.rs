@@ -2,18 +2,17 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use crate::command::{CommandDefinition, CommandFunc};
+use crate::command::{CommandDefinition, CommandFunc, CommandTable};
 use crate::errors::{DispatchError, HighLevelError};
 use crate::global_flags::HG_GLOBAL_FLAGS;
 use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::parser::{ParseOptions, ParseOutput, StructFlags, Value};
+use cliparser::parser::{ParseOptions, ParseOutput, Value};
 use configparser::config::ConfigSet;
 use configparser::hg::{parse_list, ConfigSetHgExt};
-use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -95,389 +94,305 @@ pub fn find_hg_repo_root(current_path: &Path) -> Option<&Path> {
     }
 }
 
-pub fn args() -> Result<Vec<String>, DispatchError> {
-    let os_args = env::args_os();
-
-    let resultant: Result<Vec<String>, _> = os_args.skip(1).map(|os| os.into_string()).collect();
-
-    resultant.map_err(|_| DispatchError::InvalidCommandLineArguments)
-}
-
-pub struct Dispatcher {
-    commands: BTreeMap<String, CommandDefinition>,
-}
-
-impl Dispatcher {
-    pub fn new() -> Self {
-        Dispatcher {
-            commands: BTreeMap::new(),
-        }
-    }
-
-    fn add_command(&mut self, command: CommandDefinition) {
-        let name = command.name();
-        if !self.commands.contains_key(name) {
-            self.commands.insert(name.to_string(), command);
-        }
-    }
-
-    pub fn get_command_table(&self) -> Vec<&CommandDefinition> {
-        self.commands.values().collect()
-    }
-
-    fn find_command_name(&self, args: Vec<String>) -> Option<String> {
-        let mut command_name = None;
-        for arg in args {
-            if command_name.is_none() {
-                if self.commands.contains_key(&arg) {
-                    command_name = Some(arg);
-                } else {
-                    return None;
-                }
+fn find_command_name(has_command: impl Fn(&str) -> bool, args: Vec<String>) -> Option<String> {
+    let mut command_name = None;
+    for arg in args {
+        if command_name.is_none() {
+            if has_command(&arg) {
+                command_name = Some(arg);
             } else {
-                // To check for subcommands we continue iterating to see if a longer valid command
-                // is able to be created.
-                //
-                // $ hg cloud sync -> will become Some("cloud") then attempt "cloud sync".
-                let orig = command_name.unwrap();
-                let curr = orig.clone() + &arg;
-                if self.commands.contains_key(&curr) {
-                    command_name = Some(curr.to_string())
-                } else {
-                    return Some(orig);
-                }
+                return None;
+            }
+        } else {
+            // To check for subcommands we continue iterating to see if a longer valid command
+            // is able to be created.
+            //
+            // $ hg cloud sync -> will become Some("cloud") then attempt "cloud sync".
+            let orig = command_name.unwrap();
+            let curr = orig.clone() + &arg;
+            if has_command(&curr) {
+                command_name = Some(curr.to_string())
+            } else {
+                return Some(orig);
             }
         }
-        command_name
     }
+    command_name
+}
 
-    fn create_repo(repository_path: String) -> Result<Option<Repo>, DispatchError> {
-        if repository_path == "" {
-            let cwd = env::current_dir().unwrap();
-            let root = match find_hg_repo_root(&cwd) {
-                Some(r) => r,
-                None => return Ok(None),
-            };
-            return Ok(Some(Repo::new(root)));
-        } else if let Ok(repo_path) = Path::new(&repository_path).canonicalize() {
-            if repo_path.join(".hg").is_dir() {
-                return Ok(Some(Repo::new(repo_path)));
-            }
-        }
-        Err(DispatchError::RepoNotFound {
-            path: repository_path,
-        })
-    }
-
-    fn last_chance_to_abort(opts: &ParseOutput) -> Result<(), DispatchError> {
-        if opts.pick::<bool>("profile") {
-            return Err(DispatchError::ProfileFlagNotSupported);
-        }
-
-        if opts.pick::<bool>("help") {
-            return Err(DispatchError::HelpFlagNotSupported);
-        }
-
-        Ok(())
-    }
-
-    fn early_parse(&self, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
-        let parser = ParseOptions::new()
-            .ignore_prefix(true)
-            .early_parse(true)
-            .flags(HG_GLOBAL_FLAGS.clone())
-            .flag_alias("repo", "repository")
-            .into_parser();
-
-        parser
-            .parse_args(args)
-            .map_err(|_| DispatchError::EarlyParseFailed)
-    }
-
-    fn change_workdir(opts: &HashMap<String, Value>) -> Result<(), DispatchError> {
-        if let Some(cwd_val) = opts.get("cwd") {
-            let cwd: String = cwd_val.clone().into();
-            if cwd != "" {
-                env::set_current_dir(cwd).map_err(|_| DispatchError::EarlyParseFailed)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn repo_from(opts: &HashMap<String, Value>) -> Result<Option<Repo>, DispatchError> {
-        match opts.get("repository") {
-            Some(repo_val) => {
-                let repo_path: String = repo_val.clone().try_into().unwrap();
-
-                Dispatcher::create_repo(repo_path)
-            }
-            _ => Err(DispatchError::ProgrammingError {
-                root_cause: "global flag repository should always be present in options"
-                    .to_string(),
-            }),
+fn create_repo(repository_path: String) -> Result<Option<Repo>, DispatchError> {
+    if repository_path == "" {
+        let cwd = env::current_dir().unwrap();
+        let root = match find_hg_repo_root(&cwd) {
+            Some(r) => r,
+            None => return Ok(None),
+        };
+        return Ok(Some(Repo::new(root)));
+    } else if let Ok(repo_path) = Path::new(&repository_path).canonicalize() {
+        if repo_path.join(".hg").is_dir() {
+            return Ok(Some(Repo::new(repo_path)));
         }
     }
+    Err(DispatchError::RepoNotFound {
+        path: repository_path,
+    })
+}
 
-    fn configs(opts: &HashMap<String, Value>) -> Vec<String> {
-        opts.get("config")
-            .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
-            .unwrap_or(Vec::new())
+fn last_chance_to_abort(opts: &ParseOutput) -> Result<(), DispatchError> {
+    if opts.pick::<bool>("profile") {
+        return Err(DispatchError::ProfileFlagNotSupported);
     }
 
-    fn configfiles(opts: &HashMap<String, Value>) -> Vec<PathBuf> {
-        opts.get("configfile")
-            .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
-            .unwrap_or(Vec::new())
-            .into_iter()
-            .map(|s| PathBuf::from(s))
-            .collect()
+    if opts.pick::<bool>("help") {
+        return Err(DispatchError::HelpFlagNotSupported);
     }
 
-    fn command_map(&self, cfg: &ConfigSet) -> BTreeMap<String, isize> {
-        let mut command_map = BTreeMap::new();
-        let mut i = 1;
+    Ok(())
+}
 
-        for command in (&self.commands).values() {
-            let name = command.name();
+fn early_parse(args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
+    ParseOptions::new()
+        .ignore_prefix(true)
+        .early_parse(true)
+        .flags(HG_GLOBAL_FLAGS.clone())
+        .flag_alias("repo", "repository")
+        .parse_args(args)
+        .map_err(|_| DispatchError::EarlyParseFailed)
+}
+
+fn change_workdir(opts: &HashMap<String, Value>) -> Result<(), DispatchError> {
+    if let Some(cwd_val) = opts.get("cwd") {
+        let cwd: String = cwd_val.clone().into();
+        if cwd != "" {
+            env::set_current_dir(cwd).map_err(|_| DispatchError::EarlyParseFailed)?;
+        }
+    }
+    Ok(())
+}
+
+fn repo_from(opts: &HashMap<String, Value>) -> Result<Option<Repo>, DispatchError> {
+    match opts.get("repository") {
+        Some(repo_val) => {
+            let repo_path: String = repo_val.clone().try_into().unwrap();
+
+            create_repo(repo_path)
+        }
+        _ => Err(DispatchError::ProgrammingError {
+            root_cause: "global flag repository should always be present in options".to_string(),
+        }),
+    }
+}
+
+fn configs(opts: &HashMap<String, Value>) -> Vec<String> {
+    opts.get("config")
+        .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
+        .unwrap_or(Vec::new())
+}
+
+fn configfiles(opts: &HashMap<String, Value>) -> Vec<PathBuf> {
+    opts.get("configfile")
+        .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
+        .unwrap_or(Vec::new())
+        .into_iter()
+        .map(|s| PathBuf::from(s))
+        .collect()
+}
+
+fn command_map<'a>(
+    definitions: impl IntoIterator<Item = &'a CommandDefinition>,
+    cfg: &ConfigSet,
+) -> BTreeMap<String, isize> {
+    let mut command_map = BTreeMap::new();
+    let mut i = 1;
+
+    for command in definitions {
+        let name = command.name();
+        let is_debug = name.starts_with("debug");
+        command_map.insert(name.to_string(), if is_debug { -i } else { i });
+        i = i + 1;
+    }
+    // adding aliases into the command map is what Python does, so copying this behavior
+    // allows alias expansion to not behave differently for Rust or Python.
+    for name in cfg.keys("alias") {
+        if let Ok(name) = String::from_utf8(name.to_vec()) {
             let is_debug = name.starts_with("debug");
-            command_map.insert(name.to_string(), if is_debug { -i } else { i });
+            command_map.insert(name, if is_debug { -i } else { i });
             i = i + 1;
         }
-        // adding aliases into the command map is what Python does, so copying this behavior
-        // allows alias expansion to not behave differently for Rust or Python.
-        for name in cfg.keys("alias") {
-            if let Ok(name) = String::from_utf8(name.to_vec()) {
-                let is_debug = name.starts_with("debug");
-                command_map.insert(name, if is_debug { -i } else { i });
-                i = i + 1;
-            }
-        }
+    }
 
-        // Names from `commands.name` config.
-        // This is a fast (but inaccurate) way to know Python command names.
-        let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
-        for b_name in config_commands {
-            if let Ok(name) = String::from_utf8(b_name.to_vec()) {
-                let is_debug = name.starts_with("debug");
-                for name in name.split("|") {
-                    command_map.insert(name.to_string(), if is_debug { -i } else { i });
+    // Names from `commands.name` config.
+    // This is a fast (but inaccurate) way to know Python command names.
+    let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
+    for b_name in config_commands {
+        if let Ok(name) = String::from_utf8(b_name.to_vec()) {
+            let is_debug = name.starts_with("debug");
+            for name in name.split("|") {
+                command_map.insert(name.to_string(), if is_debug { -i } else { i });
+            }
+            i = i + 1;
+        }
+    }
+
+    command_map
+}
+
+fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
+    let flags = definition
+        .flags()
+        .iter()
+        .chain(HG_GLOBAL_FLAGS.iter())
+        .cloned()
+        .collect();
+    ParseOptions::new()
+        .error_on_unknown_opts(true)
+        .flags(flags)
+        .flag_alias("repo", "repository")
+        .parse_args(args)
+        .map_err(|_| DispatchError::ParseFailed)
+}
+
+pub fn dispatch(command_table: &CommandTable, args: Vec<String>) -> Result<u8, DispatchError> {
+    let mut io = IO::stdio();
+
+    match _dispatch(command_table, args, &mut io) {
+        Ok(ret) => {
+            return Ok(ret);
+        }
+        Err(err) => {
+            let high_level: HighLevelError = err.into();
+            match high_level {
+                HighLevelError::UnsupportedError { cause } => {
+                    return Err(cause);
                 }
-                i = i + 1;
-            }
-        }
-
-        command_map
-    }
-
-    fn parse(
-        &self,
-        args: &Vec<String>,
-        command_name: &String,
-    ) -> Result<ParseOutput, DispatchError> {
-        let mut command_flags = self
-            .commands
-            .get(command_name)
-            .map(|command| command.flags().clone())
-            .unwrap_or_default();
-        command_flags.extend(HG_GLOBAL_FLAGS.clone());
-        let parser = ParseOptions::new()
-            .error_on_unknown_opts(true)
-            .flags(command_flags)
-            .flag_alias("repo", "repository")
-            .into_parser();
-
-        parser
-            .parse_args(args)
-            .map_err(|_| DispatchError::ParseFailed)
-    }
-
-    pub fn dispatch(&mut self, args: Vec<String>) -> Result<u8, DispatchError> {
-        let mut io = IO::stdio();
-
-        match self._dispatch(args, &mut io) {
-            Ok(ret) => {
-                return Ok(ret);
-            }
-            Err(err) => {
-                let high_level: HighLevelError = err.into();
-                match high_level {
-                    HighLevelError::UnsupportedError { cause } => {
-                        return Err(cause);
-                    }
-                    HighLevelError::SupportedError { cause } => {
-                        let msg = format!("{}\n", cause);
-                        io.write(msg)?;
-                        return Ok(255);
-                    }
+                HighLevelError::SupportedError { cause } => {
+                    let msg = format!("{}\n", cause);
+                    io.write(msg)?;
+                    return Ok(255);
                 }
             }
         }
     }
+}
 
-    pub fn _dispatch(&mut self, mut args: Vec<String>, io: &mut IO) -> Result<u8, DispatchError> {
-        let early_result = self.early_parse(&args)?;
+pub fn _dispatch(
+    command_table: &CommandTable,
+    mut args: Vec<String>,
+    io: &mut IO,
+) -> Result<u8, DispatchError> {
+    let early_result = early_parse(&args)?;
 
-        let early_opts = early_result.opts();
+    let early_opts = early_result.opts();
 
-        Dispatcher::change_workdir(&early_opts)?;
+    change_workdir(&early_opts)?;
 
-        let repo_res = Dispatcher::repo_from(&early_opts);
+    let repo_res = repo_from(&early_opts);
 
-        let (repo, repo_err) = match repo_res {
-            Ok(opt) => (opt, Ok(())),
-            Err(err) => (None, Err(err)),
-        };
+    let (repo, repo_err) = match repo_res {
+        Ok(opt) => (opt, Ok(())),
+        Err(err) => (None, Err(err)),
+    };
 
-        let config_set = load_config()?;
+    let config_set = load_config()?;
 
-        let opt_path = repo.as_ref().map(|r| r.path());
+    let opt_path = repo.as_ref().map(|r| r.path());
 
-        let config_set = load_repo_config(config_set, opt_path);
+    let config_set = load_repo_config(config_set, opt_path);
 
-        let configs = Dispatcher::configs(&early_opts);
+    let configs = configs(&early_opts);
 
-        let configfiles = Dispatcher::configfiles(&early_opts);
+    let configfiles = configfiles(&early_opts);
 
-        let config_set = override_config(config_set, &configfiles[..], &configs)?;
+    let config_set = override_config(config_set, &configfiles[..], &configs)?;
 
-        let alias_lookup = |name: &str| match (
-            config_set.get("alias", name),
-            config_set.get("defaults", name),
-        ) {
-            (None, None) => None,
-            (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
-            (None, Some(v)) => String::from_utf8(v.to_vec())
-                .ok()
-                .map(|v| format!("{} {}", name, v)),
-            (Some(a), Some(d)) => {
-                if let (Ok(a), Ok(d)) =
-                    (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec()))
-                {
-                    // XXX: This makes defaults override alias if there are conflicted
-                    // flags. The desired behavior is to make alias override defaults.
-                    // However, [defaults] is deprecated and is likely only used
-                    // by tests. So this might be fine.
-                    Some(format!("{} {}", a, d))
-                } else {
-                    None
-                }
+    let alias_lookup = |name: &str| match (
+        config_set.get("alias", name),
+        config_set.get("defaults", name),
+    ) {
+        (None, None) => None,
+        (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
+        (None, Some(v)) => String::from_utf8(v.to_vec())
+            .ok()
+            .map(|v| format!("{} {}", name, v)),
+        (Some(a), Some(d)) => {
+            if let (Ok(a), Ok(d)) = (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec())) {
+                // XXX: This makes defaults override alias if there are conflicted
+                // flags. The desired behavior is to make alias override defaults.
+                // However, [defaults] is deprecated and is likely only used
+                // by tests. So this might be fine.
+                Some(format!("{} {}", a, d))
+            } else {
+                None
             }
-        };
-
-        let command_map = self.command_map(&config_set);
-
-        let early_args = early_result.args();
-
-        let first_arg = early_args
-            .get(0)
-            .ok_or_else(|| DispatchError::NoCommandFound)?;
-
-        let replace = early_result.first_arg_index();
-
-        // This should hold true since `first_arg` is not empty (tested above).
-        // Therefore positional args is non-empty and first_arg_index should be
-        // an index in args.
-        debug_assert!(replace < args.len());
-        debug_assert_eq!(&args[replace], first_arg);
-        // FIXME: DispatchError::AliasExpansionFailed should contain information about
-        // ambiguous commands.
-        let command_name = expand_prefix(&command_map, first_arg)
-            .map_err(|_| DispatchError::AliasExpansionFailed)?;
-        args[replace] = command_name;
-
-        let (expanded, _replaced) = expand_aliases(alias_lookup, &args[replace..])
-            .map_err(|_| DispatchError::AliasExpansionFailed)?;
-
-        let mut new_args = Vec::new();
-
-        new_args.extend_from_slice(&args[..replace]);
-        new_args.extend_from_slice(&expanded[..]);
-
-        let command_name = self
-            .find_command_name(expanded)
-            .ok_or_else(|| DispatchError::NoCommandFound)?;
-
-        repo_err?;
-
-        let full_args = new_args;
-
-        let result = self.parse(&full_args, &command_name)?;
-
-        Dispatcher::last_chance_to_abort(&result)?;
-
-        let handler = self.commands.get(&command_name).unwrap().func();
-
-        match handler {
-            CommandFunc::Repo(f) => {
-                let mut r = repo.ok_or_else(|| DispatchError::RepoRequired {
-                    cwd: env::current_dir()
-                        .ok()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or("".to_string()),
-                })?;
-
-                r.set_config(config_set);
-                f(result, io, r)
-            }
-            CommandFunc::InferRepo(f) => {
-                let r = match repo {
-                    Some(mut re) => {
-                        re.set_config(config_set);
-                        Some(re)
-                    }
-                    None => None,
-                };
-                f(result, io, r)
-            }
-            CommandFunc::NoRepo(f) => f(result, io),
         }
-    }
-}
+    };
 
-pub trait Register<FN, T> {
-    fn register(&mut self, f: FN, name: &str, doc: &str);
-}
+    let command_map = command_map(command_table.values(), &config_set);
 
-// No Repo
-impl<S, FN> Register<FN, (S,)> for Dispatcher
-where
-    S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO) -> Result<u8, DispatchError> + 'static,
-{
-    fn register(&mut self, f: FN, name: &str, doc: &str) {
-        let func = move |opts: ParseOutput, io: &mut IO| f(opts.into(), io);
-        let func = CommandFunc::NoRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
-        self.add_command(def);
-    }
-}
+    let early_args = early_result.args();
 
-// Infer Repo
-impl<S, FN> Register<FN, ((), S)> for Dispatcher
-where
-    S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8, DispatchError> + 'static,
-{
-    fn register(&mut self, f: FN, name: &str, doc: &str) {
-        let func =
-            move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.into(), io, repo);
-        let func = CommandFunc::InferRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
-        self.add_command(def);
-    }
-}
+    let first_arg = early_args
+        .get(0)
+        .ok_or_else(|| DispatchError::NoCommandFound)?;
 
-// Repo
-impl<S, FN> Register<FN, ((), (), S)> for Dispatcher
-where
-    S: From<ParseOutput> + StructFlags,
-    FN: Fn(S, &mut IO, Repo) -> Result<u8, DispatchError> + 'static,
-{
-    fn register(&mut self, f: FN, name: &str, doc: &str) {
-        let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.into(), io, repo);
-        let func = CommandFunc::Repo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
-        self.add_command(def);
+    let replace = early_result.first_arg_index();
+
+    // This should hold true since `first_arg` is not empty (tested above).
+    // Therefore positional args is non-empty and first_arg_index should be
+    // an index in args.
+    debug_assert!(replace < args.len());
+    debug_assert_eq!(&args[replace], first_arg);
+    // FIXME: DispatchError::AliasExpansionFailed should contain information about
+    // ambiguous commands.
+    let command_name =
+        expand_prefix(&command_map, first_arg).map_err(|_| DispatchError::AliasExpansionFailed)?;
+    args[replace] = command_name;
+
+    let (expanded, _replaced) = expand_aliases(alias_lookup, &args[replace..])
+        .map_err(|_| DispatchError::AliasExpansionFailed)?;
+
+    let mut new_args = Vec::new();
+
+    new_args.extend_from_slice(&args[..replace]);
+    new_args.extend_from_slice(&expanded[..]);
+
+    let command_name = find_command_name(|name| command_table.contains_key(name), expanded)
+        .ok_or_else(|| DispatchError::NoCommandFound)?;
+
+    repo_err?;
+
+    let full_args = new_args;
+
+    let def = &command_table[&command_name];
+    let result = parse(&def, &full_args)?;
+
+    last_chance_to_abort(&result)?;
+
+    let handler = def.func();
+
+    match handler {
+        CommandFunc::Repo(f) => {
+            let mut r = repo.ok_or_else(|| DispatchError::RepoRequired {
+                cwd: env::current_dir()
+                    .ok()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or("".to_string()),
+            })?;
+
+            r.set_config(config_set);
+            f(result, io, r)
+        }
+        CommandFunc::InferRepo(f) => {
+            let r = match repo {
+                Some(mut re) => {
+                    re.set_config(config_set);
+                    Some(re)
+                }
+                None => None,
+            };
+            f(result, io, r)
+        }
+        CommandFunc::NoRepo(f) => f(result, io),
     }
 }
 

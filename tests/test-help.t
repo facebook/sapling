@@ -1566,30 +1566,6 @@ such str.lower().
   > """ % (escape(upper), escape(lower)))
   > EOF
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > ambiguous = ./ambiguous.py
-  > EOF
-
-  $ $PYTHON <<EOF | sh
-  > upper = "\x8bL\x98^"
-  > print("hg --encoding cp932 help -e ambiguous.%s" % upper)
-  > EOF
-  abort: cannot decode command line arguments
-  [255]
-
-  $ $PYTHON <<EOF | sh
-  > lower = "\x8bl\x98^"
-  > print("hg --encoding cp932 help -e ambiguous.%s" % lower)
-  > EOF
-  abort: cannot decode command line arguments
-  [255]
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > ambiguous = !
-  > EOF
-
 Show help content of disabled extensions
 
   $ cat >> $HGRCPATH <<EOF

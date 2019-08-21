@@ -1,8 +1,8 @@
 // Copyright Facebook, Inc. 2018
+use crate::commands;
 use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
-use clidispatch::dispatch::Dispatcher;
 use cpython::{exc, NoArgs, ObjectProtocol, PyDict, PyResult, Python, PythonObject};
 use cpython_ext::Bytes;
 use encoding::osstring_to_local_cstring;
@@ -49,32 +49,31 @@ impl HgPython {
             .collect()
     }
 
-    pub fn run_py(&self, py: Python<'_>, dispatcher: Dispatcher) -> PyResult<()> {
-        self.set_command_table(py, dispatcher)?;
+    fn run_py(&self, py: Python<'_>) -> PyResult<()> {
+        self.update_python_command_table(py)?;
         let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
         entry_point_mod.call(py, "run", NoArgs, None)?;
         Ok(())
     }
 
     /// Update the Python command table so it knows commands implemented in Rust.
-    pub fn set_command_table(&self, py: Python<'_>, dispatcher: Dispatcher) -> PyResult<()> {
+    fn update_python_command_table(&self, py: Python<'_>) -> PyResult<()> {
+        let table = commands::table();
         let table_mod = py.import("edenscm.mercurial.commands")?;
-        let table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
+        let py_table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
 
-        let rust_commands = dispatcher.get_command_table();
-
-        for command in rust_commands {
-            let doc = Bytes::from(command.doc().to_string());
-            table.set_item(py, command.name(), (doc, command.flags()))?;
+        for def in table.values() {
+            let doc = Bytes::from(def.doc().to_string());
+            py_table.set_item(py, def.name(), (doc, def.flags()))?;
         }
 
         Ok(())
     }
 
-    pub fn run(&self, dispatcher: Dispatcher) -> i32 {
+    pub fn run(&self) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_py(py, dispatcher) {
+        match self.run_py(py) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an
