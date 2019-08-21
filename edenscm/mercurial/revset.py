@@ -2380,6 +2380,7 @@ def _orderedlist(repo, subset, x):
             r = int(t)
             if str(r) != t or r not in cl:
                 raise ValueError
+            _warnrevnum(repo.ui, r)
             revs = [r]
         except ValueError:
             revs = stringset(repo, subset, t, defineorder)
