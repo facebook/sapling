@@ -171,6 +171,14 @@ def _warnrevnum(ui, x):
         # Log the usage.
         # This now uses 2 because 1 has too many false positives.
         ui.log("revnum_used", revnum_used=2)
+        # Also log the detailed use (traceback) of this (deprecated) feature to
+        # another table.
+        ui.log(
+            "features",
+            fullargs=repr(pycompat.sysargv),
+            feature="revnum",
+            traceback=util.smarttraceback(),
+        )
     if config == "warn":
         hintutil.trigger("revnum-deprecate", x)
     elif config == "abort":
