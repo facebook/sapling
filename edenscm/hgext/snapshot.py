@@ -27,6 +27,7 @@ from edenscm.mercurial import (
     extensions,
     hg,
     json,
+    merge as mergemod,
     pathutil,
     registrar,
     scmutil,
@@ -238,7 +239,7 @@ def createsnapshotcommit(ui, repo, opts):
     status = repo.status(unknown=True)
     snapmanifest = snapshotmanifest.createfromworkingcopy(repo, status=status)
     emptymanifest = snapmanifest.empty
-    oid = None
+    oid = ""  # this is better than None because of extra serialization rules
     if not emptymanifest:
         oid, size = snapmanifest.storetolocallfs()
     extra = {"snapshotmanifestid": oid}
@@ -287,11 +288,19 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     ui.status(_("will checkout on %s\n") % cctx.hex())
     with repo.wlock():
         # TODO(alexeyqu): support EdenFS and possibly make it more efficient
-        hg.update(repo.unfiltered(), node)
-        with repo.dirstate.parentchange():
-            newparents = [p.node() for p in cctx.parents()]
-            ui.debug("setting parents to %s\n" % newparents)
-            repo.setparents(*newparents)
+        parents = [p.node() for p in cctx.parents()]
+        # First we check out on the 1st parent of the snapshot state
+        hg.update(repo.unfiltered(), parents[0], quietempty=True)
+        # Then we update snapshot files in the working copy
+        # Here the dirstate is not updated because of the matcher
+        matcher = scmutil.match(cctx, cctx.files(), opts)
+        mergemod.update(repo.unfiltered(), node, False, False, matcher=matcher)
+        # Finally, we mark the modified files in the dirstate
+        scmutil.addremove(repo, matcher, "", opts)
+        # Tie the state to the 2nd parent if needed
+        if len(parents) == 2:
+            with repo.dirstate.parentchange():
+                repo.setparents(*parents)
     snapshotmanifestid = cctx.extra().get("snapshotmanifestid")
     if snapshotmanifestid:
         snapmanifest = snapshotmanifest.restorefromlfs(repo, snapshotmanifestid)
