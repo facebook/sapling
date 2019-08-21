@@ -196,9 +196,8 @@ fn command_map<'a>(
 fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
     let flags = definition
         .flags()
-        .iter()
-        .chain(HgGlobalOpts::flags().iter())
-        .cloned()
+        .into_iter()
+        .chain(HgGlobalOpts::flags().into_iter())
         .collect();
     ParseOptions::new()
         .error_on_unknown_opts(true)

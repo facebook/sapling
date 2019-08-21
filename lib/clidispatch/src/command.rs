@@ -15,7 +15,7 @@ pub enum CommandFunc {
 pub struct CommandDefinition {
     name: String,
     doc: String,
-    flags: Vec<Flag>,
+    flags_func: fn() -> Vec<Flag>,
     func: CommandFunc,
 }
 
@@ -23,19 +23,19 @@ impl CommandDefinition {
     pub fn new(
         name: impl ToString,
         doc: impl ToString,
-        flags: Vec<Flag>,
+        flags_func: fn() -> Vec<Flag>,
         func: CommandFunc,
     ) -> Self {
         CommandDefinition {
             name: name.to_string(),
             doc: doc.to_string(),
-            flags,
+            flags_func,
             func,
         }
     }
 
-    pub fn flags(&self) -> &Vec<Flag> {
-        &self.flags
+    pub fn flags(&self) -> Vec<Flag> {
+        (self.flags_func)()
     }
 
     pub fn name(&self) -> &str {
@@ -84,7 +84,7 @@ where
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func = move |opts: ParseOutput, io: &mut IO| f(opts.into(), io);
         let func = CommandFunc::NoRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
     }
 }
@@ -99,7 +99,7 @@ where
         let func =
             move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.into(), io, repo);
         let func = CommandFunc::InferRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
     }
 }
@@ -113,7 +113,7 @@ where
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.into(), io, repo);
         let func = CommandFunc::Repo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags(), func);
+        let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
     }
 }
