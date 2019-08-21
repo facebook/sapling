@@ -251,10 +251,11 @@ pub fn expand_prefix(
 
                 // join command aliases with ' or ' for better UX
                 // e.g. id or identify
-                let possibilities: Vec<String> = id_to_command_map
+                let mut possibilities: Vec<String> = id_to_command_map
                     .into_iter()
                     .map(|(_, vec)| vec.join(" or "))
                     .collect();
+                possibilities.sort_unstable();
 
                 return Err(ParseError::AmbiguousCommand {
                     command_name: arg,
