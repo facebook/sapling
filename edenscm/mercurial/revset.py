@@ -167,12 +167,14 @@ def _warnrevnum(ui, x):
     # check to user-provided inputs (i.e. excluding internal APIs like
     # repo.revs(...)).
     config = ui.config("devel", "legacy.revnum:real")
+    if config:
+        # Log the usage.
+        # This now uses 2 because 1 has too many false positives.
+        ui.log("revnum_used", revnum_used=2)
     if config == "warn":
         hintutil.trigger("revnum-deprecate", x)
     elif config == "abort":
         raise error.Abort(_("local revision number is disabled in this repo"))
-    # Log the usage anyway.
-    ui.log("revnum_used", revnum_used=1)
 
 
 def stringset(repo, subset, x, order):
