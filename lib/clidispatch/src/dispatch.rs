@@ -11,7 +11,7 @@ use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
-use configparser::hg::{parse_list, ConfigSetHgExt};
+use configparser::hg::parse_list;
 use failure::Fallible;
 use std::{collections::BTreeMap, env, path::Path};
 
@@ -23,23 +23,6 @@ pub fn args() -> Fallible<Vec<String>> {
                 .map_err(|_| errors::NonUTF8Arguments.into())
         })
         .collect()
-}
-
-fn load_config() -> Fallible<ConfigSet> {
-    // priority is ->
-    //     - system
-    //     - user
-    //     - repo
-    //     - configfile
-    //     - config ( bottom overrides above )
-    let mut errors = Vec::new();
-    let mut config = ConfigSet::new();
-    errors.extend(config.load_system());
-    errors.extend(config.load_user());
-    if let Some(error) = errors.pop() {
-        return Err(failure::Error::from(error));
-    }
-    Ok(config)
 }
 
 /// Apply config override flags.
@@ -187,7 +170,7 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
     let mut optional_repo = OptionalRepo::from_repository_path_and_cwd(
         &global_opts.repository,
         &env::current_dir()?,
-        load_config()?,
+        configparser::hg::load()?,
     )?;
     override_config(
         optional_repo.config_mut(),

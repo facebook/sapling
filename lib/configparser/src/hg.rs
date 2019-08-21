@@ -13,6 +13,7 @@ use std::path::Path;
 
 use bytes::Bytes;
 use dirs;
+use failure::Fallible;
 
 use crate::config::{expand_path, ConfigSet, Options};
 use crate::error::Error;
@@ -56,6 +57,18 @@ pub trait ConfigSetHgExt {
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
+}
+
+/// Load system, user config files.
+pub fn load() -> Fallible<ConfigSet> {
+    let mut set = ConfigSet::new();
+    if let Some(error) = set.load_system().pop() {
+        return Err(error.into());
+    }
+    if let Some(error) = set.load_user().pop() {
+        return Err(error.into());
+    }
+    Ok(set)
 }
 
 impl OptionsHgExt for Options {
