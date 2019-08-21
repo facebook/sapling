@@ -35,12 +35,12 @@ pub enum ParseError {
         option_name: String,
         possibilities: Vec<String>,
     },
-    #[fail(display = "Command {} is ambiguous", command_name)]
+    #[fail(display = "command '{}' is ambiguous", command_name)]
     AmbiguousCommand {
         command_name: String,
         possibilities: Vec<String>,
     },
-    #[fail(display = "Alias {} resulted in a circular reference", command_name)]
+    #[fail(display = "circular alias: {}", command_name)]
     CircularReference { command_name: String },
     #[fail(display = "alias definition {} = {:?} cannot be parsed", name, value)]
     MalformedAlias { name: String, value: String },

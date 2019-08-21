@@ -302,7 +302,7 @@ mod tests {
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
             let msg = format!("{}", err);
-            assert_eq!(msg, "Command fo is ambiguous");
+            assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
         }
@@ -316,7 +316,7 @@ mod tests {
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
             let msg = format!("{}", err);
-            assert_eq!(msg, "Command fo is ambiguous");
+            assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
         }
@@ -330,7 +330,7 @@ mod tests {
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
             let msg = format!("{}", err);
-            assert_eq!(msg, "Command fo is ambiguous");
+            assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
         }
@@ -376,7 +376,7 @@ mod tests {
 
         if let Err(err) = expand_aliases(|x| cfg.get(x), &["foo"]) {
             let msg = format!("{}", err);
-            assert_eq!(msg, "Alias foo resulted in a circular reference");
+            assert_eq!(msg, "circular alias: foo");
         } else {
             panic!()
         }
