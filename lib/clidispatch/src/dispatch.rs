@@ -9,13 +9,13 @@ use crate::io::IO;
 use crate::repo::Repo;
 use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
-use cliparser::parser::{ParseOptions, ParseOutput, StructFlags, Value};
+use cliparser::parser::{ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::{parse_list, ConfigSetHgExt};
-use std::collections::{BTreeMap, HashMap};
-use std::convert::TryInto;
+use std::collections::BTreeMap;
+
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 fn load_config() -> Result<ConfigSet, DispatchError> {
     // priority is ->
@@ -35,27 +35,11 @@ fn load_config() -> Result<ConfigSet, DispatchError> {
     }
 }
 
-fn load_repo_config(mut config: ConfigSet, current_path: Option<&Path>) -> ConfigSet {
-    let mut errors = Vec::new();
-
-    if current_path.is_none() {
-        return config;
-    }
-
-    let path = current_path.unwrap();
-
-    if let Some(repo_path) = find_hg_repo_root(path) {
-        errors.extend(config.load_hgrc(repo_path.join(".hg/hgrc"), "repository"));
-    }
-
-    config
-}
-
 fn override_config<P>(
-    mut config: ConfigSet,
+    config: &mut ConfigSet,
     config_paths: &[P],
     config_overrides: &[String],
-) -> Result<ConfigSet, DispatchError>
+) -> Result<(), DispatchError>
 where
     P: AsRef<Path>,
 {
@@ -81,7 +65,7 @@ where
         config.set(section, name, Some(&Bytes::from(value)), &"--config".into());
     }
 
-    Ok(config)
+    Ok(())
 }
 
 pub fn find_hg_repo_root(current_path: &Path) -> Option<&Path> {
@@ -121,7 +105,10 @@ fn find_command_name(has_command: impl Fn(&str) -> bool, args: Vec<String>) -> O
 }
 
 fn create_repo(repository_path: String) -> Result<Option<Repo>, DispatchError> {
-    if repository_path == "" {
+    if repository_path == ""
+        || repository_path.starts_with("bundle:")
+        || repository_path.starts_with("file:")
+    {
         let cwd = env::current_dir().unwrap();
         let root = match find_hg_repo_root(&cwd) {
             Some(r) => r,
@@ -131,6 +118,13 @@ fn create_repo(repository_path: String) -> Result<Option<Repo>, DispatchError> {
     } else if let Ok(repo_path) = Path::new(&repository_path).canonicalize() {
         if repo_path.join(".hg").is_dir() {
             return Ok(Some(Repo::new(repo_path)));
+        } else if repo_path.is_file() {
+            let cwd = env::current_dir().unwrap();
+            let root = match find_hg_repo_root(&cwd) {
+                Some(r) => r,
+                None => return Ok(None),
+            };
+            return Ok(Some(Repo::new(root)));
         }
     }
     Err(DispatchError::RepoNotFound {
@@ -138,12 +132,12 @@ fn create_repo(repository_path: String) -> Result<Option<Repo>, DispatchError> {
     })
 }
 
-fn last_chance_to_abort(opts: &ParseOutput) -> Result<(), DispatchError> {
-    if opts.pick::<bool>("profile") {
+fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<(), DispatchError> {
+    if opts.profile {
         return Err(DispatchError::ProfileFlagNotSupported);
     }
 
-    if opts.pick::<bool>("help") {
+    if opts.help {
         return Err(DispatchError::HelpFlagNotSupported);
     }
 
@@ -158,44 +152,6 @@ fn early_parse(args: &Vec<String>) -> Result<ParseOutput, DispatchError> {
         .flag_alias("repo", "repository")
         .parse_args(args)
         .map_err(|_| DispatchError::EarlyParseFailed)
-}
-
-fn change_workdir(opts: &HashMap<String, Value>) -> Result<(), DispatchError> {
-    if let Some(cwd_val) = opts.get("cwd") {
-        let cwd: String = cwd_val.clone().into();
-        if cwd != "" {
-            env::set_current_dir(cwd).map_err(|_| DispatchError::EarlyParseFailed)?;
-        }
-    }
-    Ok(())
-}
-
-fn repo_from(opts: &HashMap<String, Value>) -> Result<Option<Repo>, DispatchError> {
-    match opts.get("repository") {
-        Some(repo_val) => {
-            let repo_path: String = repo_val.clone().try_into().unwrap();
-
-            create_repo(repo_path)
-        }
-        _ => Err(DispatchError::ProgrammingError {
-            root_cause: "global flag repository should always be present in options".to_string(),
-        }),
-    }
-}
-
-fn configs(opts: &HashMap<String, Value>) -> Vec<String> {
-    opts.get("config")
-        .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
-        .unwrap_or(Vec::new())
-}
-
-fn configfiles(opts: &HashMap<String, Value>) -> Vec<PathBuf> {
-    opts.get("configfile")
-        .map(|c| c.clone().try_into().unwrap_or(Vec::new()))
-        .unwrap_or(Vec::new())
-        .into_iter()
-        .map(|s| PathBuf::from(s))
-        .collect()
 }
 
 fn command_map<'a>(
@@ -267,7 +223,7 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>) -> Result<u8, D
                 }
                 HighLevelError::SupportedError { cause } => {
                     let msg = format!("{}\n", cause);
-                    io.write(msg)?;
+                    io.write_err(msg)?;
                     return Ok(255);
                 }
             }
@@ -281,34 +237,27 @@ pub fn _dispatch(
     io: &mut IO,
 ) -> Result<u8, DispatchError> {
     let early_result = early_parse(&args)?;
+    let global_opts: HgGlobalOpts = early_result.clone().into();
 
-    let early_opts = early_result.opts();
+    if !global_opts.cwd.is_empty() {
+        env::set_current_dir(global_opts.cwd)?;
+    }
 
-    change_workdir(&early_opts)?;
-
-    let repo_res = repo_from(&early_opts);
-
-    let (repo, repo_err) = match repo_res {
-        Ok(opt) => (opt, Ok(())),
-        Err(err) => (None, Err(err)),
+    let mut repo = create_repo(global_opts.repository)?;
+    let config = {
+        let mut config = load_config()?;
+        if let Some(ref repo) = repo {
+            config.load_hgrc(repo.path().join(".hg/hgrc"), "repository");
+        }
+        override_config(&mut config, &global_opts.configfile, &global_opts.config)?;
+        if let Some(ref mut repo) = repo {
+            repo.set_config(config.clone());
+        }
+        config
     };
 
-    let config_set = load_config()?;
-
-    let opt_path = repo.as_ref().map(|r| r.path());
-
-    let config_set = load_repo_config(config_set, opt_path);
-
-    let configs = configs(&early_opts);
-
-    let configfiles = configfiles(&early_opts);
-
-    let config_set = override_config(config_set, &configfiles[..], &configs)?;
-
-    let alias_lookup = |name: &str| match (
-        config_set.get("alias", name),
-        config_set.get("defaults", name),
-    ) {
+    let alias_lookup = |name: &str| match (config.get("alias", name), config.get("defaults", name))
+    {
         (None, None) => None,
         (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
         (None, Some(v)) => String::from_utf8(v.to_vec())
@@ -327,71 +276,59 @@ pub fn _dispatch(
         }
     };
 
-    let command_map = command_map(command_table.values(), &config_set);
+    let command_map = command_map(command_table.values(), &config);
 
     let early_args = early_result.args();
-
     let first_arg = early_args
         .get(0)
         .ok_or_else(|| DispatchError::NoCommandFound)?;
 
-    let replace = early_result.first_arg_index();
+    let first_arg_index = early_result.first_arg_index();
 
     // This should hold true since `first_arg` is not empty (tested above).
     // Therefore positional args is non-empty and first_arg_index should be
     // an index in args.
-    debug_assert!(replace < args.len());
-    debug_assert_eq!(&args[replace], first_arg);
+    debug_assert!(first_arg_index < args.len());
+    debug_assert_eq!(&args[first_arg_index], first_arg);
+
     // FIXME: DispatchError::AliasExpansionFailed should contain information about
     // ambiguous commands.
     let command_name =
         expand_prefix(&command_map, first_arg).map_err(|_| DispatchError::AliasExpansionFailed)?;
-    args[replace] = command_name;
+    args[first_arg_index] = command_name;
 
-    let (expanded, _replaced) = expand_aliases(alias_lookup, &args[replace..])
+    let (expanded, _first_arg_indexd) = expand_aliases(alias_lookup, &args[first_arg_index..])
         .map_err(|_| DispatchError::AliasExpansionFailed)?;
 
     let mut new_args = Vec::new();
 
-    new_args.extend_from_slice(&args[..replace]);
+    new_args.extend_from_slice(&args[..first_arg_index]);
     new_args.extend_from_slice(&expanded[..]);
 
     let command_name = find_command_name(|name| command_table.contains_key(name), expanded)
         .ok_or_else(|| DispatchError::NoCommandFound)?;
 
-    repo_err?;
-
     let full_args = new_args;
 
     let def = &command_table[&command_name];
-    let result = parse(&def, &full_args)?;
+    let parsed = parse(&def, &full_args)?;
 
-    last_chance_to_abort(&result)?;
+    let global_opts: HgGlobalOpts = parsed.clone().into();
+    last_chance_to_abort(&global_opts)?;
 
     let handler = def.func();
 
     match handler {
         CommandFunc::Repo(f) => {
-            let mut r = repo.ok_or_else(|| DispatchError::RepoRequired {
+            let repo = repo.ok_or_else(|| DispatchError::RepoRequired {
                 cwd: env::current_dir()
                     .ok()
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or("".to_string()),
             })?;
-
-            r.set_config(config_set);
-            f(result, io, r)
+            f(parsed, io, repo)
         }
-        CommandFunc::InferRepo(f) => {
-            let r = match repo {
-                Some(mut re) => {
-                    re.set_config(config_set);
-                    Some(re)
-                }
-                None => None,
-            };
-            f(result, io, r)
-        }
-        CommandFunc::NoRepo(f) => f(result, io),
+        CommandFunc::InferRepo(f) => f(parsed, io, repo),
+        CommandFunc::NoRepo(f) => f(parsed, io),
     }
 }

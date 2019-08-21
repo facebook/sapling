@@ -344,14 +344,14 @@ Test (non-)escaping of remote paths with spaces when cloning (issue3145):
 Make sure hg is really paranoid in serve --stdio mode. It used to be
 possible to get a debugger REPL by specifying a repo named --debugger.
   $ hg -R --debugger serve --stdio
-  abort: potentially unsafe serve --stdio invocation: ['-R', '--debugger', 'serve', '--stdio']
+  abort: repository --debugger not found!
   [255]
   $ hg -R --config=ui.debugger=yes serve --stdio
-  abort: potentially unsafe serve --stdio invocation: ['-R', '--config=ui.debugger=yes', 'serve', '--stdio']
+  abort: repository --config=ui.debugger=yes not found!
   [255]
 Abbreviations of 'serve' also don't work, to avoid shenanigans.
   $ hg -R narf serv --stdio
-  abort: potentially unsafe serve --stdio invocation: ['-R', 'narf', 'serv', '--stdio']
+  abort: repository narf not found!
   [255]
 
 Test hg-ssh using a helper script that will restore PYTHONPATH (which might

@@ -13,12 +13,6 @@
   $ hg ci -Am initial
   adding a
 
-invalid scheme
-
-  $ hg log -R z:z
-  abort: no '://' in scheme url 'z:z'
-  [255]
-
 http scheme
 
   $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log

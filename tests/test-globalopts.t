@@ -55,27 +55,6 @@ Testing -R/--repository:
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
   
-
--R with a URL:
-
-  $ hg -R file:a identify
-  8580ff50825a tip
-  $ hg -R file://localhost/`pwd`/a/ identify
-  8580ff50825a tip
-
--R with path aliases:
-
-  $ cd c
-  $ hg -R default identify
-  8580ff50825a tip
-  $ hg -R relative identify
-  8580ff50825a tip
-  $ echo '[paths]' >> $HGRCPATH
-  $ echo 'relativetohome = a' >> $HGRCPATH
-  $ HOME=`pwd`/../ hg -R relativetohome identify
-  8580ff50825a tip
-  $ cd ..
-
 #if no-outer-repo
 
 Implicit -R:
