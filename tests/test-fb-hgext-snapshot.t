@@ -32,8 +32,8 @@
 
 # Snapshot test plan:
 # 1) Empty snapshot (no changes);
-# 2) Snapshot with an empty manifest (changes only in tracked files);
-# 3) Snapshot with a manifest (merge state + mixed changes);
+# 2) Snapshot with an empty metadata (changes only in tracked files);
+# 3) Snapshot with a metadata (merge state + mixed changes);
 # 4) Same as 3 but test the --clean flag on creation;
 # 5) Same as 3 but test the --force flag on restore;
 # 6) TODO(alexeyqu): Same as 3 but sync to the server and another client.
@@ -44,7 +44,7 @@
   nothing changed
 
 
-# 2) Snapshot with an empty manifest (changes only in tracked files)
+# 2) Snapshot with an empty metadata (changes only in tracked files)
   $ hg rm bar/file
   $ echo "change" >> foofile
   $ echo "another" > bazfile
@@ -75,14 +75,14 @@
 # Create a snapshot and check the result
   $ EMPTYOID="$(hg debugsnapshot | head -n 1 | cut -f2 -d' ')"
   $ echo "$EMPTYOID"
-  509c24c4681a119720ced4260520dce99e1370ee
-  $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmanifestid
-  snapshotmanifestid=
+  9c5c703bba200afd1e7105ef675d68b75d43c6b4
+  $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid
+  snapshotmetadataid=
 # The snapshot commit is hidden
   $ hg log --hidden -r  "not hidden() & $EMPTYOID"
 # But it exists!
   $ hg show --hidden "$EMPTYOID"
-  changeset:   1:509c24c4681a
+  changeset:   1:9c5c703bba20
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -91,17 +91,17 @@
   snapshot
   
   
-  diff -r 3490593cf53c -r 509c24c4681a bar/file
+  diff -r 3490593cf53c -r 9c5c703bba20 bar/file
   --- a/bar/file	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -bar
-  diff -r 3490593cf53c -r 509c24c4681a bazfile
+  diff -r 3490593cf53c -r 9c5c703bba20 bazfile
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/bazfile	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +another
-  diff -r 3490593cf53c -r 509c24c4681a foofile
+  diff -r 3490593cf53c -r 9c5c703bba20 foofile
   --- a/foofile	Thu Jan 01 00:00:00 1970 +0000
   +++ b/foofile	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -112,13 +112,13 @@
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ hg status --verbose
   $ hg debugcheckoutsnapshot "$EMPTYOID"
-  will checkout on 509c24c4681a119720ced4260520dce99e1370ee
+  will checkout on 9c5c703bba200afd1e7105ef675d68b75d43c6b4
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 
-# 3) Snapshot with a manifest + merge conflict!
+# 3) Snapshot with a metadata + merge conflict!
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ hg status --verbose
   $ echo "a" > mergefile
@@ -186,14 +186,14 @@
 # Create the snapshot
   $ OID="$(hg debugsnapshot | cut -f2 -d' ')"
   $ echo "$OID"
-  f788a565a3b78ea7b351a3c8d0bd8622ebeaf52e
+  34c81e40f10e2df58967bde74f60a35080812037
 
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
-# Check the manifest id and its contents
-  $ MANIFESTOID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmanifestid | cut -d'=' -f2)"
+# Check the metadata id and its contents
+  $ MANIFESTOID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
   $ echo "$MANIFESTOID"
   94d0daf8fadba1a239eca4ddb5cc1a71728097928543dfb02b8be399ae6fcb56
   $ cat .hg/store/lfs/objects/"${MANIFESTOID:0:2}"/"${MANIFESTOID:2}"
@@ -225,7 +225,7 @@
   [255]
 # Check out on the snapshot -- positive tests
   $ hg debugcheckoutsnapshot "$OID"
-  will checkout on f788a565a3b78ea7b351a3c8d0bd8622ebeaf52e
+  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -239,13 +239,13 @@
   .hg/merge/state
   .hg/merge/state2
   $ hg debugsnapshot --clean
-  snapshot f788a565a3b78ea7b351a3c8d0bd8622ebeaf52e created
+  snapshot 34c81e40f10e2df58967bde74f60a35080812037 created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
   $ hg debugcheckoutsnapshot "$OID"
-  will checkout on f788a565a3b78ea7b351a3c8d0bd8622ebeaf52e
+  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
   checkout complete
 
 
@@ -260,7 +260,7 @@
   
   [255]
   $ hg debugcheckoutsnapshot --force "$OID"
-  will checkout on f788a565a3b78ea7b351a3c8d0bd8622ebeaf52e
+  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 

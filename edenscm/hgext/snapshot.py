@@ -66,7 +66,7 @@ def checkloadblobbyoid(repo, oid, path, allow_remote=False):
 class filelfswrapper(object):
     """
     Helper class that links files to oids in the lfs blobstorage.
-    Also does serialization/deserialization for manifest.
+    Also does serialization/deserialization for metadata.
     """
 
     def __init__(self, path, oid=None, size=None):
@@ -87,9 +87,9 @@ class filelfswrapper(object):
             raise error.Abort(_("invalid file description: %s\n") % data)
 
 
-class snapshotmanifest(object):
+class snapshotmetadata(object):
     """
-    Main class that contains snapshot manifest representation.
+    Main class that contains snapshot metadata representation.
     """
 
     def __init__(self, repo, oid=None):
@@ -104,59 +104,59 @@ class snapshotmanifest(object):
         return not (self.deleted or self.unknown)
 
     def serialize(self):
-        manifest = defaultdict(dict)
-        manifest["deleted"] = {d.path: d.serialize() for d in self.deleted}
-        manifest["unknown"] = {u.path: u.serialize() for u in self.unknown}
-        manifest["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
-        return json.dumps(manifest)
+        metadata = defaultdict(dict)
+        metadata["deleted"] = {d.path: d.serialize() for d in self.deleted}
+        metadata["unknown"] = {u.path: u.serialize() for u in self.unknown}
+        metadata["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
+        return json.dumps(metadata)
 
     def deserialize(self, json_string):
         try:
-            manifest = json.loads(json_string)
+            metadata = json.loads(json_string)
             self.deleted = [
-                filelfswrapper(path) for path in sorted(manifest["deleted"].keys())
+                filelfswrapper(path) for path in sorted(metadata["deleted"].keys())
             ]
             self.unknown = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in sorted(manifest["unknown"].items())
+                for path, data in sorted(metadata["unknown"].items())
             ]
             self.localvfsfiles = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in sorted(manifest["localvfsfiles"].items())
+                for path, data in sorted(metadata["localvfsfiles"].items())
             ]
         except ValueError:
-            raise error.Abort(_("invalid manifest json: %s\n") % json_string)
+            raise error.Abort(_("invalid metadata json: %s\n") % json_string)
 
     @classmethod
     def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
-        manifest = cls(repo)
-        # populate the manifest
+        metadata = cls(repo)
+        # populate the metadata
         status = status or repo.status(unknown=include_untracked)
-        manifest.deleted = [filelfswrapper(path) for path in status.deleted]
-        manifest.unknown = [filelfswrapper(path) for path in status.unknown]
+        metadata.deleted = [filelfswrapper(path) for path in status.deleted]
+        metadata.unknown = [filelfswrapper(path) for path in status.unknown]
         # check merge and rebase info
         ismergestate = len(repo[None].parents()) > 1
         isrebasestate = repo.localvfs.exists("rebasestate")
         if ismergestate or isrebasestate:
             for root, dirs, files in repo.localvfs.walk(path="merge"):
-                manifest.localvfsfiles += [
+                metadata.localvfsfiles += [
                     filelfswrapper(pathutil.join(root, f)) for f in files
                 ]
         if isrebasestate:
-            manifest.localvfsfiles.append(filelfswrapper("rebasestate"))
-        return manifest
+            metadata.localvfsfiles.append(filelfswrapper("rebasestate"))
+        return metadata
 
     @classmethod
     def restorefromlfs(cls, repo, oid, allow_remote=False):
-        manifest = cls(repo, oid)
-        checkloadblobbyoid(repo, oid, "manifest", allow_remote)
-        manifest.deserialize(repo.svfs.lfslocalblobstore.read(oid))
+        metadata = cls(repo, oid)
+        checkloadblobbyoid(repo, oid, "metadata", allow_remote)
+        metadata.deserialize(repo.svfs.lfslocalblobstore.read(oid))
         # validate related files
-        for file in manifest.unknown:
+        for file in metadata.unknown:
             checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
-        for file in manifest.localvfsfiles:
+        for file in metadata.localvfsfiles:
             checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
-        return manifest
+        return metadata
 
     def storetolocallfs(self):
         def storetolfs(repo, data):
@@ -237,18 +237,18 @@ def debugsnapshot(ui, repo, *args, **opts):
 
 def createsnapshotcommit(ui, repo, opts):
     status = repo.status(unknown=True)
-    snapmanifest = snapshotmanifest.createfromworkingcopy(repo, status=status)
-    emptymanifest = snapmanifest.empty
+    snapmetadata = snapshotmetadata.createfromworkingcopy(repo, status=status)
+    emptymetadata = snapmetadata.empty
     oid = ""  # this is better than None because of extra serialization rules
-    if not emptymanifest:
-        oid, size = snapmanifest.storetolocallfs()
-    extra = {"snapshotmanifestid": oid}
+    if not emptymetadata:
+        oid, size = snapmetadata.storetolocallfs()
+    extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
     # TODO(alexeyqu): deal with unfinished merge state case
     cctx = context.workingcommitctx(
         repo, status, "snapshot", opts.get("user"), opts.get("date"), extra=extra
     )
-    if len(cctx.files()) == 0 and emptymanifest:  # don't need an empty snapshot
+    if len(cctx.files()) == 0 and emptymetadata:  # don't need an empty snapshot
         return None
     with repo.transaction("snapshot"):
         return repo.commitctx(cctx, error=True)
@@ -263,7 +263,7 @@ def createsnapshotcommit(ui, repo, opts):
 def debugcheckoutsnapshot(ui, repo, *args, **opts):
     """
     Checks out the working copy to the snapshot state, given its revision id.
-    Downloads the snapshot manifest from remote lfs if needed.
+    Downloads the snapshot metadata from remote lfs if needed.
 
     """
     if not args or len(args) != 1:
@@ -275,7 +275,7 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
     except error.RepoLookupError:
         ui.status(_("%s is not a valid revision id\n") % node)
         raise
-    if "snapshotmanifestid" not in cctx.extra():
+    if "snapshotmetadataid" not in cctx.extra():
         raise error.Abort(_("%s is not a valid snapshot id\n") % node)
     # This is a temporary safety check that WC is clean.
     if sum(map(len, repo.status(unknown=True))) != 0 and not force:
@@ -301,24 +301,24 @@ def debugcheckoutsnapshot(ui, repo, *args, **opts):
         if len(parents) == 2:
             with repo.dirstate.parentchange():
                 repo.setparents(*parents)
-    snapshotmanifestid = cctx.extra().get("snapshotmanifestid")
-    if snapshotmanifestid:
-        snapmanifest = snapshotmanifest.restorefromlfs(repo, snapshotmanifestid)
-        checkouttosnapshotmanifest(ui, repo, snapmanifest, force)
+    snapshotmetadataid = cctx.extra().get("snapshotmetadataid")
+    if snapshotmetadataid:
+        snapmetadata = snapshotmetadata.restorefromlfs(repo, snapshotmetadataid)
+        checkouttosnapshotmetadata(ui, repo, snapmetadata, force)
     ui.status(_("checkout complete\n"))
 
 
-@command("debugcreatesnapshotmanifest", inferrepo=True)
-def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
+@command("debugcreatesnapshotmetadata", inferrepo=True)
+def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
     """
-    Creates pseudo manifest for untracked files without committing them.
-    Loads untracked files and the created manifest into local lfsstore.
-    Outputs the oid of the created manifest file.
+    Creates pseudo metadata for untracked files without committing them.
+    Loads untracked files and the created metadata into local lfsstore.
+    Outputs the oid of the created metadata file.
 
-    Be careful, snapshot manifest internal structure may change.
+    Be careful, snapshot metadata internal structure may change.
     """
-    snapmanifest = snapshotmanifest.createfromworkingcopy(repo)
-    if snapmanifest.empty:
+    snapmetadata = snapshotmetadata.createfromworkingcopy(repo)
+    if snapmetadata.empty:
         ui.status(
             _(
                 "Working copy is even with the last commit. "
@@ -326,47 +326,47 @@ def debugcreatesnapshotmanifest(ui, repo, *args, **opts):
             )
         )
         return
-    oid, size = snapmanifest.storetolocallfs()
-    ui.status(_("manifest oid: %s\n") % oid)
+    oid, size = snapmetadata.storetolocallfs()
+    ui.status(_("metadata oid: %s\n") % oid)
 
 
-@command("debuguploadsnapshotmanifest", [], _("OID"), inferrepo=True)
-def debuguploadsnapshotmanifest(ui, repo, *args, **opts):
+@command("debuguploadsnapshotmetadata", [], _("OID"), inferrepo=True)
+def debuguploadsnapshotmetadata(ui, repo, *args, **opts):
     """
-    Uploads manifest and all related blobs to remote lfs.
-    Takes in an oid of the desired manifest in the local lfs.
+    Uploads metadata and all related blobs to remote lfs.
+    Takes in an oid of the desired metadata in the local lfs.
 
-    This command does not validate contents of the snapshot manifest.
+    This command does not validate contents of the snapshot metadata.
     """
     if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a manifest oid\n"))
-    snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0])
-    snapmanifest.uploadtoremotelfs()
+        raise error.Abort(_("you must specify a metadata oid\n"))
+    snapmetadata = snapshotmetadata.restorefromlfs(repo, args[0])
+    snapmetadata.uploadtoremotelfs()
     ui.status(_("upload complete\n"))
 
 
 @command(
-    "debugcheckoutsnapshotmanifest",
+    "debugcheckoutsnapshotmetadata",
     [("f", "force", False, _("force checkout"))],
     _("OID"),
     inferrepo=True,
 )
-def debugcheckoutsnapshotmanifest(ui, repo, *args, **opts):
+def debugcheckoutsnapshotmetadata(ui, repo, *args, **opts):
     """
-    Checks out the working copy to the snapshot manifest state, given its manifest oid.
-    Downloads the snapshot manifest from remote lfs if needed.
-    Takes in an oid of the manifest.
+    Checks out the working copy to the snapshot metadata state, given its metadata id.
+    Downloads the snapshot metadata from remote lfs if needed.
+    Takes in an oid of the metadata.
 
-    This command does not validate contents of the snapshot manifest.
+    This command does not validate contents of the snapshot metadata.
     """
     if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a manifest oid\n"))
-    snapmanifest = snapshotmanifest.restorefromlfs(repo, args[0], allow_remote=True)
-    checkouttosnapshotmanifest(ui, repo, snapmanifest, force=opts.get("force"))
+        raise error.Abort(_("you must specify a metadata oid\n"))
+    snapmetadata = snapshotmetadata.restorefromlfs(repo, args[0], allow_remote=True)
+    checkouttosnapshotmetadata(ui, repo, snapmetadata, force=opts.get("force"))
     ui.status(_("snapshot checkout complete\n"))
 
 
-def checkouttosnapshotmanifest(ui, repo, snapmanifest, force=True):
+def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
     def checkaddfile(store, file, vfs, force):
         if not force and vfs.exists(file.path):
             ui.note(_("skip adding %s, it exists\n") % file.path)
@@ -375,16 +375,16 @@ def checkouttosnapshotmanifest(ui, repo, snapmanifest, force=True):
         vfs.write(file.path, store.read(file.oid))
 
     # deleting files that should be missing
-    for file in snapmanifest.deleted:
+    for file in snapmetadata.deleted:
         try:
             ui.note(_("will delete %s\n") % file.path)
             util.unlink(repo.wjoin(file.path))
         except OSError:
             ui.warn(_("%s cannot be removed\n") % file.path)
     # populating the untracked files
-    for file in snapmanifest.unknown:
+    for file in snapmetadata.unknown:
         checkaddfile(repo.svfs.lfslocalblobstore, file, repo.wvfs, force)
     # restoring the merge state
     with repo.wlock():
-        for file in snapmanifest.localvfsfiles:
+        for file in snapmetadata.localvfsfiles:
             checkaddfile(repo.svfs.lfslocalblobstore, file, repo.localvfs, force)

@@ -22,13 +22,13 @@
   added 1 changesets with 1 changes to 1 files
 
 # No need to create snapshot now
-  $ hg debugcreatesnapshotmanifest
+  $ hg debugcreatesnapshotmetadata
   Working copy is even with the last commit. No need to create snapshot.
 
 # Make some changes: add an untracked file and remove the tracked file
   $ echo "bar" > untrackedfile
   $ rm existingfile
-  $ OID="$(hg debugcreatesnapshotmanifest | cut -f3 -d' ')"
+  $ OID="$(hg debugcreatesnapshotmetadata | cut -f3 -d' ')"
   $ echo "$OID"
   70750cb86e5458ef4c1f6630694943a27bde9f67e838701dc660d92360b290be
 
@@ -40,7 +40,7 @@
   .hg/store/lfs/objects/7d
   .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
 
-# Check the contents of the manifest file
+# Check the contents of the metadata file
   $ cat .hg/store/lfs/objects/"${OID:0:2}"/"${OID:2}"
   {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}} (no-eol)
 
@@ -48,18 +48,18 @@
   $ cat .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
   bar
 
-# Upload the manifest contents to server
+# Upload the metadata contents to server
   $ cat >> $HGRCPATH << EOF
   > [lfs]
   > url=file:$TESTTMP/lfsremote/
   > EOF
 
-  $ hg debuguploadsnapshotmanifest 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5
-  abort: file manifest with oid 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5 not found in local blobstorage
+  $ hg debuguploadsnapshotmetadata 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5
+  abort: file metadata with oid 1f341c81a097100373b4bfe017b80d767d2b74bd434dbfa9ced3c1964024c6b5 not found in local blobstorage
   
   [255]
 
-  $ hg debuguploadsnapshotmanifest "$OID"
+  $ hg debuguploadsnapshotmetadata "$OID"
   upload complete
 
 # Check the remote storage
@@ -76,7 +76,7 @@
   $ cat $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
   bar
 
-# Checkout the manifest
+# Checkout the metadata
   $ cd ../
   $ hg clone -q server client2
   $ cd client2
@@ -85,7 +85,7 @@
   $ ls
   existingfile
 
-  $ hg debugcheckoutsnapshotmanifest --verbose "$OID"
+  $ hg debugcheckoutsnapshotmetadata --verbose "$OID"
   will delete existingfile
   will add untrackedfile
   snapshot checkout complete
@@ -128,9 +128,9 @@
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
   
-# So we have an unfinished rebase state, now we will upload it into another manifest
-  $ MERGEOID="$(hg debugcreatesnapshotmanifest | cut -f3 -d' ')"
-  $ hg debuguploadsnapshotmanifest "$MERGEOID"
+# So we have an unfinished rebase state, now we will upload it into another metadata
+  $ MERGEOID="$(hg debugcreatesnapshotmetadata | cut -f3 -d' ')"
+  $ hg debuguploadsnapshotmetadata "$MERGEOID"
   upload complete
 
 # Check the result in the second clone
@@ -140,7 +140,7 @@
   $ hg status
   ! existingfile
   ? untrackedfile
-  $ hg debugcheckoutsnapshotmanifest --verbose "$MERGEOID"
+  $ hg debugcheckoutsnapshotmetadata --verbose "$MERGEOID"
   will add new.orig
   skip adding untrackedfile, it exists
   will add merge/c2a6b03f190dfb2b4aa91f8af8d477a9bc3401dc
