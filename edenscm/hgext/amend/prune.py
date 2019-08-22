@@ -203,7 +203,7 @@ def prune(ui, repo, *revs, **opts):
                     bookmarksmod.deactivate(repo)
                     changes = [(bookactive, newnode.node())]
                     repo._bookmarks.applychanges(repo, tr, changes)
-                commands.update(ui, repo, newnode.rev())
+                commands.update(ui, repo, newnode.hex())
                 ui.status(
                     _("working directory now at %s\n")
                     % ui.label(str(newnode), "evolve.node")
