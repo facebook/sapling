@@ -4605,7 +4605,7 @@ def phase(ui, repo, *revs, **opts):
     if not revs:
         # display both parents as the second parent phase can influence
         # the phase of a merge commit
-        revs = [c.rev() for c in repo[None].parents()]
+        revs = [c.hex() for c in repo[None].parents()]
 
     revs = scmutil.revrange(repo, revs)
 

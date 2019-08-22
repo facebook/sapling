@@ -80,3 +80,7 @@ sh % "hg log -r 'smartlog()' -T." == "..."
 sh % "hg log -r 'smartlog(1)' -T." == r"""
     abort: local revision number is disabled in this repo
     [255]"""
+
+# phase
+
+sh % "hg phase" == "1: draft"
