@@ -1165,7 +1165,7 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
             if len(revs) == 0:
                 defaultrev = destutil.desthistedit(ui, repo)
                 if defaultrev is not None:
-                    revs.append(defaultrev)
+                    revs.append(repo[defaultrev].hex())
 
             if len(revs) != 1:
                 raise error.Abort(_("histedit requires exactly one ancestor revision"))
