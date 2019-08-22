@@ -72,3 +72,11 @@ sh % "setconfig 'devel.legacy.revnum=abort'"
 sh % "hg up 0" == r"""
     abort: local revision number is disabled in this repo
     [255]"""
+
+# smartlog revset
+
+sh % "enable smartlog"
+sh % "hg log -r 'smartlog()' -T." == "..."
+sh % "hg log -r 'smartlog(1)' -T." == r"""
+    abort: local revision number is disabled in this repo
+    [255]"""

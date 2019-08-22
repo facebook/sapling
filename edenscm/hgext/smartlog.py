@@ -448,7 +448,6 @@ def smartlogrevset(repo, subset, x):
     'master' is the head of the public branch.
     (default: 'interestingmaster()')
     """
-
     args = revset.getargsdict(x, "smartlogrevset", "heads master")
     if "master" in args:
         masterset = revset.getset(repo, subset, args["master"])
@@ -464,10 +463,14 @@ def smartlogrevset(repo, subset, x):
     masterset -= smartset.baseset([nodemod.nullrev])
     if nodemod.nullrev in heads:
         heads.remove(nodemod.nullrev)
-    # Select ancestors that are draft.
-    drafts = repo.revs("draft() & ::%ld", heads)
-    # Include parents of drafts, and public heads.
-    revs = repo.revs("parents(%ld) + %ld + %ld + %ld", drafts, drafts, heads, masterset)
+    # Explicitly disable revnum deprecation warnings.
+    with repo.ui.configoverride({("devel", "legacy.revnum:real"): ""}):
+        # Select ancestors that are draft.
+        drafts = repo.revs("draft() & ::%ld", heads)
+        # Include parents of drafts, and public heads.
+        revs = repo.revs(
+            "parents(%ld) + %ld + %ld + %ld", drafts, drafts, heads, masterset
+        )
 
     # Include the ancestor of above commits to make the graph connected.
     #
