@@ -302,22 +302,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 )
         );
 
-    let filenodes = SubCommand::with_name(FILENODES)
-        .about("fetches hg filenodes information for a commit and one or more paths")
-        .arg(
-            Arg::with_name("hg-changeset-or-bookmark")
-                .required(true)
-                .takes_value(true)
-                .help("hg chageset to lookup filenodes for"),
-        )
-        .arg(
-            Arg::with_name("paths")
-                .required(true)
-                .multiple(true)
-                .takes_value(true)
-                .help("a list of file paths to lookup filenodes for"),
-        );
-
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
@@ -339,7 +323,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(hg_sync)
         .subcommand(add_public_phases)
         .subcommand(redaction)
-        .subcommand(filenodes)
+        .subcommand(filenodes::build_subcommand(FILENODES))
         .subcommand(filestore::build_subcommand(FILESTORE))
 }
 

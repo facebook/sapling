@@ -394,6 +394,14 @@ impl HgFileNodeId {
     }
 }
 
+impl FromStr for HgFileNodeId {
+    type Err = <HgNodeHash as FromStr>::Err;
+
+    fn from_str(s: &str) -> result::Result<HgFileNodeId, Self::Err> {
+        HgNodeHash::from_str(s).map(HgFileNodeId)
+    }
+}
+
 impl Display for HgFileNodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
