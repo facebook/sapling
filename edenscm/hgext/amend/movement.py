@@ -148,7 +148,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     # If we have both --clean and --rebase, we need to discard any outstanding
     # changes now before we attempt to perform any rebases.
     if opts.get("clean") and opts.get("rebase"):
-        commands.update(ui, repo, rev=repo["."].rev(), clean=True)
+        commands.update(ui, repo, rev=repo["."].hex(), clean=True)
 
     with repo.wlock(), repo.lock():
         # Record the active bookmark, if any.

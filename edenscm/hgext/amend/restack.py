@@ -53,4 +53,4 @@ def restack(ui, repo, **rebaseopts):
         # to do this manually.
         successor = repo.revs("successors(.) - .").last()
         if successor is not None:
-            commands.update(ui, repo, rev=successor)
+            commands.update(ui, repo, rev=repo[successor].hex())

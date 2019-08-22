@@ -260,7 +260,7 @@ def perftestsuitecmd(ui, repo, *revs, **opts):
 
     if opts["rev"]:
         ui.status(_("updating to %s...\n") % (opts["rev"]))
-        commands.update(ui, repo, scmutil.revsingle(repo, opts["rev"]).rev())
+        commands.update(ui, repo, scmutil.revsingle(repo, opts["rev"]).hex())
 
     suite = perftestsuite(
         repo,
