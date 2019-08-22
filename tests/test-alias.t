@@ -772,6 +772,12 @@ return code of command and shell aliases:
 
 documented aliases
 
+  $ newrepo
+  $ hg documented:doc
+  unknown command 'documented:doc'
+  (use 'hg help' to get help)
+  [255]
+
   $ hg help documented
   [^ ].* (re) (?)
   

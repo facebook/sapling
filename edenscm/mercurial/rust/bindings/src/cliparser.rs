@@ -137,6 +137,9 @@ fn expand_args(
         // XXX: This duplicates with clidispatch. They should be de-duplicated.
         for name in cfg.keys("alias") {
             if let Ok(name) = String::from_utf8(name.to_vec()) {
+                if name.contains(":") {
+                    continue;
+                }
                 let is_debug = name.starts_with("debug");
                 let i = command_map.len() as isize;
                 command_map.insert(name, if is_debug { -i } else { i });
@@ -147,21 +150,28 @@ fn expand_args(
             expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }
 
-    let lookup = move |name: &str| match (cfg.get("alias", name), cfg.get("defaults", name)) {
-        (None, None) => None,
-        (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
-        (None, Some(v)) => String::from_utf8(v.to_vec())
-            .ok()
-            .map(|v| format!("{} {}", name, v)),
-        (Some(a), Some(d)) => {
-            if let (Ok(a), Ok(d)) = (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec())) {
-                // XXX: This makes defaults override alias if there are conflicted
-                // flags. The desired behavior is to make alias override defaults.
-                // However, [defaults] is deprecated and is likely only used
-                // by tests. So this might be fine.
-                Some(format!("{} {}", a, d))
-            } else {
-                None
+    let lookup = move |name: &str| {
+        if name.contains(":") {
+            return None;
+        }
+        match (cfg.get("alias", name), cfg.get("defaults", name)) {
+            (None, None) => None,
+            (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
+            (None, Some(v)) => String::from_utf8(v.to_vec())
+                .ok()
+                .map(|v| format!("{} {}", name, v)),
+            (Some(a), Some(d)) => {
+                if let (Ok(a), Ok(d)) =
+                    (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec()))
+                {
+                    // XXX: This makes defaults override alias if there are conflicted
+                    // flags. The desired behavior is to make alias override defaults.
+                    // However, [defaults] is deprecated and is likely only used
+                    // by tests. So this might be fine.
+                    Some(format!("{} {}", a, d))
+                } else {
+                    None
+                }
             }
         }
     };

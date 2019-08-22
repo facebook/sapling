@@ -123,6 +123,10 @@ fn command_map<'a>(
     // allows alias expansion to not behave differently for Rust or Python.
     for name in cfg.keys("alias") {
         if let Ok(name) = String::from_utf8(name.to_vec()) {
+            if name.contains(":") {
+                // Not a real command.
+                continue;
+            }
             let is_debug = name.starts_with("debug");
             command_map.insert(name, if is_debug { -i } else { i });
             i = i + 1;
@@ -180,22 +184,30 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
     let config = optional_repo.config();
 
     // Prepare alias handling.
-    let alias_lookup = |name: &str| match (config.get("alias", name), config.get("defaults", name))
-    {
-        (None, None) => None,
-        (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
-        (None, Some(v)) => String::from_utf8(v.to_vec())
-            .ok()
-            .map(|v| format!("{} {}", name, v)),
-        (Some(a), Some(d)) => {
-            if let (Ok(a), Ok(d)) = (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec())) {
-                // XXX: This makes defaults override alias if there are conflicted
-                // flags. The desired behavior is to make alias override defaults.
-                // However, [defaults] is deprecated and is likely only used
-                // by tests. So this might be fine.
-                Some(format!("{} {}", a, d))
-            } else {
-                None
+    let alias_lookup = |name: &str| {
+        // [alias] can have "<name>:doc" entries that are not commands. Skip them.
+        if name.contains(":") {
+            return None;
+        }
+
+        match (config.get("alias", name), config.get("defaults", name)) {
+            (None, None) => None,
+            (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
+            (None, Some(v)) => String::from_utf8(v.to_vec())
+                .ok()
+                .map(|v| format!("{} {}", name, v)),
+            (Some(a), Some(d)) => {
+                if let (Ok(a), Ok(d)) =
+                    (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec()))
+                {
+                    // XXX: This makes defaults override alias if there are conflicted
+                    // flags. The desired behavior is to make alias override defaults.
+                    // However, [defaults] is deprecated and is likely only used
+                    // by tests. So this might be fine.
+                    Some(format!("{} {}", a, d))
+                } else {
+                    None
+                }
             }
         }
     };
