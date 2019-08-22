@@ -83,7 +83,9 @@ def _computehidden(repo):
     dynamic = hidden & repo._explicitaccess
     if dynamic:
         unfi = repo.unfiltered()
-        blocked = set(unfi.revs("(not public()) & ::%ld", dynamic))
+        # Explicitly disable revnum deprecation warnings.
+        with repo.ui.configoverride({("devel", "legacy.revnum:real"): ""}):
+            blocked = set(unfi.revs("(not public()) & ::%ld", dynamic))
         hidden -= blocked
     return hidden
 
