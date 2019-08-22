@@ -29,12 +29,7 @@ impl OptionalRepo {
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
     pub fn from_cwd(cwd: impl AsRef<Path>, config: ConfigSet) -> Fallible<OptionalRepo> {
-        if let Some(path) = cwd
-            .as_ref()
-            .canonicalize()
-            .ok()
-            .and_then(|cwd| find_hg_repo_root(&cwd))
-        {
+        if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
             let repo = Repo::from_raw_path(path, config)?;
             Ok(OptionalRepo::Some(repo))
         } else {
@@ -56,7 +51,7 @@ impl OptionalRepo {
             return Self::from_cwd(cwd, config);
         }
 
-        if let Ok(path) = repository_path.canonicalize() {
+        if let Ok(path) = util::path::absolute(repository_path) {
             if path.join(".hg").is_dir() {
                 // `path` is a directory with `.hg`.
                 let repo = Repo::from_raw_path(path, config)?;
@@ -156,14 +151,9 @@ fn read_sharedpath(path: &Path) -> Fallible<Option<PathBuf>> {
             // join relative path from the REPO/.hg path
             let new_possible = path.join(".hg").join(possible_path);
             if !new_possible.join(".hg").exists() {
-                return Err(errors::InvalidSharedPath(
-                    new_possible
-                        .canonicalize()
-                        .ok()
-                        .map(|r| r.to_string_lossy().to_string())
-                        .unwrap_or("".to_string()),
-                )
-                .into());
+                return Err(
+                    errors::InvalidSharedPath(new_possible.to_string_lossy().to_string()).into(),
+                );
             }
             sharedpath = Some(new_possible)
         }
