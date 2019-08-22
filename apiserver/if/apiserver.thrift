@@ -1,3 +1,9 @@
+// Copyright (c) 2019-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 include "common/fb303/if/fb303.thrift"
 
 namespace cpp2 scm.mononoke.apiserver.thrift
@@ -53,6 +59,12 @@ struct MononokeListDirectoryParams{
   3: binary path,
 }
 
+struct MononokeListDirectoryUnodesParams{
+  1: string repo,
+  2: MononokeRevision revision,
+  3: binary path,
+}
+
 struct MononokeIsAncestorParams {
   1: string repo,
   2: MononokeRevision ancestor,
@@ -95,6 +107,15 @@ struct MononokeFile {
   5: optional string content_sha1,
 }
 
+struct MononokeDirectoryUnodes {
+  1: list<MononokeEntryUnodes> entries,
+}
+
+struct MononokeEntryUnodes {
+  1: string name,
+  2: bool is_directory,
+}
+
 struct MononokeBlob {
   1: IOBufPointer content,
 }
@@ -116,7 +137,12 @@ service MononokeAPIService extends fb303.FacebookService {
   MononokeBranches get_branches(1: MononokeGetBranchesParams params)
     throws (1: MononokeAPIException e),
 
+  # Having two different list_directory methods is a temporary state
+  # until we get unodes deployed everywhere.
   MononokeDirectory list_directory(1: MononokeListDirectoryParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeDirectoryUnodes list_directory_unodes(1: MononokeListDirectoryUnodesParams params)
     throws (1: MononokeAPIException e),
 
   bool is_ancestor(1: MononokeIsAncestorParams params)

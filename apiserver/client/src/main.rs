@@ -69,6 +69,22 @@ fn list_directory(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFut
         .boxify()
 }
 
+fn list_directory_unodes(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
+    let revision = matches.value_of("revision").expect("must provide revision");
+    let path = matches.value_of("path").expect("must provide path");
+
+    client
+        .list_directory_unodes(revision.to_string(), path.to_string())
+        .and_then(|r| {
+            Ok(serde_json::to_string(&r).unwrap_or("Error converting request to json".to_string()))
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
+        .boxify()
+}
+
 fn is_ancestor(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let ancestor = matches.value_of("ancestor").expect("must provide ancestor");
     let descendant = matches
@@ -195,6 +211,26 @@ fn main() -> Result<(), ()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("list_directory_unodes")
+                .about("list all files in a directory using unodes")
+                .arg(
+                    Arg::with_name("revision")
+                        .short("c")
+                        .long("revision")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the revision you want to query")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .short("p")
+                        .long("path")
+                        .value_name("PATH")
+                        .help("path to the directory you want to list")
+                        .required(true),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("ancestor")
                 .about("Check whether a commit is descendant of a given ancestor")
                 .arg(
@@ -254,6 +290,8 @@ fn main() -> Result<(), ()> {
         get_branches(client)
     } else if let Some(matches) = matches.subcommand_matches("list_directory") {
         list_directory(client, matches)
+    } else if let Some(matches) = matches.subcommand_matches("list_directory_unodes") {
+        list_directory_unodes(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("ancestor") {
         is_ancestor(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("get_blob") {

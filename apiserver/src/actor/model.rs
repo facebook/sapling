@@ -19,7 +19,8 @@ use failure::{err_msg, Error};
 use serde_derive::{Deserialize, Serialize};
 
 use apiserver_thrift::types::{
-    MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
+    MononokeChangeset, MononokeEntryUnodes, MononokeFile, MononokeFileType, MononokeNodeHash,
+    MononokeTreeHash,
 };
 use blobrepo::{BlobRepo, HgBlobChangeset};
 use context::CoreContext;
@@ -98,6 +99,21 @@ impl TryFrom<Box<dyn HgEntry + Sync>> for Entry {
         let hash = entry.get_hash().to_string();
 
         Ok(Entry { name, r#type, hash })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EntryLight {
+    pub name: String,
+    pub is_directory: bool,
+}
+
+impl From<EntryLight> for MononokeEntryUnodes {
+    fn from(entry: EntryLight) -> Self {
+        MononokeEntryUnodes {
+            name: entry.name,
+            is_directory: entry.is_directory,
+        }
     }
 }
 

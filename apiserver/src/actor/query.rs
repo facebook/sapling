@@ -17,7 +17,7 @@ use serde_derive::Serialize;
 use apiserver_thrift::types::{
     MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
     MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
-    MononokeListDirectoryParams, MononokeRevision,
+    MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeRevision,
 };
 use types::api::{DataRequest, HistoryRequest, TreeRequest};
 
@@ -48,6 +48,10 @@ pub enum MononokeRepoQuery {
         revision: Revision,
     },
     ListDirectory {
+        path: String,
+        revision: Revision,
+    },
+    ListDirectoryUnodes {
         path: String,
         revision: Revision,
     },
@@ -149,6 +153,22 @@ impl TryFrom<MononokeListDirectoryParams> for MononokeQuery {
         params.revision.try_into().map(|rev| MononokeQuery {
             repo,
             kind: MononokeRepoQuery::ListDirectory {
+                path,
+                revision: rev,
+            },
+        })
+    }
+}
+
+impl TryFrom<MononokeListDirectoryUnodesParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeListDirectoryUnodesParams) -> Result<MononokeQuery, Self::Error> {
+        let repo = params.repo;
+        let path = String::from_utf8(params.path)?;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
+            kind: MononokeRepoQuery::ListDirectoryUnodes {
                 path,
                 revision: rev,
             },

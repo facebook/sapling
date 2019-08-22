@@ -22,7 +22,7 @@ use types::{
 
 use super::file_stream::FileStream;
 use super::lfs::BatchResponse;
-use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
+use super::model::{Changeset, Entry, EntryLight, EntryWithSizeAndContentHash};
 
 type StreamingDataResponse = BoxStream<DataEntry, Error>;
 type StreamingHistoryResponse = BoxStream<(RepoPathBuf, WireHistoryEntry), Error>;
@@ -31,6 +31,9 @@ type StreamingHistoryResponse = BoxStream<(RepoPathBuf, WireHistoryEntry), Error
 pub enum MononokeRepoResponse {
     ListDirectory {
         files: Vec<Entry>,
+    },
+    ListDirectoryUnodes {
+        files: Vec<EntryLight>,
     },
     GetTree {
         files: Vec<EntryWithSizeAndContentHash>,
@@ -123,6 +126,7 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             ListDirectory { files } => Json(files).respond_to(req),
+            ListDirectoryUnodes { files } => Json(files).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             GetBranches { branches } => Json(branches).respond_to(req),

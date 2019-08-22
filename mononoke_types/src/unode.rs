@@ -308,6 +308,13 @@ impl UnodeEntry {
             }
         }
     }
+
+    pub fn is_directory(&self) -> bool {
+        match self {
+            UnodeEntry::File(_) => false,
+            UnodeEntry::Directory(_) => true,
+        }
+    }
 }
 
 impl BlobstoreValue for ManifestUnode {

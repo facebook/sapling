@@ -11,14 +11,16 @@ use std::{
 
 use blobrepo::{file_history::get_file_history, BlobRepo, StoreRequest};
 use blobrepo_factory::{open_blobrepo, Caching};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use derived_data::BonsaiDerived;
 use failure::Error;
 use futures::{
-    future::{join_all, ok},
+    future::{err, join_all, ok},
     lazy,
     stream::{iter_ok, once},
     Future, IntoFuture, Stream,
@@ -26,6 +28,7 @@ use futures::{
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use http::uri::Uri;
+use manifest::{Entry as ManifestEntry, ManifestOps};
 use mononoke_api;
 use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
@@ -42,7 +45,7 @@ use types::{
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
-use mononoke_types::{MPath, RepositoryId};
+use mononoke_types::{unode::UnodeEntry, ChangesetId, MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
@@ -52,7 +55,7 @@ use crate::from_string as FS;
 
 use super::file_stream::IntoFileStream;
 use super::lfs::{build_response, BatchRequest};
-use super::model::{Entry, EntryWithSizeAndContentHash};
+use super::model::{Entry, EntryLight, EntryWithSizeAndContentHash};
 use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
 define_stats! {
@@ -60,6 +63,7 @@ define_stats! {
     get_raw_file: timeseries(RATE, SUM),
     get_blob_content: timeseries(RATE, SUM),
     list_directory: timeseries(RATE, SUM),
+    list_directory_unodes: timeseries(RATE, SUM),
     get_tree: timeseries(RATE, SUM),
     get_changeset: timeseries(RATE, SUM),
     get_branches: timeseries(RATE, SUM),
@@ -78,6 +82,7 @@ pub struct MononokeRepo {
     logger: Logger,
     skiplist_index: Arc<SkiplistIndex>,
     cache: Option<CacheManager>,
+    unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
 }
 
 impl MononokeRepo {
@@ -135,11 +140,16 @@ impl MononokeRepo {
                     }
                 }
             };
-            skiplist_index.map(|skiplist_index| Self {
-                repo,
-                logger,
-                skiplist_index,
-                cache,
+            skiplist_index.map(|skiplist_index| {
+                let unodes_derived_mapping =
+                    Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                Self {
+                    repo,
+                    logger,
+                    skiplist_index,
+                    cache,
+                    unodes_derived_mapping,
+                }
             })
         })
         .flatten()
@@ -166,6 +176,28 @@ impl MononokeRepo {
                 })
                 .right_future(),
         }
+    }
+
+    fn get_bonsai_id_from_revision(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+    ) -> impl Future<Item = ChangesetId, Error = ErrorKind> {
+        let repo = self.repo.clone();
+
+        self.get_hgchangesetid_from_revision(ctx.clone(), revision.clone())
+            .from_err()
+            .and_then({
+                cloned!(ctx, repo);
+                move |changesetid| {
+                    repo.get_bonsai_from_hg(ctx.clone(), changesetid)
+                        .from_err()
+                        .and_then(move |maybe_bcs_id| {
+                            maybe_bcs_id
+                                .ok_or(ErrorKind::NotFound(format!("{}", changesetid), None))
+                        })
+                }
+            })
     }
 
     fn get_raw_file(
@@ -289,6 +321,95 @@ impl MononokeRepo {
                 files: files.collect(),
             })
             .from_err()
+            .boxify()
+    }
+
+    fn list_directory_unodes(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::list_directory_unodes.add_value(1);
+
+        let mpath = if path.is_empty() {
+            None
+        } else {
+            Some(try_boxfuture!(FS::get_mpath(path.clone())))
+        };
+
+        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+        let blobstore = repo.get_blobstore();
+        self.get_bonsai_id_from_revision(ctx.clone(), revision.clone())
+            .and_then({
+                cloned!(ctx, repo);
+                move |bcs_id| {
+                    RootUnodeManifestId::derive(ctx, repo, unodes_derived_mapping, bcs_id)
+                        .map_err(ErrorKind::InternalError)
+                }
+            })
+            .and_then({
+                cloned!(ctx, mpath);
+                move |root_unode_mf_id| match mpath {
+                    Some(mpath) => root_unode_mf_id
+                        .manifest_unode_id()
+                        .find_entries(ctx, repo.get_blobstore(), vec![mpath])
+                        .map(|(_, entry)| entry)
+                        .collect()
+                        .map_err(ErrorKind::InternalError)
+                        .left_future(),
+                    None => ok(vec![ManifestEntry::Tree(
+                        root_unode_mf_id.manifest_unode_id().clone(),
+                    )])
+                    .right_future(),
+                }
+            })
+            .and_then(move |entries| {
+                entries.get(0).cloned().ok_or(ErrorKind::NotFound(
+                    format!("{:?} {:?}", revision, mpath),
+                    None,
+                ))
+            })
+            .and_then({
+                cloned!(blobstore, ctx);
+                move |entry| match entry {
+                    ManifestEntry::Tree(tree) => tree
+                        .load(ctx, &blobstore)
+                        .map_err(Error::from)
+                        .from_err()
+                        .left_future(),
+                    ManifestEntry::Leaf(_) => err(ErrorKind::InvalidInput(
+                        format!("{} is not a directory", path),
+                        None,
+                    ))
+                    .right_future(),
+                }
+            })
+            .and_then(|unode_mf| {
+                let res: Result<Vec<(String, UnodeEntry)>, _> = unode_mf
+                    .list()
+                    .map(|(name, entry)| {
+                        String::from_utf8(name.to_bytes().to_vec())
+                            .map(|name| (name, entry.clone()))
+                            .map_err(|err| {
+                                ErrorKind::InvalidInput(
+                                    "non utf8 path".to_string(),
+                                    Some(Error::from(err)),
+                                )
+                            })
+                    })
+                    .collect();
+                res
+            })
+            .map(|entries| MononokeRepoResponse::ListDirectoryUnodes {
+                files: entries
+                    .into_iter()
+                    .map(|(name, entry)| EntryLight {
+                        name,
+                        is_directory: entry.is_directory(),
+                    })
+                    .collect(),
+            })
             .boxify()
     }
 
@@ -603,6 +724,9 @@ impl MononokeRepo {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
+            ListDirectoryUnodes { revision, path } => {
+                self.list_directory_unodes(ctx, revision, path)
+            }
             GetTree { hash } => self.get_tree(ctx, hash),
             GetChangeset { revision } => self.get_changeset(ctx, revision),
             GetBranches => self.get_branches(ctx),

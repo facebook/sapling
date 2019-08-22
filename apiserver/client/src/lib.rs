@@ -10,9 +10,10 @@ use futures_ext::BoxFuture;
 
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
-    MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBlobParams,
-    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeNodeHash,
+    MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeDirectoryUnodes,
+    MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
+    MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
+    MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeNodeHash,
     MononokeRevision, MononokeTreeHash,
 };
 use srclient::SRChannelBuilder;
@@ -78,6 +79,19 @@ impl MononokeAPIClient {
             revision: MononokeRevision::commit_hash(revision),
             path: path.into_bytes(),
         })
+    }
+
+    pub fn list_directory_unodes(
+        &self,
+        revision: String,
+        path: String,
+    ) -> BoxFuture<MononokeDirectoryUnodes, failure_ext::Error> {
+        self.inner
+            .list_directory_unodes(&MononokeListDirectoryUnodesParams {
+                repo: self.repo.clone(),
+                revision: MononokeRevision::commit_hash(revision),
+                path: path.into_bytes(),
+            })
     }
 
     pub fn is_ancestor(

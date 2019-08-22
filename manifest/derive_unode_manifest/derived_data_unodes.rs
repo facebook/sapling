@@ -30,7 +30,7 @@ use repo_blobstore::RepoBlobstore;
 pub struct RootUnodeManifestId(ManifestUnodeId);
 
 impl RootUnodeManifestId {
-    fn manifest_unode_id(&self) -> &ManifestUnodeId {
+    pub fn manifest_unode_id(&self) -> &ManifestUnodeId {
         &self.0
     }
 }
