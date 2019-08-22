@@ -193,10 +193,10 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 # Check the metadata id and its contents
-  $ MANIFESTOID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
-  $ echo "$MANIFESTOID"
+  $ METADATAID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
+  $ echo "$METADATAID"
   6b32f5f5726caf1b66d313cdd847ad5b4266f14a3480b2acf64a0a173ac14548
-  $ cat .hg/store/lfs/objects/"${MANIFESTOID:0:2}"/"${MANIFESTOID:2}"
+  $ cat .hg/store/lfs/objects/"${METADATAID:0:2}"/"${METADATAID:2}"
   {"files": {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "fdfea51dfeeae94bd846473c7bef891823af465d33f48e92ed2556bde6b346cb", "size": "166"}, "merge/state2": {"oid": "0e421047ebcf7d0cada48ddd801304725de33da3c4048ccb258041946cd0e81d", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"} (no-eol)
 
 # Move back to BASEREV
@@ -286,3 +286,25 @@
   $ hg status --verbose
   ? mergefile.orig
   ? untrackedfile
+
+
+# Negative tests
+  $ BROKENSNAPSHOTID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
+  $ BROKENMETADATAID="$(hg log --hidden -r \"$BROKENSNAPSHOTID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
+# Delete all the related files from the local store
+  $ find .hg/store/lfs/objects/ -mindepth 1 ! -name "${BROKENMETADATAID:2}" -type f -delete
+  $ hg snapshot checkout $BROKENSNAPSHOTID
+  will checkout on 06f851b33f41c80be342a09677f43a70ecc4a0f0
+  abort: file mergefile.orig with oid 0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f not found in local blobstorage
+  
+  [255]
+  $ hg status --verbose
+# Break the metadata itself
+  $ echo "break the metadata json" >> .hg/store/lfs/objects/"${BROKENMETADATAID:0:2}"/"${BROKENMETADATAID:2}"
+  $ hg snapshot checkout $BROKENSNAPSHOTID
+  will checkout on 06f851b33f41c80be342a09677f43a70ecc4a0f0
+  abort: invalid metadata json: {"files": {"deleted": {}, "localvfsfiles": {}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"}break the metadata json
+  
+  
+  [255]
+  $ hg status --verbose
