@@ -186,7 +186,7 @@
 # Create the snapshot
   $ OID="$(hg debugsnapshot | cut -f2 -d' ')"
   $ echo "$OID"
-  34c81e40f10e2df58967bde74f60a35080812037
+  aaa7692160b6c5c0e4c13787d9343cf89fc2311a
 
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -195,9 +195,9 @@
 # Check the metadata id and its contents
   $ MANIFESTOID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
   $ echo "$MANIFESTOID"
-  94d0daf8fadba1a239eca4ddb5cc1a71728097928543dfb02b8be399ae6fcb56
+  6b32f5f5726caf1b66d313cdd847ad5b4266f14a3480b2acf64a0a173ac14548
   $ cat .hg/store/lfs/objects/"${MANIFESTOID:0:2}"/"${MANIFESTOID:2}"
-  {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "fdfea51dfeeae94bd846473c7bef891823af465d33f48e92ed2556bde6b346cb", "size": "166"}, "merge/state2": {"oid": "0e421047ebcf7d0cada48ddd801304725de33da3c4048ccb258041946cd0e81d", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}} (no-eol)
+  {"files": {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "fdfea51dfeeae94bd846473c7bef891823af465d33f48e92ed2556bde6b346cb", "size": "166"}, "merge/state2": {"oid": "0e421047ebcf7d0cada48ddd801304725de33da3c4048ccb258041946cd0e81d", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"} (no-eol)
 
 # Move back to BASEREV
   $ hg update -q --clean "$BASEREV" && rm bazfile
@@ -225,7 +225,7 @@
   [255]
 # Check out on the snapshot -- positive tests
   $ hg debugcheckoutsnapshot "$OID"
-  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
+  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -239,13 +239,13 @@
   .hg/merge/state
   .hg/merge/state2
   $ hg debugsnapshot --clean
-  snapshot 34c81e40f10e2df58967bde74f60a35080812037 created
+  snapshot aaa7692160b6c5c0e4c13787d9343cf89fc2311a created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
   $ hg debugcheckoutsnapshot "$OID"
-  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
+  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   checkout complete
 
 
@@ -260,7 +260,7 @@
   
   [255]
   $ hg debugcheckoutsnapshot --force "$OID"
-  will checkout on 34c81e40f10e2df58967bde74f60a35080812037
+  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 

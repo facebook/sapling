@@ -92,6 +92,8 @@ class snapshotmetadata(object):
     Main class that contains snapshot metadata representation.
     """
 
+    VERSION = "1"
+
     def __init__(self, repo, oid=None):
         self.repo = repo
         self.oid = oid
@@ -104,25 +106,27 @@ class snapshotmetadata(object):
         return not (self.deleted or self.unknown)
 
     def serialize(self):
-        metadata = defaultdict(dict)
-        metadata["deleted"] = {d.path: d.serialize() for d in self.deleted}
-        metadata["unknown"] = {u.path: u.serialize() for u in self.unknown}
-        metadata["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
+        files = {}
+        files["deleted"] = {d.path: d.serialize() for d in self.deleted}
+        files["unknown"] = {u.path: u.serialize() for u in self.unknown}
+        files["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
+        metadata = {"files": files, "version": snapshotmetadata.VERSION}
         return json.dumps(metadata)
 
     def deserialize(self, json_string):
         try:
             metadata = json.loads(json_string)
+            files = metadata["files"]
             self.deleted = [
-                filelfswrapper(path) for path in sorted(metadata["deleted"].keys())
+                filelfswrapper(path) for path in sorted(files["deleted"].keys())
             ]
             self.unknown = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in sorted(metadata["unknown"].items())
+                for path, data in sorted(files["unknown"].items())
             ]
             self.localvfsfiles = [
                 filelfswrapper.deserialize(path, data)
-                for path, data in sorted(metadata["localvfsfiles"].items())
+                for path, data in sorted(files["localvfsfiles"].items())
             ]
         except ValueError:
             raise error.Abort(_("invalid metadata json: %s\n") % json_string)

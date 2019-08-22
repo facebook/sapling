@@ -30,19 +30,19 @@
   $ rm existingfile
   $ OID="$(hg debugcreatesnapshotmetadata | cut -f3 -d' ')"
   $ echo "$OID"
-  70750cb86e5458ef4c1f6630694943a27bde9f67e838701dc660d92360b290be
+  f62f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
 
 # Check that the blobstore is populated
   $ find .hg/store/lfs/objects | sort
   .hg/store/lfs/objects
-  .hg/store/lfs/objects/70
-  .hg/store/lfs/objects/70/750cb86e5458ef4c1f6630694943a27bde9f67e838701dc660d92360b290be
   .hg/store/lfs/objects/7d
   .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+  .hg/store/lfs/objects/f6
+  .hg/store/lfs/objects/f6/2f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
 
 # Check the contents of the metadata file
   $ cat .hg/store/lfs/objects/"${OID:0:2}"/"${OID:2}"
-  {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}} (no-eol)
+  {"files": {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}}, "version": "1"} (no-eol)
 
 # Check that the untracked file is stored in lfs
   $ cat .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
@@ -65,13 +65,13 @@
 # Check the remote storage
   $ find $TESTTMP/lfsremote | sort
   $TESTTMP/lfsremote
-  $TESTTMP/lfsremote/70
-  $TESTTMP/lfsremote/70/750cb86e5458ef4c1f6630694943a27bde9f67e838701dc660d92360b290be
   $TESTTMP/lfsremote/7d
   $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+  $TESTTMP/lfsremote/f6
+  $TESTTMP/lfsremote/f6/2f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
 
   $ cat $TESTTMP/lfsremote/"${OID:0:2}"/"${OID:2}"
-  {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}} (no-eol)
+  {"files": {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}}, "version": "1"} (no-eol)
 
   $ cat $TESTTMP/lfsremote/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
   bar
