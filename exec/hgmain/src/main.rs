@@ -37,7 +37,7 @@ fn main() {
     #[cfg(feature = "buildinfo")]
     {
         // This code path keeps buildinfo-related symbols alive.
-        if let Some(arg0) = args.nth(0) {
+        if let Some(arg0) = args.get(0) {
             if arg0.ends_with("buildinfo") {
                 unsafe {
                     buildinfo::print_buildinfo();
