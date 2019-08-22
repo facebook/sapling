@@ -50,6 +50,27 @@ def extsetup(ui):
         raise error.Abort(_("snapshot extension requires lfs to be enabled\n"))
 
 
+@command("snapshot", [], "SUBCOMMAND ...", subonly=True)
+def snapshot(ui, repo, *args, **opts):
+    """make a restorable snapshot the working copy state
+
+    The snapshot extension lets you make a restorable snapshot of
+    the whole working copy state at any moment. This is somewhat similar
+    to shelve command, but is available anytime (e.g. in the middle of
+    a merge conflict resolution).
+
+    Use 'hg snapshot create' to create a snapshot. It will print the snapshot's id.
+
+    Use 'hg snapshot checkout SNAPSHOT_ID' to checkout to the snapshot.
+    """
+    pass
+
+
+subcmd = snapshot.subcommand(
+    categories=[("Snapshot create/restore", ["create", "checkout"])]
+)
+
+
 def checkloadblobbyoid(repo, oid, path, allow_remote=False):
     localstore = repo.svfs.lfslocalblobstore
     if localstore.has(oid):
@@ -197,10 +218,8 @@ class snapshotmetadata(object):
         lfs.wrapper.uploadblobs(self.repo, pointers)
 
 
-@command(
-    "debugsnapshot", [("", "clean", False, _("clean the working copy"))], inferrepo=True
-)
-def debugsnapshot(ui, repo, *args, **opts):
+@subcmd("create", [("", "clean", False, _("clean the working copy"))], inferrepo=True)
+def snapshotcreate(ui, repo, *args, **opts):
     """
     Creates a snapshot of the working copy.
     TODO(alexeyqu): finish docs
@@ -258,13 +277,10 @@ def createsnapshotcommit(ui, repo, opts):
         return repo.commitctx(cctx, error=True)
 
 
-@command(
-    "debugcheckoutsnapshot",
-    [("f", "force", False, _("force checkout"))],
-    _("REV"),
-    inferrepo=True,
+@subcmd(
+    "checkout", [("f", "force", False, _("force checkout"))], _("REV"), inferrepo=True
 )
-def debugcheckoutsnapshot(ui, repo, *args, **opts):
+def snapshotcheckout(ui, repo, *args, **opts):
     """
     Checks out the working copy to the snapshot state, given its revision id.
     Downloads the snapshot metadata from remote lfs if needed.

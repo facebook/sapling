@@ -40,7 +40,7 @@
 
 
 # 1) Empty snapshot -- no need to create a snapshot now
-  $ hg debugsnapshot
+  $ hg snapshot create
   nothing changed
 
 
@@ -73,7 +73,7 @@
    foo
   +change
 # Create a snapshot and check the result
-  $ EMPTYOID="$(hg debugsnapshot | head -n 1 | cut -f2 -d' ')"
+  $ EMPTYOID="$(hg snapshot create | head -n 1 | cut -f2 -d' ')"
   $ echo "$EMPTYOID"
   9c5c703bba200afd1e7105ef675d68b75d43c6b4
   $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid
@@ -111,7 +111,7 @@
 # Rollback to BASEREV and checkout on EMPTYOID
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ hg status --verbose
-  $ hg debugcheckoutsnapshot "$EMPTYOID"
+  $ hg snapshot checkout "$EMPTYOID"
   will checkout on 9c5c703bba200afd1e7105ef675d68b75d43c6b4
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -184,7 +184,7 @@
   +>>>>>>> merge rev:    f473d4d5a1c0 - test: merge #1
 
 # Create the snapshot
-  $ OID="$(hg debugsnapshot | cut -f2 -d' ')"
+  $ OID="$(hg snapshot create | cut -f2 -d' ')"
   $ echo "$OID"
   aaa7692160b6c5c0e4c13787d9343cf89fc2311a
 
@@ -207,24 +207,24 @@
 
 # Check out on the snapshot -- negative tests
 # Non-empty WC state
-  $ hg debugcheckoutsnapshot "$OID"
+  $ hg snapshot checkout "$OID"
   abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
   
   [255]
 # Bad id
   $ rm untrackedfile
-  $ hg debugcheckoutsnapshot somebadid
+  $ hg snapshot checkout somebadid
   somebadid is not a valid revision id
   abort: unknown revision 'somebadid'!
   (if somebadid is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 # Still bad id -- not a snapshot
-  $ hg debugcheckoutsnapshot "$BASEREV"
+  $ hg snapshot checkout "$BASEREV"
   abort: 3490593cf53c is not a valid snapshot id
   
   [255]
 # Check out on the snapshot -- positive tests
-  $ hg debugcheckoutsnapshot "$OID"
+  $ hg snapshot checkout "$OID"
   will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
@@ -238,13 +238,13 @@
   .hg/merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4
   .hg/merge/state
   .hg/merge/state2
-  $ hg debugsnapshot --clean
+  $ hg snapshot create --clean
   snapshot aaa7692160b6c5c0e4c13787d9343cf89fc2311a created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
-  $ hg debugcheckoutsnapshot "$OID"
+  $ hg snapshot checkout "$OID"
   will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   checkout complete
 
@@ -255,11 +255,11 @@
   ? bazfile
   ? mergefile.orig
   ? untrackedfile
-  $ hg debugcheckoutsnapshot "$OID"
+  $ hg snapshot checkout "$OID"
   abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
   
   [255]
-  $ hg debugcheckoutsnapshot --force "$OID"
+  $ hg snapshot checkout --force "$OID"
   will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
