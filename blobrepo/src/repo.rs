@@ -30,7 +30,9 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
+use failure_ext::{
+    bail_err, format_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result,
+};
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
@@ -2341,6 +2343,7 @@ impl CreateChangeset {
             self.draft,
         );
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
+        let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));
         let expected_nodeid = self.expected_nodeid;
 
         let upload_entries = process_entries(
@@ -2368,7 +2371,14 @@ impl CreateChangeset {
                 .join(parents_data)
                 .from_err()
                 .and_then({
-                    cloned!(ctx, repo, repo.filenodes, repo.blobstore, mut scuba_logger);
+                    cloned!(
+                        ctx,
+                        repo,
+                        repo.filenodes,
+                        repo.blobstore,
+                        mut scuba_logger,
+                        signal_parent_ready
+                    );
                     let expected_files = self.expected_files;
                     let cs_metadata = self.cs_metadata;
 
@@ -2465,11 +2475,12 @@ impl CreateChangeset {
                                             // We deliberately eat this error - this is only so that
                                             // another changeset can start verifying data in the blob
                                             // store while we verify this one
-                                            let _ = signal_parent_ready.send((
-                                                bcs_id,
-                                                cs_id,
-                                                manifest_id,
-                                            ));
+                                            let _ = signal_parent_ready
+                                                .lock()
+                                                .expect("poisoned lock")
+                                                .take()
+                                                .expect("signal_parent_ready cannot be taken yet")
+                                                .send(Ok((bcs_id, cs_id, manifest_id)));
 
                                             let bonsai_cs_fut = save_bonsai_changeset_object(
                                                 ctx.clone(),
@@ -2512,6 +2523,17 @@ impl CreateChangeset {
                             .log_with_msg("Changeset created", None);
                     }
                     Ok(())
+                })
+                .inspect_err({
+                    cloned!(signal_parent_ready);
+                    move |e| {
+                        let trigger = signal_parent_ready.lock().expect("poisoned lock").take();
+                        if let Some(trigger) = trigger {
+                            // Ignore errors if the receiving end has gone away.
+                            let e = format_err!("signal_parent_ready failed: {:?}", e);
+                            let _ = trigger.send(Err(e));
+                        }
+                    }
                 })
         };
 
@@ -2596,8 +2618,18 @@ impl CreateChangeset {
                 }
             });
 
+        let can_be_parent = can_be_parent
+            .into_future()
+            .then(|r| match r {
+                Ok(res) => res,
+                Err(e) => Err(format_err!("can_be_parent: {:?}", e)),
+            })
+            .map_err(|e| Error::from(e).compat())
+            .boxify()
+            .shared();
+
         ChangesetHandle::new_pending(
-            can_be_parent.shared(),
+            can_be_parent,
             spawn_future(changeset_complete_fut)
                 .map_err(|e| Error::from(e).compat())
                 .boxify()

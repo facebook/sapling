@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use cloned::cloned;
 use failure_ext::{
-    err_msg, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
+    err_msg, format_err, prelude::*, Compat, Error, FutureFailureErrorExt, Result,
+    StreamFailureErrorExt,
 };
 use futures::future::{self, ok, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
@@ -65,7 +66,7 @@ define_stats! {
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<oneshot::Receiver<(ChangesetId, HgNodeHash, HgManifestId)>>,
+    can_be_parent: Shared<BoxFuture<(ChangesetId, HgNodeHash, HgManifestId), Compat<Error>>>,
     // * Shared is required here because a single changeset can have more than one child, and
     //   all of those children will want to refer to the corresponding future for their parents.
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
@@ -76,7 +77,7 @@ pub struct ChangesetHandle {
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<oneshot::Receiver<(ChangesetId, HgNodeHash, HgManifestId)>>,
+        can_be_parent: Shared<BoxFuture<(ChangesetId, HgNodeHash, HgManifestId), Compat<Error>>>,
         completion_future: Shared<BoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>>,
     ) -> Self {
         Self {
@@ -99,20 +100,30 @@ impl ChangesetHandle {
         let cs = repo.get_changeset_by_changesetid(ctx, hg_cs);
 
         let (trigger, can_be_parent) = oneshot::channel();
-        let fut = bonsai_cs.join(cs);
+
+        let can_be_parent = can_be_parent
+            .into_future()
+            .map_err(|e| format_err!("can_be_parent: {:?}", e))
+            .map_err(Error::compat)
+            .boxify()
+            .shared();
+
+        let completion_future = bonsai_cs
+            .join(cs)
+            .map_err(Error::compat)
+            .inspect(move |(bonsai_cs, hg_cs)| {
+                let _ = trigger.send((
+                    bonsai_cs.get_changeset_id(),
+                    hg_cs.get_changeset_id().into_nodehash(),
+                    hg_cs.manifestid(),
+                ));
+            })
+            .boxify()
+            .shared();
+
         Self {
-            can_be_parent: can_be_parent.shared(),
-            completion_future: fut
-                .map_err(Error::compat)
-                .inspect(move |(bonsai_cs, hg_cs)| {
-                    let _ = trigger.send((
-                        bonsai_cs.get_changeset_id(),
-                        hg_cs.get_changeset_id().into_nodehash(),
-                        hg_cs.manifestid(),
-                    ));
-                })
-                .boxify()
-                .shared(),
+            can_be_parent,
+            completion_future,
         }
     }
 
