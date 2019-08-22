@@ -39,7 +39,7 @@ def restack(ui, repo, **rebaseopts):
             # 3. Connect revs via changelog again to cover missing revs
             revs = list(repo.revs("(draft() & ::%ld)::", revs))
 
-            rebaseopts["rev"] = [revsetlang.formatspec("%ld", revs)]
+            rebaseopts["rev"] = [ctx.hex() for ctx in repo.set("%ld", revs)]
 
         rebaseopts["dest"] = "_destrestack(SRC)"
 
