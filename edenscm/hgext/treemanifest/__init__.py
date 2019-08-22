@@ -174,6 +174,7 @@ from edenscm.mercurial import (
     phases,
     policy,
     progress,
+    pycompat,
     registrar,
     repair,
     revlog,
@@ -539,6 +540,13 @@ def wraprepo(repo):
         ):
             # If possible, use remotefilelog's more expressive fallbackpath
             fallbackpath = getfallbackpath(self)
+            if mfnodes == basemfnodes:
+                self.ui.log(
+                    "features",
+                    feature="manifestfetchnodeeqbase",
+                    fullargs=repr(pycompat.sysargv),
+                    traceback=util.smarttraceback(),
+                )
 
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
