@@ -5,7 +5,7 @@ setup configuration
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml << EOF
   > [[bookmarks]]
-  > regex="A|B|D"
+  > regex="A|B|X/Y"
   > allowed_users="^(a|b)$"
   > [[bookmarks]]
   > name="C"
@@ -52,26 +52,26 @@ push new bookmark
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (activating bookmark G)
   $ touch 1 && hg add 1 && hg ci -m 1
-  $ MOCK_USERNAME="aslpavel" hgmn push -r . --create --to D
-  pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark D
+  $ MOCK_USERNAME="aslpavel" hgmn push -r . --create --to X/Y
+  pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark X/Y
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"D\" }`",
+  remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
   remote:   Caused by:
-  remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "D" }`
+  remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
-  $ MOCK_USERNAME="b" hgmn push -r . --create --to D
-  pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark D
+  $ MOCK_USERNAME="b" hgmn push -r . --create --to X/Y
+  pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark X/Y
   searching for changes
-  exporting bookmark D
+  exporting bookmark X/Y
 
 push updates existing bookmark
   $ hg up A
