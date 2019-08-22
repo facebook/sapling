@@ -78,7 +78,7 @@ def split(ui, repo, *revs, **opts):
             cmdutil.checkunfinished(repo)
         tr = repo.transaction("split")
         ctx = repo[rev]
-        r = ctx.rev()
+        r = ctx.hex()
         allowunstable = visibility.tracking(repo) or obsolete.isenabled(
             repo, obsolete.allowunstableopt
         )
