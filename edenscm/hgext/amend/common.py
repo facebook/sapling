@@ -71,10 +71,11 @@ def restackonce(
     rebaseopts["dest"] = rev
     rebaseopts["noconflict"] = noconflict
 
-    # We need to ensure that the 'operation' field in the obsmarker metadata
-    # is always set to 'rebase', regardless of the current command so that
-    # the restacked commits will appear as 'rebased' in smartlog.
-    overrides = {}
+    overrides = {
+        # Explicitly disable revnum deprecation warnings. This is an internal
+        # use of "rebase" that does not contain user-provided revsets.
+        ("devel", "legacy.revnum"): ""
+    }
     try:
         tweakdefaults = extensions.find("tweakdefaults")
     except KeyError:
@@ -82,6 +83,9 @@ def restackonce(
         # to set the metadata.
         pass
     else:
+        # We need to ensure that the 'operation' field in the obsmarker metadata
+        # is always set to 'rebase', regardless of the current command so that
+        # the restacked commits will appear as 'rebased' in smartlog.
         overrides[
             (tweakdefaults.globaldata, tweakdefaults.createmarkersoperation)
         ] = "rebase"
