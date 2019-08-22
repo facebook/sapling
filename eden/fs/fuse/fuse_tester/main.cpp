@@ -11,6 +11,7 @@
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 #include <signal.h>
 #include <sysexits.h>
 #include "eden/fs/fuse/Dispatcher.h"
