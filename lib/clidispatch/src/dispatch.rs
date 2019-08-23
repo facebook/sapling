@@ -138,7 +138,7 @@ fn command_map<'a>(
     let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
     for b_name in config_commands {
         if let Ok(name) = String::from_utf8(b_name.to_vec()) {
-            let is_debug = name.starts_with("debug");
+            let is_debug = name.split("|").any(|name| name.starts_with("debug"));
             for name in name.split("|") {
                 command_map.insert(name.to_string(), if is_debug { -i } else { i });
             }
