@@ -566,7 +566,7 @@ class InodeMap {
 
   std::optional<RelativePath> getPathForInodeHelper(
       InodeNumber inodeNumber,
-      const folly::Synchronized<Members>::ConstLockedPtr& data);
+      const folly::Synchronized<Members>::RLockedPtr& data);
 
   /**
    * Unload an inode

@@ -431,7 +431,7 @@ std::optional<RelativePath> InodeMap::getPathForInode(InodeNumber inodeNumber) {
 
 std::optional<RelativePath> InodeMap::getPathForInodeHelper(
     InodeNumber inodeNumber,
-    const folly::Synchronized<Members>::ConstLockedPtr& data) {
+    const folly::Synchronized<Members>::RLockedPtr& data) {
   auto loadedIt = data->loadedInodes_.find(inodeNumber);
   if (loadedIt != data->loadedInodes_.cend()) {
     // If the inode is loaded, return its RelativePath

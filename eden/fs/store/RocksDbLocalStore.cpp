@@ -128,12 +128,12 @@ class RocksDbWriteBatch : public LocalStore::WriteBatch {
   ~RocksDbWriteBatch() override;
   // Use LocalStore::beginWrite() to create a write batch
   RocksDbWriteBatch(
-      Synchronized<RocksHandles>::RLockedPtr&& dbHandles,
+      Synchronized<RocksHandles>::ConstRLockedPtr&& dbHandles,
       size_t bufferSize);
 
   void flushIfNeeded();
 
-  folly::Synchronized<RocksHandles>::RLockedPtr lockedDB_;
+  folly::Synchronized<RocksHandles>::ConstRLockedPtr lockedDB_;
   rocksdb::WriteBatch writeBatch_;
   size_t bufSize_;
 };
@@ -167,7 +167,7 @@ void RocksDbWriteBatch::flushIfNeeded() {
 }
 
 RocksDbWriteBatch::RocksDbWriteBatch(
-    Synchronized<RocksHandles>::RLockedPtr&& dbHandles,
+    Synchronized<RocksHandles>::ConstRLockedPtr&& dbHandles,
     size_t bufSize)
     : LocalStore::WriteBatch(),
       lockedDB_(std::move(dbHandles)),

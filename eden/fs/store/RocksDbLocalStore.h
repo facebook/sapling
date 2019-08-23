@@ -68,7 +68,7 @@ class RocksDbLocalStore : public LocalStore {
    * DB may still be performed.  The lock exists to prevent the DB from being
    * closed while the I/O operation is in progress.
    */
-  folly::Synchronized<RocksHandles>::RLockedPtr getHandles() const {
+  folly::Synchronized<RocksHandles>::ConstRLockedPtr getHandles() const {
     auto handles = dbHandles_.rlock();
     if (!handles->db) {
       throwStoreClosedError();
