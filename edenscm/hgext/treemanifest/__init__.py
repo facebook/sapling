@@ -530,7 +530,7 @@ def wraprepo(repo):
             # semi-recent manifest node to treat as the base.
             if not basemfnodes:
                 changeloglen = len(self.changelog) - 1
-                basemfnodes = _findrecenttree(self, changeloglen)
+                basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
 
             self._prefetchtrees("", mfnodes, basemfnodes, [])
 
@@ -2190,9 +2190,10 @@ def _postpullprefetch(ui, repo):
         repo.prefetchtrees(mfnodes, basemfnodes=basemfnodes)
 
 
-def _findrecenttree(repo, startrev):
+def _findrecenttree(repo, startrev, targetmfnodes):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
+    targetmfnodes = set(targetmfnodes)
 
     with progress.spinner(repo.ui, _("finding nearest trees")):
         # Look up and down from the given rev
@@ -2218,6 +2219,16 @@ def _findrecenttree(repo, startrev):
                     continue
 
                 mfnode = cl.changelogrevision(rev).manifest
+
+                # In theory none of the target mfnodes should be in the store at
+                # all, since that's why we're trying to prefetch them now, but
+                # we've seen cases where getmissing claims they are in the
+                # store, and therefore we return the target mfnode as the recent
+                # tree, which is an invalid request to the server. Let's prevent
+                # this while we track down the root cause.
+                if mfnode in targetmfnodes:
+                    continue
+
                 missing = mfstore.getmissing([("", mfnode)])
                 if not missing:
                     return [mfnode]
@@ -2539,7 +2550,7 @@ class remotetreestore(generatingdatastore):
                     linkrev = self._repo["tip"].rev()
 
             # Find a recent tree that we already have
-            basemfnodes = _findrecenttree(self._repo, linkrev)
+            basemfnodes = _findrecenttree(self._repo, linkrev, [node])
 
         if self._repo.ui.configbool("remotefilelog", "debug"):
             msg = _("fetching tree %r %s") % (name, hex(node))
