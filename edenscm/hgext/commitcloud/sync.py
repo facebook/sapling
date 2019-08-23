@@ -11,6 +11,7 @@ import socket
 import time
 
 from edenscm.mercurial import (
+    blackbox,
     exchange,
     extensions,
     hg,
@@ -203,6 +204,35 @@ def sync(
             fp.write("Failed")
         fp.close()
     return _maybeupdateworkingcopy(repo, startnode)
+
+
+def logsyncop(repo, op, version, oldheads, newheads, oldbm, newbm, oldrbm, newrbm):
+    oldheadsset = set(oldheads)
+    newheadsset = set(newheads)
+    oldbmset = set(oldbm)
+    newbmset = set(newbm)
+    oldrbmset = set(oldrbm)
+    newrbmset = set(newrbm)
+    addedheads = blackbox.shortlist([h for h in newheads if h not in oldheadsset])
+    removedheads = blackbox.shortlist([h for h in oldheads if h not in newheadsset])
+    addedbm = blackbox.shortlist([h for h in newbm if h not in oldbmset])
+    removedbm = blackbox.shortlist([h for h in oldbm if h not in newbmset])
+    addedrbm = blackbox.shortlist([h for h in newrbm if h not in oldrbmset])
+    removedrbm = blackbox.shortlist([h for h in oldrbm if h not in newrbmset])
+    blackbox.log(
+        {
+            "commit_cloud_sync": {
+                "op": op,
+                "version": version,
+                "added_heads": addedheads,
+                "removed_heads": removedheads,
+                "added_bookmarks": addedbm,
+                "removed_bookmarks": removedbm,
+                "added_remote_bookmarks": addedrbm,
+                "removed_remote_bookmarks": removedrbm,
+            }
+        }
+    )
 
 
 def _maybeupdateworkingcopy(repo, currentnode):
@@ -404,15 +434,14 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             )
         )
         if cloudvisibleonly or cloudhiddenonly:
-            repo.ui.warn(
-                _(
-                    "detected obsmarker inconsistency (fixing by obsoleting [%s] and reviving [%s])\n"
-                )
-                % (
-                    ", ".join([nodemod.short(ctx.node()) for ctx in cloudhiddenonly]),
-                    ", ".join([nodemod.short(ctx.node()) for ctx in cloudvisibleonly]),
-                )
+            msg = _(
+                "detected obsmarker inconsistency (fixing by obsoleting [%s] and reviving [%s])\n"
+            ) % (
+                ", ".join([nodemod.short(ctx.node()) for ctx in cloudhiddenonly]),
+                ", ".join([nodemod.short(ctx.node()) for ctx in cloudvisibleonly]),
             )
+            repo.ui.log("commitcloud_sync", msg)
+            repo.ui.warn(msg)
             repo._commitcloudskippendingobsmarkers = True
             with repo.lock():
                 obsolete.createmarkers(repo, [(ctx, ()) for ctx in cloudhiddenonly])
@@ -420,6 +449,17 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             repo._commitcloudskippendingobsmarkers = False
 
     # We have now synced the repo to the cloud version.  Store this.
+    logsyncop(
+        repo,
+        "from_cloud",
+        cloudrefs.version,
+        lastsyncstate.heads,
+        cloudrefs.heads,
+        lastsyncstate.bookmarks,
+        cloudrefs.bookmarks,
+        lastsyncstate.remotebookmarks,
+        newremotebookmarks,
+    )
     lastsyncstate.update(
         cloudrefs.version,
         cloudrefs.heads,
@@ -822,6 +862,17 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newremotebookmarks,
     )
     if synced:
+        logsyncop(
+            repo,
+            "to_cloud",
+            cloudrefs.version,
+            lastsyncstate.heads,
+            newcloudheads,
+            lastsyncstate.bookmarks,
+            newcloudbookmarks,
+            oldremotebookmarks,
+            newremotebookmarks,
+        )
         lastsyncstate.update(
             cloudrefs.version,
             newcloudheads,

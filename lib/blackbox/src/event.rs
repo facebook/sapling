@@ -69,6 +69,34 @@ pub enum Event {
         duration_ms: u64,
     },
 
+    /// Commit Cloud Sync
+    #[serde(rename = "CCS", alias = "commit_cloud_sync")]
+    CommitCloudSync {
+        #[serde(rename = "O", alias = "op")]
+        op: CommitCloudSyncOp,
+
+        #[serde(rename = "V", alias = "version")]
+        version: u64,
+
+        #[serde(rename = "AH", alias = "added_heads")]
+        added_heads: ShortList,
+
+        #[serde(rename = "RH", alias = "removed_heads")]
+        removed_heads: ShortList,
+
+        #[serde(rename = "AB", alias = "added_bookmarks")]
+        added_bookmarks: ShortList,
+
+        #[serde(rename = "RB", alias = "removed_bookmarks")]
+        removed_bookmarks: ShortList,
+
+        #[serde(rename = "ARB", alias = "added_remote_bookmarks")]
+        added_remote_bookmarks: ShortList,
+
+        #[serde(rename = "RRB", alias = "removed_remote_bookmarks")]
+        removed_remote_bookmarks: ShortList,
+    },
+
     /// A subset of interesting configs.
     #[serde(rename = "C", alias = "config")]
     Config {
@@ -405,6 +433,16 @@ pub enum BlockedOp {
     MergeTool,
 }
 
+#[serde_alt]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub enum CommitCloudSyncOp {
+    #[serde(rename = "F", alias = "from_cloud")]
+    FromCloud,
+
+    #[serde(rename = "T", alias = "to_cloud")]
+    ToCloud,
+}
+
 fn is_default<T: PartialEq + Default>(value: &T) -> bool {
     value == &Default::default()
 }
@@ -462,6 +500,44 @@ impl fmt::Display for Event {
                 )?,
                 None => write!(f, "[blocked] {:?} blocked for {} ms", op, duration_ms)?,
             },
+            CommitCloudSync {
+                op,
+                version,
+                added_heads,
+                removed_heads,
+                added_bookmarks,
+                removed_bookmarks,
+                added_remote_bookmarks,
+                removed_remote_bookmarks,
+            } => {
+                let direction = match op {
+                    CommitCloudSyncOp::ToCloud => "to",
+                    CommitCloudSyncOp::FromCloud => "from",
+                };
+                write!(
+                    f,
+                    "[commit_cloud_sync] sync {} cloud version {}",
+                    direction, version
+                )?;
+                if added_heads.len > 0 {
+                    write!(f, "; heads added {}", added_heads)?;
+                }
+                if removed_heads.len > 0 {
+                    write!(f, "; heads removed {}", removed_heads)?;
+                }
+                if added_bookmarks.len > 0 {
+                    write!(f, "; bookmarks added {}", added_bookmarks)?;
+                }
+                if removed_bookmarks.len > 0 {
+                    write!(f, "; bookmarks removed {}", removed_bookmarks)?;
+                }
+                if added_remote_bookmarks.len > 0 {
+                    write!(f, "; remote bookmarks added {}", added_remote_bookmarks)?;
+                }
+                if removed_remote_bookmarks.len > 0 {
+                    write!(f, "; remote bookmarks removed {}", removed_remote_bookmarks)?;
+                }
+            }
             Config { items, interactive } => {
                 let interactive = if *interactive {
                     "interactive"
