@@ -90,16 +90,18 @@ impl UploadableHgBlob for TreemanifestEntry {
             p2: self.p2,
             path: node_key.path.clone(),
         };
-        upload.upload(ctx, repo).map(move |(_node, value)| {
-            (
-                node_key,
+        upload
+            .upload(ctx, repo.get_blobstore().boxed())
+            .map(move |(_node, value)| {
                 (
-                    manifest_content,
-                    p1,
-                    p2,
-                    value.map_err(Error::compat).boxify().shared(),
-                ),
-            )
-        })
+                    node_key,
+                    (
+                        manifest_content,
+                        p1,
+                        p2,
+                        value.map_err(Error::compat).boxify().shared(),
+                    ),
+                )
+            })
     }
 }

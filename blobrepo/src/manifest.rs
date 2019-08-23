@@ -6,25 +6,19 @@
 
 //! Root manifest, tree nodes
 
-use std::collections::BTreeMap;
-use std::str;
-
+use crate::errors::*;
+use crate::file::HgBlobEntry;
+use blobstore::Blobstore;
+use context::CoreContext;
 use failure_ext::{bail_msg, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-
-use context::CoreContext;
-use mercurial_types::nodehash::{HgNodeHash, NULL_HASH};
 use mercurial_types::{
+    nodehash::{HgNodeHash, NULL_HASH},
     FileType, HgBlob, HgEntry, HgEntryId, HgFileNodeId, HgManifest, HgManifestEnvelope,
     HgManifestId, MPathElement, Type,
 };
-
-use blobstore::Blobstore;
-
-use crate::errors::*;
-use crate::file::HgBlobEntry;
-use repo_blobstore::RepoBlobstore;
+use std::{collections::BTreeMap, str, sync::Arc};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
@@ -83,7 +77,7 @@ impl ManifestContent {
 
 pub fn fetch_raw_manifest_bytes(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     manifest_id: HgManifestId,
 ) -> BoxFuture<HgBlob, Error> {
     fetch_manifest_envelope(ctx, blobstore, manifest_id)
@@ -97,7 +91,7 @@ pub fn fetch_raw_manifest_bytes(
 
 pub fn fetch_manifest_envelope(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     manifest_id: HgManifestId,
 ) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
     fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
@@ -114,7 +108,7 @@ pub fn fetch_manifest_envelope(
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
 pub fn fetch_manifest_envelope_opt(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgManifestId,
 ) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
     let blobstore_key = node_id.blobstore_key();
@@ -142,7 +136,7 @@ pub fn fetch_manifest_envelope_opt(
 }
 
 pub struct BlobManifest {
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
@@ -154,7 +148,7 @@ pub struct BlobManifest {
 impl BlobManifest {
     pub fn load(
         ctx: CoreContext,
-        blobstore: &RepoBlobstore,
+        blobstore: &Arc<dyn Blobstore>,
         manifestid: HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
@@ -169,7 +163,7 @@ impl BlobManifest {
             .into_future()
             .boxify()
         } else {
-            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid)
+            fetch_manifest_envelope_opt(ctx, &blobstore.clone(), manifestid)
                 .and_then({
                     let blobstore = blobstore.clone();
                     move |envelope| match envelope {
@@ -186,7 +180,7 @@ impl BlobManifest {
         }
     }
 
-    pub fn parse(blobstore: RepoBlobstore, envelope: HgManifestEnvelope) -> Result<Self> {
+    pub fn parse(blobstore: Arc<dyn Blobstore>, envelope: HgManifestEnvelope) -> Result<Self> {
         let envelope = envelope.into_mut();
         let content = ManifestContent::parse(envelope.contents.as_ref()).with_context(|_| {
             format!(

@@ -1460,7 +1460,7 @@ fn test_filenode_lookup() -> Result<(), Error> {
         p2,
         path: to_mpath(path1.clone())?,
     };
-    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let (_, future) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
 
     let _ = rt.block_on(future)?;
 
@@ -1482,7 +1482,7 @@ fn test_filenode_lookup() -> Result<(), Error> {
         p2,
         path: to_mpath(path2.clone())?,
     };
-    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let (_, future) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
     let _ = rt.block_on(future)?;
 
     let gets = blobstore.tracing_gets();
@@ -1500,7 +1500,7 @@ fn test_filenode_lookup() -> Result<(), Error> {
         p2,
         path: to_mpath(path2.clone())?,
     };
-    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let (_, future) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
     let _ = rt.block_on(future)?;
 
     let gets = blobstore.tracing_gets();
@@ -1552,7 +1552,7 @@ fn test_content_uploaded_filenode_id() -> Result<(), Error> {
         p2,
         path: to_mpath(path1.clone())?,
     };
-    let (_, future) = upload.upload(ctx.clone(), &repo)?;
+    let (_, future) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
 
     let _ = rt.block_on(future)?;
 

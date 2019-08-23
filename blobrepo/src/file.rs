@@ -19,18 +19,19 @@ use futures::{
     stream::Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial_types::manifest::{Content, HgEntry, HgManifest, Type};
-use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{
-    calculate_hg_node_id, FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId,
-    HgNodeHash, HgParents, MPathElement,
+    calculate_hg_node_id,
+    manifest::{Content, HgEntry, HgManifest, Type},
+    nodehash::HgEntryId,
+    FileBytes, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
+    MPathElement,
 };
 use mononoke_types::{hash::Sha256, ContentId, ContentMetadata};
-use repo_blobstore::RepoBlobstore;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct HgBlobEntry {
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     name: Option<MPathElement>,
     id: HgEntryId,
 }
@@ -45,7 +46,7 @@ impl Eq for HgBlobEntry {}
 
 pub fn fetch_raw_filenode_bytes(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
     validate_hash: bool,
 ) -> BoxFuture<HgBlob, Error> {
@@ -103,7 +104,7 @@ pub fn fetch_raw_filenode_bytes(
 
 pub fn fetch_file_content_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Stream<Item = FileBytes, Error = Error> {
     fetch_file_envelope(ctx.clone(), blobstore, node_id)
@@ -119,7 +120,7 @@ pub fn fetch_file_content_from_blobstore(
 
 pub fn fetch_file_size_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = u64, Error = Error> {
     fetch_file_envelope(ctx, blobstore, node_id).map({ |envelope| envelope.content_size() })
@@ -127,7 +128,7 @@ pub fn fetch_file_size_from_blobstore(
 
 pub fn fetch_file_content_id_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = ContentId, Error = Error> {
     fetch_file_envelope(ctx, blobstore, node_id).map({ |envelope| envelope.content_id() })
@@ -135,7 +136,7 @@ pub fn fetch_file_content_id_from_blobstore(
 
 pub fn fetch_file_metadata_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     content_id: ContentId,
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
     filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
@@ -146,7 +147,7 @@ pub fn fetch_file_metadata_from_blobstore(
 
 pub fn fetch_file_content_sha256_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
     fetch_file_metadata_from_blobstore(ctx, blobstore, content_id).map(|metadata| metadata.sha256)
@@ -154,7 +155,7 @@ pub fn fetch_file_content_sha256_from_blobstore(
 
 pub fn fetch_file_parents_from_blobstore(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = HgParents, Error = Error> {
     fetch_file_envelope(ctx, blobstore, node_id).map(|envelope| {
@@ -167,7 +168,7 @@ pub fn fetch_file_parents_from_blobstore(
 
 pub fn fetch_file_envelope(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = HgFileEnvelope, Error = Error> {
     fetch_file_envelope_opt(ctx, blobstore, node_id)
@@ -183,7 +184,7 @@ pub fn fetch_file_envelope(
 
 pub fn fetch_file_envelope_opt(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = Option<HgFileEnvelope>, Error = Error> {
     let blobstore_key = node_id.blobstore_key();
@@ -212,7 +213,7 @@ pub fn fetch_file_envelope_opt(
 
 pub fn fetch_file_contents(
     ctx: CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     content_id: ContentId,
 ) -> impl Stream<Item = FileBytes, Error = Error> {
     filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
@@ -224,7 +225,12 @@ pub fn fetch_file_contents(
 }
 
 impl HgBlobEntry {
-    pub fn new(blobstore: RepoBlobstore, name: MPathElement, nodeid: HgNodeHash, ty: Type) -> Self {
+    pub fn new(
+        blobstore: Arc<dyn Blobstore>,
+        name: MPathElement,
+        nodeid: HgNodeHash,
+        ty: Type,
+    ) -> Self {
         Self {
             blobstore,
             name: Some(name),
@@ -235,7 +241,7 @@ impl HgBlobEntry {
         }
     }
 
-    pub fn new_root(blobstore: RepoBlobstore, manifestid: HgManifestId) -> Self {
+    pub fn new_root(blobstore: Arc<dyn Blobstore>, manifestid: HgManifestId) -> Self {
         Self {
             blobstore,
             name: None,

@@ -151,7 +151,7 @@ fn upload_hg_tree_entry(
         p2,
         path,
     };
-    upload.upload(ctx, repo).unwrap()
+    upload.upload(ctx, repo.get_blobstore().boxed()).unwrap()
 }
 
 fn upload_hg_file_entry(
@@ -181,7 +181,7 @@ fn upload_hg_file_entry(
         path: path.into_mpath().expect("expected a path to be present"),
     };
 
-    let (_, upload_fut) = upload.upload(ctx, repo).unwrap();
+    let (_, upload_fut) = upload.upload(ctx, repo.get_blobstore().boxed()).unwrap();
     (HgFileNodeId::new(node_id), upload_fut)
 }
 

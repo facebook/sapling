@@ -279,7 +279,7 @@ impl BlobRepo {
         key: HgFileNodeId,
     ) -> BoxStream<FileBytes, Error> {
         STATS::get_file_content.add_value(1);
-        fetch_file_content_from_blobstore(ctx, &self.blobstore, key).boxify()
+        fetch_file_content_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     pub fn rechunk_file_by_content_id(
@@ -301,11 +301,11 @@ impl BlobRepo {
         id: ContentId,
     ) -> BoxStream<FileBytes, Error> {
         STATS::get_file_content.add_value(1);
-        fetch_file_contents(ctx, &self.blobstore, id).boxify()
+        fetch_file_contents(ctx, &self.blobstore.boxed(), id).boxify()
     }
 
     pub fn get_file_size(&self, ctx: CoreContext, key: HgFileNodeId) -> BoxFuture<u64, Error> {
-        fetch_file_size_from_blobstore(ctx, &self.blobstore, key).boxify()
+        fetch_file_size_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     pub fn get_file_content_id(
@@ -313,7 +313,7 @@ impl BlobRepo {
         ctx: CoreContext,
         key: HgFileNodeId,
     ) -> BoxFuture<ContentId, Error> {
-        fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key).boxify()
+        fetch_file_content_id_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     pub fn get_file_content_metadata(
@@ -321,7 +321,7 @@ impl BlobRepo {
         ctx: CoreContext,
         key: ContentId,
     ) -> BoxFuture<ContentMetadata, Error> {
-        fetch_file_metadata_from_blobstore(ctx, &self.blobstore, key).boxify()
+        fetch_file_metadata_from_blobstore(ctx, &self.blobstore.boxed(), key).boxify()
     }
 
     pub fn get_file_content_id_by_sha256(
@@ -343,7 +343,7 @@ impl BlobRepo {
         ctx: CoreContext,
         key: HgFileNodeId,
     ) -> impl Future<Item = HgParents, Error = Error> {
-        fetch_file_parents_from_blobstore(ctx, &self.blobstore, key)
+        fetch_file_parents_from_blobstore(ctx, &self.blobstore.boxed(), key)
     }
 
     pub fn get_file_sha256(
@@ -351,7 +351,7 @@ impl BlobRepo {
         ctx: CoreContext,
         content_id: ContentId,
     ) -> BoxFuture<Sha256, Error> {
-        fetch_file_content_sha256_from_blobstore(ctx, &self.blobstore, content_id).boxify()
+        fetch_file_content_sha256_from_blobstore(ctx, &self.blobstore.boxed(), content_id).boxify()
     }
 
     pub fn get_file_content_by_alias(
@@ -518,7 +518,7 @@ impl BlobRepo {
         changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
         STATS::get_changeset_by_changesetid.add_value(1);
-        HgBlobChangeset::load(ctx, &self.blobstore, changesetid)
+        HgBlobChangeset::load(ctx, &self.blobstore.boxed(), changesetid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
             .boxify()
     }
@@ -529,7 +529,7 @@ impl BlobRepo {
         manifestid: HgManifestId,
     ) -> BoxFuture<Box<dyn HgManifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
-        BlobManifest::load(ctx, &self.blobstore, manifestid)
+        BlobManifest::load(ctx, &self.blobstore.boxed(), manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into()))
             .map(|m| m.boxed())
             .boxify()
@@ -555,7 +555,7 @@ impl BlobRepo {
 
     pub fn get_root_entry(&self, manifestid: HgManifestId) -> HgBlobEntry {
         STATS::get_root_entry.add_value(1);
-        HgBlobEntry::new_root(self.blobstore.clone(), manifestid)
+        HgBlobEntry::new_root(self.blobstore.boxed(), manifestid)
     }
 
     pub fn get_bookmark(
@@ -703,8 +703,7 @@ impl BlobRepo {
         ctx: CoreContext,
         node: HgFileNodeId,
     ) -> impl Future<Item = HgFileEnvelope, Error = Error> {
-        let store = self.get_blobstore();
-        fetch_file_envelope(ctx, &store, node)
+        fetch_file_envelope(ctx, &self.blobstore.boxed(), node)
     }
 
     pub fn get_filenode_from_envelope(
@@ -714,8 +713,7 @@ impl BlobRepo {
         node: HgFileNodeId,
         linknode: HgChangesetId,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-        let store = self.get_blobstore();
-        fetch_file_envelope(ctx, &store, node)
+        fetch_file_envelope(ctx, &self.blobstore.boxed(), node)
             .with_context({
                 cloned!(path);
                 move |_| format!("While fetching filenode for {} {}", path, node)
@@ -928,7 +926,7 @@ impl BlobRepo {
         // file content but different type (Regular|Executable)
         match (p1, p2) {
             (Some(parent), None) | (None, Some(parent)) => {
-                let store = self.get_blobstore();
+                let store = self.get_blobstore().boxed();
                 cloned!(ctx, change, path);
                 fetch_file_envelope(ctx.clone(), &store, parent)
                     .map(move |parent_envelope| {
@@ -1021,7 +1019,7 @@ impl BlobRepo {
                                     p2,
                                     path: path.clone(),
                                 };
-                                match upload_entry.upload(ctx, &repo) {
+                                match upload_entry.upload(ctx, repo.get_blobstore().boxed()) {
                                     Ok((_, upload_fut)) => upload_fut
                                         .map(move |(entry, _)| {
                                             let node_info = IncompleteFilenodeInfo {
@@ -1386,7 +1384,7 @@ impl BlobRepo {
             move |changes| {
                 derive_hg_manifest(
                     ctx.clone(),
-                    repo.clone(),
+                    repo.get_blobstore().boxed(),
                     incomplete_filenodes,
                     vec![manifest_p1, manifest_p2].into_iter().flatten(),
                     changes,
@@ -1806,15 +1804,7 @@ impl UploadHgTreeEntry {
     pub fn upload(
         self,
         ctx: CoreContext,
-        repo: &BlobRepo,
-    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
-        self.upload_to_blobstore(ctx, &repo.blobstore)
-    }
-
-    pub(crate) fn upload_to_blobstore(
-        self,
-        ctx: CoreContext,
-        blobstore: &RepoBlobstore,
+        blobstore: Arc<dyn Blobstore>,
     ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         STATS::upload_hg_tree_entry.add_value(1);
         let UploadHgTreeEntry {
@@ -1919,7 +1909,7 @@ impl UploadHgFileContents {
     fn execute(
         self,
         ctx: CoreContext,
-        repo: &BlobRepo,
+        blobstore: &Arc<dyn Blobstore>,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
         path: MPath,
@@ -1939,13 +1929,13 @@ impl UploadHgFileContents {
 
                 let lookup_fut = lookup_filenode_id(
                     ctx.clone(),
-                    &repo.blobstore,
+                    &*blobstore,
                     FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2),
                 );
 
                 let metadata_fut = Self::compute_metadata(
                     ctx.clone(),
-                    repo,
+                    blobstore,
                     cbinfo.meta.id,
                     cbinfo.meta.copy_from.clone(),
                 );
@@ -1954,7 +1944,7 @@ impl UploadHgFileContents {
 
                 // Attempt to lookup filenode ID by alias. Fallback to computing it if we cannot.
                 let compute_fut = (lookup_fut, metadata_fut).into_future().and_then({
-                    cloned!(ctx, repo);
+                    cloned!(ctx, blobstore);
                     move |(res, metadata)| {
                         res.ok_or(())
                             .into_future()
@@ -1962,7 +1952,7 @@ impl UploadHgFileContents {
                                 cloned!(metadata);
                                 move |_| {
                                     Self::compute_filenode_id(
-                                        ctx, &repo, content_id, metadata, p1, p2,
+                                        ctx, &blobstore, content_id, metadata, p1, p2,
                                     )
                                 }
                             })
@@ -1994,11 +1984,8 @@ impl UploadHgFileContents {
                 let file_bytes = f.file_contents();
 
                 STATS::upload_blob.add_value(1);
-                let (contents, upload_fut) = filestore::store_bytes(
-                    repo.blobstore.clone(),
-                    ctx.clone(),
-                    file_bytes.into_bytes(),
-                );
+                let (contents, upload_fut) =
+                    filestore::store_bytes(blobstore.clone(), ctx.clone(), file_bytes.into_bytes());
 
                 let upload_fut = upload_fut.timed({
                     cloned!(path);
@@ -2042,9 +2029,9 @@ impl UploadHgFileContents {
         let key = FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2);
 
         let compute_fut = compute_fut.and_then({
-            cloned!(ctx, repo);
+            cloned!(ctx, blobstore);
             move |(filenode_id, metadata, size)| {
-                store_filenode_id(ctx, &repo.blobstore, key, &filenode_id)
+                store_filenode_id(ctx, &blobstore, key, &filenode_id)
                     .map(move |_| (filenode_id, metadata, size))
             }
         });
@@ -2054,38 +2041,33 @@ impl UploadHgFileContents {
 
     fn compute_metadata(
         ctx: CoreContext,
-        repo: &BlobRepo,
+        blobstore: &Arc<dyn Blobstore>,
         content_id: ContentId,
         copy_from: Option<(MPath, HgFileNodeId)>,
     ) -> impl Future<Item = Bytes, Error = Error> {
-        filestore::peek(
-            &repo.blobstore,
-            ctx,
-            &FetchKey::Canonical(content_id),
-            META_SZ,
-        )
-        .and_then(move |bytes| bytes.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-        .context("While computing metadata")
-        .from_err()
-        .map(move |bytes| {
-            let mut metadata = Vec::new();
-            File::generate_metadata(copy_from.as_ref(), &FileBytes(bytes), &mut metadata)
-                .expect("Vec::write_all should never fail");
+        filestore::peek(&*blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ)
+            .and_then(move |bytes| bytes.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
+            .context("While computing metadata")
+            .from_err()
+            .map(move |bytes| {
+                let mut metadata = Vec::new();
+                File::generate_metadata(copy_from.as_ref(), &FileBytes(bytes), &mut metadata)
+                    .expect("Vec::write_all should never fail");
 
-            // TODO: Introduce Metadata bytes?
-            Bytes::from(metadata)
-        })
+                // TODO: Introduce Metadata bytes?
+                Bytes::from(metadata)
+            })
     }
 
     fn compute_filenode_id(
         ctx: CoreContext,
-        repo: &BlobRepo,
+        blobstore: &Arc<dyn Blobstore>,
         content_id: ContentId,
         metadata: Bytes,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> impl Future<Item = HgFileNodeId, Error = Error> {
-        let file_bytes = filestore::fetch(&repo.blobstore, ctx, &FetchKey::Canonical(content_id))
+        let file_bytes = filestore::fetch(&*blobstore, ctx, &FetchKey::Canonical(content_id))
             .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
             .flatten_stream();
 
@@ -2117,7 +2099,7 @@ impl UploadHgFileEntry {
     pub fn upload(
         self,
         ctx: CoreContext,
-        repo: &BlobRepo,
+        blobstore: Arc<dyn Blobstore>,
     ) -> Result<(ContentBlobInfo, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
@@ -2130,10 +2112,8 @@ impl UploadHgFileEntry {
         } = self;
 
         let (cbinfo, content_upload, compute_fut) =
-            contents.execute(ctx.clone(), repo, p1, p2, path.clone());
+            contents.execute(ctx.clone(), &blobstore, p1, p2, path.clone());
         let content_id = cbinfo.meta.id;
-
-        let blobstore = repo.blobstore.clone();
         let logger = ctx.logger().clone();
 
         let envelope_upload =

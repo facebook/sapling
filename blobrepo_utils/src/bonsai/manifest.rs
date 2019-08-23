@@ -228,7 +228,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 // Also fetch the manifest as we're interested in the computed node id.
                 let root_mf_id = HgManifestId::new(root_entry.get_hash().into_nodehash());
                 let root_mf_fut =
-                    BlobManifest::load(ctx.clone(), &repo.get_blobstore(), root_mf_id);
+                    BlobManifest::load(ctx.clone(), &repo.get_blobstore().boxed(), root_mf_id);
 
                 bonsai_diff(ctx.clone(), root_entry, p1_entry, p2_entry)
                     .collect()
@@ -348,7 +348,7 @@ fn apply_diff(
         .collect();
     derive_hg_manifest(
         ctx,
-        repo,
+        repo.get_blobstore().boxed(),
         IncompleteFilenodes::new(),
         vec![manifest_p1, manifest_p2]
             .into_iter()
@@ -365,7 +365,7 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
 
     match diff_result {
         Changed(path, ft, entry_id) | ChangedReusedId(path, ft, entry_id) => {
-            let blobstore = repo.get_blobstore();
+            let blobstore = repo.get_blobstore().boxed();
             let basename = path.basename().clone();
             let hash = entry_id.into_nodehash();
             Some(HgBlobEntry::new(blobstore, basename, hash, Type::File(*ft)))

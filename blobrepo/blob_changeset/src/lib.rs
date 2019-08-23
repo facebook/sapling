@@ -4,16 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::BTreeMap;
-use std::io::Write;
-
+use blobstore::Blobstore;
 use bytes::Bytes;
+use context::CoreContext;
 use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
-
-use blobstore::Blobstore;
-
-use context::CoreContext;
 use mercurial_revlog::{
     changeset::{serialize_extras, Extra},
     revlogrepo::RevlogChangeset,
@@ -25,6 +20,7 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 use repo_blobstore::RepoBlobstore;
+use std::{collections::BTreeMap, io::Write, sync::Arc};
 
 pub struct ChangesetMetadata {
     pub user: String,
@@ -152,7 +148,7 @@ impl HgBlobChangeset {
 
     pub fn load(
         ctx: CoreContext,
-        blobstore: &RepoBlobstore,
+        blobstore: &Arc<dyn Blobstore>,
         changesetid: HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         if changesetid == HgChangesetId::new(NULL_HASH) {

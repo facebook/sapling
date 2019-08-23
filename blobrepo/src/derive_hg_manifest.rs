@@ -8,8 +8,7 @@ use crate::errors::ErrorKind;
 use crate::file::{fetch_file_envelope, HgBlobEntry};
 use crate::manifest::ManifestContent;
 use crate::repo::{
-    BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-    UploadHgTreeEntry,
+    ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -21,8 +20,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
 use mercurial_types::{HgEntry, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId};
 use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
-use repo_blobstore::RepoBlobstore;
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
 pub struct Id<T>(T);
@@ -97,7 +95,7 @@ fn hg_parents<T: Copy>(parents: &Vec<T>) -> Result<(Option<T>, Option<T>), Error
 /// Derive mercurial manifest from parent manifests and bonsai file changes.
 pub fn derive_hg_manifest(
     ctx: CoreContext,
-    repo: BlobRepo, // TODO: replace with Blobstore, requires changing UploadHgFileEntry
+    blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes, // TODO: construct by diffing manifests
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)>,
@@ -105,26 +103,26 @@ pub fn derive_hg_manifest(
     let parents: Vec<_> = parents.into_iter().map(Id).collect();
     derive_manifest(
         ctx.clone(),
-        repo.get_blobstore(),
+        blobstore.clone(),
         parents.clone(),
         changes,
         {
-            cloned!(ctx, repo, incomplete_filenodes);
+            cloned!(ctx, blobstore, incomplete_filenodes);
             move |tree_info| {
                 create_hg_manifest(
                     ctx.clone(),
-                    repo.get_blobstore(),
+                    blobstore.clone(),
                     incomplete_filenodes.clone(),
                     tree_info,
                 )
             }
         },
         {
-            cloned!(ctx, repo, incomplete_filenodes);
+            cloned!(ctx, blobstore, incomplete_filenodes);
             move |leaf_info| {
                 create_hg_file(
                     ctx.clone(),
-                    repo.clone(),
+                    blobstore.clone(),
                     incomplete_filenodes.clone(),
                     leaf_info,
                 )
@@ -140,7 +138,7 @@ pub fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_hg_manifest(ctx, repo.get_blobstore(), incomplete_filenodes, tree_info)
+            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info)
                 .map(|id| id.0)
                 .right_future()
         }
@@ -151,7 +149,7 @@ pub fn derive_hg_manifest(
 /// object from `TreeInfo`.
 fn create_hg_manifest(
     ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes,
     tree_info: TreeInfo<Id<HgManifestId>, (FileType, HgFileNodeId)>,
 ) -> impl Future<Item = Id<HgManifestId>, Error = Error> {
@@ -195,7 +193,7 @@ fn create_hg_manifest(
                 p2,
                 path: path.clone(),
             }
-            .upload_to_blobstore(ctx.clone(), &blobstore)
+            .upload(ctx.clone(), blobstore)
             .map(|(hash, future)| future.map(move |_| hash))
             .into_future()
             .flatten()
@@ -219,7 +217,7 @@ fn create_hg_manifest(
 /// object from `LeafInfo`.
 fn create_hg_file(
     ctx: CoreContext,
-    repo: BlobRepo,
+    blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes,
     leaf_info: LeafInfo<(FileType, HgFileNodeId), HgBlobEntry>,
 ) -> impl Future<Item = (FileType, HgFileNodeId), Error = Error> {
@@ -242,7 +240,6 @@ fn create_hg_file(
     }
 
     // Leaf was not provided, try to resolve same-content different parents leaf
-    let blobstore = repo.get_blobstore();
     hg_parents(&parents)
         .into_future()
         .and_then(move |(p1, p2)| match (p1, p2) {
@@ -266,7 +263,7 @@ fn create_hg_file(
                             p2: Some(p2),
                             path,
                         }
-                        .upload(ctx, &repo)
+                        .upload(ctx, blobstore)
                         .map(|(_, future)| future)
                         .into_future()
                         .flatten()

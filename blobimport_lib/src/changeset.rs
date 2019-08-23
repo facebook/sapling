@@ -193,6 +193,7 @@ fn upload_entry(
         .and_then(move |(content, is_ext, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
+            let blobstore = blobrepo.get_blobstore().boxed();
             match (ty, is_ext) {
                 (Type::Tree, false) => {
                     let upload = UploadHgTreeEntry {
@@ -202,7 +203,7 @@ fn upload_entry(
                         p2,
                         path: RepoPath::DirectoryPath(path),
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
                     upload_fut
                 }
                 (Type::Tree, true) => Err(err_msg("Inconsistent data: externally stored Tree"))
@@ -217,7 +218,7 @@ fn upload_entry(
                         p2: p2.map(HgFileNodeId::new),
                         path,
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
                     spawn_future(upload_fut).boxify()
                 }
                 (Type::File(ft), true) => {
@@ -244,7 +245,7 @@ fn upload_entry(
                                 p2,
                                 path,
                             };
-                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
+                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
                             spawn_future(upload_fut).boxify()
                         })
                         .boxify()
@@ -366,7 +367,7 @@ impl UploadChangesets {
                                         path: RepoPath::root(),
                                     };
                                     upload
-                                        .upload(ctx, &blobrepo)
+                                        .upload(ctx, blobrepo.get_blobstore().boxed())
                                         .into_future()
                                         .and_then(|(_, entry)| entry)
                                         .map(Some)
