@@ -11,6 +11,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
