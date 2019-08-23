@@ -25,6 +25,7 @@ use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::HookManager;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::manifest_utils::{
@@ -121,18 +122,13 @@ where
         .join(",")
 }
 
-fn timeout_duration() -> Duration {
-    Duration::from_secs(15 * 60)
-}
-
-fn clone_timeout_duration() -> Duration {
+lazy_static! {
+    static ref TIMEOUT: Duration = Duration::from_secs(15 * 60);
     // clone requests can be rather long. Let's bump the timeout
-    Duration::from_secs(30 * 60)
-}
-
-fn getfiles_timeout_duration() -> Duration {
+    static ref CLONE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // getfiles requests can be rather long. Let's bump the timeout
-    Duration::from_secs(90 * 60)
+    static ref GETFILES_TIMEOUT: Duration = Duration::from_secs(90 * 60);
+    static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
 }
 
 fn process_timeout_error(err: TimeoutError<Error>) -> Error {
@@ -398,7 +394,7 @@ impl RepoClient {
                         }
                     }
                 })
-                .timeout(timeout_duration())
+                .timeout(*TIMEOUT)
                 .map_err(process_timeout_error)
                 .left_future(),
             Some(ref bookmarks) => future::ok(bookmarks.clone()).right_future(),
@@ -579,7 +575,7 @@ impl RepoClient {
         };
         let s = s
             .buffered_weight_limited(params)
-            .whole_stream_timeout(getfiles_timeout_duration())
+            .whole_stream_timeout(*GETFILES_TIMEOUT)
             .map_err(process_stream_timeout_error)
             .map({
                 cloned!(ctx);
@@ -769,7 +765,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
@@ -811,7 +807,7 @@ impl HgCommands for RepoClient {
         }
 
         future::ok(hostname)
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::CLIENTTELEMETRY, trace_args!())
             .timed(move |stats, _| {
@@ -844,7 +840,7 @@ impl HgCommands for RepoClient {
                     .from_err(),
             )
             .map(|(_, r)| r)
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
@@ -918,7 +914,7 @@ impl HgCommands for RepoClient {
         };
 
         lookup_fut
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
@@ -978,7 +974,7 @@ impl HgCommands for RepoClient {
                     .map(move |node| found_hg_changesets.contains(&node))
                     .collect::<Vec<_>>()
             })
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
@@ -1016,7 +1012,7 @@ impl HgCommands for RepoClient {
                     .map(move |node| hg_bcs_mapping.contains_key(&node))
                     .collect::<Vec<_>>()
             })
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
@@ -1056,7 +1052,7 @@ impl HgCommands for RepoClient {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
         }
-        .whole_stream_timeout(timeout_duration())
+        .whole_stream_timeout(*TIMEOUT)
         .map_err(process_stream_timeout_error)
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
@@ -1083,7 +1079,7 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.prepared_ctx(ops::HELLO, None).scuba().clone();
 
         future::ok(res)
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
@@ -1176,7 +1172,7 @@ impl HgCommands for RepoClient {
         stream::futures_unordered(queries)
             .concat2()
             .map(|bookmarks| bookmarks.into_iter().collect())
-            .timeout(timeout_duration())
+            .timeout(*TIMEOUT)
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
             .timed(move |stats, _| {
@@ -1231,7 +1227,7 @@ impl HgCommands for RepoClient {
                     pure_push_allowed,
                 );
 
-                res.timeout(timeout_duration())
+                res.timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
                     .traced(client.ctx.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
@@ -1257,16 +1253,15 @@ impl HgCommands for RepoClient {
         });
         let args = json!(vec![args]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
-        let load_limit_timeframe = Duration::from_secs(1);
 
         let throttle = self
             .ctx
-            .should_throttle(Metric::EgressTotalManifests, load_limit_timeframe)
+            .should_throttle(Metric::EgressTotalManifests, *LOAD_LIMIT_TIMEFRAME)
             .and_then({
                 cloned!(self.ctx);
                 move |throttle| {
                     if !throttle && ctx.is_quicksand() {
-                        ctx.should_throttle(Metric::EgressQuicksandManifests, load_limit_timeframe)
+                        ctx.should_throttle(Metric::EgressQuicksandManifests, *LOAD_LIMIT_TIMEFRAME)
                             .left_future()
                     } else {
                         future::ok(throttle).right_future()
@@ -1276,7 +1271,7 @@ impl HgCommands for RepoClient {
 
         let s = self
             .gettreepack_untimed(params)
-            .whole_stream_timeout(timeout_duration())
+            .whole_stream_timeout(*TIMEOUT)
             .map_err(process_stream_timeout_error)
             .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
             .inspect({
@@ -1389,7 +1384,7 @@ impl HgCommands for RepoClient {
                     }
                 }
             })
-            .whole_stream_timeout(getfiles_timeout_duration())
+            .whole_stream_timeout(*GETFILES_TIMEOUT)
             .map_err(process_stream_timeout_error)
             .timed({
                 cloned!(self.ctx);
@@ -1524,7 +1519,7 @@ impl HgCommands for RepoClient {
                 }
             })
             .flatten_stream()
-            .whole_stream_timeout(clone_timeout_duration())
+            .whole_stream_timeout(*CLONE_TIMEOUT)
             .map_err(process_stream_timeout_error)
             .timed({
                 let ctx = self.ctx.clone();
