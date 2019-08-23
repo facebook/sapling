@@ -117,8 +117,8 @@ impl<V> PathTree<V>
 where
     V: Default,
 {
-    pub fn insert(&mut self, path: MPath, value: V) {
-        let mut node = path.into_iter().fold(self, |node, element| {
+    pub fn insert(&mut self, path: Option<MPath>, value: V) {
+        let mut node = path.into_iter().flatten().fold(self, |node, element| {
             node.subentries
                 .entry(element)
                 .or_insert_with(Default::default)
@@ -146,6 +146,22 @@ where
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (MPath, V)>,
+    {
+        let mut tree: Self = Default::default();
+        for (path, value) in iter {
+            tree.insert(Some(path), value);
+        }
+        tree
+    }
+}
+
+impl<V> FromIterator<(Option<MPath>, V)> for PathTree<V>
+where
+    V: Default,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (Option<MPath>, V)>,
     {
         let mut tree: Self = Default::default();
         for (path, value) in iter {

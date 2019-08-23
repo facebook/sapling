@@ -4,7 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::{derive_manifest, Diff, Entry, Manifest, ManifestOps, PathTree, TreeInfo};
+use crate::{
+    derive_manifest, Diff, Entry, Manifest, ManifestOps, PathOrPrefix, PathTree, TreeInfo,
+};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
@@ -17,7 +19,7 @@ use mononoke_types::{BlobstoreBytes, MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet},
     hash::{Hash, Hasher},
     iter::FromIterator,
     sync::{Arc, Mutex},
@@ -444,21 +446,27 @@ fn test_derive_manifest() -> Result<(), Error> {
     Ok(())
 }
 
-fn make_paths(paths_str: &[&str]) -> Result<HashSet<MPath>, Error> {
-    paths_str.into_iter().map(MPath::new).collect()
+fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
+    paths_str
+        .into_iter()
+        .map(|path_str| match path_str {
+            &"/" => Ok(None),
+            _ => MPath::new(path_str).map(Some),
+        })
+        .collect()
 }
 
 #[test]
 fn test_find_entries() -> Result<(), Error> {
-    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+    let rt = Arc::new(Mutex::new(Runtime::new()?));
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
     let ctx = CoreContext::test_mock();
 
     // derive manifest
     let derive = |parents, changes| -> Result<TestManifestId, Error> {
-        let manifest_id = runtime
-            .with(|runtime| {
-                runtime.block_on(derive_test_manifest(
+        let manifest_id = rt
+            .with(|rt| {
+                rt.block_on(derive_test_manifest(
                     ctx.clone(),
                     blobstore.clone(),
                     parents,
@@ -479,31 +487,81 @@ fn test_find_entries() -> Result<(), Error> {
             "two/three/5" => Some("5"),
             "two/three/four/6" => Some("6"),
             "two/three/four/7" => Some("7"),
+            "five/six/8" => Some("8"),
+            "five/seven/eight/9" => Some("9"),
+            "five/seven/eight/nine/10" => Some("10"),
+            "five/seven/11" => Some("11"),
         },
     )?;
 
-    let paths = make_paths(&[
-        "one/1",
-        "two/three",
-        "none",
-        "two/three/four/7",
-        "two/three/6",
-    ])?;
+    // use single select
+    {
+        let paths = make_paths(&[
+            "one/1",
+            "two/three",
+            "none",
+            "two/three/four/7",
+            "two/three/6",
+        ])?;
 
-    let results =
-        runtime.with(|rt| rt.block_on(mf0.find_entries(ctx, blobstore, paths).collect()))?;
+        let results = rt.with(|rt| {
+            rt.block_on(
+                mf0.find_entries(ctx.clone(), blobstore.clone(), paths)
+                    .collect(),
+            )
+        })?;
 
-    let mut leafs = HashSet::new();
-    let mut trees = HashSet::new();
-    for (path, entry) in results {
-        match entry {
-            Entry::Tree(_) => trees.insert(path),
-            Entry::Leaf(_) => leafs.insert(path),
-        };
+        let mut leafs = BTreeSet::new();
+        let mut trees = BTreeSet::new();
+        for (path, entry) in results {
+            match entry {
+                Entry::Tree(_) => trees.insert(path),
+                Entry::Leaf(_) => leafs.insert(path),
+            };
+        }
+
+        assert_eq!(leafs, make_paths(&["one/1", "two/three/four/7",])?);
+        assert_eq!(trees, make_paths(&["two/three"])?);
     }
 
-    assert_eq!(leafs, make_paths(&["one/1", "two/three/four/7",])?);
-    assert_eq!(trees, make_paths(&["two/three"])?);
+    // use prefix + single select
+    {
+        let paths = vec![
+            PathOrPrefix::Path(Some(MPath::new("two/three/5")?)),
+            PathOrPrefix::Path(Some(MPath::new("five/seven/11")?)),
+            PathOrPrefix::Prefix(Some(MPath::new("five/seven/eight")?)),
+        ];
+
+        let results = rt.with(|rt| {
+            rt.block_on(
+                mf0.find_entries(ctx.clone(), blobstore.clone(), paths)
+                    .collect(),
+            )
+        })?;
+
+        let mut leafs = BTreeSet::new();
+        let mut trees = BTreeSet::new();
+        for (path, entry) in results {
+            match entry {
+                Entry::Tree(_) => trees.insert(path),
+                Entry::Leaf(_) => leafs.insert(path),
+            };
+        }
+
+        assert_eq!(
+            leafs,
+            make_paths(&[
+                "two/three/5",
+                "five/seven/11",
+                "five/seven/eight/9",
+                "five/seven/eight/nine/10"
+            ])?
+        );
+        assert_eq!(
+            trees,
+            make_paths(&["five/seven/eight", "five/seven/eight/nine"])?
+        );
+    }
 
     Ok(())
 }
@@ -557,21 +615,20 @@ fn test_diff() -> Result<(), Error> {
 
     let diffs = runtime.with(|rt| rt.block_on(mf0.diff(ctx, blobstore, mf1).collect()))?;
 
-    let mut added = HashSet::new();
-    let mut removed = HashSet::new();
-    let mut changed = HashSet::new();
+    let mut added = BTreeSet::new();
+    let mut removed = BTreeSet::new();
+    let mut changed = BTreeSet::new();
     for diff in diffs {
         match diff {
-            Diff::Added(Some(path), _) => {
+            Diff::Added(path, _) => {
                 added.insert(path);
             }
-            Diff::Removed(Some(path), _) => {
+            Diff::Removed(path, _) => {
                 removed.insert(path);
             }
-            Diff::Changed(Some(path), _, _) => {
+            Diff::Changed(path, _, _) => {
                 changed.insert(path);
             }
-            _ => {}
         };
     }
 
@@ -594,7 +651,7 @@ fn test_diff() -> Result<(), Error> {
             "dir_file_conflict/5"
         ])?
     );
-    assert_eq!(changed, make_paths(&["dir", "dir/changed_file"])?);
+    assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
 
     Ok(())
 }

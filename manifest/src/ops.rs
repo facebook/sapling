@@ -11,7 +11,6 @@ use failure::Error;
 use futures::{stream, Future, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxStream, FutureExt, StreamExt};
 use mononoke_types::MPath;
-use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -20,45 +19,131 @@ pub enum Diff<Entry> {
     Changed(Option<MPath>, Entry, Entry),
 }
 
+#[derive(Debug, Clone)]
+pub enum PathOrPrefix {
+    Path(Option<MPath>),
+    Prefix(Option<MPath>),
+}
+
+impl From<MPath> for PathOrPrefix {
+    fn from(path: MPath) -> Self {
+        PathOrPrefix::Path(Some(path))
+    }
+}
+
+impl From<Option<MPath>> for PathOrPrefix {
+    fn from(path: Option<MPath>) -> Self {
+        PathOrPrefix::Path(path)
+    }
+}
+
 pub trait ManifestOps
 where
     Self: Loadable + Copy + Send + Eq,
     <Self as Loadable>::Value: Manifest<TreeId = Self> + Send,
     <<Self as Loadable>::Value as Manifest>::LeafId: Copy + Send + Eq,
 {
-    fn find_entries(
+    fn find_entries<I, P>(
         &self,
         ctx: CoreContext,
         blobstore: impl Blobstore + Clone,
-        paths: impl IntoIterator<Item = MPath>,
+        paths_or_prefixes: I,
     ) -> BoxStream<
         (
-            MPath,
+            Option<MPath>,
             Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
         ),
         Error,
-    > {
-        let selector = PathTree::from_iter(paths.into_iter().map(|path| (path, true)));
+    >
+    where
+        I: IntoIterator<Item = P>,
+        PathOrPrefix: From<P>,
+    {
+        enum Select {
+            Single,    // single entry selected
+            Recursive, // whole subtree selected
+            Skip,      // not selected
+        }
+
+        impl Select {
+            fn is_selected(&self) -> bool {
+                match self {
+                    Select::Single | Select::Recursive => true,
+                    Select::Skip => false,
+                }
+            }
+
+            fn is_recursive(&self) -> bool {
+                match self {
+                    Select::Recursive => true,
+                    _ => false,
+                }
+            }
+        }
+
+        impl Default for Select {
+            fn default() -> Select {
+                Select::Skip
+            }
+        }
+
+        let selector: PathTree<Select> = paths_or_prefixes
+            .into_iter()
+            .map(|path_or_prefix| match PathOrPrefix::from(path_or_prefix) {
+                PathOrPrefix::Path(path) => (path, Select::Single),
+                PathOrPrefix::Prefix(path) => (path, Select::Recursive),
+            })
+            .collect();
+
         bounded_traversal_stream(
             256,
-            (selector, None, self.clone()),
-            move |(PathTree { subentries, .. }, path, manifest_id)| {
+            (self.clone(), selector, None, false),
+            move |(manifest_id, selector, path, recursive)| {
+                let PathTree {
+                    subentries,
+                    value: select,
+                } = selector;
+
                 manifest_id
                     .load(ctx.clone(), &blobstore)
                     .map(move |manifest| {
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
-                        for (name, subentry) in subentries {
-                            if let Some(entry) = manifest.lookup(&name) {
-                                let path = MPath::join_opt_element(path.as_ref(), &name);
-                                if subentry.value {
-                                    output.push((path.clone(), entry.clone()));
+
+                        if recursive || select.is_recursive() {
+                            output.push((path.clone(), Entry::Tree(manifest_id)));
+                            for (name, entry) in manifest.list() {
+                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                match entry {
+                                    Entry::Leaf(_) => {
+                                        output.push((path.clone(), entry));
+                                    }
+                                    Entry::Tree(manifest_id) => {
+                                        recurse.push((manifest_id, Default::default(), path, true));
+                                    }
                                 }
-                                if let Entry::Tree(manifest_id) = entry {
-                                    recurse.push((subentry, Some(path), manifest_id));
+                            }
+                        } else {
+                            if select.is_selected() {
+                                output.push((path.clone(), Entry::Tree(manifest_id)));
+                            }
+                            for (name, selector) in subentries {
+                                if let Some(entry) = manifest.lookup(&name) {
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Leaf(_) => {
+                                            if selector.value.is_selected() {
+                                                output.push((path.clone(), entry));
+                                            }
+                                        }
+                                        Entry::Tree(manifest_id) => {
+                                            recurse.push((manifest_id, selector, path, false));
+                                        }
+                                    }
                                 }
                             }
                         }
+
                         (output, recurse)
                     })
             },
