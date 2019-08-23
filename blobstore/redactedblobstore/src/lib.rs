@@ -16,14 +16,15 @@ use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashMap;
 mod errors;
-use cloned::cloned;
-
 pub use crate::errors::ErrorKind;
-use std::sync::{
-    atomic::{AtomicI64, Ordering},
-    Arc,
+use cloned::cloned;
+use std::{
+    ops::Deref,
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        Arc,
+    },
 };
-
 mod store;
 pub use crate::store::SqlRedactedContentStore;
 
@@ -33,14 +34,31 @@ pub mod config {
     pub const MIN_REPORT_TIME_DIFFERENCE_NS: i64 = 1_000_000_000;
 }
 
-// A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
-// The goal is to deny access to fetch sensitive data from the repository.
-#[derive(Debug, Clone)]
-pub struct RedactedBlobstore<T: Blobstore + Clone> {
+#[derive(Debug)]
+pub struct RedactedBlobstoreInner<T: Blobstore + Clone> {
     blobstore: T,
     redacted: Option<HashMap<String, String>>,
     scuba_builder: ScubaSampleBuilder,
     timestamp: Arc<AtomicI64>,
+}
+
+// A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
+// The goal is to deny access to fetch sensitive data from the repository.
+#[derive(Debug, Clone)]
+pub struct RedactedBlobstore<T: Blobstore + Clone> {
+    inner: Arc<RedactedBlobstoreInner<T>>,
+}
+
+impl<T> Deref for RedactedBlobstore<T>
+where
+    T: Blobstore + Clone,
+{
+    type Target = RedactedBlobstoreInner<T>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl<T: Blobstore + Clone> RedactedBlobstore<T> {
@@ -49,8 +67,27 @@ impl<T: Blobstore + Clone> RedactedBlobstore<T> {
         redacted: Option<HashMap<String, String>>,
         scuba_builder: ScubaSampleBuilder,
     ) -> Self {
-        let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
+        Self {
+            inner: Arc::new(RedactedBlobstoreInner::new(
+                blobstore,
+                redacted,
+                scuba_builder,
+            )),
+        }
+    }
 
+    pub fn boxed(&self) -> Arc<dyn Blobstore> {
+        self.inner.clone()
+    }
+}
+
+impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
+    pub fn new(
+        blobstore: T,
+        redacted: Option<HashMap<String, String>>,
+        scuba_builder: ScubaSampleBuilder,
+    ) -> Self {
+        let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
         Self {
             blobstore,
             redacted,
@@ -70,7 +107,7 @@ impl<T: Blobstore + Clone> RedactedBlobstore<T> {
 
     #[inline]
     pub fn into_inner(self) -> T {
-        self.blobstore
+        self.blobstore.clone()
     }
 
     #[inline]
@@ -112,13 +149,16 @@ impl<T: Blobstore + Clone> RedactedBlobstore<T> {
         }
     }
 
-    #[inline]
-    pub fn into_parts(self) -> (T, Option<HashMap<String, String>>, ScubaSampleBuilder) {
-        (self.blobstore, self.redacted, self.scuba_builder)
+    pub fn into_parts(&self) -> (T, Option<HashMap<String, String>>, ScubaSampleBuilder) {
+        (
+            self.blobstore.clone(),
+            self.redacted.clone(),
+            self.scuba_builder.clone(),
+        )
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for RedactedBlobstore<T> {
+impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.err_if_redacted(&key)
             .map_err({
@@ -168,6 +208,24 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstore<T> {
 
     fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
         self.blobstore.assert_present(ctx, key)
+    }
+}
+
+impl<B> Blobstore for RedactedBlobstore<B>
+where
+    B: Blobstore + Clone,
+{
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.inner.get(ctx, key)
+    }
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.inner.put(ctx, key, value)
+    }
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.inner.is_present(ctx, key)
+    }
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+        self.inner.assert_present(ctx, key)
     }
 }
 
