@@ -170,6 +170,13 @@ queries! {
          WHERE repo_id = {repo_id}
            AND cs_id IN {cs_ids}"
     }
+
+    read SelectAllPublic(repo_id: RepositoryId) -> (ChangesetId, ) {
+        "SELECT cs_id
+         FROM phases
+         WHERE repo_id = {repo_id}
+           AND phase = 'Public'"
+    }
 }
 
 #[derive(Clone)]
@@ -231,6 +238,15 @@ impl SqlPhases {
         InsertPhase::query(&self.write_connection, &phases)
             .map(|_| ())
             .right_future()
+    }
+
+    pub fn list_all_public(
+        &self,
+        _ctx: CoreContext,
+        repo_id: RepositoryId,
+    ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+        SelectAllPublic::query(&self.read_connection, &repo_id)
+            .map(|ans| ans.into_iter().map(|x| x.0).collect())
     }
 }
 

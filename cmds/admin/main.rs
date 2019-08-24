@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(async_await)]
 #![feature(process_exitcode_placeholder)]
 
 use clap::{App, Arg, SubCommand};
@@ -20,11 +21,11 @@ use slog::error;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FILENODES,
-    FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE,
-    HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
-    REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD,
-    SKIPLIST_READ,
+    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FETCH_PHASE,
+    FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE,
+    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
+    HG_SYNC_VERIFY, LIST_PUBLIC, PHASES, REDACTION, REDACTION_ADD, REDACTION_LIST,
+    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::error::SubcommandError;
@@ -32,7 +33,6 @@ use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 use crate::hg_sync::subcommand_process_hg_sync;
-use crate::public_phases::subcommand_add_public_phases;
 use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
@@ -48,7 +48,7 @@ mod filestore;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
-mod public_phases;
+mod phases;
 mod redaction;
 mod skiplist_subcommand;
 
@@ -238,19 +238,58 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .about("verify the consistency of yet-to-be-processed bookmark log entries"),
         );
 
-    let add_public_phases = SubCommand::with_name(ADD_PUBLIC_PHASES)
-        .about("mark mercurial commits as public from provided new-line separated list")
-        .arg(
-            Arg::with_name("input-file")
-                .help("new-line separated mercurial public commits")
-                .required(true)
-                .index(1),
+    let phases = SubCommand::with_name(PHASES)
+        .about("commands to work with phases")
+        .subcommand(
+            SubCommand::with_name(ADD_PUBLIC_PHASES)
+                .about("mark mercurial commits as public from provided new-line separated list")
+                .arg(
+                    Arg::with_name("input-file")
+                        .help("new-line separated mercurial public commits")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("chunk-size")
+                        .help("partition input file to chunks of specified size")
+                        .long("chunk-size")
+                        .takes_value(true),
+                ),
         )
-        .arg(
-            Arg::with_name("chunk-size")
-                .help("partition input file to chunks of specified size")
-                .long("chunk-size")
-                .takes_value(true),
+        .subcommand(
+            SubCommand::with_name(FETCH_PHASE)
+                .about("fetch phase of a commit")
+                .arg(
+                    Arg::with_name("changeset-type")
+                        .long("changeset-type")
+                        .short("c")
+                        .takes_value(true)
+                        .possible_values(&["bonsai", "hg"])
+                        .required(false)
+                        .help(
+                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
+                        ),
+                )
+                .arg(
+                    Arg::with_name("hash")
+                        .help("changeset hash")
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(LIST_PUBLIC)
+                .arg(
+                    Arg::with_name("changeset-type")
+                        .long("changeset-type")
+                        .short("c")
+                        .takes_value(true)
+                        .possible_values(&["bonsai", "hg"])
+                        .required(false)
+                        .help(
+                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
+                        ),
+                )
+                .about("List all public commits"),
         );
 
     let redaction = SubCommand::with_name(REDACTION)
@@ -321,9 +360,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(skiplist)
         .subcommand(convert)
         .subcommand(hg_sync)
-        .subcommand(add_public_phases)
         .subcommand(redaction)
         .subcommand(filenodes::build_subcommand(FILENODES))
+        .subcommand(phases)
         .subcommand(filestore::build_subcommand(FILESTORE))
 }
 
@@ -349,10 +388,10 @@ fn main() -> ExitCode {
         }
         (SKIPLIST, Some(sub_m)) => subcommand_skiplist(logger, &matches, sub_m),
         (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
-        (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
         (REDACTION, Some(sub_m)) => subcommand_redaction(logger, &matches, sub_m),
         (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
         (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
+        (PHASES, Some(sub_m)) => phases::subcommand_phases(logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 
