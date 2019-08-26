@@ -405,7 +405,7 @@ impl Tree {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
             let child = match cursor {
-                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Leaf(_) => return Ok(None),
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
                     let links = entry.get_links(&self.store, parent)?;
@@ -779,8 +779,8 @@ mod tests {
     fn test_get_with_file_parent() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo"), meta("10")).unwrap();
-        assert!(tree.get(repo_path("foo/bar")).is_err());
-        assert!(tree.get(repo_path("foo/bar/baz")).is_err());
+        assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("foo/bar/baz")).unwrap(), None);
     }
 
     #[test]

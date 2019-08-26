@@ -293,7 +293,7 @@ py_class!(class treemanifest |py| {
     def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
-        match tree.get(&path).map_pyerr::<exc::RuntimeError>(py)? {
+        match tree.get_file(&path).map_pyerr::<exc::RuntimeError>(py)? {
             Some(_) => Ok(true),
             None => Ok(false),
         }
