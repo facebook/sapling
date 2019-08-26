@@ -230,6 +230,23 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    def matches(&self, pymatcher: PyObject) -> PyResult<PyObject> {
+        let manifestmod = py.import("edenscm.mercurial.manifest")?;
+        let manifestdict = manifestmod.get(py, "manifestdict")?;
+        let result = manifestdict.call(py, NoArgs, None)?;
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
+            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let pypath = path_to_pybytes(py, &path);
+            let pynode = node_to_pybytes(py, file_metadata.node);
+            result.call_method(py, "__setitem__", (pypath, pynode), None)?;
+            let pypath = path_to_pybytes(py, &path);
+            let pyflags = file_type_to_pystring(py, file_metadata.file_type);
+            result.call_method(py, "setflag", (pypath, pyflags), None)?;
+        }
+        Ok(result)
+    }
+
     def __setitem__(&self, path: &PyBytes, binnode: &PyBytes) -> PyResult<()> {
         let mut tree = self.underlying(py).borrow_mut();
         let repo_path = pybytes_to_path(py, path);
