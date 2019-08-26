@@ -387,7 +387,7 @@ class basectx(object):
         return patch.diff(self._repo, ctx2, self, match=match, opts=diffopts)
 
     def dirs(self):
-        return self._manifest.dirs()
+        return util.dirs(self._manifest)
 
     def hasdir(self, dir):
         return self._manifest.hasdir(dir)

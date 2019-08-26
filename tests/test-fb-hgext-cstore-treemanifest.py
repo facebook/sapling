@@ -576,15 +576,6 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertFalse("abc" in a)
         self.assertFalse(None in a)
 
-    def testDirs(self):
-        a = cstore.treemanifest(FakeDataStore())
-        zflags = hashflags()
-        a.set("abc/z", *zflags)
-
-        dirs = a.dirs()
-        self.assertTrue("abc" in dirs)
-        self.assertFalse("abc/z" in dirs)
-
     def testNonZero(self):
         a = cstore.treemanifest(FakeDataStore())
         self.assertFalse(bool(a))

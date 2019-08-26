@@ -416,15 +416,6 @@ static PyObject* treemanifest_keys(py_treemanifest* self) {
   return result;
 }
 
-static PyObject* treemanifest_dirs(py_treemanifest* self) {
-  PythonObj module = PyImport_ImportModule("edenscm.mercurial.util");
-  PythonObj dirstype = module.getattr("dirs");
-
-  PyObject* args = Py_BuildValue("(O)", self);
-  PythonObj result = dirstype.call(args);
-  return result.returnval();
-}
-
 static PyObject*
 treemanifest_diff(PyObject* o, PyObject* args, PyObject* kwargs) {
   py_treemanifest* self = (py_treemanifest*)o;
@@ -1635,10 +1626,6 @@ static PyMethodDef treemanifest_methods[] = {
      (PyCFunction)treemanifest_diff,
      METH_VARARGS | METH_KEYWORDS,
      "performs a diff of the given two manifests\n"},
-    {"dirs",
-     (PyCFunction)treemanifest_dirs,
-     METH_NOARGS,
-     "gets a collection of all the directories in this manifest"},
     {"filesnotin",
      (PyCFunction)treemanifest_filesnotin,
      METH_VARARGS | METH_KEYWORDS,
