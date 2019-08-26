@@ -236,6 +236,11 @@ rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
+# Use ld.gold on Linux to improve build time.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-fuse-ld=gold"]
+
 [build]
 """
         config += 'target-dir = "{}"\n'.format(self.get_cargo_target())
