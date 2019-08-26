@@ -113,8 +113,7 @@ impl Manifest for Tree {
         Ok(())
     }
 
-    // TODO: return Fallible<Option<FileMetadata>>
-    fn remove(&mut self, path: &RepoPath) -> Fallible<()> {
+    fn remove(&mut self, path: &RepoPath) -> Fallible<Option<FileMetadata>> {
         // The return value lets us know if there are no more files in the subtree and we should be
         // removing it.
         fn do_remove<'a, I>(store: &InnerStore, cursor: &mut Link, iter: &mut I) -> Fallible<bool>
@@ -127,9 +126,7 @@ impl Manifest for Tree {
                         // We reached the file that we want to remove.
                         Ok(true)
                     } else {
-                        // TODO: add directory to message.
-                        // It turns out that the path we were asked to remove is a directory.
-                        Err(format_err!("Asked to remove a directory."))
+                        unreachable!("Unexpected directory found while remove.");
                     }
                 }
                 Some((parent, component)) => {
@@ -147,12 +144,16 @@ impl Manifest for Tree {
                 }
             }
         }
-        do_remove(
-            &self.store,
-            &mut self.root,
-            &mut path.parents().zip(path.components()),
-        )?;
-        Ok(())
+        if let Some(file_metadata) = self.get_file(path)? {
+            do_remove(
+                &self.store,
+                &mut self.root,
+                &mut path.parents().zip(path.components()),
+            )?;
+            Ok(Some(file_metadata))
+        } else {
+            Ok(None)
+        }
     }
 
     fn flush(&mut self) -> Fallible<Node> {
@@ -791,29 +792,35 @@ mod tests {
         tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
 
-        assert!(tree.remove(repo_path("a1")).is_err());
-        assert!(tree.remove(repo_path("a1/b1")).is_err());
-        assert!(tree.remove(repo_path("a1/b1/c1/d1/e1")).is_err());
-        tree.remove(repo_path("a1/b1/c1/d1")).unwrap();
-        tree.remove(repo_path("a3")).unwrap(); // does nothing
-        tree.remove(repo_path("a1/b3")).unwrap(); // does nothing
-        tree.remove(repo_path("a1/b1/c1/d2")).unwrap(); // does nothing
-        tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(); // does nothing
-        assert!(tree.remove(RepoPath::empty()).is_err());
+        assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b1")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(), None);
+        assert_eq!(
+            tree.remove(repo_path("a1/b1/c1/d1")).unwrap(),
+            Some(meta("10"))
+        );
+        assert_eq!(tree.remove(repo_path("a3")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b3")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b1/c1/d2")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(), None);
+        assert_eq!(tree.remove(RepoPath::empty()).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1/b1/c1/d1")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
             Some(FsNode::File(meta("20")))
         );
-        tree.remove(repo_path("a1/b2")).unwrap();
+        assert_eq!(tree.remove(repo_path("a1/b2")).unwrap(), Some(meta("20")));
         assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
 
         assert_eq!(
             tree.get(repo_path("a2/b2/c2")).unwrap(),
             Some(FsNode::File(meta("30")))
         );
-        tree.remove(repo_path("a2/b2/c2")).unwrap();
+        assert_eq!(
+            tree.remove(repo_path("a2/b2/c2")).unwrap(),
+            Some(meta("30"))
+        );
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
         assert_eq!(
@@ -843,14 +850,14 @@ mod tests {
             .unwrap();
         let mut tree = Tree::durable(Arc::new(store), node("1"));
 
-        assert!(tree.remove(repo_path("a1")).is_err());
-        tree.remove(repo_path("a1/b1")).unwrap();
+        assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
+        assert_eq!(tree.remove(repo_path("a1/b1")).unwrap(), Some(meta("11")));
         assert_eq!(tree.get(repo_path("a1/b1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
             Some(FsNode::File(meta("12")))
         );
-        tree.remove(repo_path("a1/b2")).unwrap();
+        assert_eq!(tree.remove(repo_path("a1/b2")).unwrap(), Some(meta("12")));
         assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
         assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
@@ -859,7 +866,7 @@ mod tests {
             tree.get(repo_path("a2")).unwrap(),
             Some(FsNode::File(meta("20")))
         );
-        tree.remove(repo_path("a2")).unwrap();
+        assert_eq!(tree.remove(repo_path("a2")).unwrap(), Some(meta("20")));
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
         assert_eq!(

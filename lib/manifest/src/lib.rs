@@ -37,7 +37,7 @@ pub trait Manifest {
 
     /// Removes a file from the manifest (equivalent to removing it from the repository).
     /// A call with a file path that does not exist in the manifest is a no-op.
-    fn remove(&mut self, file_path: &RepoPath) -> Fallible<()>;
+    fn remove(&mut self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>>;
 
     /// Persists the manifest so that it can be retrieved at a later time. Returns a note
     /// representing the identifier for saved manifest.
