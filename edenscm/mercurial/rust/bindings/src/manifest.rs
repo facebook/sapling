@@ -9,7 +9,7 @@ use bytes::Bytes;
 use cpython::*;
 use failure::Fallible;
 
-use cpython_ext::{pyset_add, pyset_new, vec_to_pyobj};
+use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
 use manifest::{self, DiffType, FileMetadata, FileType, FsNode, Manifest};
@@ -128,7 +128,7 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
-    def text(&self) -> PyResult<PyObject> {
+    def text(&self) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
@@ -141,7 +141,8 @@ py_class!(class treemanifest |py| {
             ));
         }
         lines.sort();
-        Ok(vec_to_pyobj(py, lines.join("").into()))
+        // TODO: Optimize this so that the string does not get copied.
+        Ok(PyBytes::new(py, lines.concat().as_bytes()))
     }
 
     def set(&self, path: &PyBytes, binnode: &PyBytes, flag: &PyString) -> PyResult<PyObject> {
@@ -260,6 +261,16 @@ py_class!(class treemanifest |py| {
         }
     }
 
+    def keys(&self) -> PyResult<Vec<PyBytes>> {
+        let mut result = Vec::new();
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&AlwaysMatcher::new()) {
+            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &path));
+        }
+        Ok(result)
+    }
+
     // iterator stuff
 
     def __contains__(&self, key: &PyBytes) -> PyResult<bool> {
@@ -271,7 +282,17 @@ py_class!(class treemanifest |py| {
         }
     }
 
-    def iteritems(&self) -> PyResult<Vec<(PyBytes, PyBytes, PyString)>> {
+    def __iter__(&self) -> PyResult<PyObject> {
+        let mut result = Vec::new();
+        let tree = self.underlying(py).borrow();
+        for entry in tree.files(&AlwaysMatcher::new()) {
+            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &path));
+        }
+        vec_to_iter(py, result)
+    }
+
+    def iteritems(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
@@ -279,21 +300,20 @@ py_class!(class treemanifest |py| {
             let tuple = (
                 path_to_pybytes(py, &path),
                 node_to_pybytes(py, file_metadata.node),
-                file_type_to_pystring(py, file_metadata.file_type),
             );
             result.push(tuple);
         }
-        Ok(result)
+        vec_to_iter(py, result)
     }
 
-    def iterkeys(&self) -> PyResult<Vec<PyBytes>> {
+    def iterkeys(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
             result.push(path_to_pybytes(py, &path));
         }
-        Ok(result)
+        vec_to_iter(py, result)
     }
 
     def finalize(
@@ -331,6 +351,11 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 });
+
+fn vec_to_iter<T: ToPyObject>(py: Python, items: Vec<T>) -> PyResult<PyObject> {
+    let list: PyList = items.into_py_object(py);
+    list.into_object().call_method(py, "__iter__", NoArgs, None)
+}
 
 fn file_metadata_to_py_tuple(
     py: Python,
