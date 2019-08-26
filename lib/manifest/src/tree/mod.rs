@@ -16,7 +16,7 @@ use std::{
 
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{bail, format_err, Fallible};
+use failure::{bail, Fallible};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::{DirectoryMatch, Matcher};
@@ -83,20 +83,52 @@ impl Manifest for Tree {
     }
 
     fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()> {
-        let (parent, last_component) = match path.split_last_component() {
-            Some(v) => v,
-            None => bail!("Cannot insert file metadata for repository root"),
-        };
+        let mut cursor = &self.root;
+        let mut must_insert = false;
+        for (parent, component) in path.parents().zip(path.components()) {
+            let child = match cursor {
+                Leaf(_) => bail!(
+                    "Asked to insert '{}' but '{}' is already a file.",
+                    path,
+                    parent
+                ),
+                Ephemeral(links) => links.get(component),
+                Durable(ref entry) => {
+                    let links = entry.get_links(&self.store, parent)?;
+                    links.get(component)
+                }
+            };
+            match child {
+                None => {
+                    must_insert = true;
+                    break;
+                }
+                Some(link) => cursor = link,
+            }
+        }
+        if must_insert == false {
+            match cursor {
+                Leaf(existing_metadata) => {
+                    if *existing_metadata == file_metadata {
+                        return Ok(()); // nothing to do
+                    }
+                }
+                Ephemeral(_) | Durable(_) => {
+                    bail!("Asked to insert '{}' but it is already a directory.", path);
+                }
+            }
+        }
+        let (path_parent, last_component) = path.split_last_component().unwrap();
         let mut cursor = &mut self.root;
-        for (cursor_parent, component) in parent.parents().zip(parent.components()) {
-            // TODO: only convert to ephemeral when a mutation takes place.
+        // unwrap is fine because root would have been a directory
+        for (parent, component) in path_parent.parents().zip(path_parent.components()) {
             cursor = cursor
-                .mut_ephemeral_links(&self.store, cursor_parent)?
+                .mut_ephemeral_links(&self.store, parent)?
                 .entry(component.to_owned())
                 .or_insert_with(|| Ephemeral(BTreeMap::new()));
         }
         match cursor
-            .mut_ephemeral_links(&self.store, parent)?
+            .mut_ephemeral_links(&self.store, path_parent)?
             .entry(last_component.to_owned())
         {
             Entry::Vacant(entry) => {
@@ -106,7 +138,7 @@ impl Manifest for Tree {
                 if let Leaf(ref mut store_ref) = entry.get_mut() {
                     *store_ref = file_metadata;
                 } else {
-                    bail!("Encountered directory where file was expected");
+                    unreachable!("Unexpected directory found while insert.");
                 }
             }
         }
@@ -703,6 +735,22 @@ mod tests {
             Some(meta("10"))
         );
         assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
+
+        assert_eq!(
+            format!(
+                "{}",
+                tree.insert(repo_path_buf("foo/bar/error"), meta("40"))
+                    .unwrap_err()
+            ),
+            "Asked to insert 'foo/bar/error' but 'foo/bar' is already a file.",
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                tree.insert(repo_path_buf("foo"), meta("50")).unwrap_err()
+            ),
+            "Asked to insert 'foo' but it is already a directory.",
+        );
     }
 
     #[test]
