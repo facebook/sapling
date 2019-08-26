@@ -15,12 +15,21 @@ use futures::{
     stream, Future, IntoFuture, Stream,
 };
 use futures_ext::{bounded_traversal, FutureExt, StreamExt};
+use futures_stats::Timed;
 use mononoke_types::ChangesetId;
+use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
+use time_ext::DurationExt;
 use topo_sort::sort_topological;
+
+define_stats! {
+    prefix = "mononoke.derived_data";
+    derived_data_latency:
+        dynamic_timeseries("{}.deriving.latency_ms", (derived_data_type: &'static str); AVG),
+}
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
@@ -30,7 +39,7 @@ use topo_sort::sort_topological;
 /// TODO(T47650184) - log to scuba and ods how long it took to generate derived data
 pub(crate) fn derive_impl<
     Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -100,7 +109,7 @@ fn derive_may_panic<Derived, Mapping>(
 ) -> impl Future<Item = (), Error = Error>
 where
     Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 {
     let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id.clone());
 
@@ -160,6 +169,14 @@ where
                                                 )
                                                 .and_then(move |derived| {
                                                     derived_mapping.put(ctx, bcs_id, derived)
+                                                })
+                                                .timed(move |stats, _| {
+                                                    STATS::derived_data_latency.add_value(
+                                                        stats.completion_time.as_millis_unchecked()
+                                                            as i64,
+                                                        (Derived::NAME,),
+                                                    );
+                                                    Ok(())
                                                 })
                                                 .map(|_| Loop::Break(()))
                                                 .left_future()
