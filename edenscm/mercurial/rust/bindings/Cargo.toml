@@ -9,7 +9,7 @@ name = "bindings"
 crate-type = ["cdylib"]
 
 [profile.release]
-lto = "thin"
+lto = false
 
 [dependencies]
 blackbox = { path = "../../../../lib/blackbox" }
