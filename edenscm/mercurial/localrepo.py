@@ -2259,19 +2259,34 @@ class localrepository(object):
                 # check in files
                 added = []
                 changed = []
-                removed = list(ctx.removed())
+
+                removed = []
+                drop = []
+
+                def handleremove(f):
+                    if f in m1 or f in m2:
+                        removed.append(f)
+                        if f in m:
+                            del m[f]
+                            drop.append(f)
+
+                for f in ctx.removed():
+                    handleremove(f)
+                for f in sorted(ctx.modified() + ctx.added()):
+                    if ctx[f] is None:
+                        # in memctx this means removal
+                        handleremove(f)
+                    else:
+                        added.append(f)
+
                 linkrev = len(self)
                 self.ui.note(_("committing files:\n"))
-                for f in sorted(ctx.modified() + ctx.added()):
+                for f in added:
                     self.ui.note(f + "\n")
                     try:
                         fctx = ctx[f]
-                        if fctx is None:
-                            removed.append(f)
-                        else:
-                            added.append(f)
-                            m[f] = self._filecommit(fctx, m1, m2, linkrev, trp, changed)
-                            m.setflag(f, fctx.flags())
+                        m[f] = self._filecommit(fctx, m1, m2, linkrev, trp, changed)
+                        m.setflag(f, fctx.flags())
                     except OSError:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
@@ -2283,10 +2298,8 @@ class localrepository(object):
 
                 # update manifest
                 self.ui.note(_("committing manifest\n"))
-                removed = [f for f in sorted(removed) if f in m1 or f in m2]
-                drop = [f for f in removed if f in m]
-                for f in drop:
-                    del m[f]
+                removed = sorted(removed)
+                drop = sorted(drop)
                 if added or drop:
                     mn = mctx.write(
                         trp, linkrev, p1.manifestnode(), p2.manifestnode(), added, drop

@@ -81,9 +81,9 @@ Sync Import
   latest change list number 4
   1 added files
   0 removed files
+  file: //depot/Main/Outside/a, src: * (glob)
   committing files:
   Main/Outside/a
-  file: //depot/Main/Outside/a, src: * (glob)
   committing manifest
   committing changelog
 

@@ -52,11 +52,11 @@ Sync Commit
   loading changelist numbers.
   2 changelists to import.
   importing CL1
+  file: //depot/Main/a, src: * (glob)
+  file: //depot/Main/largefile, src: * (glob)
   committing files:
   Main/a
-  file: //depot/Main/a, src: * (glob)
   Main/largefile
-  file: //depot/Main/largefile, src: * (glob)
   committing manifest
   committing changelog
   largefile: Main/largefile, oid: 37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9
@@ -94,11 +94,11 @@ Sync Commit
   latest change list number 3
   2 added files
   0 removed files
+  file: //depot/Outside/anotherlargefile, src: * (glob)
+  file: //depot/Outside/b, src: * (glob)
   committing files:
   Outside/anotherlargefile
-  file: //depot/Outside/anotherlargefile, src: * (glob)
   Outside/b
-  file: //depot/Outside/b, src: * (glob)
   committing manifest
   committing changelog
   largefile: Outside/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c

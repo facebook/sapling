@@ -102,19 +102,19 @@ Run seqimport limiting to one changelist
   3 changelists to import.
   importing 1 only because of --limit.
   importing CL1
+  file: //depot/Main/a, src: * (glob)
+  file: //depot/Main/b, src: * (glob)
+  file: //depot/Main/kw, src: * (glob)
+  file: //depot/Main/symlink, src: * (glob)
+  file: //depot/Main/symlinktosymlink, src: * (glob)
+  file: //depot/Main/x, src: * (glob)
   committing files:
   Main/a
-  file: //depot/Main/a, src: * (glob)
   Main/b
-  file: //depot/Main/b, src: * (glob)
   Main/kw
-  file: //depot/Main/kw, src: * (glob)
   Main/symlink
-  file: //depot/Main/symlink, src: * (glob)
   Main/symlinktosymlink
-  file: //depot/Main/symlinktosymlink, src: * (glob)
   Main/x
-  file: //depot/Main/x, src: * (glob)
   committing manifest
   committing changelog
   writing metadata to sqlite
@@ -154,22 +154,22 @@ Run seqimport again for up to 50 changelists
   2 changelists to import.
   importing CL2
   file: //depot/Main/b, src: * (glob)
+  file: //depot/Main/amove, src: * (glob)
+  file: //depot/Main/c, src: * (glob)
   committing files:
   Main/amove
-  file: //depot/Main/amove, src: * (glob)
    Main/amove: copy Main/a:* (glob)
   Main/b
   Main/c
-  file: //depot/Main/c, src: * (glob)
   committing manifest
   committing changelog
   writing metadata to sqlite
   importing CL3
   file: //depot/Main/symlink, src: * (glob)
   file: //depot/Main/x, src: * (glob)
+  file: //depot/Main/largefile, src: * (glob)
   committing files:
   Main/largefile
-  file: //depot/Main/largefile, src: * (glob)
   Main/symlink
   Main/x
   committing manifest

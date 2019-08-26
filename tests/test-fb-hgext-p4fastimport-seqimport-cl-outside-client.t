@@ -57,15 +57,15 @@ it cannot be used as source for move operation)
   loading changelist numbers.
   2 changelists to import.
   importing CL1
+  file: //depot/foo/a, src: * (glob)
   committing files:
   a
-  file: //depot/foo/a, src: * (glob)
   committing manifest
   committing changelog
   importing CL3
+  file: //depot/foo/b, src: * (glob)
   committing files:
   b
-  file: //depot/foo/b, src: * (glob)
   committing manifest
   committing changelog
 

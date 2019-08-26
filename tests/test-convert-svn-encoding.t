@@ -64,11 +64,11 @@ Convert while testing all possible outputs
   progress: scanning paths: /trunk/\xc3\xa0/e\xcc\x81 1/3 paths (33.33%) (esc)
   progress: scanning paths: /trunk/\xc3\xa9 2/3 paths (66.67%) (esc)
   progress: scanning paths (end)
+  progress: getting files: \xc3\xa0/e\xcc\x81 1/2 files (50.00%) (esc)
+  progress: getting files: \xc3\xa9 2/2 files (100.00%) (esc)
   committing files:
   \xc3\xa0/e\xcc\x81 (esc)
-  progress: getting files: \xc3\xa0/e\xcc\x81 1/2 files (50.00%) (esc)
   \xc3\xa9 (esc)
-  progress: getting files: \xc3\xa9 2/2 files (100.00%) (esc)
   committing manifest
   committing changelog
   progress: getting files (end)
@@ -90,12 +90,12 @@ Convert while testing all possible outputs
   progress: scanning paths (end)
   progress: getting files: \xc3\xa0/e\xcc\x81 1/4 files (25.00%) (esc)
   progress: getting files: \xc3\xa9 2/4 files (50.00%) (esc)
+  progress: getting files: \xc3\xa8 3/4 files (75.00%) (esc)
+  progress: getting files: \xc3\xb9/e\xcc\x81 4/4 files (100.00%) (esc)
   committing files:
   \xc3\xa8 (esc)
-  progress: getting files: \xc3\xa8 3/4 files (75.00%) (esc)
    \xc3\xa8: copy \xc3\xa9:6b67ccefd5ce6de77e7ead4f5292843a0255329f (esc)
   \xc3\xb9/e\xcc\x81 (esc)
-  progress: getting files: \xc3\xb9/e\xcc\x81 4/4 files (100.00%) (esc)
    \xc3\xb9/e\xcc\x81: copy \xc3\xa0/e\xcc\x81:a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
   committing manifest
   committing changelog
