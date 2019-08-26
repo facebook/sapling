@@ -660,14 +660,6 @@ class remotefileslog(filelog.fileslog):
             self.localdatastores, self.localhistorystores, lpackpath
         )
 
-        shallowutil.reportpackmetrics(
-            repo.ui,
-            "filestore",
-            spackcontent,
-            spackmetadata,
-            lpackcontent,
-            lpackmetadata,
-        )
         return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
 
     def makecachestores(self):
