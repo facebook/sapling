@@ -9,6 +9,7 @@
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use heapsize_derive::HeapSizeOf;
+use manifest::Entry;
 use mononoke_types::FileType;
 use quickcheck::{Arbitrary, Gen};
 use serde;
@@ -470,6 +471,24 @@ impl From<HgManifestId> for HgEntryId {
 impl From<(FileType, HgFileNodeId)> for HgEntryId {
     fn from((file_type, filenode_id): (FileType, HgFileNodeId)) -> Self {
         HgEntryId::File(file_type, filenode_id)
+    }
+}
+
+impl From<HgEntryId> for Entry<HgManifestId, (FileType, HgFileNodeId)> {
+    fn from(hg_entry_id: HgEntryId) -> Self {
+        match hg_entry_id {
+            HgEntryId::File(file_type, filenode_id) => Entry::Leaf((file_type, filenode_id)),
+            HgEntryId::Manifest(manifest_id) => Entry::Tree(manifest_id),
+        }
+    }
+}
+
+impl From<Entry<HgManifestId, (FileType, HgFileNodeId)>> for HgEntryId {
+    fn from(entry: Entry<HgManifestId, (FileType, HgFileNodeId)>) -> Self {
+        match entry {
+            Entry::Leaf((file_type, filenode_id)) => HgEntryId::File(file_type, filenode_id),
+            Entry::Tree(manifest_id) => HgEntryId::Manifest(manifest_id),
+        }
     }
 }
 

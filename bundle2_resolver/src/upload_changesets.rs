@@ -7,9 +7,7 @@
 use crate::errors::*;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
-use blobrepo::{
-    BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
-};
+use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset};
 use context::CoreContext;
 use failure::Compat;
 use failure_ext::bail_msg;
@@ -23,7 +21,8 @@ use mercurial_revlog::{
     manifest::{Details, ManifestContent},
 };
 use mercurial_types::{
-    HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
+    blobs::HgBlobEntry, HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
+    NULL_HASH,
 };
 use scuba_ext::ScubaSampleBuilder;
 use std::collections::HashMap;

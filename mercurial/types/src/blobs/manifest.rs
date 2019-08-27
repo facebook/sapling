@@ -6,18 +6,19 @@
 
 //! Root manifest, tree nodes
 
-use crate::errors::*;
-use crate::file::HgBlobEntry;
-use blobstore::Blobstore;
-use context::CoreContext;
-use failure_ext::{bail_msg, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
-use futures::future::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{
+use super::errors::ErrorKind;
+use super::file::HgBlobEntry;
+use crate::{
     nodehash::{HgNodeHash, NULL_HASH},
     FileType, HgBlob, HgEntry, HgEntryId, HgFileNodeId, HgManifest, HgManifestEnvelope,
     HgManifestId, MPathElement, Type,
 };
+use blobstore::{Blobstore, Loadable, LoadableError};
+use context::CoreContext;
+use failure_ext::{bail_msg, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
+use futures::future::{self, Future};
+use futures_ext::{BoxFuture, FutureExt};
+use manifest::{Entry, Manifest};
 use std::{collections::BTreeMap, str, sync::Arc};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -150,9 +151,9 @@ impl BlobManifest {
         ctx: CoreContext,
         blobstore: &Arc<dyn Blobstore>,
         manifestid: HgManifestId,
-    ) -> BoxFuture<Option<Self>, Error> {
+    ) -> impl Future<Item = Option<Self>, Error = Error> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
-            Ok(Some(BlobManifest {
+            future::ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
                 node_id: NULL_HASH,
                 p1: None,
@@ -160,8 +161,7 @@ impl BlobManifest {
                 computed_node_id: NULL_HASH,
                 content: ManifestContent::new_empty(),
             }))
-            .into_future()
-            .boxify()
+            .left_future()
         } else {
             fetch_manifest_envelope_opt(ctx, &blobstore.clone(), manifestid)
                 .and_then({
@@ -176,7 +176,7 @@ impl BlobManifest {
                     manifestid
                 ))
                 .from_err()
-                .boxify()
+                .right_future()
         }
     }
 
@@ -216,6 +216,41 @@ impl BlobManifest {
     #[inline]
     pub fn computed_node_id(&self) -> HgNodeHash {
         self.computed_node_id
+    }
+}
+
+impl Loadable for HgManifestId {
+    type Value = BlobManifest;
+
+    fn load<B: Blobstore + Clone>(
+        &self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, LoadableError> {
+        let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore.clone());
+        BlobManifest::load(ctx, &blobstore, *self)
+            .from_err()
+            .and_then(|value| value.ok_or(LoadableError::Missing))
+            .boxify()
+    }
+}
+
+impl Manifest for BlobManifest {
+    type TreeId = HgManifestId;
+    type LeafId = (FileType, HgFileNodeId);
+
+    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
+        self.content.files.get(name).copied().map(Entry::from)
+    }
+
+    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+        let iter = self
+            .content
+            .files
+            .clone()
+            .into_iter()
+            .map(|(name, hg_entry_id)| (name, Entry::from(hg_entry_id)));
+        Box::new(iter)
     }
 }
 

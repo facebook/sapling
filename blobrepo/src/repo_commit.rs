@@ -26,19 +26,18 @@ use tracing::{trace_args, Traced};
 use blobstore::Blobstore;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
-use mercurial_types::manifest::{self, Content};
-use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus};
-use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 use mercurial_types::{
+    blobs::{HgBlobEntry, HgBlobEnvelope},
+    manifest::{self, Content},
+    manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus},
+    nodehash::{HgFileNodeId, HgManifestId},
     Changeset, HgChangesetId, HgEntry, HgEntryId, HgManifest, HgNodeHash, HgNodeKey, HgParents,
     MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 use stats::define_stats;
 
-use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
-use crate::file::HgBlobEntry;
 use crate::BlobRepo;
 use crate::HgBlobChangeset;
 use blob_changeset::ChangesetMetadata;

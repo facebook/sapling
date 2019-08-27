@@ -4,9 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use super::file::File;
+use crate::{HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath};
 use failure_ext::Result;
-use mercurial_revlog::file::File;
-use mercurial_types::{HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath};
 
 pub trait HgBlobEnvelope {
     fn get_parents(&self) -> HgParents;

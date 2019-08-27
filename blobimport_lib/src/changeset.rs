@@ -28,16 +28,14 @@ use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::{
     BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobMeta, CreateChangeset,
-    HgBlobChangeset, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-    UploadHgTreeEntry,
+    HgBlobChangeset, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 use lfs_import_lib::lfs_upload;
-use mercurial_revlog::{
-    file::{File, LFSContent},
-    manifest, RevlogChangeset, RevlogEntry, RevlogRepo,
-};
+use mercurial_revlog::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
-    HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
+    blobs::{File, HgBlobEntry, LFSContent},
+    HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
+    NULL_HASH,
 };
 use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use phases::Phases;

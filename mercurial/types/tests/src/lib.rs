@@ -7,28 +7,36 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-use std::collections::{BTreeMap, HashSet};
-use std::iter::repeat;
-use std::str::FromStr;
-use std::sync::Arc;
-
 use blobrepo::BlobRepo;
+use bytes::Bytes;
 use context::CoreContext;
 use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
 use maplit::{btreemap, hashset};
-use mercurial_types::manifest::{Content, HgEmptyManifest};
-use mercurial_types::manifest_utils::{
-    changed_entry_stream_with_pruner, diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
-    DeletedPruner, EntryStatus, FilePruner, NoopPruner, Pruner,
-};
-use mercurial_types::nodehash::{HgChangesetId, HgNodeHash};
 use mercurial_types::{
-    Changeset, FileType, HgEntry, HgManifest, MPath, MPathElement, RepoPath, Type, NULL_HASH,
+    blobs::{File, LFSContent, META_MARKER, META_SZ},
+    manifest::{Content, HgEmptyManifest},
+    manifest_utils::{
+        changed_entry_stream_with_pruner, diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
+        DeletedPruner, EntryStatus, FilePruner, NoopPruner, Pruner,
+    },
+    nodehash::{HgChangesetId, HgNodeHash},
+    Changeset, FileBytes, FileType, HgEntry, HgFileNodeId, HgManifest, MPath, MPathElement,
+    RepoPath, Type, NULL_HASH,
 };
-use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
-use mercurial_types_mocks::nodehash;
+use mercurial_types_mocks::{
+    manifest::{ContentFactory, MockEntry, MockManifest},
+    nodehash,
+};
+use mononoke_types::hash::Sha256;
+use quickcheck::quickcheck;
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    iter::repeat,
+    str::FromStr,
+    sync::Arc,
+};
 
 fn get_root_manifest(
     ctx: CoreContext,
@@ -863,4 +871,341 @@ fn changeset_id_display_opt() {
         "1111111111111111111111111111111111111111"
     );
     assert_eq!(format!("{}", HgChangesetId::display_opt(None)), "(none)");
+}
+
+#[test]
+fn extract_meta_sz() {
+    assert_eq!(META_SZ, META_MARKER.len())
+}
+
+#[test]
+fn extract_meta_0() {
+    const DATA: &[u8] = b"foo - no meta";
+
+    assert_eq!(File::extract_meta(DATA), (&[][..], 0));
+}
+
+#[test]
+fn extract_meta_1() {
+    const DATA: &[u8] = b"\x01\n\x01\nfoo - empty meta";
+
+    assert_eq!(File::extract_meta(DATA), (&[][..], 4));
+}
+
+#[test]
+fn extract_meta_2() {
+    const DATA: &[u8] = b"\x01\nabc\x01\nfoo - some meta";
+
+    assert_eq!(File::extract_meta(DATA), (&b"abc"[..], 7));
+}
+
+#[test]
+fn extract_meta_3() {
+    const DATA: &[u8] = b"\x01\nfoo - bad unterminated meta";
+
+    assert_eq!(File::extract_meta(DATA), (&[][..], 2));
+}
+
+#[test]
+fn extract_meta_4() {
+    const DATA: &[u8] = b"\x01\n\x01\n\x01\nfoo - bad unterminated meta";
+
+    assert_eq!(File::extract_meta(DATA), (&[][..], 4));
+}
+
+#[test]
+fn extract_meta_5() {
+    const DATA: &[u8] = b"\x01\n\x01\n";
+
+    assert_eq!(File::extract_meta(DATA), (&[][..], 4));
+}
+
+#[test]
+fn parse_meta_0() {
+    const DATA: &[u8] = b"foo - no meta";
+
+    assert!(File::parse_meta(DATA).is_empty())
+}
+
+#[test]
+fn test_meta_1() {
+    const DATA: &[u8] = b"\x01\n\x01\nfoo - empty meta";
+
+    assert!(File::parse_meta(DATA).is_empty())
+}
+
+#[test]
+fn test_meta_2() {
+    const DATA: &[u8] = b"\x01\nfoo: bar\x01\nfoo - empty meta";
+
+    let kv: Vec<_> = File::parse_meta(DATA).into_iter().collect();
+
+    assert_eq!(kv, vec![(b"foo".as_ref(), b"bar".as_ref())])
+}
+
+#[test]
+fn test_meta_3() {
+    const DATA: &[u8] = b"\x01\nfoo: bar\nblim: blop: blap\x01\nfoo - empty meta";
+
+    let mut kv: Vec<_> = File::parse_meta(DATA).into_iter().collect();
+    kv.as_mut_slice().sort();
+
+    assert_eq!(
+        kv,
+        vec![
+            (b"blim".as_ref(), b"blop: blap".as_ref()),
+            (b"foo".as_ref(), b"bar".as_ref()),
+        ]
+    )
+}
+
+#[test]
+fn test_hash_meta_delimiter_only_0() {
+    const DELIMITER: &[u8] = b"DELIMITER";
+    const DATA: &[u8] = b"DELIMITER\n";
+
+    let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+        .into_iter()
+        .collect();
+    kv.as_mut_slice().sort();
+    assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
+}
+
+#[test]
+fn test_hash_meta_delimiter_only_1() {
+    const DELIMITER: &[u8] = b"DELIMITER";
+    const DATA: &[u8] = b"DELIMITER";
+
+    let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+        .into_iter()
+        .collect();
+    kv.as_mut_slice().sort();
+    assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
+}
+
+#[test]
+fn test_hash_meta_delimiter_short_0() {
+    const DELIMITER: &[u8] = b"DELIMITER";
+    const DATA: &[u8] = b"DELIM";
+
+    let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+        .into_iter()
+        .collect();
+    assert!(kv.as_mut_slice().is_empty())
+}
+
+#[test]
+fn test_hash_meta_delimiter_short_1() {
+    const DELIMITER: &[u8] = b"DELIMITER";
+    const DATA: &[u8] = b"\n";
+
+    let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+        .into_iter()
+        .collect();
+    assert!(kv.as_mut_slice().is_empty())
+}
+
+#[test]
+fn test_parse_to_hash_map_long_delimiter() {
+    const DATA: &[u8] = b"x\nfooDELIMITERbar\nfoo1DELIMITERbar1";
+    const DELIMITER: &[u8] = b"DELIMITER";
+    let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+        .into_iter()
+        .collect();
+    kv.as_mut_slice().sort();
+    assert_eq!(
+        kv,
+        vec![
+            (b"foo".as_ref(), b"bar".as_ref()),
+            (b"foo1".as_ref(), b"bar1".as_ref()),
+        ]
+    )
+}
+
+#[test]
+fn generate_metadata_0() {
+    const FILE_BYTES: &[u8] = b"foobar";
+    let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
+    let mut out: Vec<u8> = vec![];
+    File::generate_metadata(None, &file_bytes, &mut out).expect("Vec::write_all should succeed");
+    assert_eq!(out.as_slice(), &b""[..]);
+
+    let mut out: Vec<u8> = vec![];
+    File::generate_metadata(
+        Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
+        &file_bytes,
+        &mut out,
+    )
+    .expect("Vec::write_all should succeed");
+    assert_eq!(
+        out.as_slice(),
+        &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
+    );
+}
+
+#[test]
+fn generate_metadata_1() {
+    // The meta marker in the beginning should cause metadata to unconditionally be emitted.
+    const FILE_BYTES: &[u8] = b"\x01\nfoobar";
+    let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
+    let mut out: Vec<u8> = vec![];
+    File::generate_metadata(None, &file_bytes, &mut out).expect("Vec::write_all should succeed");
+    assert_eq!(out.as_slice(), &b"\x01\n\x01\n"[..]);
+
+    let mut out: Vec<u8> = vec![];
+    File::generate_metadata(
+        Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
+        &file_bytes,
+        &mut out,
+    )
+    .expect("Vec::write_all should succeed");
+    assert_eq!(
+        out.as_slice(),
+        &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
+    );
+}
+
+#[test]
+fn test_get_lfs_hash_map() {
+    const DATA: &[u8] = b"version https://git-lfs.github.com/spec/v1\noid sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97\nsize 17";
+
+    let mut kv: Vec<_> = File::parse_content_to_lfs_hash_map(DATA)
+        .into_iter()
+        .collect();
+    kv.as_mut_slice().sort();
+
+    assert_eq!(
+        kv,
+        vec![
+            (
+                b"oid".as_ref(),
+                b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+            ),
+            (b"size".as_ref(), b"17".as_ref()),
+            (
+                b"version".as_ref(),
+                b"https://git-lfs.github.com/spec/v1".as_ref(),
+            ),
+        ]
+    )
+}
+
+#[test]
+fn test_get_lfs_struct_0() {
+    let mut kv = HashMap::new();
+    kv.insert(
+        b"version".as_ref(),
+        b"https://git-lfs.github.com/spec/v1".as_ref(),
+    );
+    kv.insert(
+        b"oid".as_ref(),
+        b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+    );
+    kv.insert(b"size".as_ref(), b"17".as_ref());
+    let lfs = File::get_lfs_struct(&kv);
+
+    assert_eq!(
+        lfs.unwrap(),
+        LFSContent::new(
+            "https://git-lfs.github.com/spec/v1".to_string(),
+            Sha256::from_str("27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97")
+                .unwrap(),
+            17,
+            None,
+        )
+    )
+}
+
+#[test]
+fn test_get_lfs_struct_wrong_small_sha256() {
+    let mut kv = HashMap::new();
+    kv.insert(
+        b"version".as_ref(),
+        b"https://git-lfs.github.com/spec/v1".as_ref(),
+    );
+    kv.insert(b"oid".as_ref(), b"sha256:123".as_ref());
+    kv.insert(b"size".as_ref(), b"17".as_ref());
+    let lfs = File::get_lfs_struct(&kv);
+
+    assert_eq!(lfs.is_err(), true)
+}
+
+#[test]
+fn test_get_lfs_struct_wrong_size() {
+    let mut kv = HashMap::new();
+    kv.insert(
+        b"version".as_ref(),
+        b"https://git-lfs.github.com/spec/v1".as_ref(),
+    );
+    kv.insert(
+        b"oid".as_ref(),
+        b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+    );
+    kv.insert(b"size".as_ref(), b"wrong_size_length".as_ref());
+    let lfs = File::get_lfs_struct(&kv);
+
+    assert_eq!(lfs.is_err(), true)
+}
+
+#[test]
+fn test_get_lfs_struct_non_all_mandatory_fields() {
+    let mut kv = HashMap::new();
+    kv.insert(
+        b"oid".as_ref(),
+        b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+    );
+    let lfs = File::get_lfs_struct(&kv);
+
+    assert_eq!(lfs.is_err(), true)
+}
+
+#[test]
+fn test_roundtrip_lfs_content() {
+    let oid = Sha256::from_str("27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97")
+        .unwrap();
+    let size = 10;
+
+    let generated_file = File::generate_lfs_file(oid, size, None).unwrap();
+    let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
+
+    let expected_lfs_struct = LFSContent::new(
+        "https://git-lfs.github.com/spec/v1".to_string(),
+        oid,
+        size,
+        None,
+    );
+    assert_eq!(lfs_struct, expected_lfs_struct)
+}
+
+quickcheck! {
+    fn copy_info_roundtrip(
+        copy_info: Option<(MPath, HgFileNodeId)>,
+        file_bytes: FileBytes
+    ) -> bool {
+        let mut buf = Vec::new();
+        let result = File::generate_metadata(copy_info.as_ref(), &file_bytes, &mut buf)
+            .and_then(|_| {
+                File::extract_copied_from(&buf)
+            });
+        match result {
+            Ok(out_copy_info) => copy_info == out_copy_info,
+            _ => {
+                false
+            }
+        }
+    }
+
+    fn lfs_copy_info_roundtrip(
+        oid: Sha256,
+        size: u64,
+        copy_from: Option<(MPath, HgFileNodeId)>
+    ) -> bool {
+        let result = File::generate_lfs_file(oid, size, copy_from.clone())
+            .and_then(|bytes| File::data_only(bytes).get_lfs_content());
+
+        match result {
+            Ok(result) => result.oid() == oid && result.size() == size && result.copy_from() == copy_from,
+            _ => false,
+        }
+    }
 }

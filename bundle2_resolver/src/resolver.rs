@@ -13,7 +13,7 @@ use crate::stats::*;
 use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use crate::upload_changesets::upload_changeset;
 use ascii::AsciiString;
-use blobrepo::{BlobRepo, ContentBlobInfo, HgBlobEntry};
+use blobrepo::{BlobRepo, ContentBlobInfo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -32,7 +32,7 @@ use mercurial_bundles::{
     PartHeaderType, PartId,
 };
 use mercurial_revlog::changeset::RevlogChangeset;
-use mercurial_types::{HgChangesetId, HgNodeKey, RepoPath};
+use mercurial_types::{blobs::HgBlobEntry, HgChangesetId, HgNodeKey, RepoPath};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use phases::{self, Phases};

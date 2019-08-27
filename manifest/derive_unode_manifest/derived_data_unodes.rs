@@ -142,7 +142,6 @@ pub(crate) fn get_file_changes(
 mod test {
     use super::*;
     use crate::test_utils::iterate_all_entries;
-    use blobrepo::derive_hg_manifest::Id as HgId;
     use bookmarks::BookmarkName;
     use cloned::cloned;
     use fixtures::{
@@ -190,7 +189,7 @@ mod test {
             .and_then({
                 cloned!(ctx, repo);
                 move |root_mf_id| {
-                    iterate_all_entries(ctx, repo, Entry::Tree(HgId::new(root_mf_id)))
+                    iterate_all_entries(ctx, repo, Entry::Tree(root_mf_id))
                         .map(|(path, _)| path)
                         .collect()
                         .map(|mut paths| {

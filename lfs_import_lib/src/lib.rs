@@ -15,7 +15,7 @@ use futures::{
     Future, IntoFuture, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_revlog::file::LFSContent;
+use mercurial_types::blobs::LFSContent;
 use mononoke_types::ContentMetadata;
 use slog::info;
 use std::io::BufReader;

@@ -23,10 +23,9 @@ use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use memblob::LazyMemblob;
-use mercurial_revlog::file::File;
 use mercurial_types::{
-    manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents,
-    MPath, MPathElement, RepoPath,
+    blobs::File, manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
+    HgParents, MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;

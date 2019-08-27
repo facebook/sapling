@@ -5,92 +5,23 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::ErrorKind;
-use crate::file::{fetch_file_envelope, HgBlobEntry};
-use crate::manifest::ManifestContent;
 use crate::repo::{
     ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, format_err, Error};
 use futures::{future, Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
-use manifest::{derive_manifest, Entry, LeafInfo, Manifest, TreeInfo};
-use mercurial_types::{HgEntry, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId};
-use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
+use futures_ext::FutureExt;
+use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
+use mercurial_types::{
+    blobs::{fetch_file_envelope, HgBlobEntry},
+    HgEntry, HgEntryId, HgFileNodeId, HgManifestId,
+};
+use mononoke_types::{FileType, MPath, RepoPath};
 use std::{io::Write, sync::Arc};
-
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
-pub struct Id<T>(T);
-
-impl<T> Id<T> {
-    pub fn new(t: T) -> Self {
-        Self(t)
-    }
-}
-
-impl Loadable for Id<HgManifestId> {
-    type Value = ManifestContent;
-
-    fn load<B: Blobstore + Clone>(
-        &self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
-        let manifest_id = self.0;
-        blobstore
-            .get(ctx, manifest_id.blobstore_key())
-            .from_err()
-            .and_then(move |bytes| match bytes {
-                None => Err(LoadableError::Missing),
-                Some(bytes) => {
-                    let envelope = HgManifestEnvelope::from_blob(bytes.into())
-                        .map_err(LoadableError::Error)?;
-                    ManifestContent::parse(envelope.contents().as_ref())
-                        .map_err(LoadableError::Error)
-                }
-            })
-            .boxify()
-    }
-}
-
-impl Manifest for ManifestContent {
-    type TreeId = Id<HgManifestId>;
-    type LeafId = (FileType, HgFileNodeId);
-
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.files.get(name).map(hg_into_entry)
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let iter = self
-            .files
-            .clone()
-            .into_iter()
-            .map(|(name, hg_entry_id)| (name, hg_into_entry(&hg_entry_id)));
-        Box::new(iter)
-    }
-}
-
-fn hg_into_entry(hg_entry_id: &HgEntryId) -> Entry<Id<HgManifestId>, (FileType, HgFileNodeId)> {
-    match hg_entry_id {
-        HgEntryId::File(file_type, filenode_id) => Entry::Leaf((*file_type, *filenode_id)),
-        HgEntryId::Manifest(manifest_id) => Entry::Tree(Id(*manifest_id)),
-    }
-}
-
-fn hg_parents<T: Copy>(parents: &Vec<T>) -> Result<(Option<T>, Option<T>), Error> {
-    let mut parents = parents.iter();
-    let p1 = parents.next().copied();
-    let p2 = parents.next().copied();
-    if parents.next().is_some() {
-        Err(ErrorKind::TooManyParents.into())
-    } else {
-        Ok((p1, p2))
-    }
-}
 
 /// Derive mercurial manifest from parent manifests and bonsai file changes.
 pub fn derive_hg_manifest(
@@ -100,7 +31,7 @@ pub fn derive_hg_manifest(
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)>,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
-    let parents: Vec<_> = parents.into_iter().map(Id).collect();
+    let parents: Vec<_> = parents.into_iter().collect();
     derive_manifest(
         ctx.clone(),
         blobstore.clone(),
@@ -130,7 +61,7 @@ pub fn derive_hg_manifest(
         },
     )
     .and_then(move |tree_id| match tree_id {
-        Some(tree_id) => future::ok(tree_id.0).left_future(),
+        Some(tree_id) => future::ok(tree_id).left_future(),
         None => {
             // All files have been deleted, generate empty **root** manifest
             let tree_info = TreeInfo {
@@ -138,11 +69,20 @@ pub fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info)
-                .map(|id| id.0)
-                .right_future()
+            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info).right_future()
         }
     })
+}
+
+fn hg_parents<T: Copy>(parents: &Vec<T>) -> Result<(Option<T>, Option<T>), Error> {
+    let mut parents = parents.iter();
+    let p1 = parents.next().copied();
+    let p2 = parents.next().copied();
+    if parents.next().is_some() {
+        Err(ErrorKind::TooManyParents.into())
+    } else {
+        Ok((p1, p2))
+    }
 }
 
 /// This function is used as callback from `derive_manifest` to generate and store manifest
@@ -151,8 +91,8 @@ fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes,
-    tree_info: TreeInfo<Id<HgManifestId>, (FileType, HgFileNodeId)>,
-) -> impl Future<Item = Id<HgManifestId>, Error = Error> {
+    tree_info: TreeInfo<HgManifestId, (FileType, HgFileNodeId)>,
+) -> impl Future<Item = HgManifestId, Error = Error> {
     let TreeInfo {
         subentries,
         path,
@@ -163,7 +103,7 @@ fn create_hg_manifest(
     for (name, subentry) in subentries {
         contents.extend(name.as_ref());
         let (tag, hash) = match subentry {
-            Entry::Tree(manifest_id) => ("t", manifest_id.0.into_nodehash()),
+            Entry::Tree(manifest_id) => ("t", manifest_id.into_nodehash()),
             Entry::Leaf((file_type, filenode_id)) => {
                 let tag = match file_type {
                     FileType::Symlink => "l",
@@ -184,8 +124,8 @@ fn create_hg_manifest(
     hg_parents(&parents)
         .into_future()
         .and_then(move |(p1, p2)| {
-            let p1 = p1.map(|id| id.0.into_nodehash());
-            let p2 = p2.map(|id| id.0.into_nodehash());
+            let p1 = p1.map(|id| id.into_nodehash());
+            let p2 = p2.map(|id| id.into_nodehash());
             UploadHgTreeEntry {
                 upload_node_id: UploadHgNodeHash::Generate,
                 contents: contents.into(),
@@ -207,7 +147,7 @@ fn create_hg_manifest(
                         p2: p2.map(HgFileNodeId::new),
                         copyfrom: None,
                     });
-                    Id(HgManifestId::new(hash))
+                    HgManifestId::new(hash)
                 }
             })
         })

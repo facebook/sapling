@@ -48,6 +48,7 @@
 pub mod bdiff;
 pub mod blob;
 pub mod blobnode;
+pub mod blobs;
 pub mod changeset;
 pub mod delta;
 pub mod delta_apply;
@@ -66,6 +67,7 @@ pub mod remotefilelog;
 pub mod sql_types;
 pub mod utils;
 
+pub use self::manifest::{HgEntry, HgManifest, Type};
 pub use blob::HgBlob;
 pub use blobnode::{calculate_hg_node_id, calculate_hg_node_id_stream, HgBlobNode, HgParents};
 pub use changeset::Changeset;
@@ -77,7 +79,6 @@ pub use envelope::{
 pub use errors::{Error, ErrorKind};
 pub use flags::{parse_rev_flags, RevFlags};
 pub use fsencode::{fncache_fsencode, simple_fsencode};
-pub use manifest::{HgEntry, HgManifest, Type};
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
 // directly on mononoke_types;
 pub use file::FileBytes;

@@ -15,14 +15,15 @@ use futures_ext::{try_boxfuture, FutureExt};
 use blobstore::Blobstore;
 use bonsai_utils;
 use context::CoreContext;
-use mercurial_types::HgFileEnvelope;
-use mercurial_types::{Changeset, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath};
+use mercurial_types::{
+    blobs::HgBlobEnvelope, Changeset, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId, MPath,
+    RepoPath,
+};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
 
-use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
 use crate::BlobRepo;
 use crate::HgBlobChangeset;

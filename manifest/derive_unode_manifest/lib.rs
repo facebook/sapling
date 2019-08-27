@@ -242,7 +242,7 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 mod tests {
     use super::*;
     use crate::test_utils::{get_bonsai_changeset, iterate_all_entries};
-    use blobrepo::{save_bonsai_changesets, BlobManifest};
+    use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use bytes::Bytes;
     use derived_data_unodes::get_file_changes;
@@ -250,7 +250,7 @@ mod tests {
     use fixtures::linear;
     use futures::Stream;
     use maplit::btreemap;
-    use mercurial_types::{Changeset, HgFileNodeId, HgManifestId};
+    use mercurial_types::{blobs::BlobManifest, Changeset, HgFileNodeId, HgManifestId};
     use mononoke_types::{
         BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents, RepoPath,
     };

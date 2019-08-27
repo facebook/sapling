@@ -7,17 +7,10 @@
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes, UnittestOverride};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
-use crate::envelope::HgBlobEnvelope;
 use crate::errors::*;
-use crate::file::{
-    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
-    fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
-    fetch_file_size_from_blobstore, HgBlobEntry,
-};
 use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
-use crate::{BlobManifest, HgBlobChangeset};
+use crate::HgBlobChangeset;
 use blob_changeset::{ChangesetMetadata, HgChangesetContent};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
@@ -46,12 +39,18 @@ use futures_ext::{
 use futures_stats::{FutureStats, Timed};
 use lock_ext::LockExt;
 use maplit::hashmap;
-use mercurial_revlog::file::{File, META_SZ};
-use mercurial_types::manifest::Content;
 use mercurial_types::{
-    calculate_hg_node_id_stream, Changeset, FileBytes, HgBlobNode, HgChangesetId, HgEntry,
-    HgEntryId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifest, HgManifestEnvelopeMut,
-    HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
+    blobs::{
+        fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
+        fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
+        fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
+        fetch_file_size_from_blobstore, BlobManifest, File, HgBlobEntry, HgBlobEnvelope, META_SZ,
+    },
+    calculate_hg_node_id_stream,
+    manifest::Content,
+    Changeset, FileBytes, HgBlobNode, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope,
+    HgFileEnvelopeMut, HgFileNodeId, HgManifest, HgManifestEnvelopeMut, HgManifestId, HgNodeHash,
+    HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,

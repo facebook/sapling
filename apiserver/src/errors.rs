@@ -17,6 +17,7 @@ use serde_derive::Serialize;
 
 use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
+use mercurial_types::blobs::ErrorKind as MercurialBlobError;
 use mononoke_api::legacy::ErrorKind as ApiError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
@@ -137,6 +138,7 @@ impl From<Error> for ErrorKind {
             e: BlobRepoError => ErrorKind::from(e),
             e: ApiError => ErrorKind::from(e),
             e: ReachabilityIndexError => ErrorKind::from(e),
+            e: MercurialBlobError => ErrorKind::from(e),
         };
         ret.unwrap_or_else(|e| ErrorKind::InternalError(e))
     }
@@ -174,9 +176,6 @@ impl From<BlobRepoError> for ErrorKind {
             ChangesetMissing(id) => {
                 ErrorKind::NotFound(id.to_string(), Some(ChangesetMissing(id).into()))
             }
-            HgContentMissing(id, _t) => {
-                ErrorKind::NotFound(id.to_string(), Some(HgContentMissing(id, _t).into()))
-            }
             ManifestMissing(id) => {
                 ErrorKind::NotFound(id.to_string(), Some(ManifestMissing(id).into()))
             }
@@ -197,6 +196,18 @@ impl From<ReachabilityIndexError> for ErrorKind {
             e @ GenerationFetchFailed(_)
             | e @ ParentsFetchFailed(_)
             | e @ UknownSkiplistThriftEncoding => ErrorKind::InternalError(e.into()),
+        }
+    }
+}
+
+impl From<MercurialBlobError> for ErrorKind {
+    fn from(e: MercurialBlobError) -> Self {
+        use self::MercurialBlobError::*;
+        match e {
+            HgContentMissing(id, _t) => {
+                ErrorKind::NotFound(id.to_string(), Some(HgContentMissing(id, _t).into()))
+            }
+            _ => ErrorKind::InternalError(e.into()),
         }
     }
 }

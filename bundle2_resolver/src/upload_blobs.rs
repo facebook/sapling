@@ -11,11 +11,10 @@ use failure_ext::ensure_msg;
 use futures::{future::Shared, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::BlobRepo;
-use blobrepo::{HgBlobEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use blobrepo::{BlobRepo, UploadHgNodeHash, UploadHgTreeEntry};
 use context::CoreContext;
 use mercurial_revlog::manifest::ManifestContent;
-use mercurial_types::{HgNodeHash, HgNodeKey};
+use mercurial_types::{blobs::HgBlobEntry, HgNodeHash, HgNodeKey};
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 

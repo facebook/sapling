@@ -14,18 +14,13 @@
 
 mod bonsai_generation;
 pub mod derive_hg_manifest;
-mod envelope;
-pub mod file;
 pub mod file_history;
 mod filenode_lookup;
-mod manifest;
 mod repo;
 mod repo_commit;
 mod utils;
 
 pub use crate::errors::*;
-pub use crate::file::HgBlobEntry;
-pub use crate::manifest::BlobManifest;
 pub use crate::repo::{
     save_bonsai_changesets, BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset,
     UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,

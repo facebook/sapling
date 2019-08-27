@@ -15,11 +15,10 @@ use futures::{Async, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use crate::errors::*;
-use crate::file;
 use mercurial_types::manifest::Type;
 use mercurial_types::{
-    FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
-    MPath, MPathElement, RepoPath,
+    blobs::file, FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, MPathElement, RepoPath,
 };
 
 use crate::RevlogRepo;

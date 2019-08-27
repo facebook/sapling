@@ -55,22 +55,10 @@ pub enum ErrorKind {
         _0
     )]
     ChangesetDeserializeFailed(String),
-    #[fail(
-        display = "Error while deserializing manifest retrieved from key '{}'",
-        _0
-    )]
-    ManifestDeserializeFailed(String),
-    #[fail(
-        display = "Error while deserializing file node retrieved from key '{}'",
-        _0
-    )]
-    FileNodeDeserializeFailed(String),
     #[fail(display = "Manifest id {} is missing", _0)]
     ManifestMissing(HgManifestId),
     #[fail(display = "Node id {} is missing", _0)]
     NodeMissing(HgNodeHash),
-    #[fail(display = "Mercurial content missing for node {} (type {})", _0, _1)]
-    HgContentMissing(HgNodeHash, Type),
     #[fail(display = "Content missing nodeid {}", _0)]
     ContentMissing(HgNodeHash),
     #[fail(
@@ -158,12 +146,6 @@ pub enum ErrorKind {
     },
     #[fail(display = "Case conflict in a commit")]
     CaseConflict(MPath),
-    // TODO (torozco) T48791324: Remove this once fetch_raw_filenode_bytes is gone from blobrepo.
-    #[fail(display = "Corrupt hg filenode returned: {} != {}", _0, _1)]
-    CorruptHgFileNode {
-        expected: HgFileNodeId,
-        actual: HgFileNodeId,
-    },
     #[fail(display = "Mercurial entry can not have more than two parents")]
     TooManyParents,
 }

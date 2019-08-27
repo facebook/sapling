@@ -19,12 +19,12 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{
-    BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgFileContents,
-    UploadHgFileEntry, UploadHgNodeHash,
+    BlobRepo, ContentBlobInfo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
+    UploadHgNodeHash,
 };
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_revlog::file::File;
 use mercurial_types::{
+    blobs::{File, HgBlobEntry},
     delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
     RevFlags, NULL_HASH,
 };
