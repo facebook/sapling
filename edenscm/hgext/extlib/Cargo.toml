@@ -1,7 +1,0 @@
-[workspace]
-members = [
-    "indexes",
-]
-
-[profile.release]
-lto = "thin"

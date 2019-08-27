@@ -2043,11 +2043,6 @@ if havefb:
     rustvendoredcrates.append(
         RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
     )
-    # Clean up workspace Cargo.lock. They might have stale content that make
-    # complication fail.
-    # Find them using:  rg -l '^\[workspace' `echo **/Cargo.toml
-    for path in ["edenscm/hgext/extlib/Cargo.lock", "lib/Cargo.lock"]:
-        tryunlink(path)
 
 rustextmodules = [
     RustExtension(
