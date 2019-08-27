@@ -5,13 +5,13 @@
 
 //! Rotation support for a set of [`Log`]s.
 
+use crate::errors;
 use crate::lock::ScopedFileLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::utils::{atomic_write, open_dir};
 use bytes::Bytes;
 use failure::Fallible;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
@@ -439,10 +439,19 @@ fn create_empty_log(dir: Option<&Path>, open_options: &OpenOptions, latest: u8) 
     })
 }
 
-fn read_latest(dir: &Path) -> io::Result<u8> {
-    fs::read_to_string(&dir.join(LATEST_FILE))?
-        .parse()
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+fn read_latest(dir: &Path) -> Fallible<u8> {
+    let latest_path = dir.join(LATEST_FILE);
+    let content: String = fs::read_to_string(&latest_path).map_err(|e| {
+        errors::path_data_error(&latest_path, "failed to read").context(failure::Error::from(e))
+    })?;
+    let id: u8 = content.parse().map_err(|e| {
+        errors::path_data_error(
+            &latest_path,
+            format!("failed to parse as u8 integer: {:?}", content),
+        )
+        .context(failure::Error::from(e))
+    })?;
+    Ok(id)
 }
 
 fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec<Log>> {
@@ -466,10 +475,7 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
     }
 
     if logs.is_empty() {
-        Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("no logs are found in {:?}", &dir),
-        ))?
+        Err(errors::path_data_error(&dir, "no valid logs found"))?
     } else {
         Ok(logs)
     }

@@ -32,7 +32,7 @@
 // LittleEndian encoding.
 
 use crate::checksum_table::ChecksumTable;
-use crate::errors::{data_error, parameter_error};
+use crate::errors::{self, data_error, parameter_error, path_data_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedFileLock;
 use crate::utils::{atomic_write, mmap_empty, mmap_readonly, open_dir, xxhash, xxhash32};
@@ -471,7 +471,7 @@ impl Log {
                 pos,
                 meta.primary_len
             );
-            return Err(data_error(msg));
+            return Err(self.data_error(msg));
         }
 
         // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
@@ -550,9 +550,10 @@ impl Log {
         if let Some(ref dir) = self.dir {
             let dir = dir.clone();
             if !self.mem_buf.is_empty() {
-                return Err(parameter_error(
-                    "sync() should be called before finalize_indexes()",
-                ));
+                return Err(errors::ProgrammingError(
+                    "sync() should be called before finalize_indexes()".into(),
+                )
+                .into());
             }
 
             let mut dir_file = open_dir(&dir)?;
@@ -560,9 +561,10 @@ impl Log {
 
             let meta = Self::load_or_create_meta(&dir, false)?;
             if self.meta != meta {
-                return Err(parameter_error(
-                    "callsite should use lock to prevent write race",
-                ));
+                return Err(errors::ProgrammingError(
+                    "callsite should use lock to prevent write race".into(),
+                )
+                .into());
             }
 
             // Flush all indexes.
@@ -609,6 +611,7 @@ impl Log {
                         .key_buf(Some(key_buf.clone()))
                         .open(&tmp.path())?;
                     Self::update_index_for_on_disk_entry_unchecked(
+                        &self.dir,
                         &mut index,
                         def,
                         &self.disk_buf,
@@ -883,6 +886,7 @@ impl Log {
         assert!(self.mem_buf.is_empty());
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             Self::update_index_for_on_disk_entry_unchecked(
+                &self.dir,
                 index,
                 def,
                 &self.disk_buf,
@@ -893,6 +897,7 @@ impl Log {
     }
 
     fn update_index_for_on_disk_entry_unchecked(
+        path: &Option<PathBuf>,
         index: &mut Index,
         def: &IndexDef,
         disk_buf: &Mmap,
@@ -901,7 +906,7 @@ impl Log {
         // The index meta is used to store the next offset the index should be built.
         let mut offset = Self::get_index_log_len(index)?;
         // PERF: might be worthwhile to cache xxhash verification result.
-        while let Some(entry_result) = Self::read_entry_from_buf(disk_buf, offset)? {
+        while let Some(entry_result) = Self::read_entry_from_buf(&path, disk_buf, offset)? {
             let data = entry_result.data;
             for index_output in (def.func)(data) {
                 match index_output {
@@ -948,7 +953,9 @@ impl Log {
                     meta.write_file(&meta_path)?;
                     Ok(meta)
                 } else {
-                    Err(data_error("cannot read meta file").context(err).into())
+                    Err(path_data_error(dir, "cannot read meta file")
+                        .context(err)
+                        .into())
                 }
             }
             Ok(meta) => Ok(meta),
@@ -1048,13 +1055,13 @@ impl Log {
     /// integrity-check failed.
     fn read_entry(&self, offset: u64) -> Fallible<Option<EntryResult>> {
         let result = if offset < self.meta.primary_len {
-            Self::read_entry_from_buf(&self.disk_buf, offset)?
+            Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?
         } else {
             let offset = offset - self.meta.primary_len;
             if offset >= self.mem_buf.len() as u64 {
                 return Ok(None);
             }
-            Self::read_entry_from_buf(&self.mem_buf, offset)?
+            Self::read_entry_from_buf(&self.dir, &self.mem_buf, offset)?
                 .map(|entry_result| entry_result.offset(self.meta.primary_len))
         };
         Ok(result)
@@ -1063,7 +1070,18 @@ impl Log {
     /// Read an entry at the given offset of the given buffer. Verify its integrity. Return the
     /// data, the real data offset, and the next entry offset. Return None if the offset is at
     /// the end of the buffer.  Raise errors if there are integrity check issues.
-    fn read_entry_from_buf(buf: &[u8], offset: u64) -> Fallible<Option<EntryResult>> {
+    fn read_entry_from_buf<'a>(
+        path: &Option<PathBuf>,
+        buf: &'a [u8],
+        offset: u64,
+    ) -> Fallible<Option<EntryResult<'a>>> {
+        let data_error = |msg: String| -> failure::Error {
+            match path {
+                Some(path) => path_data_error(path, msg),
+                None => errors::data_error(msg),
+            }
+        };
+
         if offset == buf.len() as u64 {
             return Ok(None);
         } else if offset > buf.len() as u64 {
@@ -1148,7 +1166,7 @@ impl Log {
     fn maybe_return_index_error(&self) -> Fallible<()> {
         if self.index_corrupted {
             let msg = format!("index is corrupted");
-            Err(data_error(msg))
+            Err(self.data_error(msg))
         } else {
             Ok(())
         }
@@ -1176,6 +1194,15 @@ impl Log {
         index_meta.write_vlq(len).unwrap();
         for index in indexes {
             index.set_meta(&index_meta);
+        }
+    }
+
+    /// Raise [`errors::PathDataError`] with path of this log attached.
+    #[inline(never)]
+    fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
+        match self.dir {
+            Some(ref dir) => path_data_error(dir, message),
+            None => data_error(message),
         }
     }
 }

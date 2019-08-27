@@ -59,12 +59,12 @@ use std::ops::{
     Bound::{self, Excluded, Included, Unbounded},
     Deref, RangeBounds,
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
-use crate::errors::{data_error, parameter_error};
+use crate::errors::{data_error, parameter_error, path_data_error};
 use crate::lock::ScopedFileLock;
 use crate::utils::{mmap_empty, mmap_readonly};
 
@@ -473,7 +473,9 @@ fn extract_key_content(index: &Index, key_offset: Offset) -> Fallible<&[u8]> {
     match typed_offset {
         TypedOffset::Key(x) => Ok(x.key_content(index)?),
         TypedOffset::ExtKey(x) => Ok(x.key_content(index)?),
-        _ => Err(data_error("unexpected key type")),
+        _ => Err(index
+            .data_error(format!("unexpected key type at {}", key_offset.0))
+            .into()),
     }
 }
 
@@ -688,7 +690,9 @@ impl<'a> RangeIter<'a> {
                             });
                             continue;
                         }
-                        Ok(_) => Some(Err(data_error("unexpected type during iteration"))),
+                        Ok(_) => Some(Err(index
+                            .data_error("unexpected type during iteration")
+                            .into())),
                         Err(err) => Some(Err(err)),
                     },
                     Err(err) => Some(Err(err)),
@@ -1411,6 +1415,9 @@ pub struct Index {
     // For efficient and shared random reading.
     buf: Mmap,
 
+    // For error messages.
+    path: PathBuf,
+
     // Logical length. Could be different from `buf.len()`.
     len: u64,
 
@@ -1607,6 +1614,7 @@ impl OpenOptions {
         Ok(Index {
             file: Some(file),
             buf: mmap,
+            path: path.as_ref().to_path_buf(),
             read_only,
             root,
             dirty_radixes,
@@ -1640,6 +1648,7 @@ impl OpenOptions {
         Ok(Index {
             file: None,
             buf: mmap_empty()?,
+            path: PathBuf::new(),
             read_only: self.write == Some(false),
             root,
             dirty_radixes,
@@ -1672,6 +1681,7 @@ impl Index {
         Ok(Index {
             file,
             buf: mmap,
+            path: self.path.clone(),
             read_only: self.read_only,
             root: self.root.clone(),
             dirty_keys: self.dirty_keys.clone(),
@@ -2308,6 +2318,12 @@ impl Index {
     #[inline]
     fn verify_checksum(&self, start: u64, length: u64) -> Fallible<()> {
         verify_checksum(&self.checksum, start, length)
+    }
+
+    /// Raise [`errors::PathDataError`] with path of this index attached.
+    #[inline(never)]
+    fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
+        path_data_error(&self.path, message)
     }
 }
 

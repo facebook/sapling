@@ -255,7 +255,10 @@ impl ChecksumTable {
 
         if len < self.end {
             // Breaks the "append-only" assumption.
-            return Err(data_error("checksum file was truncated"));
+            return Err(errors::path_data_error(
+                &self.path,
+                "file was truncated unexpectedly",
+            ));
         }
 
         let mut checksums = self.checksums.clone();
