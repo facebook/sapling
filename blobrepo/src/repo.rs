@@ -32,12 +32,9 @@ use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{self, once, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{
-    bounded_traversal::bounded_traversal, spawn_future, try_boxfuture, BoxFuture, BoxStream,
-    FutureExt, StreamExt,
-};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
-use lock_ext::LockExt;
+use manifest::{ManifestOps, PathTree};
 use maplit::hashmap;
 use mercurial_types::{
     blobs::{
@@ -54,8 +51,7 @@ use mercurial_types::{
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
-    ContentMetadata, FileChange, FileType, Generation, MPath, MPathElement, MononokeId,
-    RepositoryId, Timestamp,
+    ContentMetadata, FileChange, FileType, Generation, MPath, MononokeId, RepositoryId, Timestamp,
 };
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -64,7 +60,6 @@ use stats::{define_stats, Histogram, Timeseries};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     convert::From,
-    mem,
     sync::{Arc, Mutex},
 };
 use time_ext::DurationExt;
@@ -1108,13 +1103,15 @@ impl BlobRepo {
                                 // For each potential conflict we need to check if it's present in
                                 // child manifest. If it is, then we've got a conflict, otherwise
                                 // this has been deleted and it's no longer a conflict.
-                                repo.find_entries_in_manifest(
-                                    ctx.clone(),
-                                    child_mf_id,
-                                    potential_conflicts,
-                                )
-                                .map(|entries| Loop::Break(!entries.is_empty()))
-                                .boxify()
+                                child_mf_id
+                                    .find_entries(
+                                        ctx.clone(),
+                                        repo.get_blobstore(),
+                                        potential_conflicts,
+                                    )
+                                    .collect()
+                                    .map(|entries| Loop::Break(!entries.is_empty()))
+                                    .boxify()
                             }
                         }
                     },
@@ -1131,17 +1128,13 @@ impl BlobRepo {
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
     ) -> impl Future<Item = HashMap<MPath, HgFileNodeId>, Error = Error> {
-        self.find_entries_in_manifest(ctx, manifest_id, paths)
-            .map(|path_to_entry| {
-                path_to_entry
-                    .into_iter()
-                    .filter_map(|(path, entry_id)| {
-                        entry_id
-                            .to_filenode()
-                            .map(move |(_file_type, filenode_id)| (path, filenode_id))
-                    })
-                    .collect()
+        manifest_id
+            .find_entries(ctx, self.blobstore.clone(), paths)
+            .filter_map(|(path, entry_id)| {
+                let (_file_type, filenode_id) = entry_id.into_leaf()?;
+                Some((path?, filenode_id))
             })
+            .collect_to()
     }
 
     /// Look up manifest entries for multiple paths.
@@ -1154,7 +1147,10 @@ impl BlobRepo {
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
     ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        self.query_manifest(ctx, manifest_id, paths, false)
+        manifest_id
+            .find_entries(ctx, self.blobstore.clone(), paths)
+            .filter_map(|(path, entry)| Some((path?, HgEntryId::from(entry))))
+            .collect_to()
     }
 
     /// Look up manifest entries for every component of multiple paths.
@@ -1170,91 +1166,16 @@ impl BlobRepo {
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
     ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        self.query_manifest(ctx, manifest_id, paths, true)
-    }
-
-    /// Efficiently fetch manifest entries for multiple paths.
-    ///
-    /// This function correctly handles conflicting paths too.
-    fn query_manifest(
-        &self,
-        ctx: CoreContext,
-        manifest_id: HgManifestId,
-        paths: impl IntoIterator<Item = MPath>,
-        select_all_path_components: bool,
-    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        // Note: `children` and `selected` fields are not exclusive, that is
-        //       selected might be true and children is not empty.
-        struct QueryTree {
-            children: HashMap<MPathElement, QueryTree>,
-            selected: bool,
-        }
-
-        impl QueryTree {
-            fn new(selected: bool) -> Self {
-                Self {
-                    children: HashMap::new(),
-                    selected,
-                }
-            }
-
-            fn insert_path(&mut self, path: MPath, select_all: bool) {
-                let mut node = path.into_iter().fold(self, |tree, element| {
-                    tree.children
-                        .entry(element)
-                        .or_insert_with(|| QueryTree::new(select_all))
-                });
-                node.selected = true;
-            }
-
-            fn from_paths(paths: impl IntoIterator<Item = MPath>, select_all: bool) -> Self {
-                let mut tree = Self::new(select_all);
-                paths
-                    .into_iter()
-                    .for_each(|path| tree.insert_path(path, select_all));
-                tree
-            }
-        }
-
-        let output = Arc::new(Mutex::new(HashMap::new()));
-        bounded_traversal(
-            1024,
-            (
-                QueryTree::from_paths(paths, select_all_path_components),
-                manifest_id,
-                None,
-            ),
-            {
-                let repo = self.clone();
-                cloned!(output);
-                move |(QueryTree { children, .. }, manifest_id, path)| {
-                    cloned!(path, output);
-                    repo.get_manifest_by_nodeid(ctx.clone(), manifest_id)
-                        .map(move |manifest| {
-                            let children = children
-                                .into_iter()
-                                .filter_map(|(element, child)| {
-                                    let path = MPath::join_opt_element(path.as_ref(), &element);
-                                    manifest.lookup(&element).and_then(|entry| {
-                                        let entry_id = entry.get_hash();
-                                        if child.selected {
-                                            output.with(|output| {
-                                                output.insert(path.clone(), entry_id)
-                                            });
-                                        }
-                                        entry_id
-                                            .to_manifest()
-                                            .map(|manifest_id| (child, manifest_id, Some(path)))
-                                    })
-                                })
-                                .collect::<Vec<_>>();
-                            ((), children)
-                        })
-                }
-            },
-            |_, _| Ok(()),
-        )
-        .map(move |_| output.with(|output| mem::replace(output, HashMap::new())))
+        let all_paths = paths
+            .into_iter()
+            .map(|path| (path, ()))
+            .collect::<PathTree<()>>()
+            .into_iter()
+            .map(|p| p.0);
+        manifest_id
+            .find_entries(ctx, self.blobstore.clone(), all_paths)
+            .filter_map(|(path, entry)| Some((path?, HgEntryId::from(entry))))
+            .collect_to()
     }
 
     pub fn get_manifest_from_bonsai(
@@ -1296,23 +1217,25 @@ impl BlobRepo {
             }
         }
 
+        let resolve_paths = {
+            cloned!(ctx, self.blobstore);
+            move |maybe_manifest_id: Option<HgManifestId>, paths| match maybe_manifest_id {
+                None => future::ok(HashMap::new()).right_future(),
+                Some(manifest_id) => manifest_id
+                    .find_entries(ctx.clone(), blobstore.clone(), paths)
+                    .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
+                    .collect_to::<HashMap<MPath, HgFileNodeId>>()
+                    .left_future(),
+            }
+        };
+
         // TODO:
         // `derive_manifest` already provides parents for newly created files, so we
         // can remove **all** lookups to files from here, and only leave lookups for
         // files that were copied (i.e bonsai changes that contain `copy_path`)
         let store_file_changes = (
-            manifest_p1
-                .map(|manifest_p1| {
-                    self.find_files_in_manifest(ctx.clone(), manifest_p1, p1_paths)
-                        .left_future()
-                })
-                .unwrap_or_else(|| future::ok(HashMap::new()).right_future()),
-            manifest_p2
-                .map(|manifest_p2| {
-                    self.find_files_in_manifest(ctx.clone(), manifest_p2, p2_paths)
-                        .left_future()
-                })
-                .unwrap_or_else(|| future::ok(HashMap::new()).right_future()),
+            resolve_paths(manifest_p1, p1_paths),
+            resolve_paths(manifest_p2, p2_paths),
         )
             .into_future()
             .traced_with_id(
