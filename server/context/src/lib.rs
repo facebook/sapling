@@ -29,7 +29,6 @@ pub enum Metric {
     EgressBytes,
     IngressBlobstoreBytes,
     EgressTotalManifests,
-    EgressQuicksandManifests,
 }
 
 /// Creates a regional key to be used for load limiting, based on the given prefix.
@@ -49,7 +48,6 @@ struct LoadLimiter {
     egress_bytes: LoadLimitCounter,
     ingress_blobstore_bytes: LoadLimitCounter,
     egress_total_manifests: LoadLimitCounter,
-    egress_quicksand_manifests: LoadLimitCounter,
     category: String,
     limits: MononokeThrottleLimit,
 }
@@ -69,10 +67,6 @@ impl LoadLimiter {
                 category: category.clone(),
                 key: make_limit_key("egress-total-manifests"),
             },
-            egress_quicksand_manifests: LoadLimitCounter {
-                category: category.clone(),
-                key: make_limit_key("egress-quicksand-manifests"),
-            },
             category,
             limits,
         }
@@ -85,7 +79,6 @@ impl LoadLimiter {
             Metric::EgressBytes => &self.egress_bytes,
             Metric::IngressBlobstoreBytes => &self.ingress_blobstore_bytes,
             Metric::EgressTotalManifests => &self.egress_total_manifests,
-            Metric::EgressQuicksandManifests => &self.egress_quicksand_manifests,
         }
     }
 
@@ -98,7 +91,6 @@ impl LoadLimiter {
             Metric::EgressBytes => self.limits.egress_bytes,
             Metric::IngressBlobstoreBytes => self.limits.ingress_blobstore_bytes,
             Metric::EgressTotalManifests => self.limits.total_manifests,
-            Metric::EgressQuicksandManifests => self.limits.quicksand_manifests,
         };
 
         loadlimiter::should_throttle(&self.counter(metric), limit, window)
@@ -115,6 +107,14 @@ impl fmt::Debug for LoadLimiter {
             .field("category", &self.category)
             .field("limits", &self.limits)
             .finish()
+    }
+}
+
+pub fn is_quicksand(ssh_env_vars: &SshEnvVars) -> bool {
+    if let Some(ref ssh_cert_principals) = ssh_env_vars.ssh_cert_principals {
+        ssh_cert_principals.contains("quicksand")
+    } else {
+        false
     }
 }
 
@@ -335,11 +335,7 @@ impl CoreContext {
         &self.inner.ssh_env_vars
     }
     pub fn is_quicksand(&self) -> bool {
-        if let Some(ref ssh_cert_principals) = self.ssh_env_vars().ssh_cert_principals {
-            ssh_cert_principals.contains("quicksand")
-        } else {
-            false
-        }
+        is_quicksand(self.ssh_env_vars())
     }
     pub fn bump_load(&self, metric: Metric, load: LoadCost) {
         if let Some(limiter) = &self.inner.load_limiter {

@@ -469,7 +469,6 @@ impl RepoClient {
                     ctx.bump_load(Metric::EgressTotalManifests, 1.0);
                     STATS::total_tree_count.add_value(1);
                     if ctx.is_quicksand() {
-                        ctx.bump_load(Metric::EgressQuicksandManifests, 1.0);
                         STATS::quicksand_tree_count.add_value(1);
                     }
 
@@ -1256,18 +1255,7 @@ impl HgCommands for RepoClient {
 
         let throttle = self
             .ctx
-            .should_throttle(Metric::EgressTotalManifests, *LOAD_LIMIT_TIMEFRAME)
-            .and_then({
-                cloned!(self.ctx);
-                move |throttle| {
-                    if !throttle && ctx.is_quicksand() {
-                        ctx.should_throttle(Metric::EgressQuicksandManifests, *LOAD_LIMIT_TIMEFRAME)
-                            .left_future()
-                    } else {
-                        future::ok(throttle).right_future()
-                    }
-                }
-            });
+            .should_throttle(Metric::EgressTotalManifests, *LOAD_LIMIT_TIMEFRAME);
 
         let s = self
             .gettreepack_untimed(params)

@@ -31,7 +31,7 @@ use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
 use crate::repo_handlers::RepoHandler;
 
-use context::{CoreContext, Metric};
+use context::{is_quicksand, CoreContext, Metric};
 use hooks::HookManager;
 
 lazy_static! {
@@ -132,9 +132,11 @@ pub fn request_handler(
         .cloned()
         .unwrap_or("".to_string());
 
+    let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
     let load_limiting_config = match load_limiting_config {
         Some((configerator_api, category)) => {
-            loadlimiting_configs(configerator_api, client_hostname).map(|limits| (limits, category))
+            loadlimiting_configs(configerator_api, client_hostname, &ssh_env_vars)
+                .map(|limits| (limits, category))
         }
         None => None,
     };
@@ -146,7 +148,7 @@ pub fn request_handler(
         wireproto_scribe_category,
         trace.clone(),
         preamble.misc.get("unix_username").cloned(),
-        SshEnvVars::from_map(&preamble.misc),
+        ssh_env_vars,
         load_limiting_config,
     );
 
@@ -211,7 +213,10 @@ pub fn request_handler(
 fn loadlimiting_configs(
     configerator_api: Arc<ConfigeratorAPI>,
     client_hostname: String,
+    ssh_env_vars: &SshEnvVars,
 ) -> Option<MononokeThrottleLimit> {
+    let is_quicksand = is_quicksand(&ssh_env_vars);
+
     let data = configerator_api
         .get_entity(CONFIGERATOR_LIMITS_CONFIG, CONFIGERATOR_TIMEOUT)
         .ok();
@@ -232,15 +237,21 @@ fn loadlimiting_configs(
             .or(Some(&config.defaults))
             .copied();
 
+        let multiplier = if is_quicksand {
+            region_percentage / 100.0 * config.quicksand_multiplier
+        } else {
+            region_percentage / 100.0
+        };
+
         match limit {
             Some(limit) => Some(MononokeThrottleLimit {
-                egress_bytes: limit.egress_bytes * region_percentage / 100.0,
-                ingress_blobstore_bytes: limit.ingress_blobstore_bytes * region_percentage / 100.0,
-                total_manifests: limit.total_manifests * region_percentage / 100.0,
-                quicksand_manifests: limit.quicksand_manifests * region_percentage / 100.0,
-                getfiles_files: limit.getfiles_files * region_percentage / 100.0,
-                getpack_files: limit.getpack_files * region_percentage / 100.0,
-                commits: limit.commits * region_percentage / 100.0,
+                egress_bytes: limit.egress_bytes * multiplier,
+                ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
+                total_manifests: limit.total_manifests * multiplier,
+                quicksand_manifests: limit.quicksand_manifests * multiplier,
+                getfiles_files: limit.getfiles_files * multiplier,
+                getpack_files: limit.getpack_files * multiplier,
+                commits: limit.commits * multiplier,
             }),
             _ => None,
         }
