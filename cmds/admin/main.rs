@@ -25,7 +25,7 @@ use crate::cmdargs::{
     FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE,
     HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
     HG_SYNC_VERIFY, LIST_PUBLIC, PHASES, REDACTION, REDACTION_ADD, REDACTION_LIST,
-    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ,
+    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ, UNODES,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::error::SubcommandError;
@@ -51,6 +51,7 @@ mod hg_sync;
 mod phases;
 mod redaction;
 mod skiplist_subcommand;
+mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
@@ -364,6 +365,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(filenodes::build_subcommand(FILENODES))
         .subcommand(phases)
         .subcommand(filestore::build_subcommand(FILESTORE))
+        .subcommand(subcommand_unodes::subcommand_unodes_build(UNODES))
 }
 
 fn main() -> ExitCode {
@@ -392,6 +394,7 @@ fn main() -> ExitCode {
         (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
         (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
         (PHASES, Some(sub_m)) => phases::subcommand_phases(logger, &matches, sub_m),
+        (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 

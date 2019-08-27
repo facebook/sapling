@@ -31,3 +31,4 @@ pub const REDACTION_ADD: &'static str = "add";
 pub const REDACTION_REMOVE: &'static str = "remove";
 pub const REDACTION_LIST: &'static str = "list";
 pub const SKIPLIST: &'static str = "skiplist";
+pub const UNODES: &'static str = "unodes";
