@@ -259,7 +259,7 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
 mod test {
     use super::*;
 
-    use blobrepo::UnittestOverride;
+    use blobrepo::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
     use failure::err_msg;
@@ -543,7 +543,8 @@ mod test {
         let ctx = CoreContext::test_mock();
         let mut runtime = Runtime::new()?;
         let mapping = Arc::new(TestMapping::new());
-        let repo = linear::getrepo().unittest_override(|_| Arc::new(FailingLease));
+        let repo =
+            linear::getrepo().dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime

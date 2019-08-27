@@ -29,7 +29,7 @@ pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
 pub use crate::repo_commit::compute_changed_files;
-pub use utils::UnittestOverride;
+pub use utils::DangerousOverride;
 
 pub mod internal {
     pub use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};

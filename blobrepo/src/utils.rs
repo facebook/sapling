@@ -105,10 +105,10 @@ impl IncompleteFilenodes {
 
 /// Create new instance of implementing object with overridden field of spcecified type.
 ///
-/// This trait only supposed to be used from unittests, when it is necessary to replace
-/// some of the fields to better tests specific behaviour.
-pub trait UnittestOverride<T> {
-    fn unittest_override<F>(&self, modify: F) -> Self
+/// This override can be very dangerous, it should only be used in unittest, or if you
+/// really know what you are doing.
+pub trait DangerousOverride<T> {
+    fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(T) -> T;
 }

@@ -197,7 +197,7 @@ impl SqlPhases {
             .map(move |rows| rows.into_iter().next().map(|row| row.0))
     }
 
-    fn get_public_raw(
+    pub fn get_public_raw(
         &self,
         repo_id: RepositoryId,
         csids: &Vec<ChangesetId>,

@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes, UnittestOverride};
+use super::utils::{DangerousOverride, IncompleteFilenodeInfo, IncompleteFilenodes};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
@@ -2576,14 +2576,33 @@ where
         .buffer_unordered(100)
 }
 
-impl UnittestOverride<Arc<dyn LeaseOps>> for BlobRepo {
-    fn unittest_override<F>(&self, modify: F) -> Self
+impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn LeaseOps>) -> Arc<dyn LeaseOps>,
     {
         let derived_data_lease = modify(self.derived_data_lease.clone());
         BlobRepo {
             derived_data_lease,
+            ..self.clone()
+        }
+    }
+}
+
+impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
+    {
+        let (blobstore, repoid) = RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(
+            self.blobstore.clone(),
+            self.get_repoid(),
+            modify,
+        )
+        .into_blobrepo_parts();
+        BlobRepo {
+            repoid,
+            blobstore,
             ..self.clone()
         }
     }

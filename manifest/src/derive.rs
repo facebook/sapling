@@ -18,6 +18,7 @@ use std::{
     iter::FromIterator,
     mem,
 };
+use tracing::{trace_args, Traced};
 
 /// Information passed to `create_tree` function when tree node is constructed
 pub struct TreeInfo<TreeId, LeafId> {
@@ -113,7 +114,10 @@ where
             parents: parents.into_iter().map(Entry::Tree).collect(),
         },
         // unfold, all merge logic happens in this unfold function
-        move |merge_node| merge_node.merge(ctx.clone(), blobstore.clone()),
+        {
+            let ctx = ctx.clone();
+            move |merge_node| merge_node.merge(ctx.clone(), blobstore.clone())
+        },
         // fold, this function only creates entries from merge result and already merged subentries
         move |merge_result, subentries| match merge_result {
             MergeResult::Reuse { name, entry } => future::ok(Some((name, entry))).boxify(),
@@ -158,6 +162,7 @@ where
         },
     )
     .map(|result: Option<_>| result.and_then(|(_, entry)| entry.into_tree()))
+    .traced(&ctx.trace(), "derive_manifest", trace_args! {})
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic
