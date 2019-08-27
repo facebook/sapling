@@ -1421,9 +1421,8 @@ pub struct Index {
     // Logical length. Could be different from `buf.len()`.
     len: u64,
 
-    // Whether "file" was opened as read-only.
-    // Only affects "flush". Do not affect in-memory writes.
-    read_only: bool,
+    // OpenOptions
+    open_options: OpenOptions,
 
     // In-memory entries. The root entry is always in-memory.
     root: MemRoot,
@@ -1435,7 +1434,6 @@ pub struct Index {
 
     // Optional checksum table.
     checksum: Checksum,
-    checksum_chunk_size: u64,
 
     // Additional buffer for external keys.
     // Log::sync needs write access to this field.
@@ -1549,6 +1547,7 @@ impl OpenOptions {
     /// properties, [`OpenOptions::open`] returns a "snapshotted" view of the
     /// index. Changes to the filesystem won't change instantiated [`Index`]es.
     pub fn open<P: AsRef<Path>>(&self, path: P) -> Fallible<Index> {
+        let mut open_options = self.clone();
         let open_result = if self.write == Some(false) {
             fs::OpenOptions::new().read(true).open(path.as_ref())
         } else {
@@ -1559,15 +1558,15 @@ impl OpenOptions {
                 .append(true)
                 .open(path.as_ref())
         };
-        let (read_only, mut file) = match self.write {
-            Some(true) => (false, open_result?),
-            Some(false) => (true, open_result?),
+        let mut file = match self.write {
+            Some(true) | Some(false) => open_result?,
             None => {
                 // Fall back to open the file as read-only, automatically.
                 if open_result.is_err() {
-                    (true, fs::OpenOptions::new().read(true).open(path.as_ref())?)
+                    open_options.write = Some(false);
+                    fs::OpenOptions::new().read(true).open(path.as_ref())?
                 } else {
-                    (false, open_result.unwrap())
+                    open_result.unwrap()
                 }
             }
         };
@@ -1615,7 +1614,7 @@ impl OpenOptions {
             file: Some(file),
             buf: mmap,
             path: path.as_ref().to_path_buf(),
-            read_only,
+            open_options,
             root,
             dirty_radixes,
             dirty_links: vec![],
@@ -1623,7 +1622,6 @@ impl OpenOptions {
             dirty_keys: vec![],
             dirty_ext_keys: vec![],
             checksum,
-            checksum_chunk_size,
             key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
             len,
         })
@@ -1649,7 +1647,7 @@ impl OpenOptions {
             file: None,
             buf: mmap_empty()?,
             path: PathBuf::new(),
-            read_only: self.write == Some(false),
+            open_options: self.clone(),
             root,
             dirty_radixes,
             dirty_links: vec![],
@@ -1657,7 +1655,6 @@ impl OpenOptions {
             dirty_keys: vec![],
             dirty_ext_keys: vec![],
             checksum: None,
-            checksum_chunk_size: 0,
             key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
             len: 0,
         })
@@ -1682,7 +1679,7 @@ impl Index {
             file,
             buf: mmap,
             path: self.path.clone(),
-            read_only: self.read_only,
+            open_options: self.open_options.clone(),
             root: self.root.clone(),
             dirty_keys: self.dirty_keys.clone(),
             dirty_ext_keys: self.dirty_ext_keys.clone(),
@@ -1690,7 +1687,6 @@ impl Index {
             dirty_links: self.dirty_links.clone(),
             dirty_radixes: self.dirty_radixes.clone(),
             checksum,
-            checksum_chunk_size: self.checksum_chunk_size,
             key_buf: self.key_buf.clone(),
             len: self.len,
         })
@@ -1736,7 +1732,7 @@ impl Index {
     /// For in-memory-only indexes, this function does nothing and returns 0,
     /// unless read-only was set at open time.
     pub fn flush(&mut self) -> Fallible<u64> {
-        if self.read_only {
+        if self.open_options.write == Some(false) {
             let err: io::Error = io::ErrorKind::PermissionDenied.into();
             return Err(err.into());
         }
@@ -1850,8 +1846,9 @@ impl Index {
             }
 
             if let Some(ref mut table) = self.checksum {
-                debug_assert!(self.checksum_chunk_size > 0);
-                let chunk_size_log = 63 - (self.checksum_chunk_size as u64).leading_zeros();
+                debug_assert!(self.open_options.checksum_chunk_size > 0);
+                let chunk_size_log =
+                    63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
                 table.update(chunk_size_log.into())?;
             }
             self.root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
