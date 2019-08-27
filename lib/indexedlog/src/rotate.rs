@@ -432,7 +432,7 @@ fn create_empty_log(dir: Option<&Path>, open_options: &OpenOptions, latest: u8) 
                 .clone()
                 .create(true)
                 .open(log_path)?;
-            atomic_write(&latest_path, latest_str.as_bytes())?;
+            atomic_write(&latest_path, latest_str.as_bytes(), false)?;
             log
         }
         None => open_options.log_open_options.clone().create_in_memory()?,

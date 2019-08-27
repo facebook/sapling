@@ -216,6 +216,7 @@ pub struct OpenOptions {
     pub(crate) create: bool,
     checksum_type: ChecksumType,
     pub(crate) flush_filter: Option<FlushFilterFunc>,
+    fsync: bool,
 }
 
 pub(crate) type FlushFilterFunc = fn(&FlushFilterContext, &[u8]) -> Fallible<FlushFilterOutput>;
@@ -476,6 +477,11 @@ impl Log {
 
         // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
         primary_file.write_all(&self.mem_buf)?;
+
+        if self.open_options.fsync {
+            primary_file.sync_all()?;
+        }
+
         meta.primary_len += self.mem_buf.len() as u64;
         self.mem_buf.clear();
 
@@ -514,6 +520,7 @@ impl Log {
                 Self::set_index_log_len(indexes.iter_mut(), meta.primary_len);
                 Some(indexes)
             },
+            self.open_options.fsync,
         )?;
 
         self.disk_buf = disk_buf;
@@ -530,8 +537,10 @@ impl Log {
         }
 
         // Step 5: Write the updated meta file.
-        self.meta
-            .write_file(self.dir.as_ref().unwrap().join(META_FILE))?;
+        self.meta.write_file(
+            self.dir.as_ref().unwrap().join(META_FILE),
+            self.open_options.fsync,
+        )?;
 
         Ok(self.meta.primary_len)
     }
@@ -575,7 +584,8 @@ impl Log {
                 self.meta.indexes.insert(name, new_length);
             }
 
-            self.meta.write_file(dir.join(META_FILE))?;
+            self.meta
+                .write_file(dir.join(META_FILE), self.open_options.fsync)?;
         }
         Ok(())
     }
@@ -623,7 +633,8 @@ impl Log {
                 // Before replacing the index, set its "logic length" to 0 so
                 // readers won't get inconsistent view about index length and data.
                 self.meta.indexes.insert(name.to_string(), 0);
-                self.meta.write_file(dir.join(META_FILE))?;
+                self.meta
+                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
 
                 let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                 tmp.persist(&path)?;
@@ -634,7 +645,8 @@ impl Log {
                 table.update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))?;
 
                 self.meta.indexes.insert(name.to_string(), index_len);
-                self.meta.write_file(dir.join(META_FILE))?;
+                self.meta
+                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
             }
         }
 
@@ -703,7 +715,8 @@ impl Log {
                 // Update metadata. Invalidate indexes.
                 self.meta.primary_len = valid_len;
                 self.meta.indexes.clear();
-                self.meta.write_file(dir.join(META_FILE))?;
+                self.meta
+                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
 
                 // Truncate the file!
                 primary_file.seek(SeekFrom::Start(0))?;
@@ -950,7 +963,8 @@ impl Log {
                         primary_len: PRIMARY_START_OFFSET,
                         indexes: BTreeMap::new(),
                     };
-                    meta.write_file(&meta_path)?;
+                    // An empty meta file is easy to recreate. No need to use fsync.
+                    meta.write_file(&meta_path, false)?;
                     Ok(meta)
                 } else {
                     Err(path_data_error(dir, "cannot read meta file")
@@ -973,6 +987,7 @@ impl Log {
         index_defs: &Vec<IndexDef>,
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<Vec<Index>>,
+        fsync: bool,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_buf = match dir {
             Some(dir) => {
@@ -1003,6 +1018,7 @@ impl Log {
                         &def.name,
                         index_len,
                         key_buf.clone(),
+                        fsync,
                     )?);
                 }
                 indexes
@@ -1016,7 +1032,8 @@ impl Log {
                     if index_len > Self::get_index_log_len(index).unwrap_or(0) {
                         // The on-disk index covers more entries. Loading it is probably
                         // better than reusing the existing in-memory index.
-                        *index = Self::load_index(dir, &def.name, index_len, key_buf.clone())?;
+                        *index =
+                            Self::load_index(dir, &def.name, index_len, key_buf.clone(), fsync)?;
                     } else {
                         index.key_buf = key_buf.clone();
                     }
@@ -1033,6 +1050,7 @@ impl Log {
         name: &str,
         len: u64,
         buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
+        fsync: bool,
     ) -> Fallible<Index> {
         match dir {
             Some(dir) => {
@@ -1041,11 +1059,13 @@ impl Log {
                     .checksum_chunk_size(INDEX_CHECKSUM_CHUNK_SIZE)
                     .logical_len(Some(len))
                     .key_buf(Some(buf))
+                    .fsync(fsync)
                     .open(path)
             }
             None => index::OpenOptions::new()
                 .logical_len(Some(len))
                 .key_buf(Some(buf))
+                .fsync(fsync)
                 .create_in_memory(),
         }
     }
@@ -1271,6 +1291,7 @@ impl OpenOptions {
     /// Creates a blank new set of options ready for configuration.
     ///
     /// `create` is initially `false`.
+    /// `fsync` is initially `false`.
     /// `index_defs` is initially empty.
     pub fn new() -> Self {
         Self {
@@ -1278,7 +1299,17 @@ impl OpenOptions {
             index_defs: Vec::new(),
             checksum_type: ChecksumType::Auto,
             flush_filter: None,
+            fsync: false,
         }
+    }
+
+    /// Set fsync behavior.
+    ///
+    /// If true, then [`Log::sync`] will use `fsync` to flush log and index
+    /// data to the physical device before returning.
+    pub fn fsync(mut self, fsync: bool) -> Self {
+        self.fsync = fsync;
+        self
     }
 
     /// Add an index function.
@@ -1364,7 +1395,7 @@ impl OpenOptions {
         };
         let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) =
-            Log::load_log_and_indexes(None, &meta, &self.index_defs, &mem_buf, None)?;
+            Log::load_log_and_indexes(None, &meta, &self.index_defs, &mem_buf, None, self.fsync)?;
 
         Ok(Log {
             dir: None,
@@ -1400,8 +1431,14 @@ impl OpenOptions {
         })?;
 
         let mem_buf = Box::pin(Vec::new());
-        let (disk_buf, indexes) =
-            Log::load_log_and_indexes(Some(dir), &meta, &self.index_defs, &mem_buf, reuse_indexes)?;
+        let (disk_buf, indexes) = Log::load_log_and_indexes(
+            Some(dir),
+            &meta,
+            &self.index_defs,
+            &mem_buf,
+            reuse_indexes,
+            self.fsync,
+        )?;
         let mut log = Log {
             dir: Some(dir.to_path_buf()),
             disk_buf,
@@ -1612,10 +1649,10 @@ impl LogMetadata {
         Self::read(&mut cur)
     }
 
-    pub fn write_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+    pub fn write_file<P: AsRef<Path>>(&self, path: P, fsync: bool) -> io::Result<()> {
         let mut buf = Vec::new();
         self.write(&mut buf)?;
-        atomic_write(path, &buf)?;
+        atomic_write(path, &buf, fsync)?;
         Ok(())
     }
 }
@@ -2370,7 +2407,7 @@ mod tests {
             let dir = tempdir().unwrap();
             let meta = LogMetadata { primary_len, indexes };
             let path = dir.path().join("meta");
-            meta.write_file(&path).expect("write_file");
+            meta.write_file(&path, false).expect("write_file");
             let meta_read = LogMetadata::read_file(&path).expect("read_file");
             meta_read == meta
         }

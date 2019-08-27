@@ -57,6 +57,9 @@ pub struct ChecksumTable {
     buf: Mmap,
     path: PathBuf,
 
+    // Whether fsync is set.
+    fsync: bool,
+
     // The checksum file
     checksum_path: PathBuf,
     chunk_size_log: u32,
@@ -195,12 +198,22 @@ impl ChecksumTable {
             file,
             buf: mmap,
             path: path.as_ref().to_path_buf(),
+            fsync: false,
             chunk_size_log,
             end: chunk_end,
             checksum_path,
             checksums,
             checked: RefCell::new(checked),
         })
+    }
+
+    /// Set fsync behavior.
+    ///
+    /// If true, then [`ChecksumTable::update`] will use `fsync` to make
+    /// sure data reaches the physical device before returning.
+    pub fn fsync(mut self, fsync: bool) -> Self {
+        self.fsync = fsync;
+        self
     }
 
     /// Clone the checksum table.
@@ -211,6 +224,7 @@ impl ChecksumTable {
             file,
             buf: mmap,
             path: self.path.clone(),
+            fsync: self.fsync,
             checksum_path: self.checksum_path.clone(),
             chunk_size_log: self.chunk_size_log,
             end: self.end,
@@ -293,7 +307,7 @@ impl ChecksumTable {
         }
 
         // Write changes to disk
-        atomic_write(&self.checksum_path, &buf)?;
+        atomic_write(&self.checksum_path, &buf, self.fsync)?;
 
         // Update fields
         self.buf = mmap;

@@ -98,11 +98,18 @@ pub fn xxhash32<T: AsRef<[u8]>>(buf: T) -> u32 {
 }
 
 /// Atomically create or replace a file with the given content.
-pub fn atomic_write(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> io::Result<()> {
+pub fn atomic_write(
+    path: impl AsRef<Path>,
+    content: impl AsRef<[u8]>,
+    fsync: bool,
+) -> io::Result<()> {
     let path = path.as_ref();
     let dir = path.parent().expect("path has a parent");
     let mut file = tempfile::NamedTempFile::new_in(dir)?;
     file.as_file_mut().write_all(content.as_ref())?;
+    if fsync {
+        file.as_file_mut().sync_data()?;
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -112,6 +119,9 @@ pub fn atomic_write(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> io::Re
         let permissions = PermissionsExt::from_mode(0o664);
         file.as_file().set_permissions(permissions)?;
     }
-    file.persist(path)?;
+    let file = file.persist(path)?;
+    if fsync {
+        file.sync_all()?;
+    }
     Ok(())
 }

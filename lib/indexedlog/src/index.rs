@@ -1473,6 +1473,7 @@ pub enum InsertKey<'a> {
 #[derive(Clone)]
 pub struct OpenOptions {
     checksum_chunk_size: u64,
+    fsync: bool,
     len: Option<u64>,
     write: Option<bool>,
     key_buf: Option<Arc<dyn ReadonlyBuffer + Send + Sync>>,
@@ -1482,11 +1483,13 @@ impl OpenOptions {
     /// Create [`OpenOptions`] with default configuration:
     /// - no checksum
     /// - no external key buffer
+    /// - no fsync
     /// - read root entry from the end of the file
     /// - open as read-write but fallback to read-only
     pub fn new() -> OpenOptions {
         OpenOptions {
             checksum_chunk_size: 0,
+            fsync: false,
             len: None,
             write: None,
             key_buf: None,
@@ -1502,6 +1505,15 @@ impl OpenOptions {
     /// Disabling checksum can help with performance.
     pub fn checksum_chunk_size(&mut self, checksum_chunk_size: u64) -> &mut Self {
         self.checksum_chunk_size = checksum_chunk_size;
+        self
+    }
+
+    /// Set fsync behavior.
+    ///
+    /// If true, then [`Index::flush`] will use `fsync` to flush data to the
+    /// physical device before returning.
+    pub fn fsync(&mut self, fsync: bool) -> &mut Self {
+        self.fsync = fsync;
         self
     }
 
@@ -1587,7 +1599,7 @@ impl OpenOptions {
 
         let checksum_chunk_size = self.checksum_chunk_size;
         let mut checksum = if checksum_chunk_size > 0 {
-            Some(ChecksumTable::new(&path)?)
+            Some(ChecksumTable::new(&path)?.fsync(self.fsync))
         } else {
             None
         };
@@ -1834,6 +1846,10 @@ impl Index {
             self.root.write_to(&mut buf, &offset_map)?;
             new_len = buf.len() as u64 + len;
             lock.as_mut().write_all(&buf)?;
+
+            if self.open_options.fsync {
+                lock.as_mut().sync_all()?;
+            }
 
             // Remap and update root since length has changed
             let (mmap, mmap_len) = mmap_readonly(lock.as_ref(), None)?;
