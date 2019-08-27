@@ -449,12 +449,6 @@ class JournalEntry(object):
         return command[m.end() :]
 
 
-def _apply_flatmanifest_config(test, config):
-    # flatmanifest is the default mercurial behavior
-    # no additional config settings are required
-    pass
-
-
 def _apply_treemanifest_config(test, config):
     config["extensions"]["fastmanifest"] = ""
     config["extensions"]["treemanifest"] = ""
@@ -480,7 +474,6 @@ def _apply_treeonly_config(test, config):
 
 
 ALL_CONFIGS = {
-    "Flatmanifest": _apply_flatmanifest_config,
     "Treemanifest": _apply_treemanifest_config,
     "TreeOnly": _apply_treeonly_config,
 }
@@ -488,7 +481,7 @@ ALL_CONFIGS = {
 
 def _replicate_hg_test(test_class, *variants):
     if not variants:
-        variants = ("Flatmanifest", "Treemanifest")
+        variants = ("Treemanifest",)
 
     for name in variants:
         config_fn = ALL_CONFIGS[name]

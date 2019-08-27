@@ -12,7 +12,7 @@ from eden.integration.lib.hgrepo import HgRepository
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
-@hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
+@hg_test("Treemanifest", "TreeOnly")
 class StatusTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("hello.txt", "hola")

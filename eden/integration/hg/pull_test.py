@@ -10,7 +10,7 @@ from eden.integration.lib import hgrepo
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
-@hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
+@hg_test("Treemanifest", "TreeOnly")
 class PullTest(EdenHgTestCase):
     server_repo: hgrepo.HgRepository
     commit1: str
