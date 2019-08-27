@@ -110,6 +110,17 @@ def _dolookup(repo, key):
         sha = key[14:]
     else:
         return None
+    if direction == "togit":
+        # we've started recording the hg hash in extras.
+        try:
+            ctx = repo[sha]
+        except error.RepoLookupError as e:
+            if "unknown revision" in str(e):
+                return None
+            raise e
+        fromextra = ctx.extra().get("convert_revision", "")
+        if fromextra:
+            return fromextra
     hggitmap = open(mapfile, "rb")
     for line in hggitmap:
         gitsha, hgsha = line.strip().split(" ", 1)
