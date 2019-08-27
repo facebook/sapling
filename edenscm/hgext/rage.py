@@ -39,6 +39,14 @@ from .remotefilelog import constants, shallowutil
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+BLACKBOX_PATTERN = """
+["or",
+ {"legacy_log":
+  {"msg":"_",
+   "service": ["not", "remotefilelog"]}},
+ ["not", {"legacy_log": "_"}]]
+"""
+
 
 def shcmd(cmd, input=None, check=True, keeperr=True):
     _, _, _, p = util.popen4(cmd)
@@ -299,7 +307,7 @@ def _makerage(ui, repo, **opts):
             'first 20 lines of "hg status"',
             lambda: "\n".join(hgcmd("status").splitlines()[:20]),
         ),
-        ("hg blackbox", lambda: hgcmd("blackbox")),
+        ("hg blackbox", lambda: hgcmd("blackbox", pattern=BLACKBOX_PATTERN)),
         ("hg summary", lambda: hgcmd("summary")),
         ("hg cloud status", lambda: hgcmd("cloud status")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
