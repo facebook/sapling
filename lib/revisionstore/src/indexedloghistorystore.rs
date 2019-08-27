@@ -1,0 +1,306 @@
+// Copyright 2019 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use std::{
+    io::{Cursor, Write},
+    path::{Path, PathBuf},
+};
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use crypto::{digest::Digest, sha1::Sha1};
+use failure::{format_err, Fallible};
+
+use indexedlog::{
+    log::IndexOutput,
+    rotate::{OpenOptions, RotateLog},
+};
+use types::{
+    node::{ReadNodeExt, WriteNodeExt},
+    Key, Node, NodeInfo, RepoPath, RepoPathBuf,
+};
+
+use crate::{
+    ancestors::{AncestorIterator, AncestorTraversal},
+    error::KeyError,
+    historystore::{Ancestors, HistoryStore, MutableHistoryStore},
+    localstore::LocalStore,
+    sliceext::SliceExt,
+};
+
+pub struct IndexedLogHistoryStore {
+    log: RotateLog,
+}
+
+struct Entry {
+    key: Key,
+
+    p1: Node,
+    p2: Node,
+    linknode: Node,
+    copy_from: Option<RepoPathBuf>,
+}
+
+impl Entry {
+    pub fn new(key: &Key, info: &NodeInfo) -> Self {
+        // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
+        // assert.
+        assert_ne!(key.node, info.parents[0].node);
+        assert_ne!(key.node, info.parents[1].node);
+
+        let copy_from = if info.parents[0].path != key.path {
+            Some(info.parents[0].path.to_owned())
+        } else {
+            None
+        };
+
+        Entry {
+            key: key.clone(),
+            p1: info.parents[0].node,
+            p2: info.parents[1].node,
+            linknode: info.linknode,
+            copy_from,
+        }
+    }
+
+    fn key_to_index_key(key: &Key) -> Vec<u8> {
+        let mut hasher = Sha1::new();
+        hasher.input(key.path.as_ref());
+        let mut buf: [u8; 20] = Default::default();
+        hasher.result(&mut buf);
+
+        let mut index_key = Vec::with_capacity(Node::len() * 2);
+        index_key.extend_from_slice(key.node.as_ref());
+        index_key.extend_from_slice(&buf);
+
+        index_key
+    }
+
+    /// Read an entry from the slice and deserialize it.
+    ///
+    /// The on-disk format of an entry is the following:
+    /// - Node: <20 bytes>
+    /// - Sha1(path) <20 bytes>
+    /// - Path len: 2 unsigned bytes, big-endian
+    /// - Path: <Path len> bytes
+    /// - p1 node: <20 bytes>
+    /// - p2 node: <20 bytes>
+    /// - linknode: <20 bytes>
+    /// Optionally:
+    /// - copy from len: 2 unsigned bytes, big-endian
+    /// - copy from: <copy from len> bytes
+    fn from_slice(data: &[u8]) -> Fallible<Self> {
+        let mut cur = Cursor::new(data);
+        let node = cur.read_node()?;
+
+        // Jump over the hashed path.
+        cur.set_position(40);
+
+        let path_len = cur.read_u16::<BigEndian>()? as u64;
+        let path_slice =
+            data.get_err(cur.position() as usize..(cur.position() + path_len) as usize)?;
+        cur.set_position(cur.position() + path_len);
+        let path = RepoPath::from_utf8(path_slice)?;
+
+        let key = Key::new(path.to_owned(), node);
+
+        let p1 = cur.read_node()?;
+        let p2 = cur.read_node()?;
+        let linknode = cur.read_node()?;
+
+        let copy_from = if let Ok(copy_from_len) = cur.read_u16::<BigEndian>() {
+            let copy_from_slice = data.get_err(
+                cur.position() as usize..(cur.position() + copy_from_len as u64) as usize,
+            )?;
+            Some(RepoPath::from_utf8(copy_from_slice)?.to_owned())
+        } else {
+            None
+        };
+
+        Ok(Entry {
+            key,
+            p1,
+            p2,
+            linknode,
+            copy_from,
+        })
+    }
+
+    /// Read an entry from the `IndexedLog` and deserialize it.
+    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
+        let index_key = Self::key_to_index_key(key);
+        let mut log_entry = log.lookup(0, index_key)?;
+        let buf = log_entry
+            .nth(0)
+            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
+
+        Self::from_slice(buf)
+    }
+
+    /// Write an entry to the `IndexedLog`. See [`from_slice`] for the detail about the on-disk
+    /// format.
+    pub fn write_to_log(self, log: &mut RotateLog) -> Fallible<()> {
+        let mut buf = Vec::new();
+        buf.write_all(Self::key_to_index_key(&self.key).as_ref())?;
+        let path_slice = self.key.path.as_byte_slice();
+        buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
+        buf.write_all(path_slice)?;
+        buf.write_node(&self.p1)?;
+        buf.write_node(&self.p2)?;
+        buf.write_node(&self.linknode)?;
+
+        if let Some(copy_from) = self.copy_from {
+            let copy_from_slice = copy_from.as_byte_slice();
+            buf.write_u16::<BigEndian>(copy_from_slice.len() as u16)?;
+            buf.write_all(copy_from_slice)?;
+        }
+
+        Ok(log.append(buf)?)
+    }
+
+    pub fn node_info(&self) -> NodeInfo {
+        let p1path = if let Some(copy_from) = &self.copy_from {
+            copy_from.clone()
+        } else {
+            self.key.path.clone()
+        };
+
+        NodeInfo {
+            parents: [
+                Key::new(p1path, self.p1),
+                Key::new(self.key.path.clone(), self.p2),
+            ],
+            linknode: self.linknode,
+        }
+    }
+}
+
+impl IndexedLogHistoryStore {
+    pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
+        let log = OpenOptions::new()
+            .max_log_count(10)
+            .max_bytes_per_log(200 * 1024 * 1024)
+            .create(true)
+            .index("node_and_path", |_| {
+                vec![IndexOutput::Reference(0..(Node::len() * 2) as u64)]
+            })
+            .open(path)?;
+        Ok(IndexedLogHistoryStore { log })
+    }
+}
+
+impl LocalStore for IndexedLogHistoryStore {
+    fn from_path(path: &Path) -> Fallible<Self> {
+        IndexedLogHistoryStore::new(path)
+    }
+
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        Ok(keys
+            .iter()
+            .filter(|k| Entry::from_log(k, &self.log).is_err())
+            .map(|k| k.clone())
+            .collect())
+    }
+}
+
+impl HistoryStore for IndexedLogHistoryStore {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+        AncestorIterator::new(
+            key,
+            |k, _seen| self.get_node_info(k),
+            AncestorTraversal::Partial,
+        )
+        .collect()
+    }
+
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+        let entry = Entry::from_log(key, &self.log)?;
+        Ok(entry.node_info())
+    }
+}
+
+impl MutableHistoryStore for IndexedLogHistoryStore {
+    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        let entry = Entry::new(key, info);
+        entry.write_to_log(&mut self.log)
+    }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        self.log.flush()?;
+        Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rand::SeedableRng;
+    use rand_chacha::ChaChaRng;
+    use tempfile::TempDir;
+
+    use types::testutil::*;
+
+    use crate::historypack::tests::get_nodes;
+
+    #[test]
+    fn test_empty() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        log.flush()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_add() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let k = key("a", "1");
+        let nodeinfo = NodeInfo {
+            parents: [key("a", "2"), null_key("a")],
+            linknode: node("3"),
+        };
+
+        log.add(&k, &nodeinfo)?;
+        log.flush()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_get_node_info() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let k = key("a", "1");
+        let nodeinfo = NodeInfo {
+            parents: [key("a", "2"), null_key("a")],
+            linknode: node("3"),
+        };
+        log.add(&k, &nodeinfo)?;
+        log.flush()?;
+
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let read_nodeinfo = log.get_node_info(&k)?;
+        assert_eq!(nodeinfo, read_nodeinfo);
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_get_ancestors() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+
+        let (nodes, ancestors) = get_nodes(&mut rng);
+        for (key, info) in nodes.iter() {
+            log.add(&key, &info)?;
+        }
+
+        for (key, _) in nodes.iter() {
+            log.get_node_info(&key)?;
+            let response = log.get_ancestors(&key)?;
+            assert_eq!(&response, ancestors.get(&key).unwrap());
+        }
+        Ok(())
+    }
+}
