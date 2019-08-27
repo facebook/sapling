@@ -29,6 +29,9 @@ pub enum Metric {
     EgressBytes,
     IngressBlobstoreBytes,
     EgressTotalManifests,
+    EgressGetfilesFiles,
+    EgressGetpackFiles,
+    EgressCommits,
 }
 
 /// Creates a regional key to be used for load limiting, based on the given prefix.
@@ -48,6 +51,9 @@ struct LoadLimiter {
     egress_bytes: LoadLimitCounter,
     ingress_blobstore_bytes: LoadLimitCounter,
     egress_total_manifests: LoadLimitCounter,
+    egress_getfiles_files: LoadLimitCounter,
+    egress_getpack_files: LoadLimitCounter,
+    egress_commits: LoadLimitCounter,
     category: String,
     limits: MononokeThrottleLimit,
 }
@@ -67,6 +73,18 @@ impl LoadLimiter {
                 category: category.clone(),
                 key: make_limit_key("egress-total-manifests"),
             },
+            egress_getfiles_files: LoadLimitCounter {
+                category: category.clone(),
+                key: make_limit_key("egress-getfiles-files"),
+            },
+            egress_getpack_files: LoadLimitCounter {
+                category: category.clone(),
+                key: make_limit_key("egress-getpack-files"),
+            },
+            egress_commits: LoadLimitCounter {
+                category: category.clone(),
+                key: make_limit_key("egress-commits"),
+            },
             category,
             limits,
         }
@@ -79,6 +97,9 @@ impl LoadLimiter {
             Metric::EgressBytes => &self.egress_bytes,
             Metric::IngressBlobstoreBytes => &self.ingress_blobstore_bytes,
             Metric::EgressTotalManifests => &self.egress_total_manifests,
+            Metric::EgressGetfilesFiles => &self.egress_getfiles_files,
+            Metric::EgressGetpackFiles => &self.egress_getpack_files,
+            Metric::EgressCommits => &self.egress_commits,
         }
     }
 
@@ -91,6 +112,9 @@ impl LoadLimiter {
             Metric::EgressBytes => self.limits.egress_bytes,
             Metric::IngressBlobstoreBytes => self.limits.ingress_blobstore_bytes,
             Metric::EgressTotalManifests => self.limits.total_manifests,
+            Metric::EgressGetfilesFiles => self.limits.getfiles_files,
+            Metric::EgressGetpackFiles => self.limits.getpack_files,
+            Metric::EgressCommits => self.limits.commits,
         };
 
         loadlimiter::should_throttle(&self.counter(metric), limit, window)

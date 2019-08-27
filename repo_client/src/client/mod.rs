@@ -498,6 +498,7 @@ impl RepoClient {
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
         handler: GetpackHandler,
         mut wireproto_logger: WireprotoLogger,
+        name: &'static str,
     ) -> BoxStream<Bytes, Error>
     where
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
@@ -522,150 +523,161 @@ impl RepoClient {
         // Let's fetch the whole request before responding.
         // That's prevents deadlocks, because hg client doesn't start reading the response
         // before all the arguments were sent.
-        let s = params
-            .collect()
-            .map(|v| stream::iter_ok(v.into_iter()))
-            .flatten_stream()
-            .map({
-                cloned!(ctx, getpack_params, repo);
-                move |(path, filenodes)| {
-                    {
-                        let mut getpack_params = getpack_params.lock().unwrap();
-                        getpack_params.push((path.clone(), filenodes.clone()));
-                    }
+        let request_stream = move || {
+            let s = params
+                .collect()
+                .map(|v| stream::iter_ok(v.into_iter()))
+                .flatten_stream()
+                .map({
+                    cloned!(ctx, getpack_params, repo);
+                    move |(path, filenodes)| {
+                        {
+                            let mut getpack_params = getpack_params.lock().unwrap();
+                            getpack_params.push((path.clone(), filenodes.clone()));
+                        }
 
-                    let blob_futs: Vec<_> = filenodes
-                        .iter()
-                        .map(|filenode| {
-                            handler(
-                                ctx.clone(),
-                                repo.clone(),
-                                *filenode,
-                                lfs_threshold,
-                                validate_hash,
-                            )
-                        })
+                        ctx.bump_load(Metric::EgressGetpackFiles, 1.0);
+
+                        let blob_futs: Vec<_> = filenodes
+                            .iter()
+                            .map(|filenode| {
+                                handler(
+                                    ctx.clone(),
+                                    repo.clone(),
+                                    *filenode,
+                                    lfs_threshold,
+                                    validate_hash,
+                                )
+                            })
+                            .collect();
+
+                        let history_fut = get_unordered_file_history_for_multiple_nodes(
+                            ctx.clone(),
+                            repo.clone(),
+                            filenodes.into_iter().collect(),
+                            &path,
+                        )
                         .collect();
 
-                    let history_fut = get_unordered_file_history_for_multiple_nodes(
-                        ctx.clone(),
-                        repo.clone(),
-                        filenodes.into_iter().collect(),
-                        &path,
-                    )
-                    .collect();
+                        future::join_all(blob_futs.into_iter()).map(move |blobs| {
+                            let total_weight = blobs.iter().map(|(size, _)| size).sum();
+                            let content_futs = blobs.into_iter().map(|(_, fut)| fut);
+                            let contents_and_history = future::join_all(content_futs)
+                                .join(history_fut)
+                                .map(move |(contents, history)| (path, contents, history));
 
-                    future::join_all(blob_futs.into_iter()).map(move |blobs| {
-                        let total_weight = blobs.iter().map(|(size, _)| size).sum();
-                        let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                        let contents_and_history = future::join_all(content_futs)
-                            .join(history_fut)
-                            .map(move |(contents, history)| (path, contents, history));
-
-                        (contents_and_history, total_weight)
-                    })
-                }
-            })
-            .buffered(getpack_buffer_size);
-
-        let params = BufferedParams {
-            weight_limit: 100_000_000,
-            buffer_size: getpack_buffer_size,
-        };
-        let s = s
-            .buffered_weight_limited(params)
-            .whole_stream_timeout(*GETFILES_TIMEOUT)
-            .map_err(process_stream_timeout_error)
-            .map({
-                cloned!(ctx);
-                move |(path, contents, history)| {
-                    let mut res = vec![wirepack::Part::HistoryMeta {
-                        path: RepoPath::FilePath(path.clone()),
-                        entry_count: history.len() as u32,
-                    }];
-
-                    let history = history.into_iter().map(|history_entry| {
-                        let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
-                            history_entry.parents(),
-                            history_entry.copyfrom().as_ref(),
-                        );
-
-                        wirepack::Part::History(wirepack::HistoryEntry {
-                            node: history_entry.filenode().into_nodehash(),
-                            p1: p1.into_nodehash(),
-                            p2: p2.into_nodehash(),
-                            linknode: history_entry.linknode().into_nodehash(),
-                            copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                            (contents_and_history, total_weight)
                         })
-                    });
-                    res.extend(history);
-
-                    res.push(wirepack::Part::DataMeta {
-                        path: RepoPath::FilePath(path),
-                        entry_count: contents.len() as u32,
-                    });
-                    for (filenode, content, metadata) in contents {
-                        let content = content.to_vec();
-                        ctx.perf_counters()
-                            .set_max_counter("getpack_max_file_size", content.len() as i64);
-                        res.push(wirepack::Part::Data(wirepack::DataEntry {
-                            node: filenode.into_nodehash(),
-                            delta_base: NULL_HASH,
-                            delta: Delta::new_fulltext(content),
-                            metadata,
-                        }));
                     }
-                    stream::iter_ok(res.into_iter())
-                }
-            })
-            .flatten()
-            .chain(stream::once(Ok(wirepack::Part::End)));
+                })
+                .buffered(getpack_buffer_size);
 
-        wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
-            .and_then(|chunk| chunk.into_bytes())
-            .inspect({
-                cloned!(self.ctx);
-                move |bytes| {
-                    let len = bytes.len() as i64;
-                    ctx.perf_counters()
-                        .add_to_counter("getpack_response_size", len);
+            let params = BufferedParams {
+                weight_limit: 100_000_000,
+                buffer_size: getpack_buffer_size,
+            };
+            let s = s
+                .buffered_weight_limited(params)
+                .whole_stream_timeout(*GETFILES_TIMEOUT)
+                .map_err(process_stream_timeout_error)
+                .map({
+                    cloned!(ctx);
+                    move |(path, contents, history)| {
+                        let mut res = vec![wirepack::Part::HistoryMeta {
+                            path: RepoPath::FilePath(path.clone()),
+                            entry_count: history.len() as u32,
+                        }];
 
-                    STATS::total_fetched_file_size.add_value(len as i64);
-                    if ctx.is_quicksand() {
-                        STATS::quicksand_fetched_file_size.add_value(len as i64);
-                    }
-                }
-            })
-            .timed({
-                cloned!(self.ctx);
-                move |stats, _| {
-                    STATS::getpack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    let encoded_params = {
-                        let getpack_params = getpack_params.lock().unwrap();
-                        let mut encoded_params = vec![];
-                        for (path, filenodes) in getpack_params.iter() {
-                            let mut encoded_filenodes = vec![];
-                            for filenode in filenodes {
-                                encoded_filenodes.push(format!("{}", filenode));
-                            }
-                            encoded_params.push((
-                                String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                encoded_filenodes,
-                            ));
+                        let history = history.into_iter().map(|history_entry| {
+                            let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
+                                history_entry.parents(),
+                                history_entry.copyfrom().as_ref(),
+                            );
+
+                            wirepack::Part::History(wirepack::HistoryEntry {
+                                node: history_entry.filenode().into_nodehash(),
+                                p1: p1.into_nodehash(),
+                                p2: p2.into_nodehash(),
+                                linknode: history_entry.linknode().into_nodehash(),
+                                copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                            })
+                        });
+                        res.extend(history);
+
+                        res.push(wirepack::Part::DataMeta {
+                            path: RepoPath::FilePath(path),
+                            entry_count: contents.len() as u32,
+                        });
+                        for (filenode, content, metadata) in contents {
+                            let content = content.to_vec();
+                            ctx.perf_counters()
+                                .set_max_counter("getpack_max_file_size", content.len() as i64);
+                            res.push(wirepack::Part::Data(wirepack::DataEntry {
+                                node: filenode.into_nodehash(),
+                                delta_base: NULL_HASH,
+                                delta: Delta::new_fulltext(content),
+                                metadata,
+                            }));
                         }
-                        encoded_params
-                    };
+                        stream::iter_ok(res.into_iter())
+                    }
+                })
+                .flatten()
+                .chain(stream::once(Ok(wirepack::Part::End)));
 
-                    ctx.perf_counters()
-                        .add_to_counter("getpack_num_files", encoded_params.len() as i64);
+            wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
+                .and_then(|chunk| chunk.into_bytes())
+                .inspect({
+                    cloned!(ctx);
+                    move |bytes| {
+                        let len = bytes.len() as i64;
+                        ctx.perf_counters()
+                            .add_to_counter("getpack_response_size", len);
 
-                    wireproto_logger.set_args(Some(json! {encoded_params}));
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
-                    Ok(())
-                }
-            })
-            .boxify()
+                        STATS::total_fetched_file_size.add_value(len as i64);
+                        if ctx.is_quicksand() {
+                            STATS::quicksand_fetched_file_size.add_value(len as i64);
+                        }
+                    }
+                })
+                .timed({
+                    cloned!(ctx);
+                    move |stats, _| {
+                        STATS::getpack_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        let encoded_params = {
+                            let getpack_params = getpack_params.lock().unwrap();
+                            let mut encoded_params = vec![];
+                            for (path, filenodes) in getpack_params.iter() {
+                                let mut encoded_filenodes = vec![];
+                                for filenode in filenodes {
+                                    encoded_filenodes.push(format!("{}", filenode));
+                                }
+                                encoded_params.push((
+                                    String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                    encoded_filenodes,
+                                ));
+                            }
+                            encoded_params
+                        };
+
+                        ctx.perf_counters()
+                            .add_to_counter("getpack_num_files", encoded_params.len() as i64);
+
+                        wireproto_logger.set_args(Some(json! {encoded_params}));
+                        wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                        wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                        Ok(())
+                    }
+                })
+        };
+
+        throttle_stream(
+            self.ctx.clone(),
+            Metric::EgressGetpackFiles,
+            name,
+            request_stream,
+        )
     }
 
     fn wireproto_logger(
@@ -681,6 +693,35 @@ impl RepoClient {
             self.repo.reponame().clone(),
         )
     }
+}
+
+fn throttle_stream<F, S, V>(
+    ctx: CoreContext,
+    metric: Metric,
+    name: &'static str,
+    func: F,
+) -> BoxStream<V, Error>
+where
+    F: FnOnce() -> S + Send + 'static,
+    S: Stream<Item = V, Error = Error> + Send + 'static,
+{
+    ctx.should_throttle(metric, *LOAD_LIMIT_TIMEFRAME)
+        .then(move |throttle| match throttle {
+            Ok(throttle) => {
+                if throttle {
+                    let err: Error = ErrorKind::RequestThrottled {
+                        request_name: name.to_string(),
+                    }
+                    .into();
+                    Err(err)
+                } else {
+                    Ok(func())
+                }
+            }
+            Err(never_type) => never_type,
+        })
+        .flatten_stream()
+        .boxify()
 }
 
 impl HgCommands for RepoClient {
@@ -1047,7 +1088,7 @@ impl HgCommands for RepoClient {
         let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, Some(value));
         cloned!(self.ctx);
 
-        match self.create_bundle(args) {
+        let s = match self.create_bundle(args) {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
         }
@@ -1060,7 +1101,14 @@ impl HgCommands for RepoClient {
             wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
             Ok(())
         })
-        .boxify()
+        .boxify();
+
+        throttle_stream(
+            self.ctx.clone(),
+            Metric::EgressCommits,
+            ops::GETBUNDLE,
+            move || s,
+        )
     }
 
     // @wireprotocommand('hello')
@@ -1253,10 +1301,6 @@ impl HgCommands for RepoClient {
         let args = json!(vec![args]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
 
-        let throttle = self
-            .ctx
-            .should_throttle(Metric::EgressTotalManifests, *LOAD_LIMIT_TIMEFRAME);
-
         let s = self
             .gettreepack_untimed(params)
             .whole_stream_timeout(*TIMEOUT)
@@ -1284,23 +1328,12 @@ impl HgCommands for RepoClient {
                 }
             });
 
-        throttle
-            .then(move |throttle| match throttle {
-                Ok(throttle) => {
-                    if throttle {
-                        let err: Error = ErrorKind::RequestThrottled {
-                            request_name: ops::GETTREEPACK.into(),
-                        }
-                        .into();
-                        Err(err)
-                    } else {
-                        Ok(s)
-                    }
-                }
-                Err(never_type) => never_type,
-            })
-            .flatten_stream()
-            .boxify()
+        throttle_stream(
+            self.ctx.clone(),
+            Metric::EgressTotalManifests,
+            ops::GETTREEPACK,
+            move || s,
+        )
     }
 
     // @wireprotocommand('getfiles', 'files*')
@@ -1316,89 +1349,100 @@ impl HgCommands for RepoClient {
         let getfiles_params = Arc::new(Mutex::new(vec![]));
 
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-        params
-            .map({
-                cloned!(getfiles_params);
-                move |param| {
-                    let mut getfiles_params = getfiles_params.lock().unwrap();
-                    getfiles_params.push(param.clone());
-                    param
-                }
-            })
-            .map({
-                cloned!(self.ctx);
-                move |(node, path)| {
-                    let repo = this.repo.clone();
-                    create_getfiles_blob(
-                        ctx.clone(),
-                        repo.blobrepo().clone(),
-                        node,
-                        path.clone(),
-                        repo.lfs_params().threshold,
-                        validate_hash,
-                    )
-                    .traced(
-                        this.ctx.trace(),
-                        ops::GETFILES,
-                        trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
-                    )
-                    .timed({
-                        cloned!(ctx);
-                        move |stats, _| {
-                            STATS::getfiles_ms
-                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            let completion_time =
-                                stats.completion_time.as_millis_unchecked() as i64;
-                            ctx.perf_counters()
-                                .set_max_counter("getfiles_max_latency", completion_time);
-                            Ok(())
-                        }
-                    })
-                }
-            })
-            .buffered(getfiles_buffer_size)
-            .inspect({
-                cloned!(self.ctx);
-                move |bytes| {
-                    let len = bytes.len() as i64;
-                    ctx.perf_counters()
-                        .add_to_counter("getfiles_response_size", len);
-                    ctx.perf_counters()
-                        .set_max_counter("getfiles_max_file_size", len);
-
-                    STATS::total_fetched_file_size.add_value(len as i64);
-                    if ctx.is_quicksand() {
-                        STATS::quicksand_fetched_file_size.add_value(len as i64);
+        cloned!(self.ctx);
+        let request_stream = move || {
+            params
+                .map({
+                    cloned!(getfiles_params);
+                    move |param| {
+                        let mut getfiles_params = getfiles_params.lock().unwrap();
+                        getfiles_params.push(param.clone());
+                        param
                     }
-                }
-            })
-            .whole_stream_timeout(*GETFILES_TIMEOUT)
-            .map_err(process_stream_timeout_error)
-            .timed({
-                cloned!(self.ctx);
-                move |stats, _| {
-                    let encoded_params = {
-                        let getfiles_params = getfiles_params.lock().unwrap();
-                        let mut encoded_params = vec![];
-                        for (node, path) in getfiles_params.iter() {
-                            encoded_params.push(vec![
-                                format!("{}", node),
-                                String::from_utf8_lossy(&path.to_vec()).to_string(),
-                            ]);
+                })
+                .map({
+                    cloned!(ctx);
+                    move |(node, path)| {
+                        let repo = this.repo.clone();
+                        ctx.bump_load(Metric::EgressGetfilesFiles, 1.0);
+                        create_getfiles_blob(
+                            ctx.clone(),
+                            repo.blobrepo().clone(),
+                            node,
+                            path.clone(),
+                            repo.lfs_params().threshold,
+                            validate_hash,
+                        )
+                        .traced(
+                            this.ctx.trace(),
+                            ops::GETFILES,
+                            trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
+                        )
+                        .timed({
+                            cloned!(ctx);
+                            move |stats, _| {
+                                STATS::getfiles_ms
+                                    .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                                let completion_time =
+                                    stats.completion_time.as_millis_unchecked() as i64;
+                                ctx.perf_counters()
+                                    .set_max_counter("getfiles_max_latency", completion_time);
+                                Ok(())
+                            }
+                        })
+                    }
+                })
+                .buffered(getfiles_buffer_size)
+                .inspect({
+                    cloned!(ctx);
+                    move |bytes| {
+                        let len = bytes.len() as i64;
+                        ctx.perf_counters()
+                            .add_to_counter("getfiles_response_size", len);
+                        ctx.perf_counters()
+                            .set_max_counter("getfiles_max_file_size", len);
+
+                        STATS::total_fetched_file_size.add_value(len as i64);
+                        if ctx.is_quicksand() {
+                            STATS::quicksand_fetched_file_size.add_value(len as i64);
                         }
-                        encoded_params
-                    };
+                    }
+                })
+                .whole_stream_timeout(*GETFILES_TIMEOUT)
+                .map_err(process_stream_timeout_error)
+                .timed({
+                    cloned!(ctx);
+                    move |stats, _| {
+                        let encoded_params = {
+                            let getfiles_params = getfiles_params.lock().unwrap();
+                            let mut encoded_params = vec![];
+                            for (node, path) in getfiles_params.iter() {
+                                encoded_params.push(vec![
+                                    format!("{}", node),
+                                    String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                ]);
+                            }
+                            encoded_params
+                        };
 
-                    ctx.perf_counters()
-                        .add_to_counter("getfiles_num_files", stats.count as i64);
+                        ctx.perf_counters()
+                            .add_to_counter("getfiles_num_files", stats.count as i64);
 
-                    wireproto_logger.set_args(Some(json! {encoded_params}));
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
-                    Ok(())
-                }
-            })
-            .boxify()
+                        wireproto_logger.set_args(Some(json! {encoded_params}));
+                        wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                        wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                        Ok(())
+                    }
+                })
+                .boxify()
+        };
+
+        throttle_stream(
+            self.ctx.clone(),
+            Metric::EgressGetfilesFiles,
+            ops::GETFILES,
+            request_stream,
+        )
     }
 
     // @wireprotocommand('stream_out_shallow')
@@ -1538,6 +1582,7 @@ impl HgCommands for RepoClient {
                 })
             },
             wireproto_logger,
+            ops::GETPACKV1,
         )
     }
 
@@ -1561,6 +1606,7 @@ impl HgCommands for RepoClient {
                 )
             },
             wireproto_logger,
+            ops::GETPACKV2,
         )
     }
 
