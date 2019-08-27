@@ -68,7 +68,7 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     let drain = {
         let drain = {
             // TODO: switch to TermDecorator, which supports color
-            let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
+            let decorator = slog_term::PlainSyncDecorator::new(io::stderr());
             let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
             // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
             // since logview is sampled anyway.
