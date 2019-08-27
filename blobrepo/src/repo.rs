@@ -10,8 +10,6 @@ use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
-use crate::HgBlobChangeset;
-use blob_changeset::{ChangesetMetadata, HgChangesetContent};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
@@ -41,7 +39,8 @@ use mercurial_types::{
         fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
         fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
         fetch_file_metadata_from_blobstore, fetch_file_parents_from_blobstore,
-        fetch_file_size_from_blobstore, BlobManifest, File, HgBlobEntry, HgBlobEnvelope, META_SZ,
+        fetch_file_size_from_blobstore, BlobManifest, ChangesetMetadata, File, HgBlobChangeset,
+        HgBlobEntry, HgBlobEnvelope, HgChangesetContent, META_SZ,
     },
     calculate_hg_node_id_stream,
     manifest::Content,

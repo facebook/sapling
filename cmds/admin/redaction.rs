@@ -10,7 +10,6 @@ use cmdlib::args;
 
 use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::{get_file_nodes, resolve_hg_rev};
-use blob_changeset::HgBlobChangeset;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
@@ -20,7 +19,7 @@ use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
 use itertools::{Either, Itertools};
-use mercurial_types::{Changeset, HgChangesetId, HgEntryId, MPath};
+use mercurial_types::{blobs::HgBlobChangeset, Changeset, HgChangesetId, HgEntryId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{info, Logger};

@@ -16,8 +16,8 @@ use blobstore::Blobstore;
 use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::{
-    blobs::HgBlobEnvelope, Changeset, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId, MPath,
-    RepoPath,
+    blobs::{HgBlobChangeset, HgBlobEnvelope},
+    Changeset, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
 };
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
@@ -26,7 +26,6 @@ use repo_blobstore::RepoBlobstore;
 
 use crate::errors::*;
 use crate::BlobRepo;
-use crate::HgBlobChangeset;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub fn create_bonsai_changeset_object(

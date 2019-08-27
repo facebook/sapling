@@ -27,7 +27,7 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{
-    blobs::{HgBlobEntry, HgBlobEnvelope},
+    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent},
     manifest::{self, Content},
     manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus},
     nodehash::{HgFileNodeId, HgManifestId},
@@ -39,9 +39,6 @@ use stats::define_stats;
 
 use crate::errors::*;
 use crate::BlobRepo;
-use crate::HgBlobChangeset;
-use blob_changeset::ChangesetMetadata;
-use blob_changeset::HgChangesetContent;
 use repo_blobstore::RepoBlobstore;
 
 define_stats! {

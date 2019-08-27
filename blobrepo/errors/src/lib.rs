@@ -12,11 +12,10 @@ use failure_ext::failure;
 use failure_ext::Fail;
 
 use mercurial_types::{
-    HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath, RepoPath, Type,
+    blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, RepoPath, Type,
 };
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
-
-use blob_changeset::HgBlobChangeset;
 
 #[derive(Debug)]
 pub enum StateOpenError {

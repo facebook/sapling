@@ -11,7 +11,7 @@ use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use crate::errors::*;
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
 use blobrepo::internal::IncompleteFilenodes;
-use blobrepo::{BlobRepo, HgBlobChangeset};
+use blobrepo::BlobRepo;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use cloned::cloned;
 use context::CoreContext;
@@ -22,7 +22,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mercurial_types::{
-    blobs::{BlobManifest, HgBlobEntry},
+    blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
     manifest_utils::{changed_entry_stream, ChangedEntry},
     Changeset, HgChangesetId, HgEntry, HgManifestId, HgNodeHash, Type,
 };

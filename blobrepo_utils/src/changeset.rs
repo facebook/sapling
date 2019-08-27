@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::{BlobRepo, HgBlobChangeset};
+use blobrepo::BlobRepo;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
@@ -15,7 +15,7 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{send_discard, BoxFuture};
-use mercurial_types::HgChangesetId;
+use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId};
 use slog::{o, Logger};
 use std::sync::Arc;
 use tokio;

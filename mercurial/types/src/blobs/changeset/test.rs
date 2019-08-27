@@ -4,16 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::BTreeMap;
-
-use quickcheck::{quickcheck, QuickCheck, TestResult};
-
-use mercurial_types::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, MPath};
-use mononoke_types::DateTime;
-
-use crate::changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
-
+use super::revlog::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
+use crate::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, MPath};
 use bytes::Bytes;
+use mononoke_types::DateTime;
+use quickcheck::{quickcheck, QuickCheck, TestResult};
+use std::collections::BTreeMap;
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
 const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");

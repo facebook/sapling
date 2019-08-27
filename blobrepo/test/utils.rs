@@ -16,14 +16,15 @@ use futures_ext::{BoxFuture, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
 use blobrepo::{
-    BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, UploadHgFileContents,
-    UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+    BlobRepo, ChangesetHandle, CreateChangeset, UploadHgFileContents, UploadHgFileEntry,
+    UploadHgNodeHash, UploadHgTreeEntry,
 };
 use blobrepo_factory::new_memblob_empty;
 use context::CoreContext;
 use memblob::{EagerMemblob, LazyMemblob};
 use mercurial_types::{
-    blobs::HgBlobEntry, FileType, HgBlobNode, HgFileNodeId, HgNodeHash, MPath, RepoPath,
+    blobs::{ChangesetMetadata, HgBlobEntry},
+    FileType, HgBlobNode, HgFileNodeId, HgNodeHash, MPath, RepoPath,
 };
 use mononoke_types::DateTime;
 use std::sync::Arc;

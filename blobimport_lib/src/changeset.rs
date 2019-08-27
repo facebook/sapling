@@ -27,13 +27,13 @@ use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::{
-    BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobMeta, CreateChangeset,
-    HgBlobChangeset, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+    BlobRepo, ChangesetHandle, ContentBlobMeta, CreateChangeset, UploadHgFileContents,
+    UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
-    blobs::{File, HgBlobEntry, LFSContent},
+    blobs::{ChangesetMetadata, File, HgBlobChangeset, HgBlobEntry, LFSContent},
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
     NULL_HASH,
 };

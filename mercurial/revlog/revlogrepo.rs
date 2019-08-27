@@ -20,11 +20,10 @@ use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use crate::stockbookmarks::StockBookmarks;
 use mercurial_types::{
-    fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash, MPath,
-    MPathElement, RepoPath,
+    blobs::RevlogChangeset, fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId,
+    HgNodeHash, MPath, MPathElement, RepoPath,
 };
 
-pub use crate::changeset::RevlogChangeset;
 use crate::errors::*;
 pub use crate::manifest::RevlogManifest;
 use crate::revlog::{Revlog, RevlogIter};

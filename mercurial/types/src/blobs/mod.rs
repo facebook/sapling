@@ -22,3 +22,9 @@ pub use file::{
 
 mod manifest;
 pub use self::manifest::{BlobManifest, ManifestContent};
+
+mod changeset;
+pub use changeset::{
+    serialize_cs, serialize_extras, ChangesetMetadata, Extra, HgBlobChangeset, HgChangesetContent,
+    RevlogChangeset,
+};

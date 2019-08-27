@@ -22,7 +22,6 @@ pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
 use asyncmemo::{Asyncmemo, Filler, Weight};
-use blob_changeset::HgBlobChangeset;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
@@ -32,7 +31,8 @@ use failure_ext::{err_msg, Error, FutureFailureErrorExt};
 use futures::{finished, future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::{
-    manifest_utils::EntryStatus, Changeset, HgChangesetId, HgFileNodeId, HgParents, MPath,
+    blobs::HgBlobChangeset, manifest_utils::EntryStatus, Changeset, HgChangesetId, HgFileNodeId,
+    HgParents, MPath,
 };
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;

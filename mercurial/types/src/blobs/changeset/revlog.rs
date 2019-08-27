@@ -4,21 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure_ext::bail_msg;
-use std::collections::BTreeMap;
-use std::io::{self, Write};
-use std::str::{self, FromStr};
-
-use crate::errors::*;
-use bytes::Bytes;
-use mercurial_types::{
+use crate::{
     HgBlob, HgBlobNode, HgChangesetEnvelope, HgChangesetId, HgManifestId, HgNodeHash, HgParents,
     MPath, NULL_HASH,
 };
+use bytes::Bytes;
+use failure_ext::{bail_msg, Error, Result, ResultExt};
 use mononoke_types::DateTime;
-
-#[cfg(test)]
-mod test;
+use std::{
+    collections::BTreeMap,
+    io::{self, Write},
+    str::{self, FromStr},
+};
 
 // The `user` and `comments` fields are expected to be utf8 encoded, but
 // some older commits might be corrupted. We handle them as pure binary here
@@ -37,7 +34,7 @@ pub struct RevlogChangeset {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub struct Extra(BTreeMap<Vec<u8>, Vec<u8>>);
+pub struct Extra(pub(super) BTreeMap<Vec<u8>, Vec<u8>>);
 
 impl Extra {
     pub fn as_ref(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
@@ -56,7 +53,7 @@ where
     }
 }
 
-fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
+pub(super) fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     let mut ret = Vec::new();
 
     for c in s.into_iter() {
@@ -72,7 +69,7 @@ fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     ret
 }
 
-fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
+pub(super) fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     let mut ret = Vec::new();
     let mut quote = false;
 
@@ -122,7 +119,7 @@ impl Extra {
         self.0.is_empty()
     }
 
-    fn from_slice<S: AsRef<[u8]>>(s: Option<S>) -> Result<Extra> {
+    pub(super) fn from_slice<S: AsRef<[u8]>>(s: Option<S>) -> Result<Extra> {
         let mut ret = BTreeMap::new();
 
         if let Some(s) = s {
@@ -241,7 +238,11 @@ impl RevlogChangeset {
     // XXX Files sorted? No escaping?
     // XXX "extra" - how sorted? What encoding?
     // XXX "comment" - line endings normalized at all?
-    fn parse(blob: HgBlob, p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> Result<Self> {
+    pub(super) fn parse(
+        blob: HgBlob,
+        p1: Option<HgNodeHash>,
+        p2: Option<HgNodeHash>,
+    ) -> Result<Self> {
         // This is awkward - we want to store the node in the resulting
         // RevlogChangeset but we need to borrow from it to parse its data. Set up a
         // partially initialized RevlogChangeset then fill it in as we go.

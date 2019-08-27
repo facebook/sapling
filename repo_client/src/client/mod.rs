@@ -7,7 +7,6 @@
 use crate::errors::*;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use blobrepo::BlobRepo;
-use blobrepo::HgBlobChangeset;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -33,8 +32,9 @@ use mercurial_types::manifest_utils::{
     Pruner,
 };
 use mercurial_types::{
-    convert_parents_to_remotefilelog_format, percent_encode, Delta, HgBlobNode, HgChangesetId,
-    HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
+    blobs::HgBlobChangeset, convert_parents_to_remotefilelog_format, percent_encode, Delta,
+    HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
+    NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
 use percent_encoding;

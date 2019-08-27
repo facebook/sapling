@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 
-use blobrepo::{BlobRepo, HgBlobChangeset};
+use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -18,7 +18,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::manifest_utils::{self, EntryStatus};
 use mercurial_types::{
-    manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId, MPath, Type,
+    blobs::HgBlobChangeset, manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId,
+    MPath, Type,
 };
 use mononoke_types::FileType;
 

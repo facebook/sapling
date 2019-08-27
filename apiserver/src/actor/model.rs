@@ -22,11 +22,11 @@ use apiserver_thrift::types::{
     MononokeChangeset, MononokeEntryUnodes, MononokeFile, MononokeFileType, MononokeNodeHash,
     MononokeTreeHash,
 };
-use blobrepo::{BlobRepo, HgBlobChangeset};
+use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::{Changeset as HgChangeset, HgEntry, HgEntryId, Type};
+use mercurial_types::{blobs::HgBlobChangeset, Changeset as HgChangeset, HgEntry, HgEntryId, Type};
 use mononoke_types::RepositoryId;
 
 use crate::cache::CacheManager;

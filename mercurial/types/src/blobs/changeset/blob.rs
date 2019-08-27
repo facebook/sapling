@@ -4,23 +4,20 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobstore::Blobstore;
-use bytes::Bytes;
-use context::CoreContext;
-use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
-use futures::future::{Either, Future, IntoFuture};
-use mercurial_revlog::{
-    changeset::{serialize_extras, Extra},
-    revlogrepo::RevlogChangeset,
-};
-use mercurial_types::{
+use super::revlog::{serialize_extras, Extra, RevlogChangeset};
+use crate::{
     nodehash::{HgChangesetId, HgManifestId, NULL_HASH},
     Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents,
     MPath,
 };
+use blobstore::{Blobstore, Loadable, LoadableError};
+use bytes::Bytes;
+use context::CoreContext;
+use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
+use futures::future::{Either, Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
-use repo_blobstore::RepoBlobstore;
-use std::{collections::BTreeMap, io::Write, sync::Arc};
+use std::{collections::BTreeMap, io::Write};
 
 pub struct ChangesetMetadata {
     pub user: String,
@@ -146,9 +143,9 @@ impl HgBlobChangeset {
         self.changesetid
     }
 
-    pub fn load(
+    pub fn load<B: Blobstore + Clone>(
         ctx: CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &B,
         changesetid: HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         if changesetid == HgChangesetId::new(NULL_HASH) {
@@ -196,7 +193,7 @@ impl HgBlobChangeset {
     pub fn save(
         &self,
         ctx: CoreContext,
-        blobstore: RepoBlobstore,
+        blobstore: impl Blobstore + Clone,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         let key = self.changesetid.blobstore_key();
 
@@ -229,6 +226,21 @@ impl HgBlobChangeset {
     #[inline]
     pub fn p2(&self) -> Option<HgNodeHash> {
         self.content.p2()
+    }
+}
+
+impl Loadable for HgChangesetId {
+    type Value = HgBlobChangeset;
+
+    fn load<B: Blobstore + Clone>(
+        &self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, LoadableError> {
+        HgBlobChangeset::load(ctx, blobstore, *self)
+            .from_err()
+            .and_then(|value| value.ok_or(LoadableError::Missing))
+            .boxify()
     }
 }
 
