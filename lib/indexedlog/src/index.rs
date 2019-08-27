@@ -122,21 +122,9 @@ fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> Fallible<()>
     // Be sure to run `cargo bench --bench index verified` when changing this
     // function, or the inline attributes.
     if let &Some(ref table) = checksum {
-        if table.check_range(start, length) {
-            return Ok(());
-        } else {
-            return checksum_error();
-        }
+        table.check_range(start, length)?
     }
     Ok(())
-}
-
-// Intentionally not inlined, and avoiding printing byte ranges.
-// Reduce instruction count in `verify_checksum`.
-#[inline(never)]
-fn checksum_error() -> Fallible<()> {
-    let msg = "integrity check failed";
-    Err(data_error(msg))
 }
 
 fn range_error(start: usize, length: usize) -> failure::Error {

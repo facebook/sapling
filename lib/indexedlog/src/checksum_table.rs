@@ -24,7 +24,7 @@
 // infrequently updated, and are already complex that it's cleaner to not
 // embed checksum logic into them.
 
-use crate::errors::{data_error, parameter_error};
+use crate::errors::{self, data_error, parameter_error};
 use crate::utils::{atomic_write, mmap_readonly, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
@@ -55,6 +55,7 @@ pub struct ChecksumTable {
     // work. But that's not required for correctness.
     file: File,
     buf: Mmap,
+    path: PathBuf,
 
     // The checksum file
     checksum_path: PathBuf,
@@ -90,27 +91,30 @@ const DEFAULT_CHUNK_SIZE_LOG: u32 = 20;
 const MAX_CHUNK_SIZE_LOG: u32 = 31;
 
 impl ChecksumTable {
-    /// Check given byte range. Return `true` if the byte range passes checksum,
-    /// `false` if it fails or unsure.
+    /// Check given byte range. Return `Ok(())` if the byte range passes checksum,
+    /// raise `ChecksumError` if it fails or unsure.
     ///
-    /// Depending on `chunk_size_log`, `false` might be caused by something within a
-    /// same chunk, but outside the provided range being broken. `false` could also
-    /// mean the range is outside what the checksum table covers.
-    pub fn check_range(&self, offset: u64, length: u64) -> bool {
+    /// Depending on `chunk_size_log`, `ChecksumError` might be caused by
+    /// something within a same chunk, but outside the provided range being
+    /// broken, or if the range is outside what the checksum table covers.
+    pub fn check_range(&self, offset: u64, length: u64) -> Fallible<()> {
         // Empty range is treated as good.
         if length == 0 {
-            return true;
+            return Ok(());
         }
 
         // Ranges not covered by checksums are treated as bad.
         if offset + length > self.end {
-            return false;
+            return checksum_error(self, offset, length);
         }
 
         // Otherwise, scan related chunks.
         let start = (offset >> self.chunk_size_log) as usize;
         let end = ((offset + length - 1) >> self.chunk_size_log) as usize;
-        (start..(end + 1)).all(|i| self.check_chunk(i))
+        if !(start..(end + 1)).all(|i| self.check_chunk(i)) {
+            return checksum_error(self, offset, length);
+        }
+        Ok(())
     }
 
     fn check_chunk(&self, index: usize) -> bool {
@@ -190,6 +194,7 @@ impl ChecksumTable {
         Ok(ChecksumTable {
             file,
             buf: mmap,
+            path: path.as_ref().to_path_buf(),
             chunk_size_log,
             end: chunk_end,
             checksum_path,
@@ -205,6 +210,7 @@ impl ChecksumTable {
         Ok(ChecksumTable {
             file,
             buf: mmap,
+            path: self.path.clone(),
             checksum_path: self.checksum_path.clone(),
             chunk_size_log: self.chunk_size_log,
             end: self.end,
@@ -265,10 +271,7 @@ impl ChecksumTable {
 
         // Before recalculating, verify the changed chunks first.
         let start = checksums.len() as u64 * old_chunk_size;
-        if !self.check_range(start, self.end - start) {
-            let msg = format!("integrity check failure in range {}..{}", start, self.end);
-            return Err(data_error(msg));
-        }
+        self.check_range(start, self.end - start)?;
 
         let mut offset = checksums.len() as u64 * chunk_size;
         while offset < len {
@@ -310,6 +313,20 @@ impl ChecksumTable {
     }
 }
 
+// Intentionally not inlined. This affects the "index lookup (disk, verified)"
+// benchmark. It takes 74ms with this function inlined, and 61ms without.
+//
+// Reduce instruction count in `Index::verify_checksum`.
+#[inline(never)]
+fn checksum_error(table: &ChecksumTable, offset: u64, length: u64) -> Fallible<()> {
+    Err(errors::ChecksumError {
+        path: table.path.to_string_lossy().to_string(),
+        start: offset,
+        end: offset + length,
+    }
+    .into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -344,10 +361,10 @@ mod tests {
     fn test_empty() {
         let (_file, get_table) = setup();
         let table = get_table().expect("checksum on an empty file is okay");
-        assert!(table.check_range(0, 0));
-        assert!(!table.check_range(0, 1));
-        assert!(table.check_range(1, 0));
-        assert!(!table.check_range(1, 1));
+        assert!(table.check_range(0, 0).is_ok());
+        assert!(table.check_range(0, 1).is_err());
+        assert!(table.check_range(1, 0).is_ok());
+        assert!(table.check_range(1, 1).is_err());
     }
 
     #[test]
@@ -356,11 +373,11 @@ mod tests {
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
         table.update(7.into()).expect("update");
-        assert!(table.check_range(1, 19));
-        assert!(!table.check_range(1, 20));
-        assert!(table.check_range(19, 1));
-        assert!(table.check_range(0, 1));
-        assert!(!table.check_range(0, 21));
+        assert!(table.check_range(1, 19).is_ok());
+        assert!(table.check_range(1, 20).is_err());
+        assert!(table.check_range(19, 1).is_ok());
+        assert!(table.check_range(0, 1).is_ok());
+        assert!(table.check_range(0, 21).is_err());
     }
 
     #[test]
@@ -369,11 +386,11 @@ mod tests {
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
         table.update(3.into()).expect("update");
-        assert!(table.check_range(0, 20));
+        assert!(table.check_range(0, 20).is_ok());
         file.write_all(b"01234567890123456789").expect("write");
-        assert!(!table.check_range(20, 1));
+        assert!(table.check_range(20, 1).is_err());
         table.update(None).expect("update");
-        assert!(table.check_range(20, 20));
+        assert!(table.check_range(20, 20).is_ok());
     }
 
     #[test]
@@ -384,8 +401,8 @@ mod tests {
         table.update(2.into()).expect("update");
         for &chunk_size in &[1, 2, 3, 4] {
             table.update(chunk_size.into()).expect("update");
-            assert!(table.check_range(0, 20));
-            assert!(!table.check_range(0, 21));
+            assert!(table.check_range(0, 20).is_ok());
+            assert!(table.check_range(0, 21).is_err());
         }
     }
 
@@ -395,11 +412,11 @@ mod tests {
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
         table.update(3.into()).expect("update");
-        assert!(table.check_range(0, 20));
-        assert!(!table.check_range(0, 21));
+        assert!(table.check_range(0, 20).is_ok());
+        assert!(table.check_range(0, 21).is_err());
         let table = get_table().unwrap();
-        assert!(table.check_range(0, 20));
-        assert!(!table.check_range(0, 21));
+        assert!(table.check_range(0, 20).is_ok());
+        assert!(table.check_range(0, 21).is_err());
     }
 
     #[test]
@@ -411,12 +428,13 @@ mod tests {
         // Corruption: Corrupt the file at byte 5
         file.seek(SeekFrom::Start(5)).expect("seek");
         file.write_all(&[1]).expect("write");
-        assert!(!table.check_range(0, 10));
-        assert!(!table.check_range(5, 1));
+        let err = table.check_range(0, 10).unwrap_err();
+        assert!(format!("{}", err).ends_with("range 0..10 failed checksum check"));
+        assert!(table.check_range(5, 1).is_err());
         // Byte 4 is not corrupted. But the same chunk is corrupted.
-        assert!(!table.check_range(4, 1));
-        assert!(table.check_range(7, 13));
-        assert!(table.check_range(0, 4));
+        assert!(table.check_range(4, 1).is_err());
+        assert!(table.check_range(7, 13).is_ok());
+        assert!(table.check_range(0, 4).is_ok());
     }
 
     // This test truncates mmaped files which is unsupported by Windows.
@@ -429,9 +447,9 @@ mod tests {
         table.update(1.into()).expect("update");
         file.set_len(19).expect("set_len");
         let table = get_table().unwrap();
-        assert!(!table.check_range(0, 20));
-        assert!(!table.check_range(0, 19));
-        assert!(table.check_range(0, 18));
+        assert!(table.check_range(0, 20).is_err());
+        assert!(table.check_range(0, 19).is_err());
+        assert!(table.check_range(0, 18).is_ok());
     }
 
     #[test]
@@ -452,7 +470,7 @@ mod tests {
         file.write_all(b"x123451234512345").expect("write");
         table.update(None).expect("update");
         // But explicitly verifying it will reveal the problem.
-        assert!(!table.check_range(23, 1));
+        assert!(table.check_range(23, 1).is_err());
         // Update with a different chunk_size will also cause an error.
         table.update(2.into()).expect_err("broken during update");
     }
