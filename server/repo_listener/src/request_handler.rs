@@ -238,6 +238,9 @@ fn loadlimiting_configs(
                 ingress_blobstore_bytes: limit.ingress_blobstore_bytes * region_percentage / 100.0,
                 total_manifests: limit.total_manifests * region_percentage / 100.0,
                 quicksand_manifests: limit.quicksand_manifests * region_percentage / 100.0,
+                getfiles_files: limit.getfiles_files * region_percentage / 100.0,
+                getpack_files: limit.getpack_files * region_percentage / 100.0,
+                commits: limit.commits * region_percentage / 100.0,
             }),
             _ => None,
         }
