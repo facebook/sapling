@@ -7,13 +7,16 @@
 extern crate failure_ext as failure;
 extern crate sql;
 
+use cloned::cloned;
 use failure::{Error, Result};
 use futures::{
     future::{loop_fn, ok, Loop},
     Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, FutureExt};
-use std::path::Path;
+use slog::{info, Logger};
+use std::{path::Path, time::Duration};
+use tokio_timer::sleep;
 
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 
@@ -202,8 +205,18 @@ fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
 pub fn myrouter_ready(
     db_addr_opt: Option<String>,
     myrouter_port: Option<u16>,
+    logger: Logger,
 ) -> impl Future<Item = (), Error = Error> {
-    match db_addr_opt {
+    let logger_fut = loop_fn((), move |()| {
+        cloned!(logger);
+        sleep(Duration::from_secs(1)).map(move |_| {
+            info!(logger, "waiting for myrouter...");
+            Loop::Continue(())
+        })
+    })
+    .from_err();
+
+    let f = match db_addr_opt {
         None => ok(()).left_future(), // No DB required: we can skip myrouter.
         Some(db_address) => {
             if let Some(myrouter_port) = myrouter_port {
@@ -213,5 +226,7 @@ pub fn myrouter_ready(
                 ok(()).left_future()
             }
         }
-    }
+    };
+
+    f.select(logger_fut).map(|_| ()).map_err(|(err, _)| err)
 }

@@ -14,6 +14,7 @@ use std::{
 };
 
 use clap::{App, Arg, ArgMatches};
+use cloned::cloned;
 use failure_ext::{bail_msg, err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -756,6 +757,7 @@ fn open_repo_internal<'a>(
 
     let myrouter_port = parse_myrouter_port(matches);
 
+    cloned!(logger);
     repo_id
         .into_future()
         .and_then(move |repo_id| {
@@ -768,6 +770,7 @@ fn open_repo_internal<'a>(
                 redaction_override.unwrap_or(config.redaction),
                 common_config.scuba_censored_table,
                 config.filestore,
+                logger,
             )
         })
         .boxify()

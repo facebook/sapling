@@ -110,6 +110,7 @@ impl MononokeRepo {
             config.redaction,
             common_config.scuba_censored_table,
             config.filestore,
+            logger.clone(),
         )
         .map(move |repo| {
             let skiplist_index = {

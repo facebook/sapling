@@ -102,6 +102,7 @@ pub fn repo_handlers(
                 config.redaction,
                 scuba_censored_table.clone(),
                 config.filestore.clone(),
+                logger.clone(),
             )
             .and_then(move |blobrepo| {
                 let RepoConfig {

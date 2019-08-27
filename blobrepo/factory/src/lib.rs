@@ -31,6 +31,7 @@ use mononoke_types::RepositoryId;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use slog::Logger;
 use sql_ext::myrouter_ready;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
@@ -57,6 +58,7 @@ pub fn open_blobrepo(
     redaction: Redaction,
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
+    logger: Logger,
 ) -> BoxFuture<BlobRepo, Error> {
     let filestore_config = filestore_params
         .map(|params| {
@@ -72,37 +74,41 @@ pub fn open_blobrepo(
         })
         .unwrap_or(FilestoreConfig::default());
 
-    myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
-        .and_then(move |()| match storage_config.dbconfig {
-            MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
-                SqliteFactory::new(path),
-                storage_config.blobstore,
-                caching,
-                repoid,
-                myrouter_port,
-                bookmarks_cache_ttl,
-                redaction,
-                scuba_censored_table,
-                filestore_config,
-            )
-            .left_future(),
-            MetadataDBConfig::Mysql {
-                db_address,
-                sharded_filenodes,
-            } => do_open_blobrepo(
-                XdbFactory::new(db_address, myrouter_port, sharded_filenodes),
-                storage_config.blobstore,
-                caching,
-                repoid,
-                myrouter_port,
-                bookmarks_cache_ttl,
-                redaction,
-                scuba_censored_table,
-                filestore_config,
-            )
-            .right_future(),
-        })
-        .boxify()
+    myrouter_ready(
+        storage_config.dbconfig.get_db_address(),
+        myrouter_port,
+        logger,
+    )
+    .and_then(move |()| match storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
+            SqliteFactory::new(path),
+            storage_config.blobstore,
+            caching,
+            repoid,
+            myrouter_port,
+            bookmarks_cache_ttl,
+            redaction,
+            scuba_censored_table,
+            filestore_config,
+        )
+        .left_future(),
+        MetadataDBConfig::Mysql {
+            db_address,
+            sharded_filenodes,
+        } => do_open_blobrepo(
+            XdbFactory::new(db_address, myrouter_port, sharded_filenodes),
+            storage_config.blobstore,
+            caching,
+            repoid,
+            myrouter_port,
+            bookmarks_cache_ttl,
+            redaction,
+            scuba_censored_table,
+            filestore_config,
+        )
+        .right_future(),
+    })
+    .boxify()
 }
 
 fn do_open_blobrepo<T: SqlFactory>(

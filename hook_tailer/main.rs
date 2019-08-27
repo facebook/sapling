@@ -91,6 +91,7 @@ fn main() -> Result<()> {
         config.redaction,
         common_config.scuba_censored_table,
         config.filestore.clone(),
+        logger.clone(),
     );
 
     let rc = RequestContext {
