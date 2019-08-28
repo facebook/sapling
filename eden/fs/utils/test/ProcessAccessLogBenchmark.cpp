@@ -6,13 +6,12 @@
  */
 #include "eden/fs/utils/ProcessAccessLog.h"
 
-#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
+#include <folly/synchronization/test/Barrier.h>
 #include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
-using namespace facebook::fb303;
 
 /**
  * A high but realistic amount of contention.
@@ -26,7 +25,7 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
   ProcessAccessLog processAccessLog{processNameCache};
 
   std::vector<std::thread> threads;
-  StartingGate gate{kThreadCount};
+  folly::test::Barrier gate{kThreadCount + 1};
 
   size_t remainingIterations = iters;
   size_t totalIterations = 0;
@@ -47,10 +46,10 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
 
   CHECK_EQ(totalIterations, iters);
 
-  suspender.dismiss();
-
   // Now wake the threads.
-  gate.waitThenOpen();
+  gate.wait();
+
+  suspender.dismiss();
 
   // Wait until they're done.
   for (auto& thread : threads) {

@@ -4,9 +4,9 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include <folly/init/Init.h>
+#include <folly/synchronization/test/Barrier.h>
 #include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/tracing/Tracing.h"
 
@@ -25,7 +25,7 @@ BENCHMARK(Tracer_repeatedly_create_trace_points, n) {
 BENCHMARK(Tracer_repeatedly_create_trace_points_from_multiple_threads, n) {
   constexpr unsigned threadCount = 8;
   std::vector<std::thread> threads;
-  facebook::fb303::StartingGate gate{threadCount};
+  folly::test::Barrier gate{1 + threadCount};
   {
     folly::BenchmarkSuspender suspender;
     enableTracing();
@@ -42,7 +42,7 @@ BENCHMARK(Tracer_repeatedly_create_trace_points_from_multiple_threads, n) {
         }
       });
     }
-    gate.waitThenOpen();
+    gate.wait();
   }
   for (unsigned i = 0; i < n; ++i) {
     TraceBlock block{"foo"};

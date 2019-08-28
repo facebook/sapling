@@ -6,8 +6,8 @@
  */
 #include "eden/fs/utils/ProcessNameCache.h"
 
-#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
+#include <folly/synchronization/test/Barrier.h>
 #include "eden/fs/benchharness/Bench.h"
 
 using namespace facebook::eden;
@@ -22,7 +22,7 @@ BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
 
   ProcessNameCache processNameCache;
   std::vector<std::thread> threads;
-  facebook::fb303::StartingGate gate{kThreadCount};
+  folly::test::Barrier gate{1 + kThreadCount};
 
   size_t remainingIterations = iters;
   size_t totalIterations = 0;
@@ -42,10 +42,10 @@ BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
 
   CHECK_EQ(totalIterations, iters);
 
-  suspender.dismiss();
-
   // Now wake the threads.
-  gate.waitThenOpen();
+  gate.wait();
+
+  suspender.dismiss();
 
   // Wait until they're done.
   for (auto& thread : threads) {

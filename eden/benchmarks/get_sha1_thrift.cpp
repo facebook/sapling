@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 #include <boost/filesystem.hpp>
-#include <fb303/test/StartingGate.h>
 #include <folly/Benchmark.h>
 #include <folly/File.h>
 #include <folly/container/Array.h>
 #include <folly/init/Init.h>
+#include <folly/synchronization/test/Barrier.h>
 #include <thrift/lib/cpp/async/TAsyncSocket.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 #include <iostream>
@@ -21,7 +21,6 @@
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 
 using namespace facebook::eden;
-using namespace facebook::fb303;
 using namespace boost::filesystem;
 
 DEFINE_uint64(threads, 1, "The number of concurrent Thrift client threads");
@@ -67,7 +66,7 @@ int main(int argc, char** argv) {
   const auto samples_per_thread = 131072;
 
   std::vector<std::thread> threads;
-  StartingGate gate{static_cast<unsigned>(nthreads)};
+  folly::test::Barrier gate{static_cast<unsigned>(nthreads)};
   std::vector<uint64_t> samples(nthreads * samples_per_thread);
   for (unsigned i = 0; i < nthreads; ++i) {
     threads.emplace_back(
@@ -110,7 +109,6 @@ int main(int argc, char** argv) {
         });
   }
 
-  gate.waitThenOpen();
   for (auto& thread : threads) {
     thread.join();
   }

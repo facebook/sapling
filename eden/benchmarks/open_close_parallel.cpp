@@ -4,11 +4,11 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-#include <fb303/test/StartingGate.h>
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/Likely.h>
 #include <folly/init/Init.h>
+#include <folly/synchronization/test/Barrier.h>
 #include <gflags/gflags.h>
 #include <inttypes.h>
 #include <string.h>
@@ -23,7 +23,7 @@ DEFINE_uint64(threads, 1, "The number of concurrent open/close threads");
 DEFINE_uint64(iterations, 100000, "Number of open/close iterations per thread");
 
 using namespace facebook::eden;
-using facebook::fb303::StartingGate;
+using folly::test::Barrier;
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     ::close(fd);
   }
 
-  StartingGate gate{FLAGS_threads};
+  folly::test::Barrier gate{FLAGS_threads};
 
   std::mutex result_mutex;
   StatAccumulator combined_open;
@@ -97,8 +97,6 @@ int main(int argc, char** argv) {
   for (uint64_t t = 0; t < FLAGS_threads; ++t) {
     threads.emplace_back([t, &thread] { thread(t); });
   }
-
-  gate.waitThenOpen();
 
   for (auto& thread : threads) {
     thread.join();
