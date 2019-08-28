@@ -22,6 +22,7 @@ from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .subcmd import Subcmd
 from .util import mkdir_p, mkscratch_bin
+from .version import get_running_eden_version_parts
 
 
 redirect_cmd = subcmd_mod.Decorator()
@@ -511,6 +512,14 @@ class FixupCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        vers_date, _vers_time = get_running_eden_version_parts(instance)
+        if vers_date is not None and vers_date < "20190701":
+            # The redirection feature was shipped internally around the end
+            # of June; using July 1st as a cutoff is reasonable.  If they
+            # aren't running a new enough build, just silently bail out
+            # early.
+            return 0
+
         mount_table = mtab.new()
         redirs = get_effective_redirections(checkout, mount_table)
 
