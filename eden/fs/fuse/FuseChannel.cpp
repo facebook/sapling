@@ -271,6 +271,7 @@ static const std::unordered_map<int32_t, const char*> capsLabels = {
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
     {FUSE_POSIX_ACL, "POSIX_ACL"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
+    {FUSE_NO_OPENDIR_SUPPORT, "NO_OPENDIR_SUPPORT"},
 #endif
 #ifdef __APPLE__
     {FUSE_ALLOCATE, "ALLOCATE"},
