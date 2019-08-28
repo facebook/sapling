@@ -436,7 +436,10 @@ class Overlay:
         )
         try:
             os.write(fd, contents)
-            os.fdatasync(fd)
+            if getattr(os, "fdatasync", None):
+                os.fdatasync(fd)
+            else:
+                os.fsync(fd)
             os.fchmod(fd, 0o644)
             os.rename(tmp_path, file_path)
         except Exception:
