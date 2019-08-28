@@ -285,7 +285,17 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   args.blocksize = FUSE_DEFAULT_BLOCKSIZE;
   args.altflags |= FUSE_MOPT_BLOCKSIZE;
 
-  args.daemon_timeout = FUSE_DEFAULT_DAEMON_TIMEOUT;
+  // The daemon timeout is a hard timeout for fuse request processing.
+  // If the timeout is reached, the kernel will shut down the fuse
+  // connection.
+  auto daemon_timeout_seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(fuseTimeout_).count();
+  if (daemon_timeout_seconds > FUSE_MAX_DAEMON_TIMEOUT) {
+    args.daemon_timeout = FUSE_MAX_DAEMON_TIMEOUT;
+  } else {
+    args.daemon_timeout = daemon_timeout_seconds;
+  }
+  XLOG(ERR) << "setting daemon_timeout to " << args.daemon_timeout;
   args.altflags |= FUSE_MOPT_DAEMON_TIMEOUT;
 
   // maximum iosize for reading or writing.  We want to allow a much
@@ -544,6 +554,22 @@ void PrivHelperServer::setLogFile(folly::File&& logFile) {
   folly::checkUnixError(dup2(logFile.fd(), STDERR_FILENO));
 }
 
+UnixSocket::Message PrivHelperServer::processSetDaemonTimeout(
+    folly::io::Cursor& cursor,
+    UnixSocket::Message& /* request */) {
+  XLOG(DBG3) << "set daemon timeout";
+  std::chrono::nanoseconds duration;
+  PrivHelperConn::parseSetDaemonTimeoutRequest(cursor, duration);
+
+  setDaemonTimeout(duration);
+
+  return makeResponse();
+}
+
+void PrivHelperServer::setDaemonTimeout(std::chrono::nanoseconds duration) {
+  fuseTimeout_ = duration;
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -710,6 +736,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetLogFileMsg(cursor, request);
     case PrivHelperConn::REQ_UNMOUNT_BIND:
       return processBindUnMountMsg(cursor);
+    case PrivHelperConn::REQ_SET_DAEMON_TIMEOUT:
+      return processSetDaemonTimeout(cursor, request);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

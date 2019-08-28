@@ -208,6 +208,24 @@ void PrivHelperConn::parseBindMountRequest(
   checkAtEnd(cursor, "bind mount request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetDaemonTimeoutRequest(
+    uint32_t xid,
+    std::chrono::nanoseconds duration) {
+  auto msg = serializeHeader(xid, REQ_SET_DAEMON_TIMEOUT);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  uint64_t durationNanoseconds = duration.count();
+  appender.writeBE<uint64_t>(durationNanoseconds);
+
+  return msg;
+}
+
+void PrivHelperConn::parseSetDaemonTimeoutRequest(
+    Cursor& cursor,
+    std::chrono::nanoseconds& duration) {
+  duration = std::chrono::nanoseconds(cursor.readBE<uint64_t>());
+  checkAtEnd(cursor, "set daemon timeout request");
+}
+
 UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
     uint32_t xid,
     folly::StringPiece mountPath) {

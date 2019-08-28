@@ -61,6 +61,8 @@ class FakePrivHelper : public PrivHelper {
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) override;
   folly::Future<folly::Unit> setLogFile(folly::File logFile) override;
+  folly::Future<folly::Unit> setDaemonTimeout(
+      std::chrono::nanoseconds duration) override;
   int stop() override;
 
  private:

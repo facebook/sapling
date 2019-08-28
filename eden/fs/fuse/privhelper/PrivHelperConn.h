@@ -43,6 +43,7 @@ class PrivHelperConn {
     REQ_TAKEOVER_STARTUP = 6,
     REQ_SET_LOG_FILE = 7,
     REQ_UNMOUNT_BIND = 8,
+    REQ_SET_DAEMON_TIMEOUT = 9,
   };
 
   /**
@@ -116,6 +117,13 @@ class PrivHelperConn {
       uint32_t xid,
       folly::File logFile);
   static void parseSetLogFileRequest(folly::io::Cursor& cursor);
+
+  static UnixSocket::Message serializeSetDaemonTimeoutRequest(
+      uint32_t xid,
+      std::chrono::nanoseconds duration);
+  static void parseSetDaemonTimeoutRequest(
+      folly::io::Cursor& cursor,
+      std::chrono::nanoseconds& duration);
 
   /**
    * Parse a response that is expected to be empty.

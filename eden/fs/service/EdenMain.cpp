@@ -176,6 +176,8 @@ int EdenMain::main(int argc, char** argv) {
           folly::File(STDERR_FILENO, /*ownsFd=*/false));
     }
 
+    privHelper->setDaemonTimeoutBlocking(edenConfig->getFuseDaemonTimeout());
+
     // Since we are a daemon, and we don't ever want to be in a situation
     // where we hold any open descriptors through a fuse mount that points
     // to ourselves (which can happen during takeover), we chdir to `/`

@@ -19,6 +19,7 @@
 #include <gflags/gflags.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -1040,7 +1041,11 @@ void EdenMount::createFuseChannel(folly::File fuseDevice) {
       getPath(),
       FLAGS_fuseNumThreads,
       dispatcher_.get(),
-      serverState_->getProcessNameCache()));
+      serverState_->getProcessNameCache(),
+      std::chrono::duration_cast<folly::Duration>(
+          serverState_->getReloadableConfig()
+              .getEdenConfig()
+              ->getFuseRequestTimeout())));
 }
 
 void EdenMount::fuseInitSuccessful(

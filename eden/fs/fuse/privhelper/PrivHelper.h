@@ -9,6 +9,7 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <sys/types.h>
+#include <chrono>
 #include <memory>
 
 namespace folly {
@@ -107,6 +108,16 @@ class PrivHelper {
       folly::File logFile) = 0;
 
   /**
+   * Tell the privhelper server to use `duration` for the `daemon_timeout`
+   * parameter in subsequent fuseMount requests.
+   * The `daemon_timeout` is a macOS specific FUSE implementation detail;
+   * it is equivalent to our FuseChannel::fuseRequestTimeout_ value, except
+   * that the consequence of exceeding the timeout is that the FUSE session
+   * is torn down. */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setDaemonTimeout(
+      std::chrono::nanoseconds duration) = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *
@@ -116,6 +127,7 @@ class PrivHelper {
    * started.
    */
   void setLogFileBlocking(folly::File logFile);
+  void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
 
   /*
    * Explicitly stop the privhelper process.

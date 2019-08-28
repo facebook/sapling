@@ -156,6 +156,26 @@ class EdenConfig : public ConfigSettingManager {
     return localStoreEphemeralSizeLimit_.getValue();
   }
 
+  /**
+   * Get the maximum time duration allowed for a fuse request.
+   * If a request exceeds this amount of time, an ETIMEDOUT
+   * error will be returned to the kernel to avoid blocking forever.
+   */
+  std::chrono::nanoseconds getFuseRequestTimeout() const {
+    return fuseRequestTimeout_.getValue();
+  }
+
+  /**
+   * Get the maximum time duration that the kernel should allow
+   * for a fuse request.
+   * If a request exceeds this amount of time, it may take aggressive
+   * measures to shut down the fuse channel.
+   * This value is only applicable to the macOS fuse implementation.
+   */
+  std::chrono::nanoseconds getFuseDaemonTimeout() const {
+    return fuseDaemonTimeout_.getValue();
+  }
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -288,6 +308,15 @@ class EdenConfig : public ConfigSettingManager {
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};
+
+  ConfigSetting<std::chrono::nanoseconds> fuseRequestTimeout_{
+      "fuse:request-timeout",
+      std::chrono::minutes(1),
+      this};
+  ConfigSetting<std::chrono::nanoseconds> fuseDaemonTimeout_{
+      "fuse:daemon-timeout",
+      std::chrono::nanoseconds::max(),
+      this};
 };
 } // namespace eden
 } // namespace facebook

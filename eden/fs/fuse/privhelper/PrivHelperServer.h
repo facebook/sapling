@@ -88,6 +88,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       UnixSocket::Message& request);
   std::string findMatchingMountPrefix(folly::StringPiece path);
 
+  UnixSocket::Message processSetDaemonTimeout(
+      folly::io::Cursor& cursor,
+      UnixSocket::Message& request);
+
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);
   virtual void fuseUnmount(const char* mountPath);
@@ -95,11 +99,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);
   virtual void setLogFile(folly::File&& logFile);
+  virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
 
   std::unique_ptr<folly::EventBase> eventBase_;
   UnixSocket::UniquePtr conn_;
   uid_t uid_{std::numeric_limits<uid_t>::max()};
   gid_t gid_{std::numeric_limits<gid_t>::max()};
+  std::chrono::nanoseconds fuseTimeout_{std::chrono::seconds(60)};
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state

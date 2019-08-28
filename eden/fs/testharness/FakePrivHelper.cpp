@@ -137,5 +137,10 @@ std::shared_ptr<FakePrivHelper::MountDelegate> FakePrivHelper::getMountDelegate(
   return it->second;
 }
 
+folly::Future<folly::Unit> FakePrivHelper::setDaemonTimeout(
+    std::chrono::nanoseconds /* duration */) {
+  return folly::Unit{};
+}
+
 } // namespace eden
 } // namespace facebook
