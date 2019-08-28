@@ -1646,6 +1646,13 @@ impl BlobRepo {
                         }
                     }
                 })
+                .timed(move |stats, _| {
+                    ctx.scuba()
+                        .clone()
+                        .add_future_stats(&stats)
+                        .log_with_msg("Generating hg changeset", Some(format!("{}", bcs_id)));
+                    Ok(())
+                })
         }
 
         let repo = self.clone();

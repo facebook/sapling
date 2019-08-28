@@ -17,6 +17,7 @@ use futures::{
 use futures_ext::{bounded_traversal, FutureExt, StreamExt};
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
+use scuba_ext::ScubaSampleBuilderExt;
 use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::HashSet,
@@ -35,8 +36,6 @@ define_stats! {
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
 /// nothing will be generated. Otherwise this function will generate data for this commit and for
 /// all it's ancestors that didn't have this derived data.
-///
-/// TODO(T47650184) - log to scuba and ods how long it took to generate derived data
 pub(crate) fn derive_impl<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
@@ -95,7 +94,18 @@ pub(crate) fn derive_impl<
     .flatten_stream()
     .for_each({
         cloned!(ctx, derived_mapping, repo);
-        move |bcs_id| derive_may_panic(ctx.clone(), repo.clone(), derived_mapping.clone(), bcs_id)
+        move |bcs_id| {
+            derive_may_panic(ctx.clone(), repo.clone(), derived_mapping.clone(), bcs_id.clone())
+                .timed({
+                    cloned!(ctx);
+                    move |stats, _| {
+                        ctx.scuba()
+                            .clone()
+                            .add_future_stats(&stats)
+                            .log_with_msg("Generating derived data", Some(format!("{} {}", Derived::NAME, bcs_id)));
+                        Ok(())
+                }})
+        }
     })
     .and_then(move |()| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
 }
