@@ -130,5 +130,10 @@ void RequestData::genericErrorHandler(const std::exception& err) {
   RequestData::get().replyError(EIO);
 }
 
+void RequestData::timeoutErrorHandler(const folly::FutureTimeout& err) {
+  XLOG(DBG5) << folly::exceptionStr(err);
+  RequestData::get().replyError(ETIMEDOUT);
+}
+
 } // namespace eden
 } // namespace facebook

@@ -98,7 +98,8 @@ class FuseChannel {
       AbsolutePathPiece mountPath,
       size_t numThreads,
       Dispatcher* const dispatcher,
-      std::shared_ptr<ProcessNameCache> processNameCache);
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      folly::Duration requestTimeout = std::chrono::seconds(60));
 
   /**
    * Destroy the FuseChannel.
@@ -528,6 +529,7 @@ class FuseChannel {
   const size_t numThreads_;
   Dispatcher* const dispatcher_{nullptr};
   const AbsolutePath mountPath_;
+  const folly::Duration requestTimeout_;
 
   /*
    * connInfo_ is modified during the initialization process,
