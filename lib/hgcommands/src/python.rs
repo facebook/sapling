@@ -2,7 +2,8 @@
 
 use libc::c_int;
 use python27_sys::{
-    PyEval_InitThreads, PySys_SetArgv, Py_Finalize, Py_Initialize, Py_SetProgramName,
+    PyEval_InitThreads, PySys_SetArgv, Py_Finalize, Py_Initialize, Py_IsInitialized,
+    Py_SetProgramName,
 };
 use std;
 use std::ffi::CString;
@@ -27,6 +28,10 @@ pub fn py_initialize() {
     unsafe {
         Py_Initialize();
     }
+}
+
+pub fn py_is_initialized() -> bool {
+    unsafe { Py_IsInitialized() != 0 }
 }
 
 pub fn py_finalize() {

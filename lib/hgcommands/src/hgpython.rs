@@ -1,7 +1,8 @@
 // Copyright Facebook, Inc. 2018
 use crate::commands;
 use crate::python::{
-    py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
+    py_finalize, py_init_threads, py_initialize, py_is_initialized, py_set_argv,
+    py_set_program_name,
 };
 use cpython::{exc, NoArgs, ObjectProtocol, PyDict, PyResult, Python, PythonObject};
 use cpython_ext::Bytes;
@@ -10,12 +11,19 @@ use std::env;
 use std::ffi::CString;
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm.mercurial.entrypoint";
-pub struct HgPython {}
+pub struct HgPython {
+    py_initialized_by_us: bool,
+}
 
 impl HgPython {
     pub fn new() -> HgPython {
-        Self::setup_python();
-        HgPython {}
+        let py_initialized_by_us = !py_is_initialized();
+        if py_initialized_by_us {
+            Self::setup_python();
+        }
+        HgPython {
+            py_initialized_by_us,
+        }
     }
 
     fn setup_python() {
@@ -105,6 +113,8 @@ impl HgPython {
 
 impl Drop for HgPython {
     fn drop(&mut self) {
-        py_finalize();
+        if self.py_initialized_by_us {
+            py_finalize();
+        }
     }
 }
