@@ -62,7 +62,6 @@ else
 	$(RM) $(HGNAME)
 	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
 endif
-	env HGRCPATH= hg version
 
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
