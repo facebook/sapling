@@ -23,12 +23,14 @@ use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{info, Logger};
 use std::{collections::BTreeSet, str::FromStr, sync::Arc};
+use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";
 const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
 const ARG_LIMIT: &'static str = "limit";
+const ARG_TRACE: &'static str = "trace";
 
 fn csid_resolve(
     ctx: CoreContext,
@@ -83,6 +85,11 @@ pub fn subcommand_unodes_build(name: &str) -> App {
 
     SubCommand::with_name(name)
         .about("inspect and interact with unodes")
+        .arg(
+            Arg::with_name(ARG_TRACE)
+                .help("upload trace to manifold")
+                .long("trace"),
+        )
         .subcommand(
             SubCommand::with_name(COMMAND_TREE)
                 .help("recursively list all unode entries starting with prefix")
@@ -107,15 +114,21 @@ pub fn subcommand_unodes(
     matches: &ArgMatches<'_>,
     sub_matches: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
+    let tracing_enable = sub_matches.is_present(ARG_TRACE);
+    if tracing_enable {
+        tracing::enable();
+    }
+
     args::init_cachelib(&matches);
 
     let repo = args::open_repo(&logger, &matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
 
-    match sub_matches.subcommand() {
+    let run = match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = path_resolve(matches.value_of(ARG_PATH).unwrap());
+            cloned!(ctx);
             (repo, path)
                 .into_future()
                 .and_then(move |(repo, path)| {
@@ -132,6 +145,7 @@ pub fn subcommand_unodes(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
+            cloned!(ctx);
             repo.into_future()
                 .and_then(move |repo| {
                     csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
@@ -141,6 +155,32 @@ pub fn subcommand_unodes(
                 .boxify()
         }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
+    };
+
+    if tracing_enable {
+        run.then(move |result| {
+            ctx.trace()
+                .upload_to_manifold(RequestContext {
+                    bucketName: "mononoke_prod".into(),
+                    apiKey: "".into(),
+                    ..Default::default()
+                })
+                .then(move |upload_result| {
+                    let logger = ctx.logger();
+                    match upload_result {
+                        Err(err) => info!(logger, "failed to upload trace: {:#?}", err),
+                        Ok(_) => info!(
+                            logger,
+                            "trace uploaded: mononoke_prod/flat/{}.trace",
+                            ctx.trace().id()
+                        ),
+                    }
+                    result
+                })
+        })
+        .boxify()
+    } else {
+        run
     }
 }
 

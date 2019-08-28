@@ -18,6 +18,7 @@ use futures_ext::{bounded_traversal, FutureExt, StreamExt};
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
+use slog::debug;
 use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::HashSet,
@@ -25,6 +26,7 @@ use std::{
 };
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
+use tracing::{trace_args, EventId, Traced};
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -81,6 +83,7 @@ pub(crate) fn derive_impl<
             })
         }
     })
+    .traced(&ctx.trace(), "derive::find_dependencies", None)
     .filter_map(|x| x) // Remove all None
     .collect_to()
     .map(|v| {
@@ -121,6 +124,13 @@ where
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 {
+    debug!(
+        ctx.logger(),
+        "derive {} for {}",
+        Derived::NAME,
+        bcs_id.to_hex()
+    );
+    let event_id = EventId::new();
     let bcs_fut = repo.get_bonsai_changeset(ctx.clone(), bcs_id.clone());
 
     let lease = repo.get_derived_data_lease_ops();
@@ -177,8 +187,24 @@ where
                                                     bcs,
                                                     parents,
                                                 )
+                                                .traced_with_id(
+                                                    &ctx.trace(),
+                                                    "derive::derive_from_parents",
+                                                    trace_args! {
+                                                        "csid" => bcs_id.to_hex().to_string(),
+                                                        "type" => Derived::NAME
+                                                    },
+                                                    event_id,
+                                                )
                                                 .and_then(move |derived| {
-                                                    derived_mapping.put(ctx, bcs_id, derived)
+                                                    derived_mapping
+                                                        .put(ctx.clone(), bcs_id, derived)
+                                                        .traced_with_id(
+                                                            &ctx.trace(),
+                                                            "derive::update_mapping",
+                                                            None,
+                                                            event_id,
+                                                        )
                                                 })
                                                 .timed(move |stats, _| {
                                                     STATS::derived_data_latency.add_value(

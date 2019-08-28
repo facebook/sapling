@@ -18,7 +18,7 @@ use std::{
     iter::FromIterator,
     mem,
 };
-use tracing::{trace_args, Traced};
+use tracing::{trace_args, EventId, Traced};
 
 /// Information passed to `create_tree` function when tree node is constructed
 pub struct TreeInfo<TreeId, LeafId> {
@@ -101,6 +101,7 @@ where
     LFut: IntoFuture<Item = LeafId, Error = Error>,
     LFut::Future: Send + 'static,
 {
+    let event_id = EventId::new();
     bounded_traversal(
         256,
         MergeNode {
@@ -119,50 +120,69 @@ where
             move |merge_node| merge_node.merge(ctx.clone(), blobstore.clone())
         },
         // fold, this function only creates entries from merge result and already merged subentries
-        move |merge_result, subentries| match merge_result {
-            MergeResult::Reuse { name, entry } => future::ok(Some((name, entry))).boxify(),
-            MergeResult::Delete => future::ok(None).boxify(),
-            MergeResult::CreateTree {
-                name,
-                path,
-                parents,
-            } => {
-                let subentries: BTreeMap<_, _> = subentries
-                    .flatten()
-                    .filter_map(|(name, entry): (Option<MPathElement>, _)| {
-                        name.map(|name| (name, entry))
-                    })
-                    .collect();
-                if subentries.is_empty() {
-                    future::ok(None).boxify()
-                } else {
-                    create_tree(TreeInfo {
-                        path,
-                        parents,
-                        subentries,
-                    })
-                    .into_future()
-                    .map(move |tree_id| Some((name, Entry::Tree(tree_id))))
-                    .boxify()
+        {
+            let ctx = ctx.clone();
+            move |merge_result, subentries| match merge_result {
+                MergeResult::Reuse { name, entry } => future::ok(Some((name, entry))).boxify(),
+                MergeResult::Delete => future::ok(None).boxify(),
+                MergeResult::CreateTree {
+                    name,
+                    path,
+                    parents,
+                } => {
+                    let subentries: BTreeMap<_, _> = subentries
+                        .flatten()
+                        .filter_map(|(name, entry): (Option<MPathElement>, _)| {
+                            name.map(|name| (name, entry))
+                        })
+                        .collect();
+                    if subentries.is_empty() {
+                        future::ok(None).boxify()
+                    } else {
+                        create_tree(TreeInfo {
+                            path: path.clone(),
+                            parents,
+                            subentries,
+                        })
+                        .into_future()
+                        .map(move |tree_id| Some((name, Entry::Tree(tree_id))))
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "derive_manifest::create_tree",
+                            trace_args! {
+                                "path" => MPath::display_opt(path.as_ref()).to_string(),
+                            },
+                            event_id,
+                        )
+                        .boxify()
+                    }
                 }
+                MergeResult::CreateLeaf {
+                    leaf,
+                    name,
+                    path,
+                    parents,
+                } => create_leaf(LeafInfo {
+                    leaf,
+                    path: path.clone(),
+                    parents,
+                })
+                .into_future()
+                .map(move |leaf_id| Some((name, Entry::Leaf(leaf_id))))
+                .traced_with_id(
+                    &ctx.trace(),
+                    "derive_manifest::create_leaf",
+                    trace_args! {
+                        "path" => path.to_string(),
+                    },
+                    event_id,
+                )
+                .boxify(),
             }
-            MergeResult::CreateLeaf {
-                leaf,
-                name,
-                path,
-                parents,
-            } => create_leaf(LeafInfo {
-                leaf,
-                path,
-                parents,
-            })
-            .into_future()
-            .map(move |leaf_id| Some((name, Entry::Leaf(leaf_id))))
-            .boxify(),
         },
     )
     .map(|result: Option<_>| result.and_then(|(_, entry)| entry.into_tree()))
-    .traced(&ctx.trace(), "derive_manifest", trace_args! {})
+    .traced_with_id(&ctx.trace(), "derive_manifest", None, event_id)
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic
