@@ -6,7 +6,7 @@
 # FIXME: need to pull in proxygen for this
 file(GLOB STORE_MONONOKE_SRCS "*.cpp")
 
-if (EDEN_WIN_NOMONONOKE)
+if (NOT EDEN_HAVE_MONONOKE)
   list(
     REMOVE_ITEM
     STORE_MONONOKE_SRCS

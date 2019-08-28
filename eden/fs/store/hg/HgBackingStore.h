@@ -11,9 +11,6 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
-#if EDEN_HAVE_RUST_DATAPACK
-#include "scm/hg/lib/revisionstore/RevisionStore.h"
-#endif
 #include "eden/fs/tracing/EdenStats.h"
 
 #include <folly/Executor.h>
@@ -21,6 +18,10 @@
 #include <folly/Synchronized.h>
 #include <memory>
 #include <optional>
+
+#if EDEN_HAVE_RUST_DATAPACK
+#include "scm/hg/lib/revisionstore/RevisionStore.h"
+#endif
 
 /* forward declare support classes from mercurial */
 class ConstantStringRef;
@@ -121,7 +122,7 @@ class HgBackingStore : public BackingStore {
    */
   std::unique_ptr<ServiceAddress> getMononokeServiceAddress();
 
-#ifndef EDEN_WIN_NOMONONOKE
+#if EDEN_HAVE_MONONOKE
   /**
    * Create an instance of MononokeHttpBackingStore with values from config_
    * (Proxygen based Mononoke client)

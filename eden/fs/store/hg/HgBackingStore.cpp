@@ -40,7 +40,7 @@
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
 
-#ifndef EDEN_WIN_NOMONONOKE
+#if EDEN_HAVE_MONONOKE
 #include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 #include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
 #endif
@@ -377,7 +377,7 @@ std::unique_ptr<ServiceAddress> HgBackingStore::getMononokeServiceAddress() {
   return std::make_unique<ServiceAddress>(tier);
 }
 
-#ifndef EDEN_WIN_NOMONONOKE
+#if EDEN_HAVE_MONONOKE
 std::unique_ptr<MononokeHttpBackingStore>
 HgBackingStore::initializeHttpMononokeBackingStore() {
   auto edenConfig = config_->getEdenConfig();
@@ -437,7 +437,7 @@ HgBackingStore::initializeCurlMononokeBackingStore() {
 std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
   const auto& connectionType =
       config_->getEdenConfig()->getMononokeConnectionType();
-#ifndef EDEN_WIN_NOMONONOKE
+#if EDEN_HAVE_MONONOKE
   if (connectionType == "http") {
     return initializeHttpMononokeBackingStore();
   } else if (connectionType == "thrift") {
@@ -445,18 +445,18 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
   } else if (connectionType == "curl") {
 #ifdef EDEN_HAVE_CURL
     return initializeCurlMononokeBackingStore();
-#else // EDEN_HAVE_CURL
+#else
     XLOG(WARN)
         << "User specified Mononoke connection type as cURL, but eden is built "
            "without cURL";
-#endif // EDEN_HAVE_CURL
+#endif
   } else {
     XLOG(WARN) << "got unexpected value for `mononoke:connection-type`: "
                << connectionType;
   }
-#elif defined(EDEN_HAVE_CURL) // EDEN_WIN_NOMONONOKE
+#elif defined(EDEN_HAVE_CURL)
   return initializeCurlMononokeBackingStore();
-#endif // EDEN_WIN_NOMONONOKE
+#endif
   return nullptr;
 }
 
