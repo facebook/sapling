@@ -15,5 +15,4 @@
 #cmakedefine EDEN_HAVE_SYSTEMD
 #cmakedefine EDEN_HAVE_CURL
 #cmakedefine EDEN_WIN_NOMONONOKE
-#cmakedefine EDEN_WIN_NO_RUST_DATAPACK
-
+#cmakedefine EDEN_HAVE_RUST_DATAPACK

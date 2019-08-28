@@ -36,7 +36,7 @@
 
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
 
@@ -191,7 +191,7 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
   return nullptr;
 }
 
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
 std::unique_ptr<Blob> getBlobFromDataPackUnion(
     DataPackUnion& store,
     const Hash& id,
@@ -248,7 +248,7 @@ HgBackingStore::HgBackingStore(
               stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
   initializeDatapackImport(repository);
 #endif
   HgImporter importer(
@@ -274,7 +274,7 @@ HgBackingStore::HgBackingStore(
 
 HgBackingStore::~HgBackingStore() {}
 
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
 namespace {
 folly::Synchronized<DataPackUnion> makeUnionStore(
     AbsolutePathPiece repository,
@@ -753,7 +753,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
   if (useDatapackGetBlob_ && dataPackStore_) {
     auto content =
         getBlobFromDataPackUnion(*dataPackStore_.value().wlock(), id, hgInfo);

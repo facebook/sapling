@@ -11,7 +11,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
 #include "scm/hg/lib/revisionstore/RevisionStore.h"
 #endif
 #include "eden/fs/tracing/EdenStats.h"
@@ -205,7 +205,7 @@ class HgBackingStore : public BackingStore {
 
   std::string repoName_;
   folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;
-#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#if EDEN_HAVE_RUST_DATAPACK
   std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
 #endif
 };

@@ -74,7 +74,7 @@ set(EDEN_HAVE_CURL ${CURL_FOUND})
 if (WIN32)
   find_package(Prjfs MODULE REQUIRED)
 endif()
-set(EDEN_WIN_NO_RUST_DATAPACK ON)
+set(EDEN_HAVE_RUST_DATAPACK OFF)
 set(EDEN_WIN_NOMONONOKE ON)
 
 # TODO(strager): Support systemd in the opensource build.
