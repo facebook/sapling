@@ -33,7 +33,8 @@
 # Snapshot test plan:
 # 1) Empty snapshot (no changes);
 # 2) Snapshot with an empty metadata (changes only in tracked files);
-# 3) Snapshot with a metadata (merge state + mixed changes);
+# 3.1) Snapshot with metadata (merge state only);
+# 3.2) Snapshot with metadata (merge state + mixed changes);
 # 4) Same as 3 but test the --clean flag on creation;
 # 5) Same as 3 but test the --force flag on restore;
 # 6) TODO(alexeyqu): Same as 3 but sync to the server and another client.
@@ -118,7 +119,7 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 
-# 3) Snapshot with a metadata + merge conflict!
+# 3.1) Snapshot with metadata (merge state only);
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ hg status --verbose
   $ echo "a" > mergefile
@@ -136,6 +137,62 @@
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
+  $ BEFORESTATUS="$(hg status --verbose)"
+  $ echo "$BEFORESTATUS"
+  M mergefile
+  ? mergefile.orig
+  # The repository is in an unfinished *merge* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     mergefile
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  $ BEFOREDIFF="$(hg diff)"
+  $ echo "$BEFOREDIFF"
+  diff -r 6eb2552aed20 mergefile
+  --- a/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,5 @@
+  +<<<<<<< working copy: 6eb2552aed20 - test: merge #2
+   b
+  +=======
+  +a
+  +>>>>>>> merge rev:    f473d4d5a1c0 - test: merge #1
+# Create the snapshot
+  $ OID="$(hg snapshot create | cut -f2 -d' ')"
+  $ echo "$OID"
+  37c08567761738ed25fa7a8d497dc14de9dfa969
+
+# Clean everything and checkout back
+  $ hg update -q --clean . && rm mergefile.orig
+  $ hg snapshot checkout "$OID"
+  will checkout on 37c08567761738ed25fa7a8d497dc14de9dfa969
+  checkout complete
+
+# hg status/diff are unchanged
+  $ test "$BEFORESTATUS" = "$(hg status --verbose)"
+  $ test "$BEFOREDIFF" = "$(hg diff)"
+
+
+# 3.2) Snapshot with metadata (merge state + mixed changes);
+  $ hg status --verbose
+  M mergefile
+  ? mergefile.orig
+  # The repository is in an unfinished *merge* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     mergefile
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  
 
 # Make some changes on top of that: add, remove, edit
   $ hg rm bar/file

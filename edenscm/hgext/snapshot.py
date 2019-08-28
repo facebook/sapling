@@ -124,7 +124,7 @@ class snapshotmetadata(object):
 
     @property
     def empty(self):
-        return not (self.deleted or self.unknown)
+        return not (self.deleted or self.unknown or self.localvfsfiles)
 
     def serialize(self):
         files = {}
