@@ -12,8 +12,8 @@
 
 include(FindPackageHandleStandardArgs)
 
-find_path(PRJFS_INCLUDE_DIR NAMES ProjectedFSLib.h PATHS "D:/edenwin64/prjfs")
-find_library(PRJFS_LIBRARY NAMES ProjectedFSLib.lib PATHS "D:/edenwin64/prjfs")
+find_path(PRJFS_INCLUDE_DIR NAMES ProjectedFSLib.h PATHS "facebook/third-party/prjfs" "D:/edenwin64/prjfs")
+find_library(PRJFS_LIBRARY NAMES ProjectedFSLib.lib PATHS "facebook/third-party/prjfs" "D:/edenwin64/prjfs")
 find_package_handle_standard_args(
   Prjfs
   PRJFS_INCLUDE_DIR
