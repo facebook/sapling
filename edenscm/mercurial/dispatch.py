@@ -491,8 +491,20 @@ def dispatch(req):
                         "pid": os.getpid(),
                         "time": time.time(),
                     }
+                    splitoutput = output.split("\n")
+                    if len(splitoutput) > 200:
+                        readableoutput = "\n".join(
+                            splitoutput[:200]
+                            + ["Perftrace trunkated at 200 lines, see {}".format(key)]
+                        )
+                    else:
+                        readableoutput = output
                     req.ui.log(
-                        "perftrace", "Trace:\n%s\n", output, key=key, payload=output
+                        "perftrace",
+                        "Trace:\n%s\n",
+                        readableoutput,
+                        key=key,
+                        payload=output,
                     )
                     req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
 
