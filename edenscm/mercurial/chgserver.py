@@ -48,7 +48,9 @@ import socket
 import struct
 import time
 
-from . import commandserver, encoding, error, extensions, pycompat, util
+from edenscmnative.bindings import commands
+
+from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util
 from .i18n import _
 
 
@@ -438,7 +440,19 @@ class chgcmdserver(commandserver.server):
         os.umask(mask)
 
     def runcommand(self):
-        return super(chgcmdserver, self).runcommand()
+        args = self._readlist()
+        pycompat.sysargv[1:] = args
+        origui = uimod.ui
+        # Use the class patched by _newchgui so 'system' and 'pager' requests
+        # get forwarded to chg client
+        uimod.ui = self.ui.__class__
+        try:
+            ret = commands.run(
+                [pycompat.sysargv[0]] + args, self.ui.fin, self.ui.fout, self.ui.ferr
+            )
+            self.cresult.write(struct.pack(">i", int(ret & 255)))
+        finally:
+            uimod.ui = origui
 
     def setenv(self):
         """Clear and update os.environ
