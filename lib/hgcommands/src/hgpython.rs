@@ -4,8 +4,10 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_is_initialized, py_set_argv,
     py_set_program_name,
 };
-use cpython::{exc, NoArgs, ObjectProtocol, PyDict, PyResult, Python, PythonObject};
-use cpython_ext::Bytes;
+use cpython::{
+    exc, ObjectProtocol, PyClone, PyDict, PyObject, PyResult, Python, PythonObject, ToPyObject,
+};
+use cpython_ext::{Bytes, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
@@ -57,10 +59,25 @@ impl HgPython {
             .collect()
     }
 
-    fn run_py(&self, py: Python<'_>) -> PyResult<()> {
+    fn run_py(
+        &self,
+        py: Python<'_>,
+        args: Vec<String>,
+        io: &mut clidispatch::io::IO,
+    ) -> PyResult<()> {
         self.update_python_command_table(py)?;
         let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
-        entry_point_mod.call(py, "run", NoArgs, None)?;
+        let call_args = {
+            let fin = read_to_py_object(py, &io.input);
+            let fout = write_to_py_object(py, &io.output);
+            let ferr = match io.error {
+                None => fout.clone_ref(py),
+                Some(ref error) => write_to_py_object(py, error),
+            };
+            let args: Vec<Bytes> = args.into_iter().map(Bytes::from).collect();
+            (args, fin, fout, ferr).to_py_object(py)
+        };
+        entry_point_mod.call(py, "run", call_args, None)?;
         Ok(())
     }
 
@@ -78,10 +95,10 @@ impl HgPython {
         Ok(())
     }
 
-    pub fn run(&self) -> i32 {
+    pub fn run(&self, args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_py(py) {
+        match self.run_py(py, args, io) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an
@@ -116,5 +133,30 @@ impl Drop for HgPython {
         if self.py_initialized_by_us {
             py_finalize();
         }
+    }
+}
+
+fn read_to_py_object(py: Python, reader: &Box<dyn clidispatch::io::Read>) -> PyObject {
+    let any = Box::as_ref(reader).as_any();
+    if let Some(_) = any.downcast_ref::<std::io::Stdin>() {
+        // The Python code accepts None, and will use its default input stream.
+        py.None()
+    } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
+        obj.0.clone_ref(py)
+    } else {
+        unimplemented!("converting non-stdio Read from Rust to Python is not implemented")
+    }
+}
+
+fn write_to_py_object(py: Python, writer: &Box<dyn clidispatch::io::Write>) -> PyObject {
+    let any = Box::as_ref(writer).as_any();
+    if let Some(_) = any.downcast_ref::<std::io::Stdout>() {
+        py.None()
+    } else if let Some(_) = any.downcast_ref::<std::io::Stderr>() {
+        py.None()
+    } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
+        obj.0.clone_ref(py)
+    } else {
+        unimplemented!("converting non-stdio Write from Rust to Python is not implemented")
     }
 }

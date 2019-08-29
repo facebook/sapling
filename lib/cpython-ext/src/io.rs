@@ -11,7 +11,7 @@ pub fn wrap_pyio(pyio: PyObject) -> WrappedIO {
     WrappedIO(pyio)
 }
 
-pub struct WrappedIO(PyObject);
+pub struct WrappedIO(pub PyObject);
 
 impl io::Read for WrappedIO {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {

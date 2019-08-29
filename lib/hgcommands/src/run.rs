@@ -40,8 +40,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
             // code.
             let _ = env::set_current_dir(cwd);
 
-            // FIXME: HgPython does not respect `io`.
-            HgPython::new(args).run()
+            HgPython::new(args.clone()).run(args, io)
         }
     }
 }
