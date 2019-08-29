@@ -91,7 +91,7 @@ The history for y has to be refetched from the server.
   deleting corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
   xy2
   xy
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
 
 Next, do the same for local data.  This time there is data loss, as there are no more copies
 of the data available.

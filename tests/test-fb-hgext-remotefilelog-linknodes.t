@@ -258,7 +258,7 @@ Case 1: fastlog service calls fails or times out
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
 
 Case 2: fastlog returns empty results
 
@@ -321,6 +321,8 @@ Fastlog should never get called on draft commits
 
 Test linknode fixup logging
 
+  $ clearcache
+
 Setup extension that logs ui.log linkrevfixup output on the stderr
   $ cat >> $TESTTMP/uilog.py <<EOF
   > from edenscm.mercurial import extensions
@@ -334,6 +336,10 @@ Setup extension that logs ui.log linkrevfixup output on the stderr
   >         msgstr = msg[0] % msg[1:]
   >         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
   >     return orig(self, service, *msg, **opts)
+  > def call_conduit(*args, **kwargs):
+  >   return [{'hash': '123456'}]
+  > def conduit_config(*args, **kwargs):
+  >   return True
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -344,6 +350,7 @@ Silencing stdout because we are interested only in ui.log output
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
   linkrevfixup: fastlog succeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
 
 Fastlog fails
   $ cat > $TESTTMP/bad_conduit.py <<EOF
@@ -357,3 +364,4 @@ Fastlog fails
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
   linkrevfixup: fastlog failed (error) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   linkrevfixup: remotefilelog prefetching succeeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s

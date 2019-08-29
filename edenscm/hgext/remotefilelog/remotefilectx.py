@@ -214,15 +214,14 @@ class remotefilectx(context.filectx):
 
     def parents(self):
         repo = self._repo
-        ancestormap = self.ancestormap()
 
-        p1, p2, linknode, copyfrom = ancestormap[self._filenode]
+        p1, p2, linknode, copyfrom = self.getnodeinfo()
         results = []
         if p1 != nullid:
             path = copyfrom or self._path
             flog = repo.file(path)
             p1ctx = remotefilectx(
-                repo, path, fileid=p1, filelog=flog, ancestormap=ancestormap
+                repo, path, fileid=p1, filelog=flog, ancestormap=self._ancestormap
             )
             if self._descendantrevfastpath or "_changeid" in self.__dict__:
                 p1ctx._descendantrev = self.rev()
@@ -232,7 +231,7 @@ class remotefilectx(context.filectx):
             path = self._path
             flog = repo.file(path)
             p2ctx = remotefilectx(
-                repo, path, fileid=p2, filelog=flog, ancestormap=ancestormap
+                repo, path, fileid=p2, filelog=flog, ancestormap=self._ancestormap
             )
             if self._descendantrevfastpath or "_changeid" in self.__dict__:
                 p2ctx._descendantrev = self.rev()

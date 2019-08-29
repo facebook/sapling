@@ -29,4 +29,4 @@ Test blame
   0: x
   1: y
   2: z
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
