@@ -5,9 +5,9 @@
 
 #![allow(non_camel_case_types)]
 
-use crate::io::wrap_pyio;
 use clidispatch::io::IO;
 use cpython::*;
+use cpython_ext::wrap_pyio;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "commands"].join(".");
