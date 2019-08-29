@@ -1,14 +1,72 @@
 Writing Native Commands
 =======================
 
-The Rust library ``clidispatch`` found at ``scm/hg/lib/clidispatch`` is a library
-that mimics Mercurial's Python's ``dispatch`` logic, allowing command registration,
-command resolution, command line parsing, and handing execution off to a command
-handler to satisfy the end-user request.  Writing native commands allows requests
-to be satisfied without having to invoke the Python interpreter, thus creating a
-faster response time.  This library aims to eventually replace the seemingly hacky
-behavior of the telemetry wrapper ( ``scm/hg/telemetry/telemetry`` ) and allow
-more complex commands to be written in Rust.
+Quick Start
+-----------
+
+First, define flags. This is similarily magical as ``structopt``:
+
+.. sourcecode:: rust
+
+    use cliparser::define_flags;
+
+    define_flags! {
+        struct FooOpts {
+            /// help doc of shared
+            shared: bool,
+
+            /// a flag with a short name and default value
+            #[short('f')]
+            foo_bar: bool = true,
+
+            /// revisions
+            #[short('r')]
+            revs: Vec<String>,
+
+            #[arg]
+            first: String,
+
+            #[arg]
+            second: String,
+
+            #[args]
+            rest: Vec<String>,
+        }
+    }
+
+Fields with ``#[arg]`` or ``#[args]`` attribute are optional. If they are
+missing, the command wouldn't accept positional arguments. There is another
+attribute - ``#[command_name]``. It provides the "arg0" and may be useful
+for cases where mutliple commands share a same implementation.
+
+Then, define the function body.
+
+.. sourcecode:: rust
+
+    pub fn foo(flags: FooOpts, io: &mut IO, repo: Repo) -> Result<u8, DispatchError> {
+        // use io.write to output
+        io.write(format!("args: {} {} {:?}\n", opts.first, opts.second, opts.args));
+        io.write_err(format!("foo_bar: {:?}\n", flags.foo_bar));
+    }
+
+``repo: Repo`` indicates a repo is required. For commands not requiring a repo,
+just remove the argument:
+
+.. sourcecode:: rust
+
+    pub fn foo(flags: FooOpts, io: &mut IO) -> Result<u8, DispatchError> {
+         // ...
+    }
+
+Finally, register the command to the command table:
+
+.. sourcecode:: rust
+
+    // search table.register to find the place to change
+    table.register(foo, "foo", "help text of foo");
+
+It's done. Recompile and the ``foo`` command will be available.
+
 
 Flag Definitions
 ----------------
@@ -41,11 +99,11 @@ variants accept a default param.  Currently types supported are:
 Variant            Usage
 ===============    ============================================================
 ``Value::Str``     Expecting a single String argument e.g. ``--foo "bar"``
-``Value::Bool``    Expecting either a True / False value ( supports no-prefix ) 
+``Value::Bool``    Expecting either a True / False value ( supports no-prefix )
                    e.g. ``--foo`` or ``--no-foo``
 ``Value::Int``     Expecting a number ( i64 ) e.g. ``--foo 5``
-``Value::List``    Expecting multiple String arguments e.g. ``--foo "bar" 
-                   --foo "baz"``          
+``Value::List``    Expecting multiple String arguments e.g. ``--foo "bar"
+                   --foo "baz"``
 ===============    ============================================================
 
 There is a final variant ``Value::OptBool``, however this was created as a
@@ -56,18 +114,23 @@ native commands.
 Real Example
 ~~~~~~~~~~~~
 
+.. note::
+
+   You won't need to define ``Flag`` manually if you're using the
+   ``define_flags!`` macro.
+
 In Python we can have a definition such as ``--noninteractive``
 
 .. sourcecode:: python
 
     ( "y", "noninteractive", False, _("do not prompt...") )
-    
+
 Translating this definition to Rust we would end up with:
 
 .. sourcecode:: rust
 
     let flag: Flag = ('y', "noninteractive", "do not prompt...", false).into();
-    
+
 If there is no ``short_name`` for a flag then pass an empty character literal
 e.g. ``' '`` in the ``short_name`` place.
 
@@ -78,27 +141,18 @@ Command definitions are essentially metadata about all Mercurial commands.  The
 reason that Rust must know about *all* commands and not simply Rust-only commands
 is to be able to correctly prefix match on aliases and commands alike.  Commands
 loaded from ``commands.names`` config option are marked as Python and only kept for their name.  Commands
-actually defined in rust are of much more interest.  The definition has a basic
-builder pattern to add flags, add documentation ( to interop with Mercurial's 
-``help`` command ).
+actually defined in Rust are of much more interest.  The definition contains
+the name, doc, flags and the function body of a command.
 
-.. sourcecode:: rust
-    
-    let command = CommandDefinition::new(command_name)
-        .add_flag(flag)
-        .with_doc(r#"documentation goes here"#);
+.. note::
 
-Add as many flags are is necessary.  The flags that are parsed will be the superset
-of the global flags applying to all commands plus the commands specific flags.
-
-Real Example
-~~~~~~~~~~~~
+   You shouldn't use ``CommandDefinition`` directly.
+   Use ``dispatcher.register`` instead.
 
 .. sourcecode:: rust
 
-    let root_command = CommandDefinition::new("root")
-        .add_flag((None, "shared", "show shared...", false))
-        .with_doc(r#"show root of the repo returns 0 on success."#);
+    let def = CommandDefinition::new(name, doc, flags, func);
+
 
 Command Handlers
 ----------------
@@ -110,9 +164,9 @@ an implicit version of what Python does with ``inferrepo=True``.
 Command Types
 ~~~~~~~~~~~~~
 
-* ``Repo`` | ``(From<ParseOutput>, Vec<String>, &mut IO, Repo) -> Result<u8, DispatchError>``
-* ``InferRepo`` | ``(From<ParseOutput>, Vec<String>, &mut IO, Option<Repo>) -> Result<u8, DispatchError>``
-* ``NoRepo`` | ``(From<ParseOutput, Vec<String>, &mut IO) -> Result<u8, DispatchError>``
+* ``Repo`` | ``(Opts, &mut IO, Repo) -> Result<u8, DispatchError>``
+* ``InferRepo`` | ``(Opts, &mut IO, Option<Repo>) -> Result<u8, DispatchError>``
+* ``NoRepo`` | ``(Opts, &mut IO) -> Result<u8, DispatchError>``
 
 By changing your command handler, you are able to select where / when this command
 would be made available to the user.  Some commands require that they are executed
@@ -123,15 +177,9 @@ Defining The Arguments
 
 There are a possible total of 4 arguments being passed into command handlers:
 
-``From<ParseOutput>``: This argument is the most similar to the ``opts``
-argument in the Python codebase, and is essentially a map of flag's ``long_name``
-to Value variant.  The ``From`` trait is used to allow more flexibility in this
-type, such as being able to have a custom struct converted from this ParseOutput.
-This is a building block to approach an API similar to that of Structopts where
-flags can be inferred without having to tediously write out builder patterns.
-
-``Vec<String>``: This argument are the positional arguments to the command.
-The order is preserved from the command line.
+``Opts``: This argument is the most similar to the ``opts`` and ``args``
+arguments in the Python codebase. It is mostly likely crated by the
+``define_flags!`` macro.
 
 ``&mut IO``: IO is most similar to the ``UI`` object from Python, without the
 god class features.  It is simply a layer to write and read from stdin / stdout
@@ -166,23 +214,12 @@ Dispatcher
 
 ``clidispatch::dispatch::Dispatcher`` is the struct that allows command registration,
 and dispatching command line arguments.  Usage is very simple, and the correct
-version of ``register`` will be called based on the function signature of 
+version of ``register`` will be called based on the function signature of
 your command handler.
 
-Registering A Command
-~~~~~~~~~~~~~~~~~~~~~
+See :ref:`Quick Start` for code example.
 
-First, create a CommandDefinition ( currently the pattern is to have a method for this ).
-Next, create a command handler that pairs with this definition.  Create the dispatcher
-and register the definition with the handler:
-
-.. sourcecode:: rust
-
-    let root_command: CommandDefinition = root_command();
-    let mut dispatcher: Dispatcher = Dispatcher::new();
-    dispatcher.register(root_command, root); // assume function named `root` is handler
-
-Then ``dispatcher.dispatch(args)`` will handle all of the parsing, calling the
+``dispatcher.dispatch(args)`` will handle all of the parsing, calling the
 correct handler, and if the command is not backed by Rust, it will fallback to
 Python automatically.
 
