@@ -513,7 +513,7 @@ class FixupCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         vers_date, _vers_time = get_running_eden_version_parts(instance)
-        if vers_date is not None and vers_date < "20190701":
+        if vers_date and vers_date < "20190701":
             # The redirection feature was shipped internally around the end
             # of June; using July 1st as a cutoff is reasonable.  If they
             # aren't running a new enough build, just silently bail out
