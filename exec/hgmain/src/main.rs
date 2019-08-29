@@ -22,16 +22,20 @@ fn main() {
         }
     };
 
-    #[cfg(feature = "buildinfo")]
-    {
-        // This code path keeps buildinfo-related symbols alive.
-        if let Some(arg0) = args.get(0) {
-            if arg0.ends_with("buildinfo") {
-                unsafe {
-                    buildinfo::print_buildinfo();
-                }
-                return;
+    if let Some(cmd) = full_args.get(1) {
+        if cmd.ends_with("buildinfo") {
+            // This code path keeps buildinfo-related symbols alive.
+            #[cfg(feature = "buildinfo")]
+            unsafe {
+                buildinfo::print_buildinfo();
             }
+
+            #[cfg(not(feature = "buildinfo"))]
+            {
+                eprintln!("buildinfo not compiled in!");
+            }
+
+            return;
         }
     }
 
