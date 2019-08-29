@@ -394,8 +394,12 @@ ImporterOptions HgImporter::waitForHelperStart() {
 
   auto flags = cursor.readBE<uint32_t>();
   auto numTreemanifestPaths = cursor.readBE<uint32_t>();
-  if ((flags & StartFlag::TREEMANIFEST_SUPPORTED) &&
-      numTreemanifestPaths == 0) {
+  if (!(flags & StartFlag::TREEMANIFEST_SUPPORTED)) {
+    throw std::runtime_error(
+        "hg_import_helper indicated that treemanifest is not supported. "
+        "EdenFS requires treemanifest support.");
+  }
+  if (numTreemanifestPaths == 0) {
     throw std::runtime_error(
         "hg_import_helper indicated that treemanifest "
         "is supported, but provided no store paths");
