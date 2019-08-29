@@ -9,9 +9,7 @@ use std::borrow::Cow;
 #[fail(display = "cannot decode arguments")]
 pub struct NonUTF8Arguments;
 
-#[derive(Debug, Fail)]
-#[fail(display = "invalid arguments\n(use '--help' to get help)")]
-pub struct InvalidArguments;
+pub use cliparser::errors::InvalidArguments;
 
 #[derive(Debug, Fail)]
 #[fail(display = "unknown command '{}'\n(use 'hg help' to get help)", _0)]

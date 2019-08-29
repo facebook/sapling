@@ -38,9 +38,6 @@ define_flags! {
     pub struct RootOpts {
         /// show root of the shared repo
         shared: bool,
-
-        #[args]
-        args: Vec<String>,
     }
 
     pub struct DebugstoreOpts {
@@ -53,11 +50,6 @@ define_flags! {
 }
 
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
-    let args = opts.args;
-    if !args.is_empty() {
-        return Err(errors::InvalidArguments.into());
-    }
-
     let path = if opts.shared {
         repo.shared_path()
             .map(|p| p.to_owned())

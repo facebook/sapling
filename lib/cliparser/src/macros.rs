@@ -11,7 +11,7 @@ macro_rules! define_flags {
             flags []
             arg0 ()
             varargs ()
-            misc ($vis $name 1)
+            misc ($vis $name 1 false)
         ); )*
     };
 }
@@ -24,7 +24,7 @@ macro_rules! _define_flags_impl {
       flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr) )* ]
       arg0 ( $( $arg0:ident )? )
       varargs ( $($varargs:ident)? )
-      misc ($vis:vis $name:ident $varargs_offset:expr)
+      misc ($vis:vis $name:ident $varargs_offset:tt $has_varargs:tt)
     ) => {
         $vis struct $name {
             $( #[doc=$doc] pub $field : $type , )*
@@ -44,6 +44,10 @@ macro_rules! _define_flags_impl {
             type Error = ::failure::Error;
 
             fn try_from(out: $crate::parser::ParseOutput) -> ::failure::Fallible<Self> {
+                if !$has_varargs && out.args.len() > $varargs_offset {
+                    return Err($crate::errors::InvalidArguments.into());
+                }
+
                 Ok(Self {
                     $( $field : out.pick::<$type>(&stringify!($field).replace("_", "-")), )*
                     $( $varargs: out.args.get($varargs_offset..).map(|v| v.to_vec()).unwrap_or_default(), )?
@@ -139,14 +143,14 @@ macro_rules! _define_flags_impl {
       flags $flags:tt
       arg0 $arg0:tt
       varargs ()
-      misc $tail:tt
+      misc ($vis:vis $name:ident $varargs_offset:tt false)
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags $flags
             arg0 $arg0
             varargs ( $varargs_name )
-            misc $tail
+            misc ($vis $name $varargs_offset true)
         );
     };
 
@@ -248,6 +252,13 @@ mod tests {
         assert_eq!(parsed.count, 12);
         assert_eq!(parsed.long_name, "bob");
         assert_eq!(parsed.rev, vec!["b", "a"]);
+
+        let parsed = ParseOptions::new()
+            .flags(TestOptions::flags())
+            .parse_args(&vec!["--no-boo", "arg0", "arg1"])
+            .unwrap();
+        // arg1 is unexpected
+        assert!(TestOptions::try_from(parsed).is_err());
 
         let parsed = ParseOptions::new()
             .flags(AnotherTestOptions::flags())
