@@ -130,8 +130,24 @@ class HgRepository(repobase.Repository):
         repository's .hg/hgrc file.
         """
         self.hg("init")
-        if hgrc is not None:
-            self.write_hgrc(hgrc)
+        if hgrc is None:
+            hgrc = configparser.ConfigParser()
+
+        cachepath = os.path.join(self.path, ".hg", "remotefilelog_cachepath")
+        try:
+            os.mkdir(cachepath)
+        except FileExistsError:
+            pass
+
+        hgrc.setdefault("extensions", {})
+        hgrc["extensions"]["treemanifest"] = ""
+        hgrc["extensions"]["remotefilelog"] = ""
+        hgrc.setdefault("treemanifest", {})
+        hgrc["treemanifest"]["treeonly"] = "true"
+        hgrc.setdefault("remotefilelog", {})
+        hgrc["remotefilelog"]["reponame"] = "test"
+        hgrc["remotefilelog"]["cachepath"] = cachepath
+        self.write_hgrc(hgrc)
 
     def write_hgrc(self, hgrc: configparser.ConfigParser) -> None:
         hgrc_path = os.path.join(self.path, ".hg", "hgrc")
