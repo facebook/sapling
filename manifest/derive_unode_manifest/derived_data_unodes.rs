@@ -65,7 +65,8 @@ impl BonsaiDerived for RootUnodeManifestId {
             bcs_id,
             parents
                 .into_iter()
-                .map(|root_mf_id| root_mf_id.manifest_unode_id().clone()),
+                .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
+                .collect(),
             get_file_changes(&bonsai),
         )
         .map(RootUnodeManifestId)
@@ -124,9 +125,8 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
-) -> impl IntoIterator<Item = (MPath, Option<(ContentId, FileType)>)> {
-    let v: Vec<_> = bcs
-        .file_changes()
+) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+    bcs.file_changes()
         .map(|(mpath, maybe_file_change)| {
             let content_file_type = match maybe_file_change {
                 Some(file_change) => Some((file_change.content_id(), file_change.file_type())),
@@ -134,8 +134,7 @@ pub(crate) fn get_file_changes(
             };
             (mpath.clone(), content_file_type)
         })
-        .collect();
-    v.into_iter()
+        .collect()
 }
 
 #[cfg(test)]

@@ -8,8 +8,12 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Fail};
-use futures::{future, Future};
+use failure_ext::{err_msg, Error, Fail};
+use futures::{
+    future,
+    sync::{mpsc, oneshot},
+    Future, IntoFuture, Stream,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
@@ -43,38 +47,74 @@ pub fn derive_unode_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-    parents: impl IntoIterator<Item = ManifestUnodeId>,
-    changes: impl IntoIterator<Item = (MPath, Option<(ContentId, FileType)>)>,
+    parents: Vec<ManifestUnodeId>,
+    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> impl Future<Item = ManifestUnodeId, Error = Error> {
-    let parents: Vec<_> = parents.into_iter().collect();
+    future::lazy(move || {
+        let parents: Vec<_> = parents.into_iter().collect();
+        let blobstore = repo.get_blobstore();
+        let (result_sender, result_receiver) = oneshot::channel();
+        // Stream is used to batch writes to blobstore
+        let (sender, receiver) = mpsc::unbounded();
 
-    derive_manifest(
-        ctx.clone(),
-        repo.get_blobstore(),
-        parents.clone(),
-        changes,
-        {
-            cloned!(ctx, cs_id, repo);
-            move |tree_info| {
-                create_unode_manifest(ctx.clone(), cs_id, repo.get_blobstore(), tree_info)
+        let f = derive_manifest(
+            ctx.clone(),
+            repo.get_blobstore(),
+            parents.clone(),
+            changes,
+            {
+                cloned!(blobstore, ctx, cs_id, sender);
+                move |tree_info| {
+                    create_unode_manifest(
+                        ctx.clone(),
+                        cs_id,
+                        blobstore.clone(),
+                        sender.clone(),
+                        tree_info,
+                    )
+                }
+            },
+            {
+                cloned!(blobstore, ctx, cs_id, sender);
+                move |leaf_info| {
+                    create_unode_file(
+                        ctx.clone(),
+                        cs_id,
+                        blobstore.clone(),
+                        sender.clone(),
+                        leaf_info,
+                    )
+                }
+            },
+        )
+        .and_then({
+            cloned!(ctx, blobstore);
+            move |maybe_tree_id| match maybe_tree_id {
+                Some(tree_id) => future::ok(tree_id).left_future(),
+                None => {
+                    // All files have been deleted, generate empty **root** manifest
+                    let tree_info = TreeInfo {
+                        path: None,
+                        parents,
+                        subentries: Default::default(),
+                    };
+                    create_unode_manifest(ctx, cs_id, blobstore, sender, tree_info).right_future()
+                }
             }
-        },
-        {
-            cloned!(ctx, cs_id, repo);
-            move |leaf_info| create_unode_file(ctx.clone(), cs_id, repo.get_blobstore(), leaf_info)
-        },
-    )
-    .and_then(move |maybe_tree_id| match maybe_tree_id {
-        Some(tree_id) => future::ok(tree_id).left_future(),
-        None => {
-            // All files have been deleted, generate empty **root** manifest
-            let tree_info = TreeInfo {
-                path: None,
-                parents,
-                subentries: Default::default(),
-            };
-            create_unode_manifest(ctx, cs_id, repo.get_blobstore(), tree_info).right_future()
-        }
+        })
+        .then(move |res| {
+            // Error means receiver went away, just ignore it
+            let _ = result_sender.send(res);
+            Ok(())
+        });
+
+        tokio::spawn(f);
+        let blobstore_put_stream = receiver.map_err(|()| err_msg("receiver failed"));
+
+        blobstore_put_stream
+            .buffered(100)
+            .for_each(|_| Ok(()))
+            .and_then(move |()| result_receiver.from_err().and_then(|res| res))
     })
 }
 
@@ -98,6 +138,7 @@ fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
+    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId>,
 ) -> impl Future<Item = ManifestUnodeId, Error = Error> {
     let mut subentries = BTreeMap::new();
@@ -114,22 +155,29 @@ fn create_unode_manifest(
     let parents: Vec<_> = tree_info.parents.into_iter().collect();
     let mf_unode = ManifestUnode::new(parents, subentries, linknode);
     let mf_unode_id = mf_unode.get_unode_id();
+
     let key = mf_unode_id.blobstore_key();
     let blob = mf_unode.into_blob();
-    blobstore
-        .put(ctx, key, blob.into())
+    let f = future::lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
+
+    sender
+        .unbounded_send(f)
+        .into_future()
         .map(move |()| mf_unode_id)
+        .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
 }
 
 fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
+    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
 ) -> BoxFuture<FileUnodeId, Error> {
     fn save_unode(
         ctx: CoreContext,
         blobstore: RepoBlobstore,
+        sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
         file_type: FileType,
@@ -138,13 +186,20 @@ fn create_unode_file(
     ) -> BoxFuture<FileUnodeId, Error> {
         let file_unode = FileUnode::new(parents, content_id, file_type, path_hash, linknode);
         let file_unode_id = file_unode.get_unode_id();
-        blobstore
-            .put(
+        let f = future::lazy(move || {
+            blobstore.put(
                 ctx,
                 file_unode_id.blobstore_key(),
                 file_unode.into_blob().into(),
             )
+        })
+        .boxify();
+
+        sender
+            .unbounded_send(f)
+            .into_future()
             .map(move |()| file_unode_id)
+            .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
             .boxify()
     }
 
@@ -156,8 +211,9 @@ fn create_unode_file(
 
     if let Some((content_id, file_type)) = leaf {
         save_unode(
-            ctx.clone(),
+            ctx,
             blobstore,
+            sender,
             parents,
             content_id,
             file_type,
@@ -206,6 +262,7 @@ fn create_unode_file(
                 Some((content_id, file_type)) => save_unode(
                     ctx,
                     blobstore,
+                    sender,
                     parents,
                     content_id.clone(),
                     *file_type,
@@ -271,7 +328,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
-                vec![].into_iter(),
+                vec![],
                 get_file_changes(&bcs),
             );
 
@@ -307,7 +364,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
-                vec![parent_unode_id.clone()].into_iter(),
+                vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
             );
 
@@ -362,7 +419,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
-                vec![].into_iter(),
+                vec![],
                 get_file_changes(&bcs),
             );
             let unode_id = runtime.block_on(f).unwrap();
@@ -469,7 +526,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             bcs_id,
-            vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
+            vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
         );
         let root_unode = runtime.block_on(f).unwrap();
@@ -479,7 +536,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             bcs_id,
-            vec![p1_root_unode_id, p2_root_unode_id].into_iter(),
+            vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
         );
         let same_root_unode = runtime.block_on(f).unwrap();
@@ -490,7 +547,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             bcs_id,
-            vec![p2_root_unode_id, p1_root_unode_id].into_iter(),
+            vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
         );
         let reverse_root_unode = runtime.block_on(f).unwrap();
@@ -512,7 +569,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             bcs_id,
-            vec![].into_iter(),
+            vec![],
             get_file_changes(&bcs),
         );
         runtime.block_on(f).unwrap()
@@ -536,7 +593,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             first_bcs_id,
-            vec![].into_iter(),
+            vec![],
             get_file_changes(&bcs),
         );
         let first_unode_id = runtime.block_on(f).unwrap();
@@ -556,7 +613,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 merge_p1_id,
-                vec![first_unode_id.clone()].into_iter(),
+                vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
             );
             let merge_p1_unode_id = runtime.block_on(f).unwrap();
@@ -579,7 +636,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 merge_p2_id,
-                vec![first_unode_id.clone()].into_iter(),
+                vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
             );
             let merge_p2_unode_id = runtime.block_on(f).unwrap();
@@ -599,7 +656,7 @@ mod tests {
             ctx.clone(),
             repo.clone(),
             merge_id,
-            vec![merge_p1_unode_id, merge_p2_unode_id].into_iter(),
+            vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),
         );
         runtime.block_on(f)
