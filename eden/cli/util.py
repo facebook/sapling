@@ -511,21 +511,26 @@ def get_username() -> str:
 class LoadedNode(typing.NamedTuple):
     path: str
     is_write: bool
+    file_size: Optional[int]
 
 
 def split_inodes_by_operation_type(
     inode_results: typing.Sequence[TreeInodeDebugInfo]
-) -> typing.Tuple[typing.List[str], typing.List[str]]:
+) -> typing.Tuple[
+    typing.List[typing.Tuple[str, Optional[int]]],
+    typing.List[typing.Tuple[str, Optional[int]]],
+]:
     loaded_node_info = [
         LoadedNode(
             path=os.path.join(os.fsdecode(tree.path), os.fsdecode(n.name)),
             is_write=n.materialized or not n.hash,
+            file_size=n.fileSize,
         )
         for tree in inode_results
         for n in tree.entries
         if n.loaded and stat.S_IFMT(n.mode) == stat.S_IFREG
     ]
 
-    read_files = [o.path for o in loaded_node_info if not o.is_write]
-    written_files = [o.path for o in loaded_node_info if o.is_write]
+    read_files = [(o.path, o.file_size) for o in loaded_node_info if not o.is_write]
+    written_files = [(o.path, o.file_size) for o in loaded_node_info if o.is_write]
     return read_files, written_files

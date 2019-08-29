@@ -3274,6 +3274,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
     }
   }
 
+  std::vector<folly::Future<std::pair<size_t, uint64_t>>> futures;
   for (const auto& childData : childInodes) {
     info.entries.emplace_back();
     auto& infoEntry = info.entries.back();
@@ -3299,7 +3300,22 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       auto blobHash = childFile->getBlobHash();
       infoEntry.materialized = !blobHash.has_value();
       infoEntry.hash = thriftHash(blobHash);
+      futures.push_back(
+          childFile->stat().thenValue([i = info.entries.size() - 1](auto st) {
+            auto fileSize = st.st_size;
+            return std::make_pair(i, fileSize);
+          }));
     }
+  }
+  auto fileSizeMappings = folly::collectAll(futures).get();
+  for (const auto& future : fileSizeMappings) {
+    auto [i, fileSize] = future.value();
+
+    auto& infoEntry = info.entries[i];
+    // We must use set_size here because size is
+    // optional and if it is set directly then it will
+    // not get serialized correctly.
+    infoEntry.set_fileSize(fileSize);
   }
   results.push_back(info);
 

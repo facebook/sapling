@@ -41,6 +41,7 @@ class UtilTest(unittest.TestCase):
                     loaded=True,
                     materialized=False,
                     hash=b"1abc",
+                    fileSize=300,
                 ),
                 TreeInodeEntryDebugInfo(
                     name=b"written_file",
@@ -48,6 +49,7 @@ class UtilTest(unittest.TestCase):
                     mode=stat.S_IFREG,
                     loaded=True,
                     materialized=True,
+                    fileSize=400,
                 ),
             ],
             refcount=0,
@@ -58,8 +60,8 @@ class UtilTest(unittest.TestCase):
         read_files, written_files = util.split_inodes_by_operation_type(
             self.INODE_RESULTS_0
         )
-        self.assertListEqual(read_files, ["some_path/d1/read_file"])
-        self.assertListEqual(written_files, ["some_path/d1/written_file"])
+        self.assertListEqual(read_files, [("some_path/d1/read_file", 300)])
+        self.assertListEqual(written_files, [("some_path/d1/written_file", 400)])
 
     INODE_RESULTS_1 = [
         TreeInodeDebugInfo(
@@ -75,6 +77,7 @@ class UtilTest(unittest.TestCase):
                     loaded=True,
                     materialized=False,
                     hash=b"1abc",
+                    fileSize=300,
                 ),
                 TreeInodeEntryDebugInfo(
                     name=b"written_file",
@@ -82,6 +85,7 @@ class UtilTest(unittest.TestCase):
                     mode=stat.S_IFDIR,
                     loaded=True,
                     materialized=True,
+                    fileSize=400,
                 ),
             ],
             refcount=0,
@@ -109,6 +113,7 @@ class UtilTest(unittest.TestCase):
                     loaded=True,
                     materialized=False,
                     hash=b"1abc",
+                    fileSize=300,
                 )
             ],
             refcount=0,
@@ -125,6 +130,7 @@ class UtilTest(unittest.TestCase):
                     mode=stat.S_IFREG,
                     loaded=True,
                     materialized=True,
+                    fileSize=400,
                 )
             ],
             refcount=0,
@@ -135,8 +141,8 @@ class UtilTest(unittest.TestCase):
         read_files, written_files = util.split_inodes_by_operation_type(
             self.INODE_RESULTS_2
         )
-        self.assertListEqual(read_files, ["some_path/d1/read_file"])
-        self.assertListEqual(written_files, ["some_path/d1/written_file"])
+        self.assertListEqual(read_files, [("some_path/d1/read_file", 300)])
+        self.assertListEqual(written_files, [("some_path/d1/written_file", 400)])
 
     INODE_RESULTS_3 = [
         TreeInodeDebugInfo(
@@ -152,6 +158,7 @@ class UtilTest(unittest.TestCase):
                     loaded=False,
                     materialized=False,
                     hash=b"1abc",
+                    fileSize=300,
                 ),
                 TreeInodeEntryDebugInfo(
                     name=b"written_file",
@@ -159,6 +166,7 @@ class UtilTest(unittest.TestCase):
                     mode=stat.S_IFREG,
                     loaded=False,
                     materialized=True,
+                    fileSize=400,
                 ),
             ],
             refcount=0,
