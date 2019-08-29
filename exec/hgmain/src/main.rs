@@ -35,10 +35,12 @@ fn main() {
         }
     }
 
+    #[cfg(feature = "with_chg")]
+    maybe_call_chg();
+
     #[cfg(windows)]
     disable_standard_handle_inheritability().unwrap();
 
-    // FIXME: Restore the use of chg
     let mut io = clidispatch::io::IO::stdio();
     let code = hgcommands::run_command(full_args, &mut io);
     std::process::exit(code as i32);
