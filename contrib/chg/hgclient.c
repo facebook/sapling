@@ -34,7 +34,6 @@ enum {
   CAP_CHDIR = 0x0200,
   CAP_SETENV = 0x0800,
   CAP_SETUMASK = 0x1000,
-  CAP_VALIDATE = 0x2000,
   CAP_SETPROCNAME = 0x4000,
 };
 
@@ -50,7 +49,6 @@ static const cappair_t captable[] = {
     {"chdir", CAP_CHDIR},
     {"setenv", CAP_SETENV},
     {"setumask", CAP_SETUMASK},
-    {"validate", CAP_VALIDATE},
     {"setprocname", CAP_SETPROCNAME},
     {NULL, 0}, /* terminator */
 };
@@ -517,39 +515,6 @@ pid_t hgc_peerpid(const hgclient_t* hgc) {
 unsigned long long hgc_versionhash(const hgclient_t* hgc) {
   assert(hgc);
   return hgc->versionhash;
-}
-
-/*!
- * Send command line arguments to let the server load the repo config and check
- * whether it can process our request directly or not.
- * Make sure hgc_setenv is called before calling this.
- *
- * @return - NULL, the server believes it can handle our request, or does not
- *           support "validate" command.
- *         - a list of strings, the server probably cannot handle our request
- *           and it sent instructions telling us what to do next. See
- *           chgserver.py for possible instruction formats.
- *           the list should be freed by the caller.
- *           the last string is guaranteed to be NULL.
- */
-const char**
-hgc_validate(hgclient_t* hgc, const char* const args[], size_t argsize) {
-  assert(hgc);
-  if (!(hgc->capflags & CAP_VALIDATE))
-    return NULL;
-
-  packcmdargs(&hgc->ctx, args, argsize);
-  writeblockrequest(hgc, "validate");
-  handleresponse(hgc);
-
-  /* the server returns '\0' if it can handle our request */
-  if (hgc->ctx.datasize <= 1)
-    return NULL;
-
-  /* make sure the buffer is '\0' terminated */
-  enlargecontext(&hgc->ctx, hgc->ctx.datasize + 1);
-  hgc->ctx.data[hgc->ctx.datasize] = '\0';
-  return unpackcmdargsnul(&hgc->ctx);
 }
 
 /*!

@@ -57,117 +57,6 @@ from .i18n import _
 _log = commandserver.log
 
 
-def _hashlist(items):
-    """return sha1 hexdigest for a list"""
-    return hashlib.sha1(str(items)).hexdigest()
-
-
-# sensitive environment variables affecting confighash
-_envre = re.compile(
-    r"""\A(?:
-                    CHGHG
-                    |HG(?:EMITWARNINGS|ENCODING)?
-                    )\Z""",
-    re.X,
-)
-
-
-def _confighash(ui):
-    """return a quick hash for detecting config/env changes
-
-    confighash is the hash of sensitive config items and environment variables.
-
-    for chgserver, it is designed that once confighash changes, the server is
-    not qualified to serve its client and should redirect the client to a new
-    server. different from mtimehash, confighash change will not mark the
-    server outdated and exit since the user can have different configs at the
-    same time.
-    """
-    # no more sensitive config sections with dispatch.runchgserver()
-    # If $CHGHG is set, the change to $HG should not trigger a new chg server
-    if "CHGHG" in encoding.environ:
-        ignored = {"HG"}
-    else:
-        ignored = set()
-    envitems = [
-        (k, v)
-        for k, v in encoding.environ.iteritems()
-        if _envre.match(k) and k not in ignored
-    ]
-    envhash = _hashlist(sorted(envitems))
-    return envhash[:6]
-
-
-def _getmtimepaths(ui):
-    """get a list of paths that should be checked to detect change
-
-    The list will include:
-    - mercurial/__version__.py
-    - python binary
-    """
-    modules = []
-    try:
-        from . import __version__
-
-        modules.append(__version__)
-    except ImportError:
-        pass
-    files = [pycompat.sysexecutable]
-    for m in modules:
-        try:
-            files.append(inspect.getabsfile(m))
-        except TypeError:
-            pass
-    return sorted(set(files))
-
-
-def _mtimehash(paths):
-    """return a quick hash for detecting file changes
-
-    mtimehash calls stat on given paths and calculate a hash based on size and
-    mtime of each file. mtimehash does not read file content because reading is
-    expensive. therefore it's not 100% reliable for detecting content changes.
-    it's possible to return different hashes for same file contents.
-    it's also possible to return a same hash for different file contents for
-    some carefully crafted situation.
-
-    for chgserver, it is designed that once mtimehash changes, the server is
-    considered outdated immediately and should no longer provide service.
-
-    mtimehash is not included in confighash because we only know the paths of
-    extensions after importing them (there is imp.find_module but that faces
-    race conditions). We need to calculate confighash without importing.
-    """
-
-    def trystat(path):
-        try:
-            st = os.stat(path)
-            return (st.st_mtime, st.st_size)
-        except OSError:
-            # could be ENOENT, EPERM etc. not fatal in any case
-            pass
-
-    return _hashlist(map(trystat, paths))[:12]
-
-
-class hashstate(object):
-    """a structure storing confighash, mtimehash, paths used for mtimehash"""
-
-    def __init__(self, confighash, mtimehash, mtimepaths):
-        self.confighash = confighash
-        self.mtimehash = mtimehash
-        self.mtimepaths = mtimepaths
-
-    @staticmethod
-    def fromui(ui, mtimepaths=None):
-        if mtimepaths is None:
-            mtimepaths = _getmtimepaths(ui)
-        confighash = _confighash(ui)
-        mtimehash = _mtimehash(mtimepaths)
-        _log("confighash = %s mtimehash = %s\n" % (confighash, mtimehash))
-        return hashstate(confighash, mtimehash, mtimepaths)
-
-
 def _newchgui(srcui, csystem, attachio):
     class chgui(srcui.__class__):
         def __init__(self, src=None):
@@ -201,28 +90,6 @@ def _newchgui(srcui, csystem, attachio):
             return True
 
     return chgui(srcui)
-
-
-def _loadnewui(srcui, args):
-    from . import dispatch  # avoid cycle
-
-    newui = srcui.__class__.load()
-    for a in ["fin", "fout", "ferr", "environ"]:
-        setattr(newui, a, getattr(srcui, a))
-    if util.safehasattr(srcui, "_csystem"):
-        newui._csystem = srcui._csystem
-
-    # command line args
-    options = dispatch._earlyparseopts(newui, args)
-    dispatch._parseconfig(newui, options["config"])
-
-    # load wd and repo config, copied from dispatch.py
-    cwd = options["cwd"]
-    cwd = cwd and os.path.realpath(cwd) or None
-    rpath = options["repository"]
-    path, newlui = dispatch._getlocal(newui, rpath, wd=cwd)
-
-    return (newui, newlui)
 
 
 class channeledsystem(object):
@@ -289,7 +156,7 @@ _iochannels = [
 
 
 class chgcmdserver(commandserver.server):
-    def __init__(self, ui, repo, fin, fout, sock, hashstate, baseaddress):
+    def __init__(self, ui, repo, fin, fout, sock, baseaddress):
         super(chgcmdserver, self).__init__(
             _newchgui(ui, channeledsystem(fin, fout, "S"), self.attachio),
             repo,
@@ -298,11 +165,7 @@ class chgcmdserver(commandserver.server):
         )
         self.clientsock = sock
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
-        self.hashstate = hashstate
         self.baseaddress = baseaddress
-        if hashstate is not None:
-            self.capabilities = self.capabilities.copy()
-            self.capabilities["validate"] = chgcmdserver.validate
 
     def cleanup(self):
         super(chgcmdserver, self).cleanup()
@@ -375,51 +238,6 @@ class chgcmdserver(commandserver.server):
             setattr(self, cn, ch)
             setattr(ui, fn, fp)
         del self._oldios[:]
-
-    def validate(self):
-        """Reload the config and check if the server is up to date
-
-        Read a list of '\0' separated arguments.
-        Write a non-empty list of '\0' separated instruction strings or '\0'
-        if the list is empty.
-        An instruction string could be either:
-            - "unlink $path", the client should unlink the path to stop the
-              outdated server.
-            - "redirect $path", the client should attempt to connect to $path
-              first. If it does not work, start a new server. It implies
-              "reconnect".
-            - "exit $n", the client should exit directly with code n.
-              This may happen if we cannot parse the config.
-            - "reconnect", the client should close the connection and
-              reconnect.
-        If neither "reconnect" nor "redirect" is included in the instruction
-        list, the client can continue with this server after completing all
-        the instructions.
-        """
-        from . import dispatch  # avoid cycle
-
-        args = self._readlist()
-        try:
-            self.ui, lui = _loadnewui(self.ui, args)
-        except error.ParseError as inst:
-            dispatch._formatparse(self.ui.warn, inst)
-            self.ui.flush()
-            self.cresult.write("exit 255")
-            return
-        newhash = hashstate.fromui(lui, self.hashstate.mtimepaths)
-        insts = []
-        if newhash.mtimehash != self.hashstate.mtimehash:
-            addr = _hashaddress(self.baseaddress, self.hashstate.confighash)
-            insts.append("unlink %s" % addr)
-            # mtimehash is empty if one or more extensions fail to load.
-            # to be compatible with hg, still serve the client this time.
-            if self.hashstate.mtimehash:
-                insts.append("reconnect")
-        if newhash.confighash != self.hashstate.confighash:
-            addr = _hashaddress(self.baseaddress, newhash.confighash)
-            insts.append("redirect %s" % addr)
-        _log("validate: %s\n" % insts)
-        self.cresult.write("\0".join(insts) or "\0")
 
     def chdir(self):
         """Change current directory
@@ -494,13 +312,13 @@ def _tempaddress(address):
     return "%s.%d.tmp" % (address, os.getpid())
 
 
-def _hashaddress(address, hashstr):
+def _realaddress(address):
     # if the basename of address contains '.', use only the left part. this
     # makes it possible for the client to pass 'server.tmp$PID' and follow by
     # an atomic rename to avoid locking when spawning new servers.
     dirname, basename = os.path.split(address)
     basename = basename.split(".", 1)[0]
-    return "%s-%s" % (os.path.join(dirname, basename), hashstr)
+    return os.path.join(dirname, basename)
 
 
 class chgunixservicehandler(object):
@@ -514,29 +332,11 @@ class chgunixservicehandler(object):
         self._lastactive = time.time()
 
     def bindsocket(self, sock, address):
-        self._inithashstate(address)
-        self._checkextensions()
+        self._baseaddress = address
+        self._realaddress = _realaddress(address)
         self._bind(sock)
         self._createsymlink()
         # no "listening at" message should be printed to simulate hg behavior
-
-    def _inithashstate(self, address):
-        self._baseaddress = address
-        if self.ui.configbool("chgserver", "skiphash"):
-            self._hashstate = None
-            self._realaddress = address
-            return
-        self._hashstate = hashstate.fromui(self.ui)
-        self._realaddress = _hashaddress(address, self._hashstate.confighash)
-
-    def _checkextensions(self):
-        if not self._hashstate:
-            return
-        if extensions.notloaded():
-            # one or more extensions failed to load. mtimehash becomes
-            # meaningless because we do not know the paths of those extensions.
-            # set mtimehash to an illegal hash value to invalidate the server.
-            self._hashstate.mtimehash = ""
 
     def _bind(self, sock):
         # use a unique temp address so we can stat the file and do ownership
@@ -588,9 +388,7 @@ class chgunixservicehandler(object):
         self._lastactive = time.time()
 
     def createcmdserver(self, repo, conn, fin, fout):
-        return chgcmdserver(
-            self.ui, repo, fin, fout, conn, self._hashstate, self._baseaddress
-        )
+        return chgcmdserver(self.ui, repo, fin, fout, conn, self._baseaddress)
 
 
 def chgunixservice(ui, repo, opts):

@@ -106,7 +106,7 @@ static void setcmdserveropts(struct cmdserveropts* opts) {
   }
 
   const char* basename = (envsockname) ? envsockname : sockdir;
-  const char* sockfmt = (envsockname) ? "%s" : "%s/server2";
+  const char* sockfmt = (envsockname) ? "%s" : "%s/server3";
   r = snprintf(opts->sockname, sizeof(opts->sockname), sockfmt, basename);
   if (r < 0 || (size_t)r >= sizeof(opts->sockname))
     abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
@@ -174,10 +174,10 @@ static hgclient_t* retryconnectcmdserver(
   for (unsigned int i = 0; !timeoutsec || i < timeoutsec * 100; i++) {
     hgclient_t* hgc = hgc_open(opts->initsockname);
     if (hgc) {
-      debugmsg("rename %s to %s", opts->initsockname, opts->sockname);
-      int r = rename(opts->initsockname, opts->sockname);
+      debugmsg("unlink %s", opts->initsockname);
+      int r = unlink(opts->initsockname);
       if (r != 0)
-        abortmsgerrno("cannot rename");
+        abortmsgerrno("cannot unlink");
       return hgc;
     }
 
@@ -250,43 +250,6 @@ static void killcmdserver(const struct cmdserveropts* opts) {
     debugmsg("unlink(\"%s\") = %d", resolvedpath, ret);
     free(resolvedpath);
   }
-}
-
-/* Run instructions sent from the server like unlink and set redirect path
- * Return 1 if reconnect is needed, otherwise 0 */
-static int runinstructions(struct cmdserveropts* opts, const char** insts) {
-  int needreconnect = 0;
-  if (!insts)
-    return needreconnect;
-
-  assert(insts);
-  opts->redirectsockname[0] = '\0';
-  const char** pinst;
-  for (pinst = insts; *pinst; pinst++) {
-    debugmsg("instruction: %s", *pinst);
-    if (strncmp(*pinst, "unlink ", 7) == 0) {
-      unlink(*pinst + 7);
-    } else if (strncmp(*pinst, "redirect ", 9) == 0) {
-      int r = snprintf(
-          opts->redirectsockname,
-          sizeof(opts->redirectsockname),
-          "%s",
-          *pinst + 9);
-      if (r < 0 || r >= (int)sizeof(opts->redirectsockname))
-        abortmsg("redirect path is too long (%d)", r);
-      needreconnect = 1;
-    } else if (strncmp(*pinst, "exit ", 5) == 0) {
-      int n = 0;
-      if (sscanf(*pinst + 5, "%d", &n) != 1)
-        abortmsg("cannot read the exit code");
-      exit(n);
-    } else if (strcmp(*pinst, "reconnect") == 0) {
-      needreconnect = 1;
-    } else {
-      abortmsg("unknown instruction: %s", *pinst);
-    }
-  }
-  return needreconnect;
 }
 
 /*
@@ -389,12 +352,6 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
 #endif
     if (!needreconnect) {
       hgc_setenv(hgc, envp);
-      double validate_start = hgc_elapsed(hgc);
-      const char** insts = hgc_validate(hgc, argv + 1, argc - 1);
-      double validate_interval = hgc_elapsed(hgc) - validate_start;
-      needreconnect = runinstructions(&opts, insts);
-      free(insts);
-      debugmsg("validate took %.4f seconds", validate_interval);
     }
     if (!needreconnect)
       break;
