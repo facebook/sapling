@@ -17,7 +17,7 @@ use cloned::cloned;
 use cmdlib::{args, monitoring};
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::{bail_msg, err_msg, prelude::*};
+use failure_ext::{bail_msg, err_msg, format_err, prelude::*};
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
     prelude::*,
@@ -112,7 +112,7 @@ fn maybe_schedule_healer_for_storage(
         }
     };
 
-    let mut replication_lag_db_conns = vec![];
+    let mut replication_lag_db_conns = Vec::new();
     let mut conn_builder = Connection::myrouter_builder();
     conn_builder
         .service_type(myrouter::ServiceType::SLAVE)
@@ -121,8 +121,8 @@ fn maybe_schedule_healer_for_storage(
         .port(myrouter_port);
 
     for region in replication_lag_db_regions {
-        conn_builder.explicit_region(region);
-        replication_lag_db_conns.push(conn_builder.build_read_only());
+        conn_builder.explicit_region(region.clone());
+        replication_lag_db_conns.push((region, conn_builder.build_read_only()));
     }
 
     let heal = blobstores.and_then(
@@ -151,7 +151,7 @@ fn maybe_schedule_healer_for_storage(
 fn schedule_everlasting_healing(
     logger: Logger,
     repo_healer: Healer,
-    replication_lag_db_conns: Vec<Connection>,
+    replication_lag_db_conns: Vec<(String, Connection)>,
 ) -> BoxFuture<(), Error> {
     let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
 
@@ -170,7 +170,7 @@ fn schedule_everlasting_healing(
 
 fn ensure_small_db_replication_lag(
     logger: Logger,
-    replication_lag_db_conns: Arc<Vec<Connection>>,
+    replication_lag_db_conns: Arc<Vec<(String, Connection)>>,
 ) -> impl Future<Item = (), Error = Error> {
     // Make sure we've slept at least once before continuing
     let last_max_lag: Option<usize> = None;
@@ -183,21 +183,33 @@ fn ensure_small_db_replication_lag(
 
         // Check what max replication lag on replicas, and sleep for that long.
         // This is done in order to avoid overloading the db.
-        let mut lag_secs_futs = vec![];
-        for conn in replication_lag_db_conns.iter() {
-            let f = conn.show_replica_lag_secs().and_then(|maybe_secs| {
-                maybe_secs.ok_or(err_msg(
-                    "Could not fetch db replication lag. Failing to avoid overloading db",
+        let lag_secs_futs: Vec<_> = replication_lag_db_conns
+            .iter()
+            .map(|(region, conn)| {
+                cloned!(region);
+                conn.show_replica_lag_secs().and_then(|maybe_secs| {
+                    maybe_secs
+                        .ok_or(format_err!(
+                    "Could not fetch db replication lag for {}. Failing to avoid overloading db",
+                    region
                 ))
-            });
-            lag_secs_futs.push(f);
-        }
+                        .map(|lag_secs| (region, lag_secs))
+                })
+            })
+            .collect();
+
         cloned!(logger);
 
         join_all(lag_secs_futs)
             .and_then(move |lags| {
-                let max_lag_secs: usize = lags.into_iter().max().unwrap_or(0);
-                info!(logger, "Max replication lag is {} secs", max_lag_secs);
+                let (region, max_lag_secs): (String, usize) = lags
+                    .into_iter()
+                    .max_by_key(|(_, lag)| *lag)
+                    .unwrap_or(("".to_string(), 0));
+                info!(
+                    logger,
+                    "Max replication lag is {}, {}s", region, max_lag_secs
+                );
                 let max_lag = Duration::from_secs(max_lag_secs as u64);
 
                 let start = Instant::now();
