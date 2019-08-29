@@ -39,6 +39,7 @@ const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 
 fn maybe_schedule_healer_for_storage(
     dry_run: bool,
+    drain_only: bool,
     blobstore_sync_queue_limit: usize,
     logger: Logger,
     storage_config: StorageConfig,
@@ -133,6 +134,7 @@ fn maybe_schedule_healer_for_storage(
                 sync_queue,
                 Arc::new(blobstores),
                 source_blobstore_key,
+                drain_only,
             );
 
             if dry_run {
@@ -237,6 +239,7 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             r#"
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
+            --drain-only 'drain the queue without healing.  Use with caution.'
             --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
@@ -261,12 +264,18 @@ fn main() -> Result<()> {
     let source_blobstore_key = matches.value_of("blobstore-key-like");
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
-
+    let drain_only = matches.is_present("drain-only");
+    if drain_only && source_blobstore_key.is_none() {
+        return Err(err_msg(
+            "Missing --blobstore-key-like restriction for --drain-only",
+        ));
+    }
     info!(logger, "Using storage_config {:#?}", storage_config);
 
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
             dry_run,
+            drain_only,
             blobstore_sync_queue_limit,
             logger.clone(),
             storage_config,

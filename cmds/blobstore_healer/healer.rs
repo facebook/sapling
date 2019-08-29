@@ -33,6 +33,7 @@ pub struct Healer {
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     blobstore_key_like: Option<String>,
+    drain_only: bool,
 }
 
 impl Healer {
@@ -42,6 +43,7 @@ impl Healer {
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
         blobstore_key_like: Option<String>,
+        drain_only: bool,
     ) -> Self {
         Self {
             logger,
@@ -49,6 +51,7 @@ impl Healer {
             sync_queue,
             blobstores,
             blobstore_key_like,
+            drain_only,
         }
     }
 
@@ -64,7 +67,7 @@ impl Healer {
 
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - *ENTRY_HEALING_MIN_AGE);
-
+        let drain_only = self.drain_only;
         sync_queue
             .iter(
                 ctx.clone(),
@@ -80,9 +83,32 @@ impl Healer {
                     .filter_map(|(key, entries)| {
                         cloned!(ctx, sync_queue, blobstores, healing_deadline);
                         let entries: Vec<_> = entries.collect();
-                        let heal_opt =
-                            heal_blob(ctx, sync_queue, blobstores, healing_deadline, key, &entries);
-                        heal_opt.map(|fut| fut.map(|heal_stats| (heal_stats, entries)))
+                        if drain_only {
+                            Some(
+                                futures::future::ok((
+                                    HealStats {
+                                        queue_del: entries.len(),
+                                        queue_add: 0,
+                                        put_success: 0,
+                                        put_failure: 0,
+                                    },
+                                    entries,
+                                ))
+                                .left_future(),
+                            )
+                        } else {
+                            let heal_opt = heal_blob(
+                                ctx,
+                                sync_queue,
+                                blobstores,
+                                healing_deadline,
+                                key,
+                                &entries,
+                            );
+                            heal_opt.map(|fut| {
+                                fut.map(|heal_stats| (heal_stats, entries)).right_future()
+                            })
+                        }
                     })
                     .collect();
 
