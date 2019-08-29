@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 
+#include <folly/CppAttributes.h>
 #include <folly/small_vector.h>
 
 #include "eden/fs/fuse/InodeNumber.h"
@@ -31,11 +32,21 @@ class FsOverlay;
  * found.
  */
 class OverlayChecker {
+ private:
+  class RepairState;
+
  public:
   class Error {
    public:
     virtual ~Error() {}
     virtual std::string getMessage(OverlayChecker* checker) const = 0;
+    virtual bool repair(RepairState& repair) const = 0;
+  };
+  class RepairResult {
+   public:
+    AbsolutePath repairDir;
+    uint32_t totalErrors{0};
+    uint32_t fixedErrors{0};
   };
 
   /**
@@ -56,8 +67,11 @@ class OverlayChecker {
 
   /**
    * Attempt to repair the errors that were found by scanForErrors().
+   *
+   * Returns std::nullopt if repairErrors() is called when there are no errors
+   * to repair, otherwise returns a RepairResult.
    */
-  void repairErrors();
+  std::optional<RepairResult> repairErrors();
 
   /**
    * Log the errors that were found by scanForErrors(), without fixing them.
@@ -142,18 +156,25 @@ class OverlayChecker {
   struct InodeInfo {
     InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
 
-    void addParent(InodeNumber parent) {
+    void addParent(InodeNumber parent, mode_t mode) {
       parents.push_back(parent);
+      modeFromParent = mode;
     }
 
     InodeNumber number;
     InodeType type{InodeType::Error};
+    mode_t modeFromParent{0};
     overlay::OverlayDir children;
     folly::small_vector<InodeNumber, 1> parents;
   };
 
   OverlayChecker(OverlayChecker const&) = delete;
   OverlayChecker& operator=(OverlayChecker const&) = delete;
+
+  // Get the InodeInfo object for the specified InodeNumber.
+  // Returns null if no info for this inode number is present.
+  // readInodes() must have been called for inode info to be populated.
+  InodeInfo* FOLLY_NULLABLE getInodeInfo(InodeNumber number);
 
   PathInfo computePath(const InodeInfo& info);
   PathComponent findChildName(const InodeInfo& parentInfo, InodeNumber child);

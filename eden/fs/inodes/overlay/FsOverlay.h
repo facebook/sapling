@@ -159,6 +159,19 @@ class FsOverlay {
    */
   folly::File openFileNoVerify(InodeNumber inodeNumber);
 
+  /**
+   * Get the absolute path to a file to the overlay file for a given inode
+   * number.
+   *
+   * Note that this method should not be needed in most normal circumstances:
+   * most internal operation is done using getFilePath(), which returns relative
+   * paths that are guaranteed to always fit in a fixed length.
+   * getAbsoluteFilePath() is primarily intended for the fsck logic, where it is
+   * sometimes useful to be able to get absolute paths to be able to move broken
+   * files out of the overlay.
+   */
+  AbsolutePath getAbsoluteFilePath(InodeNumber inodeNumber) const;
+
   bool hasOverlayData(InodeNumber inodeNumber);
 
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};

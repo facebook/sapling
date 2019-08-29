@@ -376,6 +376,11 @@ InodePath FsOverlay::getFilePath(InodeNumber inodeNumber) {
   return outPath;
 }
 
+AbsolutePath FsOverlay::getAbsoluteFilePath(InodeNumber inodeNumber) const {
+  auto inodePath = getFilePath(inodeNumber);
+  return localDir_ + RelativePathPiece(inodePath.c_str());
+}
+
 std::optional<overlay::OverlayDir> FsOverlay::deserializeOverlayDir(
     InodeNumber inodeNumber) {
   // Open the file.  Return std::nullopt if the file does not exist.

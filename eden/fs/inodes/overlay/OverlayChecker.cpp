@@ -7,6 +7,7 @@
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 
 #include <boost/filesystem.hpp>
+#include <time.h>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -26,9 +27,190 @@ using std::make_unique;
 using std::optional;
 using std::string;
 using std::unique_ptr;
+using std::chrono::microseconds;
+using std::chrono::seconds;
 
 namespace facebook {
 namespace eden {
+
+class OverlayChecker::RepairState {
+ public:
+  explicit RepairState(OverlayChecker* checker)
+      : checker_(checker),
+        dir_(createRepairDir(checker_->fs_->getLocalDir())),
+        logFile_(
+            (dir_ + PathComponentPiece("fsck.log")).c_str(),
+            O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
+            0600) {}
+
+  void log(StringPiece msg) {
+    logLine(msg);
+  }
+  template <typename Arg1, typename... Args>
+  void log(Arg1&& arg1, Args&&... args) {
+    auto msg = folly::to<string>(
+        std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+    logLine(msg);
+  }
+
+  template <typename Arg1, typename... Args>
+  void warn(Arg1&& arg1, Args&&... args) {
+    auto msg = folly::to<string>(
+        std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+    XLOG(WARN) << "fsck:" << checker_->fs_->getLocalDir() << ":" << msg;
+    logLine(msg);
+  }
+
+  AbsolutePath getRepairDir() const {
+    return dir_;
+  }
+
+  OverlayChecker* checker() {
+    return checker_;
+  }
+  FsOverlay* fs() {
+    return checker_->fs_;
+  }
+
+  AbsolutePath getLostAndFoundPath() {
+    auto lostNFound = dir_ + PathComponentPiece("lost+found");
+    ensureDirectoryExists(lostNFound);
+    return lostNFound;
+  }
+
+  /**
+   * Get the path inside the repair directory where we should save
+   * data for an orphan inode.
+   */
+  AbsolutePath getLostAndFoundPath(
+      InodeNumber number,
+      StringPiece suffix = {}) {
+    return getLostAndFoundPath() +
+        PathComponent(folly::to<string>(number, suffix));
+  }
+  AbsolutePath getLostAndFoundPath(const OverlayChecker::PathInfo& pathInfo) {
+    // Note that we intentionally include pathInfo.parent in the path here,
+    // even when it is kRootNodeId.  This helps avoid possible path collisions
+    // in the lost+found directory if the root inode contained some children
+    // whose names could also be the same as some other inode number.
+    return getLostAndFoundPath() +
+        PathComponent(folly::to<string>(pathInfo.parent)) + pathInfo.path;
+  }
+
+  /**
+   * Create an overlay entry for the specified inode number.
+   *
+   * This helper function is used by InodeDataError and
+   * MissingMaterializedInode.
+   */
+  void createInodeReplacement(InodeNumber number, mode_t mode) {
+    // Create a new empty directory or file in this location.
+    //
+    // TODO: It would be somewhat nicer to look in the ObjectStore and see what
+    // data would exist at this path in the current commit (if this path
+    // exists).  If we can find contents hash that way, it would be nicer to
+    // just dematerialize this inode's entry in its parent directory.
+    // That said, in practice most of the times when we have seen files or
+    // directories get corrupted they are generated files that are updated
+    // frequently by tools, and aren't files we could recover from source
+    // control state.  If the files can be recovered from source control, users
+    // can always recover it themselves afterwards with `hg revert`
+    if (S_ISDIR(mode)) {
+      overlay::OverlayDir contents;
+      fs()->saveOverlayDir(number, contents);
+    } else if (S_ISLNK(mode)) {
+      // symbolic links generally can't be empty in normal circumstances,
+      // so put some dummy data in the link.
+      fs()->createOverlayFile(number, StringPiece("[lost]"));
+    } else {
+      fs()->createOverlayFile(number, ByteRange());
+    }
+  }
+
+ private:
+  static struct tm getLocalTime(time_t now) {
+    struct tm result;
+    if (localtime_r(&now, &result) == nullptr) {
+      folly::throwSystemError("error getting local time during fsck repair");
+    }
+    return result;
+  }
+
+  static AbsolutePath createRepairDir(AbsolutePathPiece overlayDir) {
+    // Put all repair directories in a sibling directory of the overlay.
+    auto baseDir = overlayDir.dirname() + PathComponentPiece("fsck");
+    ensureDirectoryExists(baseDir);
+
+    // Name the repair directory based on the current timestamp
+    auto now = getLocalTime(time(nullptr));
+    auto timestampStr = folly::sformat(
+        "{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}",
+        now.tm_year + 1900,
+        now.tm_mon,
+        now.tm_mday,
+        now.tm_hour,
+        now.tm_min,
+        now.tm_sec);
+
+    // Support adding an extra count number to the directory name in the
+    // unlikely event that a directory already exists for the current second.
+    for (size_t iter = 0; iter < 100; ++iter) {
+      AbsolutePath path;
+      if (iter == 0) {
+        path = baseDir + PathComponentPiece(timestampStr);
+      } else {
+        path = baseDir +
+            PathComponentPiece(folly::to<string>(timestampStr, ".", iter));
+      }
+
+      int rc = mkdir(path.c_str(), 0700);
+      if (rc == 0) {
+        return path;
+      }
+      if (errno != EEXIST) {
+        folly::throwSystemError("error creating fsck repair directory");
+      }
+    }
+
+    // We should only reach here if we tried 100 different directory names for
+    // the current second and they all already existed.  This is very unlikely.
+    // We use a limit of 100 just to ensure we can't ever have an infinite loop,
+    // even in the event of some other bug.
+    throw std::runtime_error(
+        "failed to create an fsck repair directory: retry limit exceeded");
+  }
+
+  void logLine(StringPiece msg) {
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    auto nowSec = std::chrono::duration_cast<seconds>(now);
+    auto us = std::chrono::duration_cast<microseconds>(now - nowSec);
+    auto timeFields = getLocalTime(nowSec.count());
+    auto header = folly::sformat(
+        "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}: ",
+        timeFields.tm_year + 1900,
+        timeFields.tm_mon,
+        timeFields.tm_mday,
+        timeFields.tm_hour,
+        timeFields.tm_min,
+        timeFields.tm_sec,
+        us.count());
+    auto fullMsg = folly::to<string>(header, msg, "\n");
+
+    // We don't buffer output to the log file, and write each message
+    // immediately.
+    auto result =
+        folly::writeFull(logFile_.fd(), fullMsg.data(), fullMsg.size());
+    if (result == -1) {
+      int errnum = errno;
+      XLOG(ERR) << "error writing to fsck repair log file: "
+                << folly::errnoStr(errnum);
+    }
+  }
+
+  OverlayChecker* const checker_;
+  AbsolutePath dir_;
+  folly::File logFile_;
+};
 
 class OverlayChecker::ShardDirectoryEnumerationError
     : public OverlayChecker::Error {
@@ -43,6 +225,20 @@ class OverlayChecker::ShardDirectoryEnumerationError
         "fsck error attempting to enumerate ", path_, ": ", error_.message());
   }
 
+  bool repair(RepairState& /* repair */) const override {
+    // The only error we can really handle here is if the shard directory didn't
+    // exist.  Try creating the directory, in hopes that this was the problem.
+    // (We could check the error code in error_ too to confirm that this is the
+    // issue.)
+    int rc = mkdir(path_.c_str(), 0700);
+    if (rc == 0) {
+      // If we created the shard directory this likely fixed the problem.
+      return true;
+    } else {
+      return false;
+    }
+  }
+
  private:
   AbsolutePath path_;
   boost::system::error_code error_;
@@ -54,6 +250,11 @@ class OverlayChecker::UnexpectedOverlayFile : public OverlayChecker::Error {
 
   string getMessage(OverlayChecker*) const override {
     return folly::to<string>("unexpected file present in overlay: ", path_);
+  }
+
+  bool repair(RepairState& /* repair */) const override {
+    // TODO: Move the file into the repair directory, with some unique name
+    return false;
   }
 
  private:
@@ -74,6 +275,11 @@ class OverlayChecker::UnexpectedInodeShard : public OverlayChecker::Error {
         ")");
   }
 
+  bool repair(RepairState& /* repair */) const override {
+    // TODO: Move the file into the repair directory, with some unique name
+    return false;
+  }
+
  private:
   InodeNumber number_;
   ShardID shardID_;
@@ -82,33 +288,54 @@ class OverlayChecker::UnexpectedInodeShard : public OverlayChecker::Error {
 class OverlayChecker::InodeDataError : public OverlayChecker::Error {
  public:
   template <typename... Args>
-  explicit InodeDataError(InodeNumber number, Args&&... args)
-      : number_(number),
-        message_(folly::to<string>(std::forward<Args>(args)...)) {}
+  explicit InodeDataError(const InodeInfo* info, Args&&... args)
+      : info_(info), message_(folly::to<string>(std::forward<Args>(args)...)) {}
 
   string getMessage(OverlayChecker*) const override {
     return folly::to<string>(
-        "error reading data for inode ", number_, ": ", message_);
+        "error reading data for inode ", info_->number, ": ", message_);
+  }
+
+  bool repair(RepairState& repair) const override {
+    // Move the bad file into the lost+found directory
+    auto pathInfo = repair.checker()->computePath(info_->number);
+    auto outputPath = repair.getLostAndFoundPath(pathInfo);
+    ensureDirectoryExists(outputPath.dirname());
+    auto srcPath = repair.fs()->getAbsoluteFilePath(info_->number);
+    auto ret = ::rename(srcPath.c_str(), outputPath.c_str());
+    folly::checkUnixError(
+        ret, "failed to rename inode data ", srcPath, " to ", outputPath);
+
+    // Create replacement data for this inode in the overlay.
+    auto mode = info_->modeFromParent;
+    if (mode == 0) {
+      mode = S_IFREG | 0644;
+    }
+    repair.createInodeReplacement(info_->number, mode);
+    return true;
   }
 
  private:
-  InodeNumber number_;
+  // The InodeInfo is owned by the OverlayChecker.
+  // The OverlayChecker ensures that it will remain valid longer than the
+  // OrphanInode error object does.
+  const InodeInfo* info_;
   std::string message_;
 };
 
 class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
  public:
   MissingMaterializedInode(
-      InodeNumber number,
+      InodeNumber parentDirInode,
       StringPiece childName,
       overlay::OverlayEntry childInfo)
-      : number_(number), childName_(childName), childInfo_(childInfo) {}
+      : parent_(parentDirInode), childName_(childName), childInfo_(childInfo) {}
 
   string getMessage(OverlayChecker* checker) const override {
     auto fileTypeStr = S_ISDIR(childInfo_.mode)
         ? "directory"
         : (S_ISLNK(childInfo_.mode) ? "symlink" : "file");
-    auto path = checker->computePath(number_, childName_);
+    auto path = checker->computePath(parent_, childName_);
     return folly::to<string>(
         "missing overlay file for materialized ",
         fileTypeStr,
@@ -119,22 +346,211 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
         ")");
   }
 
+  bool repair(RepairState& repair) const override {
+    // Create replacement data for this inode in the overlay
+    XDCHECK_NE(childInfo_.inodeNumber, 0);
+    InodeNumber childInodeNumber(childInfo_.inodeNumber);
+    repair.createInodeReplacement(childInodeNumber, childInfo_.mode);
+
+    // Add an entry in the OverlayChecker's inodes_ set.
+    // In case the parent directory was part of an orphaned subtree the
+    // OrphanInode code will look for this child in the inodes_ map.
+    auto type = S_ISDIR(childInfo_.mode) ? InodeType::Dir : InodeType::File;
+    auto info = make_unique<InodeInfo>(childInodeNumber, type);
+    info->addParent(parent_, childInfo_.mode);
+    auto [iter, inserted] =
+        repair.checker()->inodes_.emplace(childInodeNumber, std::move(info));
+    XDCHECK(inserted);
+    return true;
+  }
+
  private:
-  InodeNumber number_;
+  InodeNumber parent_;
   PathComponent childName_;
   overlay::OverlayEntry childInfo_;
 };
 
 class OverlayChecker::OrphanInode : public OverlayChecker::Error {
  public:
-  explicit OrphanInode(InodeNumber number) : number_(number) {}
+  explicit OrphanInode(InodeInfo* info) : info_(info) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>("found orphan inode ", number_);
+    return folly::to<string>(
+        "found orphan ",
+        info_->type == InodeType::Dir ? "directory" : "file",
+        " inode ",
+        info_->number);
+  }
+
+  bool repair(RepairState& repair) const override {
+    auto number = info_->number;
+    switch (info_->type) {
+      case InodeType::File: {
+        auto outputPath = repair.getLostAndFoundPath(number);
+        archiveOrphanFile(repair, number, outputPath, S_IFREG | 0644);
+        return true;
+      }
+      case InodeType::Dir: {
+        auto outputPath = repair.getLostAndFoundPath(number);
+        archiveOrphanDir(repair, number, outputPath, info_->children);
+        return true;
+      }
+      case InodeType::Error: {
+        processOrphanedError(repair, number);
+        return false;
+      }
+    }
+
+    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(info_->type)
+                 << " when processing orphan inode " << number;
+    return false;
   }
 
  private:
-  InodeNumber number_;
+  void archiveOrphanDir(
+      RepairState& repair,
+      InodeNumber number,
+      AbsolutePath archivePath,
+      const overlay::OverlayDir& children) const {
+    auto rc = mkdir(archivePath.value().c_str(), 0700);
+    if (rc != 0 && errno != EEXIST) {
+      // EEXIST is okay.  Another error repair step (like InodeDataError) may
+      // have already created a lost+found directory for other files that are
+      // part of our orphaned subtree.
+      folly::checkUnixError(
+          rc,
+          "failed to create directory to archive orphan directory inode ",
+          number);
+    }
+
+    auto* const checker = repair.checker();
+    for (const auto& childEntry : children.entries) {
+      auto childRawInode = childEntry.second.inodeNumber;
+      if (childRawInode == 0) {
+        // If this child does not have an inode number allocated it cannot
+        // be materialized.
+        continue;
+      }
+
+      // Look up the inode information that we previously loaded for this child.
+      InodeNumber childInodeNumber(childRawInode);
+      auto childInfo = checker->getInodeInfo(childInodeNumber);
+      if (!childInfo) {
+        // This child was not present in the overlay.
+        // This means that it wasn't materialized, so there is nothing for us to
+        // do here.
+        continue;
+      }
+
+      auto childPath = archivePath + PathComponentPiece(childEntry.first);
+      archiveDirectoryEntry(repair, childInfo, childEntry.second, childPath);
+    }
+
+    tryRemoveInode(repair, number);
+  }
+
+  void archiveDirectoryEntry(
+      RepairState& repair,
+      InodeInfo* info,
+      overlay::OverlayEntry dirEntry,
+      AbsolutePath archivePath) const {
+    // If this directory entry has multiple parents skip it.
+    // We don't want to remove it from the overlay if another parent is still
+    // referencing it.  If all parents were themselves orphans this entry would
+    // be detected as an orphan by a second fsck run.
+    if (info->parents.size() > 1) {
+      return;
+    }
+
+    switch (info->type) {
+      case InodeType::File:
+        archiveOrphanFile(repair, info->number, archivePath, dirEntry.mode);
+        return;
+      case InodeType::Dir:
+        archiveOrphanDir(repair, info->number, archivePath, info->children);
+        return;
+      case InodeType::Error:
+        processOrphanedError(repair, info->number);
+        return;
+    }
+
+    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(info->type)
+                 << " when processing orphan inode " << info->number;
+    throw std::runtime_error("unexpected inode type");
+  }
+
+  void archiveOrphanFile(
+      RepairState& repair,
+      InodeNumber number,
+      AbsolutePath archivePath,
+      mode_t /* mode */) const {
+    auto input =
+        repair.fs()->openFile(number, FsOverlay::kHeaderIdentifierFile);
+    folly::File output(
+        archivePath.value(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+
+    // TODO: if the mode parameter indicates that this file is a symlink,
+    // extract it as a symlink rather than a regular file.
+
+    // Copy the data
+    size_t blockSize = 1024 * 1024;
+    std::vector<uint8_t> buffer;
+    buffer.resize(blockSize);
+    while (true) {
+      auto bytesRead =
+          folly::readFull(input.fd(), buffer.data(), buffer.size());
+      if (bytesRead < 0) {
+        folly::throwSystemError(
+            "read error while copying data from inode ",
+            number,
+            " to ",
+            archivePath);
+      } else if (bytesRead == 0) {
+        break;
+      }
+      auto bytesWritten =
+          folly::writeFull(output.fd(), buffer.data(), bytesRead);
+      folly::checkUnixError(
+          bytesWritten,
+          "write error while copying data from inode ",
+          number,
+          " to ",
+          archivePath);
+    }
+
+    // Now remove the orphan inode file
+    tryRemoveInode(repair, number);
+  }
+
+  void processOrphanedError(RepairState& repair, InodeNumber number) const {
+    // Inodes with a type of InodeType::Error should have already had their
+    // broken data moved to the fsck repair directory by
+    // InodeDataError::repair().  We are guaranteed to process all
+    // InodeDataError objects before OrphanInode errors, since we find the
+    // OrphanInode errors last.
+    //
+    // The InodeDataError::repair() code will have replaced the broken inode
+    // contents with an empty file or directory.  We just need to remove that
+    // here if it is part of an orphan subtree.
+    tryRemoveInode(repair, number);
+  }
+
+  void tryRemoveInode(RepairState& repair, InodeNumber number) const {
+    try {
+      repair.fs()->removeOverlayFile(number);
+    } catch (const std::system_error& ex) {
+      // If we fail to remove the file log an error, but proceed with the rest
+      // of the fsck repairs rather than letting the exception propagate up
+      // to our caller.
+      XLOG(ERR) << "error removing overlay file for orphaned inode " << number
+                << " after archiving it: " << ex.what();
+    }
+  }
+
+  // The InodeInfo is owned by the OverlayChecker.
+  // The OverlayChecker ensures that it will remain valid longer than the
+  // OrphanInode error object does.
+  InodeInfo* info_;
 };
 
 class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
@@ -156,6 +572,11 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
     return msg;
   }
 
+  bool repair(RepairState& /* repair */) const override {
+    // TODO: split the inode into 2 separate copies
+    return false;
+  }
+
  private:
   InodeNumber number_;
   std::vector<InodeNumber> parents_;
@@ -172,6 +593,13 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
         loadedNumber_,
         " but should be at least ",
         expectedNumber_);
+  }
+
+  bool repair(RepairState& /* repair */) const override {
+    // We don't need to do anything here.
+    // We will always write out the correct next inode number when we close the
+    // overlay next.
+    return true;
   }
 
  private:
@@ -203,9 +631,63 @@ void OverlayChecker::scanForErrors() {
   }
 }
 
-void OverlayChecker::repairErrors() {
-  // TODO: actually repair the problems
-  logErrors();
+optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
+  if (errors_.empty()) {
+    return std::nullopt;
+  }
+
+  // Create an output directory.  We will record a log of errors here,
+  // and will move orphan inodes and other unrepairable data here.
+  RepairState repair(this);
+  RepairResult result;
+  result.repairDir = repair.getRepairDir();
+  result.totalErrors = errors_.size();
+  repair.log("Beginning fsck repair for ", fs_->getLocalDir());
+  repair.log(errors_.size(), " problems detected");
+
+  size_t errnum = 0;
+  for (const auto& error : errors_) {
+    ++errnum;
+    auto description = error->getMessage(this);
+    XLOG(ERR) << "fsck:" << fs_->getLocalDir() << ": error: " << description;
+    repair.log("error ", errnum, ": ", description);
+    try {
+      bool repaired = error->repair(repair);
+      if (repaired) {
+        ++result.fixedErrors;
+        repair.log("  - successfully repaired error ", errnum);
+      } else {
+        repair.log("  ! unable to repair error ", errnum);
+      }
+    } catch (const std::exception& ex) {
+      XLOG(ERR) << "fsck:" << fs_->getLocalDir()
+                << ": unexpected error occurred while attempting repair: "
+                << folly::exceptionStr(ex);
+      repair.log(
+          "  ! failed to repair error ",
+          errnum,
+          ": unexpected exception: ",
+          folly::exceptionStr(ex));
+    }
+  }
+
+  auto numUnfixed = errors_.size() - result.fixedErrors;
+  string finalMsg;
+  if (numUnfixed) {
+    finalMsg = folly::to<string>(
+        "repaired ",
+        result.fixedErrors,
+        " problems; ",
+        numUnfixed,
+        " were unfixable");
+  } else {
+    finalMsg = folly::to<string>(
+        "successfully repaired all ", result.fixedErrors, " problems");
+  }
+  repair.log(finalMsg);
+  XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": " << finalMsg;
+
+  return result;
 }
 
 void OverlayChecker::logErrors() {
@@ -239,19 +721,28 @@ OverlayChecker::PathInfo OverlayChecker::cachedPathComputation(
   return result;
 }
 
+OverlayChecker::InodeInfo* FOLLY_NULLABLE
+OverlayChecker::getInodeInfo(InodeNumber number) {
+  auto iter = inodes_.find(number);
+  if (iter == inodes_.end()) {
+    return nullptr;
+  }
+  return iter->second.get();
+}
+
 OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {
   return cachedPathComputation(number, [&]() {
-    auto iter = inodes_.find(number);
-    if (iter == inodes_.end()) {
+    auto info = getInodeInfo(number);
+    if (!info) {
       // We don't normally expect computePath() to be called on unknown inode
       // numbers.
       XLOG(WARN) << "computePath() called on unknown inode " << number;
       return PathInfo(number);
-    } else if (iter->second->parents.empty()) {
+    } else if (info->parents.empty()) {
       // This inode is unlinked/orphaned
       return PathInfo(number);
     } else {
-      auto parentNumber = InodeNumber(iter->second->parents[0]);
+      auto parentNumber = InodeNumber(info->parents[0]);
       return computePath(parentNumber, number);
     }
   });
@@ -276,8 +767,8 @@ OverlayChecker::PathInfo OverlayChecker::computePath(
 OverlayChecker::PathInfo OverlayChecker::computePath(
     InodeNumber parent,
     InodeNumber child) {
-  auto iter = inodes_.find(parent);
-  if (iter == inodes_.end()) {
+  auto parentInfo = getInodeInfo(parent);
+  if (!parentInfo) {
     // This shouldn't ever happen unless we have a bug in the fsck code somehow.
     // The parent relationships are only set up if we found both inodes.
     XLOG(DFATAL) << "bug in fsck code: previously found parent " << parent
@@ -285,9 +776,8 @@ OverlayChecker::PathInfo OverlayChecker::computePath(
     return PathInfo(child);
   }
 
-  const auto& parentInfo = *(iter->second);
-  auto childName = findChildName(parentInfo, child);
-  return PathInfo(computePath(parentInfo), childName);
+  auto childName = findChildName(*parentInfo, child);
+  return PathInfo(computePath(*parentInfo), childName);
 }
 
 PathComponent OverlayChecker::findChildName(
@@ -383,27 +873,23 @@ void OverlayChecker::loadInode(InodeNumber number, ShardID shardID) {
   }
 
   auto info = loadInodeInfo(number);
-  if (!info) {
-    // loadInodeInfo() will have already added an error.
-    // Add an error entry to the inode map to record that there was an inode
-    // file here but we couldn't load it.  This helps us avoid recording
-    // duplicate errors when its parent directory is checking to make sure that
-    // all of the materialized children were present.
-    info = make_unique<InodeInfo>(number, InodeType::Error);
-  }
   inodes_.emplace(number, std::move(info));
 }
 
 unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
     InodeNumber number) {
+  auto inodeError = [this, number](auto&&... args) {
+    auto info = make_unique<InodeInfo>(number, InodeType::Error);
+    addError<InodeDataError>(info.get(), args...);
+    return info;
+  };
+
   // Open the inode file
   folly::File file;
   try {
     file = fs_->openFileNoVerify(number);
   } catch (const std::exception& ex) {
-    addError<InodeDataError>(
-        number, "error opening file: ", folly::exceptionStr(ex));
-    return nullptr;
+    return inodeError("error opening file: ", folly::exceptionStr(ex));
   }
 
   // Read the file header
@@ -412,18 +898,14 @@ unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
       folly::readFull(file.fd(), headerContents.data(), headerContents.size());
   if (readResult < 0) {
     int errnum = errno;
-    addError<InodeDataError>(
-        number, "error reading from file: ", folly::errnoStr(errnum));
-    return nullptr;
+    return inodeError("error reading from file: ", folly::errnoStr(errnum));
   } else if (readResult != FsOverlay::kHeaderLength) {
-    addError<InodeDataError>(
-        number,
+    return inodeError(
         "file was too short to contain overlay header: read ",
         readResult,
         " bytes, expected ",
         FsOverlay::kHeaderLength,
         " bytes");
-    return nullptr;
   }
 
   // The first 4 bytes of the header are the file type identifier.
@@ -443,9 +925,7 @@ unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
       sizeof(uint32_t));
   auto version = folly::Endian::big(versionBE);
   if (version != FsOverlay::kHeaderVersion) {
-    addError<InodeDataError>(
-        number, "unknown overlay file format version ", version);
-    return nullptr;
+    return inodeError("unknown overlay file format version ", version);
   }
 
   InodeType type;
@@ -454,11 +934,8 @@ unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
   } else if (typeID == FsOverlay::kHeaderIdentifierFile) {
     type = InodeType::File;
   } else {
-    addError<InodeDataError>(
-        number,
-        "unknown overlay file type ID: ",
-        folly::hexlify(ByteRange{typeID}));
-    return nullptr;
+    return inodeError(
+        "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
   }
 
   auto info = make_unique<InodeInfo>(number, type);
@@ -466,11 +943,8 @@ unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
     try {
       info->children = loadDirectoryChildren(file);
     } catch (const std::exception& ex) {
-      addError<InodeDataError>(
-          number,
-          "error parsing directory contents: ",
-          folly::exceptionStr(ex));
-      return nullptr;
+      return inodeError(
+          "error parsing directory contents: ", folly::exceptionStr(ex));
     }
   }
 
@@ -503,8 +977,8 @@ void OverlayChecker::linkInodeChildren() {
 
       auto childInodeNumber = InodeNumber(childRawInode);
       updateMaxInodeNumber(childInodeNumber);
-      auto childIter = inodes_.find(childInodeNumber);
-      if (childIter == inodes_.end()) {
+      auto childInfo = getInodeInfo(childInodeNumber);
+      if (!childInfo) {
         const auto& hash = child.hash_ref();
         if (!hash.has_value() || hash->empty()) {
           // This child is materialized (since it doesn't have a hash
@@ -514,10 +988,10 @@ void OverlayChecker::linkInodeChildren() {
               parentInodeNumber, childName, child);
         }
       } else {
-        childIter->second->addParent(parentInodeNumber);
+        childInfo->addParent(parentInodeNumber, child.mode);
 
         // TODO: It would be nice to also check for mismatch between
-        // childIter->second.type and child.mode
+        // childInfo->type and child.mode
       }
     }
   }
@@ -527,7 +1001,7 @@ void OverlayChecker::scanForParentErrors() {
   for (const auto& [inodeNumber, inodeInfo] : inodes_) {
     if (inodeInfo->parents.empty()) {
       if (inodeNumber != kRootNodeId) {
-        addError<OrphanInode>(inodeNumber);
+        addError<OrphanInode>(inodeInfo.get());
       }
     } else if (inodeInfo->parents.size() != 1) {
       addError<HardLinkedInode>(inodeNumber, inodeInfo.get());
