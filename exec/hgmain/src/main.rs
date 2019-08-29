@@ -17,16 +17,16 @@ use windows::disable_standard_handle_inheritability;
 
 /// Execute a command, using an embedded interpreter
 /// This function does not return
-fn call_embedded_python() {
+fn call_embedded_python(args: Vec<String>) {
     let code = {
-        let hgpython = HgPython::new();
+        let hgpython = HgPython::new(args);
         hgpython.run()
     };
     std::process::exit(code);
 }
 
 fn main() {
-    let args = match dispatch::args() {
+    let full_args = match dispatch::args() {
         Ok(args) => args,
         Err(_) => {
             eprintln!("abort: cannot decode command line arguments");
@@ -52,7 +52,7 @@ fn main() {
 
     let cwd = env::current_dir().unwrap();
     let table = commands::table();
-    let args: Vec<String> = args.into_iter().skip(1).collect();
+    let args: Vec<String> = full_args.iter().skip(1).cloned().collect();
     let mut io = clidispatch::io::IO::stdio();
 
     match dispatch::dispatch(&table, args, &mut io) {
@@ -84,7 +84,7 @@ fn main() {
             #[cfg(feature = "with_chg")]
             maybe_call_chg();
 
-            call_embedded_python();
+            call_embedded_python(full_args);
         }
     }
 }

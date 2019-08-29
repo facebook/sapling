@@ -16,18 +16,18 @@ pub struct HgPython {
 }
 
 impl HgPython {
-    pub fn new() -> HgPython {
+    pub fn new(args: Vec<String>) -> HgPython {
         let py_initialized_by_us = !py_is_initialized();
         if py_initialized_by_us {
-            Self::setup_python();
+            Self::setup_python(args);
         }
         HgPython {
             py_initialized_by_us,
         }
     }
 
-    fn setup_python() {
-        let args = Self::args_to_local_cstrings();
+    fn setup_python(args: Vec<String>) {
+        let args = Self::args_to_local_cstrings(args);
         let executable_name = args[0].clone();
         py_set_program_name(executable_name);
         py_initialize();
@@ -35,7 +35,7 @@ impl HgPython {
         py_init_threads();
     }
 
-    fn args_to_local_cstrings() -> Vec<CString> {
+    fn args_to_local_cstrings(args: Vec<String>) -> Vec<CString> {
         // Replace args[0] with the absolute current_exe path. This workarounds
         // an issue in libpython sys.path handling.
         //
@@ -52,7 +52,7 @@ impl HgPython {
         // it some hint by passing the absolute path resolved by the Rust stdlib.
         Some(env::current_exe().unwrap().into_os_string())
             .into_iter()
-            .chain(env::args_os().skip(1))
+            .chain(args.into_iter().skip(1).map(Into::into))
             .map(|x| osstring_to_local_cstring(&x))
             .collect()
     }
