@@ -12,7 +12,7 @@ import os
 import sys
 
 
-def run():
+def run(args=None, fin=None, fout=None, ferr=None):
     from edenscm import hgdemandimport
     from edenscm.mercurial import encoding
 
@@ -23,9 +23,12 @@ def run():
         except NameError:
             pass
 
+    if args is None:
+        args = sys.argv
+
     if (
-        sys.argv[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]
-        and sys.argv[6:8] == ["--daemon-postexec", "chdir:/"]
+        args[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]
+        and args[6:8] == ["--daemon-postexec", "chdir:/"]
         and "CHGINTERNALMARK" in encoding.environ
     ):
         # Shortcut path for chg server
@@ -46,7 +49,7 @@ def run():
             sys.exit(-1)
         from edenscm.mercurial import dispatch
 
-        dispatch.run()
+        dispatch.run(args, fin, fout, ferr)
 
 
 if __name__ == "__main__":

@@ -117,10 +117,12 @@ class request(object):
                 raise exc
 
 
-def run():
+def run(args=None, fin=None, fout=None, ferr=None):
     "run the command in sys.argv"
     _initstdio()
-    req = request(pycompat.sysargv[1:])
+    if args is None:
+        args = pycompat.sysargv
+    req = request(args[1:], fin=fin, fout=fout, ferr=ferr)
     err = None
     try:
         status = (dispatch(req) or 0) & 255
