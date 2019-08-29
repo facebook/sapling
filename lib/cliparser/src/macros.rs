@@ -6,24 +6,27 @@
 #[macro_export]
 macro_rules! define_flags {
     ( $( $vis:vis struct $name:ident { $( $token:tt )* } )*  ) => {
-        $( $crate::_define_flags_impl!([ $( $token )* ] [] [] ($vis $name) ); )*
+        $( $crate::_define_flags_impl!(
+            input [ $( $token )* ]
+            flags []
+            varargs ()
+            misc ($vis $name)
+        ); )*
     };
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _define_flags_impl {
-    // A recursive macro that has states.
-    //
-    //  ( [...]          [ (short, field, doc, type, default)... ] [args] (vis  name) )
-    //    ^^^^^          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    //    input          parsed state
-
     // Nothing left to parse
-    ( [] [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr) )* ] [ $($args:ident)? ] ($vis:vis $name:ident) ) => {
+    ( input []
+      flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr) )* ]
+      varargs ( $($varargs:ident)? )
+      misc ($vis:vis $name:ident)
+    ) => {
         $vis struct $name {
             $( #[doc=$doc] pub $field : $type , )*
-            $( pub $args: Vec<String>, )?
+            $( pub $varargs: Vec<String>, )?
         }
 
         impl $crate::parser::StructFlags for $name {
@@ -38,7 +41,7 @@ macro_rules! _define_flags_impl {
             fn from(out: $crate::parser::ParseOutput) -> Self {
                 Self {
                     $( $field : out.pick::<$type>(&stringify!($field).replace("_", "-")), )*
-                    $( $args: out.args, )?
+                    $( $varargs: out.args, )?
                 }
             }
         }
@@ -48,22 +51,34 @@ macro_rules! _define_flags_impl {
     //
     //    /// description
     //    name: type,
-    ( [ #[doc=$doc:expr] $field:ident : $type:ty, $($rest:tt)* ] [ $( $parsed:tt )* ] [ $($args:ident)? ] $tail:tt ) => {
-        $crate::_define_flags_impl!( [ $( $rest )* ]
-                                     [ $( $parsed )* (' ', $field, $doc, $type, (<$type>::default())) ]
-                                     [ $( $args )? ]
-                                     $tail);
+    ( input [ #[doc=$doc:expr] $field:ident : $type:ty, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      varargs $varargs:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* (' ', $field, $doc, $type, (<$type>::default())) ]
+            varargs $varargs
+            misc $misc
+        );
     };
 
     // Match a field like:
     //
     //    /// description
     //    name: type = default,
-    ( [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ] [ $( $parsed:tt )* ] [ $($args:ident)? ] $tail:tt ) => {
-        $crate::_define_flags_impl!( [ $( $rest )* ]
-                                     [ $( $parsed )* (' ', $field, $doc, $type, $default) ]
-                                     [ $( $args )? ]
-                                     $tail);
+    ( input [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      varargs $varargs:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* (' ', $field, $doc, $type, $default) ]
+            varargs $varargs
+            misc $misc
+        );
     };
 
     // Match a field like:
@@ -71,11 +86,17 @@ macro_rules! _define_flags_impl {
     //    /// description
     //    #[short('s')]
     //    name: type,
-    ( [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ] [ $( $parsed:tt )* ] [ $($args:ident)? ] $tail:tt ) => {
-        $crate::_define_flags_impl!( [ $( $rest )* ]
-                                     [ $( $parsed )* ($short, $field, $doc, $type, (<$type>::default())) ]
-                                     [ $( $args )? ]
-                                     $tail);
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      varargs $varargs:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default())) ]
+            varargs $varargs
+            misc $misc
+        );
     };
 
     // Match a field like:
@@ -83,22 +104,34 @@ macro_rules! _define_flags_impl {
     //    /// description
     //    #[short('s')]
     //    name: type = default,
-    ( [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ] [ $( $parsed:tt )* ] [ $($args:ident)? ] $tail:tt ) => {
-        $crate::_define_flags_impl!( [ $( $rest )* ]
-                                     [ $( $parsed )* ($short, $field, $doc, $type, $default) ]
-                                     [ $( $args )? ]
-                                     $tail);
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      varargs $varargs:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, $default) ]
+            varargs $varargs
+            misc $misc
+        );
     };
 
     // Match a field like:
     //
     //    #[args]
     //    patterns: Vec<String>,
-    ( [ #[args] $args_name:ident : Vec<String>, $($rest:tt)* ] [ $( $parsed:tt )* ] [ ] $tail:tt ) => {
-        $crate::_define_flags_impl!( [ $( $rest )* ]
-                                     [ $( $parsed )* ]
-                                     [ $args_name ]
-                                     $tail);
+    ( input [ #[args] $varargs_name:ident : Vec<String>, $($rest:tt)* ]
+      flags $flags:tt
+      varargs ()
+      misc $tail:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags $flags
+            varargs ( $varargs_name )
+            misc $tail
+        );
     };
 }
 
