@@ -79,7 +79,7 @@ def _test_service_is_running(ui):
     port = ui.configint("commitcloud", "scm_daemon_tcp_port")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if s.connect_ex(("127.0.0.1", port)):
-        _warn_service_not_running()
+        _warn_service_not_running(ui)
     s.close()
 
 
