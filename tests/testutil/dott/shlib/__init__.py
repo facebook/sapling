@@ -59,6 +59,7 @@ else:
 
 try:
     from edenscm.mercurial import dispatch, encoding, ui as uimod, util
+    from edenscmnative import bindings
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
 
@@ -246,17 +247,12 @@ globals()["."] = source
 
 
 def hg(*args, **kwargs):
-    stdin = kwargs.get("stdin")
-    ui = uimod.ui()
+    stdin = kwargs.get("stdin") or ""
     encoding.setfromenviron()
-    if "HGRCPATH" in os.environ:
-        ui.readconfig(os.environ["HGRCPATH"])
-    fout = util.stringio()
-    req = dispatch.request(
-        list(args), ui=ui, fin=util.stringio(stdin or ""), fout=fout, ferr=fout
-    )
     cwdbefore = os.getcwd()
-    status = (dispatch.dispatch(req) or 0) & 255
+    fout = util.stringio()
+    fin = util.stringio(stdin)
+    status = bindings.commands.run(["hg"] + list(args), fin, fout, fout)
     cwdafter = os.getcwd()
     if cwdafter != cwdbefore:
         # Revert side effect of --cwd
