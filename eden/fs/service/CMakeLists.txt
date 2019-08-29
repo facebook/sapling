@@ -93,3 +93,9 @@ if (APPLE)
     "-framework IOKit"
   )
 endif()
+
+target_include_directories(
+  eden_service
+  PUBLIC
+    ${CPPTOML_INCLUDE_DIR}
+)

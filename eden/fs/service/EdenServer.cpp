@@ -6,6 +6,11 @@
  */
 #include "eden/fs/service/EdenServer.h"
 
+#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <fstream>
+#include <memory>
+#include <sstream>
+
 #include <fb303/ServiceData.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
@@ -77,14 +82,14 @@ DEFINE_bool(
 
 DEFINE_string(
     local_storage_engine_unsafe,
-    DEFAULT_STORAGE_ENGINE,
+    "",
     "Select storage engine. " DEFAULT_STORAGE_ENGINE
     " is the default. "
     "possible choices are (" SUPPORTED_STORAGE_ENGINES
     "). "
     "memory is currently very dangerous as you will "
     "lose state across restarts and graceful restarts! "
-    "It is unsafe to change this between edenfs invocations!");
+    "This flag will only be used on the first invocation");
 DEFINE_int32(
     thrift_num_workers,
     std::thread::hardware_concurrency(),
@@ -137,6 +142,8 @@ using namespace facebook::eden;
 
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
+constexpr StringPiece kConfig{"config.toml"};
+
 } // namespace
 
 namespace facebook {
@@ -437,7 +444,6 @@ Future<Unit> EdenServer::prepareImpl(
     }
     doingTakeover = true;
   }
-
   // Store a pointer to the EventBase that will be used to drive
   // the main thread.  The runServer() code will end up driving this EventBase.
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
@@ -482,39 +488,8 @@ Future<Unit> EdenServer::prepareImpl(
     prepareThriftAddress();
   }
 
-  if (FLAGS_local_storage_engine_unsafe == "memory") {
-    logger->log("Creating new memory store.");
-    localStore_ = make_shared<MemoryLocalStore>();
-  } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
-    const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
-    const auto parentDir = path.dirname();
-    ensureDirectoryExists(parentDir);
-    logger->log("Opening local SQLite store ", path, "...");
-    folly::stop_watch<std::chrono::milliseconds> watch;
-    localStore_ = make_shared<SqliteLocalStore>(path);
-    logger->log(
-        "Opened SQLite store in ",
-        watch.elapsed().count() / 1000.0,
-        " seconds.");
-#ifndef _WIN32
-  } else if (FLAGS_local_storage_engine_unsafe == "rocksdb") {
-    logger->log("Opening local RocksDB store...");
-    folly::stop_watch<std::chrono::milliseconds> watch;
-    const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
-    ensureDirectoryExists(rocksPath);
-    localStore_ = make_shared<RocksDbLocalStore>(
-        rocksPath, &serverState_->getFaultInjector());
-    logger->log(
-        "Opened RocksDB store in ",
-        watch.elapsed().count() / 1000.0,
-        " seconds.");
-
-#endif // !_WIN32
-  } else {
-    throw std::runtime_error(folly::to<string>(
-        "invalid --local_storage_engine_unsafe flag: ",
-        FLAGS_local_storage_engine_unsafe));
-  }
+  auto config = parseConfig();
+  openStorageEngine(config, logger);
 
 #ifndef _WIN32
   // Start listening for graceful takeover requests
@@ -544,6 +519,83 @@ Future<Unit> EdenServer::prepareImpl(
     // Don't wait for the mount futures.
     // Only return the thrift future.
     return thriftRunningFuture;
+  }
+}
+
+std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
+  auto configPath = edenDir_.getPath() + RelativePathPiece{kConfig};
+  std::ifstream inputFile(configPath.c_str());
+  if (!inputFile.is_open()) {
+    if (errno != ENOENT) {
+      folly::throwSystemErrorExplicit(
+          errno, "unable to open EdenFS config ", configPath);
+    }
+    // config file does not yet exist, create file
+    auto configRoot = getDefaultConfig();
+    std::stringstream stream;
+    stream << (*configRoot);
+    folly::writeFileAtomic(string(configPath.c_str()), stream.str());
+    return configRoot;
+  }
+  return cpptoml::parser(inputFile).parse();
+}
+
+std::shared_ptr<cpptoml::table> EdenServer::getDefaultConfig() {
+  auto configTable = cpptoml::make_table();
+  auto storageEngine = FLAGS_local_storage_engine_unsafe.empty()
+      ? DEFAULT_STORAGE_ENGINE
+      : FLAGS_local_storage_engine_unsafe;
+  std::shared_ptr<cpptoml::table> rootTable = cpptoml::make_table();
+  configTable->insert("engine", storageEngine);
+  rootTable->insert("local-store", configTable);
+  return rootTable;
+}
+
+void EdenServer::openStorageEngine(
+    std::shared_ptr<cpptoml::table> config,
+    std::shared_ptr<StartupLogger> logger) {
+  std::string storageEngine =
+      config->get_qualified_as<std::string>("local-store.engine").value_or("");
+  if (!FLAGS_local_storage_engine_unsafe.empty() &&
+      FLAGS_local_storage_engine_unsafe != storageEngine) {
+    throw std::runtime_error(folly::to<string>(
+        "--local_storage_engine_unsafe flag ",
+        FLAGS_local_storage_engine_unsafe,
+        "does not match last recorded flag ",
+        storageEngine));
+  }
+
+  if (storageEngine == "memory") {
+    logger->log("Creating new memory store.");
+    localStore_ = make_shared<MemoryLocalStore>();
+  } else if (storageEngine == "sqlite") {
+    const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
+    const auto parentDir = path.dirname();
+    ensureDirectoryExists(parentDir);
+    logger->log("Opening local SQLite store ", path, "...");
+    folly::stop_watch<std::chrono::milliseconds> watch;
+    localStore_ = make_shared<SqliteLocalStore>(path);
+    logger->log(
+        "Opened SQLite store in ",
+        watch.elapsed().count() / 1000.0,
+        " seconds.");
+#ifndef _WIN32
+  } else if (storageEngine == "rocksdb") {
+    logger->log("Opening local RocksDB store...");
+    folly::stop_watch<std::chrono::milliseconds> watch;
+    const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
+    ensureDirectoryExists(rocksPath);
+    localStore_ = make_shared<RocksDbLocalStore>(
+        rocksPath, &serverState_->getFaultInjector());
+    logger->log(
+        "Opened RocksDB store in ",
+        watch.elapsed().count() / 1000.0,
+        " seconds.");
+
+#endif // !_WIN32
+  } else {
+    throw std::runtime_error(folly::to<string>(
+        "invalid storage engine: ", FLAGS_local_storage_engine_unsafe));
   }
 }
 

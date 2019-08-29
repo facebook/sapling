@@ -42,6 +42,10 @@
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
 
+namespace cpptoml {
+class table;
+} // namespace cpptoml
+
 namespace apache {
 namespace thrift {
 class ThriftServer;
@@ -386,6 +390,25 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<StartupLogger> logger,
       std::vector<TakeoverData::MountInfo>&& takeoverMounts);
   FOLLY_NODISCARD std::vector<folly::Future<folly::Unit>> prepareMounts(
+      std::shared_ptr<StartupLogger> logger);
+
+  /**
+   * Create config file if this the first time running the server, otherwise
+   * parse existing config file.
+   *
+   */
+  std::shared_ptr<cpptoml::table> parseConfig();
+
+  /**
+   * Create default config toml table
+   */
+  std::shared_ptr<cpptoml::table> getDefaultConfig();
+
+  /**
+   * Open local storage engine for caching source control data.
+   */
+  void openStorageEngine(
+      std::shared_ptr<cpptoml::table>,
       std::shared_ptr<StartupLogger> logger);
 
   // Called when a mount has been unmounted and has stopped.
