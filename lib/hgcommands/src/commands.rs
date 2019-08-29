@@ -44,8 +44,11 @@ define_flags! {
         /// print blob contents
         content: bool,
 
-        #[args]
-        args: Vec<String>,
+        #[arg]
+        path: String,
+
+        #[arg]
+        node: String,
     }
 }
 
@@ -66,10 +69,8 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
 }
 
 pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
-    let args = opts.args;
-    if args.len() != 2 || !opts.content {
-        return Err(errors::InvalidArguments.into());
-    }
+    let path = RepoPathBuf::from_string(opts.path)?;
+    let node = Node::from_str(&opts.node)?;
     let config = repo.config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
         Some(c) => c,
@@ -88,10 +89,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     let mut unionstore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);
-    let k = Key::new(
-        RepoPathBuf::from_string(args[0].clone()).unwrap(),
-        Node::from_str(&args[1]).unwrap(),
-    );
+    let k = Key::new(path, node);
     let content = unionstore.get(&k).unwrap();
     io.write(content)?;
     Ok(0)
