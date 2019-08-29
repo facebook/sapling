@@ -2,12 +2,33 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-use std::io::{self, Read, Write};
+use std::any::Any;
+use std::io;
 
 pub struct IO {
-    input: Box<dyn Read>,
-    output: Box<dyn Write>,
-    error: Option<Box<dyn Write>>,
+    pub input: Box<dyn Read>,
+    pub output: Box<dyn Write>,
+    pub error: Option<Box<dyn Write>>,
+}
+
+pub trait Read: io::Read + Any {
+    fn as_any(&self) -> &dyn Any;
+}
+
+pub trait Write: io::Write + Any {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: io::Read + Any> Read for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl<T: io::Write + Any> Write for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl IO {
