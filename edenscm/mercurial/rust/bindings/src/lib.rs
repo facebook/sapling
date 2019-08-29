@@ -10,6 +10,7 @@ use cpython::py_module_initializer;
 pub mod blackbox;
 pub mod bookmarkstore;
 pub mod cliparser;
+pub mod commands;
 pub mod configparser;
 pub mod dag;
 pub mod edenapi;
@@ -33,6 +34,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "blackbox", blackbox::init_module(py, &name)?)?;
     m.add(py, "bookmarkstore", bookmarkstore::init_module(py, &name)?)?;
     m.add(py, "cliparser", cliparser::init_module(py, &name)?)?;
+    m.add(py, "commands", commands::init_module(py, &name)?)?;
     m.add(py, "configparser", configparser::init_module(py, &name)?)?;
     m.add(py, "dag", dag::init_module(py, &name)?)?;
     m.add(py, "edenapi", edenapi::init_module(py, &name)?)?;

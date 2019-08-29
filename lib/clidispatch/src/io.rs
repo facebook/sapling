@@ -11,7 +11,7 @@ pub struct IO {
 }
 
 impl IO {
-    fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
+    pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
     where
         IS: Read + 'static,
         OS: Write + 'static,
