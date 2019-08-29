@@ -173,9 +173,14 @@ fn ensure_small_db_replication_lag(
     replication_lag_db_conns: Arc<Vec<Connection>>,
 ) -> impl Future<Item = (), Error = Error> {
     // Make sure we've slept at least once before continuing
-    let already_slept = false;
+    let last_max_lag: Option<usize> = None;
 
-    loop_fn(already_slept, move |already_slept| {
+    loop_fn(last_max_lag, move |last_max_lag| {
+        if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
+            // No need check rep lag again, was ok on last loop
+            return ok(Loop::Break(())).left_future();
+        }
+
         // Check what max replication lag on replicas, and sleep for that long.
         // This is done in order to avoid overloading the db.
         let mut lag_secs_futs = vec![];
@@ -189,23 +194,20 @@ fn ensure_small_db_replication_lag(
         }
         cloned!(logger);
 
-        join_all(lag_secs_futs).and_then(move |lags| {
-            let max_lag = lags.into_iter().max().unwrap_or(0);
-            info!(logger, "Replication lag is {} secs", max_lag);
-            if max_lag < MAX_ALLOWED_REPLICATION_LAG_SECS && already_slept {
-                ok(Loop::Break(())).left_future()
-            } else {
-                let max_lag = Duration::from_secs(max_lag as u64);
+        join_all(lag_secs_futs)
+            .and_then(move |lags| {
+                let max_lag_secs: usize = lags.into_iter().max().unwrap_or(0);
+                info!(logger, "Max replication lag is {} secs", max_lag_secs);
+                let max_lag = Duration::from_secs(max_lag_secs as u64);
 
                 let start = Instant::now();
                 let next_iter_deadline = start + max_lag;
 
                 Delay::new(next_iter_deadline)
-                    .map(|()| Loop::Continue(true))
+                    .map(move |()| Loop::Continue(Some(max_lag_secs)))
                     .from_err()
-                    .right_future()
-            }
-        })
+            })
+            .right_future()
     })
 }
 
@@ -248,11 +250,9 @@ fn main() -> Result<()> {
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
 
-    let healer = {
-        let logger = logger.new(o!(
-            "storage" => format!("{:#?}", storage_config),
-        ));
+    info!(logger, "Using storage_config {:#?}", storage_config);
 
+    let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
             dry_run,
             blobstore_sync_queue_limit,

@@ -17,6 +17,7 @@ use mononoke_types::{DateTime, Timestamp};
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
 use stats::{define_stats, Timeseries};
+use std::iter::IntoIterator;
 use std::sync::Arc;
 
 define_stats! {
@@ -127,10 +128,9 @@ queries! {
          VALUES {values}"
     }
 
-    write DeleteEntry(id: u64) {
+    write DeleteEntries(>list ids: u64) {
         none,
-        "DELETE FROM blobstore_sync_queue
-         WHERE id = {id}"
+        "DELETE FROM blobstore_sync_queue WHERE id in {ids}"
     }
 
     read GetRangeOfEntries(older_than: Timestamp, limit: usize) -> (
@@ -378,11 +378,9 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         ids.into_future()
             .and_then({
                 cloned!(self.write_connection);
-                move |ids| {
-                    future::join_all(ids.into_iter().map({
-                        cloned!(write_connection);
-                        move |id| DeleteEntry::query(&write_connection, &id)
-                    }))
+                move |ids: Vec<u64>| {
+                    let ids: Vec<&u64> = ids.iter().collect();
+                    DeleteEntries::query(&write_connection, &ids[..])
                 }
             })
             .map(|_| ())

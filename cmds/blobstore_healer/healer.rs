@@ -18,6 +18,8 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
 use slog::{info, warn, Logger};
 use std::collections::{HashMap, HashSet};
+use std::iter::Sum;
+use std::ops::Add;
 use std::sync::Arc;
 
 lazy_static! {
@@ -80,23 +82,66 @@ impl Healer {
                         let entries: Vec<_> = entries.collect();
                         let heal_opt =
                             heal_blob(ctx, sync_queue, blobstores, healing_deadline, key, &entries);
-                        heal_opt.map(|fut| fut.map(|()| entries))
+                        heal_opt.map(|fut| fut.map(|heal_stats| (heal_stats, entries)))
                     })
                     .collect();
+
+                if healing_futures.len() == 0 {
+                    info!(logger, "All caught up, nothing to do");
+                    return futures::future::ok(()).left_future();
+                }
 
                 info!(
                     logger,
                     "Found {} blobs to be healed... Doing it",
                     healing_futures.len()
                 );
-
                 futures::stream::futures_unordered(healing_futures)
                     .collect()
-                    .and_then(move |cleaned_entries: Vec<Vec<BlobstoreSyncQueueEntry>>| {
-                        let cleaned = cleaned_entries.into_iter().flatten().collect();
-                        cleanup_after_healing(ctx, sync_queue, cleaned)
-                    })
+                    .and_then(
+                        move |heal_res: Vec<(HealStats, Vec<BlobstoreSyncQueueEntry>)>| {
+                            let (chunk_stats, processed_entries): (Vec<_>, Vec<_>) =
+                                heal_res.into_iter().unzip();
+                            let summary_stats: HealStats = chunk_stats.into_iter().sum();
+                            info!(
+                                logger,
+                                "For {} blobs did {:?}",
+                                processed_entries.len(),
+                                summary_stats
+                            );
+                            let entries_to_remove =
+                                processed_entries.into_iter().flatten().collect();
+                            cleanup_after_healing(ctx, sync_queue, entries_to_remove)
+                        },
+                    )
+                    .right_future()
             })
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct HealStats {
+    queue_add: usize,
+    queue_del: usize,
+    put_success: usize,
+    put_failure: usize,
+}
+
+impl Add for HealStats {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            queue_add: self.queue_add + other.queue_add,
+            queue_del: self.queue_del + other.queue_del,
+            put_success: self.put_success + other.put_success,
+            put_failure: self.put_failure + other.put_failure,
+        }
+    }
+}
+
+impl Sum for HealStats {
+    fn sum<I: Iterator<Item = HealStats>>(iter: I) -> HealStats {
+        iter.fold(Default::default(), Add::add)
     }
 }
 
@@ -111,12 +156,14 @@ fn heal_blob(
     healing_deadline: DateTime,
     key: String,
     entries: &[BlobstoreSyncQueueEntry],
-) -> Option<impl Future<Item = (), Error = Error>> {
+) -> Option<impl Future<Item = HealStats, Error = Error>> {
     // This is needed as we load by key, and a given key may have entries both before and after
     // the deadline.  We leave the key rather than re-add to avoid entries always being too new.
     if !entries.iter().all(|e| e.timestamp < healing_deadline) {
         return None;
     }
+
+    let num_entries: usize = entries.len();
 
     let (seen_blobstores, unknown_seen_blobstores): (HashSet<_>, HashSet<_>) =
         entries.iter().partition_map(|entry| {
@@ -127,6 +174,8 @@ fn heal_blob(
                 Either::Right(id)
             }
         });
+
+    let num_unknown_entries: usize = unknown_seen_blobstores.len();
 
     if !unknown_seen_blobstores.is_empty() {
         warn!(
@@ -149,7 +198,14 @@ fn heal_blob(
     if stores_to_heal.is_empty() || seen_blobstores.is_empty() {
         // All blobstores have been synchronized or all are unknown to be requeued
         return Some(
-            requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores).left_future(),
+            requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores)
+                .map(move |()| HealStats {
+                    queue_del: num_entries,
+                    queue_add: num_unknown_entries,
+                    put_success: 0,
+                    put_failure: 0,
+                })
+                .left_future(),
         );
     }
 
@@ -196,6 +252,7 @@ fn heal_blob(
                         Either::Right(id)
                     }
                 });
+
             if !unhealed_stores.is_empty() || !unknown_seen_blobstores.is_empty() {
                 // Add good_sources to the healed_stores as we should write all
                 // known good blobstores so that the stores_to_heal logic run on read
@@ -206,6 +263,14 @@ fn heal_blob(
                 for b in fetch_data.good_sources {
                     healed_stores.insert(b);
                 }
+
+                let heal_stats = HealStats {
+                    queue_del: num_entries,
+                    queue_add: healed_stores.len() + num_unknown_entries,
+                    put_success: healed_stores.len(),
+                    put_failure: unhealed_stores.len(),
+                };
+
                 // Add unknown stores to queue as well so we try them later
                 for b in unknown_seen_blobstores {
                     healed_stores.insert(b);
@@ -217,9 +282,17 @@ fn heal_blob(
                     healed_stores,
                     unhealed_stores
                 );
-                requeue_partial_heal(ctx, sync_queue, key, healed_stores).left_future()
+                requeue_partial_heal(ctx, sync_queue, key, healed_stores)
+                    .map(|()| heal_stats)
+                    .left_future()
             } else {
-                futures::future::ok(()).right_future()
+                let heal_stats = HealStats {
+                    queue_del: num_entries,
+                    queue_add: num_unknown_entries,
+                    put_success: healed_stores.len(),
+                    put_failure: unhealed_stores.len(),
+                };
+                futures::future::ok(heal_stats).right_future()
             }
         })
     });
@@ -300,6 +373,11 @@ fn cleanup_after_healing(
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     entries: Vec<BlobstoreSyncQueueEntry>,
 ) -> impl Future<Item = (), Error = Error> {
+    info!(
+        ctx.logger(),
+        "Deleting {} actioned queue entries",
+        entries.len()
+    );
     sync_queue.del(ctx, entries)
 }
 
@@ -332,6 +410,7 @@ fn requeue_partial_heal(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::Future;
     use futures_ext::BoxFuture;
     use std::iter::FromIterator;
@@ -570,7 +649,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
         assert_eq!(
@@ -659,7 +738,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(0, sync_queue.len());
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
@@ -690,7 +769,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, sync_queue.len(), "expecting 1 new entries on queue");
         assert_eq!(
             0,
@@ -722,7 +801,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(3, sync_queue.len(), "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
         assert_eq!(
             1,
@@ -775,7 +854,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(
             1,
@@ -819,7 +898,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(
             1,
@@ -868,7 +947,7 @@ mod tests {
         );
         let r = fut.wait();
         assert!(r.is_ok());
-        assert_eq!(Some(()), r.unwrap(), "expecting to delete entries");
+        assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(
             1,
