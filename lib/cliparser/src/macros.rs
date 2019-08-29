@@ -9,8 +9,9 @@ macro_rules! define_flags {
         $( $crate::_define_flags_impl!(
             input [ $( $token )* ]
             flags []
+            arg0 ()
             varargs ()
-            misc ($vis $name)
+            misc ($vis $name 1)
         ); )*
     };
 }
@@ -21,12 +22,14 @@ macro_rules! _define_flags_impl {
     // Nothing left to parse
     ( input []
       flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr) )* ]
+      arg0 ( $( $arg0:ident )? )
       varargs ( $($varargs:ident)? )
-      misc ($vis:vis $name:ident)
+      misc ($vis:vis $name:ident $varargs_offset:expr)
     ) => {
         $vis struct $name {
             $( #[doc=$doc] pub $field : $type , )*
             $( pub $varargs: Vec<String>, )?
+            $( pub $arg0: String, )?
         }
 
         impl $crate::parser::StructFlags for $name {
@@ -41,7 +44,8 @@ macro_rules! _define_flags_impl {
             fn from(out: $crate::parser::ParseOutput) -> Self {
                 Self {
                     $( $field : out.pick::<$type>(&stringify!($field).replace("_", "-")), )*
-                    $( $varargs: out.args, )?
+                    $( $varargs: out.args.get($varargs_offset..).map(|v| v.to_vec()).unwrap_or_default(), )?
+                    $( $arg0: out.args.get(0).cloned().unwrap_or_default(), )?
                 }
             }
         }
@@ -53,12 +57,14 @@ macro_rules! _define_flags_impl {
     //    name: type,
     ( input [ #[doc=$doc:expr] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
       varargs $varargs:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags [ $( $flags )* (' ', $field, $doc, $type, (<$type>::default())) ]
+            arg0 $arg0
             varargs $varargs
             misc $misc
         );
@@ -70,12 +76,14 @@ macro_rules! _define_flags_impl {
     //    name: type = default,
     ( input [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
       varargs $varargs:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags [ $( $flags )* (' ', $field, $doc, $type, $default) ]
+            arg0 $arg0
             varargs $varargs
             misc $misc
         );
@@ -88,12 +96,14 @@ macro_rules! _define_flags_impl {
     //    name: type,
     ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
       varargs $varargs:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default())) ]
+            arg0 $arg0
             varargs $varargs
             misc $misc
         );
@@ -106,12 +116,14 @@ macro_rules! _define_flags_impl {
     //    name: type = default,
     ( input [ #[doc=$doc:expr] #[short($short:literal)] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
       varargs $varargs:tt
       misc $misc:tt
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags [ $( $flags )* ($short, $field, $doc, $type, $default) ]
+            arg0 $arg0
             varargs $varargs
             misc $misc
         );
@@ -123,16 +135,38 @@ macro_rules! _define_flags_impl {
     //    patterns: Vec<String>,
     ( input [ #[args] $varargs_name:ident : Vec<String>, $($rest:tt)* ]
       flags $flags:tt
+      arg0 $arg0:tt
       varargs ()
       misc $tail:tt
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
             flags $flags
+            arg0 $arg0
             varargs ( $varargs_name )
             misc $tail
         );
     };
+
+    // Match a field like:
+    //
+    //    #[command_name]
+    //    command_name: String
+    ( input [ #[command_name] $arg0:ident : String, $($rest:tt)* ]
+      flags $flags:tt
+      arg0 ()
+      varargs $varargs:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags $flags
+            arg0 ( $arg0 )
+            varargs $varargs
+            misc $misc
+        );
+    };
+
 }
 
 #[cfg(test)]
@@ -162,6 +196,9 @@ mod tests {
 
             #[args]
             pats: Vec<String>,
+
+            #[command_name]
+            name: String,
         }
     }
 
@@ -211,10 +248,11 @@ mod tests {
 
         let parsed = ParseOptions::new()
             .flags(AnotherTestOptions::flags())
-            .parse_args(&vec!["--no-follow", "b", "--follow", "c"])
+            .parse_args(&vec!["--no-follow", "foo", "b", "--follow", "c"])
             .unwrap();
         let parsed = AnotherTestOptions::from(parsed);
         assert_eq!(parsed.follow, true);
         assert_eq!(parsed.pats, vec!["b", "c"]);
+        assert_eq!(parsed.name, "foo");
     }
 }

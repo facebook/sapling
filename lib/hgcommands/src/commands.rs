@@ -54,7 +54,7 @@ define_flags! {
 
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     let args = opts.args;
-    if args != vec!["root"] {
+    if !args.is_empty() {
         return Err(errors::InvalidArguments.into());
     }
 
