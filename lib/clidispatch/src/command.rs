@@ -5,6 +5,7 @@
 use crate::{io::IO, repo::Repo};
 use cliparser::parser::{Flag, ParseOutput, StructFlags};
 use failure::Fallible;
+use std::convert::{TryFrom, TryInto};
 use std::{collections::BTreeMap, ops::Deref};
 
 pub enum CommandFunc {
@@ -79,11 +80,11 @@ pub trait Register<FN, T> {
 // NoRepo commands.
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
-    S: From<ParseOutput> + StructFlags,
+    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
     FN: Fn(S, &mut IO) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
-        let func = move |opts: ParseOutput, io: &mut IO| f(opts.into(), io);
+        let func = move |opts: ParseOutput, io: &mut IO| f(opts.try_into()?, io);
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
@@ -93,12 +94,12 @@ where
 // OptionalRepo commands.
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
-    S: From<ParseOutput> + StructFlags,
+    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
     FN: Fn(S, &mut IO, Option<Repo>) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         let func =
-            move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.into(), io, repo);
+            move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.try_into()?, io, repo);
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
@@ -108,11 +109,11 @@ where
 // Repo commands.
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
-    S: From<ParseOutput> + StructFlags,
+    S: TryFrom<ParseOutput, Error = failure::Error> + StructFlags,
     FN: Fn(S, &mut IO, Repo) -> Fallible<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
-        let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.into(), io, repo);
+        let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.try_into()?, io, repo);
         let func = CommandFunc::Repo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);

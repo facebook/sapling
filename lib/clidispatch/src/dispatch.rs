@@ -13,6 +13,7 @@ use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::parse_list;
 use failure::Fallible;
+use std::convert::TryInto;
 use std::{collections::BTreeMap, env, path::Path};
 
 /// Similar to `env::args()`. But does not panic.
@@ -164,7 +165,7 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
 
 pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO) -> Fallible<u8> {
     let early_result = early_parse(&args)?;
-    let global_opts: HgGlobalOpts = early_result.clone().into();
+    let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
 
     if !global_opts.cwd.is_empty() {
         env::set_current_dir(global_opts.cwd)?;
@@ -245,7 +246,7 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
     let def = &command_table[&command_name];
     let parsed = parse(&def, &full_args)?;
 
-    let global_opts: HgGlobalOpts = parsed.clone().into();
+    let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
     last_chance_to_abort(&global_opts)?;
 
     let handler = def.func();

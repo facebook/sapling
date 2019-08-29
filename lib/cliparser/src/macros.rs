@@ -40,13 +40,15 @@ macro_rules! _define_flags_impl {
             }
         }
 
-        impl From<$crate::parser::ParseOutput> for $name {
-            fn from(out: $crate::parser::ParseOutput) -> Self {
-                Self {
+        impl ::std::convert::TryFrom<$crate::parser::ParseOutput> for $name {
+            type Error = ::failure::Error;
+
+            fn try_from(out: $crate::parser::ParseOutput) -> ::failure::Fallible<Self> {
+                Ok(Self {
                     $( $field : out.pick::<$type>(&stringify!($field).replace("_", "-")), )*
                     $( $varargs: out.args.get($varargs_offset..).map(|v| v.to_vec()).unwrap_or_default(), )?
                     $( $arg0: out.args.get(0).cloned().unwrap_or_default(), )?
-                }
+                })
             }
         }
     };
@@ -203,6 +205,7 @@ mod tests {
     }
 
     use crate::parser::{Flag, ParseOptions, StructFlags, Value};
+    use std::convert::TryFrom;
 
     #[test]
     fn test_struct_flags() {
@@ -229,7 +232,7 @@ mod tests {
             .flags(TestOptions::flags())
             .parse_args(&vec!["--count", "3"])
             .unwrap();
-        let parsed = TestOptions::from(parsed);
+        let parsed = TestOptions::try_from(parsed).unwrap();
         assert_eq!(parsed.boo, true);
         assert_eq!(parsed.count, 3);
         assert_eq!(parsed.long_name, "alice");
@@ -239,7 +242,7 @@ mod tests {
             .flags(TestOptions::flags())
             .parse_args(&vec!["--no-boo", "--long-name=bob", "--rev=b", "-r", "a"])
             .unwrap();
-        let parsed = TestOptions::from(parsed);
+        let parsed = TestOptions::try_from(parsed).unwrap();
         assert_eq!(parsed.boo, false);
         assert_eq!(parsed.foo, false);
         assert_eq!(parsed.count, 12);
@@ -250,7 +253,7 @@ mod tests {
             .flags(AnotherTestOptions::flags())
             .parse_args(&vec!["--no-follow", "foo", "b", "--follow", "c"])
             .unwrap();
-        let parsed = AnotherTestOptions::from(parsed);
+        let parsed = AnotherTestOptions::try_from(parsed).unwrap();
         assert_eq!(parsed.follow, true);
         assert_eq!(parsed.pats, vec!["b", "c"]);
         assert_eq!(parsed.name, "foo");
