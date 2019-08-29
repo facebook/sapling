@@ -48,8 +48,8 @@ if (NOT WIN32)
   include(CompilerSettingsUnix)
 endif()
 include(EdenConfigChecks)
-include(ThriftCppLibrary)
 include(FBMercurialFeatures)
+include(FBThriftCppLibrary)
 
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 

@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-add_thrift_cpp2_library(
+add_fbthrift_cpp_library(
   eden_service_thrift
   eden.thrift
   SERVICES
@@ -12,7 +12,7 @@ add_thrift_cpp2_library(
     eden_config_thrift
     fb303::fb303_thrift_cpp
 )
-add_thrift_cpp2_library(
+add_fbthrift_cpp_library(
   streamingeden_thrift
   streamingeden.thrift
   SERVICES
