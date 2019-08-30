@@ -434,6 +434,18 @@ impl Tree {
         Ok(executor.converted_nodes.into_iter())
     }
 
+    pub fn list(&self, path: &RepoPath) -> Fallible<List> {
+        let directory = match self.get_link(path)? {
+            None => return Ok(List::NotFound),
+            Some(Leaf(_)) => return Ok(List::File),
+            Some(Ephemeral(content)) => content,
+            Some(Durable(entry)) => entry.get_links(&self.store, path)?,
+        };
+        Ok(List::Directory(
+            directory.keys().map(|key| key.to_owned()).collect(),
+        ))
+    }
+
     fn get_link(&self, path: &RepoPath) -> Fallible<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -680,6 +692,13 @@ where
     }
 }
 
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum List {
+    NotFound,
+    File,
+    Directory(Vec<PathComponentBuf>),
+}
+
 /// The purpose of this function is to provide compatible behavior with the C++ implementation
 /// of the treemanifest. This function is problematic because it goes through abstraction
 /// boundaries and is built with the assumption that the storage format is the same as the
@@ -688,6 +707,9 @@ where
 /// This function returns the nodes that need to be sent over the wire for a subtree of the
 /// manifest to be fully hydrated. The subtree is represented by `path` and `node`. The data
 /// that is present locally by the client is represented by `other_nodes`.
+///
+/// It is undefined what this function will do when called with a path that points to a file
+/// or with nodes that don't make sense.
 // NOTE: The implementation is currently custom. Consider converting the code to use Cursor.
 // The suggestion received in code review was also to consider making the return type more
 // simple (RepoPath, Node) and letting the call sites deal with the Bytes.
@@ -1630,5 +1652,39 @@ mod tests {
             vec![]
         );
         // it is illegal to call compat_subtree_diff with "baz" but we can't validate for it
+    }
+
+    #[test]
+    fn test_list() {
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("a1/b1/c1"), meta("10")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        let _node = tree.flush().unwrap();
+        tree.insert(repo_path_buf("a2/b3/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a2/b4"), meta("30")).unwrap();
+
+        assert_eq!(tree.list(repo_path("not_found")).unwrap(), List::NotFound);
+        assert_eq!(tree.list(repo_path("a1/b1/c1")).unwrap(), List::File);
+        assert_eq!(
+            tree.list(repo_path("a1/b1")).unwrap(),
+            List::Directory(vec![path_component_buf("c1")]),
+        );
+        assert_eq!(
+            tree.list(repo_path("a1")).unwrap(),
+            List::Directory(vec![path_component_buf("b1"), path_component_buf("b2")]),
+        );
+        assert_eq!(tree.list(repo_path("a2/b3/c2")).unwrap(), List::File);
+        assert_eq!(
+            tree.list(repo_path("a2/b3")).unwrap(),
+            List::Directory(vec![path_component_buf("c2")]),
+        );
+        assert_eq!(
+            tree.list(repo_path("a2")).unwrap(),
+            List::Directory(vec![path_component_buf("b3"), path_component_buf("b4")]),
+        );
+        assert_eq!(
+            tree.list(RepoPath::empty()).unwrap(),
+            List::Directory(vec![path_component_buf("a1"), path_component_buf("a2")]),
+        );
     }
 }

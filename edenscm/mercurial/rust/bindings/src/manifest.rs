@@ -142,6 +142,19 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
+    def listdir(&self, path: &PyBytes) -> PyResult<Vec<PyBytes>> {
+        let repo_path = pybytes_to_path(py, path);
+        let tree = self.underlying(py).borrow();
+        let result = match tree.list(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
+            manifest::tree::List::NotFound | manifest::tree::List::File => vec![],
+            manifest::tree::List::Directory(components) =>
+                components.into_iter().map(|component|
+                    path_to_pybytes(py, component.as_path_component())
+                ).collect()
+        };
+        Ok(result)
+    }
+
     def text(&self) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
         let tree = self.underlying(py).borrow();
@@ -457,8 +470,8 @@ fn pybytes_to_path(py: Python, pybytes: &PyBytes) -> RepoPathBuf {
     local_bytes_to_repo_path(pybytes.data(py)).to_owned()
 }
 
-fn path_to_pybytes(py: Python, path: &RepoPath) -> PyBytes {
-    PyBytes::new(py, repo_path_to_local_bytes(path))
+fn path_to_pybytes<T: AsRef<RepoPath>>(py: Python, path: T) -> PyBytes {
+    PyBytes::new(py, repo_path_to_local_bytes(path.as_ref()))
 }
 
 fn pystring_to_file_type(py: Python, pystring: &PyString) -> PyResult<FileType> {
