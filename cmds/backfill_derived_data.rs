@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(duration_float)]
 
 use blobrepo::DangerousOverride;
 use blobstore::Blobstore;
