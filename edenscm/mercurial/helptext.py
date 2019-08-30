@@ -2902,11 +2902,16 @@ Examples::
     Whether to log wireproto getfiles requests or not. "sampling.py" extension
     can be used to send list of log entries to log aggregator.
 
+``loggetpack``
+    Whether to log wireproto getpack requests or not. "sampling.py" extension
+    can be used to send list of log entries to log aggregator.
+
 Examples::
 
     [wireproto]
     logrequests = getbundle,gettreepack
     loggetfiles = True
+    loggetpack = True
 
     [sampling]
     key.wireproto_requests=perfpipe_wireprotorequests

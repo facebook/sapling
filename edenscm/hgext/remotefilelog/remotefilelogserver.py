@@ -342,7 +342,7 @@ def getfiles(repo, proto):
         fin = proto.fin
         args = []
         responselen = 0
-        start_time = time.time()
+        starttime = time.time()
 
         while True:
             request = fin.readline()[:-1]
@@ -370,28 +370,7 @@ def getfiles(repo, proto):
             proto.fout.flush()
 
         if repo.ui.configbool("wireproto", "loggetfiles"):
-            try:
-                serializedargs = json.dumps(args)
-            except Exception:
-                serializedargs = "Failed to serialize arguments"
-
-            kwargs = {}
-            try:
-                clienttelemetry = extensions.find("clienttelemetry")
-                kwargs = clienttelemetry.getclienttelemetry(repo)
-            except KeyError:
-                pass
-            reponame = repo.ui.config("common", "reponame", "unknown")
-            kwargs["reponame"] = reponame
-            repo.ui.log(
-                "wireproto_requests",
-                "",
-                command="getfiles",
-                args=serializedargs,
-                responselen=responselen,
-                duration=int((time.time() - start_time) * 1000),
-                **kwargs
-            )
+            _logwireprotorequest(repo, "getfiles", starttime, responselen, args)
 
     return wireproto.streamres(streamer())
 
@@ -535,8 +514,13 @@ def getpack(repo, proto, args, version=1):
         """
         files = _receivepackrequest(proto.fin)
 
+        args = []
+        responselen = 0
+        starttime = time.time()
+
         # Sort the files by name, so we provide deterministic results
         for filename, nodes in sorted(files.iteritems()):
+            args.append([filename, [hex(n) for n in nodes]])
             fl = repo.file(filename)
 
             # Compute history
@@ -561,10 +545,22 @@ def getpack(repo, proto, args, version=1):
             for chunk in wirepack.sendpackpart(
                 filename, history, chain, version=version
             ):
+                responselen += len(chunk)
                 yield chunk
 
-        yield wirepack.closepart()
+        close = wirepack.closepart()
+        responselen += len(close)
+        yield close
         proto.fout.flush()
+
+        if repo.ui.configbool("wireproto", "loggetpack"):
+            _logwireprotorequest(
+                repo,
+                "getpackv1" if version == 1 else "getpackv2",
+                starttime,
+                responselen,
+                args,
+            )
 
     return wireproto.streamres(streamer())
 
@@ -616,3 +612,30 @@ def _getdeltachain(fl, nodes, version):
 
     chain.reverse()
     return chain
+
+
+def _logwireprotorequest(repo, name, starttime, responselen, args):
+    try:
+        serializedargs = json.dumps(args)
+    except Exception:
+        serializedargs = "Failed to serialize arguments"
+
+    kwargs = {}
+    try:
+        clienttelemetry = extensions.find("clienttelemetry")
+        kwargs = clienttelemetry.getclienttelemetry(repo)
+    except KeyError:
+        pass
+
+    reponame = repo.ui.config("common", "reponame", "unknown")
+    kwargs["reponame"] = reponame
+
+    repo.ui.log(
+        "wireproto_requests",
+        "",
+        command=name,
+        args=serializedargs,
+        responselen=responselen,
+        duration=int((time.time() - starttime) * 1000),
+        **kwargs
+    )
