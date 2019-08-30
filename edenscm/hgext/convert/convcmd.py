@@ -502,22 +502,19 @@ class converter(object):
             c = None
 
             self.ui.status(_("converting...\n"))
-            with self.dest.repo.transaction("convert"):
-                with progress.bar(
-                    self.ui, _("converting"), _("revisions"), len(t)
-                ) as prog:
-                    for i, c in enumerate(t):
-                        num -= 1
-                        desc = self.commitcache[c].desc
-                        if "\n" in desc:
-                            desc = desc.splitlines()[0]
-                        # convert log message to local encoding without using
-                        # tolocal() because the encoding.encoding convert()
-                        # uses is 'utf-8'
-                        self.ui.status("%d %s\n" % (num, recode(desc)))
-                        self.ui.note(_("source: %s\n") % recode(c))
-                        prog.value = i
-                        self.copy(c)
+            with progress.bar(self.ui, _("converting"), _("revisions"), len(t)) as prog:
+                for i, c in enumerate(t):
+                    num -= 1
+                    desc = self.commitcache[c].desc
+                    if "\n" in desc:
+                        desc = desc.splitlines()[0]
+                    # convert log message to local encoding without using
+                    # tolocal() because the encoding.encoding convert()
+                    # uses is 'utf-8'
+                    self.ui.status("%d %s\n" % (num, recode(desc)))
+                    self.ui.note(_("source: %s\n") % recode(c))
+                    prog.value = i
+                    self.copy(c)
 
             if not self.ui.configbool("convert", "skiptags"):
                 tags = self.source.gettags()
