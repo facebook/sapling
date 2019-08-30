@@ -65,6 +65,7 @@
   2 warnings encountered!
   2 integrity errors encountered!
   % journal contents
+  00changelog.d
   00changelog.i
   00manifest.i
   data/b.i
@@ -123,6 +124,7 @@
   7 integrity errors encountered!
   (first damaged changeset appears to be 3)
   % journal contents
+  00changelog.d
   00changelog.i
   00manifest.i
   data/b.i

@@ -22,7 +22,7 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   { metrics : { ssh : { connections : 2,
                         getfiles : { calls : 1,  revs : 1},
-                        read : { bytes : 1703},
+                        read : { bytes : 1719},
                         write : { bytes : 812}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF

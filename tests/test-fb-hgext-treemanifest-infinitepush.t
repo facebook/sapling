@@ -211,7 +211,8 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   my change
   my other change
   $ ls_l .hg/store
-  -rw-r--r--     392 00changelog.i
+  -rw-r--r--     200 00changelog.d
+  -rw-r--r--     192 00changelog.i
   -rw-r--r--     108 00manifesttree.i
   drwxr-xr-x         data
   drwxrwxr-x         packs

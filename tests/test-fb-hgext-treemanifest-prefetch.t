@@ -53,7 +53,7 @@ There are three cases which are of interest in this test:
 #if remotefilelog.true.shallowrepo.true
   $ hgcloneshallow ssh://user@dummy/master client
   streaming all changes
-  2 files to transfer, 749 bytes of data
+  3 files to transfer, 749 bytes of data
   transferred 749 bytes in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -63,7 +63,7 @@ There are three cases which are of interest in this test:
 #else
   $ hg clone ssh://user@dummy/master client
   streaming all changes
-  4 files to transfer, 952 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 952 bytes in * seconds (*) (glob)
   searching for changes
   no changes found

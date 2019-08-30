@@ -18,11 +18,11 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   { metrics : { ssh : { connections : 2,
                         getfiles : { calls : 1,  revs : 1},
-                        read : { bytes : 1446},
+                        read : { bytes : 1462},
                         write : { bytes : 812}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 902},
+                        read : { bytes : 918},
                         write : { bytes : 656}}}}
 
 We should see the remotefilelog capability here, which advertises that

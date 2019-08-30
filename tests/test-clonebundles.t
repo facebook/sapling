@@ -294,7 +294,7 @@ Python <2.7.9 will filter SNI URLs
 Stream clone bundles are supported
 
   $ hg -R server debugcreatestreamclonebundle packed.hg
-  writing 613 bytes for 4 files
+  writing 613 bytes for 5 files
   bundle requirements: generaldelta, revlogv1
 
 No bundle spec should work
@@ -305,7 +305,7 @@ No bundle spec should work
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-no-spec
   applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
   searching for changes
@@ -319,7 +319,7 @@ Bundle spec without parameters should work
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-vanilla-spec
   applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
   searching for changes
@@ -333,7 +333,7 @@ Bundle spec with format requirements should work
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-supported-requirements
   applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
   searching for changes
@@ -461,7 +461,7 @@ A manifest with just a gzip bundle
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -476,7 +476,7 @@ A manifest with a stream clone but no BUNDLESPEC
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -490,7 +490,7 @@ A manifest with a gzip bundle and a stream clone
 
   $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed
   applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in * seconds (*) (glob)
   finished applying clone bundle
   searching for changes
@@ -505,7 +505,7 @@ A manifest with a gzip bundle and stream clone with supported requirements
 
   $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-requirements
   applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in * seconds (*) (glob)
   finished applying clone bundle
   searching for changes
@@ -522,7 +522,7 @@ A manifest with a gzip bundle and a stream clone with unsupported requirements
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes
-  4 files to transfer, 613 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 613 bytes in * seconds (*) (glob)
   searching for changes
   no changes found

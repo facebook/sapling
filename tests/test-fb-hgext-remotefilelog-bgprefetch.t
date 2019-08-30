@@ -27,7 +27,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
-  2 files to transfer, * bytes of data (glob)
+  3 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (*) (glob)
   searching for changes
   no changes found

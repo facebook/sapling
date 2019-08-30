@@ -306,6 +306,9 @@ class changelog(revlog.revlog):
             # changelogs don't benefit from generaldelta
             self.version &= ~revlog.FLAG_GENERALDELTA
             self._generaldelta = False
+            # disable inline to make it easier to read changelog.i
+            self.version &= ~revlog.FLAG_INLINE_DATA
+            self._inline = False
 
         # Delta chains for changelogs tend to be very small because entries
         # tend to be small and don't delta well with each. So disable delta

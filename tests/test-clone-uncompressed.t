@@ -22,7 +22,7 @@ Basic clone
 
   $ hg clone --stream -U http://localhost:$HGPORT clone1
   streaming all changes
-  1027 files to transfer, * of data (glob)
+  1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -54,7 +54,7 @@ Block full streaming clones
 
   $ hg clone --uncompressed -U http://localhost:$HGPORT clone1-uncompressed
   streaming all changes
-  1027 files to transfer, * of data (glob)
+  1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -66,7 +66,7 @@ Clone with background file closing enabled
   sending capabilities command
   streaming all changes
   sending stream_out_option command
-  1027 files to transfer, * of data (glob)
+  1028 files to transfer, * of data (glob)
   starting 4 threads for background file closing
   transferred * in * seconds (*) (glob)
   query 1; heads
@@ -106,7 +106,7 @@ Streaming of secrets can be overridden by server config
 
   $ hg clone --stream -U http://localhost:$HGPORT secret-allowed
   streaming all changes
-  1027 files to transfer, * of data (glob)
+  1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found

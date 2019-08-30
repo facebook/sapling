@@ -38,8 +38,8 @@ sh % "cd .."
 
 sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate --config 'extensions.fastmanifest='" == r"""
     streaming all changes
-    3 files to transfer, 347 bytes of data
-    transferred 347 bytes in * seconds (*/sec) (glob)
+    4 files to transfer, 347 bytes of data
+    transferred 347 bytes in 0.0 seconds (339 KB/sec)
     searching for changes
     no changes found"""
 sh % "ls 'shallow/.hg/store/00*.i'" == r"""
@@ -56,8 +56,8 @@ shallowtrees=True
 
 sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate --config 'extensions.fastmanifest='" == r"""
     streaming all changes
-    2 files to transfer, 236 bytes of data
-    transferred 236 bytes in * seconds (*/sec) (glob)
+    3 files to transfer, 236 bytes of data
+    transferred 236 bytes in 0.0 seconds (230 KB/sec)
     searching for changes
     no changes found"""
 sh % "ls 'shallow/.hg/store/00*.i'" == r"""

@@ -270,13 +270,13 @@ Cannot produce streaming clone bundles with "hg bundle"
 packed1 is produced properly
 
   $ hg -R test debugcreatestreamclonebundle packed.hg
-  writing * bytes for 6 files (glob)
+  writing * bytes for 7 files (glob)
   bundle requirements: generaldelta, revlogv1
 
 #if common-zlib
   $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2827, sha1=9d14cb90c66a21462d915ab33656f38b9deed686
-  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 06 00 00 |HGS1UN..........|
+  packed.hg: size=2844, sha1=a6e24597a941d54d2f7bf6ac4f1364d1b3a0058a
+  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 07 00 00 |HGS1UN..........|
   0010: 00 00 00 00 0a 68 00 16 67 65 6e 65 72 61 6c 64 |.....h..generald|
   0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
   0030: 74 61 2f 61 64 69 66 66 65 72 65 6e 74 66 69 6c |ta/adifferentfil|
@@ -293,12 +293,12 @@ generaldelta requirement is not listed in stream clone bundles unless used
   $ hg -q commit -A -m initial
   $ cd ..
   $ hg -R testnongd debugcreatestreamclonebundle packednongd.hg
-  writing 301 bytes for 3 files
+  writing 301 bytes for 4 files
   bundle requirements: revlogv1
 
   $ f -B 64 --size --sha1 --hexdump packednongd.hg
-  packednongd.hg: size=383, sha1=1d9c230238edd5d38907100b729ba72b1831fe6f
-  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 03 00 00 |HGS1UN..........|
+  packednongd.hg: size=399, sha1=6388d5d4129a9a8ad86c17e8df26055dd2787cde
+  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 04 00 00 |HGS1UN..........|
   0010: 00 00 00 00 01 2d 00 09 72 65 76 6c 6f 67 76 31 |.....-..revlogv1|
   0020: 00 64 61 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 |.data/foo.i.64..|
   0030: 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
@@ -317,7 +317,7 @@ Warning emitted when packed bundles contain secret changesets
 
   $ hg -R testsecret debugcreatestreamclonebundle packedsecret.hg
   (warning: stream clone bundle will contain secret revisions)
-  writing 301 bytes for 3 files
+  writing 301 bytes for 4 files
   bundle requirements: generaldelta, revlogv1
 
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
@@ -359,7 +359,7 @@ transaction)
   > EOF
 
   $ hg -R packed debugapplystreamclonebundle packed.hg
-  6 files to transfer, 2.60 KB of data
+  7 files to transfer, * of data (glob)
   pretxnopen: 000000000000
   pretxnclose: aa35859c02ea
   transferred 2.60 KB in *.* seconds (* */sec) (glob)

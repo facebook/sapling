@@ -36,7 +36,7 @@ Pull changes client-side
   $ hg pull
   pulling from ssh://user@dummy/repo
   streaming all changes
-  5 files to transfer, * KB of data (glob)
+  6 files to transfer, * of data (glob)
   transferred .* in [\d.]+ seconds \([\d.]+ .*\) (re)
   searching for changes
   no changes found
@@ -92,7 +92,7 @@ Now try to restore it from different client. Make sure bookmark
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/repo secondclient
   streaming all changes
-  2 files to transfer, 268 bytes of data
+  3 files to transfer, * of data (glob)
   transferred 268 bytes in [\d.]+ seconds \([\d.]+ .*\) (re)
   searching for changes
   no changes found

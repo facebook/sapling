@@ -47,6 +47,7 @@ Prepare repo r1:
   $ cd ../..
 
   $ nlinksdir r1/.hg/store
+  1 r1/.hg/store/00changelog.d
   1 r1/.hg/store/00changelog.i
   1 r1/.hg/store/00manifest.i
   1 r1/.hg/store/data/d1/f2.i
@@ -70,8 +71,9 @@ Create hardlinked clone r2:
   progress: linking: 5
   progress: linking: 6
   progress: linking: 7
+  progress: linking: 8
   progress: linking (end)
-  linked 7 files
+  linked 8 files
 
 Create non-hardlinked clone r3:
 
@@ -89,6 +91,7 @@ Create non-hardlinked clone r3:
 Repos r1 and r2 should now contain hardlinked files:
 
   $ nlinksdir r1/.hg/store
+  2 r1/.hg/store/00changelog.d
   2 r1/.hg/store/00changelog.i
   2 r1/.hg/store/00manifest.i
   2 r1/.hg/store/data/d1/f2.i
@@ -102,6 +105,7 @@ Repos r1 and r2 should now contain hardlinked files:
   1 r1/.hg/store/undo.phaseroots
 
   $ nlinksdir r2/.hg/store
+  2 r2/.hg/store/00changelog.d
   2 r2/.hg/store/00changelog.i
   2 r2/.hg/store/00manifest.i
   2 r2/.hg/store/data/d1/f2.i
@@ -111,6 +115,7 @@ Repos r1 and r2 should now contain hardlinked files:
 Repo r3 should not be hardlinked:
 
   $ nlinksdir r3/.hg/store
+  1 r3/.hg/store/00changelog.d
   1 r3/.hg/store/00changelog.i
   1 r3/.hg/store/00manifest.i
   1 r3/.hg/store/data/d1/f2.i
@@ -137,6 +142,7 @@ Create a non-inlined filelog in r3:
   $ cd ../..
 
   $ nlinksdir r3/.hg/store
+  1 r3/.hg/store/00changelog.d
   1 r3/.hg/store/00changelog.i
   1 r3/.hg/store/00manifest.i
   1 r3/.hg/store/data/d1/f2.d
@@ -172,6 +178,7 @@ Push to repo r1 should break up most hardlinks in r2:
   $ cd ..
 
   $ nlinksdir r2/.hg/store
+  1 r2/.hg/store/00changelog.d
   1 r2/.hg/store/00changelog.i
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
@@ -202,6 +209,7 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   $ cd ..
 
   $ nlinksdir r2/.hg/store
+  1 r2/.hg/store/00changelog.d
   1 r2/.hg/store/00changelog.i
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
@@ -247,6 +255,7 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
   2 r4/.hg/requires
+  2 r4/.hg/store/00changelog.d
   2 r4/.hg/store/00changelog.i
   2 r4/.hg/store/00manifest.i
   2 r4/.hg/store/data/d1/f2.d
@@ -291,6 +300,8 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
   2 r4/.hg/requires
+  2 r4/f3 (no-execbit !)
+  2 r4/.hg/store/00changelog.d
   2 r4/.hg/store/00changelog.i
   2 r4/.hg/store/00manifest.i
   2 r4/.hg/store/data/d1/f2.d
@@ -315,7 +326,6 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/d1/f2
   1 r4/f1
   1 r4/f3 (execbit !)
-  2 r4/f3 (no-execbit !)
 
 #if hardlink-whitelisted
   $ nlinksdir r4/.hg/undo.backup.dirstate r4/.hg/undo.dirstate

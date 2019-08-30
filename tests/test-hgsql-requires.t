@@ -37,7 +37,7 @@ Ensure streaming clones to non-hgsql repos work
 Ensure streaming clones to hgsql repos work
   $ hg clone --config extensions.hgsql= --config ui.ssh='python "$TESTDIR/dummyssh"' --uncompressed ssh://user@dummy/master client3
   streaming all changes
-  3 files to transfer, 294 bytes of data
+  4 files to transfer, 294 bytes of data
   transferred 294 bytes in * seconds (*) (glob)
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

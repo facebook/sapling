@@ -360,6 +360,7 @@ generaldelta added to original requirements files
 store directory has files we expect
 
   $ ls .hg/store
+  00changelog.d
   00changelog.i
   00manifest.i
   data
@@ -387,6 +388,7 @@ verify should be happy
 old store should be backed up
 
   $ ls .hg/upgradebackup.*/store
+  00changelog.d
   00changelog.i
   00manifest.i
   data

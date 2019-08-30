@@ -62,8 +62,9 @@ No update, with debug option:
   progress: linking: 6
   progress: linking: 7
   progress: linking: 8
+  progress: linking: 9
   progress: linking (end)
-  linked 8 files
+  linked 9 files
 #else
   $ hg --debug clone -U . ../c --config progress.debug=true
   linking: 1

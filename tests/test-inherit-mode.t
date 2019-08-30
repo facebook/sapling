@@ -76,6 +76,7 @@ new directories are setgid
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
   00770 ./.hg/store/
+  00660 ./.hg/store/00changelog.d
   00660 ./.hg/store/00changelog.i
   00660 ./.hg/store/00manifest.i
   00770 ./.hg/store/data/
@@ -124,6 +125,7 @@ group can still write everything
   00660 ../push/.hg/dirstate
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
+  00660 ../push/.hg/store/00changelog.d
   00660 ../push/.hg/store/00changelog.i
   00660 ../push/.hg/store/00manifest.i
   00770 ../push/.hg/store/data/

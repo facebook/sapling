@@ -1791,8 +1791,9 @@ class EntryRevlog(revlog.revlog):
         # This is a copy of the changelog init implementation.
         # It hard codes no generaldelta.
         if path == "00changelog.i" and self._initempty:
-            self.version &= ~revlog.FLAG_GENERALDELTA
+            self.version &= ~(revlog.FLAG_GENERALDELTA | revlog.FLAG_INLINE_DATA)
             self._generaldelta = False
+            self._inline = False
 
     def addentry(
         self, transaction, ifh, dfh, entry, data0, data1, ignoreexisting=False

@@ -775,7 +775,7 @@ Stream clone with basicstore
   $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT1 stream-clone-basicstore
   streaming all changes
-  18 files to transfer, * of data (glob)
+  19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -791,7 +791,7 @@ Stream clone with encodedstore
   $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT2 stream-clone-encodedstore
   streaming all changes
-  18 files to transfer, * of data (glob)
+  19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -807,7 +807,7 @@ Stream clone with fncachestore
   $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT stream-clone-fncachestore
   streaming all changes
-  18 files to transfer, * of data (glob)
+  19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -821,7 +821,7 @@ Stream clone with fncachestore
 
 Packed bundle
   $ hg -R deeprepo debugcreatestreamclonebundle repo-packed.hg
-  writing * bytes for 18 files (glob)
+  writing * bytes for 19 files (glob)
   bundle requirements: generaldelta, revlogv1, treemanifest
   $ hg debugbundle --spec repo-packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Crevlogv1%2Ctreemanifest

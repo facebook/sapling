@@ -16,7 +16,7 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow --config extensions.fastmanifest= --config fastmanifest.usetrees=True --config extensions.treemanifest= --config treemanifest.treeonly=True
   streaming all changes
-  1 files to transfer, 124 bytes of data
+  2 files to transfer, * of data (glob)
   transferred 124 bytes in * seconds (*) (glob)
   searching for changes
   no changes found

@@ -35,7 +35,7 @@
 
   $ hgcloneshallowlfs ssh://user@dummy/master shallow file://$LFSPATH --noupdate
   streaming all changes
-  2 files to transfer, * bytes of data (glob)
+  3 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (*) (glob)
   searching for changes
   no changes found

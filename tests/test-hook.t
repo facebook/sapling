@@ -182,6 +182,7 @@ more there after
 (Check that no 'changelog.i.a' file were left behind)
 
   $ ls -1 .hg/store/
+  00changelog.d
   00changelog.i
   00manifest.i
   data

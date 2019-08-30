@@ -29,7 +29,7 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2234},
+                        read : { bytes : 2252},
                         write : { bytes : 1042}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF

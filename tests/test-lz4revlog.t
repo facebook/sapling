@@ -122,7 +122,7 @@ uncompressed clone from lz4 to lz4 should be fine
   $ cd ..
   $ hg clone --uncompressed http://localhost:$HGPORT/ happy
   streaming all changes
-  4 files to transfer, 785 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 785 bytes in * seconds * (glob)
   searching for changes
   no changes found

@@ -35,8 +35,8 @@ sh % "cd .."
 
 sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate" == r"""
     streaming all changes
-    2 files to transfer, 908 bytes of data
-    transferred 908 bytes in * seconds (*/sec) (glob)
+    3 files to transfer, 908 bytes of data
+    transferred 908 bytes in 0.0 seconds (887 KB/sec)
     searching for changes
     no changes found"""
 sh % "cd shallow"

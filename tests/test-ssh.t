@@ -44,7 +44,7 @@ clone remote via stream
 
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/remote local-stream
   streaming all changes
-  4 files to transfer, 392 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 392 bytes in 0.0 seconds (383 KB/sec)
   searching for changes
   no changes found
@@ -64,7 +64,7 @@ clone bookmarks via stream
   $ hg -R local-stream book mybook
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/local-stream stream2
   streaming all changes
-  4 files to transfer, 392 bytes of data
+  5 files to transfer, * of data (glob)
   transferred 392 bytes in 0.0 seconds (383 KB/sec)
   searching for changes
   no changes found

@@ -84,6 +84,7 @@ Non store repo:
   adding tst.d/foo
   $ find .hg | sort | grep -v blackbox
   .hg
+  .hg/00changelog.d
   .hg/00changelog.i
   .hg/00manifest.i
   .hg/checkoutidentifier
@@ -122,6 +123,7 @@ Non fncache repo:
   .hg/last-message.txt
   .hg/requires
   .hg/store
+  .hg/store/00changelog.d
   .hg/store/00changelog.i
   .hg/store/00manifest.i
   .hg/store/data

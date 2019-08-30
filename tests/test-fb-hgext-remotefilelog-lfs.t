@@ -41,7 +41,7 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
-  2 files to transfer, 1.14 KB of data
+  3 files to transfer, * of data (glob)
   transferred 1.14 KB in * seconds (*/sec) (glob)
   searching for changes
   no changes found

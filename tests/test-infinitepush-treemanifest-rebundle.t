@@ -18,7 +18,7 @@ Make a remotefilelog client
   $ cd $TESTTMP
   $ hgcloneshallow ssh://user@dummy/master client1
   streaming all changes
-  2 files to transfer, 246 bytes of data
+  3 files to transfer, * of data (glob)
   transferred * (glob)
   searching for changes
   no changes found
@@ -77,7 +77,7 @@ Clone another client, this time treeonly
   $ cd $TESTTMP
   $ hgcloneshallow ssh://user@dummy/master client2 --config extensions.treemanifest= --config treemanifest.treeonly=true
   streaming all changes
-  2 files to transfer, 242 bytes of data
+  3 files to transfer, * of data (glob)
   transferred * (glob)
   searching for changes
   no changes found

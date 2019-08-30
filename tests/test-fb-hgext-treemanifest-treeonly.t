@@ -305,7 +305,8 @@ Test peer-to-peer push/pull of tree only commits
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client2
   $ ls_l .hg/store
-  -rw-r--r--     277 00changelog.i
+  -rw-r--r--     149 00changelog.d
+  -rw-r--r--     128 00changelog.i
   drwxr-xr-x         data
   -rw-r--r--       0 requires
   -rw-r--r--       0 undo
@@ -581,8 +582,7 @@ Test pushing flat manifests to a treeonly server
   $ hg push -r tip --to master --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: "unable to find the following nodes locally or on the server: ('', 89bffa38cf192d8f8a234bfb14dd22d0c65064f0)"
-  abort: push failed on remote
+  abort: revlog decompress error: Error -5 while decompressing data: incomplete or truncated stream!
   [255]
 
 Test pulling to a treeonly client from a treeonly server

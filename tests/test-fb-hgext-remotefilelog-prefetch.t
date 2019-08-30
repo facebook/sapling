@@ -36,7 +36,7 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
-  2 files to transfer, * bytes of data (glob)
+  3 files to transfer, * of data (glob)
   transferred * bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
@@ -218,7 +218,7 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow2
   streaming all changes
-  2 files to transfer, * bytes of data (glob)
+  3 files to transfer, * of data (glob)
   transferred * bytes in * seconds * (glob)
   searching for changes
   no changes found
@@ -261,7 +261,7 @@
 # Prefetch packs
   $ hgcloneshallow ssh://user@dummy/master packprefetch
   streaming all changes
-  2 files to transfer, * bytes of data (glob)
+  3 files to transfer, * of data (glob)
   transferred * bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
