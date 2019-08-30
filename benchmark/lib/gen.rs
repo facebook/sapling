@@ -6,6 +6,7 @@
 
 //! Utilities to generate reasonably looking stack of changesets
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobstore::Storable;
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{future, stream, Future, Stream};
@@ -113,16 +114,13 @@ impl GenManifest {
                     }
                     Some(content) => {
                         let content = FileContents::new_bytes(content);
-                        store_changes.push(repo.unittest_store(ctx.clone(), content.clone()));
                         let size = content.size();
+                        let blob = content.into_blob();
+                        let id = *blob.id();
+                        store_changes.push(blob.store(ctx.clone(), &repo.get_blobstore()));
                         file_changes.insert(
                             path,
-                            Some(FileChange::new(
-                                *content.into_blob().id(),
-                                FileType::Regular,
-                                size as u64,
-                                None,
-                            )),
+                            Some(FileChange::new(id, FileType::Regular, size as u64, None)),
                         );
                     }
                 }

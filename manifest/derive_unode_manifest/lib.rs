@@ -301,6 +301,7 @@ mod tests {
     use crate::test_utils::{get_bonsai_changeset, iterate_all_entries};
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
+    use blobstore::Storable;
     use bytes::Bytes;
     use derived_data_unodes::get_file_changes;
     use failure_ext::Result;
@@ -309,7 +310,8 @@ mod tests {
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, Changeset, HgFileNodeId, HgManifestId};
     use mononoke_types::{
-        BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents, RepoPath,
+        BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
+        RepoPath,
     };
     use std::collections::{HashSet, VecDeque};
     use tokio::runtime::Runtime;
@@ -713,9 +715,9 @@ mod tests {
             match content {
                 Some((content, file_type)) => {
                     let size = content.len();
-                    let content = FileContents::Bytes(Bytes::from(content));
+                    let content = FileContents::Bytes(Bytes::from(content)).into_blob();
                     let content_id = runtime
-                        .block_on(repo.unittest_store(ctx.clone(), content))
+                        .block_on(content.store(ctx.clone(), &repo.get_blobstore()))
                         .unwrap();
 
                     let file_change = FileChange::new(content_id, file_type, size as u64, None);

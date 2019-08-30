@@ -10,7 +10,7 @@ use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use crate::repo_commit::*;
-use blobstore::{Blobstore, Loadable, LoadableError, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -222,48 +222,6 @@ impl BlobRepo {
             derived_data_lease,
             filestore_config,
         )
-    }
-
-    fn fetch<Id, V>(&self, ctx: CoreContext, id: Id) -> impl Future<Item = V, Error = Error> + Send
-    where
-        Id: Loadable<Value = V> + ::std::fmt::Debug + Send,
-        V: Send,
-    {
-        id.load(ctx, &self.blobstore).from_err()
-    }
-
-    // this is supposed to be used only from unittest
-    pub fn unittest_fetch<Id, V>(
-        &self,
-        ctx: CoreContext,
-        id: Id,
-    ) -> impl Future<Item = V, Error = Error> + Send
-    where
-        Id: Loadable<Value = V> + ::std::fmt::Debug + Send,
-        V: Send,
-    {
-        self.fetch(ctx, id)
-    }
-
-    fn store<K, V>(&self, ctx: CoreContext, value: V) -> impl Future<Item = K, Error = Error> + Send
-    where
-        V: BlobstoreValue<Key = K>,
-        Blob<K>: Storable<Key = K>,
-    {
-        value.into_blob().store(ctx, &self.blobstore)
-    }
-
-    // this is supposed to be used only from unittest
-    pub fn unittest_store<K, V>(
-        &self,
-        ctx: CoreContext,
-        value: V,
-    ) -> impl Future<Item = K, Error = Error> + Send
-    where
-        V: BlobstoreValue<Key = K>,
-        Blob<K>: Storable<Key = K>,
-    {
-        self.store(ctx, value)
     }
 
     pub fn get_file_content(
@@ -781,7 +739,7 @@ impl BlobRepo {
         bonsai_cs_id: ChangesetId,
     ) -> BoxFuture<BonsaiChangeset, Error> {
         STATS::get_bonsai_changeset.add_value(1);
-        self.fetch(ctx, bonsai_cs_id).boxify()
+        bonsai_cs_id.load(ctx, &self.blobstore).from_err().boxify()
     }
 
     // TODO(stash): make it accept ChangesetId
@@ -1549,8 +1507,9 @@ impl BlobRepo {
                                     visited,
                                 )))
                                 .left_future(),
-                                None => repo
-                                    .fetch(ctx.clone(), bcs_id)
+                                None => bcs_id
+                                    .load(ctx.clone(), &repo.get_blobstore())
+                                    .from_err()
                                     .map(move |bcs| {
                                         commits_to_generate.push(bcs.clone());
                                         queue.extend(bcs.parents().filter(|p| visited.insert(*p)));

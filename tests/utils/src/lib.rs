@@ -6,22 +6,16 @@
 
 #![deny(warnings)]
 
-extern crate blobrepo;
-extern crate bytes;
-extern crate context;
-extern crate futures;
-#[macro_use]
-extern crate maplit;
-extern crate mononoke_types;
-
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::Future;
+use maplit::btreemap;
 use mononoke_types::{
-    BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType, MPath,
+    BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
+    MPath,
 };
-
 use std::collections::BTreeMap;
 
 pub fn store_files(
@@ -37,7 +31,11 @@ pub fn store_files(
             Some(content) => {
                 let size = content.len();
                 let content = FileContents::new_bytes(Bytes::from(content));
-                let content_id = repo.unittest_store(ctx.clone(), content).wait().unwrap();
+                let content_id = content
+                    .into_blob()
+                    .store(ctx.clone(), &repo.get_blobstore())
+                    .wait()
+                    .unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
                 res.insert(path, Some(file_change));
@@ -60,7 +58,11 @@ pub fn store_rename(
     let path = MPath::new(path).unwrap();
     let size = content.len();
     let content = FileContents::new_bytes(Bytes::from(content));
-    let content_id = repo.unittest_store(ctx, content).wait().unwrap();
+    let content_id = content
+        .into_blob()
+        .store(ctx, &repo.get_blobstore())
+        .wait()
+        .unwrap();
 
     let file_change = FileChange::new(content_id, FileType::Regular, size as u64, Some(copy_src));
     (path, Some(file_change))

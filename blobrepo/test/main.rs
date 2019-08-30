@@ -14,7 +14,7 @@ use blobrepo::{
     compute_changed_files, BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
     UploadHgNodeHash,
 };
-use blobstore::{Loadable, Storable};
+use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
@@ -30,16 +30,13 @@ use mercurial_types::{
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
-    blob::BlobstoreValue, Blob, BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange,
-    FileContents,
+    blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
 };
-use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
 use rand::{distributions::Normal, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::FromIterator,
-    marker::PhantomData,
     sync::Arc,
 };
 use tests_utils::{create_commit, store_files};
@@ -578,53 +575,6 @@ test_both_repotypes!(
     check_linknode_creation_eager
 );
 
-struct StoreFetchTestable<K> {
-    repo: BlobRepo,
-    _key: PhantomData<K>,
-}
-
-impl<K> StoreFetchTestable<K> {
-    fn new(repo: &BlobRepo) -> Self {
-        StoreFetchTestable {
-            repo: repo.clone(),
-            _key: PhantomData,
-        }
-    }
-}
-
-impl<K, V> Testable for StoreFetchTestable<K>
-where
-    K: Loadable<Value = V> + ::std::fmt::Debug + Send,
-    V: BlobstoreValue<Key = K> + PartialEq + Arbitrary + Send,
-    Blob<K>: Storable<Key = K>,
-{
-    fn result<G: Gen>(&self, g: &mut G) -> TestResult {
-        let ctx = CoreContext::test_mock();
-        let value = <V as Arbitrary>::arbitrary(g);
-        let value_cloned = value.clone();
-        let store_fetch_future = self
-            .repo
-            .unittest_store(ctx.clone(), value)
-            .and_then({
-                cloned!(ctx, self.repo);
-                move |key| repo.unittest_fetch(ctx, key)
-            })
-            .map(move |value_fetched| TestResult::from_bool(value_fetched == value_cloned));
-        run_future(store_fetch_future).expect("valid mononoke type")
-    }
-}
-
-fn store_fetch_mononoke_types(repo: BlobRepo) {
-    quickcheck(StoreFetchTestable::<ChangesetId>::new(&repo));
-    quickcheck(StoreFetchTestable::<ContentId>::new(&repo));
-}
-
-test_both_repotypes!(
-    store_fetch_mononoke_types,
-    store_fetch_mononoke_types_lazy,
-    store_fetch_mononoke_types_eager
-);
-
 #[test]
 fn test_compute_changed_files_no_parents() {
     async_unit::tokio_unit_test(|| {
@@ -736,7 +686,9 @@ fn make_file_change(
 ) -> impl Future<Item = FileChange, Error = Error> + Send {
     let content = content.as_ref();
     let content_size = content.len() as u64;
-    repo.unittest_store(ctx, FileContents::new_bytes(content.as_ref()))
+    FileContents::new_bytes(content.as_ref())
+        .into_blob()
+        .store(ctx, &repo.get_blobstore())
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
 }
 

@@ -6,10 +6,8 @@
 
 #![deny(warnings)]
 
-use std::collections::BTreeMap;
-use std::str::FromStr;
-
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
@@ -19,8 +17,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
+    BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
+    FileContents, FileType,
 };
+use std::collections::BTreeMap;
+use std::str::FromStr;
 
 fn store_files(
     ctx: CoreContext,
@@ -35,7 +36,11 @@ fn store_files(
             Some(content) => {
                 let size = content.len();
                 let content = FileContents::new_bytes(Bytes::from(content));
-                let content_id = repo.unittest_store(ctx.clone(), content).wait().unwrap();
+                let content_id = content
+                    .into_blob()
+                    .store(ctx.clone(), &repo.get_blobstore())
+                    .wait()
+                    .unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
                 res.insert(path, Some(file_change));
