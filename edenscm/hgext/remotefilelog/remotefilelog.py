@@ -529,10 +529,8 @@ class remotefileslog(filelog.fileslog):
     def getmutablesharedpacks(self):
         return self._mutablesharedpacks.getmutablepack()
 
-    def commitpending(self):
-        """Used in alternative filelog implementations to commit pending
-        additions."""
-        self._mutablelocalpacks.commit()
+    def commitsharedpacks(self):
+        """Persist the dirty data written to the shared packs."""
         dpackpath, hpackpath = self._mutablesharedpacks.commit()
 
         self.repo.fileservice.updatecache(dpackpath, hpackpath)
@@ -540,12 +538,17 @@ class remotefileslog(filelog.fileslog):
         self.contentstore.markforrefresh()
         self.metadatastore.markforrefresh()
 
+    def commitpending(self):
+        """Used in alternative filelog implementations to commit pending
+        additions."""
+        self._mutablelocalpacks.commit()
+        self.commitsharedpacks()
+
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
         self._mutablelocalpacks.abort()
-        # XXX: Maybe we actually want to commit these
-        self._mutablesharedpacks.abort()
+        self.commitsharedpacks()
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""

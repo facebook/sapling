@@ -894,16 +894,20 @@ class basetreemanifestlog(object):
                 )
         return node
 
-    def commitpending(self):
-        self._mutablelocalpacks.commit()
+    def commitsharedpacks(self):
+        """Persist the dirty trees written to the shared packs."""
         self._mutablesharedpacks.commit()
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
 
+    def commitpending(self):
+        self._mutablelocalpacks.commit()
+        self.commitsharedpacks()
+
     def abortpending(self):
         self._mutablelocalpacks.abort()
-        self._mutablesharedpacks.abort()
+        self.commitsharedpacks()
 
     def __nonzero__(self):
         return True
