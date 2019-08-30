@@ -704,10 +704,14 @@ def _cleanupoldpacks(ui, packpath, limit):
 
         def _listpackfiles(path):
             packs = []
-            for f in os.listdir(path):
-                _, ext = os.path.splitext(f)
-                if ext.endswith("pack"):
-                    packs.append(os.path.join(packpath, f))
+            try:
+                for f in os.listdir(path):
+                    _, ext = os.path.splitext(f)
+                    if ext.endswith("pack"):
+                        packs.append(os.path.join(packpath, f))
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
 
             return packs
 
