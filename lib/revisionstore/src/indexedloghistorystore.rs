@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
+    fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
 };
@@ -177,15 +178,27 @@ impl Entry {
 }
 
 impl IndexedLogHistoryStore {
+    /// Create or open an `IndexedLogHistoryStore`.
+    ///
+    /// It is configured to use 10 logs of 200MB each. On data corruption, the entire
+    /// `IndexedLogHistoryStore` is being recreated, losing all data that was previously stored in
+    /// it.
     pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
-        let log = OpenOptions::new()
+        let open_options = OpenOptions::new()
             .max_log_count(10)
             .max_bytes_per_log(200 * 1024 * 1024)
             .create(true)
             .index("node_and_path", |_| {
                 vec![IndexOutput::Reference(0..(Node::len() * 2) as u64)]
-            })
-            .open(path)?;
+            });
+
+        let log = match open_options.clone().open(&path) {
+            Ok(log) => log,
+            Err(_) => {
+                remove_dir_all(&path)?;
+                open_options.open(&path)?
+            }
+        };
         Ok(IndexedLogHistoryStore { log })
     }
 }
@@ -235,6 +248,8 @@ impl MutableHistoryStore for IndexedLogHistoryStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::remove_file;
 
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -301,6 +316,35 @@ mod tests {
             let response = log.get_ancestors(&key)?;
             assert_eq!(&response, ancestors.get(&key).unwrap());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_corrupted() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+
+        let (nodes, _) = get_nodes(&mut rng);
+        for (key, info) in nodes.iter() {
+            log.add(&key, &info)?;
+        }
+        log.flush()?;
+        drop(log);
+
+        // Corrupt the log by removing the "log" file.
+        let mut rotate_log_path = tempdir.path().to_path_buf();
+        rotate_log_path.push("0");
+        rotate_log_path.push("log");
+        remove_file(rotate_log_path)?;
+
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        for (key, info) in nodes.iter() {
+            log.add(&key, &info)?;
+        }
+        log.flush()?;
+
+        assert_eq!(log.log.iter().count(), nodes.iter().count());
         Ok(())
     }
 }

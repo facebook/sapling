@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
+    fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
 };
@@ -144,15 +145,27 @@ impl Entry {
 }
 
 impl IndexedLogDataStore {
+    /// Create or open an `IndexedLogDataStore`.
+    ///
+    /// It is configured to use 10 logs of 1GB each. On data corruption, the entire
+    /// `IndexedLogDataStore` is being recreated, losing all data that was previously stored in
+    /// it.
     pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
-        let log = OpenOptions::new()
+        let open_options = OpenOptions::new()
             .max_log_count(10)
             .max_bytes_per_log(1 * 1024 * 1024 * 1024)
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..Node::len() as u64)]
-            })
-            .open(path)?;
+            });
+
+        let log = match open_options.clone().open(&path) {
+            Ok(log) => log,
+            Err(_) => {
+                remove_dir_all(&path)?;
+                open_options.open(&path)?
+            }
+        };
         Ok(IndexedLogDataStore { log })
     }
 }
@@ -224,6 +237,8 @@ impl IterableStore for IndexedLogDataStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::remove_file;
 
     use bytes::Bytes;
     use tempfile::TempDir;
@@ -319,6 +334,45 @@ mod tests {
 
         log.add(&delta, &metadata)?;
         assert!(log.iter().all(|e| e.unwrap() == k));
+        Ok(())
+    }
+
+    #[test]
+    fn test_corrupted() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogDataStore::new(&tempdir)?;
+
+        let k = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k.clone(),
+        };
+        let metadata = Default::default();
+
+        log.add(&delta, &metadata)?;
+        log.flush()?;
+        drop(log);
+
+        // Corrupt the log by removing the "log" file.
+        let mut rotate_log_path = tempdir.path().to_path_buf();
+        rotate_log_path.push("0");
+        rotate_log_path.push("log");
+        remove_file(rotate_log_path)?;
+
+        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let k = key("a", "3");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k.clone(),
+        };
+        let metadata = Default::default();
+        log.add(&delta, &metadata)?;
+        log.flush()?;
+
+        // There should be only one key in the store.
+        assert_eq!(log.iter().count(), 1);
         Ok(())
     }
 }
