@@ -52,12 +52,13 @@ def run_cmd(cmd, env=None, cwd=None):
     subprocess.check_call(cmd, env=env, cwd=cwd)
 
 
-def generate_thrift_code(thrift_compiler, oss_dir, thrift_dep_dir, gen_dir):
+def generate_thrift_code(thrift_compiler, oss_dir, fb303_dir, gen_dir):
     """ Generate python thrift clients for a couple of things """
+    fb303_include_dir = os.path.join(fb303_dir, "include", "thrift-files")
     thrift_files = [
         os.path.join(oss_dir, "eden/fs/config/eden_config.thrift"),
         os.path.join(oss_dir, "eden/fs/service/eden.thrift"),
-        os.path.join(thrift_dep_dir, "fb303/thrift/fb303_core.thrift"),
+        os.path.join(fb303_include_dir, "fb303/thrift/fb303_core.thrift"),
         os.path.join(oss_dir, "eden/fs/inodes/overlay/overlay.thrift"),
     ]
     for t in thrift_files:
@@ -67,7 +68,7 @@ def generate_thrift_code(thrift_compiler, oss_dir, thrift_dep_dir, gen_dir):
                 "-I",
                 oss_dir,
                 "-I",
-                thrift_dep_dir,
+                fb303_include_dir,
                 "-gen",
                 "py:new_style",
                 "-out",
@@ -127,8 +128,8 @@ parser.add_argument(
     default="eden.zip",
     help="The output file location (default=%(default)s)",
 )
-parser.add_argument("--oss_dir", default=DEFAULT_OSS_DIR)
-parser.add_argument("--thrift_dep_dir")
+parser.add_argument("--oss-dir", default=DEFAULT_OSS_DIR)
+parser.add_argument("--fb303-dir")
 parser.add_argument(
     "--thrift-compiler",
     default=os.path.join(DEFAULT_OSS_DIR, "external/install/bin/thrift1"),
@@ -140,9 +141,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 with tempfile.TemporaryDirectory() as instdir:
-    generate_thrift_code(
-        args.thrift_compiler, args.oss_dir, args.thrift_dep_dir, instdir
-    )
+    generate_thrift_code(args.thrift_compiler, args.oss_dir, args.fb303_dir, instdir)
 
     for src_dir, dest_prefix in MODULES:
         copy_py(os.path.join(args.oss_dir, src_dir), instdir, dest_prefix)
