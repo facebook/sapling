@@ -152,29 +152,23 @@ def _shareddatastoresrepack(repo, options, incremental):
 
 def _localdatapythonrepack(repo, options, packpath, incremental):
     if incremental:
-        _incrementalrepack(
-            repo,
-            repo.fileslog.localdatastores,
-            repo.fileslog.localhistorystores,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=False,
-        )
-    else:
-        datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
-        historysource = metadatastore.unionmetadatastore(
-            *repo.fileslog.localhistorystores, allowincomplete=True
-        )
-        _runrepack(
-            repo,
-            datasource,
-            historysource,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=False,
-        )
+        # Always do a full repack of the local loosefiles.
+        options = dict(options)
+        options["incremental"] = False
+
+    datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
+    historysource = metadatastore.unionmetadatastore(
+        *repo.fileslog.localhistorystores, allowincomplete=True
+    )
+    _runrepack(
+        repo,
+        datasource,
+        historysource,
+        packpath,
+        constants.FILEPACK_CATEGORY,
+        options=options,
+        shared=False,
+    )
 
 
 def _localdatarepack(repo, options, incremental):

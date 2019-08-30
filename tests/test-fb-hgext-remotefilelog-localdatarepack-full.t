@@ -16,5 +16,3 @@
   $ hg repack --incremental --config remotefilelog.localdatarepack=True
 
   $ findfilessorted .hg/store/data
-  .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
-  .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/filename
