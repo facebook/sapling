@@ -17,6 +17,7 @@ target_link_libraries(
   eden_config
   PUBLIC
     eden_config_thrift
+    eden_model
     eden_utils
 )
 target_include_directories(

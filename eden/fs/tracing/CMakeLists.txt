@@ -11,6 +11,7 @@ add_library(
 target_link_libraries(
   eden_tracing
   PUBLIC
+    eden_config
     eden_utils
     fb303::fb303
     Folly::folly
