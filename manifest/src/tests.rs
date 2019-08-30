@@ -10,7 +10,7 @@ use crate::{
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
-use futures::{future, Future, IntoFuture, Stream};
+use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use maplit::btreemap;
@@ -561,6 +561,48 @@ fn test_find_entries() -> Result<(), Error> {
             trees,
             make_paths(&["five/seven/eight", "five/seven/eight/nine"])?
         );
+    }
+
+    // find entry
+    {
+        let mf_root =
+            rt.with(|rt| rt.block_on(mf0.find_entry(ctx.clone(), blobstore.clone(), None)))?;
+        assert_eq!(mf_root, Some(Entry::Tree(mf0)));
+
+        let paths = make_paths(&[
+            "one/1",
+            "two/three",
+            "none",
+            "two/three/four/7",
+            "two/three/6",
+            "five/seven/11",
+        ])?;
+
+        let results = rt.with(|rt| {
+            rt.block_on(
+                stream::iter_ok(paths)
+                    .and_then(move |path| {
+                        mf0.find_entry(ctx.clone(), blobstore.clone(), path.clone())
+                            .map(move |entry| entry.map(|entry| (path, entry)))
+                    })
+                    .collect(),
+            )
+        })?;
+
+        let mut leafs = BTreeSet::new();
+        let mut trees = BTreeSet::new();
+        for (path, entry) in results.into_iter().flatten() {
+            match entry {
+                Entry::Tree(_) => trees.insert(path),
+                Entry::Leaf(_) => leafs.insert(path),
+            };
+        }
+
+        assert_eq!(
+            leafs,
+            make_paths(&["one/1", "two/three/four/7", "five/seven/11"])?
+        );
+        assert_eq!(trees, make_paths(&["two/three"])?);
     }
 
     Ok(())

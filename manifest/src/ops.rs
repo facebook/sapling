@@ -9,7 +9,9 @@ use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use failure::Error;
 use futures::{stream, Future, Stream};
-use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxStream, FutureExt, StreamExt};
+use futures_ext::{
+    bounded_traversal::bounded_traversal_stream, BoxFuture, BoxStream, FutureExt, StreamExt,
+};
 use mononoke_types::MPath;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -151,6 +153,23 @@ where
         .map(|entries| stream::iter_ok(entries))
         .flatten()
         .boxify()
+    }
+
+    fn find_entry(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+        path: Option<MPath>,
+    ) -> BoxFuture<Option<Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>>, Error>
+    {
+        self.find_entries(ctx, blobstore, Some(PathOrPrefix::Path(path)))
+            .into_future()
+            .then(|result| match result {
+                Ok((Some((_path, entry)), _stream)) => Ok(Some(entry)),
+                Ok((None, _stream)) => Ok(None),
+                Err((err, _stream)) => Err(err),
+            })
+            .boxify()
     }
 
     fn diff(
