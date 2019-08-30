@@ -27,7 +27,7 @@ thus multiple stable commits.
 import re
 import subprocess
 
-from edenscm.mercurial import commands, error, json, registrar
+from edenscm.mercurial import commands, error, json, registrar, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.revsetlang import getargsdict, getstring
 from edenscm.mercurial.smartset import baseset
@@ -66,15 +66,23 @@ def _execute(ui, repo, target=None):
         raise error.ConfigError(_("must set stablerev.script"))
 
     # Assume the specified script is relative to the repo:
-    abspath = repo.wvfs.join(script)
-    args = [abspath]
     if target is not None:
-        args.extend(["--target", str(target)])
+        script += " --target %s" % util.shellquote(target)
     try:
+        ui.debug("repo-specific script for stable: %s\n" % script)
+        cwd = repo.wvfs.join("")
+        ui.debug("setting current working directory to: %s\n" % cwd)
         p = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True
+            script,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=util.closefds,
+            cwd=cwd,
         )
-        return p.communicate()
+        res = p.communicate()
+        ui.debug("stable script returns: %r\n" % (res,))
+        return res
     except subprocess.CalledProcessError as e:
         raise error.Abort(_("couldn't fetch stable rev: %s") % e)
 
