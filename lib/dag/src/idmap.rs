@@ -275,7 +275,7 @@ impl IdMap {
     /// Translate `get_parents` from taking slices to taking `Id`s.
     pub fn build_get_parents_by_id<'a>(
         &'a self,
-        get_parents_by_name: &'a Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
+        get_parents_by_name: &'a dyn Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
     ) -> impl Fn(Id) -> Fallible<Vec<Id>> + 'a {
         let func = move |id: Id| -> Fallible<Vec<Id>> {
             let name = self
