@@ -351,7 +351,6 @@ impl Tree {
                         Step::Err(err) => return Err(err),
                     }
                 }
-                parent_nodes.sort();
                 Ok(parent_nodes)
             }
             fn parent_trees_for_subdirectory(
@@ -1132,12 +1131,13 @@ mod tests {
         assert_eq!(tree_changed[3].5, NULL_ID);
         assert_eq!(tree_changed[4].0, RepoPathBuf::new());
 
-        let mut sorted = vec![
-            get_node(&p1, RepoPath::empty()),
-            get_node(&p2, RepoPath::empty()),
-        ];
-        sorted.sort();
-        assert_eq!(vec![tree_changed[4].3, tree_changed[4].5], sorted);
+        assert_eq!(
+            vec![tree_changed[4].3, tree_changed[4].5],
+            vec![
+                get_node(&p1, RepoPath::empty()),
+                get_node(&p2, RepoPath::empty()),
+            ]
+        );
     }
 
     #[test]
