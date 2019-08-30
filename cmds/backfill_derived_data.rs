@@ -13,7 +13,7 @@ use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
@@ -41,7 +41,7 @@ const SUBCOMMAND_BACKFILL: &'static str = "backfill";
 const SUBCOMMAND_TAIL: &'static str = "tail";
 
 fn main() -> Result<(), Error> {
-    let matches = args::MononokeApp {
+    let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
@@ -71,12 +71,14 @@ fn main() -> Result<(), Error> {
                     .possible_values(&[RootUnodeManifestId::NAME])
                     .help("comma separated list of derived data types"),
             ),
-    )
-    .get_matches();
+    );
+    let app = args::add_fb303_args(app);
+    let matches = app.get_matches();
     args::init_cachelib(&matches);
 
     let logger = args::get_logger(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
+    let mut runtime = tokio::runtime::Runtime::new()?;
 
     let run = match matches.subcommand() {
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
@@ -101,6 +103,9 @@ fn main() -> Result<(), Error> {
                 .ok_or_else(|| {
                     format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE)
                 })?;
+            let service_name =
+                std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string());
+            start_fb303_and_stats_agg(&mut runtime, &service_name, &logger, &matches)?;
             (
                 args::open_repo(&logger, &matches),
                 args::open_sql::<SqlBookmarks>(&matches),
@@ -115,7 +120,6 @@ fn main() -> Result<(), Error> {
             return Err(format_err!("unhandled subcommand: {}", name));
         }
     };
-    let mut runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(run)
 }
 
