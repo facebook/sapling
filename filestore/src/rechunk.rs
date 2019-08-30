@@ -33,7 +33,7 @@ pub fn rechunk<B: Blobstore + Clone>(
         .load(ctx.clone(), &blobstore)
         .or_else(move |err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Err(ErrorKind::ContentNotFound(content_id).into()),
+            LoadableError::Missing(_) => Err(ErrorKind::ContentNotFound(content_id).into()),
         })
         .and_then(move |file_contents| {
             let req = StoreRequest::with_canonical(file_contents.size(), content_id);

@@ -156,7 +156,7 @@ pub fn get_metadata<B: Blobstore + Clone>(
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Ok(None),
+            LoadableError::Missing(_) => Ok(None),
         })
         .and_then({
             cloned!(blobstore, ctx);
@@ -178,7 +178,7 @@ pub fn exists<B: Blobstore + Clone>(
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Ok(None),
+            LoadableError::Missing(_) => Ok(None),
         })
         .and_then({
             cloned!(blobstore, ctx);
@@ -202,7 +202,7 @@ pub fn fetch<B: Blobstore + Clone>(
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Ok(None),
+            LoadableError::Missing(_) => Ok(None),
         })
         .and_then({
             cloned!(blobstore, ctx);

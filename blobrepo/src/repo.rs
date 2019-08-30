@@ -326,7 +326,7 @@ impl BlobRepo {
             .load(ctx, &self.blobstore)
             .or_else(move |err| match err {
                 LoadableError::Error(err) => Err(err),
-                LoadableError::Missing => Err(ErrorKind::ContentBlobByAliasMissing(key).into()),
+                LoadableError::Missing(_) => Err(ErrorKind::ContentBlobByAliasMissing(key).into()),
             })
             .boxify()
     }

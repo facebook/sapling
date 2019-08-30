@@ -10,7 +10,7 @@ use bytes::Bytes;
 use std::fmt;
 use std::sync::Arc;
 
-use failure_ext::{err_msg, Error};
+use failure_ext::{Error, Fail};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -162,21 +162,12 @@ impl Blobstore for Box<dyn Blobstore> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum LoadableError {
+    #[fail(display = "Internal error: {}", _0)]
     Error(Error),
-    Missing,
-}
-
-impl From<LoadableError> for Error {
-    fn from(error: LoadableError) -> Self {
-        use LoadableError::*;
-
-        match error {
-            Error(e) => e,
-            Missing => err_msg("Blob is missing"),
-        }
-    }
+    #[fail(display = "Blob is missing: {}", _0)]
+    Missing(String),
 }
 
 impl From<Error> for LoadableError {

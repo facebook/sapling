@@ -38,7 +38,7 @@ pub fn get_metadata<B: Blobstore + Clone>(
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Ok(None),
+            LoadableError::Missing(_) => Ok(None),
         })
         .and_then({
             cloned!(blobstore, ctx);
@@ -83,7 +83,7 @@ fn rebuild_metadata<B: Blobstore + Clone>(
         .load(ctx.clone(), &blobstore)
         .or_else(move |err| match err {
             LoadableError::Error(err) => Err(InternalError(content_id, err)),
-            LoadableError::Missing => Err(NotFound(content_id)),
+            LoadableError::Missing(_) => Err(NotFound(content_id)),
         })
         .and_then({
             cloned!(blobstore, ctx);

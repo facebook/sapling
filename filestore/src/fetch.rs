@@ -50,7 +50,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                     .load(ctx.clone(), &blobstore)
                     .or_else(move |err| match err {
                         LoadableError::Error(err) => Err(err),
-                        LoadableError::Missing => Err(ErrorKind::ChunkNotFound(chunk_id).into()),
+                        LoadableError::Missing(_) => Err(ErrorKind::ChunkNotFound(chunk_id).into()),
                     })
                     .map(ContentChunk::into_bytes);
 
@@ -73,7 +73,7 @@ pub fn fetch<B: Blobstore + Clone>(
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
-            LoadableError::Missing => Ok(None),
+            LoadableError::Missing(_) => Ok(None),
         })
         .map({
             cloned!(blobstore, ctx);

@@ -237,9 +237,12 @@ impl Loadable for HgChangesetId {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<Self::Value, LoadableError> {
-        HgBlobChangeset::load(ctx, blobstore, *self)
+        let csid = *self;
+        HgBlobChangeset::load(ctx, blobstore, csid)
             .from_err()
-            .and_then(|value| value.ok_or(LoadableError::Missing))
+            .and_then(move |value| {
+                value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
+            })
             .boxify()
     }
 }

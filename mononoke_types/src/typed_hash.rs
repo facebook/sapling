@@ -217,7 +217,7 @@ macro_rules! impl_typed_hash_loadable_storable {
                     .get(ctx, blobstore_key.clone())
                     .from_err()
                     .and_then(move |bytes| {
-                        let bytes = bytes.ok_or(LoadableError::Missing)?;
+                        let bytes = bytes.ok_or(LoadableError::Missing(blobstore_key))?;
 
                         let blob: Blob<$typed> = Blob::new(id, bytes.into_bytes());
                         <$typed as MononokeId>::Value::from_blob(blob).map_err(LoadableError::Error)

@@ -228,9 +228,10 @@ impl Loadable for HgManifestId {
         blobstore: &B,
     ) -> BoxFuture<Self::Value, LoadableError> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore.clone());
-        BlobManifest::load(ctx, &blobstore, *self)
+        let id = *self;
+        BlobManifest::load(ctx, &blobstore, id)
             .from_err()
-            .and_then(|value| value.ok_or(LoadableError::Missing))
+            .and_then(move |value| value.ok_or_else(|| LoadableError::Missing(id.blobstore_key())))
             .boxify()
     }
 }

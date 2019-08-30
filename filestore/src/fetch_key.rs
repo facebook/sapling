@@ -61,11 +61,12 @@ impl Loadable for Alias {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<Self::Value, LoadableError> {
+        let key = self.blobstore_key();
         blobstore
-            .get(ctx, self.blobstore_key())
+            .get(ctx, key.clone())
             .from_err()
-            .and_then(|maybe_alias| {
-                let blob = maybe_alias.ok_or(LoadableError::Missing)?;
+            .and_then(move |maybe_alias| {
+                let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
 
                 ContentAlias::from_bytes(blob.into_bytes().into())
                     .map(|alias| alias.content_id())

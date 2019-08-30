@@ -40,11 +40,12 @@ impl Loadable for TestLeafId {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<Self::Value, LoadableError> {
+        let key = self.0.to_string();
         blobstore
-            .get(ctx, self.0.to_string())
+            .get(ctx, key.clone())
             .from_err()
-            .and_then(|bytes| {
-                let bytes = bytes.ok_or(LoadableError::Missing)?;
+            .and_then(move |bytes| {
+                let bytes = bytes.ok_or(LoadableError::Missing(key))?;
                 let bytes = std::str::from_utf8(bytes.as_bytes())
                     .map_err(|err| LoadableError::Error(Error::from(err)))?;
                 Ok(TestLeaf(bytes.to_owned()))
@@ -85,10 +86,11 @@ impl Loadable for TestManifestId {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<Self::Value, LoadableError> {
+        let key = self.0.to_string();
         blobstore
-            .get(ctx, self.0.to_string())
+            .get(ctx, key.clone())
             .from_err()
-            .and_then(|data| data.ok_or(LoadableError::Missing))
+            .and_then(move |data| data.ok_or(LoadableError::Missing(key)))
             .and_then(|bytes| {
                 let mf = serde_cbor::from_slice(bytes.as_bytes().as_ref())
                     .map_err(|err| LoadableError::Error(Error::from(err)))?;
