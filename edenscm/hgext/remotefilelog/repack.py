@@ -94,8 +94,6 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
     if not os.path.isdir(packpath):
         return
 
-    failed = False
-
     if incremental:
         repacks = [
             revisionstore.repackincrementaldatapacks,
@@ -110,13 +108,7 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
         except Exception as e:
             repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
             if "Repack successful but with errors" not in str(e):
-                failed = True
-
-    if failed:
-        repo.ui.warn(
-            _("warning: rust repack failed for: %s, fallback to python\n") % packpath
-        )
-        pythonrepack(repo, options, packpath, incremental)
+                raise
 
 
 def _shareddatastorespythonrepack(repo, options, packpath, incremental):
