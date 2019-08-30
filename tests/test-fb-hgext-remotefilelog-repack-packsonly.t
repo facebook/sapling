@@ -24,7 +24,6 @@
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > prefetchdays=0
-  > userustrepack=True
   > fetchpacks=True
   > EOF
   $ cd ..

@@ -83,8 +83,6 @@ Configs:
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
     files to include in an incremental history repack.
 
-    ``remotefilelog.userustrepack`` use rust based repack implementation.
-
     ``remotefilelog.packsonlyrepack`` only repack packfiles during background
     repacks.
 

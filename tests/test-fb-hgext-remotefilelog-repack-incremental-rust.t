@@ -26,7 +26,7 @@
 # Set the prefetchdays config to zero so that all commits are prefetched
 # no matter what their creation date is.
   $ cd shallow
-  $ setconfig remotefilelog.prefetchdays=0 remotefilelog.userustrepack=True
+  $ setconfig remotefilelog.prefetchdays=0
   $ cd ..
 
 # Test that repack cleans up the old files and creates new packs

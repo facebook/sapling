@@ -80,10 +80,6 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
     runshellcommand(cmd, encoding.environ)
 
 
-def _userustrepack(repo):
-    return repo.ui.configbool("remotefilelog", "userustrepack", True)
-
-
 def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
     # In the case of a loose-only repack, fallback to Python, as Rust doesn't support them.
     if options.get(constants.OPTION_LOOSEONLY):
@@ -157,12 +153,9 @@ def _shareddatastoresrepack(repo, options, incremental):
         limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
         _cleanuppacks(repo.ui, packpath, limit)
 
-        if _userustrepack(repo):
-            _runrustrepack(
-                repo, options, packpath, incremental, _shareddatastorespythonrepack
-            )
-        else:
-            _shareddatastorespythonrepack(repo, options, packpath, incremental)
+        _runrustrepack(
+            repo, options, packpath, incremental, _shareddatastorespythonrepack
+        )
 
 
 def _localdatapythonrepack(repo, options, packpath, incremental):
@@ -201,10 +194,7 @@ def _localdatarepack(repo, options, incremental):
         )
         _cleanuppacks(repo.ui, packpath, 0)
 
-        if _userustrepack(repo):
-            _runrustrepack(repo, options, packpath, incremental, _localdatapythonrepack)
-        else:
-            _localdatapythonrepack(repo, options, packpath, incremental)
+        _runrustrepack(repo, options, packpath, incremental, _localdatapythonrepack)
 
 
 def _manifestpythonrepack(
@@ -250,20 +240,15 @@ def _manifestrepack(repo, options, incremental):
                 else 0
             )
             _cleanuppacks(repo.ui, packpath, limit)
-            if _userustrepack(repo):
-                _runrustrepack(
-                    repo,
-                    options,
-                    packpath,
-                    incremental,
-                    lambda repo, options, packpath, incremental: _manifestpythonrepack(
-                        repo, options, packpath, dstores, hstores, incremental, shared
-                    ),
-                )
-            else:
-                _manifestpythonrepack(
+            _runrustrepack(
+                repo,
+                options,
+                packpath,
+                incremental,
+                lambda repo, options, packpath, incremental: _manifestpythonrepack(
                     repo, options, packpath, dstores, hstores, incremental, shared
-                )
+                ),
+            )
 
         # Repack the shared manifest store
         _domanifestrepack(spackpath, sdstores, shstores, True)
