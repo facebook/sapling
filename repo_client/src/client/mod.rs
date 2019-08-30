@@ -68,13 +68,13 @@ const MAX_NODES_TO_LOG: usize = 5;
 define_stats! {
     prefix = "mononoke.repo_client";
     getbundle_ms:
-        histogram(500, 0, 10_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(10, 0, 1_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     gettreepack_ms:
-        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(2, 0, 200, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getfiles_ms:
-        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(5, 0, 500, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
-        histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        histogram(20, 0, 2_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     total_tree_count: timeseries(RATE, SUM),
     quicksand_tree_count: timeseries(RATE, SUM),
     total_tree_size: timeseries(RATE, SUM),
