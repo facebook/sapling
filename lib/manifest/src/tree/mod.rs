@@ -287,7 +287,6 @@ impl fmt::Debug for Tree {
 }
 
 impl Tree {
-    // TODO: return bytes for current or ability to get those bytes
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&Tree>,
@@ -312,13 +311,15 @@ impl Tree {
             (&buf).into()
         }
         struct Executor<'a> {
+            store: &'a InnerStore,
             path: RepoPathBuf,
             converted_nodes: Vec<(RepoPathBuf, Node, Bytes, Node, Bytes, Node)>,
             parent_trees: Vec<Cursor<'a>>,
         };
         impl<'a> Executor<'a> {
-            fn new(parent_trees: &[&'a Tree]) -> Fallible<Executor<'a>> {
+            fn new(store: &'a InnerStore, parent_trees: &[&'a Tree]) -> Fallible<Executor<'a>> {
                 let mut executor = Executor {
+                    store,
                     path: RepoPathBuf::new(),
                     converted_nodes: Vec::new(),
                     parent_trees: parent_trees.iter().map(|v| v.root_cursor()).collect(),
@@ -385,51 +386,55 @@ impl Tree {
                 active_parents: Vec<usize>,
             ) -> Fallible<(Node, store::Flag)> {
                 let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
-                match link {
-                    Leaf(file_metadata) => Ok((
+                if let Leaf(file_metadata) = link {
+                    return Ok((
                         file_metadata.node,
                         store::Flag::File(file_metadata.file_type.clone()),
-                    )),
-                    Durable(entry) => Ok((entry.node, store::Flag::Directory)),
-                    Ephemeral(links) => {
-                        let mut entry = store::EntryMut::new();
-                        for (component, link) in links.iter_mut() {
-                            self.path.push(component.as_path_component());
-                            let child_parents =
-                                self.parent_trees_for_subdirectory(&active_parents)?;
-                            let (node, flag) = self.work(link, child_parents)?;
-                            self.path.pop();
-                            let element = store::Element::new(component.clone(), node, flag);
-                            entry.add_element(element);
-                        }
-                        let entry = entry.freeze();
-                        let node = compute_node(&parent_tree_nodes, &entry);
-
-                        let cell = OnceCell::new();
-                        // TODO: remove clone
-                        cell.set(Ok(links.clone())).unwrap();
-
-                        let durable_entry = DurableEntry { node, links: cell };
-                        let inner = Arc::new(durable_entry);
-                        *link = Durable(inner);
-                        let parent_node =
-                            |id| *parent_tree_nodes.get(id).unwrap_or(Node::null_id());
-                        let p1raw = Bytes::new();
-                        self.converted_nodes.push((
-                            self.path.clone(),
-                            node,
-                            entry.to_bytes(),
-                            parent_node(0),
-                            p1raw,
-                            parent_node(1),
-                        ));
-                        Ok((node, store::Flag::Directory))
+                    ));
+                }
+                if let Durable(entry) = link {
+                    if parent_tree_nodes.contains(&entry.node) {
+                        return Ok((entry.node, store::Flag::Directory));
                     }
                 }
+                // TODO: This code is also used on durable nodes for the purpose of generating
+                // a list of entries to insert in the local store. For those cases we don't
+                // need to convert to Ephemeral instead only verify the hash.
+                let links = link.mut_ephemeral_links(self.store, &self.path)?;
+                let mut entry = store::EntryMut::new();
+                for (component, link) in links.iter_mut() {
+                    self.path.push(component.as_path_component());
+                    let child_parents = self.parent_trees_for_subdirectory(&active_parents)?;
+                    let (node, flag) = self.work(link, child_parents)?;
+                    self.path.pop();
+                    let element = store::Element::new(component.clone(), node, flag);
+                    entry.add_element(element);
+                }
+                let entry = entry.freeze();
+                let node = compute_node(&parent_tree_nodes, &entry);
+
+                let cell = OnceCell::new();
+                // TODO: remove clone
+                cell.set(Ok(links.clone())).unwrap();
+
+                let durable_entry = DurableEntry { node, links: cell };
+                let inner = Arc::new(durable_entry);
+                *link = Durable(inner);
+                let parent_node = |id| *parent_tree_nodes.get(id).unwrap_or(Node::null_id());
+                let p1raw = Bytes::new();
+                self.converted_nodes.push((
+                    self.path.clone(),
+                    node,
+                    entry.to_bytes(),
+                    parent_node(0),
+                    p1raw,
+                    parent_node(1),
+                ));
+                Ok((node, store::Flag::Directory))
             }
         }
 
-        let mut executor = Executor::new(&parent_trees)?;
+        let mut executor = Executor::new(&self.store, &parent_trees)?;
         executor.work(&mut self.root, (0..parent_trees.len()).collect())?;
         Ok(executor.converted_nodes.into_iter())
     }
@@ -1159,6 +1164,28 @@ mod tests {
         assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
         assert_eq!(tree3_changed[0].3, tree2_changed[1].1);
         assert_eq!(tree3_changed[0].5, NULL_ID);
+    }
+
+    #[test]
+    fn test_finalize_on_durable() {
+        let store = Arc::new(TestStore::new());
+        let mut tree1 = Tree::ephemeral(store.clone());
+        tree1
+            .insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .unwrap();
+        tree1.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        tree1.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        let _tree1_changed = tree1.finalize(vec![]).unwrap();
+
+        let mut tree2 = tree1.clone();
+        tree2.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
+        tree2.insert(repo_path_buf("a2/b2/c2"), meta("60")).unwrap();
+        tree2.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        let tree_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
+        assert_eq!(
+            tree2.finalize(vec![&tree1]).unwrap().collect::<Vec<_>>(),
+            tree_changed,
+        );
     }
 
     #[test]
