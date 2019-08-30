@@ -150,6 +150,8 @@ Did you mean to run "eden" instead of "edenfs"?
         self.assertMultiLineEqual(err, out.stderr.decode("utf-8", errors="replace"))
 
 
+# pyre-fixme[38]: `StartFakeEdenFSTestBase` does not implement all inherited
+#  abstract methods.
 class StartFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
@@ -179,6 +181,8 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
 
 
 @service_test
+# pyre-fixme[38]: `StartFakeEdenFSTest` does not implement all inherited abstract
+#  methods.
 class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
     def test_eden_start_launches_separate_processes_for_separate_eden_dirs(
         self
@@ -334,6 +338,8 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
 
 
 @service_test
+# pyre-fixme[38]: `StartWithSystemdTest` does not implement all inherited abstract
+#  methods.
 class StartWithSystemdTest(StartFakeEdenFSTestBase, SystemdServiceTestCaseMarker):
     def test_eden_start_fails_if_service_is_running(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir):

@@ -365,6 +365,7 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
                 f"Unsupported value for {forced_type_variable}: {forced_type!r}"
             )
 
+        # pyre-fixme[18]: Global name `systemd` is undefined.
         if not _is_system_booted_with_systemd():
             return False
 

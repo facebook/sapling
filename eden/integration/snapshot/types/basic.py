@@ -15,6 +15,8 @@ from eden.integration.snapshot.snapshot import HgSnapshot, snapshot_class
     "A simple directory structure with a mix of loaded, materialized, "
     "and unloaded files.",
 )
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `system_hgrc_path` is never initialized.
 class BasicSnapshot(HgSnapshot):
     def populate_backing_repo(self) -> None:
         repo = self.backing_repo

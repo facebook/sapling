@@ -37,6 +37,7 @@ def wait_for_process_exit(pid: int, timeout: float) -> bool:
     """
 
     def process_exited() -> Optional[bool]:
+        # pyre-fixme[18]: Global name `daemon` is undefined.
         if did_process_exit(pid):
             return True
         else:

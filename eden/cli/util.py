@@ -170,6 +170,7 @@ def check_health(
             status = client.getStatus()
     except (
         eden.thrift.EdenNotRunningError,
+        # pyre-fixme[18]: Global name `TTransport` is undefined.
         thrift.transport.TTransport.TTransportException,
     ):
         # It is possible that the edenfs process is running, but the Thrift
@@ -200,6 +201,7 @@ def wait_for_daemon_healthy(
 
     def check_daemon_health() -> Optional[HealthStatus]:
         # Check the thrift status
+        # pyre-fixme[18]: Global name `cli` is undefined.
         health_info = check_health(get_client, config_dir)
         if health_info.is_healthy():
             if (exclude_pid is None) or (health_info.pid != exclude_pid):

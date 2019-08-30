@@ -428,6 +428,7 @@ class SystemdUserBus:
     """
 
     _cleanups: contextlib.ExitStack
+    # pyre-fixme[11]: Type `DBus` is not defined.
     _dbus: "pystemd.dbuslib.DBus"
     _event_loop: asyncio.AbstractEventLoop
     _manager: "pystemd.SDManager"
@@ -487,6 +488,7 @@ class SystemdUserBus:
         def go() -> DBusString:
             unit = pystemd.systemd1.unit.Unit(unit_name, bus=self._dbus)
             unit.load()
+            # pyre-fixme[18]: Global name `eden` is undefined.
             active_state = _pystemd_dynamic(unit).Unit.ActiveState
             assert isinstance(active_state, DBusString)
             return active_state
@@ -500,6 +502,7 @@ class SystemdUserBus:
         def go() -> DBusString:
             unit = pystemd.systemd1.unit.Unit(service_name, bus=self._dbus)
             unit.load()
+            # pyre-fixme[18]: Global name `eden` is undefined.
             result = _pystemd_dynamic(unit).Service.Result
             assert isinstance(result, DBusString)
             return result
@@ -565,6 +568,7 @@ class SystemdUserBus:
         """
 
         def go() -> DBusObjectPath:
+            # pyre-fixme[18]: Global name `eden` is undefined.
             path = _pystemd_dynamic(self._manager).Manager.StartUnit(name, mode)
             assert isinstance(path, DBusObjectPath)
             return path
@@ -626,6 +630,7 @@ class SystemdUserBus:
         """
 
         def go() -> None:
+            # pyre-fixme[18]: Global name `eden` is undefined.
             _pystemd_dynamic(self._manager).Manager.Subscribe()
 
         await self._run_in_executor_async(go)

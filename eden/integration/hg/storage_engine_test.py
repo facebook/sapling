@@ -92,18 +92,45 @@ class _Hidden:
 
 
 @hg_test
+# pyre-fixme[38]: `HisteditMemoryStorageEngineTest` does not implement all inherited
+#  abstract methods.
+# pyre-fixme[13]: Attribute `_commit1` is never initialized.
+# pyre-fixme[13]: Attribute `_commit2` is never initialized.
+# pyre-fixme[13]: Attribute `_commit3` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
+# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
+# pyre-fixme[13]: Attribute `repo` is never initialized.
 class HisteditMemoryStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "memory"
 
 
 @hg_test
+# pyre-fixme[38]: `HisteditSQLiteStorageEngineTest` does not implement all inherited
+#  abstract methods.
+# pyre-fixme[13]: Attribute `_commit1` is never initialized.
+# pyre-fixme[13]: Attribute `_commit2` is never initialized.
+# pyre-fixme[13]: Attribute `_commit3` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
+# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
+# pyre-fixme[13]: Attribute `repo` is never initialized.
 class HisteditSQLiteStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "sqlite"
 
 
 @hg_test
+# pyre-fixme[38]: `HisteditRocksDBStorageEngineTest` does not implement all
+#  inherited abstract methods.
+# pyre-fixme[13]: Attribute `_commit1` is never initialized.
+# pyre-fixme[13]: Attribute `_commit2` is never initialized.
+# pyre-fixme[13]: Attribute `_commit3` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
+# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
+# pyre-fixme[13]: Attribute `repo` is never initialized.
 class HisteditRocksDBStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "rocksdb"

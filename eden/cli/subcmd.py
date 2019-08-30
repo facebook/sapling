@@ -102,12 +102,14 @@ def subcmd(
         # https://github.com/python/mypy/issues/2477
         cls_mypy: Any = cls
 
+        # pyre-fixme[31]: Expression `cls_mypy` is not a valid type.
         class SubclassedCmd(cls_mypy):
             NAME = name
             HELP = help
             ALIASES = aliases
 
         if cmd_table is not None:
+            # pyre-fixme[18]: Global name `subcmd` is undefined.
             cmd_table.append(typing.cast(Type[Subcmd], SubclassedCmd))
         return typing.cast(Type[Subcmd], SubclassedCmd)
 

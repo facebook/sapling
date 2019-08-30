@@ -13,7 +13,9 @@ from .lib import repobase, testcase
 
 
 class ChownTest(testcase.EdenRepoTest):
+    # pyre-fixme[13]: Attribute `nobody_uid` is never initialized.
     nobody_uid: int
+    # pyre-fixme[13]: Attribute `nobody_gid` is never initialized.
     nobody_gid: int
 
     def populate_repo(self) -> None:

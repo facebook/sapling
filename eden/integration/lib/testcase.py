@@ -301,7 +301,9 @@ class EdenRepoTest(EdenTestCase):
     your tests once per supported repository type.
     """
 
+    # pyre-fixme[13]: Attribute `repo` is never initialized.
     repo: repobase.Repository
+    # pyre-fixme[13]: Attribute `repo_name` is never initialized.
     repo_name: str
 
     enable_logview: bool = False
@@ -413,11 +415,13 @@ def test_replicator(
         if len(args) == 1 and not kwargs and isinstance(args[0], type):
             # The decorator was invoked directly with the test class,
             # with no arguments or keyword arguments
+            # pyre-fixme[18]: Global name `testcase` is undefined.
             _replicate_test(caller_scope, replicate, args[0], args=(), kwargs={})
             return None
         else:
 
             def inner_decorator(test_class: Type[unittest.TestCase]) -> None:
+                # pyre-fixme[18]: Global name `testcase` is undefined.
                 _replicate_test(caller_scope, replicate, test_class, args, kwargs)
 
             return inner_decorator

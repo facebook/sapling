@@ -40,6 +40,8 @@ class ProblemBase(abc.ABC):
         return None
 
 
+# pyre-fixme[38]: `FixableProblem` does not implement all inherited abstract methods.
+# pyre-fixme[44]: `FixableProblem` non-abstract class with abstract methods.
 class FixableProblem(ProblemBase):
     @abc.abstractmethod
     def dry_run_msg(self) -> str:

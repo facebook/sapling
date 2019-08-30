@@ -16,6 +16,7 @@ WSAECONNREFUSED = 10061
 
 
 class SOCKADDR_UN(ctypes.Structure):
+    # pyre-fixme[16]: `c_char` has no attribute `__mul__`.
     _fields_ = [("sun_family", ctypes.c_ushort), ("sun_path", ctypes.c_char * 108)]
 
 

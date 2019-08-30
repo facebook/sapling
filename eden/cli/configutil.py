@@ -31,6 +31,7 @@ from .configinterpolator import EdenConfigInterpolator
 
 if TYPE_CHECKING:
 
+    # pyre-fixme[39]: `Tuple[str, ...]` is not a valid parent class.
     class Strs(Tuple[str, ...]):
         pass
 

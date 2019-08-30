@@ -24,7 +24,9 @@ cmd = debug_mod.debug_cmd
 
 @cmd("overlay", "Show data about the overlay")
 class OverlayCmd(subcmd_mod.Subcmd):
+    # pyre-fixme[13]: Attribute `args` is never initialized.
     args: argparse.Namespace
+    # pyre-fixme[13]: Attribute `overlay` is never initialized.
     overlay: overlay_mod.Overlay
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

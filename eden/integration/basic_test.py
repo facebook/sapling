@@ -24,6 +24,7 @@ class BasicTest(testcase.EdenRepoTest):
     things that are appropriate to include in this test case.
     """
 
+    # pyre-fixme[13]: Attribute `expected_mount_entries` is never initialized.
     expected_mount_entries: Set[str]
 
     def populate_repo(self) -> None:

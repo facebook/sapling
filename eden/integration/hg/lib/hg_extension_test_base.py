@@ -486,6 +486,7 @@ def _replicate_hg_test(test_class, *variants):
     for name in variants:
         config_fn = ALL_CONFIGS[name]
 
+        # pyre-fixme[31]: Expression `test_class` is not a valid type.
         class HgTestVariant(test_class):
             config_variant_name = name
             apply_hg_config_variant = config_fn

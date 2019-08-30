@@ -17,9 +17,17 @@ from eden.integration.lib import hgrepo
 
 
 @hg_test
+# pyre-fixme[38]: `UpdateTest` does not implement all inherited abstract methods.
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
+# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
+# pyre-fixme[13]: Attribute `repo` is never initialized.
 class UpdateTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
+    # pyre-fixme[13]: Attribute `commit3` is never initialized.
     commit3: str
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
@@ -469,7 +477,14 @@ class UpdateTest(EdenHgTestCase):
 
 
 @hg_test
+# pyre-fixme[38]: `UpdateCacheInvalidationTest` does not implement all inherited
+#  abstract methods.
+# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
+# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
+# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
+# pyre-fixme[13]: Attribute `repo` is never initialized.
 class UpdateCacheInvalidationTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
 
     def edenfs_logging_settings(self) -> Dict[str, str]:

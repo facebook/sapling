@@ -20,6 +20,7 @@ from eden.cli.doctor.problem import FixableProblem, ProblemTracker, UnexpectedCh
 from thrift.Thrift import TApplicationException
 
 
+# pyre-fixme[44]: `HgChecker` non-abstract class with abstract methods.
 class HgChecker:
     errors: List[str] = []
 

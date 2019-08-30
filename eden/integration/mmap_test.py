@@ -28,6 +28,7 @@ libc.munmap.argtypes = [c_void_p, c_size_t]
 @testcase.eden_repo_test
 class MmapTest(testcase.EdenRepoTest):
     contents = "abcdef"
+    # pyre-fixme[13]: Attribute `filename` is never initialized.
     filename: str
 
     def populate_repo(self) -> None:
