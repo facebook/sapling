@@ -22,7 +22,7 @@ use sql::mysql_async::{
 use std::collections::HashMap;
 use std::fmt;
 use std::mem;
-use std::ops::Range;
+use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
 
 mod cache;
 pub use cache::CachedBookmarks;
@@ -141,6 +141,10 @@ impl BookmarkName {
         Self { bookmark }
     }
 
+    pub fn as_ascii(&self) -> &AsciiString {
+        &self.bookmark
+    }
+
     pub fn to_ascii(&self) -> Result<AsciiString> {
         Ok(self.bookmark.clone())
     }
@@ -176,6 +180,32 @@ impl fmt::Display for BookmarkPrefix {
     }
 }
 
+pub enum BookmarkPrefixRange {
+    Range(Range<BookmarkName>),
+    RangeFrom(RangeFrom<BookmarkName>),
+    RangeFull(RangeFull),
+}
+
+impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
+    fn start_bound(&self) -> Bound<&BookmarkName> {
+        use BookmarkPrefixRange::*;
+        match self {
+            Range(r) => r.start_bound(),
+            RangeFrom(r) => r.start_bound(),
+            RangeFull(r) => r.start_bound(),
+        }
+    }
+
+    fn end_bound(&self) -> Bound<&BookmarkName> {
+        use BookmarkPrefixRange::*;
+        match self {
+            Range(r) => r.end_bound(),
+            RangeFrom(r) => r.end_bound(),
+            RangeFull(r) => r.end_bound(),
+        }
+    }
+}
+
 impl BookmarkPrefix {
     pub fn new<B: AsRef<str>>(bookmark_prefix: B) -> Result<Self> {
         Ok(Self {
@@ -206,12 +236,54 @@ impl BookmarkPrefix {
         self.bookmark_prefix.is_empty()
     }
 
-    pub fn to_range(&self) -> Range<BookmarkName> {
-        let mut end_ascii = self.bookmark_prefix.clone();
-        end_ascii.push(AsciiChar::DEL); // DEL is the maximum ascii character
-        Range {
-            start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
-            end: BookmarkName::new_ascii(end_ascii),
+    pub fn to_range(&self) -> BookmarkPrefixRange {
+        match prefix_to_range_end(self.bookmark_prefix.clone()) {
+            Some(range_end) => {
+                let range = Range {
+                    start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
+                    end: BookmarkName::new_ascii(range_end),
+                };
+                BookmarkPrefixRange::Range(range)
+            }
+            None => match self.bookmark_prefix.len() {
+                0 => BookmarkPrefixRange::RangeFull(RangeFull),
+                _ => {
+                    let range = RangeFrom {
+                        start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
+                    };
+                    BookmarkPrefixRange::RangeFrom(range)
+                }
+            },
+        }
+    }
+}
+
+fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
+    // If we have a prefix, then we need to take the last character of the prefix, increment it by
+    // 1, then take that as an ASCII char. So, if you prefix is foobarA, then the range will be
+    // from foobarA (inclusive) to foobarB (exclusive). Basically, what we're trying to implement
+    // here is a little bit like Ruby's str#next.
+    loop {
+        match prefix.pop() {
+            Some(chr) => match AsciiChar::from(chr.as_byte() + 1) {
+                Ok(next_chr) => {
+                    // Happy path, we found the next character, so just put that in and move on.
+                    prefix.push(next_chr);
+                    return Some(prefix);
+                }
+                Err(_) => {
+                    // The last character doesn't fit in ASCII (i.e. it's DEL). This means we have
+                    // something like foobaA[DEL]. In this case, we need to set the bound to be the
+                    // character after the one before the DEL, so we want foobaB[DEL]
+                    continue;
+                }
+            },
+            None => {
+                // We exhausted the entire string. This will only happen if the string is 0 or more
+                // DEL characters. In this case, return the fact that no next string can be
+                // produced.
+                return None;
+            }
         }
     }
 }
@@ -651,6 +723,39 @@ impl Arbitrary for BookmarkHgKind {
             1 => PublishingNotPullDefault,
             2 => PullDefault,
             _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::quickcheck;
+
+    quickcheck! {
+        fn test_prefix_range_contains_self(bookmark: Bookmark) -> bool {
+            let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
+            prefix.to_range().contains(bookmark.name())
+        }
+
+        fn test_prefix_range_contains_its_suffixes(bookmark: Bookmark, more: AsciiString) -> bool {
+            let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
+            let mut name = bookmark.name().as_ascii().clone();
+            name.push_str(&more);
+            prefix.to_range().contains(&BookmarkName::new_ascii(name))
+        }
+
+        fn test_prefix_range_does_not_contains_its_prefixes(bookmark: Bookmark, chr: AsciiChar) -> bool {
+            let mut prefix = bookmark.name().as_ascii().clone();
+            prefix.push(chr);
+            let prefix = BookmarkPrefix::new_ascii(prefix);
+
+            !prefix.to_range().contains(bookmark.name())
+        }
+
+        fn test_empty_range_contains_any(bookmark: Bookmark) -> bool {
+            let prefix = BookmarkPrefix::empty();
+            prefix.to_range().contains(bookmark.name())
         }
     }
 }
