@@ -106,7 +106,7 @@ impl Entry {
         Ok(Entry(underlying.freeze()))
     }
 
-    // used in tests and in finalize
+    // used in tests, finalize and subtree_diff
     pub fn to_bytes(self) -> Bytes {
         self.0
     }

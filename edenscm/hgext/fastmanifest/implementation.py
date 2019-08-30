@@ -11,6 +11,7 @@ import heapq
 import os
 import time
 
+from edenscm.hgext.treemanifest import _buildtree, nativemanifesttype
 from edenscm.mercurial import error, manifest, mdiff, revlog, util
 from edenscmnative import cfastmanifest, cstore
 
@@ -144,14 +145,13 @@ class hybridmanifest(object):
             if self.node in self.treecache:
                 self.__treemanifest = self.treecache[self.node]
             elif self.node == revlog.nullid:
-                store = self.manifestlog.datastore
-                self.__treemanifest = cstore.treemanifest(store)
+                self.__treemanifest = _buildtree(self.manifestlog)
             else:
                 store = self.manifestlog.datastore
                 self.ui.pushbuffer()
                 try:
                     store.get("", self.node)
-                    self.__treemanifest = cstore.treemanifest(store, self.node)
+                    self.__treemanifest = _buildtree(self.manifestlog, self.node)
                     # The buffer is only to eat certain errors, so show
                     # non-error messages.
                     output = self.ui.popbuffer()
@@ -235,7 +235,7 @@ class hybridmanifest(object):
 
     def fastdelta(self, base, changes):
         m = self._manifest("fastdelta")
-        if isinstance(m, cstore.treemanifest):
+        if isinstance(m, nativemanifesttype):
             return fastdelta(m, m.find, base, changes)
         return m.fastdelta(base, changes)
 
@@ -246,7 +246,7 @@ class hybridmanifest(object):
             return hybridmanifest(self.ui, self.opener, self.manifestlog, fast=m)
         elif isinstance(m, manifest.manifestdict):
             return hybridmanifest(self.ui, self.opener, self.manifestlog, flat=m)
-        elif supportsctree and isinstance(m, cstore.treemanifest):
+        elif supportsctree and isinstance(m, nativemanifesttype):
             return hybridmanifest(self.ui, self.opener, self.manifestlog, tree=m)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))

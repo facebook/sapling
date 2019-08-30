@@ -47,6 +47,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "manifest"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<treemanifest>(py)?;
+    m.add(
+        py,
+        "subdirdiff",
+        py_fn!(
+            py,
+            subdir_diff(
+                store: PyObject,
+                path: &PyBytes,
+                binnode: &PyBytes,
+                other_binnodes: &PyList,
+                depth: i32
+            )
+        ),
+    )?;
     Ok(m)
 }
 
@@ -368,6 +382,46 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 });
+
+pub fn subdir_diff(
+    py: Python,
+    store: PyObject,
+    path: &PyBytes,
+    binnode: &PyBytes,
+    other_binnodes: &PyList,
+    depth: i32,
+) -> PyResult<PyObject> {
+    let store = PythonDataStore::new(store);
+    let manifest_store = Arc::new(ManifestStore::new(store));
+    let mut others = vec![];
+    for pybytes in other_binnodes.iter(py) {
+        others.push(pybytes_to_node(py, &pybytes.extract(py)?)?);
+    }
+    let diff = manifest::compat_subtree_diff(
+        manifest_store,
+        &pybytes_to_path(py, path),
+        pybytes_to_node(py, binnode)?,
+        others,
+        depth,
+    )
+    .map_pyerr::<exc::RuntimeError>(py)?;
+    let mut result = vec![];
+    for (path, node, bytes) in diff {
+        let tuple = PyTuple::new(
+            py,
+            &[
+                path_to_pybytes(py, &path).into_object(),
+                node_to_pybytes(py, node).into_object(),
+                PyBytes::new(py, &bytes).into_object(),
+                py.None(),
+                py.None(),
+                py.None(),
+            ],
+        );
+        result.push(tuple);
+    }
+    vec_to_iter(py, result)
+}
 
 fn vec_to_iter<T: ToPyObject>(py: Python, items: Vec<T>) -> PyResult<PyObject> {
     let list: PyList = items.into_py_object(py);

@@ -10,6 +10,7 @@ import tempfile
 
 from edenscm.mercurial import match as matchmod, node, revlog, util as hgutil
 from edenscmnative import cstore
+from edenscmnative.bindings import manifest as rustmanifest
 
 from . import svnexternals, svnwrap, util
 
@@ -284,7 +285,9 @@ class HgEditor(svnwrap.Editor):
     def get_files_in_dir(self, ctx, dir):
         assert dir == "" or dir.endswith("/")
         mf = ctx.manifest()
-        if isinstance(mf, cstore.treemanifest):
+        if isinstance(mf, cstore.treemanifest) or isinstance(
+            mf, rustmanifest.treemanifest
+        ):
             matcher = matchmod.match("", "/", patterns=[dir], default="path")
             for x in mf.walk(matcher):
                 yield x

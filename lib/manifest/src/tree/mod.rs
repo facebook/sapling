@@ -680,6 +680,89 @@ where
     }
 }
 
+/// The purpose of this function is to provide compatible behavior with the C++ implementation
+/// of the treemanifest. This function is problematic because it goes through abstraction
+/// boundaries and is built with the assumption that the storage format is the same as the
+/// in memory format that is the same as the wire format.
+///
+/// This function returns the nodes that need to be sent over the wire for a subtree of the
+/// manifest to be fully hydrated. The subtree is represented by `path` and `node`. The data
+/// that is present locally by the client is represented by `other_nodes`.
+// NOTE: The implementation is currently custom. Consider converting the code to use Cursor.
+// The suggestion received in code review was also to consider making the return type more
+// simple (RepoPath, Node) and letting the call sites deal with the Bytes.
+pub fn compat_subtree_diff(
+    store: Arc<dyn TreeStore + Send + Sync>,
+    path: &RepoPath,
+    node: Node,
+    other_nodes: Vec<Node>,
+    depth: i32,
+) -> Fallible<Vec<(RepoPathBuf, Node, Bytes)>> {
+    struct State {
+        store: InnerStore,
+        path: RepoPathBuf,
+        result: Vec<(RepoPathBuf, Node, Bytes)>,
+        depth_remaining: i32,
+    }
+    impl State {
+        fn work(&mut self, node: Node, other_nodes: Vec<Node>) -> Fallible<()> {
+            let entry = self.store.get_entry(&self.path, node)?;
+
+            if self.depth_remaining > 0 {
+                // TODO: optimize "other_nodes" construction
+                // We use BTreeMap for convenience only, it is more efficient to use an array since
+                // the entries are already sorted.
+                let mut others_map = BTreeMap::new();
+                for other_node in other_nodes {
+                    let other_entry = self.store.get_entry(&self.path, other_node)?;
+                    for other_element_result in other_entry.elements() {
+                        let other_element = other_element_result?;
+                        others_map
+                            .entry(other_element.component)
+                            .or_insert(vec![])
+                            .push(other_element.node);
+                    }
+                }
+                for element_result in entry.elements() {
+                    let element = element_result?;
+                    if element.flag != store::Flag::Directory {
+                        continue;
+                    }
+                    let mut others = others_map
+                        .remove(&element.component)
+                        .unwrap_or_else(|| vec![]);
+                    if others.contains(&element.node) {
+                        continue;
+                    }
+                    others.dedup();
+                    self.path.push(element.component.as_ref());
+                    self.depth_remaining -= 1;
+                    self.work(element.node, others)?;
+                    self.depth_remaining += 1;
+                    self.path.pop();
+                }
+            }
+            // NOTE: order in the result set matters for a lot of the integration tests
+            self.result
+                .push((self.path.clone(), node, entry.to_bytes()));
+            Ok(())
+        }
+    }
+
+    if other_nodes.contains(&node) {
+        return Ok(vec![]);
+    }
+
+    let mut state = State {
+        store: InnerStore::new(store),
+        path: path.to_owned(),
+        result: vec![],
+        depth_remaining: depth - 1,
+    };
+    state.work(node, other_nodes)?;
+    Ok(state.result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1421,5 +1504,131 @@ mod tests {
              | | | c2 (File, 0000000000000000000000000000000000000030, Regular)\n\
              "
         );
+    }
+
+    #[test]
+    fn test_compat_subtree_diff() {
+        let store = Arc::new(TestStore::new());
+        // add ("", 1), ("foo", 11), ("baz", 21), ("foo/bar", 111)
+        let root_1_entry = store::Entry::from_elements(vec![
+            store_element("foo", "11", store::Flag::Directory),
+            store_element("baz", "21", store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
+        store
+            .insert(
+                RepoPath::empty(),
+                node("1"),
+                root_1_entry.clone().to_bytes(),
+            )
+            .unwrap();
+        let foo_11_entry = store::Entry::from_elements(vec![store_element(
+            "bar",
+            "111",
+            store::Flag::File(FileType::Regular),
+        )])
+        .unwrap();
+        store
+            .insert(
+                repo_path("foo"),
+                node("11"),
+                foo_11_entry.clone().to_bytes(),
+            )
+            .unwrap();
+
+        // add ("", 2), ("foo", 12), ("baz", 21), ("foo/bar", 112)
+        let root_2_entry = store::Entry::from_elements(vec![
+            store_element("foo", "12", store::Flag::Directory),
+            store_element("baz", "21", store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
+        store
+            .insert(RepoPath::empty(), node("2"), root_2_entry.to_bytes())
+            .unwrap();
+        let foo_12_entry = store::Entry::from_elements(vec![store_element(
+            "bar",
+            "112",
+            store::Flag::File(FileType::Regular),
+        )])
+        .unwrap();
+        store
+            .insert(repo_path("foo"), node("12"), foo_12_entry.to_bytes())
+            .unwrap();
+
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                RepoPath::empty(),
+                node("1"),
+                vec![node("2")],
+                3
+            )
+            .unwrap(),
+            vec![
+                (
+                    repo_path_buf("foo"),
+                    node("11"),
+                    foo_11_entry.clone().to_bytes()
+                ),
+                (
+                    RepoPathBuf::new(),
+                    node("1"),
+                    root_1_entry.clone().to_bytes()
+                ),
+            ]
+        );
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                RepoPath::empty(),
+                node("1"),
+                vec![node("2")],
+                1
+            )
+            .unwrap(),
+            vec![(
+                RepoPathBuf::new(),
+                node("1"),
+                root_1_entry.clone().to_bytes()
+            ),]
+        );
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                repo_path("foo"),
+                node("11"),
+                vec![node("12")],
+                3
+            )
+            .unwrap(),
+            vec![(
+                repo_path_buf("foo"),
+                node("11"),
+                foo_11_entry.clone().to_bytes()
+            ),]
+        );
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                RepoPath::empty(),
+                node("1"),
+                vec![node("1")],
+                3
+            )
+            .unwrap(),
+            vec![]
+        );
+        assert_eq!(
+            compat_subtree_diff(
+                store.clone(),
+                repo_path("foo"),
+                node("11"),
+                vec![node("11")],
+                3
+            )
+            .unwrap(),
+            vec![]
+        );
+        // it is illegal to call compat_subtree_diff with "baz" but we can't validate for it
     }
 }

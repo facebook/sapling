@@ -236,6 +236,8 @@ configitem("treemanifest", "usehttp", default=False)
 configitem("treemanifest", "prefetchdraftparents", default=True)
 configitem("treemanifest", "rustmanifest", default=False)
 
+nativemanifesttype = (cstore.treemanifest, rustmanifest.treemanifest)
+
 PACK_CATEGORY = "manifests"
 
 TREEGROUP_PARTTYPE = "b2x:treegroup"
@@ -2417,7 +2419,10 @@ def _generatepackstream(
         # implementation cannot handle more yet.
         userustmanifest = repo.ui.configbool("treemanifest", "rustmanifest")
         if userustmanifest:
-            raise NotImplementedError
+            basenodes = [mybasenode for (_path, mybasenode) in basetrees]
+            subtrees = rustmanifest.subdirdiff(
+                datastore, rootdir, node, basenodes, depth
+            )
         else:
             subtrees = cstore.treemanifest.walksubdirtrees(
                 (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
@@ -2659,10 +2664,7 @@ def serverrepack(repo, incremental=False, options=None):
 def _debugcmdfindtreemanifest(orig, ctx):
     manifest = ctx.manifest()
     # Check if the manifest we have is a treemanifest.
-    if isinstance(manifest, cstore.treemanifest):
-        return manifest
-    if isinstance(manifest, rustmanifest.treemanifest):
-        # should be the same as the cstore treemanifest
+    if isinstance(manifest, nativemanifesttype):
         return manifest
     try:
         # Look up the treemanifest in the treemanifestlog.  There might not be
