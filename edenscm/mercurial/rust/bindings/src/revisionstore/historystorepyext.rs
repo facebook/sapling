@@ -7,18 +7,23 @@ use cpython::{
     PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
+use failure::Fallible;
 
-use revisionstore::historystore::{HistoryStore, MutableHistoryStore};
+use revisionstore::{HistoryStore, IterableStore, MutableHistoryStore};
 use types::{Key, NodeInfo};
 
 use crate::revisionstore::pythonutil::{
-    from_key_to_tuple, from_tuple_to_key, to_key, to_node, to_path, to_pyerr,
+    from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_node, to_path, to_pyerr,
 };
 
 pub trait HistoryStorePyExt {
     fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
+}
+
+pub trait IterableHistoryStorePyExt {
+    fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>>;
 }
 
 pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
@@ -124,6 +129,37 @@ fn to_node_info(
 
     let linknode = to_node(py, linknode);
     Ok(NodeInfo { parents, linknode })
+}
+
+impl<T: IterableStore + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
+    fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
+        let iter = self.iter().map(|res| {
+            let key = res?;
+            let node_info = self.get_node_info(&key)?;
+            let (name, node) = from_key(py, &key);
+            let copyfrom = if key.path != node_info.parents[0].path {
+                if node_info.parents[0].path.is_empty() {
+                    PyBytes::new(py, b"")
+                } else {
+                    PyBytes::new(py, node_info.parents[0].path.as_byte_slice())
+                }
+            } else {
+                PyBytes::new(py, b"")
+            };
+            let tuple = (
+                name.into_object(),
+                node.into_object(),
+                PyBytes::new(py, node_info.parents[0].node.as_ref()),
+                PyBytes::new(py, node_info.parents[1].node.as_ref()),
+                PyBytes::new(py, node_info.linknode.as_ref().as_ref()),
+                copyfrom.into_object(),
+            )
+                .into_py_object(py);
+            Ok(tuple)
+        });
+        iter.collect::<Fallible<Vec<PyTuple>>>()
+            .map_err(|e| to_pyerr(py, &e.into()))
+    }
 }
 
 impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {

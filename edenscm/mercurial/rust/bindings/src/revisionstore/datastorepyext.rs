@@ -25,7 +25,7 @@ pub trait DataStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
-pub trait IterableStorePyExt {
+pub trait IterableDataStorePyExt {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>>;
 }
 
@@ -120,7 +120,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
     }
 }
 
-impl<T: IterableStore + DataStore + ?Sized> IterableStorePyExt for T {
+impl<T: IterableStore + DataStore + ?Sized> IterableDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.iter().map(|res| {
             let key = res?;

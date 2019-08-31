@@ -10,9 +10,7 @@ use failure::{format_err, Error, Fallible};
 
 use encoding;
 use revisionstore::{
-    repack::{
-        filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks, IterableStore,
-    },
+    repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     Ancestors, DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
     HistoryStore, IndexedLogDataStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
     MutableHistoryPack, MutableHistoryStore,
@@ -20,12 +18,14 @@ use revisionstore::{
 use types::{Key, NodeInfo};
 
 use crate::revisionstore::datastorepyext::{
-    DataStorePyExt, IterableStorePyExt, MutableDeltaStorePyExt,
+    DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt,
 };
-use crate::revisionstore::historystorepyext::{HistoryStorePyExt, MutableHistoryStorePyExt};
+use crate::revisionstore::historystorepyext::{
+    HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
+};
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
-use crate::revisionstore::pythonutil::{from_key, to_pyerr};
+use crate::revisionstore::pythonutil::to_pyerr;
 use crate::revisionstore::repackablepyext::RepackablePyExt;
 
 mod datastorepyext;
@@ -286,30 +286,7 @@ py_class!(class historypack |py| {
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py).get_value(py)?;
-        let iter = store.iter().map(|res| {
-            let key = res?;
-            let node_info = store.get_node_info(&key)?;
-            let (name, node) = from_key(py, &key);
-            let copyfrom = if key.path != node_info.parents[0].path {
-                if node_info.parents[0].path.is_empty() {
-                    PyBytes::new(py, b"")
-                } else {
-                    PyBytes::new(py, node_info.parents[0].path.as_byte_slice())
-                }
-            } else {
-                PyBytes::new(py, b"")
-            };
-            let tuple = (
-                name.into_object(),
-                node.into_object(),
-                PyBytes::new(py, node_info.parents[0].node.as_ref()),
-                PyBytes::new(py, node_info.parents[1].node.as_ref()),
-                PyBytes::new(py, node_info.linknode.as_ref().as_ref()),
-                copyfrom.into_object(),
-            ).into_py_object(py);
-            Ok(tuple)
-        });
-        iter.collect::<Fallible<Vec<PyTuple>>>().map_err(|e| to_pyerr(py, &e.into()))
+        store.iter_py(py)
     }
 });
 
