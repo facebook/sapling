@@ -11,6 +11,7 @@ pub mod asyncindexedlogdatastore;
 pub mod asyncmutabledatapack;
 pub mod asyncmutabledeltastore;
 pub mod asyncmutablehistorypack;
+pub mod asyncmutablehistorystore;
 pub mod asyncuniondatastore;
 pub mod asyncunionhistorystore;
 
@@ -22,5 +23,6 @@ pub use crate::asyncindexedlogdatastore::AsyncMutableIndexedLogDataStore;
 pub use crate::asyncmutabledatapack::AsyncMutableDataPack;
 pub use crate::asyncmutabledeltastore::AsyncMutableDeltaStore;
 pub use crate::asyncmutablehistorypack::AsyncMutableHistoryPack;
+pub use crate::asyncmutablehistorystore::AsyncMutableHistoryStore;
 pub use crate::asyncuniondatastore::AsyncUnionDataStore;
 pub use crate::asyncunionhistorystore::AsyncUnionHistoryStore;
