@@ -447,7 +447,7 @@ def dumpdeltachain(ui, deltachain, **opts):
         )
 
 
-def debughistorypack(ui, paths, **opts):
+def debughistorystore(ui, store, **opts):
     if opts.get("long"):
         hashformatter = hex
         hashlen = 42
@@ -455,37 +455,40 @@ def debughistorypack(ui, paths, **opts):
         hashformatter = short
         hashlen = 14
 
+    lastfilename = None
+    for entry in store.iterentries():
+        filename, node, p1node, p2node, linknode, copyfrom = entry
+        if filename != lastfilename:
+            ui.write("\n%s\n" % filename)
+            ui.write(
+                "%s%s%s%s%s\n"
+                % (
+                    "Node".ljust(hashlen),
+                    "P1 Node".ljust(hashlen),
+                    "P2 Node".ljust(hashlen),
+                    "Link Node".ljust(hashlen),
+                    "Copy From",
+                )
+            )
+            lastfilename = filename
+        ui.write(
+            "%s  %s  %s  %s  %s\n"
+            % (
+                hashformatter(node),
+                hashformatter(p1node),
+                hashformatter(p2node),
+                hashformatter(linknode),
+                copyfrom,
+            )
+        )
+
+
+def debughistorypack(ui, paths, **opts):
     for path in paths:
         if ".hist" in path:
             path = path[: path.index(".hist")]
         hpack = revisionstore.historypack(path)
-
-        lastfilename = None
-        for entry in hpack.iterentries():
-            filename, node, p1node, p2node, linknode, copyfrom = entry
-            if filename != lastfilename:
-                ui.write("\n%s\n" % filename)
-                ui.write(
-                    "%s%s%s%s%s\n"
-                    % (
-                        "Node".ljust(hashlen),
-                        "P1 Node".ljust(hashlen),
-                        "P2 Node".ljust(hashlen),
-                        "Link Node".ljust(hashlen),
-                        "Copy From",
-                    )
-                )
-                lastfilename = filename
-            ui.write(
-                "%s  %s  %s  %s  %s\n"
-                % (
-                    hashformatter(node),
-                    hashformatter(p1node),
-                    hashformatter(p2node),
-                    hashformatter(linknode),
-                    copyfrom,
-                )
-            )
+        debughistorystore(ui, hpack, **opts)
 
 
 def debugwaitonrepack(repo):
