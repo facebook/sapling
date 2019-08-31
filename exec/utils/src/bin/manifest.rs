@@ -14,8 +14,9 @@ use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::Un
 use types::{Key, Node, RepoPath};
 
 #[derive(StructOpt)]
+#[structopt(rename_all = "verbatim", no_version)]
 struct Cli {
-    #[structopt(short = "n", parse(try_from_str = "Node::from_str"))]
+    #[structopt(short = "n", parse(try_from_str = Node::from_str))]
     node: Node,
     #[structopt(
         short = "p",

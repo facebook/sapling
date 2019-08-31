@@ -10,5 +10,5 @@ indexedlog = { path = "../../lib/indexedlog" }
 manifest = { path = "../../lib/manifest" }
 pathmatcher = { path = "../../lib/pathmatcher" }
 revisionstore = { path = "../../lib/revisionstore" }
-structopt = "0.2"
+structopt = "0.3"
 types = { path = "../../lib/types" }
