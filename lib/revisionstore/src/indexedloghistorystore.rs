@@ -27,6 +27,7 @@ use crate::{
     error::KeyError,
     historystore::{Ancestors, HistoryStore, MutableHistoryStore},
     localstore::LocalStore,
+    repack::IterableStore,
     sliceext::SliceExt,
 };
 
@@ -245,6 +246,17 @@ impl MutableHistoryStore for IndexedLogHistoryStore {
     }
 }
 
+impl IterableStore for IndexedLogHistoryStore {
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
+        Box::new(
+            self.log
+                .iter()
+                .map(|entry| Entry::from_slice(entry?))
+                .map(|entry| Ok(entry?.key)),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,6 +357,21 @@ mod tests {
         log.flush()?;
 
         assert_eq!(log.log.iter().count(), nodes.iter().count());
+        Ok(())
+    }
+
+    #[test]
+    fn test_iter() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let k = key("a", "1");
+        let nodeinfo = NodeInfo {
+            parents: [key("a", "2"), null_key("a")],
+            linknode: node("3"),
+        };
+        log.add(&k, &nodeinfo)?;
+
+        assert!(log.iter().all(|e| e.unwrap() == k));
         Ok(())
     }
 }
