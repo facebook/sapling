@@ -12,8 +12,8 @@ use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     Ancestors, DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
-    HistoryStore, IndexedLogDataStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
-    MutableHistoryPack, MutableHistoryStore,
+    HistoryStore, IndexedLogDataStore, IndexedLogHistoryStore, LocalStore, Metadata,
+    MutableDataPack, MutableDeltaStore, MutableHistoryPack, MutableHistoryStore,
 };
 use types::{Key, NodeInfo};
 
@@ -44,6 +44,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<datapack>(py)?;
     m.add_class::<historypack>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
+    m.add_class::<indexedloghistorystore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
     m.add_class::<mutablehistorystore>(py)?;
     m.add(
@@ -326,6 +327,53 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
+        Ok(Python::None(py))
+    }
+
+    def markforrefresh(&self) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.flush_py(py)?;
+        Ok(Python::None(py))
+    }
+
+    def iterentries(&self) -> PyResult<Vec<PyTuple>> {
+        let store = self.store(py).get_value(py)?;
+        store.iter_py(py)
+    }
+});
+
+py_class!(class indexedloghistorystore |py| {
+    data store: PyOptionalRefCell<Box<IndexedLogHistoryStore>>;
+
+    def __new__(_cls, path: &PyBytes) -> PyResult<indexedloghistorystore> {
+        let path = encoding::local_bytes_to_path(path.data(py))
+            .map_err(|e| to_pyerr(py, &e.into()))?;
+        indexedloghistorystore::create_instance(
+            py,
+            PyOptionalRefCell::new(Box::new(match IndexedLogHistoryStore::new(&path) {
+                Ok(log) => log,
+                Err(e) => return Err(to_pyerr(py, &e)),
+            })),
+        )
+    }
+
+    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
+        let _known = known;
+        let store = self.store(py).get_value(py)?;
+        store.get_ancestors_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+        let store = self.store(py).get_value(py)?;
+        store.get_node_info_py(py, name, node)
+    }
+
+    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
         Ok(Python::None(py))
     }
 

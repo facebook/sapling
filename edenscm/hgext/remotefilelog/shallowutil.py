@@ -112,6 +112,11 @@ def getindexedlogdatastorepath(repo):
     return os.path.join(path, "indexedlogdatastore")
 
 
+def getindexedloghistorystorepath(repo):
+    path = os.path.join(getcachepath(repo.ui), repo.name)
+    return os.path.join(path, "indexedloghistorystore")
+
+
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
     traditional revlog

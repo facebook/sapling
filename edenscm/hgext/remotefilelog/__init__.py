@@ -124,7 +124,9 @@ Configs:
 
     ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
 
-    ``remotefilelog.indexedlogdatastore`` use an experimental IndexedLog content store.
+    ``remotefilelog.indexedlogdatastore`` use an IndexedLog content store.
+
+    ``remotefilelog.indexedloghistorystore`` use an IndexedLog history store.
 
 Configs for Eden API (HTTP data fetching):
 
@@ -1295,6 +1297,16 @@ def debugindexedlogdatastore(ui, *paths, **opts):
 )
 def debughistorypack(ui, *paths, **opts):
     return debugcommands.debughistorypack(ui, paths, **opts)
+
+
+@command(
+    "debugindexedloghistorystore",
+    [("", "long", None, _("print the long hashes"))],
+    _("hg debugindexedloghistorystore <path>"),
+    norepo=True,
+)
+def debugindexedloghistorystore(ui, *paths, **opts):
+    return debugcommands.debugindexedloghistorystore(ui, paths, **opts)
 
 
 @command("debugkeepset", [], _("hg debugkeepset"))

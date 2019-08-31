@@ -581,6 +581,14 @@ class remotefileslog(filelog.fileslog):
                 finally:
                     os.umask(mask)
 
+            if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
+                path = shallowutil.getindexedloghistorystorepath(repo)
+                mask = os.umask(0o002)
+                try:
+                    sharedmetadatastores += [revisionstore.indexedloghistorystore(path)]
+                finally:
+                    os.umask(mask)
+
             sunioncontentstore = unioncontentstore(*sharedcontentstores)
             sunionmetadatastore = unionmetadatastore(
                 *sharedmetadatastores, allowincomplete=True

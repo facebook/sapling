@@ -557,7 +557,11 @@ class basestore(object):
                         continue
 
                     # Don't delete pack files or indexedlog data.
-                    if "/packs/" in root or "/indexedlogdatastore/" in root:
+                    if (
+                        "/packs/" in root
+                        or "/indexedlogdatastore/" in root
+                        or "/indexedloghistorystore/" in root
+                    ):
                         continue
 
                     count += 1

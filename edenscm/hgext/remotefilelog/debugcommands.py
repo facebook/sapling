@@ -491,6 +491,12 @@ def debughistorypack(ui, paths, **opts):
         debughistorystore(ui, hpack, **opts)
 
 
+def debugindexedloghistorystore(ui, paths, **opts):
+    for path in paths:
+        store = revisionstore.indexedloghistorystore(path)
+        debughistorystore(ui, store, **opts)
+
+
 def debugwaitonrepack(repo):
     with extutil.flock(repacklockvfs(repo).join("repacklock"), ""):
         return

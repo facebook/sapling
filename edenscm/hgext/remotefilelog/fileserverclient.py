@@ -868,6 +868,10 @@ class fileserverclient(object):
                 if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
                     path = shallowutil.getindexedlogdatastorepath(self.repo)
                     options += "--indexedlog_dir %s" % path
+
+                if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
+                    path = shallowutil.getindexedloghistorystorepath(self.repo)
+                    options += " --indexedloghistorystore_dir %s" % path
             else:
                 cachepath = shallowutil.getcachepath(self.ui)
 
