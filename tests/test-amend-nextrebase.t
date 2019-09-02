@@ -4,7 +4,13 @@ Set up test environment.
   > amend=
   > rebase=
   > [experimental]
-  > evolution = createmarkers, allowunstable
+  > evolution=
+  > [mutation]
+  > record=true
+  > enabled=true
+  > date=0 0
+  > [visibility]
+  > enabled=true
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -54,10 +60,10 @@ Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   $ hg next
   changeset 61246295ee1e has multiple children, namely:
   [e8ec16] r1
-  [dc00ac] amended
-  choosing the only non-obsolete child: dc00accb61d3
+  [f03405] amended
+  choosing the only non-obsolete child: f03405deb52b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [dc00ac] amended
+  [f03405] amended
 
 Rebasing single changeset.
   $ hg next
@@ -66,7 +72,7 @@ Rebasing single changeset.
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [fe8ffc] r2
+  [8fb200] r2
   $ showgraph
   @  5 r2
   |
@@ -93,7 +99,7 @@ Test --clean flag.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 3:137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [7d603c] r3
+  [f12433] r3
   $ hg status
   ? foo
   $ showgraph
@@ -119,7 +125,7 @@ Rebasing multiple changesets at once.
   rebasing 3:137d867d71d5 "r3"
   rebasing 4:daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [55b98e] r4
+  [d25685] r4
   $ showgraph
   @  8 r4
   |
@@ -143,11 +149,11 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [fe8ffc] r2
+  [8fb200] r2
   $ hg next --rebase
   rebasing 3:137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [7d603c] r3
+  [f12433] r3
   $ showgraph
   @  7 r3
   |
@@ -169,7 +175,7 @@ Rebasing a stack one changeset at a time.
   $ hg next --rebase
   rebasing 4:daa37004f338 "r4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [55b98e] r4
+  [d25685] r4
   $ showgraph
   @  8 r4
   |
@@ -194,7 +200,7 @@ Rebasing a stack two changesets at a time.
   rebasing 2:776c07fa2b12 "r2"
   rebasing 3:137d867d71d5 "r3"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [7d603c] r3
+  [f12433] r3
   $ showgraph
   @  8 r3
   |
@@ -218,7 +224,7 @@ Rebasing a stack two changesets at a time.
   rebasing 4:daa37004f338 "r4"
   rebasing 5:5f333e6f7274 "r5"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [c01a35] r5
+  [dd153e] r5
   $ showgraph
   @  10 r5
   |
@@ -261,7 +267,7 @@ Rebasing after multiple amends.
   rebasing 3:137d867d71d5 "r3"
   rebasing 4:daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [66772e] r4
+  [5d31c6] r4
   $ showgraph
   @  10 r4
   |
@@ -304,7 +310,7 @@ Rebasing from below the amended changeset with the --newest flag.
   rebasing 4:daa37004f338 "r4"
   rebasing 5:5f333e6f7274 "r5"
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [bd05f8] r5
+  [2d8122] r5
   $ showgraph
   @  9 r5
   |
@@ -331,7 +337,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   $ mkcommit a
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [dc00ac] amended
+  [f03405] amended
   $ showgraph
   o  7 add a
   |
@@ -351,9 +357,9 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
-  changeset dc00accb61d3 has multiple children, namely:
-  [4e13d3] add a
-  [fe8ffc] r2
+  changeset f03405deb52b has multiple children, namely:
+  [c9239a] add a
+  [8fb200] r2
   transaction abort!
   rollback completed
   abort: ambiguous next changeset
@@ -455,12 +461,12 @@ Rebase when other predecessors are still visible
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [4ac9bf] r2
+  [bd2075] r2
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [2d6018] amended 1
+  [80573e] amended 1
   $ hg amend -m "amended 2" --no-rebase
-  hint[amend-restack]: descendants of 2d6018c15b52 are left behind - use 'hg restack' to rebase them
+  hint[amend-restack]: descendants of 80573e6618ae are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  6 amended 2
@@ -478,13 +484,19 @@ Rebase when other predecessors are still visible
   o  0 r0
   
   $ hg next --rebase
-  note: not rebasing 2:776c07fa2b12 "r2" and its descendants as this would cause divergence
-  rebasing 5:4ac9bf453d75 "r2"
+  rebasing 2:776c07fa2b12 "r2"
+  rebasing 5:bd2075358087 "r2"
+  changeset 2bff44790d43 has multiple children, namely:
+  [58ba33] r2
+  [e650e9] r2
+  choosing the only non-obsolete child: e650e9f8f507
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [6c1a58] r2
+  [e650e9] r2
   $ showgraph
-  @  7 r2
+  @  8 r2
   |
+  | x  7 r2
+  |/
   o  6 amended 2
   |
   | o  3 r3
@@ -495,3 +507,4 @@ Rebase when other predecessors are still visible
   |/
   o  0 r0
   
+BUG! The obsolete r2 got rebased.
