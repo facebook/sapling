@@ -139,23 +139,23 @@ test reachability in basic repo
 
 test reachability response on nonexistent nodes
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 | extract_json_error
-  internal server error: Invalid input: 0000
-  500
+  Invalid input: 0000
+  400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 | extract_json_error
-  internal server error: Invalid input: 1111
-  500
+  Invalid input: 1111
+  400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 | extract_json_error
-  internal server error: Invalid input: 2222
-  500
+  Invalid input: 2222
+  400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 | extract_json_error
-  CommitHash("0123456789123456789012345678901234567890") is not found
+  0123456789123456789012345678901234567890 is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 | extract_json_error
-  CommitHash("1234567890123456789012345678901234567890") is not found
+  1234567890123456789012345678901234567890 is not found
   404
 
 test folder list

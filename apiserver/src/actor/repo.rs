@@ -45,7 +45,7 @@ use types::{
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
-use mononoke_types::{unode::UnodeEntry, ChangesetId, MPath, RepositoryId};
+use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
@@ -186,19 +186,34 @@ impl MononokeRepo {
     ) -> impl Future<Item = ChangesetId, Error = ErrorKind> {
         let repo = self.repo.clone();
 
-        self.get_hgchangesetid_from_revision(ctx.clone(), revision.clone())
-            .from_err()
-            .and_then({
-                cloned!(ctx, repo);
-                move |changesetid| {
-                    repo.get_bonsai_from_hg(ctx.clone(), changesetid)
+        match revision {
+            Revision::CommitHash(hash) => FS::get_changeset_id(hash)
+                .into_future()
+                .from_err()
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |changesetid| {
+                        repo.get_bonsai_from_hg(ctx, changesetid)
+                            .from_err()
+                            .and_then(move |maybe_bcs_id| {
+                                maybe_bcs_id
+                                    .ok_or(ErrorKind::NotFound(format!("{}", changesetid), None))
+                            })
+                    }
+                })
+                .left_future(),
+            Revision::Bookmark(bookmark) => BookmarkName::new(bookmark)
+                .into_future()
+                .from_err()
+                .and_then(move |bookmark| {
+                    repo.get_bonsai_bookmark(ctx, &bookmark)
                         .from_err()
-                        .and_then(move |maybe_bcs_id| {
-                            maybe_bcs_id
-                                .ok_or(ErrorKind::NotFound(format!("{}", changesetid), None))
+                        .and_then(move |opt| {
+                            opt.ok_or_else(|| ErrorKind::BookmarkNotFound(bookmark.to_string()))
                         })
-                }
-            })
+                })
+                .right_future(),
+        }
     }
 
     fn get_raw_file(
@@ -240,27 +255,8 @@ impl MononokeRepo {
         descendant: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::is_ancestor.add_value(1);
-        let descendant_future = self
-            .get_hgchangesetid_from_revision(ctx.clone(), descendant.clone())
-            .from_err()
-            .and_then({
-                cloned!(ctx, self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
-            })
-            .and_then(move |maybenode| {
-                maybenode.ok_or(ErrorKind::NotFound(format!("{:?}", descendant), None))
-            });
-
-        let ancestor_future = self
-            .get_hgchangesetid_from_revision(ctx.clone(), ancestor.clone())
-            .from_err()
-            .and_then({
-                cloned!(ctx, self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
-            })
-            .and_then(move |maybenode| {
-                maybenode.ok_or(ErrorKind::NotFound(format!("{:?}", ancestor), None))
-            });
+        let descendant_future = self.get_bonsai_id_from_revision(ctx.clone(), descendant.clone());
+        let ancestor_future = self.get_bonsai_id_from_revision(ctx.clone(), ancestor.clone());
 
         descendant_future
             .join(ancestor_future)
@@ -351,22 +347,15 @@ impl MononokeRepo {
             })
             .and_then({
                 cloned!(ctx, mpath);
-                move |root_unode_mf_id| match mpath {
-                    Some(mpath) => root_unode_mf_id
+                move |root_unode_mf_id| {
+                    root_unode_mf_id
                         .manifest_unode_id()
-                        .find_entries(ctx, repo.get_blobstore(), vec![mpath])
-                        .map(|(_, entry)| entry)
-                        .collect()
+                        .find_entry(ctx, repo.get_blobstore(), mpath)
                         .map_err(ErrorKind::InternalError)
-                        .left_future(),
-                    None => ok(vec![ManifestEntry::Tree(
-                        root_unode_mf_id.manifest_unode_id().clone(),
-                    )])
-                    .right_future(),
                 }
             })
-            .and_then(move |entries| {
-                entries.get(0).cloned().ok_or(ErrorKind::NotFound(
+            .and_then(move |maybe_entry| {
+                maybe_entry.ok_or(ErrorKind::NotFound(
                     format!("{:?} {:?}", revision, mpath),
                     None,
                 ))
@@ -387,11 +376,14 @@ impl MononokeRepo {
                 }
             })
             .and_then(|unode_mf| {
-                let res: Result<Vec<(String, UnodeEntry)>, _> = unode_mf
+                let res: Result<Vec<_>, _> = unode_mf
                     .list()
                     .map(|(name, entry)| {
                         String::from_utf8(name.to_bytes().to_vec())
-                            .map(|name| (name, entry.clone()))
+                            .map(|name| EntryLight {
+                                name,
+                                is_directory: entry.is_directory(),
+                            })
                             .map_err(|err| {
                                 ErrorKind::InvalidInput(
                                     "non utf8 path".to_string(),
@@ -402,15 +394,7 @@ impl MononokeRepo {
                     .collect();
                 res
             })
-            .map(|entries| MononokeRepoResponse::ListDirectoryUnodes {
-                files: entries
-                    .into_iter()
-                    .map(|(name, entry)| EntryLight {
-                        name,
-                        is_directory: entry.is_directory(),
-                    })
-                    .collect(),
-            })
+            .map(|entries| MononokeRepoResponse::ListDirectoryUnodes { files: entries })
             .boxify()
     }
 
