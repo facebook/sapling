@@ -484,19 +484,13 @@ Rebase when other predecessors are still visible
   o  0 r0
   
   $ hg next --rebase
-  rebasing 2:776c07fa2b12 "r2"
+  note: not rebasing 2:776c07fa2b12 "r2" and its descendants as this would cause divergence
   rebasing 5:bd2075358087 "r2"
-  changeset 2bff44790d43 has multiple children, namely:
-  [58ba33] r2
-  [e650e9] r2
-  choosing the only non-obsolete child: e650e9f8f507
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [e650e9] r2
+  [2ee7bd] r2
   $ showgraph
-  @  8 r2
+  @  7 r2
   |
-  | x  7 r2
-  |/
   o  6 amended 2
   |
   | o  3 r3

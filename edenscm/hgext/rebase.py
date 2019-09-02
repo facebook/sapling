@@ -339,7 +339,8 @@ class rebaseruntime(object):
         )
         skippedset = set(self.obsoletenotrebased)
         skippedset.update(self.obsoletewithoutsuccessorindestination)
-        _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
+        if not mutation.enabled(self.repo):
+            _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
     def _prepareabortorcontinue(self, isabort):
         try:
@@ -492,12 +493,14 @@ class rebaseruntime(object):
         repo, ui = self.repo, self.ui
         if mutation.enabled(repo):
             # We must traverse mutation edges, too - topo sort is not enough.
-            sortedrevs = mutation.toposortrevs(repo, subset, self.predmap)
+            sortedrevs = smartset.baseset(
+                mutation.toposortrevs(repo, subset, self.predmap)
+            )
         else:
             sortedrevs = repo.revs("sort(%ld, -topo)", subset)
         allowdivergence = self.ui.configbool(
             "experimental", "evolution.allowdivergence"
-        ) or mutation.enabled(repo)
+        )
         if not allowdivergence:
             sortedrevs -= repo.revs(
                 "descendants(%ld) and not %ld",

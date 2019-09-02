@@ -926,7 +926,7 @@ Many splits and folds:
   R 
   O 
 
-Rebase of amended commit
+Metaedit with descendant amended commits
 
   $ cd ..
   $ newrepo
@@ -938,37 +938,29 @@ Rebase of amended commit
   >   \|/      B
   >    B
   >    |
-  >    A A1
-  >    |/
+  >    A
+  >    |
   >    Z
   > EOS
-  $ hg rebase -s $B -d $A1
-  rebasing 3:917a077edb8d "B"
-  rebasing 4:b45c90359798 "C"
-  rebasing 6:01f26f1a10b2 "D"
-  rebasing 7:9df062337510 "C2"
-  rebasing 9:1c7520bf51f0 "E"
-  rebasing 10:80102b688282 "C4" (tip)
+  $ hg metaedit -r $A -m A1
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  C4
   |
   | o  E
   | |
-  | x  C2 (Rewritten using rebase-copy into C4)
+  | x  C2 (Rewritten using metaedit-copy into C4)
   |/
   | o  D
   | |
-  | x  C (Rewritten using rebase-copy into C2)
+  | x  C (Rewritten using metaedit-copy into C2)
   |/
   o  B
   |
   o  A1
   |
-  | o  A
-  |/
   o  Z
   
-Rebase of folded commit
+Metaedit with descendant folded commits
 
   $ cd ..
   $ newrepo
@@ -979,8 +971,8 @@ Rebase of folded commit
   >   |/
   >   B
   >   |
-  >   A A1
-  >   |/
+  >   A
+  >   |
   >   Z
   > EOS
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
@@ -992,30 +984,22 @@ Rebase of folded commit
   |/
   o  B
   |
-  | o  A1
-  | |
-  o |  A
-  |/
+  o  A
+  |
   o  Z
   
-  $ hg rebase -s $B -d $A1
-  rebasing 3:917a077edb8d "B"
-  rebasing 4:b45c90359798 "C"
-  rebasing 5:01f26f1a10b2 "D"
-  rebasing 7:e7dba301a292 "F" (tip)
+  $ hg metaedit -r $A -m "A1"
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  F
   |
   | o  D
   | |
-  | x  C (Rewritten using rebase-copy into F)
+  | x  C (Rewritten using metaedit-copy into F)
   |/
   o  B
   |
   o  A1
   |
-  | o  A
-  |/
   o  Z
   
 
