@@ -444,3 +444,54 @@ Now resolve the conflict and resume the rebase.
   |/
   o  0 add a
   
+Rebase when other predecessors are still visible
+  $ reset
+  $ hg debugbuilddag -n +4
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended 1" --no-rebase
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
+  $ hg next --rebase
+  rebasing 2:776c07fa2b12 "r2"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [4ac9bf] r2
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [2d6018] amended 1
+  $ hg amend -m "amended 2" --no-rebase
+  hint[amend-restack]: descendants of 2d6018c15b52 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
+  $ showgraph
+  @  6 amended 2
+  |
+  | o  5 r2
+  | |
+  | x  4 amended 1
+  |/
+  | o  3 r3
+  | |
+  | x  2 r2
+  | |
+  | x  1 r1
+  |/
+  o  0 r0
+  
+  $ hg next --rebase
+  note: not rebasing 2:776c07fa2b12 "r2" and its descendants as this would cause divergence
+  rebasing 5:4ac9bf453d75 "r2"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [6c1a58] r2
+  $ showgraph
+  @  7 r2
+  |
+  o  6 amended 2
+  |
+  | o  3 r3
+  | |
+  | x  2 r2
+  | |
+  | x  1 r1
+  |/
+  o  0 r0
+  
