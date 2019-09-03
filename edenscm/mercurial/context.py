@@ -1993,6 +1993,9 @@ class workingctx(committablectx):
         man = parents[0].manifest().copy()
 
         ff = self._flagfunc
+        for f in status.deleted + status.removed:
+            if f in man:
+                del man[f]
         for i, l in ((addednodeid, status.added), (modifiednodeid, status.modified)):
             for f in l:
                 man[f] = i
@@ -2000,10 +2003,6 @@ class workingctx(committablectx):
                     man.setflag(f, ff(f))
                 except OSError:
                     pass
-
-        for f in status.deleted + status.removed:
-            if f in man:
-                del man[f]
 
         return man
 
