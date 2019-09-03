@@ -73,7 +73,7 @@ impl Blake2 {
     }
 
     #[inline]
-    pub(crate) fn from_thrift(b: thrift::Blake2) -> Result<Self> {
+    pub fn from_thrift(b: thrift::Blake2) -> Result<Self> {
         // Currently this doesn't require consuming b, but hopefully with T26959816 this
         // code will be able to convert a SmallVec directly into an array.
         if b.0.len() != 32 {
@@ -107,7 +107,7 @@ impl Blake2 {
         }
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::Blake2 {
+    pub fn into_thrift(self) -> thrift::Blake2 {
         // This doesn't need to consume self today, but once T26959816 is implemented it
         // should be possible to do that without copying.
         thrift::Blake2(self.0.to_vec())

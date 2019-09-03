@@ -172,6 +172,24 @@ where
             .boxify()
     }
 
+    fn list_all_entries(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+    ) -> BoxStream<
+        (
+            Option<MPath>,
+            Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
+        ),
+        Error,
+    > {
+        self.find_entries(
+            ctx.clone(),
+            blobstore.clone(),
+            vec![PathOrPrefix::Prefix(None)],
+        )
+    }
+
     fn diff(
         &self,
         ctx: CoreContext,
