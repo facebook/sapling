@@ -10,7 +10,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{bail_err, Error};
 use futures::{future, Future};
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, FutureExt};
 use manifest::Entry;
 use mononoke_types::{hash::Blake2, ChangesetId, FileUnodeId, ManifestUnodeId};
 use rust_thrift::compact_protocol;
@@ -32,13 +32,16 @@ pub(crate) fn create_new_batch(
     }));
 
     f.and_then(move |parent_batches| {
-        match parent_batches.get(0) {
-            None => future::ok(FastlogBatch::new(linknode)),
-            _ => {
-                // TODO(stash): handle other cases as well i.e. linear history and history with
-                // merges
-                unimplemented!()
+        if parent_batches.len() < 2 {
+            match parent_batches.get(0) {
+                Some(parent_batch) => parent_batch
+                    .prepend_single_parent(ctx, blobstore, linknode)
+                    .left_future(),
+                None => future::ok(FastlogBatch::new(linknode)).right_future(),
             }
+        } else {
+            // TODO(stash): handle merges as well
+            unimplemented!()
         }
     })
 }
@@ -108,8 +111,20 @@ impl FastlogBatch {
         }
     }
 
-    // Converts FastlogBatch into a list of (ChangesetId, Vec<FastlogParent>)
-    // TODO(stash): at the moment it doesn't fetch `previous_batches`
+    pub(crate) fn prepend_single_parent(
+        &self,
+        _ctx: CoreContext,
+        _blobstore: Arc<dyn Blobstore>,
+        cs_id: ChangesetId,
+    ) -> impl Future<Item = FastlogBatch, Error = Error> {
+        let mut new_batch = self.clone();
+        // If there's just one parent, then the latest commit in the parent batch is the parent,
+        // and offset to this parent is 1.
+        new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
+        // TODO(stash): handle overflows
+        future::ok(new_batch)
+    }
+
     pub(crate) fn convert_to_list(
         &self,
         _ctx: CoreContext,
@@ -221,7 +236,7 @@ impl FastlogBatchId {
 mod test {
     use super::*;
     use fixtures::linear;
-    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
     use tokio::runtime::Runtime;
 
     #[test]
@@ -235,6 +250,46 @@ mod test {
         assert_eq!(
             vec![(ONES_CSID, vec![])],
             rt.block_on(batch.convert_to_list(ctx, blobstore)).unwrap()
+        );
+    }
+
+    #[test]
+    fn convert_to_list_prepend() {
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo();
+        let mut rt = Runtime::new().unwrap();
+        let batch = FastlogBatch::new(ONES_CSID);
+        let blobstore = Arc::new(repo.get_blobstore());
+
+        assert_eq!(
+            vec![(ONES_CSID, vec![])],
+            rt.block_on(batch.convert_to_list(ctx.clone(), blobstore.clone()))
+                .unwrap()
+        );
+
+        let prepended = rt
+            .block_on(batch.prepend_single_parent(ctx.clone(), blobstore.clone(), TWOS_CSID))
+            .unwrap();
+        assert_eq!(
+            vec![
+                (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
+                (ONES_CSID, vec![])
+            ],
+            rt.block_on(prepended.convert_to_list(ctx.clone(), blobstore.clone()))
+                .unwrap()
+        );
+
+        let prepended = rt
+            .block_on(prepended.prepend_single_parent(ctx.clone(), blobstore.clone(), THREES_CSID))
+            .unwrap();
+        assert_eq!(
+            vec![
+                (THREES_CSID, vec![FastlogParent::Known(TWOS_CSID)]),
+                (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
+                (ONES_CSID, vec![])
+            ],
+            rt.block_on(prepended.convert_to_list(ctx, blobstore))
+                .unwrap()
         );
     }
 }
