@@ -378,14 +378,14 @@ py_class!(class treemanifest |py| {
             parents.iter().map(|x| x.deref()).collect()
         ).map_pyerr::<exc::RuntimeError>(py)?;
         for entry in entries {
-            let (repo_path, node, raw, p1node, p1raw, p2node) = entry;
+            let (repo_path, node, raw, p1node, p2node) = entry;
             let tuple = PyTuple::new(
                 py,
                 &[
                     path_to_pybytes(py, &repo_path).into_object(),
                     node_to_pybytes(py, node).into_object(),
                     PyBytes::new(py, &raw).into_object(),
-                    PyBytes::new(py, &p1raw).into_object(),
+                    PyBytes::new(py, &[]).into_object(),
                     node_to_pybytes(py, p1node).into_object(),
                     node_to_pybytes(py, p2node).into_object(),
                 ],

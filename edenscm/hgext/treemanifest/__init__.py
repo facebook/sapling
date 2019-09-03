@@ -1722,7 +1722,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
         if name in repo:
             allowedtreeroots.add(repo[name].manifestnode())
 
-    userustmanifest = _userustmanifest(mfl)
     includedentries = set()
     with progress.bar(ui, _("priming tree cache"), total=total) as prog:
         for rev in xrange(oldtip, newtip):
@@ -1783,7 +1782,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             )
             mfdatastore = mfl.datastore
             newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
-            for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+            for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
                 if verify:
                     # Verify all children of the tree already exist in the store
                     # somewhere.
@@ -1804,16 +1803,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
                             pdb.set_trace()
 
-                # Only use deltas if the delta base is in this same pack file
-                if np1 != nullid and (nname, np1) in includedentries:
-                    if userustmanifest:
-                        np1text = mfdatastore.get(nname, np1)
-                    delta = mdiff.textdiff(np1text, ntext)
-                    deltabase = np1
-                else:
-                    delta = ntext
-                    deltabase = nullid
-                tempdatapack.add(nname, nnode, deltabase, delta)
+                tempdatapack.add(nname, nnode, nullid, ntext)
                 temphistorypack.add(nname, nnode, np1, np2, linknode, "")
                 includedentries.add((nname, nnode))
 

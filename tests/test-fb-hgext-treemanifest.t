@@ -49,13 +49,13 @@ Test autocreatetrees
   added 1 changesets with 0 changes to 0 files
   new changesets e4d61696a942
   $ ls_l $CACHEDIR/master/packs/manifests
-  -r--r--r--    1154 5477a48a1f99b7c300cca583ac3ab845096424c3.dataidx
-  -r--r--r--     327 5477a48a1f99b7c300cca583ac3ab845096424c3.datapack
+  -r--r--r--    1154 6b4c4e7794e8f08e211ef803a189df5b46a01010.dataidx
+  -r--r--r--     365 6b4c4e7794e8f08e211ef803a189df5b46a01010.datapack
   -r--r--r--    1224 ed1a27864c5d25f144a51961ad6e79088f2a7571.histidx
   -r--r--r--     265 ed1a27864c5d25f144a51961ad6e79088f2a7571.histpack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/5477a48a1f99b7c300cca583ac3ab845096424c3:
+  $TESTTMP/hgcache/master/packs/manifests/6b4c4e7794e8f08e211ef803a189df5b46a01010:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -66,7 +66,7 @@ Test autocreatetrees
   
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
-  70f2c6726cec  bc0c2c938b92  61            (missing)
+  70f2c6726cec  000000000000  92            (missing)
   
 
 Test that commit creates local trees
