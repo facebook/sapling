@@ -47,7 +47,9 @@ mod thrift {
     pub use mononoke_types_thrift::*;
 }
 
-use fastlog_batch::{create_new_batch, fetch_fastlog_batch, save_fastlog_batch};
+use fastlog_batch::{
+    create_new_batch, fetch_fastlog_batch_by_unode_id, save_fastlog_batch_by_unode_id,
+};
 
 /// Returns history for a given unode if it exists.
 /// This is the public API of this crate i.e. what clients should use if they want to
@@ -58,7 +60,7 @@ pub fn prefetch_history(
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> impl Future<Item = Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
     let blobstore = Arc::new(repo.get_blobstore());
-    fetch_fastlog_batch(ctx.clone(), blobstore.clone(), unode_entry).and_then(
+    fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), unode_entry).and_then(
         move |maybe_fastlog_batch| {
             maybe_fastlog_batch.map(|fastlog_batch| fastlog_batch.convert_to_list(ctx, blobstore))
         },
@@ -138,7 +140,12 @@ impl BonsaiDerived for RootFastlog {
                                     .and_then({
                                         cloned!(ctx, blobstore);
                                         move |fastlog_batch| {
-                                            save_fastlog_batch(ctx, blobstore, entry, fastlog_batch)
+                                            save_fastlog_batch_by_unode_id(
+                                                ctx,
+                                                blobstore,
+                                                entry,
+                                                fastlog_batch,
+                                            )
                                         }
                                     })
                             }
@@ -399,7 +406,11 @@ mod tests {
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
         let blobstore = Arc::new(repo.get_blobstore());
         let batch = rt
-            .block_on(fetch_fastlog_batch(ctx.clone(), blobstore.clone(), entry))
+            .block_on(fetch_fastlog_batch_by_unode_id(
+                ctx.clone(),
+                blobstore.clone(),
+                entry,
+            ))
             .unwrap()
             .expect("batch hasn't been generated yet");
 

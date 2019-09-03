@@ -5,14 +5,17 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{thrift, ErrorKind, FastlogParent};
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{bail_err, Error};
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::Entry;
-use mononoke_types::{hash::Blake2, ChangesetId, FileUnodeId, ManifestUnodeId};
+use mononoke_types::{
+    hash::{Blake2, Context},
+    ChangesetId, FileUnodeId, ManifestUnodeId,
+};
 use rust_thrift::compact_protocol;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -26,7 +29,7 @@ pub(crate) fn create_new_batch(
     let f = future::join_all(unode_parents.clone().into_iter().map({
         cloned!(ctx, blobstore);
         move |entry| {
-            fetch_fastlog_batch(ctx.clone(), blobstore.clone(), entry)
+            fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), entry)
                 .and_then(move |maybe_batch| maybe_batch.ok_or(ErrorKind::NotFound(entry).into()))
         }
     }));
@@ -46,7 +49,7 @@ pub(crate) fn create_new_batch(
     })
 }
 
-pub(crate) fn fetch_fastlog_batch(
+pub(crate) fn fetch_fastlog_batch_by_unode_id(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
@@ -68,7 +71,7 @@ pub(crate) fn fetch_fastlog_batch(
         })
 }
 
-pub(crate) fn save_fastlog_batch(
+pub(crate) fn save_fastlog_batch_by_unode_id(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
@@ -208,6 +211,89 @@ impl FastlogBatch {
             latest: latest_thrift,
             previous_batches,
         }
+    }
+}
+
+impl Loadable for FastlogBatchId {
+    type Value = FastlogBatch;
+
+    fn load<B: Blobstore + Clone>(
+        &self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Value, LoadableError> {
+        let blobstore_key = blobstore_fastlog_batch_key(&self);
+
+        blobstore
+            .get(ctx, blobstore_key.clone())
+            .from_err()
+            .and_then(move |bytes| {
+                let bytes = bytes.ok_or_else(|| LoadableError::Missing(blobstore_key.clone()))?;
+
+                let batch: Result<thrift::FastlogBatch, LoadableError> =
+                    compact_protocol::deserialize(&bytes.into_bytes()).map_err(|err| {
+                        let err: Error =
+                            ErrorKind::DeserializationError(blobstore_key, format!("{}", err))
+                                .into();
+                        LoadableError::Error(err)
+                    });
+
+                let batch = batch?;
+                FastlogBatch::from_thrift(batch).map_err(LoadableError::Error)
+            })
+            .boxify()
+    }
+}
+
+impl Storable for FastlogBatch {
+    type Key = FastlogBatchId;
+
+    fn store<B: Blobstore + Clone>(
+        self,
+        ctx: CoreContext,
+        blobstore: &B,
+    ) -> BoxFuture<Self::Key, Error> {
+        let serialized = compact_protocol::serialize(&self.clone().into_thrift());
+        let mut context = FastlogBatchContext::new();
+        context.update(&serialized);
+        let batch_id = context.finish();
+
+        blobstore
+            .put(
+                ctx,
+                blobstore_fastlog_batch_key(&batch_id),
+                BlobstoreBytes::from_bytes(serialized),
+            )
+            .map(move |()| batch_id)
+            .boxify()
+    }
+}
+
+fn blobstore_fastlog_batch_key(id: &FastlogBatchId) -> String {
+    format!("fastlogbatch.{}", id.0)
+}
+
+#[derive(Clone)]
+pub struct FastlogBatchContext(Context);
+
+impl FastlogBatchContext {
+    /// Construct a context.
+    #[inline]
+    pub fn new() -> Self {
+        FastlogBatchContext(Context::new("fastlogbatch".as_bytes()))
+    }
+
+    #[inline]
+    pub fn update<T>(&mut self, data: T)
+    where
+        T: AsRef<[u8]>,
+    {
+        self.0.update(data)
+    }
+
+    #[inline]
+    pub fn finish(self) -> FastlogBatchId {
+        FastlogBatchId(self.0.finish())
     }
 }
 
