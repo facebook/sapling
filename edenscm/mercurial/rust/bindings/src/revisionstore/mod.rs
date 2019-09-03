@@ -3,7 +3,10 @@
 
 #![allow(non_camel_case_types)]
 
-use std::path::PathBuf;
+use std::{
+    fs::read_dir,
+    path::{Path, PathBuf},
+};
 
 use cpython::*;
 use failure::{format_err, Error, Fallible};
@@ -11,9 +14,10 @@ use failure::{format_err, Error, Fallible};
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    Ancestors, DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
-    HistoryStore, IndexedLogDataStore, IndexedLogHistoryStore, LocalStore, Metadata,
-    MutableDataPack, MutableDeltaStore, MutableHistoryPack, MutableHistoryStore,
+    Ancestors, DataPack, DataPackStore, DataPackVersion, DataStore, Delta, HistoryPack,
+    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
+    IndexedLogHistoryStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
+    MutableHistoryPack, MutableHistoryStore,
 };
 use types::{Key, NodeInfo};
 
@@ -42,7 +46,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<datapack>(py)?;
+    m.add_class::<datapackstore>(py)?;
     m.add_class::<historypack>(py)?;
+    m.add_class::<historypackstore>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
     m.add_class::<indexedloghistorystore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
@@ -219,6 +225,92 @@ py_class!(class datapack |py| {
     }
 });
 
+/// Scan the filesystem for files with `extensions`, and compute their size.
+fn compute_store_size<P: AsRef<Path>>(
+    storepath: P,
+    extensions: Vec<&str>,
+) -> Fallible<(usize, usize)> {
+    let dirents = read_dir(storepath)?;
+
+    assert_eq!(extensions.len(), 2);
+
+    let mut count = 0;
+    let mut size = 0;
+
+    for dirent in dirents {
+        let dirent = dirent?;
+        let path = dirent.path();
+
+        if let Some(file_ext) = path.extension() {
+            for extension in &extensions {
+                if extension == &file_ext {
+                    size += dirent.metadata()?.len();
+                    count += 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    // We did count the indexes too, but we do not want them counted.
+    count /= 2;
+
+    Ok((size as usize, count))
+}
+
+py_class!(class datapackstore |py| {
+    data store: Box<DataPackStore>;
+    data path: PathBuf;
+
+    def __new__(_cls, directory: &PyBytes) -> PyResult<datapackstore> {
+        let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = directory.into();
+        datapackstore::create_instance(py, Box::new(DataPackStore::new(&path)), path)
+    }
+
+    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+        self.store(py).get_py(py, name, node)
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        self.store(py).get_meta_py(py, name, node)
+    }
+
+    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        self.store(py).get_delta_py(py, name, node)
+    }
+
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+        self.store(py).get_delta_chain_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
+        // Used in Python repack, for loosefiles, so nothing needs to be done here.
+        Ok(Python::None(py))
+    }
+
+    def markforrefresh(&self) -> PyResult<PyObject> {
+        self.store(py).force_rescan();
+        Ok(Python::None(py))
+    }
+
+    def getmetrics(&self) -> PyResult<PyDict> {
+        let (size, count) = match compute_store_size(self.path(py), vec!["datapack", "dataidx"]) {
+            Ok((size, count)) => (size, count),
+            Err(_) => (0, 0),
+        };
+
+        let res = PyDict::new(py);
+        res.set_item(py, "numpacks", count)?;
+        res.set_item(py, "totalpacksize", size)?;
+        Ok(res)
+    }
+});
+
 py_class!(class historypack |py| {
     data store: PyOptionalRefCell<Box<HistoryPack>>;
 
@@ -288,6 +380,52 @@ py_class!(class historypack |py| {
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py).get_value(py)?;
         store.iter_py(py)
+    }
+});
+
+py_class!(class historypackstore |py| {
+    data store: Box<HistoryPackStore>;
+    data path: PathBuf;
+
+    def __new__(_cls, directory: &PyBytes) -> PyResult<historypackstore> {
+        let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let path = directory.into();
+        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path)), path)
+    }
+
+    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
+        let _known = known;
+        self.store(py).get_ancestors_py(py, name, node)
+    }
+
+    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+        self.store(py).get_node_info_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
+        // Used in Python repack, for loosefiles, so nothing needs to be done here.
+        Ok(Python::None(py))
+    }
+
+    def markforrefresh(&self) -> PyResult<PyObject> {
+        self.store(py).force_rescan();
+        Ok(Python::None(py))
+    }
+
+    def getmetrics(&self) -> PyResult<PyDict> {
+        let (size, count) = match compute_store_size(self.path(py), vec!["histpack", "histidx"]) {
+            Ok((size, count)) => (size, count),
+            Err(_) => (0, 0),
+        };
+
+        let res = PyDict::new(py);
+        res.set_item(py, "numpacks", count)?;
+        res.set_item(py, "totalpacksize", size)?;
+        Ok(res)
     }
 });
 

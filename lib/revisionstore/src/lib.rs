@@ -39,7 +39,7 @@ pub use crate::localstore::LocalStore;
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
-pub use crate::packstore::DataPackStore;
+pub use crate::packstore::{DataPackStore, HistoryPackStore};
 pub use crate::repack::IterableStore;
 pub use crate::uniondatastore::UnionDataStore;
 
