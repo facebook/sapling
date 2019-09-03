@@ -5,6 +5,7 @@ use std::{
     collections::vec_deque::{Iter, IterMut},
     collections::VecDeque,
     fs::read_dir,
+    io::ErrorKind,
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -119,7 +120,19 @@ impl<T: LocalStore> PackStore<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Fallible<()> {
         let mut new_packs = Vec::new();
-        for entry in read_dir(&self.pack_dir)? {
+
+        let readdir = match read_dir(&self.pack_dir) {
+            Ok(readdir) => readdir,
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    return Ok(());
+                } else {
+                    return Err(e.into());
+                }
+            }
+        };
+
+        for entry in readdir {
             let entry = entry?;
             if entry.file_type()?.is_file() {
                 let path = entry.path();
@@ -404,5 +417,15 @@ mod tests {
         assert!(packstore.packs.borrow().stores[0].get_delta(&k1).is_ok());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_rescan_no_dir() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut non_present_tempdir = tempdir.into_path();
+        non_present_tempdir.push("non_present");
+        let store = HistoryPackStore::new(&non_present_tempdir);
+
+        store.rescan()
     }
 }
