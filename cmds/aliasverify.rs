@@ -71,7 +71,7 @@ enum Mode {
 #[derive(Clone)]
 struct AliasVerification {
     logger: Logger,
-    blobrepo: Arc<BlobRepo>,
+    blobrepo: BlobRepo,
     repoid: RepositoryId,
     sqlchangesets: Arc<SqlChangesets>,
     mode: Mode,
@@ -82,7 +82,7 @@ struct AliasVerification {
 impl AliasVerification {
     pub fn new(
         logger: Logger,
-        blobrepo: Arc<BlobRepo>,
+        blobrepo: BlobRepo,
         repoid: RepositoryId,
         sqlchangesets: Arc<SqlChangesets>,
         mode: Mode,
@@ -381,7 +381,6 @@ fn main() -> Result<()> {
     let aliasimport = blobrepo
         .join(sqlchangesets)
         .and_then(move |(blobrepo, sqlchangesets)| {
-            let blobrepo = Arc::new(blobrepo);
             AliasVerification::new(logger, blobrepo, repoid, Arc::new(sqlchangesets), mode)
                 .verify_all(ctx, step, min_cs_db_id)
         });
