@@ -41,14 +41,14 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-mod fastlog_batch;
+mod fastlog_impl;
 mod thrift {
-    pub use fastlog_thrift::*;
     pub use mononoke_types_thrift::*;
 }
 
-use fastlog_batch::{
-    create_new_batch, fetch_fastlog_batch_by_unode_id, save_fastlog_batch_by_unode_id,
+use fastlog_impl::{
+    create_new_batch, fetch_fastlog_batch_by_unode_id, fetch_flattened,
+    save_fastlog_batch_by_unode_id,
 };
 
 /// Returns history for a given unode if it exists.
@@ -62,7 +62,7 @@ pub fn prefetch_history(
     let blobstore = Arc::new(repo.get_blobstore());
     fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), unode_entry).and_then(
         move |maybe_fastlog_batch| {
-            maybe_fastlog_batch.map(|fastlog_batch| fastlog_batch.fetch_flattened(ctx, blobstore))
+            maybe_fastlog_batch.map(|fastlog_batch| fetch_flattened(&fastlog_batch, ctx, blobstore))
         },
     )
 }
@@ -534,7 +534,8 @@ mod tests {
         );
         assert!(batch.latest().len() <= 10);
         assert!(batch.previous_batches().len() <= 5);
-        rt.block_on(batch.fetch_flattened(ctx, blobstore)).unwrap()
+        rt.block_on(fetch_flattened(&batch, ctx, blobstore))
+            .unwrap()
     }
 
     fn find_unode_history(

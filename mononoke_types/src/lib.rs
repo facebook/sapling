@@ -15,6 +15,7 @@ pub mod content_chunk;
 pub mod content_metadata;
 pub mod datetime;
 pub mod errors;
+pub mod fastlog_batch;
 pub mod file_change;
 pub mod file_contents;
 pub mod generation;
@@ -39,8 +40,8 @@ pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, RepoPath, R
 pub use rawbundle2::RawBundle2;
 pub use repo::RepositoryId;
 pub use typed_hash::{
-    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId,
-    MononokeId, RawBundle2Id,
+    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FastlogBatchId, FileUnodeId,
+    ManifestUnodeId, MononokeId, RawBundle2Id,
 };
 
 mod macros;

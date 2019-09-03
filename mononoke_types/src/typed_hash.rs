@@ -25,6 +25,7 @@ use crate::{
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
     errors::*,
+    fastlog_batch::FastlogBatch,
     file_contents::FileContents,
     hash::{Blake2, Context},
     rawbundle2::RawBundle2,
@@ -85,6 +86,9 @@ pub struct FileUnodeId(Blake2);
 /// An identifier for a file unode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct ManifestUnodeId(Blake2);
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct FastlogBatchId(Blake2);
 
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash_no_context {
@@ -354,6 +358,13 @@ impl_typed_hash_loadable_storable! {
     hash_type => ContentMetadataId,
 }
 
+impl_typed_hash! {
+    hash_type => FastlogBatchId,
+    value_type => FastlogBatch,
+    context_type => FastlogBatchIdContext,
+    context_key => "fastlogbatch",
+}
+
 impl ContentMetadataId {
     const PREFIX: &'static str = "content_metadata.blake2";
 }
@@ -426,5 +437,8 @@ mod test {
             id.blobstore_key(),
             format!("content_metadata.blake2.{}", id)
         );
+
+        let id = FastlogBatchId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("fastlogbatch.blake2.{}", id));
     }
 }

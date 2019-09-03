@@ -12,8 +12,8 @@ use bytes::Bytes;
 use crate::{
     errors::*,
     typed_hash::{
-        ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FileUnodeId, ManifestUnodeId,
-        RawBundle2Id,
+        ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FastlogBatchId, FileUnodeId,
+        ManifestUnodeId, RawBundle2Id,
     },
 };
 
@@ -49,6 +49,7 @@ pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
 pub type ContentMetadataBlob = Blob<ContentMetadataId>;
+pub type FastlogBatchBlob = Blob<FastlogBatchId>;
 
 impl<Id> From<Blob<Id>> for BlobstoreBytes {
     #[inline]
