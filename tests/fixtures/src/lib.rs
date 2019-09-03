@@ -23,7 +23,7 @@ use mononoke_types::{
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-fn store_files(
+pub fn store_files(
     ctx: CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: BlobRepo,
@@ -1515,6 +1515,24 @@ pub fn create_bonsai_changeset_with_author(
         message: "message".to_string(),
         extra: btreemap! {},
         file_changes: btreemap! {},
+    }
+    .freeze()
+    .unwrap()
+}
+
+pub fn create_bonsai_changeset_with_files(
+    parents: Vec<ChangesetId>,
+    file_changes: BTreeMap<MPath, Option<FileChange>>,
+) -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        parents,
+        author: "author".to_string(),
+        author_date: DateTime::from_timestamp(0, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "message".to_string(),
+        extra: btreemap! {},
+        file_changes,
     }
     .freeze()
     .unwrap()

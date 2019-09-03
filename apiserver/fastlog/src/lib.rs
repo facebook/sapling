@@ -62,7 +62,7 @@ pub fn prefetch_history(
     let blobstore = Arc::new(repo.get_blobstore());
     fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), unode_entry).and_then(
         move |maybe_fastlog_batch| {
-            maybe_fastlog_batch.map(|fastlog_batch| fastlog_batch.convert_to_list(ctx, blobstore))
+            maybe_fastlog_batch.map(|fastlog_batch| fastlog_batch.fetch_flattened(ctx, blobstore))
         },
     )
 }
@@ -248,12 +248,18 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use benchmark_lib::{GenManifest, GenSettings};
     use blobrepo::save_bonsai_changesets;
     use context::CoreContext;
-    use fixtures::{create_bonsai_changeset, linear};
+    use fixtures::{
+        create_bonsai_changeset, create_bonsai_changeset_with_files, linear, store_files,
+    };
+    use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{MPath, ManifestUnodeId};
     use pretty_assertions::assert_eq;
+    use rand::SeedableRng;
+    use rand_xorshift::XorShiftRng;
     use std::collections::{HashSet, VecDeque};
     use std::str::FromStr;
     use tokio::runtime::Runtime;
@@ -362,6 +368,84 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_derive_overflow() {
+        let mut rt = Runtime::new().unwrap();
+        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock();
+
+        let mut bonsais = vec![];
+        let mut parents = vec![];
+        for i in 1..60 {
+            let filename = String::from("1");
+            let content = format!("{}", i);
+            let stored_files = store_files(
+                ctx.clone(),
+                btreemap! { filename.as_str() => Some(content.as_str()) },
+                repo.clone(),
+            );
+
+            let bcs = create_bonsai_changeset_with_files(parents, stored_files);
+            let bcs_id = bcs.get_changeset_id();
+            bonsais.push(bcs);
+            parents = vec![bcs_id];
+        }
+
+        let latest = parents.get(0).unwrap();
+        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+            .unwrap();
+
+        verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
+    }
+
+    #[test]
+    fn test_random_repo() {
+        let mut rt = Runtime::new().unwrap();
+        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock();
+
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let gen_settings = GenSettings::default();
+        let mut changes_count = vec![];
+        changes_count.resize(100, 100);
+        let latest = rt
+            .block_on(GenManifest::new().gen_stack(
+                ctx.clone(),
+                repo.clone(),
+                &mut rng,
+                &gen_settings,
+                None,
+                changes_count,
+            ))
+            .unwrap();
+
+        verify_all_entries_for_commit(&mut rt, ctx, repo, latest);
+    }
+
+    fn verify_all_entries_for_commit(
+        rt: &mut Runtime,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        bcs_id: ChangesetId,
+    ) {
+        let root_unode_mf_id =
+            derive_fastlog_batch_and_unode(rt, ctx.clone(), bcs_id.clone(), repo.clone());
+
+        let blobstore = Arc::new(repo.get_blobstore());
+        let entries = rt
+            .block_on(
+                root_unode_mf_id
+                    .list_all_entries(ctx.clone(), blobstore.clone())
+                    .collect(),
+            )
+            .unwrap();
+
+        for (path, entry) in entries {
+            println!("verifying: path: {:?} unode: {:?}", path, entry);
+            verify_list(rt, ctx.clone(), repo.clone(), entry);
+        }
+    }
+
     fn derive_fastlog_batch_and_unode(
         rt: &mut Runtime,
         ctx: CoreContext,
@@ -414,7 +498,15 @@ mod tests {
             .unwrap()
             .expect("batch hasn't been generated yet");
 
-        rt.block_on(batch.convert_to_list(ctx, blobstore)).unwrap()
+        println!(
+            "batch for {:?}: latest size: {}, previous batches size: {}",
+            entry,
+            batch.latest().len(),
+            batch.previous_batches().len(),
+        );
+        assert!(batch.latest().len() <= 10);
+        assert!(batch.previous_batches().len() <= 5);
+        rt.block_on(batch.fetch_flattened(ctx, blobstore)).unwrap()
     }
 
     fn find_unode_history(
@@ -441,6 +533,9 @@ mod tests {
                 .block_on(unode_entry.get_linknode(ctx.clone(), repo.clone()))
                 .unwrap();
             history.push(linknode);
+            if history.len() >= 60 {
+                break;
+            }
             let parents = runtime
                 .block_on(unode_entry.get_parents(ctx.clone(), repo.clone()))
                 .unwrap();

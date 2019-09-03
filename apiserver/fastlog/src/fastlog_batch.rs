@@ -38,9 +38,13 @@ pub(crate) fn create_new_batch(
         if parent_batches.len() < 2 {
             match parent_batches.get(0) {
                 Some(parent_batch) => parent_batch
-                    .prepend_single_parent(ctx, blobstore, linknode)
+                    .prepend_child_with_single_parent(ctx, blobstore, linknode)
                     .left_future(),
-                None => future::ok(FastlogBatch::new(linknode)).right_future(),
+                None => {
+                    let mut d = VecDeque::new();
+                    d.push_back((linknode, vec![]));
+                    future::ok(FastlogBatch::new(d)).right_future()
+                }
             }
         } else {
             // TODO(stash): handle merges as well
@@ -95,8 +99,11 @@ fn generate_fastlog_batch_key(unode_entry: Entry<ManifestUnodeId, FileUnodeId>) 
     format!("fastlogbatch.{}", key_part)
 }
 
+const MAX_LATEST_LEN: usize = 10;
+const MAX_BATCHES: usize = 5;
+
 #[derive(Clone)]
-struct ParentOffset(i32);
+pub(crate) struct ParentOffset(i32);
 
 #[derive(Clone)]
 pub struct FastlogBatch {
@@ -105,55 +112,102 @@ pub struct FastlogBatch {
 }
 
 impl FastlogBatch {
-    pub(crate) fn new(cs_id: ChangesetId) -> Self {
-        let mut latest = VecDeque::new();
-        latest.push_front((cs_id, vec![]));
-        FastlogBatch {
+    fn new(latest: VecDeque<(ChangesetId, Vec<ParentOffset>)>) -> Self {
+        Self {
             latest,
             previous_batches: VecDeque::new(),
         }
     }
 
-    pub(crate) fn prepend_single_parent(
+    // Prepending a child with a single parent is a special case - we only need to prepend one entry
+    // with ParentOffset(1).
+    pub(crate) fn prepend_child_with_single_parent(
         &self,
-        _ctx: CoreContext,
-        _blobstore: Arc<dyn Blobstore>,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
         cs_id: ChangesetId,
     ) -> impl Future<Item = FastlogBatch, Error = Error> {
+        let new_entry = (cs_id, vec![ParentOffset(1)]);
+
         let mut new_batch = self.clone();
-        // If there's just one parent, then the latest commit in the parent batch is the parent,
-        // and offset to this parent is 1.
-        new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
-        // TODO(stash): handle overflows
-        future::ok(new_batch)
+        if new_batch.latest.len() >= MAX_LATEST_LEN {
+            let previous_latest = std::mem::replace(&mut new_batch.latest, VecDeque::new());
+            let new_previous_batch = FastlogBatch::new(previous_latest);
+            new_previous_batch
+                .store(ctx.clone(), &blobstore)
+                .map(move |new_batch_id| {
+                    if new_batch.previous_batches.len() >= MAX_BATCHES {
+                        new_batch.previous_batches.pop_back();
+                    }
+                    new_batch.latest.push_front(new_entry);
+                    new_batch.previous_batches.push_front(new_batch_id);
+                    new_batch
+                })
+                .left_future()
+        } else {
+            new_batch.latest.push_front(new_entry);
+            future::ok(new_batch).right_future()
+        }
     }
 
-    pub(crate) fn convert_to_list(
+    pub(crate) fn fetch_flattened(
         &self,
-        _ctx: CoreContext,
-        _blobstore: Arc<dyn Blobstore>,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
     ) -> impl Future<Item = Vec<(ChangesetId, Vec<FastlogParent>)>, Error = Error> {
-        let mut res = vec![];
-        for (index, (cs_id, parent_offsets)) in self.latest.iter().enumerate() {
-            let mut batch_parents = vec![];
-            for offset in parent_offsets {
-                let parent_index = index + offset.0 as usize;
-                let batch_parent = match self.latest.get(parent_index) {
-                    Some((p_cs_id, _)) => FastlogParent::Known(*p_cs_id),
-                    None => FastlogParent::Unknown,
-                };
-                batch_parents.push(batch_parent);
+        self.fetch_raw_list(ctx, blobstore).map(|full_batch| {
+            let mut res = vec![];
+            for (index, (cs_id, parent_offsets)) in full_batch.iter().enumerate() {
+                let mut batch_parents = vec![];
+                for offset in parent_offsets {
+                    let parent_index = index + offset.0 as usize;
+                    let batch_parent = match full_batch.get(parent_index) {
+                        Some((p_cs_id, _)) => FastlogParent::Known(*p_cs_id),
+                        None => FastlogParent::Unknown,
+                    };
+                    batch_parents.push(batch_parent);
+                }
+
+                res.push((*cs_id, batch_parents));
             }
 
-            res.push((*cs_id, batch_parents));
+            res
+        })
+    }
+
+    fn fetch_raw_list(
+        &self,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+    ) -> BoxFuture<Vec<(ChangesetId, Vec<ParentOffset>)>, Error> {
+        let mut v = vec![];
+        for p in self.previous_batches.iter() {
+            v.push(p.load(ctx.clone(), &blobstore).from_err().and_then({
+                cloned!(ctx, blobstore);
+                move |full_batch| full_batch.fetch_raw_list(ctx, blobstore)
+            }));
         }
 
-        if !self.previous_batches.is_empty() {
-            // TODO(stash): handle previous_batches correctly
-            unimplemented!()
-        }
+        let mut res = vec![];
+        res.extend(self.latest.clone());
+        future::join_all(v)
+            .map(move |previous_batches| {
+                for p in previous_batches {
+                    res.extend(p);
+                }
+                res
+            })
+            .boxify()
+    }
 
-        future::ok(res)
+    #[cfg(test)]
+    pub(crate) fn latest(&self) -> &VecDeque<(ChangesetId, Vec<ParentOffset>)> {
+        &self.latest
+    }
+
+    #[cfg(test)]
+    pub(crate) fn previous_batches(&self) -> &VecDeque<FastlogBatchId> {
+        &self.previous_batches
     }
 
     fn from_thrift(th: thrift::FastlogBatch) -> Result<FastlogBatch, Error> {
@@ -326,47 +380,59 @@ mod test {
     use tokio::runtime::Runtime;
 
     #[test]
-    fn convert_to_list_simple() {
+    fn fetch_flattened_simple() {
         let ctx = CoreContext::test_mock();
         let repo = linear::getrepo();
         let mut rt = Runtime::new().unwrap();
-        let batch = FastlogBatch::new(ONES_CSID);
+        let mut d = VecDeque::new();
+        d.push_back((ONES_CSID, vec![]));
+        let batch = FastlogBatch::new(d);
         let blobstore = Arc::new(repo.get_blobstore());
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
-            rt.block_on(batch.convert_to_list(ctx, blobstore)).unwrap()
+            rt.block_on(batch.fetch_flattened(ctx, blobstore)).unwrap()
         );
     }
 
     #[test]
-    fn convert_to_list_prepend() {
+    fn fetch_flattened_prepend() {
         let ctx = CoreContext::test_mock();
         let repo = linear::getrepo();
         let mut rt = Runtime::new().unwrap();
-        let batch = FastlogBatch::new(ONES_CSID);
+        let mut d = VecDeque::new();
+        d.push_back((ONES_CSID, vec![]));
+        let batch = FastlogBatch::new(d);
         let blobstore = Arc::new(repo.get_blobstore());
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
-            rt.block_on(batch.convert_to_list(ctx.clone(), blobstore.clone()))
+            rt.block_on(batch.fetch_flattened(ctx.clone(), blobstore.clone()))
                 .unwrap()
         );
 
         let prepended = rt
-            .block_on(batch.prepend_single_parent(ctx.clone(), blobstore.clone(), TWOS_CSID))
+            .block_on(batch.prepend_child_with_single_parent(
+                ctx.clone(),
+                blobstore.clone(),
+                TWOS_CSID,
+            ))
             .unwrap();
         assert_eq!(
             vec![
                 (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
                 (ONES_CSID, vec![])
             ],
-            rt.block_on(prepended.convert_to_list(ctx.clone(), blobstore.clone()))
+            rt.block_on(prepended.fetch_flattened(ctx.clone(), blobstore.clone()))
                 .unwrap()
         );
 
         let prepended = rt
-            .block_on(prepended.prepend_single_parent(ctx.clone(), blobstore.clone(), THREES_CSID))
+            .block_on(prepended.prepend_child_with_single_parent(
+                ctx.clone(),
+                blobstore.clone(),
+                THREES_CSID,
+            ))
             .unwrap();
         assert_eq!(
             vec![
@@ -374,7 +440,7 @@ mod test {
                 (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
                 (ONES_CSID, vec![])
             ],
-            rt.block_on(prepended.convert_to_list(ctx, blobstore))
+            rt.block_on(prepended.fetch_flattened(ctx, blobstore))
                 .unwrap()
         );
     }
