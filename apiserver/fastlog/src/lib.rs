@@ -117,15 +117,21 @@ impl BonsaiDerived for RootFastlog {
 
                 if parents.len() < 2 {
                     let s = match parents.get(0) {
-                        Some(parent) => (*parent)
-                            .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
-                            .filter_map(|diff_entry| match diff_entry {
-                                Diff::Added(_, entry) => Some(entry),
-                                Diff::Removed(..) => None,
-                                Diff::Changed(_, _, entry) => Some(entry),
-                            })
-                            .chain(stream::once(Ok(Entry::Tree(unode_mf_id))))
-                            .boxify(),
+                        Some(parent) => {
+                            if parent != &unode_mf_id {
+                                (*parent)
+                                    .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
+                                    .filter_map(|diff_entry| match diff_entry {
+                                        Diff::Added(_, entry) => Some(entry),
+                                        Diff::Removed(..) => None,
+                                        Diff::Changed(_, _, entry) => Some(entry),
+                                    })
+                                    .chain(stream::once(Ok(Entry::Tree(unode_mf_id))))
+                                    .boxify()
+                            } else {
+                                stream::empty().boxify()
+                            }
+                        }
                         None => unode_mf_id
                             .list_all_entries(ctx.clone(), blobstore.clone())
                             .map(|(_, entry)| entry)
@@ -420,6 +426,28 @@ mod tests {
             .unwrap();
 
         verify_all_entries_for_commit(&mut rt, ctx, repo, latest);
+    }
+
+    #[test]
+    fn test_derive_empty_commits() {
+        let mut rt = Runtime::new().unwrap();
+        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock();
+
+        let mut bonsais = vec![];
+        let mut parents = vec![];
+        for _ in 1..60 {
+            let bcs = create_bonsai_changeset(parents);
+            let bcs_id = bcs.get_changeset_id();
+            bonsais.push(bcs);
+            parents = vec![bcs_id];
+        }
+
+        let latest = parents.get(0).unwrap();
+        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+            .unwrap();
+
+        verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
     }
 
     fn verify_all_entries_for_commit(
