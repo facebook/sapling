@@ -2,12 +2,14 @@
 
 use std::{
     cell::RefCell,
+    collections::vec_deque::{Iter, IterMut},
+    collections::VecDeque,
     fs::read_dir,
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
-use failure::Fallible;
+use failure::{format_err, Fallible};
 
 use types::{Key, NodeInfo};
 
@@ -17,7 +19,63 @@ use crate::error::KeyError;
 use crate::historypack::HistoryPack;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::localstore::LocalStore;
-use crate::unionstore::UnionStore;
+
+/// Naive implementation of a store that order its underlying stores based on how recently we found
+/// data in them. This helps in reducing the number of stores that are iterated on.
+///
+/// The implementation uses a `VecDeque` and always moves the last used store to the front.
+///
+/// Open source crates were considered, but none support both having an unbounded size, and being
+/// able to move one element to the front.
+struct LruStore<T> {
+    stores: VecDeque<T>,
+}
+
+impl<T> LruStore<T> {
+    fn new() -> Self {
+        Self {
+            stores: VecDeque::new(),
+        }
+    }
+
+    /// Move the store at `index` at the front.
+    ///
+    /// From a complexity standpoint, the complexity is at worst O(N). In practice, we're expecting
+    /// the most recent stores to be near the beginning, which would reduce the observed cost of
+    /// this. A more efficient datastructure should allow for a lower complexity.
+    fn update(&mut self, index: usize) {
+        if let Some(store) = self.stores.remove(index) {
+            self.stores.push_front(store);
+        }
+    }
+
+    /// Iterates over all the element, the most recently used items will be returned first.
+    fn iter(&self) -> Iter<T> {
+        self.stores.iter()
+    }
+
+    /// Iterates over all the element, the most recently used items will be returned first.
+    fn iter_mut(&mut self) -> IterMut<T> {
+        self.stores.iter_mut()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a LruStore<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T> From<Vec<T>> for LruStore<T> {
+    fn from(other: Vec<T>) -> Self {
+        Self {
+            stores: other.into(),
+        }
+    }
+}
 
 /// A `PackStore` automatically keeps track of packfiles in a given directory. New on-disk
 /// packfiles will be periodically scanned and opened accordingly.
@@ -25,7 +83,7 @@ pub struct PackStore<T> {
     pack_dir: PathBuf,
     scan_frequency: Duration,
     last_scanned: RefCell<Instant>,
-    packs: RefCell<UnionStore<T>>,
+    packs: RefCell<LruStore<T>>,
 }
 
 pub type DataPackStore = PackStore<DataPack>;
@@ -45,7 +103,7 @@ impl<T> PackStore<T> {
             pack_dir: PathBuf::from(pack_dir.as_ref()),
             scan_frequency,
             last_scanned: RefCell::new(force_rescan),
-            packs: RefCell::new(UnionStore::new()),
+            packs: RefCell::new(LruStore::new()),
         }
     }
 
@@ -60,7 +118,7 @@ impl<T> PackStore<T> {
 impl<T: LocalStore> PackStore<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Fallible<()> {
-        let mut new_packs = UnionStore::new();
+        let mut new_packs = Vec::new();
         for entry in read_dir(&self.pack_dir)? {
             let entry = entry?;
             if entry.file_type()?.is_file() {
@@ -71,7 +129,7 @@ impl<T: LocalStore> PackStore<T> {
                     if let Some(ext) = ext.to_str() {
                         if ext.ends_with("pack") {
                             if let Ok(pack) = T::from_path(&path) {
-                                new_packs.add(pack);
+                                new_packs.push(pack);
                             }
                         }
                     }
@@ -79,70 +137,96 @@ impl<T: LocalStore> PackStore<T> {
             }
         }
 
-        self.packs.replace(new_packs);
+        self.packs.replace(new_packs.into());
         Ok(())
     }
 
     /// Execute the `op` function. May call `rescan` when `op` fails with `KeyError`.
-    fn run<R, F>(&self, op: F) -> Fallible<R>
+    fn run<R, F>(&self, op: F, key: &Key) -> Fallible<R>
     where
-        F: Fn(&UnionStore<T>) -> Fallible<R>,
+        F: Fn(&T) -> Fallible<R>,
     {
-        let res = op(&*self.packs.try_borrow()?);
-        match res {
-            Ok(ret) => Ok(ret),
-            Err(e) => {
-                let now = Instant::now();
-
-                // When a store doesn't contain the asked data, it returns Err(KeyError). Ideally,
-                // the store interface should return a Fallible<Option<T>> and Ok(None) would
-                // indicate that the data asked isn't present. Until we make this change, we have
-                // to resort to using an ugly downcast :(
-                if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency
-                    && e.downcast_ref::<KeyError>().is_some()
-                {
-                    self.rescan()?;
-                    self.last_scanned.replace(now);
-                    op(&*self.packs.try_borrow()?)
-                } else {
-                    Err(e)
+        for _ in 0..2 {
+            let mut found = None;
+            {
+                let mut lrustore = self.packs.try_borrow_mut()?;
+                for (index, store) in lrustore.iter_mut().enumerate() {
+                    match op(store) {
+                        Ok(result) => {
+                            found = Some((index, result));
+                            break;
+                        }
+                        Err(e) => {
+                            // When a store doesn't contain the asked data, it returns
+                            // Err(KeyError). Ideally, the store interface should return a
+                            // Fallible<Option<T>> and Ok(None) would indicate that the data asked
+                            // isn't present. Until we make this change, we have to resort to using
+                            // an ugly downcast :(
+                            if e.downcast_ref::<KeyError>().is_none() {
+                                return Err(e);
+                            }
+                        }
+                    }
                 }
             }
+
+            if let Some((index, result)) = found {
+                self.packs.borrow_mut().update(index);
+                return Ok(result);
+            }
+
+            let now = Instant::now();
+
+            if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency {
+                self.rescan()?;
+                self.last_scanned.replace(now);
+            } else {
+                break;
+            }
         }
+
+        Err(KeyError::new(format_err!("Key {:?} not found in PackStore", key)).into())
     }
 }
 
 impl<T: LocalStore> LocalStore for PackStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        self.packs.try_borrow()?.get_missing(keys)
+        let initial_keys = Ok(keys.iter().cloned().collect());
+        self.packs
+            .try_borrow()?
+            .into_iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => store.get_missing(&missing_keys),
+                Err(e) => Err(e),
+            })
     }
 }
 
 impl DataStore for DataPackStore {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
-        self.run(|store| store.get(key))
+        self.run(|store| store.get(key), key)
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        self.run(|store| store.get_delta(key))
+        self.run(|store| store.get_delta(key), key)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        self.run(|store| store.get_delta_chain(key))
+        self.run(|store| store.get_delta_chain(key), key)
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        self.run(|store| store.get_meta(key))
+        self.run(|store| store.get_meta(key), key)
     }
 }
 
 impl HistoryStore for HistoryPackStore {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
-        self.run(|store| store.get_ancestors(key))
+        self.run(|store| store.get_ancestors(key), key)
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        self.run(|store| store.get_node_info(key))
+        self.run(|store| store.get_node_info(key), key)
     }
 }
 
@@ -281,6 +365,43 @@ mod tests {
             let response: NodeInfo = store.get_node_info(key)?;
             assert_eq!(response, *info);
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lrustore_order() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+
+        let k1 = key("a", "2");
+        let revision1 = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: Some(key("a", "1")),
+                key: k1.clone(),
+            },
+            Default::default(),
+        );
+        make_datapack(&tempdir, &vec![revision1.clone()]);
+
+        let k2 = key("b", "3");
+        let revision2 = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: Some(key("a", "1")),
+                key: k2.clone(),
+            },
+            Default::default(),
+        );
+        make_datapack(&tempdir, &vec![revision2.clone()]);
+
+        let packstore = DataPackStore::new(&tempdir);
+
+        let _ = packstore.get_delta(&k2)?;
+        assert!(packstore.packs.borrow().stores[0].get_delta(&k2).is_ok());
+
+        let _ = packstore.get_delta(&k1)?;
+        assert!(packstore.packs.borrow().stores[0].get_delta(&k1).is_ok());
 
         Ok(())
     }
