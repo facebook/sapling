@@ -18,7 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use futures::future::{ok, result};
-use futures::{failed, Future};
+use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hlua::{
     function0, function1, function2, AnyLuaString, AnyLuaValue, Lua, LuaError,
@@ -196,7 +196,7 @@ impl Hook<HookChangeset> for LuaHook {
             .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
-            return failed(e).boxify();
+            return future::err(e).boxify();
         }
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
@@ -205,7 +205,7 @@ impl Hook<HookChangeset> for LuaHook {
             .map_err(|_| panic!("No g__hook_start"));
         let builder = match res {
             Ok(builder) => builder,
-            Err(e) => return failed(e).boxify(),
+            Err(e) => return future::err(e).boxify(),
         };
 
         let mut files = vec![];
@@ -310,7 +310,7 @@ impl Hook<HookFile> for LuaHook {
             .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
-            return failed(e).boxify();
+            return future::err(e).boxify();
         }
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
@@ -319,7 +319,7 @@ impl Hook<HookFile> for LuaHook {
             .map_err(|_| panic!("No g__hook_start"));
         let builder = match res {
             Ok(builder) => builder,
-            Err(e) => return failed(e).boxify(),
+            Err(e) => return future::err(e).boxify(),
         };
         let ty = match context.data.ty {
             ChangedFileType::Added => "added".to_string(),

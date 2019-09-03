@@ -12,7 +12,7 @@
 use super::{Hook, HookChangeset, HookContext, HookExecution};
 use context::CoreContext;
 use failure::Error;
-use futures::finished;
+use futures::future::ok;
 use futures_ext::{BoxFuture, FutureExt};
 
 pub struct RustHook {
@@ -25,6 +25,6 @@ impl Hook<HookChangeset> for RustHook {
         _ctx: CoreContext,
         _context: HookContext<HookChangeset>,
     ) -> BoxFuture<HookExecution, Error> {
-        finished(HookExecution::Accepted).boxify()
+        ok(HookExecution::Accepted).boxify()
     }
 }

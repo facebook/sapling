@@ -10,7 +10,7 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use failure_ext::Error;
 use fixtures::many_files_dirs;
-use futures::future::finished;
+use futures::future::ok;
 use futures::Future;
 use futures::{stream, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -54,7 +54,7 @@ impl Hook<HookChangeset> for FnChangesetHook {
         _ctx: CoreContext,
         context: HookContext<HookChangeset>,
     ) -> BoxFuture<HookExecution, Error> {
-        finished((self.f)(context)).boxify()
+        ok((self.f)(context)).boxify()
     }
 }
 
@@ -80,7 +80,7 @@ impl Hook<HookChangeset> for ContextMatchingChangesetHook {
         context: HookContext<HookChangeset>,
     ) -> BoxFuture<HookExecution, Error> {
         assert_eq!(self.expected_context, context);
-        Box::new(finished(HookExecution::Accepted))
+        Box::new(ok(HookExecution::Accepted))
     }
 }
 
@@ -105,7 +105,7 @@ impl Hook<HookChangeset> for ContainsStringMatchingChangesetHook {
         for file in context.data.files {
             let fut = match self.expected_content.get(&file.path) {
                 Some(content) => file.contains_string(ctx.clone(), &content),
-                None => Box::new(finished(false)),
+                None => Box::new(ok(false)),
             };
             futs.push(fut);
         }
@@ -152,7 +152,7 @@ impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
                         })
                         .boxify()
                 }
-                None => Box::new(finished(false)),
+                None => Box::new(ok(false)),
             };
             futs.push(fut);
         }
@@ -196,7 +196,7 @@ impl Hook<HookChangeset> for LengthMatchingChangesetHook {
                         .map(move |length| length == expected_length)
                         .boxify()
                 }
-                None => Box::new(finished(false)),
+                None => Box::new(ok(false)),
             };
             futs.push(fut);
         }
@@ -275,7 +275,7 @@ impl Hook<HookFile> for FnFileHook {
         _ctx: CoreContext,
         context: HookContext<HookFile>,
     ) -> BoxFuture<HookExecution, Error> {
-        finished((self.f)(context)).boxify()
+        ok((self.f)(context)).boxify()
     }
 }
 
@@ -300,7 +300,7 @@ impl Hook<HookFile> for PathMatchingFileHook {
         _ctx: CoreContext,
         context: HookContext<HookFile>,
     ) -> BoxFuture<HookExecution, Error> {
-        finished(if self.paths.contains(&context.data.path) {
+        ok(if self.paths.contains(&context.data.path) {
             HookExecution::Accepted
         } else {
             default_rejection()

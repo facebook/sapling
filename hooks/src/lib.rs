@@ -28,7 +28,7 @@ use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
 use failure_ext::{err_msg, Error, FutureFailureErrorExt};
-use futures::{finished, future, Future, IntoFuture};
+use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::{
     blobs::HgBlobChangeset, manifest_utils::EntryStatus, Changeset, HgChangesetId, HgFileNodeId,
@@ -196,7 +196,7 @@ impl HookManager {
             .collect();
 
         if hooks.is_empty() {
-            finished(Vec::new()).boxify()
+            future::ok(Vec::new()).boxify()
         } else {
             self.run_changeset_hooks_for_changeset_id(
                 ctx,
@@ -316,7 +316,7 @@ impl HookManager {
         };
 
         if hooks.is_empty() {
-            finished(Vec::new()).boxify()
+            future::ok(Vec::new()).boxify()
         } else {
             self.run_file_hooks_for_changeset_id(
                 ctx.clone(),
