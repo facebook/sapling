@@ -75,11 +75,11 @@ enum class CounterName {
   /**
    * Represents count of loaded inodes in the current mount.
    */
-  LOADED,
+  INODEMAP_LOADED,
   /**
    * Represents count of unloaded inodes in the current mount.
    */
-  UNLOADED,
+  INODEMAP_UNLOADED,
   /**
    * Represents the amount of memory used by deltas in the change log
    */

@@ -145,7 +145,7 @@ class InodeMap {
    * reference count is non-zero.  The inode number refcount is incremented by
    * calling incFuseRefcount() on the Inode object.  The initial access that
    * first creates an Inode is always by name.  After the initial access,
-   * incFuseRefcount() can be called to allow it to be retreived by inode
+   * incFuseRefcount() can be called to allow it to be retrieved by inode
    * number later.  InodeMap::decFuseRefcount() can be used to drop an inode
    * number reference count.
    *

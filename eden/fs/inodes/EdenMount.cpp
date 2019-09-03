@@ -906,22 +906,24 @@ SharedRenameLock EdenMount::acquireSharedRenameLock() {
 }
 
 std::string EdenMount::getCounterName(CounterName name) {
-  const auto base = basename(getPath().stringPiece()).str();
+  const auto& mountPath = getPath();
+  const auto base = basename(mountPath.stringPiece());
   switch (name) {
-    case CounterName::LOADED:
-      return base + ".loaded";
-    case CounterName::UNLOADED:
-      return base + ".unloaded";
+    case CounterName::INODEMAP_LOADED:
+      return folly::to<std::string>("inodemap.", base, ".loaded");
+    case CounterName::INODEMAP_UNLOADED:
+      return folly::to<std::string>("inodemap.", base, ".unloaded");
     case CounterName::JOURNAL_MEMORY:
-      return "journal." + base + ".memory";
+      return folly::to<std::string>("journal.", base, ".memory");
     case CounterName::JOURNAL_ENTRIES:
-      return "journal." + base + ".count";
+      return folly::to<std::string>("journal.", base, ".count");
     case CounterName::JOURNAL_DURATION:
-      return "journal." + base + ".duration_secs";
+      return folly::to<std::string>("journal.", base, ".duration_secs");
     case CounterName::JOURNAL_MAX_FILES_ACCUMULATED:
-      return "journal." + base + ".files_accumulated.max";
+      return folly::to<std::string>("journal.", base, ".files_accumulated.max");
   }
-  EDEN_BUG() << "unknown counter name " << static_cast<int>(name);
+  EDEN_BUG() << "unknown counter name "
+             << static_cast<std::underlying_type_t<CounterName>>(name);
   folly::assume_unreachable();
 }
 

@@ -138,7 +138,6 @@ using std::unique_ptr;
 using namespace std::chrono_literals;
 
 namespace {
-using namespace facebook::eden;
 
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
@@ -804,15 +803,11 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 #ifndef _WIN32
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-  // Register callback for getting Loaded inodes in the memory
-  // for a mountPoint.
   counters->registerCallback(
-      edenMount->getCounterName(CounterName::LOADED),
+      edenMount->getCounterName(CounterName::INODEMAP_LOADED),
       [edenMount] { return edenMount->getInodeMap()->getLoadedInodeCount(); });
-  // Register callback for getting Unloaded inodes in the
-  // memory for a mountpoint
   counters->registerCallback(
-      edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
+      edenMount->getCounterName(CounterName::INODEMAP_UNLOADED), [edenMount] {
         return edenMount->getInodeMap()->getUnloadedInodeCount();
       });
   counters->registerCallback(
@@ -842,9 +837,10 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 void EdenServer::unregisterStats(EdenMount* edenMount) {
 #ifndef _WIN32
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-  counters->unregisterCallback(edenMount->getCounterName(CounterName::LOADED));
   counters->unregisterCallback(
-      edenMount->getCounterName(CounterName::UNLOADED));
+      edenMount->getCounterName(CounterName::INODEMAP_LOADED));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::INODEMAP_UNLOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY));
   counters->unregisterCallback(
