@@ -561,12 +561,12 @@ void FileInode::materializeInParent() {
 }
 
 Future<vector<string>> FileInode::listxattr() {
-  // Currently, we only return a non-empty vector for regular files, and we
-  // assume that the SHA-1 is present without checking the ObjectStore.
   vector<string> attributes;
-  if (dtype_t::Regular == getType()) {
-    attributes.emplace_back(kXattrSha1.str());
-  }
+  // We used to return kXattrSha1 here for regular files, but
+  // that caused some annoying behavior with appledouble
+  // metadata files being created by various tools that wanted
+  // to preserve all of these attributes across copy on macos.
+  // So now we just return an empty set on all systems.
   return attributes;
 }
 
