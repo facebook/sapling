@@ -857,6 +857,19 @@ def bailifchanged(repo, merge=True, hint=None):
 def logmessage(repo, opts):
     """ get the log message according to -m and -l option """
     ui = repo.ui
+
+    # Allow the commit message from another commit to be reused.
+    reuserev = opts.get("reuse_message")
+    if reuserev:
+        incompatibleopts = ["message", "logfile"]
+        currentinvaliopts = [opt for opt in incompatibleopts if opts.get(opt)]
+        if currentinvaliopts:
+            raise error.Abort(
+                _("--reuse-message and --%s are mutually exclusive")
+                % (currentinvaliopts[0])
+            )
+        opts["message"] = scmutil.revsingle(repo, reuserev).description()
+
     message = opts.get("message")
     logfile = opts.get("logfile")
 
