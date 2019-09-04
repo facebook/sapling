@@ -7,7 +7,9 @@
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 
 #include <boost/filesystem.hpp>
+#include <fcntl.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -489,16 +491,51 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       RepairState& repair,
       InodeNumber number,
       AbsolutePath archivePath,
-      mode_t /* mode */) const {
+      mode_t mode) const {
     auto input =
         repair.fs()->openFile(number, FsOverlay::kHeaderIdentifierFile);
-    folly::File output(
-        archivePath.value(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
 
-    // TODO: if the mode parameter indicates that this file is a symlink,
-    // extract it as a symlink rather than a regular file.
+    // If the file is a symlink, try to create the file in the archive
+    // directory as a symlink.
+    if (S_ISLNK(mode)) {
+      // The maximum symlink size on Linux is really filesystem dependent.
+      // _POSIX_SYMLINK_MAX is typically defined as 255, but various filesystems
+      // have larger limits.  In practice ext4, btrfs, and tmpfs appear to limit
+      // symlinks to 4095 bytes.  xfs appears to have a limit of 1023 bytes.
+      //
+      // Try reading up to 4096 bytes here.  If the data is longer than this, or
+      // if we get ENAMETOOLONG when creating the symlink, we fall back and
+      // extract the data as a regular file.
+      constexpr size_t maxLength = 4096;
+      std::vector<char> contents(maxLength);
+      auto bytesRead = folly::preadFull(
+          input.fd(),
+          contents.data(),
+          contents.size(),
+          FsOverlay::kHeaderLength);
+      if (bytesRead < 0) {
+        folly::throwSystemError(
+            "read error while copying symlink data from inode ",
+            number,
+            " to ",
+            archivePath);
+      }
+      if (0 < bytesRead && static_cast<size_t>(bytesRead) < maxLength) {
+        auto rc = ::symlink(contents.data(), archivePath.value().c_str());
+        if (rc == 0) {
+          // We successfully created a symlink of the contents, so we're done.
+          return;
+        }
+      }
+      // If we can't save the contents as a symlink, fall through and just
+      // save them as a regular file.  We used pread() above, so the input file
+      // position will still be at the start of the data, and we don't need to
+      // reset it.
+    }
 
     // Copy the data
+    folly::File output(
+        archivePath.value(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
     size_t blockSize = 1024 * 1024;
     std::vector<uint8_t> buffer;
     buffer.resize(blockSize);

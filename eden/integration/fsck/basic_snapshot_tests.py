@@ -303,16 +303,9 @@ class SnapshotTestBase(
                         # files and symlinks, so sockets do not get extracted.
                         continue
                 elif expected_file.file_type == stat_mod.S_IFLNK:
-                    if new_fsck:
-                        # At the moment the C++ fsck code extracts symlinks as regular
-                        # files
-                        expected.add_file(
-                            orphan_path, expected_file.contents, perms=0o600
-                        )
-                    else:
-                        expected.add_symlink(
-                            orphan_path, expected_file.contents, perms=0o777
-                        )
+                    expected.add_symlink(
+                        orphan_path, expected_file.contents, perms=0o777
+                    )
                 elif expected_file.file_type == stat_mod.S_IFREG:
                     expected.add_file(orphan_path, expected_file.contents, perms=0o600)
                 else:
