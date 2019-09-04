@@ -4553,7 +4553,7 @@ def describe(describefunc, _describecall=bindings.stackdesc.describecall):
 renderstack = bindings.stackdesc.renderstack
 
 
-def smarttraceback():
+def smarttraceback(frame=None):
     """Get a friendly traceback as a string.
 
     Based on some methods in the traceback.format_stack.
@@ -4563,10 +4563,11 @@ def smarttraceback():
     import linecache
 
     # Get the frame. See traceback.format_stack
-    try:
-        raise ZeroDivisionError
-    except ZeroDivisionError:
-        frame = sys.exc_info()[2].tb_frame.f_back
+    if frame is None:
+        try:
+            raise ZeroDivisionError
+        except ZeroDivisionError:
+            frame = sys.exc_info()[2].tb_frame.f_back
 
     # Similar to traceback.extract_stack
     frameinfos = []

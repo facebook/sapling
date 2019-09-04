@@ -19,7 +19,8 @@
 
 Test the default SIGUSR1 signal
 
-  $ hg signal USR1
+  $ hg signal USR1 2>&1 | tail -1
+  Stacktrace written to $TESTTMP/dump-*.log (glob)
   $ ls $TESTTMP/dump-*.log
   $TESTTMP/dump-*-*.log (glob)
   $ grep Thread $TESTTMP/dump-*.log | head -n 1
@@ -30,7 +31,8 @@ Test the signal config option
 
   $ echo 'signal=USR2' >> $HGRCPATH
   $ echo 'memsignal=USR1' >> $HGRCPATH
-  $ hg signal USR2
+  $ hg signal USR2  2>&1 | tail -1
+  Stacktrace written to $TESTTMP/dump-*.log (glob)
   $ ls $TESTTMP/dump-*.log
   $TESTTMP/dump-*-*.log (glob)
   $ grep Thread $TESTTMP/dump-*.log | head -n 1

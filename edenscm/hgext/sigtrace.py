@@ -25,7 +25,7 @@ import sys
 import time
 import traceback
 
-from edenscm.mercurial import registrar
+from edenscm.mercurial import registrar, util
 
 
 pathformat = "/tmp/trace-%(pid)s-%(time)s.log"
@@ -43,10 +43,16 @@ configitem("sigtrace", "memsignal", default="USR2")
 def printstacks(sig, currentframe):
     content = ""
     for tid, frame in sys._current_frames().iteritems():
-        content += "Thread %s:\n%s\n" % (tid, "".join(traceback.format_stack(frame)))
+        content += "Thread %s:\n%s\n" % (tid, util.smarttraceback(frame))
 
-    with open(pathformat % {"time": time.time(), "pid": os.getpid()}, "w") as f:
+    path = pathformat % {"time": time.time(), "pid": os.getpid()}
+    with open(path, "w") as f:
         f.write(content)
+
+    # Also print to stderr
+    sys.stderr.write(content)
+    sys.stderr.write("\nStacktrace written to %s\n" % path)
+    sys.stderr.flush()
 
 
 memorytracker = []
