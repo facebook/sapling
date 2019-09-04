@@ -26,6 +26,8 @@ use repo_blobstore::RepoBlobstore;
 use std::collections::BTreeMap;
 
 pub mod derived_data_unodes;
+pub use derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+
 #[cfg(test)]
 mod test_utils;
 

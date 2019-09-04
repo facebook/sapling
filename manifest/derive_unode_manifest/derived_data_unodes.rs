@@ -75,6 +75,7 @@ impl BonsaiDerived for RootUnodeManifestId {
 }
 
 // TODO(stash): have a generic version of blobstore derived data mapping?
+#[derive(Clone)]
 pub struct RootUnodeManifestMapping {
     blobstore: RepoBlobstore,
 }
