@@ -7,6 +7,8 @@
 #include "eden/fs/inodes/Overlay.h"
 
 #include <boost/filesystem.hpp>
+#include <algorithm>
+
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -15,10 +17,10 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include <algorithm>
+
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -97,16 +99,23 @@ folly::SemiFuture<Unit> Overlay::initialize() {
 
 void Overlay::initOverlay() {
   auto optNextInodeNumber = fsOverlay_.initOverlay(true);
-  if (optNextInodeNumber) {
-    nextInodeNumber_.store(
-        optNextInodeNumber->get(), std::memory_order_relaxed);
-  } else {
-    // TODO: Run fsck code to detect and fix any fs corruption.
+  if (!optNextInodeNumber.has_value()) {
+    // If the next-inode-number data is missing it means that this overlay was
+    // not shut down cleanly the last time it was used.  If this was caused by a
+    // hard system reboot this can sometimes cause corruption and/or missing
+    // data in some of the on-disk state.
+    //
+    // Use OverlayChecker to scan the overlay for any issues, and also compute
+    // correct next inode number as it does so.
     XLOG(WARN) << "Overlay " << fsOverlay_.getLocalDir()
-               << " was not shut down cleanly.  Will rescan.";
-    nextInodeNumber_.store(
-        fsOverlay_.scanForNextInodeNumber().get(), std::memory_order_relaxed);
+               << " was not shut down cleanly.  Performing fsck scan.";
+    OverlayChecker checker(&fsOverlay_, std::nullopt);
+    checker.scanForErrors();
+    checker.repairErrors();
+
+    optNextInodeNumber = checker.getNextInodeNumber();
   }
+  nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
 
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.

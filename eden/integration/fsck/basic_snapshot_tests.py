@@ -7,12 +7,13 @@
 
 import abc
 import binascii
+import os
 import stat as stat_mod
 import struct
 import typing
 import unittest
 from pathlib import Path
-from typing import List, Optional, Sequence, Type, Union
+from typing import List, Optional, Sequence, Tuple
 
 from eden.cli import fsck as fsck_mod
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
@@ -49,10 +50,14 @@ class MissingMaterializedInode(ExpectedError):
 
 
 class InvalidMaterializedInode(ExpectedError):
-    def __init__(self, inode_number: int, path: str) -> None:
+    def __init__(
+        self, inode_number: int, path: str, parent_inode: int, bad_data: bytes
+    ) -> None:
         super().__init__()
         self.inode_number = inode_number
         self.path = path
+        self.parent_inode_number = parent_inode
+        self.bad_data = bad_data
 
     def __str__(self) -> str:
         return f"InvalidMaterializedInode({self.inode_number}, {self.path!r})"
@@ -237,11 +242,38 @@ class SnapshotTestBase(
             )
 
     def _verify_orphans_extracted(
-        self, log_dir: Path, orphan_errors: OrphanInodes
+        self, log_dir: Path, expected_errors: List[ExpectedError], new_fsck=False
     ) -> None:
         # Build the state that we expect to find in the lost+found directory
         expected = verify_mod.ExpectedFileSet()
 
+        for error in expected_errors:
+            if isinstance(error, OrphanInodes):
+                self._build_expected_orphans(expected, error, new_fsck)
+            elif isinstance(error, InvalidMaterializedInode):
+                # The Python fsck code extracts broken data files into a separate
+                # "broken_inodes" subdirectory, but the newer C++ logic puts everything
+                # into the single "lost+found" directory.
+                if new_fsck:
+                    extracted_path = os.path.join(
+                        str(error.parent_inode_number), os.path.basename(error.path)
+                    )
+                    expected.add_file(extracted_path, error.bad_data, perms=0o644)
+
+        verifier = verify_mod.SnapshotVerifier()
+        verifier.verify_directory(log_dir / "lost+found", expected)
+        if verifier.errors:
+            self.fail(
+                f"found errors when checking extracted orphan inodes: "
+                f"{verifier.errors}"
+            )
+
+    def _build_expected_orphans(
+        self,
+        expected: verify_mod.ExpectedFileSet,
+        orphan_errors: OrphanInodes,
+        new_fsck: bool,
+    ):
         # All of the orphan files should be extracted as regular files using their inode
         # number as the path.  We cannot tell if the inodes were originally regular
         # files, symlinks, or sockets, so everything just gets extracted as a regular
@@ -262,24 +294,29 @@ class SnapshotTestBase(
                     orphan_dir.path
                 )
                 if expected_file.file_type == stat_mod.S_IFSOCK:
-                    # socket files are ignored and never extracted
-                    continue
+                    if new_fsck:
+                        expected.add_file(
+                            orphan_path, expected_file.contents, perms=0o600
+                        )
+                    else:
+                        # The Python fsck code does not extract anything but regular
+                        # files and symlinks, so sockets do not get extracted.
+                        continue
                 elif expected_file.file_type == stat_mod.S_IFLNK:
-                    expected.add_symlink(
-                        orphan_path, expected_file.contents, perms=0o777
-                    )
+                    if new_fsck:
+                        # At the moment the C++ fsck code extracts symlinks as regular
+                        # files
+                        expected.add_file(
+                            orphan_path, expected_file.contents, perms=0o600
+                        )
+                    else:
+                        expected.add_symlink(
+                            orphan_path, expected_file.contents, perms=0o777
+                        )
                 elif expected_file.file_type == stat_mod.S_IFREG:
                     expected.add_file(orphan_path, expected_file.contents, perms=0o600)
                 else:
                     raise Exception("unknown file type for expected orphan inode")
-
-        verifier = verify_mod.SnapshotVerifier()
-        verifier.verify_directory(log_dir / "lost+found", expected)
-        if verifier.errors:
-            self.fail(
-                f"found errors when checking extracted orphan inodes: "
-                f"{verifier.errors}"
-            )
 
     def _check_expected_errors(
         self, fsck: fsck_mod.FilesystemChecker, expected_errors: Sequence[ExpectedError]
@@ -313,43 +350,43 @@ class Basic20181121Test(SnapshotTestBase):
         return Path("eden/test-data/snapshots/basic-20181121.tar.xz")
 
     def test_untracked_file_removed(self) -> None:
-        self._test_file_corrupted(None, MissingMaterializedInode)
+        self._test_file_corrupted(None)
 
     def test_untracked_file_empty(self) -> None:
-        self._test_file_corrupted(b"", InvalidMaterializedInode)
+        self._test_file_corrupted(b"")
 
     def test_untracked_file_short_header(self) -> None:
-        self._test_file_corrupted(b"OVFL\x00\x00\x00\x01", InvalidMaterializedInode)
+        self._test_file_corrupted(b"OVFL\x00\x00\x00\x01")
 
-    def _test_file_corrupted(
-        self,
-        data: Optional[bytes],
-        error_type: Union[
-            Type[MissingMaterializedInode], Type[InvalidMaterializedInode]
-        ],
-    ) -> None:
+    def _test_file_corrupted(self, data: Optional[bytes]) -> None:
         inode_number = 45  # untracked/new/normal2.txt
+        path = "untracked/new/normal2.txt"
         self._replace_overlay_inode(inode_number, data)
 
-        error = error_type(inode_number, "untracked/new/normal2.txt")
-        expected_errors: List[ExpectedError] = [error]
+        expected_errors: List[ExpectedError] = []
+        if data is None:
+            expected_errors.append(MissingMaterializedInode(inode_number, path))
+        else:
+            expected_errors.append(
+                InvalidMaterializedInode(
+                    inode_number, path, parent_inode=43, bad_data=data
+                )
+            )
         repaired_files = self.snapshot.get_expected_files()
-        repaired_files.set_file(error.path, b"", perms=0o644)
+        repaired_files.set_file(path, b"", perms=0o644)
 
         self._run_fsck(expected_errors)
         self._run_fsck([])
         self._verify_contents(repaired_files)
 
     def test_untracked_dir_removed(self) -> None:
-        self._test_untracked_dir_corrupted(None, MissingMaterializedInode)
+        self._test_untracked_dir_corrupted(None)
 
     def test_untracked_dir_truncated(self) -> None:
-        self._test_untracked_dir_corrupted(b"", InvalidMaterializedInode)
+        self._test_untracked_dir_corrupted(b"")
 
     def test_untracked_dir_short_header(self) -> None:
-        self._test_untracked_dir_corrupted(
-            b"OVDR\x00\x00\x00\x01", InvalidMaterializedInode
-        )
+        self._test_untracked_dir_corrupted(b"OVDR\x00\x00\x00\x01")
 
     def test_untracked_dir_short_body(self) -> None:
         data = binascii.unhexlify(
@@ -364,19 +401,21 @@ class Basic20181121Test(SnapshotTestBase):
                 "636b 15c8 8606 1648 000e 6578 6563 7574"
             ).replace(" ", "")
         )
-        self._test_untracked_dir_corrupted(data, InvalidMaterializedInode)
+        self._test_untracked_dir_corrupted(data)
 
-    def _test_untracked_dir_corrupted(
-        self,
-        data: Optional[bytes],
-        error_type: Union[
-            Type[MissingMaterializedInode], Type[InvalidMaterializedInode]
-        ],
-    ) -> None:
+    def _test_untracked_dir_corrupted(self, data: Optional[bytes]) -> None:
         inode_number = 42  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
-        main_error = error_type(inode_number, "untracked")
+        expected_errors: List[ExpectedError] = []
+        if data is None:
+            expected_errors.append(MissingMaterializedInode(inode_number, "untracked"))
+        else:
+            expected_errors.append(
+                InvalidMaterializedInode(
+                    inode_number, "untracked", parent_inode=1, bad_data=data
+                )
+            )
         repaired_files = self.snapshot.get_expected_files()
         orphan_files = [
             OrphanFile(50, repaired_files.pop("untracked/executable.exe")),
@@ -396,18 +435,23 @@ class Basic20181121Test(SnapshotTestBase):
                 ],
             )
         ]
-        orphan_errors = OrphanInodes(orphan_files, orphan_dirs)
+        expected_errors.append(OrphanInodes(orphan_files, orphan_dirs))
 
-        expected_errors: List[ExpectedError] = [main_error, orphan_errors]
         log_dir = self._run_fsck(expected_errors)
         assert log_dir is not None
         self._run_fsck([])
         self._verify_contents(repaired_files)
-        self._verify_orphans_extracted(log_dir, orphan_errors)
+        self._verify_orphans_extracted(log_dir, expected_errors)
 
-    def test_main_dir_truncated(self) -> None:
+    def _truncate_main_dir(
+        self
+    ) -> Tuple[verify_mod.ExpectedFileSet, List[ExpectedError]]:
         # inode 4 is main/
-        self._replace_overlay_inode(4, b"")
+        bad_main_data = b""
+        self._replace_overlay_inode(4, bad_main_data)
+        expected_errors: List[ExpectedError] = [
+            InvalidMaterializedInode(4, "main", parent_inode=1, bad_data=bad_main_data)
+        ]
 
         repaired_files = self.snapshot.get_expected_files()
         orphan_files = [
@@ -442,7 +486,7 @@ class Basic20181121Test(SnapshotTestBase):
                 [repaired_files.pop("main/untracked_dir/foo.txt")],
             ),
         ]
-        orphan_errors = OrphanInodes(orphan_files, orphan_dirs)
+        expected_errors.append(OrphanInodes(orphan_files, orphan_dirs))
 
         # The following files are inside the corrupt directory, but they were never
         # materialized and so their contents will not be extracted into lost+found.
@@ -455,15 +499,38 @@ class Basic20181121Test(SnapshotTestBase):
         del repaired_files["main/loaded_dir/loaded_subdir/dir2/file2.txt"]
         del repaired_files["main/materialized_subdir/unmodified.txt"]
 
-        expected_errors: List[ExpectedError] = [
-            InvalidMaterializedInode(4, "main"),
-            orphan_errors,
-        ]
+        return repaired_files, expected_errors
+
+    def test_main_dir_truncated(self) -> None:
+        repaired_files, expected_errors = self._truncate_main_dir()
+
         log_dir = self._run_fsck(expected_errors)
         assert log_dir is not None
         self._run_fsck([])
         self._verify_contents(repaired_files)
-        self._verify_orphans_extracted(log_dir, orphan_errors)
+        self._verify_orphans_extracted(log_dir, expected_errors)
+
+    def test_main_dir_truncated_auto_fsck(self) -> None:
+        repaired_files, expected_errors = self._truncate_main_dir()
+
+        # Remove the next-inode-number file so that edenfs will
+        # automatically peform an fsck run when mounting this checkout.
+        next_inode_path = self._overlay_path() / "next-inode-number"
+        next_inode_path.unlink()
+
+        # Now call _verify_contents() without ever running fsck.
+        # edenfs should automatically perform the fsck steps.
+        self._verify_contents(repaired_files)
+
+        # Find the fsck log directory that was written out
+        log_dirs = list((self._overlay_path().parent / "fsck").iterdir())
+        if len(log_dirs) != 1:
+            raise Exception(
+                f"unable to find fsck log directory: candidates are {log_dirs!r}"
+            )
+        log_dir = log_dirs[0]
+
+        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=True)
 
     # The correct next inode number for this snapshot.
     _next_inode_number = 58

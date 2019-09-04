@@ -210,7 +210,7 @@ class OverlayChecker {
   std::optional<InodeNumber> loadedNextInodeNumber_;
   std::unordered_map<InodeNumber, InodeInfo> inodes_;
   std::vector<std::unique_ptr<Error>> errors_;
-  uint64_t maxInodeNumber_{0};
+  uint64_t maxInodeNumber_{kRootNodeId.get()};
 
   std::unordered_map<InodeNumber, PathInfo> pathCache_;
 };

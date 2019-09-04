@@ -200,68 +200,6 @@ void FsOverlay::saveNextInodeNumber(InodeNumber nextInodeNumber) {
           reinterpret_cast<const uint8_t*>(&nextInodeVal + 1)));
 }
 
-InodeNumber FsOverlay::scanForNextInodeNumber() {
-  // Walk the root directory downwards to find all (non-unlinked) directory
-  // inodes stored in the overlay.
-  //
-  // TODO: It would be nicer if each overlay file contained a short header so
-  // we could tell if it was a file or directory.  This way we could do a
-  // simpler scan of opening every single file.  For now we have to walk the
-  // directory tree from the root downwards.
-  auto maxInode = kRootNodeId;
-  std::vector<InodeNumber> toProcess;
-  toProcess.push_back(maxInode);
-  auto encounteredBrokenDirectory = false;
-  while (!toProcess.empty()) {
-    auto dirInodeNumber = toProcess.back();
-    toProcess.pop_back();
-
-    auto dir = optional<overlay::OverlayDir>{};
-    try {
-      dir = loadOverlayDir(dirInodeNumber);
-    } catch (const std::exception& error) {
-      XLOG_IF(WARN, !encounteredBrokenDirectory)
-          << "Ignoring failure to load directory inode " << dirInodeNumber
-          << ": " << error.what();
-      encounteredBrokenDirectory = true;
-    }
-    if (!dir.has_value()) {
-      continue;
-    }
-
-    for (const auto& entry : dir.value().entries) {
-      if (entry.second.inodeNumber == 0) {
-        continue;
-      }
-      auto entryInode = InodeNumber::fromThrift(entry.second.inodeNumber);
-      maxInode = std::max(maxInode, entryInode);
-      if (mode_to_dtype(entry.second.mode) == dtype_t::Dir) {
-        toProcess.push_back(entryInode);
-      }
-    }
-  }
-
-  // Look through the subdirectories and increment maxInode based on the
-  // filenames we see.  This is needed in case there are unlinked inodes
-  // present.
-  std::array<char, kShardDirPathLength> subdir;
-  for (ShardID n = 0; n < kNumShards; ++n) {
-    formatSubdirShardPath(n, MutableStringPiece{subdir.data(), subdir.size()});
-    auto subdirPath = localDir_ +
-        PathComponentPiece{StringPiece{subdir.data(), subdir.size()}};
-
-    auto boostPath = boost::filesystem::path{subdirPath.value().c_str()};
-    for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
-      auto entryInodeNumber =
-          folly::tryTo<uint64_t>(entry.path().filename().string());
-      if (entryInodeNumber.hasValue()) {
-        maxInode = std::max(maxInode, InodeNumber{entryInodeNumber.value()});
-      }
-    }
-  }
-  return InodeNumber{maxInode.get() + 1};
-}
-
 void FsOverlay::readExistingOverlay(int infoFD) {
   // Read the info file header
   std::array<uint8_t, kInfoHeaderSize> infoHeader;

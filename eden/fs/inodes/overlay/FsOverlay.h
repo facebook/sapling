@@ -107,12 +107,6 @@ class FsOverlay {
    * be opened or does not contain a valid InodeNumber, a SystemError is thrown.
    */
   std::optional<InodeNumber> tryLoadNextInodeNumber();
-  /**
-   * Scan the Inode files to find the maximumInodeNumber. Return the
-   * maximumInodeNumber + 1.  The minimum value that can be returned (if no
-   * files exist) would be kRootNodeId+1.
-   */
-  InodeNumber scanForNextInodeNumber();
 
   /**
    * Validate an existing overlay's info file exists, is valid and contains the
