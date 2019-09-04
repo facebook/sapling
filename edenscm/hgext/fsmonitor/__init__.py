@@ -116,6 +116,14 @@ treestate. Set this to a small value updates treestate more frequently,
 leading to better performance, at the cost of disk usage. Set this to a large
 value would update treestate less frequently, with the downside that
 performance might regress in some cases. (default: 200)
+
+::
+
+    [fsmonitor]
+    warn-fresh-instance = false
+
+If set to true, warn about fresh instance cases that might slow down
+operations.
 """
 
 # Platforms Supported
@@ -193,6 +201,7 @@ configitem("fsmonitor", "timeout", default=10)
 configitem("fsmonitor", "track-ignore-files", default=True)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
+configitem("fsmonitor", "warn-fresh-instance", default=False)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -308,6 +317,22 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
         except UnicodeDecodeError:
             # test-adding-invalid-utf8.t hits this path
             pass
+
+
+def _watchmanpid(clock):
+    """Get watchman pid from a watchman clock value.
+
+    For example, 'c:1567536997:497:1:21' has pid '497'.
+    Return None if `clock` is malformed.
+    """
+    try:
+        pid = int(clock.split(":")[2])
+        if pid == 0:
+            return None
+        else:
+            return pid
+    except (AttributeError, IndexError):
+        return None
 
 
 def _walk(orig, self, match, unknown, ignored, full, event):
@@ -463,6 +488,32 @@ def _walk(orig, self, match, unknown, ignored, full, event):
         state.setlastclock(result["clock"])
         state.setlastisfresh(result["is_fresh_instance"])
         if result["is_fresh_instance"]:
+            if not self._ui.plain() and self._ui.configbool(
+                "fsmonitor", "warn-fresh-instance"
+            ):
+                oldpid = _watchmanpid(event["old_clock"])
+                newpid = _watchmanpid(event["new_clock"])
+                if oldpid is not None and newpid is not None:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
+                        )
+                        % (oldpid, newpid)
+                    )
+                elif oldpid is None and newpid is not None:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman has recently started (pid %s) - operation will be slower than usual\n"
+                        )
+                        % (newpid,)
+                    )
+                else:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual\n"
+                        )
+                    )
+
             if state.walk_on_invalidate:
                 state.invalidate(reason="fresh_instance")
                 return bail("fresh instance")
