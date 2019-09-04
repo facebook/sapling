@@ -4310,7 +4310,7 @@ class ring(object):
             return head + tail
 
 
-def timefunction(key, uiposition, uiname):
+def timefunction(key, uiposition=None, uiname=None):
     """A decorator for indicating a function should be timed and logged.
 
     `uiposition` the integer argument number that contains the ui or a reference
@@ -4327,9 +4327,20 @@ def timefunction(key, uiposition, uiname):
 
     def wrapper(func):
         def inner(*args, **kwargs):
-            uiarg = args[uiposition]
+            uiarg = None
+            if uiposition is not None:
+                uiarg = args[uiposition]
             if uiname is not None:
                 uiarg = getattr(uiarg, uiname)
+            if uiarg is None:
+                for arg in list(args) + list(kwargs.values()):
+                    if safehasattr(arg, "timesection"):
+                        uiarg = arg
+                        break
+                    elif safehasattr(arg, "ui"):
+                        uiarg = arg.ui
+                        break
+            assert uiarg
             with uiarg.timesection(key):
                 return func(*args, **kwargs)
 

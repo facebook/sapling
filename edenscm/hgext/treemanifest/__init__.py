@@ -2186,6 +2186,7 @@ def _postpullprefetch(ui, repo):
         repo.prefetchtrees(mfnodes, basemfnodes=basemfnodes)
 
 
+@util.timefunction("findrecenttrees")
 def _findrecenttree(repo, startrev, targetmfnodes):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
