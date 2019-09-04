@@ -45,7 +45,7 @@ where
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
     let blobstore = repo.get_blobstore().clone();
-    bounded_traversal_stream(256, (None, entry), move |(path, entry)| match entry {
+    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| match entry {
         Entry::Leaf(_) => future::ok((vec![(path, entry.clone())], vec![])).left_future(),
         Entry::Tree(tree) => tree
             .load(ctx.clone(), &blobstore)

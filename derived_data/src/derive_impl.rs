@@ -53,7 +53,7 @@ pub(crate) fn derive_impl<
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
 
-    bounded_traversal::bounded_traversal_stream(100, start_csid, {
+    bounded_traversal::bounded_traversal_stream(100, Some(start_csid), {
         cloned!(ctx, derived_mapping);
         move |cs_id| {
             DeriveNode::from_bonsai(ctx.clone(), derived_mapping.clone(), cs_id).and_then({

@@ -181,22 +181,26 @@ impl Loadable for Files {
     ) -> BoxFuture<Self::Value, LoadableError> {
         let blobstore = blobstore.clone();
 
-        bounded_traversal_stream(256, (None, Entry::Tree(self.0)), move |(path, entry)| {
-            entry
-                .load(ctx.clone(), &blobstore)
-                .map(move |content| match content {
-                    Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                    Entry::Tree(tree) => {
-                        let recurse = tree
-                            .list()
-                            .map(|(name, entry)| {
-                                (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                            })
-                            .collect();
-                        (None, recurse)
-                    }
-                })
-        })
+        bounded_traversal_stream(
+            256,
+            Some((None, Entry::Tree(self.0))),
+            move |(path, entry)| {
+                entry
+                    .load(ctx.clone(), &blobstore)
+                    .map(move |content| match content {
+                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                        Entry::Tree(tree) => {
+                            let recurse = tree
+                                .list()
+                                .map(|(name, entry)| {
+                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                                })
+                                .collect();
+                            (None, recurse)
+                        }
+                    })
+            },
+        )
         .filter_map(|item| {
             let (path, leaf) = item?;
             Some((path?, leaf.0))

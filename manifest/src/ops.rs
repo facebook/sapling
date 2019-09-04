@@ -99,7 +99,7 @@ where
 
         bounded_traversal_stream(
             256,
-            (self.clone(), selector, None, false),
+            Some((self.clone(), selector, None, false)),
             move |(manifest_id, selector, path, recursive)| {
                 let PathTree {
                     subentries,
@@ -202,7 +202,7 @@ where
 
         bounded_traversal_stream(
             256,
-            Diff::Changed(None, self.clone(), other),
+            Some(Diff::Changed(None, self.clone(), other)),
             move |input| match input {
                 Diff::Changed(path, left, right) => left
                     .load(ctx.clone(), &blobstore)

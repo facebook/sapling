@@ -534,7 +534,7 @@ fn test_bounded_traversal_stream() -> Result<(), Error> {
     let reference: StateLog<BTreeSet<usize>> = StateLog::new();
     let mut rt = Runtime::new()?;
 
-    let traverse = bounded_traversal_stream(2, tree, {
+    let traverse = bounded_traversal_stream(2, Some(tree), {
         let tick = tick.clone();
         let log = log.clone();
         move |Tree { id, children }| {

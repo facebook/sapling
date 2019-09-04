@@ -37,7 +37,7 @@ fn find_files_with_given_content_id_blobstore_keys(
 ) -> impl Future<Item = Vec<(String, String)>, Error = Error> {
     let manifest_id = cs.manifestid();
     let keys_to_tasks: Arc<HashMap<String, String>> = Arc::new(keys_to_tasks);
-    bounded_traversal_stream(4096, (repo.clone(), manifest_id, None), {
+    bounded_traversal_stream(4096, Some((repo.clone(), manifest_id, None)), {
         cloned!(ctx);
         move |(repo, manifest_id, path)| {
             repo.clone()
