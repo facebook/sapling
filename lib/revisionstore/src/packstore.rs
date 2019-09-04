@@ -20,6 +20,7 @@ use crate::error::KeyError;
 use crate::historypack::HistoryPack;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::localstore::LocalStore;
+use crate::repack::Repackable;
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
 /// data in them. This helps in reducing the number of stores that are iterated on.
@@ -50,6 +51,11 @@ impl<T> LruStore<T> {
         }
     }
 
+    /// Remove an element from the `LruStore`. The order will not be preserved.
+    fn remove(&mut self, index: usize) -> T {
+        self.stores.swap_remove_back(index).unwrap()
+    }
+
     /// Iterates over all the element, the most recently used items will be returned first.
     fn iter(&self) -> Iter<T> {
         self.stores.iter()
@@ -78,11 +84,18 @@ impl<T> From<Vec<T>> for LruStore<T> {
     }
 }
 
+#[derive(PartialEq)]
+pub enum CorruptionPolicy {
+    IGNORE,
+    REMOVE,
+}
+
 /// A `PackStore` automatically keeps track of packfiles in a given directory. New on-disk
 /// packfiles will be periodically scanned and opened accordingly.
 pub struct PackStore<T> {
     pack_dir: PathBuf,
     extension: &'static str,
+    corruption_policy: CorruptionPolicy,
     scan_frequency: Duration,
     last_scanned: RefCell<Instant>,
     packs: RefCell<LruStore<T>>,
@@ -95,6 +108,7 @@ struct PackStoreOptions {
     pack_dir: PathBuf,
     scan_frequency: Duration,
     extension: &'static str,
+    corruption_policy: CorruptionPolicy,
 }
 
 impl PackStoreOptions {
@@ -103,6 +117,7 @@ impl PackStoreOptions {
             pack_dir: PathBuf::new(),
             scan_frequency: Duration::from_secs(10),
             extension: "",
+            corruption_policy: CorruptionPolicy::IGNORE,
         }
     }
 
@@ -122,6 +137,13 @@ impl PackStoreOptions {
         self
     }
 
+    /// When a packfile is detected to be corrupted, should we automatically remove it from disk or
+    /// simply ignore it?
+    fn corruption_policy(mut self, corruption_policy: CorruptionPolicy) -> Self {
+        self.corruption_policy = corruption_policy;
+        self
+    }
+
     fn build<T>(self) -> PackStore<T> {
         let now = Instant::now();
         let force_rescan = now - self.scan_frequency;
@@ -130,6 +152,7 @@ impl PackStoreOptions {
             pack_dir: self.pack_dir,
             scan_frequency: self.scan_frequency,
             extension: self.extension,
+            corruption_policy: self.corruption_policy,
             last_scanned: RefCell::new(force_rescan),
             packs: RefCell::new(LruStore::new()),
         }
@@ -147,9 +170,13 @@ impl<T> PackStore<T> {
 
 impl DataPackStore {
     /// Build a new DataPackStore. The default rescan rate is 10 seconds.
+    ///
+    /// Only use for data that can be recoverd from the network, corrupted datapacks will be
+    /// automatically removed from disk.
     pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
         PackStoreOptions::new()
             .directory(pack_dir)
+            .corruption_policy(CorruptionPolicy::REMOVE)
             .extension("datapack")
             .build()
     }
@@ -157,15 +184,19 @@ impl DataPackStore {
 
 impl HistoryPackStore {
     /// Build a new HistoryPackStore. The default rescan rate is 10 seconds.
+    ///
+    /// Only use for data that can be recoverd from the network, corrupted datapacks will be
+    /// automatically removed from disk.
     pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
         PackStoreOptions::new()
             .directory(pack_dir)
+            .corruption_policy(CorruptionPolicy::REMOVE)
             .extension("histpack")
             .build()
     }
 }
 
-impl<T: LocalStore> PackStore<T> {
+impl<T: LocalStore + Repackable> PackStore<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Fallible<()> {
         let mut new_packs = Vec::new();
@@ -222,6 +253,8 @@ impl<T: LocalStore> PackStore<T> {
         for _ in 0..2 {
             let mut found = None;
             {
+                let mut corrupted = Vec::new();
+
                 let mut lrustore = self.packs.try_borrow_mut()?;
                 for (index, store) in lrustore.iter_mut().enumerate() {
                     match op(store) {
@@ -236,8 +269,17 @@ impl<T: LocalStore> PackStore<T> {
                             // isn't present. Until we make this change, we have to resort to using
                             // an ugly downcast :(
                             if e.downcast_ref::<KeyError>().is_none() {
-                                return Err(e);
+                                corrupted.push(index);
                             }
+                        }
+                    }
+                }
+
+                if !corrupted.is_empty() {
+                    for store_index in corrupted.into_iter().rev() {
+                        let store = lrustore.remove(store_index);
+                        if self.corruption_policy == CorruptionPolicy::REMOVE {
+                            let _ = store.delete();
                         }
                     }
                 }
@@ -259,7 +301,7 @@ impl<T: LocalStore> PackStore<T> {
     }
 }
 
-impl<T: LocalStore> LocalStore for PackStore<T> {
+impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over
@@ -308,6 +350,8 @@ impl HistoryStore for HistoryPackStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::{self, OpenOptions};
 
     use bytes::Bytes;
     use rand::SeedableRng;
@@ -518,5 +562,37 @@ mod tests {
         let store = HistoryPackStore::new(&non_present_tempdir);
 
         store.rescan()
+    }
+
+    #[test]
+    #[should_panic(expected = "KeyError")]
+    fn test_corrupted() {
+        let tempdir = TempDir::new().unwrap();
+
+        let k1 = key("a", "2");
+        let revision1 = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: Some(key("a", "1")),
+                key: k1.clone(),
+            },
+            Default::default(),
+        );
+        let path = make_datapack(&tempdir, &vec![revision1.clone()])
+            .pack_path()
+            .to_path_buf();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mut permissions = metadata.permissions();
+        permissions.set_readonly(false);
+        fs::set_permissions(&path, permissions).unwrap();
+
+        let datapack = OpenOptions::new().write(true).open(path).unwrap();
+        datapack
+            .set_len(datapack.metadata().unwrap().len() / 2)
+            .unwrap();
+
+        let packstore = DataPackStore::new(&tempdir);
+        packstore.get_delta(&k1).unwrap();
     }
 }
