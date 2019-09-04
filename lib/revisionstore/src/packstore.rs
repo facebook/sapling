@@ -154,6 +154,20 @@ impl<T: LocalStore> PackStore<T> {
         Ok(())
     }
 
+    /// Scan the store when too much time has passed since the last scan. Returns whether the
+    /// filesystem was actually scanned.
+    fn try_scan(&self) -> Fallible<bool> {
+        let now = Instant::now();
+
+        if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency {
+            self.rescan()?;
+            self.last_scanned.replace(now);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     /// Execute the `op` function. May call `rescan` when `op` fails with `KeyError`.
     fn run<R, F>(&self, op: F, key: &Key) -> Fallible<R>
     where
@@ -188,12 +202,9 @@ impl<T: LocalStore> PackStore<T> {
                 return Ok(result);
             }
 
-            let now = Instant::now();
-
-            if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency {
-                self.rescan()?;
-                self.last_scanned.replace(now);
-            } else {
+            // We didn't find anything, let's try to probe the filesystem to discover new packfiles
+            // and retry.
+            if !self.try_scan()? {
                 break;
             }
         }
@@ -204,6 +215,11 @@ impl<T: LocalStore> PackStore<T> {
 
 impl<T: LocalStore> LocalStore for PackStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
+        // any packfiles have been loaded. Let's tentatively scan the store before iterating over
+        // all the known packs.
+        self.try_scan()?;
+
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.packs
             .try_borrow()?
@@ -275,6 +291,27 @@ mod tests {
         let store = DataPackStore::new(&tempdir);
         let delta = store.get_delta(&k)?;
         assert_eq!(delta, revision.0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_datapack_get_missing() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+
+        let k = key("a", "2");
+        let revision = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: Some(key("a", "1")),
+                key: k.clone(),
+            },
+            Default::default(),
+        );
+        make_datapack(&tempdir, &vec![revision.clone()]);
+
+        let store = DataPackStore::new(&tempdir);
+        let missing = store.get_missing(&vec![k])?;
+        assert_eq!(missing.len(), 0);
         Ok(())
     }
 
