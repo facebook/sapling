@@ -314,6 +314,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
         )
 
 
+@util.timefunction("mergecopies")
 def _domergecopies(orig, repo, cdst, csrc, base):
     """ Fast copytracing using filename heuristics
 
