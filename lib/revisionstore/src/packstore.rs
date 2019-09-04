@@ -82,6 +82,7 @@ impl<T> From<Vec<T>> for LruStore<T> {
 /// packfiles will be periodically scanned and opened accordingly.
 pub struct PackStore<T> {
     pack_dir: PathBuf,
+    extension: &'static str,
     scan_frequency: Duration,
     last_scanned: RefCell<Instant>,
     packs: RefCell<LruStore<T>>,
@@ -90,29 +91,77 @@ pub struct PackStore<T> {
 pub type DataPackStore = PackStore<DataPack>;
 pub type HistoryPackStore = PackStore<HistoryPack>;
 
-impl<T> PackStore<T> {
-    /// Create a new PackStore. The default rescan period is 10 seconds.
-    pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
-        Self::with_scan_frequency(pack_dir, Duration::from_secs(10))
+struct PackStoreOptions {
+    pack_dir: PathBuf,
+    scan_frequency: Duration,
+    extension: &'static str,
+}
+
+impl PackStoreOptions {
+    fn new() -> Self {
+        Self {
+            pack_dir: PathBuf::new(),
+            scan_frequency: Duration::from_secs(10),
+            extension: "",
+        }
     }
 
-    fn with_scan_frequency<P: AsRef<Path>>(pack_dir: P, scan_frequency: Duration) -> Self {
-        let now = Instant::now();
-        let force_rescan = now - scan_frequency;
+    fn directory<P: AsRef<Path>>(mut self, dir: P) -> Self {
+        self.pack_dir = PathBuf::from(dir.as_ref());
+        self
+    }
 
-        Self {
-            pack_dir: PathBuf::from(pack_dir.as_ref()),
-            scan_frequency,
+    #[cfg(test)]
+    fn scan_frequency(mut self, frequency: Duration) -> Self {
+        self.scan_frequency = frequency;
+        self
+    }
+
+    fn extension(mut self, extension: &'static str) -> Self {
+        self.extension = extension;
+        self
+    }
+
+    fn build<T>(self) -> PackStore<T> {
+        let now = Instant::now();
+        let force_rescan = now - self.scan_frequency;
+
+        PackStore {
+            pack_dir: self.pack_dir,
+            scan_frequency: self.scan_frequency,
+            extension: self.extension,
             last_scanned: RefCell::new(force_rescan),
             packs: RefCell::new(LruStore::new()),
         }
     }
+}
 
+impl<T> PackStore<T> {
     /// Force a rescan to be performed. Since rescan are expensive, this should only be called for
     /// out-of-process created packfiles.
     pub fn force_rescan(&self) {
         self.last_scanned
             .replace(Instant::now() - self.scan_frequency);
+    }
+}
+
+impl DataPackStore {
+    /// Build a new DataPackStore. The default rescan rate is 10 seconds.
+    pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
+        PackStoreOptions::new()
+            .directory(pack_dir)
+            .extension("datapack")
+            .build()
+    }
+}
+
+impl HistoryPackStore {
+    /// Build a new HistoryPackStore. The default rescan rate is 10 seconds.
+    pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
+        PackStoreOptions::new()
+            .directory(pack_dir)
+            .extension("histpack")
+            .build()
     }
 }
 
@@ -137,13 +186,10 @@ impl<T: LocalStore> PackStore<T> {
             if entry.file_type()?.is_file() {
                 let path = entry.path();
 
-                // Only open the packfile, not the indexes.
                 if let Some(ext) = path.extension() {
-                    if let Some(ext) = ext.to_str() {
-                        if ext.ends_with("pack") {
-                            if let Ok(pack) = T::from_path(&path) {
-                                new_packs.push(pack);
-                            }
+                    if ext == self.extension {
+                        if let Ok(pack) = T::from_path(&path) {
+                            new_packs.push(pack);
                         }
                     }
                 }
@@ -340,7 +386,11 @@ mod tests {
     #[should_panic(expected = "KeyError")]
     fn test_slow_rescan() {
         let tempdir = TempDir::new().unwrap();
-        let store = DataPackStore::with_scan_frequency(&tempdir, Duration::from_secs(1000));
+        let store = PackStoreOptions::new()
+            .directory(&tempdir)
+            .extension("datapack")
+            .scan_frequency(Duration::from_secs(1000))
+            .build();
 
         let k = key("a", "2");
         let revision = (
@@ -372,7 +422,11 @@ mod tests {
     #[test]
     fn test_force_rescan() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let store = DataPackStore::with_scan_frequency(&tempdir, Duration::from_secs(1000));
+        let store = PackStoreOptions::new()
+            .directory(&tempdir)
+            .extension("datapack")
+            .scan_frequency(Duration::from_secs(1000))
+            .build();
 
         let k = key("a", "2");
         let revision = (
