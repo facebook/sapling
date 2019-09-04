@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import hashlib
 import json
 import os
-import re
 
 from edenscm.mercurial import (
     error,
@@ -23,47 +22,6 @@ from edenscm.mercurial import (
     worker,
 )
 from edenscm.mercurial.i18n import _
-
-
-# 64 bytes for SHA256
-_lfsre = re.compile(r"\A[a-f0-9]{64}\Z")
-
-
-class lfsvfs(vfsmod.vfs):
-    def join(self, path):
-        """split the path at first two characters, like: XX/XXXXX..."""
-        if not _lfsre.match(path):
-            raise error.ProgrammingError("unexpected lfs path: %s" % path)
-        return super(lfsvfs, self).join(path[0:2], path[2:])
-
-    def walk(self, path=None, onerror=None):
-        """Yield (dirpath, [], oids) tuple for blobs under path
-
-        Oids only exist in the root of this vfs, so dirpath is always ''.
-        """
-        root = os.path.normpath(self.base)
-        # when dirpath == root, dirpath[prefixlen:] becomes empty
-        # because len(dirpath) < prefixlen.
-        prefixlen = len(pathutil.normasprefix(root))
-        oids = []
-
-        for dirpath, dirs, files in os.walk(
-            self.reljoin(self.base, path or ""), onerror=onerror
-        ):
-            dirpath = dirpath[prefixlen:]
-
-            # Silently skip unexpected files and directories
-            if len(dirpath) == 2:
-                oids.extend([dirpath + f for f in files if _lfsre.match(dirpath + f)])
-
-        yield ("", [], oids)
-
-    def linktovfs(self, oid, vfs):
-        """Hardlink a file to another lfs vfs"""
-        src = self.join(oid)
-        dst = vfs.join(oid)
-        util.makedirs(os.path.dirname(dst))
-        util.copyfile(src, dst, hardlink=True)
 
 
 class filewithprogress(object):
@@ -109,10 +67,10 @@ class local(object):
 
     def __init__(self, repo):
         fullpath = repo.svfs.join("lfs/objects")
-        self.vfs = lfsvfs(fullpath)
+        self.vfs = vfsmod.blobvfs(fullpath)
         usercachepath = repo.ui.config("lfs", "usercache")
         if usercachepath:
-            self.cachevfs = lfsvfs(usercachepath)
+            self.cachevfs = vfsmod.blobvfs(usercachepath)
         else:
             self.cachevfs = None
 
@@ -409,7 +367,7 @@ class _dummyremote(object):
     """Dummy store storing blobs to temp directory."""
 
     def __init__(self, ui, url):
-        self.vfs = lfsvfs(url.path)
+        self.vfs = vfsmod.blobvfs(url.path)
 
     def writebatch(self, pointers, fromstore):
         for p in pointers:
