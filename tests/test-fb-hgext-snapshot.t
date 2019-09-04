@@ -263,6 +263,11 @@
   ? untrackedfile
 
 # Check out on the snapshot -- negative tests
+# Regular checkout
+  $ hg checkout --hidden "$OID"
+  abort: aaa7692160b6 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
+  
+  [255]
 # Non-empty WC state
   $ hg snapshot checkout "$OID"
   abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
