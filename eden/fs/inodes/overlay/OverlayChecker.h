@@ -155,6 +155,8 @@ class OverlayChecker {
   };
   struct InodeInfo {
     InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
+    InodeInfo(InodeNumber num, overlay::OverlayDir&& c)
+        : number(num), type(InodeType::Dir), children(std::move(c)) {}
 
     void addParent(InodeNumber parent, mode_t mode) {
       parents.push_back(parent);
@@ -185,7 +187,7 @@ class OverlayChecker {
   void readInodes();
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);
   void loadInode(InodeNumber number, ShardID shardID);
-  std::unique_ptr<InodeInfo> loadInodeInfo(InodeNumber number);
+  InodeInfo loadInodeInfo(InodeNumber number);
   overlay::OverlayDir loadDirectoryChildren(folly::File& file);
 
   void linkInodeChildren();
@@ -206,7 +208,7 @@ class OverlayChecker {
 
   FsOverlay* const fs_;
   std::optional<InodeNumber> loadedNextInodeNumber_;
-  std::unordered_map<InodeNumber, std::unique_ptr<InodeInfo>> inodes_;
+  std::unordered_map<InodeNumber, InodeInfo> inodes_;
   std::vector<std::unique_ptr<Error>> errors_;
   uint64_t maxInodeNumber_{0};
 

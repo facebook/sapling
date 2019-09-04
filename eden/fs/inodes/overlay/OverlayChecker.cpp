@@ -288,38 +288,38 @@ class OverlayChecker::UnexpectedInodeShard : public OverlayChecker::Error {
 class OverlayChecker::InodeDataError : public OverlayChecker::Error {
  public:
   template <typename... Args>
-  explicit InodeDataError(const InodeInfo* info, Args&&... args)
-      : info_(info), message_(folly::to<string>(std::forward<Args>(args)...)) {}
+  explicit InodeDataError(InodeNumber number, Args&&... args)
+      : number_(number),
+        message_(folly::to<string>(std::forward<Args>(args)...)) {}
 
   string getMessage(OverlayChecker*) const override {
     return folly::to<string>(
-        "error reading data for inode ", info_->number, ": ", message_);
+        "error reading data for inode ", number_, ": ", message_);
   }
 
   bool repair(RepairState& repair) const override {
     // Move the bad file into the lost+found directory
-    auto pathInfo = repair.checker()->computePath(info_->number);
+    auto pathInfo = repair.checker()->computePath(number_);
     auto outputPath = repair.getLostAndFoundPath(pathInfo);
     ensureDirectoryExists(outputPath.dirname());
-    auto srcPath = repair.fs()->getAbsoluteFilePath(info_->number);
+    auto srcPath = repair.fs()->getAbsoluteFilePath(number_);
     auto ret = ::rename(srcPath.c_str(), outputPath.c_str());
     folly::checkUnixError(
         ret, "failed to rename inode data ", srcPath, " to ", outputPath);
 
     // Create replacement data for this inode in the overlay.
-    auto mode = info_->modeFromParent;
+    const auto& inodes = repair.checker()->inodes_;
+    auto iter = inodes.find(number_);
+    mode_t mode = (iter == inodes.end()) ? 0 : iter->second.modeFromParent;
     if (mode == 0) {
-      mode = S_IFREG | 0644;
+      mode = (S_IFREG | 0644);
     }
-    repair.createInodeReplacement(info_->number, mode);
+    repair.createInodeReplacement(number_, mode);
     return true;
   }
 
  private:
-  // The InodeInfo is owned by the OverlayChecker.
-  // The OverlayChecker ensures that it will remain valid longer than the
-  // OrphanInode error object does.
-  const InodeInfo* info_;
+  InodeNumber number_;
   std::string message_;
 };
 
@@ -356,11 +356,10 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
     // In case the parent directory was part of an orphaned subtree the
     // OrphanInode code will look for this child in the inodes_ map.
     auto type = S_ISDIR(childInfo_.mode) ? InodeType::Dir : InodeType::File;
-    auto info = make_unique<InodeInfo>(childInodeNumber, type);
-    info->addParent(parent_, childInfo_.mode);
-    auto [iter, inserted] =
-        repair.checker()->inodes_.emplace(childInodeNumber, std::move(info));
+    auto [iter, inserted] = repair.checker()->inodes_.try_emplace(
+        childInodeNumber, childInodeNumber, type);
     XDCHECK(inserted);
+    iter->second.addParent(parent_, childInfo_.mode);
     return true;
   }
 
@@ -372,37 +371,44 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
 
 class OverlayChecker::OrphanInode : public OverlayChecker::Error {
  public:
-  explicit OrphanInode(InodeInfo* info) : info_(info) {}
+  explicit OrphanInode(const InodeInfo& info)
+      : number_(info.number), type_(info.type) {}
 
   string getMessage(OverlayChecker*) const override {
     return folly::to<string>(
         "found orphan ",
-        info_->type == InodeType::Dir ? "directory" : "file",
+        type_ == InodeType::Dir ? "directory" : "file",
         " inode ",
-        info_->number);
+        number_);
   }
 
   bool repair(RepairState& repair) const override {
-    auto number = info_->number;
-    switch (info_->type) {
+    switch (type_) {
       case InodeType::File: {
-        auto outputPath = repair.getLostAndFoundPath(number);
-        archiveOrphanFile(repair, number, outputPath, S_IFREG | 0644);
+        auto outputPath = repair.getLostAndFoundPath(number_);
+        archiveOrphanFile(repair, number_, outputPath, S_IFREG | 0644);
         return true;
       }
       case InodeType::Dir: {
-        auto outputPath = repair.getLostAndFoundPath(number);
-        archiveOrphanDir(repair, number, outputPath, info_->children);
+        // Look up the previously loaded children data
+        auto iter = repair.checker()->inodes_.find(number_);
+        if (iter == repair.checker()->inodes_.end()) {
+          XLOG(DFATAL) << "failed to look up previously-loaded children for "
+                       << "orphan directory inode " << number_;
+          return false;
+        }
+        auto outputPath = repair.getLostAndFoundPath(number_);
+        archiveOrphanDir(repair, number_, outputPath, iter->second.children);
         return true;
       }
       case InodeType::Error: {
-        processOrphanedError(repair, number);
+        processOrphanedError(repair, number_);
         return false;
       }
     }
 
-    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(info_->type)
-                 << " when processing orphan inode " << number;
+    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(type_)
+                 << " when processing orphan inode " << number_;
     return false;
   }
 
@@ -547,17 +553,14 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     }
   }
 
-  // The InodeInfo is owned by the OverlayChecker.
-  // The OverlayChecker ensures that it will remain valid longer than the
-  // OrphanInode error object does.
-  InodeInfo* info_;
+  InodeNumber number_;
+  InodeType type_;
 };
 
 class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
  public:
-  explicit HardLinkedInode(InodeNumber number, const InodeInfo* info)
-      : number_(number) {
-    parents_.insert(parents_.end(), info->parents.begin(), info->parents.end());
+  explicit HardLinkedInode(const InodeInfo& info) : number_(info.number) {
+    parents_.insert(parents_.end(), info.parents.begin(), info.parents.end());
     // Sort the parent inode numbers, just to ensure deterministic ordering
     // of paths in the error message so we can check it more easily in the unit
     // tests.
@@ -727,7 +730,7 @@ OverlayChecker::getInodeInfo(InodeNumber number) {
   if (iter == inodes_.end()) {
     return nullptr;
   }
-  return iter->second.get();
+  return &(iter->second);
 }
 
 OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {
@@ -872,16 +875,13 @@ void OverlayChecker::loadInode(InodeNumber number, ShardID shardID) {
     return;
   }
 
-  auto info = loadInodeInfo(number);
-  inodes_.emplace(number, std::move(info));
+  inodes_.emplace(number, loadInodeInfo(number));
 }
 
-unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
-    InodeNumber number) {
+OverlayChecker::InodeInfo OverlayChecker::loadInodeInfo(InodeNumber number) {
   auto inodeError = [this, number](auto&&... args) {
-    auto info = make_unique<InodeInfo>(number, InodeType::Error);
-    addError<InodeDataError>(info.get(), args...);
-    return info;
+    addError<InodeDataError>(number, args...);
+    return InodeInfo(number, InodeType::Error);
   };
 
   // Open the inode file
@@ -938,17 +938,15 @@ unique_ptr<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
         "unknown overlay file type ID: ", folly::hexlify(ByteRange{typeID}));
   }
 
-  auto info = make_unique<InodeInfo>(number, type);
   if (type == InodeType::Dir) {
     try {
-      info->children = loadDirectoryChildren(file);
+      return InodeInfo(number, loadDirectoryChildren(file));
     } catch (const std::exception& ex) {
       return inodeError(
           "error parsing directory contents: ", folly::exceptionStr(ex));
     }
   }
-
-  return info;
+  return InodeInfo(number, type);
 }
 
 overlay::OverlayDir OverlayChecker::loadDirectoryChildren(folly::File& file) {
@@ -962,7 +960,7 @@ overlay::OverlayDir OverlayChecker::loadDirectoryChildren(folly::File& file) {
 
 void OverlayChecker::linkInodeChildren() {
   for (const auto& [parentInodeNumber, parent] : inodes_) {
-    for (const auto& [childName, child] : parent->children.entries) {
+    for (const auto& [childName, child] : parent.children.entries) {
       auto childRawInode = child.inodeNumber;
       if (childRawInode == 0) {
         // Older versions of edenfs would leave the inode number set to 0
@@ -999,12 +997,12 @@ void OverlayChecker::linkInodeChildren() {
 
 void OverlayChecker::scanForParentErrors() {
   for (const auto& [inodeNumber, inodeInfo] : inodes_) {
-    if (inodeInfo->parents.empty()) {
+    if (inodeInfo.parents.empty()) {
       if (inodeNumber != kRootNodeId) {
-        addError<OrphanInode>(inodeInfo.get());
+        addError<OrphanInode>(inodeInfo);
       }
-    } else if (inodeInfo->parents.size() != 1) {
-      addError<HardLinkedInode>(inodeNumber, inodeInfo.get());
+    } else if (inodeInfo.parents.size() != 1) {
+      addError<HardLinkedInode>(inodeInfo);
     }
   }
 }
