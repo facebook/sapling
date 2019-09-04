@@ -80,6 +80,7 @@ def editmessages(repo, revs):
             False,
             _("edit messages of multiple commits in one editor invocation"),
         ),
+        ("M", "reuse-message", "", _("reuse commit message from another commit")),
     ]
     + commands.commitopts
     + commands.commitopts2
@@ -149,7 +150,9 @@ def metaedit(ui, repo, templ, *revs, **opts):
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
 
-            if commitopts.get("message") or commitopts.get("logfile"):
+            if any(
+                commitopts.get(name) for name in ["message", "logfile", "reuse_message"]
+            ):
                 commitopts["edit"] = False
             else:
                 if opts["fold"]:

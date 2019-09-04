@@ -482,3 +482,19 @@ Test actually editing the commits
   o  B1
   
 #endif
+
+Test reusing commit message from another commit
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  > EOS
+
+  $ hg metaedit -r "$B" -M "$A"
+  $ hg log -Gr 'all()' -T '{desc}'
+  o  A
+  |
+  o  A
+  
