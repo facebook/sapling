@@ -854,8 +854,9 @@ def bailifchanged(repo, merge=True, hint=None):
         raise error.UncommitedChangesAbort(_("uncommitted changes"), hint=hint)
 
 
-def logmessage(ui, opts):
+def logmessage(repo, opts):
     """ get the log message according to -m and -l option """
+    ui = repo.ui
     message = opts.get("message")
     logfile = opts.get("logfile")
 
@@ -1435,7 +1436,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     rejects = False
 
     try:
-        cmdline_message = logmessage(ui, opts)
+        cmdline_message = logmessage(repo, opts)
         if cmdline_message:
             # pickup the cmdline msg
             message = cmdline_message
@@ -3364,7 +3365,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     date = opts.get("date")
     if date:
         opts["date"] = util.parsedate(date)
-    message = logmessage(ui, opts)
+    message = logmessage(repo, opts)
     matcher = scmutil.match(repo[None], pats, opts)
 
     dsguard = None
@@ -3518,7 +3519,7 @@ def amend(ui, repo, old, extra, pats, opts):
 
         # See if we got a message from -m or -l, if not, open the editor with
         # the message of the changeset to amend.
-        message = logmessage(ui, opts)
+        message = logmessage(repo, opts)
 
         editform = mergeeditform(old, "commit.amend")
         editor = getcommiteditor(editform=editform, **pycompat.strkwargs(opts))

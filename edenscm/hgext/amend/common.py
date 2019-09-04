@@ -188,7 +188,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
                 return mctx
             return None
 
-        message = cmdutil.logmessage(repo.ui, commitopts)
+        message = cmdutil.logmessage(repo, commitopts)
         if not message:
             message = old.description()
 
@@ -244,7 +244,7 @@ def metarewrite(repo, old, newbases, commitopts, copypreds=None):
         tr = repo.transaction("rewrite")
         updatebookmarks = bookmarksupdater(repo, old.node(), tr)
 
-        message = cmdutil.logmessage(repo.ui, commitopts)
+        message = cmdutil.logmessage(repo, commitopts)
         if not message:
             message = old.description()
 

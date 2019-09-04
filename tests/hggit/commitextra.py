@@ -27,7 +27,7 @@ def commitextra(ui, repo, *pats, **opts):
     for field in fields:
         k, v = field.split("=", 1)
         extras[k] = v
-    message = cmdutil.logmessage(ui, opts)
+    message = cmdutil.logmessage(repo, opts)
     repo.commit(
         message,
         opts.get("user"),

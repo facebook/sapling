@@ -183,7 +183,7 @@ class rebaseruntime(object):
         self.skipped = set()
 
         self.collapsef = opts.get("collapse", False)
-        self.collapsemsg = cmdutil.logmessage(ui, opts)
+        self.collapsemsg = cmdutil.logmessage(repo, opts)
         self.date = opts.get("date", None)
 
         e = opts.get("extrafn")  # internal, used by e.g. hgsubversion
