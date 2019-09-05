@@ -29,11 +29,7 @@ use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure_ext::{Error, Fail};
-use futures::{
-    future,
-    stream::{self, FuturesUnordered},
-    Future, Stream,
-};
+use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
@@ -117,21 +113,14 @@ impl BonsaiDerived for RootFastlog {
 
                 if parents.len() < 2 {
                     let s = match parents.get(0) {
-                        Some(parent) => {
-                            if parent != &unode_mf_id {
-                                (*parent)
-                                    .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
-                                    .filter_map(|diff_entry| match diff_entry {
-                                        Diff::Added(_, entry) => Some(entry),
-                                        Diff::Removed(..) => None,
-                                        Diff::Changed(_, _, entry) => Some(entry),
-                                    })
-                                    .chain(stream::once(Ok(Entry::Tree(unode_mf_id))))
-                                    .boxify()
-                            } else {
-                                stream::empty().boxify()
-                            }
-                        }
+                        Some(parent) => (*parent)
+                            .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
+                            .filter_map(|diff_entry| match diff_entry {
+                                Diff::Added(_, entry) => Some(entry),
+                                Diff::Removed(..) => None,
+                                Diff::Changed(_, _, entry) => Some(entry),
+                            })
+                            .boxify(),
                         None => unode_mf_id
                             .list_all_entries(ctx.clone(), blobstore.clone())
                             .map(|(_, entry)| entry)
