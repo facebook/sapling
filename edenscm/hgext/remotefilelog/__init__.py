@@ -128,6 +128,8 @@ Configs:
 
     ``remotefilelog.indexedloghistorystore`` use an IndexedLog history store.
 
+    ``remotefilelog.userustpackstore`` use the Rust PackStore.
+
 Configs for Eden API (HTTP data fetching):
 
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.

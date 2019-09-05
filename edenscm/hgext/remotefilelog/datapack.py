@@ -83,7 +83,10 @@ class datapackstore(basepack.basepackstore):
 
 
 def makedatapackstore(ui, path, deletecorruptpacks=False):
-    return datapackstore(ui, path, deletecorruptpacks)
+    if ui.configbool("remotefilelog", "userustpackstore", False):
+        return revisionstore.datapackstore(path, deletecorruptpacks)
+    else:
+        return datapackstore(ui, path, deletecorruptpacks)
 
 
 class memdatapack(object):

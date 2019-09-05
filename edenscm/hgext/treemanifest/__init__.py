@@ -713,7 +713,6 @@ def setuptreestores(repo, mfl):
     )
 
     # Data store
-    # TODO: support cstore.uniondatapackstore here
     datastore = makedatapackstore(ui, packpath, deletecorruptpacks=True)
     localdatastore = makedatapackstore(ui, localpackpath)
     datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]

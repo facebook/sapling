@@ -355,7 +355,14 @@ def _incrementalrepack(
     datapacks = _topacks(
         packpath, _computeincrementaldatapack(repo.ui, files), revisionstore.datapack
     )
-    datapacks.extend(s for s in datastore if not isinstance(s, datapack.datapackstore))
+    datapacks.extend(
+        s
+        for s in datastore
+        if not (
+            isinstance(s, datapack.datapackstore)
+            or isinstance(s, revisionstore.datapackstore)
+        )
+    )
 
     historypacks = _topacks(
         packpath,
@@ -363,7 +370,12 @@ def _incrementalrepack(
         revisionstore.historypack,
     )
     historypacks.extend(
-        s for s in historystore if not isinstance(s, historypack.historypackstore)
+        s
+        for s in historystore
+        if not (
+            isinstance(s, historypack.historypackstore)
+            or isinstance(s, revisionstore.historypackstore)
+        )
     )
 
     # ``allhistory{files,packs}`` contains all known history packs, even ones we

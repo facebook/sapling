@@ -87,7 +87,10 @@ class historypackstore(basepack.basepackstore):
 
 
 def makehistorypackstore(ui, path, deletecorruptpacks=False):
-    return historypackstore(ui, path, deletecorruptpacks)
+    if ui.configbool("remotefilelog", "userustpackstore", False):
+        return revisionstore.historypackstore(path, deletecorruptpacks)
+    else:
+        return historypackstore(ui, path, deletecorruptpacks)
 
 
 class memhistorypack(object):
