@@ -9,7 +9,9 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 
-use revisionstore::{DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore};
+use revisionstore::{
+    CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
+};
 use types::{Key, Node, RepoPathBuf};
 
 #[allow(dead_code)]
@@ -83,7 +85,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     let cachepath = String::from_utf8_lossy(&cachepath[..]);
     let reponame = String::from_utf8_lossy(&reponame[..]);
     let fullpath = format!("{}/{}/packs", cachepath, reponame);
-    let packstore = Box::new(DataPackStore::new(fullpath));
+    let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
     let indexedstore = Box::new(IndexedLogDataStore::new(fullpath).unwrap());
     let mut unionstore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();

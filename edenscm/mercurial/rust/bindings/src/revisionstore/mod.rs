@@ -14,8 +14,8 @@ use failure::{format_err, Error, Fallible};
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    Ancestors, DataPack, DataPackStore, DataPackVersion, DataStore, Delta, HistoryPack,
-    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
+    Ancestors, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta,
+    HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
     IndexedLogHistoryStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
     MutableHistoryPack, MutableHistoryStore,
 };
@@ -262,10 +262,17 @@ py_class!(class datapackstore |py| {
     data store: Box<DataPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, directory: &PyBytes) -> PyResult<datapackstore> {
+    def __new__(_cls, directory: &PyBytes, deletecorruptpacks: bool = false) -> PyResult<datapackstore> {
         let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
         let path = directory.into();
-        datapackstore::create_instance(py, Box::new(DataPackStore::new(&path)), path)
+
+        let corruption_policy = if deletecorruptpacks {
+            CorruptionPolicy::REMOVE
+        } else {
+            CorruptionPolicy::IGNORE
+        };
+
+        datapackstore::create_instance(py, Box::new(DataPackStore::new(&path, corruption_policy)), path)
     }
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
@@ -387,10 +394,17 @@ py_class!(class historypackstore |py| {
     data store: Box<HistoryPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, directory: &PyBytes) -> PyResult<historypackstore> {
+    def __new__(_cls, directory: &PyBytes, deletecorruptpacks: bool = false) -> PyResult<historypackstore> {
         let directory = encoding::local_bytes_to_path(directory.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
         let path = directory.into();
-        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path)), path)
+
+        let corruption_policy = if deletecorruptpacks {
+            CorruptionPolicy::REMOVE
+        } else {
+            CorruptionPolicy::IGNORE
+        };
+
+        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path, corruption_policy)), path)
     }
 
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {

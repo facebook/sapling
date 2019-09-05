@@ -173,10 +173,10 @@ impl DataPackStore {
     ///
     /// Only use for data that can be recoverd from the network, corrupted datapacks will be
     /// automatically removed from disk.
-    pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
+    pub fn new<P: AsRef<Path>>(pack_dir: P, corruption_policy: CorruptionPolicy) -> Self {
         PackStoreOptions::new()
             .directory(pack_dir)
-            .corruption_policy(CorruptionPolicy::REMOVE)
+            .corruption_policy(corruption_policy)
             .extension("datapack")
             .build()
     }
@@ -187,10 +187,10 @@ impl HistoryPackStore {
     ///
     /// Only use for data that can be recoverd from the network, corrupted datapacks will be
     /// automatically removed from disk.
-    pub fn new<P: AsRef<Path>>(pack_dir: P) -> Self {
+    pub fn new<P: AsRef<Path>>(pack_dir: P, corruption_policy: CorruptionPolicy) -> Self {
         PackStoreOptions::new()
             .directory(pack_dir)
-            .corruption_policy(CorruptionPolicy::REMOVE)
+            .corruption_policy(corruption_policy)
             .extension("histpack")
             .build()
     }
@@ -378,7 +378,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let store = DataPackStore::new(&tempdir);
+        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
         let delta = store.get_delta(&k)?;
         assert_eq!(delta, revision.0);
         Ok(())
@@ -399,7 +399,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let store = DataPackStore::new(&tempdir);
+        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
         let missing = store.get_missing(&vec![k])?;
         assert_eq!(missing.len(), 0);
         Ok(())
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn test_datapack_created_after() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let store = DataPackStore::new(&tempdir);
+        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
         let k = key("a", "2");
         let revision = (
@@ -505,7 +505,7 @@ mod tests {
     fn test_histpack() -> Fallible<()> {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new()?;
-        let store = HistoryPackStore::new(&tempdir);
+        let store = HistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
         let (nodes, _) = get_nodes(&mut rng);
         make_historypack(&tempdir, &nodes);
@@ -543,7 +543,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision2.clone()]);
 
-        let packstore = DataPackStore::new(&tempdir);
+        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
         let _ = packstore.get_delta(&k2)?;
         assert!(packstore.packs.borrow().stores[0].get_delta(&k2).is_ok());
@@ -559,7 +559,7 @@ mod tests {
         let tempdir = TempDir::new()?;
         let mut non_present_tempdir = tempdir.into_path();
         non_present_tempdir.push("non_present");
-        let store = HistoryPackStore::new(&non_present_tempdir);
+        let store = HistoryPackStore::new(&non_present_tempdir, CorruptionPolicy::REMOVE);
 
         store.rescan()
     }
@@ -592,7 +592,41 @@ mod tests {
             .set_len(datapack.metadata().unwrap().len() / 2)
             .unwrap();
 
-        let packstore = DataPackStore::new(&tempdir);
+        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
         packstore.get_delta(&k1).unwrap();
+    }
+
+    #[test]
+    fn test_ignore_corrupted() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+
+        let k1 = key("a", "2");
+        let revision1 = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: Some(key("a", "1")),
+                key: k1.clone(),
+            },
+            Default::default(),
+        );
+        let path = make_datapack(&tempdir, &vec![revision1.clone()])
+            .pack_path()
+            .to_path_buf();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mut permissions = metadata.permissions();
+        permissions.set_readonly(false);
+        fs::set_permissions(&path, permissions).unwrap();
+
+        let datapack = OpenOptions::new().write(true).open(path)?;
+        datapack.set_len(datapack.metadata()?.len() / 2)?;
+
+        assert_eq!(read_dir(&tempdir)?.count(), 2);
+
+        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::IGNORE);
+        assert!(packstore.get_delta(&k1).is_err());
+
+        assert_eq!(read_dir(&tempdir)?.count(), 2);
+        Ok(())
     }
 }
