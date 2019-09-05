@@ -106,8 +106,13 @@ impl MononokeApp {
                     // This is an old form that some consumers use
                     .alias("repo_id")
                     .value_name("ID")
-                    .default_value("0")
                     .help("numeric ID of repository")
+            )
+            .arg(
+                Arg::with_name("repo-name")
+                    .long("repo-name")
+                    .value_name("NAME")
+                    .help("Name of repository")
             )
             .arg(
                 Arg::with_name("mononoke-config-path")
@@ -270,12 +275,35 @@ pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error =
 }
 
 pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let repo_id = matches
-        .value_of("repo-id")
-        .ok_or(err_msg("Missing repo-id"))?
-        .parse::<u32>()
-        .map_err(|_| err_msg("Couldn't parse repo-id as u32"))?;
-    Ok(RepositoryId::new(repo_id as i32))
+    match (matches.value_of("repo-name"), matches.value_of("repo-id")) {
+        (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
+        (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
+        (None, Some(repo_id)) => {
+            let repo_id = repo_id
+                .parse::<u32>()
+                .map_err(|_| err_msg("Couldn't parse repo-id as u32"))?;
+            Ok(RepositoryId::new(repo_id as i32))
+        }
+        (Some(repo_name), None) => {
+            let configs = read_configs(matches)?;
+            let mut repo_config: Vec<_> = configs
+                .repos
+                .into_iter()
+                .filter(|(name, _)| name == repo_name)
+                .collect();
+            if repo_config.is_empty() {
+                Err(err_msg(format!("unknown repo-name {:?}", repo_name)))
+            } else if repo_config.len() > 1 {
+                Err(err_msg(format!(
+                    "repo-name {:?} defined multiple times",
+                    repo_name
+                )))
+            } else {
+                let (_, repo_config) = repo_config.pop().unwrap();
+                Ok(RepositoryId::new(repo_config.repoid))
+            }
+        }
+    }
 }
 
 pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>

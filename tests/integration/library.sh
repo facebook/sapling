@@ -87,6 +87,7 @@ function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
@@ -95,6 +96,7 @@ function mononoke_hg_sync {
 function mononoke_rechunker {
     "$MONONOKE_RECHUNKER" \
     "${CACHING_ARGS[@]}" \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config \
     "$@"
 }
@@ -103,6 +105,7 @@ function mononoke_hg_sync_with_retry {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --base-retry-delay-ms 1 \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
@@ -114,6 +117,7 @@ function mononoke_hg_sync_with_failure_handler {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
     --lock-on-failure \
@@ -153,6 +157,7 @@ function mononoke_bookmarks_filler {
 
   "$MONONOKE_BOOKMARKS_FILLER" \
     "${CACHING_ARGS[@]}" \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config  \
     "$@" "$sql_source" "$sql_name"
 }
@@ -199,6 +204,7 @@ function mononoke_hg_sync_loop {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
+    --repo-id 0 \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
@@ -206,12 +212,14 @@ function mononoke_hg_sync_loop {
 function mononoke_admin {
   "$MONONOKE_ADMIN" \
     "${CACHING_ARGS[@]}" \
+    --repo-id 0 \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
 function write_stub_log_entry {
   "$WRITE_STUB_LOG_ENTRY" \
     "${CACHING_ARGS[@]}" \
+    --repo-id 0 \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
