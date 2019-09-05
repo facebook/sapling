@@ -131,8 +131,7 @@ But they can be made optional or required:
 Try making the script return different locations, based on the target:
   $ cat <<'EOF' > stable.sh
   > #!/bin/bash
-  > # The script is passed "--target <TARGET>", so look at $2:
-  > if [ "$2" = "foo" ]; then
+  > if [ "$TARGET" = "foo" ]; then
   >    echo 'D'
   > else
   >    echo 'C'

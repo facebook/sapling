@@ -27,7 +27,7 @@ thus multiple stable commits.
 import re
 import subprocess
 
-from edenscm.mercurial import commands, error, json, registrar, util
+from edenscm.mercurial import commands, encoding, error, json, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.revsetlang import getargsdict, getstring
 from edenscm.mercurial.smartset import baseset
@@ -65,20 +65,26 @@ def _execute(ui, repo, target=None):
     if script is None:
         raise error.ConfigError(_("must set stablerev.script"))
 
-    # Assume the specified script is relative to the repo:
+    # Pass '--target $TARGET' for compatibility.
+    # XXX: Remove this once the new code has been rolled out for some time.
     if target is not None:
         script += " --target %s" % util.shellquote(target)
     try:
         ui.debug("repo-specific script for stable: %s\n" % script)
-        cwd = repo.wvfs.join("")
-        ui.debug("setting current working directory to: %s\n" % cwd)
+        reporoot = repo.wvfs.join("")
+        env = encoding.environ.copy()
+        env.update({"REAL_CWD": pycompat.getcwd(), "HG_ROOT": reporoot})
+        if target is not None:
+            env["TARGET"] = target
+        ui.debug("setting current working directory to: %s\n" % reporoot)
         p = subprocess.Popen(
             script,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=util.closefds,
-            cwd=cwd,
+            cwd=reporoot,
+            env=env,
         )
         res = p.communicate()
         ui.debug("stable script returns: %r\n" % (res,))
