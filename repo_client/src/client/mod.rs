@@ -124,6 +124,8 @@ where
 
 lazy_static! {
     static ref TIMEOUT: Duration = Duration::from_secs(15 * 60);
+    // getbundle requests can be very slow for huge commits
+    static ref GETBUNDLE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // clone requests can be rather long. Let's bump the timeout
     static ref CLONE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // getfiles requests can be rather long. Let's bump the timeout
@@ -1092,7 +1094,7 @@ impl HgCommands for RepoClient {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
         }
-        .whole_stream_timeout(*TIMEOUT)
+        .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
         .map_err(process_stream_timeout_error)
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
