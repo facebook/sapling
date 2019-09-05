@@ -16,8 +16,9 @@ use serde_derive::Serialize;
 
 use apiserver_thrift::types::{
     MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
-    MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeRevision,
+    MononokeGetLastCommitOnPathParams, MononokeGetRawParams, MononokeGetTreeParams,
+    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeListDirectoryUnodesParams,
+    MononokeRevision,
 };
 use types::api::{DataRequest, HistoryRequest, TreeRequest};
 
@@ -65,6 +66,10 @@ pub enum MononokeRepoQuery {
         revision: Revision,
     },
     GetBranches,
+    GetLastCommitOnPath {
+        path: String,
+        revision: Revision,
+    },
     IsAncestor {
         ancestor: Revision,
         descendant: Revision,
@@ -140,6 +145,22 @@ impl TryFrom<MononokeGetBranchesParams> for MononokeQuery {
         Ok(MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetBranches,
+        })
+    }
+}
+
+impl TryFrom<MononokeGetLastCommitOnPathParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeGetLastCommitOnPathParams) -> Result<MononokeQuery, Self::Error> {
+        let repo = params.repo;
+        let path = String::from_utf8(params.path)?;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
+            kind: MononokeRepoQuery::GetLastCommitOnPath {
+                path,
+                revision: rev,
+            },
         })
     }
 }

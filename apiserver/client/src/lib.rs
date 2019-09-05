@@ -12,9 +12,9 @@ use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeDirectoryUnodes,
     MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
-    MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeNodeHash,
-    MononokeRevision, MononokeTreeHash,
+    MononokeGetLastCommitOnPathParams, MononokeGetRawParams, MononokeGetTreeParams,
+    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeListDirectoryUnodesParams,
+    MononokeNodeHash, MononokeRevision, MononokeTreeHash,
 };
 use srclient::SRChannelBuilder;
 
@@ -67,6 +67,19 @@ impl MononokeAPIClient {
         self.inner.get_branches(&MononokeGetBranchesParams {
             repo: self.repo.clone(),
         })
+    }
+
+    pub fn get_last_commit_on_path(
+        &self,
+        revision: String,
+        path: String,
+    ) -> BoxFuture<MononokeChangeset, failure_ext::Error> {
+        self.inner
+            .get_last_commit_on_path(&MononokeGetLastCommitOnPathParams {
+                repo: self.repo.clone(),
+                revision: MononokeRevision::commit_hash(revision),
+                path: path.into_bytes(),
+            })
     }
 
     pub fn list_directory(

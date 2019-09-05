@@ -47,7 +47,7 @@ use types::{
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
-use mononoke_types::{ChangesetId, MPath, RepositoryId};
+use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
@@ -69,6 +69,7 @@ define_stats! {
     get_tree: timeseries(RATE, SUM),
     get_changeset: timeseries(RATE, SUM),
     get_branches: timeseries(RATE, SUM),
+    get_last_commit_on_path: timeseries(RATE, SUM),
     is_ancestor: timeseries(RATE, SUM),
     download_large_file: timeseries(RATE, SUM),
     lfs_batch: timeseries(RATE, SUM),
@@ -240,6 +241,47 @@ impl MononokeRepo {
         }
     }
 
+    fn get_root_manifest_unode_entry(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+    ) -> BoxFuture<ManifestEntry<ManifestUnodeId, FileUnodeId>, ErrorKind> {
+        let mpath = if path.is_empty() {
+            None
+        } else {
+            Some(try_boxfuture!(FS::get_mpath(path.clone())))
+        };
+
+        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+
+        let blobstore = repo.get_blobstore();
+        self.get_bonsai_id_from_revision(ctx.clone(), revision.clone())
+            .and_then({
+                cloned!(ctx, repo);
+                move |bcs_id| {
+                    RootUnodeManifestId::derive(ctx, repo, unodes_derived_mapping, bcs_id)
+                        .map_err(ErrorKind::InternalError)
+                }
+            })
+            .and_then({
+                cloned!(blobstore, ctx, mpath);
+                move |root_unode_mf_id| {
+                    root_unode_mf_id
+                        .manifest_unode_id()
+                        .find_entry(ctx, blobstore, mpath)
+                        .map_err(ErrorKind::InternalError)
+                }
+            })
+            .and_then(move |maybe_entry| {
+                maybe_entry.ok_or(ErrorKind::NotFound(
+                    format!("{:?} {:?}", revision, mpath),
+                    None,
+                ))
+            })
+            .boxify()
+    }
+
     fn get_raw_file(
         &self,
         ctx: CoreContext,
@@ -312,6 +354,46 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn get_last_commit_on_path(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_last_commit_on_path.add_value(1);
+
+        cloned!(ctx, self.repo);
+        let blobstore = repo.get_blobstore();
+        self.get_root_manifest_unode_entry(ctx.clone(), revision, path)
+            .and_then({
+                cloned!(blobstore, ctx);
+                move |entry| entry.load(ctx, &blobstore).map_err(Error::from).from_err()
+            })
+            .and_then({
+                cloned!(ctx, repo);
+                move |unode| {
+                    let changeset_id = match unode {
+                        ManifestEntry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                        ManifestEntry::Leaf(file_unode) => file_unode.linknode().clone(),
+                    };
+                    repo.get_hg_from_bonsai_changeset(ctx, changeset_id)
+                        .from_err()
+                }
+            })
+            .and_then(move |hg_changeset_id| {
+                repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
+                    .from_err()
+            })
+            .and_then(move |changeset| {
+                changeset
+                    .try_into()
+                    .map_err(Error::from)
+                    .map_err(ErrorKind::from)
+            })
+            .map(move |changeset| MononokeRepoResponse::GetLastCommitOnPath { commit: changeset })
+            .boxify()
+    }
+
     fn list_directory(
         &self,
         ctx: CoreContext,
@@ -353,37 +435,9 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::list_directory_unodes.add_value(1);
 
-        let mpath = if path.is_empty() {
-            None
-        } else {
-            Some(try_boxfuture!(FS::get_mpath(path.clone())))
-        };
-
-        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+        cloned!(ctx, self.repo);
         let blobstore = repo.get_blobstore();
-        self.get_bonsai_id_from_revision(ctx.clone(), revision.clone())
-            .and_then({
-                cloned!(ctx, repo);
-                move |bcs_id| {
-                    RootUnodeManifestId::derive(ctx, repo, unodes_derived_mapping, bcs_id)
-                        .map_err(ErrorKind::InternalError)
-                }
-            })
-            .and_then({
-                cloned!(ctx, mpath);
-                move |root_unode_mf_id| {
-                    root_unode_mf_id
-                        .manifest_unode_id()
-                        .find_entry(ctx, repo.get_blobstore(), mpath)
-                        .map_err(ErrorKind::InternalError)
-                }
-            })
-            .and_then(move |maybe_entry| {
-                maybe_entry.ok_or(ErrorKind::NotFound(
-                    format!("{:?} {:?}", revision, mpath),
-                    None,
-                ))
-            })
+        self.get_root_manifest_unode_entry(ctx.clone(), revision, path.clone())
             .and_then({
                 cloned!(blobstore, ctx);
                 move |entry| match entry {
@@ -741,6 +795,9 @@ impl MononokeRepo {
             GetTree { hash } => self.get_tree(ctx, hash),
             GetChangeset { revision } => self.get_changeset(ctx, revision),
             GetBranches => self.get_branches(ctx),
+            GetLastCommitOnPath { revision, path } => {
+                self.get_last_commit_on_path(ctx, revision, path)
+            }
             IsAncestor {
                 ancestor,
                 descendant,

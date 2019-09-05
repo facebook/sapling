@@ -9,15 +9,15 @@ use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 use crate::errors::ErrorKind;
 use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
-    GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, GetTreeExn, IsAncestorExn,
-    ListDirectoryExn, ListDirectoryUnodesExn,
+    GetBlobExn, GetBranchesExn, GetChangesetExn, GetLastCommitOnPathExn, GetRawExn, GetTreeExn,
+    IsAncestorExn, ListDirectoryExn, ListDirectoryUnodesExn,
 };
 use apiserver_thrift::types::{
     MononokeAPIException, MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory,
     MononokeDirectoryUnodes, MononokeGetBlobParams, MononokeGetBranchesParams,
-    MononokeGetChangesetParams, MononokeGetRawParams, MononokeGetTreeParams,
-    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeListDirectoryUnodesParams,
-    MononokeRevision,
+    MononokeGetChangesetParams, MononokeGetLastCommitOnPathParams, MononokeGetRawParams,
+    MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams,
+    MononokeListDirectoryUnodesParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
 use async_trait::async_trait;
@@ -237,6 +237,46 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                         .iter()
                         .map(|(bookmark, hash)| bookmark.len() + hash.len())
                         .sum()
+                })
+                .unwrap_or(0),
+        );
+        resp
+    }
+
+    async fn get_last_commit_on_path(
+        &self,
+        params: MononokeGetLastCommitOnPathParams,
+    ) -> Result<MononokeChangeset, GetLastCommitOnPathExn> {
+        let scuba = self.create_scuba_logger(
+            Some(params.path.clone()),
+            Some(params.revision.clone()),
+            params.repo.clone(),
+        );
+        let ctx = self.create_ctx(scuba);
+
+        let resp = self
+            .convert_and_call(
+                ctx.clone(),
+                params,
+                |resp: MononokeRepoResponse| match resp {
+                    MononokeRepoResponse::GetLastCommitOnPath { commit } => {
+                        Ok(MononokeChangeset::from(commit))
+                    }
+                    _ => Err(ErrorKind::InternalError(err_msg(
+                        "Actor returned wrong response type to query".to_string(),
+                    ))),
+                },
+            )
+            .await;
+
+        log_response_size(
+            ctx.scuba().clone(),
+            resp.as_ref()
+                .map(|resp| {
+                    resp.commit_hash.as_bytes().len()
+                        + resp.message.len()
+                        + resp.author.as_bytes().len()
+                        + size_of::<i64>()
                 })
                 .unwrap_or(0),
         );

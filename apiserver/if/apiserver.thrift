@@ -53,6 +53,12 @@ struct MononokeGetBranchesParams{
   1: string repo,
 }
 
+struct MononokeGetLastCommitOnPathParams{
+  1: string repo,
+  2: MononokeRevision revision,
+  3: binary path,
+}
+
 struct MononokeListDirectoryParams{
   1: string repo,
   2: MononokeRevision revision,
@@ -135,6 +141,9 @@ service MononokeAPIService extends fb303.FacebookService {
     throws (1: MononokeAPIException e),
 
   MononokeBranches get_branches(1: MononokeGetBranchesParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeChangeset get_last_commit_on_path(1: MononokeGetLastCommitOnPathParams params)
     throws (1: MononokeAPIException e),
 
   # Having two different list_directory methods is a temporary state

@@ -44,6 +44,9 @@ pub enum MononokeRepoResponse {
     GetBranches {
         branches: BTreeMap<String, String>,
     },
+    GetLastCommitOnPath {
+        commit: Changeset,
+    },
     IsAncestor {
         answer: bool,
     },
@@ -130,6 +133,7 @@ impl Responder for MononokeRepoResponse {
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             GetBranches { branches } => Json(branches).respond_to(req),
+            GetLastCommitOnPath { commit } => Json(commit).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
                     "true".into()

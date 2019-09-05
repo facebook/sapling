@@ -53,6 +53,28 @@ fn get_branches(client: MononokeAPIClient) -> BoxFuture<(), ()> {
         .boxify()
 }
 
+fn get_last_commit_on_path(
+    client: MononokeAPIClient,
+    matches: &ArgMatches<'_>,
+) -> BoxFuture<(), ()> {
+    let path = matches.value_of("path").expect("must provide path");
+    let revision = matches.value_of("revision").expect("must provide revision");
+
+    client
+        .get_last_commit_on_path(revision.to_string(), path.to_string())
+        .and_then(|r| {
+            Ok(
+                serde_json::to_string(&r)
+                    .unwrap_or("Error converting response to json".to_string()),
+            )
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
+        .boxify()
+}
+
 fn list_directory(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let revision = matches.value_of("revision").expect("must provide revision");
     let path = matches.value_of("path").expect("must provide path");
@@ -191,6 +213,26 @@ fn main() -> Result<(), ()> {
         )
         .subcommand(SubCommand::with_name("get_branches").about("get all branches"))
         .subcommand(
+            SubCommand::with_name("get_last_commit_on_path")
+                .about("get the last commit cantaining changes on the path")
+                .arg(
+                    Arg::with_name("revision")
+                        .short("c")
+                        .long("revision")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the revision you want to query")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .short("p")
+                        .long("path")
+                        .value_name("PATH")
+                        .help("path to the file or directory")
+                        .required(true),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("list_directory")
                 .about("list all files in a directory")
                 .arg(
@@ -288,6 +330,8 @@ fn main() -> Result<(), ()> {
         get_changeset(client, matches)
     } else if let Some(_) = matches.subcommand_matches("get_branches") {
         get_branches(client)
+    } else if let Some(matches) = matches.subcommand_matches("get_last_commit_on_path") {
+        get_last_commit_on_path(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("list_directory") {
         list_directory(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("list_directory_unodes") {
