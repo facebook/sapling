@@ -1063,8 +1063,8 @@ def packparthandler(op, part):
 
 
 def _createpackstore(ui, packpath):
-    datastore = datapack.datapackstore(ui, packpath)
-    histstore = historypack.historypackstore(ui, packpath)
+    datastore = datapack.makedatapackstore(ui, packpath)
+    histstore = historypack.makehistorypackstore(ui, packpath)
     return datastore, histstore
 
 

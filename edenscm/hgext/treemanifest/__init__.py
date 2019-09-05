@@ -202,8 +202,8 @@ from ..remotefilelog import (
     wirepack,
 )
 from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
-from ..remotefilelog.datapack import datapackstore, memdatapack
-from ..remotefilelog.historypack import historypackstore, memhistorypack
+from ..remotefilelog.datapack import makedatapackstore, memdatapack
+from ..remotefilelog.historypack import makehistorypackstore, memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.repack import (
     _computeincrementaldatapack,
@@ -650,7 +650,7 @@ def setuptreestores(repo, mfl):
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
-        datastore = datapackstore(ui, packpath)
+        datastore = makedatapackstore(ui, packpath)
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
 
@@ -676,7 +676,7 @@ def setuptreestores(repo, mfl):
         )
 
         # History store
-        historystore = historypackstore(ui, packpath)
+        historystore = makehistorypackstore(ui, packpath)
         mfl.historystore = unionmetadatastore(
             historystore, revlogstore, mutablelocalstore, ondemandstore
         )
@@ -714,8 +714,8 @@ def setuptreestores(repo, mfl):
 
     # Data store
     # TODO: support cstore.uniondatapackstore here
-    datastore = datapackstore(ui, packpath, deletecorruptpacks=True)
-    localdatastore = datapackstore(ui, localpackpath)
+    datastore = makedatapackstore(ui, packpath, deletecorruptpacks=True)
+    localdatastore = makedatapackstore(ui, localpackpath)
     datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]
     if demanddownload:
         datastores.append(remotestore)
@@ -730,8 +730,8 @@ def setuptreestores(repo, mfl):
     mfl.localdatastores = [localdatastore]
 
     # History store
-    sharedhistorystore = historypackstore(ui, packpath, deletecorruptpacks=True)
-    localhistorystore = historypackstore(ui, localpackpath)
+    sharedhistorystore = makehistorypackstore(ui, packpath, deletecorruptpacks=True)
+    localhistorystore = makehistorypackstore(ui, localpackpath)
     mfl.sharedhistorystores = [sharedhistorystore]
     mfl.localhistorystores = [localhistorystore]
 
@@ -2611,7 +2611,7 @@ def serverrepack(repo, incremental=False, options=None):
         files = []
 
     # Data store
-    fulldatapackstore = datapackstore(repo.ui, packpath)
+    fulldatapackstore = makedatapackstore(repo.ui, packpath)
     if incremental:
         datastores = _topacks(
             packpath,
@@ -2631,7 +2631,7 @@ def serverrepack(repo, incremental=False, options=None):
             revisionstore.historypack,
         )
     else:
-        historystores = [historypackstore(repo.ui, packpath)]
+        historystores = [makehistorypackstore(repo.ui, packpath)]
     historystores.append(revlogstore)
     histstore = unionmetadatastore(*historystores)
 

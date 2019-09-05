@@ -21,8 +21,8 @@ from .contentstore import (
     remotefilelogcontentstore,
     unioncontentstore,
 )
-from .datapack import datapackstore
-from .historypack import historypackstore
+from .datapack import makedatapackstore
+from .historypack import makehistorypackstore
 from .metadatastore import (
     remotefilelogmetadatastore,
     remotemetadatastore,
@@ -644,10 +644,10 @@ class remotefileslog(filelog.fileslog):
         repo = self.repo
 
         def makepackstore(datastores, historystores, packpath, deletecorrupt=False):
-            packcontentstore = datapackstore(
+            packcontentstore = makedatapackstore(
                 repo.ui, packpath, deletecorruptpacks=deletecorrupt
             )
-            packmetadatastore = historypackstore(
+            packmetadatastore = makehistorypackstore(
                 repo.ui, packpath, deletecorruptpacks=deletecorrupt
             )
             datastores.append(packcontentstore)

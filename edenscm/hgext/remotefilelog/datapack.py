@@ -82,6 +82,10 @@ class datapackstore(basepack.basepackstore):
             revisionstore.repackincrementaldatapacks(self.path, self.path)
 
 
+def makedatapackstore(ui, path, deletecorruptpacks=False):
+    return datapackstore(ui, path, deletecorruptpacks)
+
+
 class memdatapack(object):
     def __init__(self):
         self.data = {}

@@ -86,6 +86,10 @@ class historypackstore(basepack.basepackstore):
             revisionstore.repackincrementalhistpacks(self.path, self.path)
 
 
+def makehistorypackstore(ui, path, deletecorruptpacks=False):
+    return historypackstore(ui, path, deletecorruptpacks)
+
+
 class memhistorypack(object):
     def __init__(self):
         self.history = {}
