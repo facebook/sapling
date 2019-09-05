@@ -19,6 +19,7 @@
 #include <string>
 
 #include <folly/Conv.h>
+#include <folly/portability/GFlags.h>
 
 #include "eden/fs/utils/PathFuncs.h"
 

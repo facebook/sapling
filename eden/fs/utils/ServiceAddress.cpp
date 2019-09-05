@@ -14,7 +14,7 @@
 #include "eden/fs/eden-config.h"
 
 #ifdef EDEN_HAVE_SERVICEROUTER
-#include <servicerouter/client/cpp2/ServiceRouter.h>
+#include <servicerouter/client/cpp2/ServiceRouter.h> // @manual
 #endif
 
 namespace facebook {

@@ -7,7 +7,6 @@
 #include "eden/fs/service/EdenInit.h"
 
 #include <boost/filesystem.hpp>
-#include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
