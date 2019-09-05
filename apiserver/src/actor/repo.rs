@@ -4,15 +4,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::time::{Duration, Instant};
 use std::{
+    collections::{BTreeMap, HashMap},
     convert::{TryFrom, TryInto},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 use blobrepo::{file_history::get_file_history, BlobRepo, StoreRequest};
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::{Blobstore, Loadable};
-use bookmarks::{Bookmark, BookmarkName};
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -20,9 +22,9 @@ use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeM
 use derived_data::BonsaiDerived;
 use failure::Error;
 use futures::{
-    future::{err, join_all, ok},
+    future::{self, err, join_all, ok},
     lazy,
-    stream::{iter_ok, once},
+    stream::{iter_ok, once, repeat, FuturesUnordered},
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
@@ -75,6 +77,7 @@ define_stats! {
     eden_get_history: timeseries(RATE, SUM),
     eden_get_trees: timeseries(RATE, SUM),
     eden_prefetch_trees: timeseries(RATE, SUM),
+    cached_bookmark_update_time_ms: timeseries(RATE, SUM),
 }
 
 pub struct MononokeRepo {
@@ -83,6 +86,10 @@ pub struct MononokeRepo {
     skiplist_index: Arc<SkiplistIndex>,
     cache: Option<CacheManager>,
     unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    // Cached public bookmarks that are used by apiserver. They can be outdated but not by much
+    // (normally just a few seconds).
+    // These bookmarks are updated when derived data is generated for them.
+    cached_publishing_bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
 }
 
 impl MononokeRepo {
@@ -101,6 +108,8 @@ impl MononokeRepo {
 
         let repoid = RepositoryId::new(config.repoid);
 
+        let bookmarks = Arc::new(RwLock::new(HashMap::new()));
+
         open_blobrepo(
             config.storage_config.clone(),
             repoid,
@@ -113,6 +122,9 @@ impl MononokeRepo {
             logger.clone(),
         )
         .map(move |repo| {
+            // Spawn a task that keeps cached bookmarks updated
+            spawn_bookmarks_updater(bookmarks.clone(), ctx.clone(), logger.clone(), repo.clone());
+
             let skiplist_index = {
                 if !with_skiplist {
                     ok(Arc::new(SkiplistIndex::new())).right_future()
@@ -141,7 +153,10 @@ impl MononokeRepo {
                     }
                 }
             };
-            skiplist_index.map(|skiplist_index| {
+
+            // Make sure bookmarks are not empty
+            let f = update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone());
+            skiplist_index.join(f).map(move |(skiplist_index, ())| {
                 let unodes_derived_mapping =
                     Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
                 Self {
@@ -150,6 +165,7 @@ impl MononokeRepo {
                     skiplist_index,
                     cache,
                     unodes_derived_mapping,
+                    cached_publishing_bookmarks: bookmarks,
                 }
             })
         })
@@ -160,22 +176,17 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         revision: Revision,
-    ) -> impl Future<Item = HgChangesetId, Error = Error> {
+    ) -> BoxFuture<HgChangesetId, Error> {
         let repo = self.repo.clone();
         match revision {
-            Revision::CommitHash(hash) => FS::get_changeset_id(hash)
-                .into_future()
+            Revision::CommitHash(hash) => {
+                FS::get_changeset_id(hash).into_future().from_err().boxify()
+            }
+            Revision::Bookmark(bookmark) => self
+                .get_bonsai_id_from_bookmark(ctx.clone(), bookmark)
                 .from_err()
-                .left_future(),
-            Revision::Bookmark(bookmark) => BookmarkName::new(bookmark)
-                .into_future()
-                .from_err()
-                .and_then(move |bookmark| {
-                    repo.get_bookmark(ctx, &bookmark).and_then(move |opt| {
-                        opt.ok_or_else(|| ErrorKind::BookmarkNotFound(bookmark.to_string()).into())
-                    })
-                })
-                .right_future(),
+                .and_then(move |bcs_id| repo.get_hg_from_bonsai_changeset(ctx, bcs_id))
+                .boxify(),
         }
     }
 
@@ -201,18 +212,31 @@ impl MononokeRepo {
                             })
                     }
                 })
-                .left_future(),
-            Revision::Bookmark(bookmark) => BookmarkName::new(bookmark)
-                .into_future()
+                .boxify(),
+            Revision::Bookmark(bookmark) => self.get_bonsai_id_from_bookmark(ctx, bookmark),
+        }
+    }
+
+    fn get_bonsai_id_from_bookmark(
+        &self,
+        ctx: CoreContext,
+        bookmark: String,
+    ) -> BoxFuture<ChangesetId, ErrorKind> {
+        let bookmark_name = try_boxfuture!(BookmarkName::new(bookmark.clone()));
+        let book = {
+            let bookmarks = self.cached_publishing_bookmarks.read().unwrap();
+            bookmarks.get(&bookmark_name).cloned()
+        };
+        match book {
+            Some(bookmark_value) => future::ok(bookmark_value).boxify(),
+            None => self
+                .repo
+                .get_bonsai_bookmark(ctx, &bookmark_name)
                 .from_err()
-                .and_then(move |bookmark| {
-                    repo.get_bonsai_bookmark(ctx, &bookmark)
-                        .from_err()
-                        .and_then(move |opt| {
-                            opt.ok_or_else(|| ErrorKind::BookmarkNotFound(bookmark.to_string()))
-                        })
+                .and_then(move |opt| {
+                    opt.ok_or_else(|| ErrorKind::BookmarkNotFound(bookmark.to_string()))
                 })
-                .right_future(),
+                .boxify(),
         }
     }
 
@@ -445,19 +469,21 @@ impl MononokeRepo {
 
     fn get_branches(&self, ctx: CoreContext) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::get_branches.add_value(1);
-        self.repo
-            .get_publishing_bookmarks_maybe_stale(ctx)
-            .map(|(bookmark, changesetid): (Bookmark, HgChangesetId)| {
-                (
-                    bookmark.into_name().to_string(),
-                    changesetid.to_hex().to_string(),
-                )
-            })
-            .collect()
-            .map(|vec| MononokeRepoResponse::GetBranches {
-                branches: vec.into_iter().collect(),
-            })
-            .from_err()
+        // Set type to make sure we don't accidentally hold to mutex guard
+        let bookmarks: HashMap<_, _> = { self.cached_publishing_bookmarks.read().unwrap().clone() };
+        let mut futs = FuturesUnordered::new();
+        for (key, value) in bookmarks.iter() {
+            let key = key.clone();
+            futs.push(
+                self.repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), value.clone())
+                    .map(move |hg_cs_id| (key.to_string(), hg_cs_id.to_hex().to_string()))
+                    .from_err(),
+            );
+        }
+
+        futs.collect_to::<BTreeMap<_, _>>()
+            .map(|branches| MononokeRepoResponse::GetBranches { branches })
             .boxify()
     }
 
@@ -750,6 +776,76 @@ impl MononokeRepo {
             }
         })
     }
+}
+
+fn spawn_bookmarks_updater(
+    bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    ctx: CoreContext,
+    logger: Logger,
+    repo: BlobRepo,
+) {
+    tokio::spawn(future::lazy({
+        cloned!(bookmarks, ctx, logger, repo);
+        move || {
+            repeat(())
+                .and_then(move |()| {
+                    debug!(logger, "updating bookmark cache...");
+                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone())
+                        .timed(|stats, _| {
+                            STATS::cached_bookmark_update_time_ms.add_value(
+                                stats.completion_time.as_millis_unchecked() as i64
+                            );
+                            Ok(())
+                        })
+                })
+                // Ignore all errors and always retry - we don't want a transient
+                // failure make our bookmarks stale forever
+                .then(|_| {
+                    let dur = Duration::from_millis(1000);
+                    tokio::timer::Delay::new(Instant::now() + dur).map_err(|_| ())
+                })
+                .collect()
+                .map(|_| ())
+                .map_err(|_| ())
+        }
+    }));
+}
+
+fn update_bookmarks(
+    bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    ctx: CoreContext,
+    repo: BlobRepo,
+) -> impl Future<Item = (), Error = Error> {
+    repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .map({
+            cloned!(ctx, repo);
+            move |(bookmark, cs_id)| {
+                // Derive all the necessary derive data.
+                // This makes sure that read path don't have to generate
+                // derived data if a bookmark is requested (which is the most
+                // common case).
+                let unodes_derived_mapping =
+                    Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                let unodes = RootUnodeManifestId::derive(
+                    ctx.clone(),
+                    repo.clone(),
+                    unodes_derived_mapping,
+                    cs_id,
+                );
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .join(unodes)
+                    .map(move |_| (bookmark.into_name(), cs_id))
+            }
+        })
+        .buffered(100)
+        .collect_to::<HashMap<_, _>>()
+        .map({
+            cloned!(bookmarks);
+            move |map| {
+                let mut bookmarks = bookmarks.write().unwrap();
+                *bookmarks = map;
+            }
+        })
 }
 
 fn log_result(
