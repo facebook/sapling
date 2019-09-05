@@ -27,6 +27,7 @@
 #include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
@@ -56,11 +57,13 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
-#include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
-
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/ProcUtil.h"
+
+#ifdef EDEN_HAVE_GIT
+#include "eden/fs/store/git/GitBackingStore.h" // @manual
+#endif
 
 DEFINE_bool(
     debug,
@@ -1160,17 +1163,15 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
             serverState_, &serverState_->getReloadableConfig()),
         getSharedStats());
   } else if (type == "git") {
-#ifndef _WIN32
+#ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());
 #else
     // TODO: Compile libgit2 on Windows and add the git backing store back
-    NOT_IMPLEMENTED();
 #endif
-  } else {
-    throw std::domain_error(
-        folly::to<string>("unsupported backing store type: ", type));
   }
+  throw std::domain_error(
+      folly::to<string>("unsupported backing store type: ", type));
 }
 
 Future<Unit> EdenServer::createThriftServer() {

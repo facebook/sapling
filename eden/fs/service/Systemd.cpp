@@ -11,7 +11,7 @@
 #include "eden/fs/eden-config.h"
 
 #if EDEN_HAVE_SYSTEMD
-#include <systemd/sd-daemon.h>
+#include <systemd/sd-daemon.h> // @manual
 #endif
 
 namespace facebook {

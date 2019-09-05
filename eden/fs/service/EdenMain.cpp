@@ -30,7 +30,7 @@
 
 // This has to be placed after eden-config.h
 #ifdef EDEN_HAVE_CURL
-#include <curl/curl.h>
+#include <curl/curl.h> // @manual
 #endif
 
 DEFINE_bool(
