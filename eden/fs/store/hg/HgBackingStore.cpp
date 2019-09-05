@@ -28,7 +28,6 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 #include "eden/fs/utils/LazyInitialize.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/ServiceAddress.h"
@@ -36,17 +35,18 @@
 
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
+
 #if EDEN_HAVE_RUST_DATAPACK
-#include "scm/hg/lib/configparser/ConfigParser.h"
+#include "scm/hg/lib/configparser/ConfigParser.h" // @manual
 #endif
 
 #if EDEN_HAVE_MONONOKE
-#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
-#include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
+#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h" // @manual
+#include "eden/fs/store/mononoke/MononokeThriftBackingStore.h" // @manual
 #endif
 
 #ifdef EDEN_HAVE_CURL
-#include "eden/fs/store/mononoke/MononokeCurlBackingStore.h"
+#include "eden/fs/store/mononoke/MononokeCurlBackingStore.h" // @manual
 #endif
 
 using folly::ByteRange;

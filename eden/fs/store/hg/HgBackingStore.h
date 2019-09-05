@@ -20,7 +20,7 @@
 #include <optional>
 
 #if EDEN_HAVE_RUST_DATAPACK
-#include "scm/hg/lib/revisionstore/RevisionStore.h"
+#include "scm/hg/lib/revisionstore/RevisionStore.h" // @manual
 #endif
 
 /* forward declare support classes from mercurial */
