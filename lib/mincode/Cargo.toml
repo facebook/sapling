@@ -1,0 +1,15 @@
+[package]
+name = "mincode"
+version = "0.0.1"
+authors = ["David Tolnay <dtolnay@gmail.com>", "Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
+license = "GPL-2.0-only"
+description = "Minimal serialization format"
+include = ["Cargo.toml", "src/**/*.rs"]
+
+[dependencies]
+byteorder = "1.0"
+serde = "1.0"
+
+[dev-dependencies]
+serde = { version = "1.0", features = ["derive"] }

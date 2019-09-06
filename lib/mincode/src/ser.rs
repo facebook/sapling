@@ -1,3 +1,9 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+// Copyright (c) David Tolnay <dtolnay@gmail.com>
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2. Copyright Facebook, Inc.
+
 use crate::{Error, Result};
 use byteorder::{NetworkEndian, WriteBytesExt};
 use serde;
