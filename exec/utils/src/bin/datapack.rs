@@ -11,7 +11,6 @@ use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::Un
 use types::{Key, Node, RepoPathBuf};
 
 #[derive(StructOpt)]
-#[structopt(no_version)]
 struct Cli {
     #[structopt(short = "n", parse(try_from_str = Node::from_str))]
     node: Node,
