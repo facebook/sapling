@@ -353,6 +353,16 @@ impl SpanSet {
         }
     }
 
+    /// Get the maximum id in this set.
+    pub fn max(&self) -> Option<Id> {
+        self.spans.first().map(|span| span.high)
+    }
+
+    /// Get the minimal id in this set.
+    pub fn min(&self) -> Option<Id> {
+        self.spans.last().map(|span| span.low)
+    }
+
     /// Internal use only. Append a span, which must have lower boundaries
     /// than existing spans.
     pub(crate) fn push_span(&mut self, span: Span) {

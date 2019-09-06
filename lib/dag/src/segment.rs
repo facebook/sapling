@@ -424,7 +424,7 @@ impl Dag {
         let mut result = SpanSet::empty();
         let mut set = set.into();
 
-        'outer: while let Some(head) = set.iter().nth(0) {
+        'outer: while let Some(head) = set.max() {
             // For high-level segments. If the set covers the entire segment, then
             // the parents is (the segment - its head + its parents).
             for level in (1..=self.max_level).rev() {
@@ -486,7 +486,7 @@ impl Dag {
     pub fn gca_one(&self, set: impl Into<SpanSet>) -> Fallible<Option<Id>> {
         let set = set.into();
         // The set is sorted in DESC order. Therefore its first item can be used as the result.
-        Ok(self.common_ancestors(set)?.iter().nth(0))
+        Ok(self.common_ancestors(set)?.max())
     }
 
     /// Calculate all "greatest common ancestor"s of the given set.
@@ -544,8 +544,7 @@ impl Dag {
         let set = set.into();
         let mut remaining = set;
         let mut result = SpanSet::empty();
-        // `iter().nth(0)` returns the "largest" Id, which must be a head.
-        while let Some(id) = remaining.iter().nth(0) {
+        while let Some(id) = remaining.max() {
             result.push_span((id..=id).into());
             // Remove ancestors reachable from that head.
             remaining = remaining.difference(&self.ancestors(id)?);
