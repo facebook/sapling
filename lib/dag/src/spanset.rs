@@ -70,6 +70,12 @@ impl Span {
         self.low <= value && value <= self.high
     }
 
+    /// Construct a full [`Span`] that contains everything.
+    /// Warning: The [`Id`] in this span might be unknown to an actual storage.
+    pub fn full() -> Self {
+        (0..=Id::max_value()).into()
+    }
+
     fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
         use Bound::{Excluded, Included};
         #[cfg(debug_assertions)]
@@ -162,9 +168,9 @@ impl SpanSet {
     }
 
     /// Construct a full [`SpanSet`] that contains everything.
+    /// Warning: The [`Id`] in this set might be unknown to an actual storage.
     pub fn full() -> Self {
-        let spans = vec![(0..=u64::max_value()).into()];
-        SpanSet { spans }
+        Span::full().into()
     }
 
     /// Check if the spans satisfies internal assumptions: sorted and not
