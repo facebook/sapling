@@ -93,6 +93,14 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
+function megarepo_tool {
+  $MEGAREPO_TOOL \
+    "${CACHING_ARGS[@]}" \
+    --repo-id 0 \
+    --mononoke-config-path mononoke-config  \
+    "$@"
+}
+
 function mononoke_rechunker {
     "$MONONOKE_RECHUNKER" \
     "${CACHING_ARGS[@]}" \
