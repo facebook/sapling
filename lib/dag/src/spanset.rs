@@ -11,6 +11,7 @@ use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
     PartialOrd,
 };
+use std::collections::BinaryHeap;
 use std::fmt::{self, Debug};
 use std::ops::{Bound, RangeBounds, RangeInclusive};
 
@@ -31,11 +32,10 @@ pub struct SpanSet {
 
 impl PartialOrd for Span {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // Reversed order.
-        Some(match other.high.cmp(&self.high) {
+        Some(match self.high.cmp(&other.high) {
             Less => Less,
             Greater => Greater,
-            Equal => other.low.cmp(&self.low),
+            Equal => self.low.cmp(&other.low),
         })
     }
 }
@@ -48,11 +48,10 @@ impl PartialEq for Span {
 
 impl Ord for Span {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Reversed order.
-        match other.high.cmp(&self.high) {
+        match self.high.cmp(&other.high) {
             Less => Less,
             Greater => Greater,
-            Equal => other.low.cmp(&self.low),
+            Equal => self.low.cmp(&other.low),
         }
     }
 }
@@ -133,12 +132,16 @@ impl From<(Id, Id)> for SpanSet {
 
 impl SpanSet {
     /// Construct a [`SpanSet`] containing given spans.
-    /// Panic if spans overlap.
+    /// Overlapped spans will be merged automatically.
     pub fn from_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
-        let mut spans: Vec<Span> = spans.into_iter().map(|span| span.into()).collect();
-        spans.sort_unstable();
+        let mut heap: BinaryHeap<Span> = spans.into_iter().map(|span| span.into()).collect();
+        let mut spans = Vec::with_capacity(heap.len().min(64));
+        while let Some(span) = heap.pop() {
+            push_with_union(&mut spans, span);
+        }
         let result = SpanSet { spans };
-        assert!(result.is_valid());
+        // `result` should be valid because the use of `push_with_union`.
+        debug_assert!(result.is_valid());
         result
     }
 
@@ -458,9 +461,9 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic]
     fn test_overlapped_spans() {
-        SpanSet::from_spans(vec![1..=3, 3..=4]);
+        let span = SpanSet::from_spans(vec![1..=3, 3..=4]);
+        assert_eq!(span.as_spans(), &[Span::from(1..=4)]);
     }
 
     #[test]
