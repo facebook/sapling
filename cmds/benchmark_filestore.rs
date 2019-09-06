@@ -4,7 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#[deny(warnings)]
 use blobstore::Blobstore;
+use bytes::Bytes;
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
 use cachelib;
 use clap::{App, Arg, SubCommand};
@@ -12,19 +14,23 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure::Error;
+use failure_ext::format_err;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{Future, Stream};
+use futures::{stream::iter_ok, Future, IntoFuture, Stream};
+use futures_ext::{FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
 use memblob;
-use mononoke_types::ContentMetadata;
+use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
+use rand::Rng;
 use sqlblob::Sqlblob;
-use std::convert::TryInto;
 use std::fmt::Debug;
 use std::io::BufReader;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::{codec, fs::File};
+use tokio_timer;
 
 const NAME: &str = "benchmark_filestore";
 
@@ -42,6 +48,9 @@ const ARG_CONCURRENCY: &str = "concurrency";
 const ARG_MEMCACHE: &str = "memcache";
 const ARG_CACHELIB_SIZE: &str = "cachelib-size";
 const ARG_INPUT: &str = "input";
+const ARG_DELAY: &str = "delay";
+const ARG_DEBUG: &str = "debug";
+const ARG_RANDOMIZE: &str = "randomize";
 
 fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> Result<(), ()> {
     match res {
@@ -77,7 +86,10 @@ fn read<B: Blobstore + Clone>(
     eprintln!("Fetch start: {:?} ({:?} B)", key, total_size);
 
     filestore::fetch(&blob, ctx, &key)
-        .map(|maybe_stream| maybe_stream.unwrap())
+        .and_then(|maybe_stream| match maybe_stream {
+            Some(stream) => Ok(stream),
+            None => Err(format_err!("Fetch failed: no stream")),
+        })
         .flatten_stream()
         .for_each(|_| Ok(()))
         .timed(move |stats, res| log_perf(stats, res, total_size))
@@ -143,6 +155,21 @@ fn main() -> Result<(), Error> {
                 .takes_value(true)
                 .required(false),
         )
+        .arg(
+            Arg::with_name(ARG_DELAY)
+                .long("delay-after-write")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            // This is read by args::get_logger
+            Arg::with_name(ARG_DEBUG).long("debug").required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_RANDOMIZE)
+                .long("randomize")
+                .required(false),
+        )
         .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
         .subcommand(memory_subcommand)
@@ -169,6 +196,16 @@ fn main() -> Result<(), Error> {
         .unwrap()
         .parse()
         .map_err(Error::from)?;
+
+    let delay: Option<Duration> = matches
+        .value_of(ARG_DELAY)
+        .map(|seconds| -> Result<Duration, Error> {
+            let seconds = seconds.parse().map_err(Error::from)?;
+            Ok(Duration::new(seconds, 0))
+        })
+        .transpose()?;
+
+    let randomize = matches.is_present(ARG_RANDOMIZE);
 
     let config = FilestoreConfig {
         chunk_size: Some(chunk_size),
@@ -242,18 +279,43 @@ fn main() -> Result<(), Error> {
             cloned!(blob, config, ctx);
             move |(file, metadata)| {
                 let stdout = BufReader::with_capacity(input_capacity, file);
-                let len: u64 = metadata.len().try_into().unwrap();
-                eprintln!("Write start: {:?} B", len);
+                let len = metadata.len();
 
                 let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
                     .map(|bytes_mut| bytes_mut.freeze())
                     .from_err();
+
+                let (len, data) = if randomize {
+                    let bytes = rand::thread_rng().gen::<[u8; 32]>();
+                    let bytes = Bytes::from(&bytes[..]);
+                    (
+                        len + (bytes.len() as u64),
+                        iter_ok(vec![bytes]).chain(data).left_stream(),
+                    )
+                } else {
+                    (len, data.right_stream())
+                };
+
+                eprintln!("Write start: {:?} B", len);
 
                 let req = StoreRequest::new(len);
 
                 filestore::store(blob, &config, ctx, &req, data)
                     .timed(move |stats, res| log_perf(stats, res, len))
             }
+        })
+        .and_then(move |res| match delay {
+            Some(delay) => tokio_timer::sleep(delay)
+                .from_err()
+                .map(move |_| res)
+                .left_future(),
+            None => {
+                let res: Result<_, Error> = Ok(res);
+                res.into_future().right_future()
+            }
+        })
+        .inspect(|meta| {
+            eprintln!("Write committed: {:?}", meta.content_id.blobstore_key());
         })
         .and_then({
             cloned!(blob, ctx);
