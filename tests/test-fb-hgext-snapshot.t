@@ -73,35 +73,35 @@
    foo
   +change
 # Create a snapshot and check the result
-  $ EMPTYOID="$(hg snapshot create | head -n 1 | cut -f2 -d' ')"
+  $ EMPTYOID="$(hg snapshot create -m \"first\" | head -n 1 | cut -f2 -d' ')"
   $ echo "$EMPTYOID"
-  9c5c703bba200afd1e7105ef675d68b75d43c6b4
+  c6f3170138389ab1cc8dd2d43fc275e5add2e1a2
   $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid
   snapshotmetadataid=
 # The snapshot commit is hidden
   $ hg log --hidden -r  "not hidden() & $EMPTYOID"
 # But it exists!
   $ hg show --hidden "$EMPTYOID"
-  changeset:   1:9c5c703bba20
+  changeset:   1:c6f317013838
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file bazfile foofile
   description:
-  snapshot
+  "first"
   
   
-  diff -r 3490593cf53c -r 9c5c703bba20 bar/file
+  diff -r 3490593cf53c -r c6f317013838 bar/file
   --- a/bar/file	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -bar
-  diff -r 3490593cf53c -r 9c5c703bba20 bazfile
+  diff -r 3490593cf53c -r c6f317013838 bazfile
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/bazfile	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +another
-  diff -r 3490593cf53c -r 9c5c703bba20 foofile
+  diff -r 3490593cf53c -r c6f317013838 foofile
   --- a/foofile	Thu Jan 01 00:00:00 1970 +0000
   +++ b/foofile	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -112,7 +112,7 @@
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ hg status --verbose
   $ hg snapshot checkout "$EMPTYOID"
-  will checkout on 9c5c703bba200afd1e7105ef675d68b75d43c6b4
+  will checkout on c6f3170138389ab1cc8dd2d43fc275e5add2e1a2
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"

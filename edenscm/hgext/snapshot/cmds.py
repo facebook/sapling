@@ -47,7 +47,14 @@ subcmd = snapshot.subcommand(
 )
 
 
-@subcmd("create", [("", "clean", False, _("clean the working copy"))], inferrepo=True)
+@subcmd(
+    "create",
+    [
+        ("", "clean", False, _("clean the working copy")),
+        ("m", "message", "", _("use text as a snapshot commit message"), _("TEXT")),
+    ],
+    inferrepo=True,
+)
 def snapshotcreate(ui, repo, *args, **opts):
     """
     Creates a snapshot of the working copy.
@@ -97,8 +104,9 @@ def createsnapshotcommit(ui, repo, opts):
     extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
     # TODO(alexeyqu): deal with unfinished merge state case
+    text = opts.get("message") or "snapshot"
     cctx = context.workingcommitctx(
-        repo, status, "snapshot", opts.get("user"), opts.get("date"), extra=extra
+        repo, status, text, opts.get("user"), opts.get("date"), extra=extra
     )
     if len(cctx.files()) == 0 and emptymetadata:  # don't need an empty snapshot
         return None
