@@ -28,6 +28,21 @@ use tokio::{codec, fs::File};
 
 const NAME: &str = "benchmark_filestore";
 
+const CMD_MANIFOLD: &str = "manifold";
+const CMD_MEMORY: &str = "memory";
+const CMD_XDB: &str = "xdb";
+
+const ARG_MANIFOLD_BUCKET: &str = "manifold-bucket";
+const ARG_SHARDMAP: &str = "shardmap";
+const ARG_SHARD_COUNT: &str = "shard-count";
+const ARG_MYROUTER_PORT: &str = "myrouter-port";
+const ARG_INPUT_CAPACITY: &str = "input-capacity";
+const ARG_CHUNK_SIZE: &str = "chunk-size";
+const ARG_CONCURRENCY: &str = "concurrency";
+const ARG_MEMCACHE: &str = "memcache";
+const ARG_CACHELIB_SIZE: &str = "cachelib-size";
+const ARG_INPUT: &str = "input";
+
 fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> Result<(), ()> {
     match res {
         Ok(_) => {
@@ -71,21 +86,25 @@ fn read<B: Blobstore + Clone>(
 
 fn main() -> Result<(), Error> {
     let manifold_subcommand = SubCommand::with_name("manifold").arg(
-        Arg::with_name("manifold-bucket")
+        Arg::with_name(ARG_MANIFOLD_BUCKET)
             .takes_value(true)
             .required(false),
     );
 
-    let memory_subcommand = SubCommand::with_name("memory");
-    let xdb_subcommand = SubCommand::with_name("xdb")
-        .arg(Arg::with_name("shardmap").takes_value(true).required(true))
+    let memory_subcommand = SubCommand::with_name(CMD_MEMORY);
+    let xdb_subcommand = SubCommand::with_name(CMD_XDB)
         .arg(
-            Arg::with_name("shard-count")
+            Arg::with_name(ARG_SHARDMAP)
                 .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("myrouter-port")
+            Arg::with_name(ARG_SHARD_COUNT)
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(ARG_MYROUTER_PORT)
                 .long("myrouter-port")
                 .takes_value(true)
                 .required(false),
@@ -93,34 +112,38 @@ fn main() -> Result<(), Error> {
 
     let app = App::new(NAME)
         .arg(
-            Arg::with_name("input-capacity")
+            Arg::with_name(ARG_INPUT_CAPACITY)
                 .long("input-capacity")
                 .takes_value(true)
                 .required(false)
                 .default_value("8192"),
         )
         .arg(
-            Arg::with_name("chunk-size")
+            Arg::with_name(ARG_CHUNK_SIZE)
                 .long("chunk-size")
                 .takes_value(true)
                 .required(false)
                 .default_value("1048576"),
         )
         .arg(
-            Arg::with_name("concurrency")
+            Arg::with_name(ARG_CONCURRENCY)
                 .long("concurrency")
                 .takes_value(true)
                 .required(false)
                 .default_value("1"),
         )
-        .arg(Arg::with_name("memcache").long("memcache").required(false))
         .arg(
-            Arg::with_name("cachelib-size")
+            Arg::with_name(ARG_MEMCACHE)
+                .long("memcache")
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_CACHELIB_SIZE)
                 .long("cachelib-size")
                 .takes_value(true)
                 .required(false),
         )
-        .arg(Arg::with_name("input").takes_value(true).required(true))
+        .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
@@ -130,19 +153,19 @@ fn main() -> Result<(), Error> {
     let input = matches.value_of("input").unwrap().to_string();
 
     let input_capacity: usize = matches
-        .value_of("input-capacity")
+        .value_of(ARG_INPUT_CAPACITY)
         .unwrap()
         .parse()
         .map_err(Error::from)?;
 
     let chunk_size: u64 = matches
-        .value_of("chunk-size")
+        .value_of(ARG_CHUNK_SIZE)
         .unwrap()
         .parse()
         .map_err(Error::from)?;
 
     let concurrency: usize = matches
-        .value_of("concurrency")
+        .value_of(ARG_CONCURRENCY)
         .unwrap()
         .parse()
         .map_err(Error::from)?;
@@ -155,21 +178,21 @@ fn main() -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
 
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
-        ("manifold", Some(sub)) => {
-            let bucket = sub.value_of("manifold-bucket").unwrap();
+        (CMD_MANIFOLD, Some(sub)) => {
+            let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
             let manifold = ThriftManifoldBlob::new(bucket).map_err(|e| -> Error { e.into() })?;
             let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
             Arc::new(blobstore)
         }
-        ("memory", Some(_)) => Arc::new(memblob::LazyMemblob::new()),
-        ("xdb", Some(sub)) => {
-            let shardmap = sub.value_of("shardmap").unwrap().to_string();
+        (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::new()),
+        (CMD_XDB, Some(sub)) => {
+            let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
             let shard_count = sub
-                .value_of("shard-count")
+                .value_of(ARG_SHARD_COUNT)
                 .unwrap()
                 .parse()
                 .map_err(Error::from)?;
-            let fut = match sub.value_of("myrouter-port") {
+            let fut = match sub.value_of(ARG_MYROUTER_PORT) {
                 Some(port) => {
                     let port = port.parse().map_err(Error::from)?;
                     Sqlblob::with_myrouter(shardmap, port, shard_count)
@@ -182,13 +205,13 @@ fn main() -> Result<(), Error> {
         _ => unreachable!(),
     };
 
-    let blob: Arc<dyn Blobstore> = if matches.is_present("memcache") {
+    let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
         Arc::new(new_memcache_blobstore_no_lease(blob, NAME, "")?)
     } else {
         blob
     };
 
-    let blob: Arc<dyn Blobstore> = match matches.value_of("cachelib-size") {
+    let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
         Some(size) => {
             let cache_size_bytes = size.parse().map_err(Error::from)?;
             cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size_bytes))?;
