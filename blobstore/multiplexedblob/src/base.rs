@@ -51,6 +51,9 @@ lazy_static! {
         if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
             stats.push(("tw_task_id", tw_task_id));
         }
+        if let Ok(tw_canary_id) = env::var("TW_CANARY_ID") {
+            stats.push(("tw_canary_id", tw_canary_id));
+        }
         stats
     };
 }
