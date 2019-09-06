@@ -33,7 +33,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::with_name(TO_ID).required(true));
 
     args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: true,
     }

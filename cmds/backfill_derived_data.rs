@@ -42,7 +42,6 @@ const SUBCOMMAND_TAIL: &'static str = "tail";
 
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
     }

@@ -24,7 +24,6 @@ const DEFAULT_CONCURRENCY: usize = 16;
 
 fn main() -> Result<()> {
     let app = args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
     }

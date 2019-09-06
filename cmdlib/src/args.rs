@@ -8,7 +8,6 @@ use std::{
     cmp::min,
     collections::HashMap,
     fs,
-    num::NonZeroUsize,
     path::Path,
     time::{Duration, Instant},
 };
@@ -71,9 +70,6 @@ const CACHE_ARGS: &[(&str, &str)] = &[
 ];
 
 pub struct MononokeApp {
-    /// Whether to redirect writes to non-production by default. Note that this isn't (yet)
-    /// foolproof.
-    pub safe_writes: bool,
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
     pub hide_advanced_args: bool,
@@ -82,16 +78,7 @@ pub struct MononokeApp {
 }
 
 impl MononokeApp {
-    /// Create a new Mononoke-based CLI tool. The `safe_writes` option changes some defaults to
-    /// avoid production writes. (But it isn't foolproof -- please fix any options that are
-    /// missing).
     pub fn build<'a, 'b, S: Into<String>>(self, name: S) -> App<'a, 'b> {
-        let default_manifold_prefix = if self.safe_writes {
-            "mononoke_test"
-        } else {
-            ""
-        };
-
         let name = name.into();
 
         let mut app = App::new(name)
@@ -106,49 +93,19 @@ impl MononokeApp {
                     // This is an old form that some consumers use
                     .alias("repo_id")
                     .value_name("ID")
-                    .help("numeric ID of repository")
+                    .help("numeric ID of repository"),
             )
             .arg(
                 Arg::with_name("repo-name")
                     .long("repo-name")
                     .value_name("NAME")
-                    .help("Name of repository")
+                    .help("Name of repository"),
             )
             .arg(
                 Arg::with_name("mononoke-config-path")
                     .long("mononoke-config-path")
                     .value_name("MONONOKE_CONFIG_PATH")
-                    .help("Path to the Mononoke configs")
-            )
-
-            // Manifold-specific arguments
-            .arg(
-                Arg::with_name("manifold-bucket")
-                    .long("manifold-bucket")
-                    .value_name("BUCKET")
-                    .default_value("mononoke_prod")
-                    .help("manifold bucket"),
-            )
-            .arg(
-                Arg::with_name("manifold-prefix")
-                    .long("manifold-prefix")
-                    .value_name("PREFIX")
-                    .default_value(default_manifold_prefix)
-                    .help("manifold prefix"),
-            )
-            .arg(
-                Arg::with_name("mysql-blobstore-shardmap")
-                    .long("mysql-blobstore-shardmap")
-                    .value_name("SHARDMAP")
-                    .help("mysql blobstore shardmap, if provided mysql is used instead of \
-                           manifold"),
-            )
-            .arg(
-                Arg::with_name("mysql-blobstore-shard-num")
-                    .long("mysql-blobstore-shard-num")
-                    .value_name("SHARD_NUM")
-                    .default_value("100")
-                    .help("mysql blobstore shard num"),
+                    .help("Path to the Mononoke configs"),
             );
 
         app = add_logger_args(app, self.default_glog);
@@ -802,27 +759,6 @@ fn open_repo_internal<'a>(
             )
         })
         .boxify()
-}
-
-pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> BlobConfig {
-    // The unwraps here are safe because default values have already been provided in mononoke_app
-    // above.
-    match matches.value_of("mysql-blobstore-shardmap") {
-        Some(shardmap) => BlobConfig::Mysql {
-            shard_map: shardmap.to_string(),
-            shard_num: matches
-                .value_of("mysql-blobstore-shard-num")
-                .unwrap()
-                .parse::<usize>()
-                .ok()
-                .and_then(NonZeroUsize::new)
-                .expect("Provided mysql-blobstore-shard-num must be int larger than 0"),
-        },
-        None => BlobConfig::Manifold {
-            bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
-            prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
-        },
-    }
 }
 
 pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {

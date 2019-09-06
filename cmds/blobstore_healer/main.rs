@@ -227,7 +227,6 @@ fn ensure_small_db_replication_lag(
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp {
-        safe_writes: true,
         hide_advanced_args: false,
         default_glog: true,
     };

@@ -274,7 +274,6 @@ impl fmt::Display for HookExecutionStat {
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = cmdlib::args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: true,
     };

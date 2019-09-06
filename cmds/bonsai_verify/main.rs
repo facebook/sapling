@@ -38,7 +38,6 @@ use std::{
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        safe_writes: false,
         default_glog: false,
     };
     app.build("bonsai roundtrip verification")

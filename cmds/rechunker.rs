@@ -24,7 +24,6 @@ const DEFAULT_NUM_JOBS: usize = 10;
 
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
     };

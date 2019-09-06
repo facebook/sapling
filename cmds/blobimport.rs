@@ -22,7 +22,6 @@ use tracing::{trace_args, Traced};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
-        safe_writes: true,
         hide_advanced_args: false,
         default_glog: true,
     };

@@ -112,7 +112,6 @@ impl<'a> From<&'a State> for StateSerde {
 
 fn parse_args() -> Result<Config, Error> {
     let app = args::MononokeApp {
-        safe_writes: true,
         hide_advanced_args: false,
         default_glog: true,
     }

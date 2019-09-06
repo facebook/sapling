@@ -13,7 +13,6 @@ use failure_ext::{err_msg, Result};
 
 fn main() -> Result<()> {
     let app = args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
     };

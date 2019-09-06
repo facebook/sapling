@@ -33,7 +33,6 @@ where
 
 fn main() {
     let app = args::MononokeApp {
-        safe_writes: false,
         hide_advanced_args: true,
         default_glog: false,
     };
