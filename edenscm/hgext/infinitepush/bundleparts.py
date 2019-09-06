@@ -144,6 +144,19 @@ def getscratchbranchparts(
     except KeyError:
         pass
 
+    try:
+        snapshot = extensions.find("snapshot")
+    except KeyError:
+        pass
+    else:
+        data = snapshot.bundleparts.getmetadatafromrevs(repo, outgoing.missing)
+        if data:
+            parts.append(
+                bundle2.bundlepart(
+                    snapshot.bundleparts.snapshotmetadataparttype, data=data
+                )
+            )
+
     return parts
 
 

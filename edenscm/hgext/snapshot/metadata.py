@@ -115,6 +115,12 @@ class snapshotmetadata(object):
         except ValueError:
             raise error.Abort(_("invalid metadata json: %s\n") % json_string)
 
+    def getauxfileids(self):
+        auxfileids = set()
+        auxfileids.update(f.oid for f in self.unknown)
+        auxfileids.update(f.oid for f in self.localvfsfiles)
+        return auxfileids
+
     @classmethod
     def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
         metadata = cls(repo)

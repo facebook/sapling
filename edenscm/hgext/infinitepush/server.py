@@ -465,6 +465,12 @@ def processparts(orig, repo, op, unbundler):
     except KeyError:
         pass
 
+    try:
+        snapshot = extensions.find("snapshot")
+        partforwardingwhitelist.append(snapshot.bundleparts.snapshotmetadataparttype)
+    except KeyError:
+        pass
+
     bundler = bundle2.bundle20(repo.ui)
     compress = repo.ui.config("infinitepush", "bundlecompression", "UN")
     bundler.setcompression(compress)

@@ -20,12 +20,16 @@ Configs::
     [ui]
     # Allow to run `hg checkout` for snapshot revisions
     allow-checkout-snapshot = False
+
+    [snapshot]
+    # Sync snapshot metadata via bundle2
+    enable-sync-bundle = False
 """
 
 from edenscm.mercurial import error, extensions, hg, registrar
 from edenscm.mercurial.i18n import _
 
-from . import blobstore, cmds as snapshotcommands, metadata
+from . import blobstore, bundleparts, cmds as snapshotcommands, metadata
 
 
 cmdtable = snapshotcommands.cmdtable
@@ -33,6 +37,11 @@ cmdtable = snapshotcommands.cmdtable
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("ui", "allow-checkout-snapshot", default=False)
+configitem("snapshot", "enable-sync-bundle", default=False)
+
+
+def uisetup(ui):
+    bundleparts.uisetup(ui)
 
 
 def reposetup(ui, repo):
