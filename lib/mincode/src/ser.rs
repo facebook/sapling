@@ -12,6 +12,7 @@ use serde::ser::{
     SerializeTupleStruct, SerializeTupleVariant,
 };
 use std::io::Write;
+use vlqencoding::VLQEncode;
 
 pub struct Serializer<W> {
     writer: W,
@@ -63,23 +64,17 @@ where
 
     #[inline]
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.writer
-            .write_u16::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.writer
-            .write_u32::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.writer
-            .write_u64::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]
@@ -89,23 +84,17 @@ where
 
     #[inline]
     fn serialize_i16(self, v: i16) -> Result<()> {
-        self.writer
-            .write_i16::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]
     fn serialize_i32(self, v: i32) -> Result<()> {
-        self.writer
-            .write_i32::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]
     fn serialize_i64(self, v: i64) -> Result<()> {
-        self.writer
-            .write_i64::<NetworkEndian>(v)
-            .map_err(From::from)
+        self.writer.write_vlq(v).map_err(From::from)
     }
 
     #[inline]

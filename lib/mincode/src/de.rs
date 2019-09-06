@@ -12,6 +12,7 @@ use serde::de::{
     Visitor,
 };
 use std::str;
+use vlqencoding::VLQDecode;
 
 pub struct Deserializer<'de> {
     bytes: &'de [u8],
@@ -37,12 +38,12 @@ impl<'de> Deserializer<'de> {
 }
 
 macro_rules! impl_nums {
-    ($ty:ty, $dser_method:ident, $visitor_method:ident, $reader_method:ident) => {
+    ($ty:ty, $dser_method:ident, $visitor_method:ident, $($reader_method:tt)*) => {
         #[inline]
         fn $dser_method<V>(self, visitor: V) -> Result<V::Value>
             where V: Visitor<'de>
         {
-            let value = self.bytes.$reader_method::<NetworkEndian>()?;
+            let value = self.bytes.$($reader_method)*()?;
             visitor.$visitor_method(value)
         }
     };
@@ -70,30 +71,16 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
         }
     }
 
-    impl_nums!(u16, deserialize_u16, visit_u16, read_u16);
-    impl_nums!(u32, deserialize_u32, visit_u32, read_u32);
-    impl_nums!(u64, deserialize_u64, visit_u64, read_u64);
-    impl_nums!(i16, deserialize_i16, visit_i16, read_i16);
-    impl_nums!(i32, deserialize_i32, visit_i32, read_i32);
-    impl_nums!(i64, deserialize_i64, visit_i64, read_i64);
-    impl_nums!(f32, deserialize_f32, visit_f32, read_f32);
-    impl_nums!(f64, deserialize_f64, visit_f64, read_f64);
-
-    #[inline]
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_u8(self.bytes.read_u8()?)
-    }
-
-    #[inline]
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_i8(self.bytes.read_i8()?)
-    }
+    impl_nums!(u8, deserialize_u8, visit_u8, read_u8);
+    impl_nums!(u16, deserialize_u16, visit_u16, read_vlq);
+    impl_nums!(u32, deserialize_u32, visit_u32, read_vlq);
+    impl_nums!(u64, deserialize_u64, visit_u64, read_vlq);
+    impl_nums!(i8, deserialize_i8, visit_i8, read_i8);
+    impl_nums!(i16, deserialize_i16, visit_i16, read_vlq);
+    impl_nums!(i32, deserialize_i32, visit_i32, read_vlq);
+    impl_nums!(i64, deserialize_i64, visit_i64, read_vlq);
+    impl_nums!(f32, deserialize_f32, visit_f32, read_f32::<NetworkEndian>);
+    impl_nums!(f64, deserialize_f64, visit_f64, read_f64::<NetworkEndian>);
 
     #[inline]
     fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
