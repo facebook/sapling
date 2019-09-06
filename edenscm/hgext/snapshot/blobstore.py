@@ -18,7 +18,7 @@ class local(blobstore.localblobstore):
         fullpath = repo.svfs.join("snapshots/objects")
         vfs = vfsmod.blobvfs(fullpath)
         cachevfs = None
-        usercachepath = repo.ui.config("lfs", "usercache")
+        usercachepath = repo.ui.config("snapshot", "usercache")
         if usercachepath:
             self.cachevfs = vfsmod.blobvfs(usercachepath)
         super(local, self).__init__(vfs, cachevfs)

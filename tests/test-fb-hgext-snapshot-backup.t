@@ -1,5 +1,4 @@
 # Initial setup
-  $ setconfig extensions.lfs=
   $ setconfig extensions.rebase=
   $ setconfig extensions.snapshot=
   $ setconfig extensions.treemanifest=!

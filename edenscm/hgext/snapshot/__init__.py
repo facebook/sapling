@@ -24,6 +24,10 @@ Configs::
     [snapshot]
     # Sync snapshot metadata via bundle2
     enable-sync-bundle = False
+
+    # The local directory to store blob file for sharing across local clones
+    # If not set, the cache is disabled (default)
+    usercache = /path/to/global/cache
 """
 
 from edenscm.mercurial import error, extensions, hg, registrar
@@ -38,6 +42,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("ui", "allow-checkout-snapshot", default=False)
 configitem("snapshot", "enable-sync-bundle", default=False)
+configitem("snapshot", "usercache", default=None)
 
 
 def uisetup(ui):
@@ -53,8 +58,6 @@ def reposetup(ui, repo):
 
 
 def extsetup(ui):
-    metadata.extsetup(ui)
-
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
 
 

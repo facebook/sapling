@@ -112,8 +112,6 @@ def createsnapshotcommit(ui, repo, opts):
 def snapshotcheckout(ui, repo, *args, **opts):
     """
     Checks out the working copy to the snapshot state, given its revision id.
-    Downloads the snapshot metadata from remote lfs if needed.
-
     """
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a snapshot revision id\n"))
@@ -179,21 +177,6 @@ def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
     ui.status(_("metadata oid: %s\n") % oid)
 
 
-@command("debuguploadsnapshotmetadata", [], _("OID"), inferrepo=True)
-def debuguploadsnapshotmetadata(ui, repo, *args, **opts):
-    """
-    Uploads metadata and all related blobs to remote lfs.
-    Takes in an oid of the desired metadata in the local blobstore.
-
-    This command does not validate contents of the snapshot metadata.
-    """
-    if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a metadata oid\n"))
-    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, args[0])
-    snapmetadata.uploadtoremotelfs()
-    ui.status(_("upload complete\n"))
-
-
 @command(
     "debugcheckoutsnapshotmetadata",
     [("f", "force", False, _("force checkout"))],
@@ -203,16 +186,13 @@ def debuguploadsnapshotmetadata(ui, repo, *args, **opts):
 def debugcheckoutsnapshotmetadata(ui, repo, *args, **opts):
     """
     Checks out the working copy to the snapshot metadata state, given its metadata id.
-    Downloads the snapshot metadata from remote lfs if needed.
     Takes in an oid of the metadata.
 
     This command does not validate contents of the snapshot metadata.
     """
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a metadata oid\n"))
-    snapmetadata = snapshotmetadata.getfromlocalstorage(
-        repo, args[0], allow_remote=True
-    )
+    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, args[0])
     checkouttosnapshotmetadata(ui, repo, snapmetadata, force=opts.get("force"))
     ui.status(_("snapshot checkout complete\n"))
 
