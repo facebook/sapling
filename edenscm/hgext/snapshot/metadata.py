@@ -67,7 +67,7 @@ class snapshotmetadata(object):
     Main class that contains snapshot metadata representation.
     """
 
-    VERSION = "1"
+    VERSION = 1
 
     def __init__(self, repo, oid=None):
         self.repo = repo
@@ -85,12 +85,21 @@ class snapshotmetadata(object):
         files["deleted"] = {d.path: d.serialize() for d in self.deleted}
         files["unknown"] = {u.path: u.serialize() for u in self.unknown}
         files["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
-        metadata = {"files": files, "version": snapshotmetadata.VERSION}
+        metadata = {"files": files, "version": str(snapshotmetadata.VERSION)}
         return json.dumps(metadata)
 
     def deserialize(self, json_string):
         try:
             metadata = json.loads(json_string)
+            # check version of metadata
+            try:
+                version = int(metadata["version"])
+            except ValueError:
+                raise error.Abort(
+                    _("invalid metadata version: %s\n") % metadata["version"]
+                )
+            if version != snapshotmetadata.VERSION:
+                raise error.Abort(_("invalid version number %d") % version)
             files = metadata["files"]
             self.deleted = [
                 filelfswrapper(path) for path in sorted(files["deleted"].keys())
