@@ -29,10 +29,14 @@ use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure_ext::{Error, Fail};
-use futures::{future, stream::FuturesUnordered, Future, Stream};
+use futures::{
+    future,
+    stream::{self, FuturesUnordered},
+    Future, Stream,
+};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Diff, Entry, ManifestOps};
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
@@ -111,51 +115,93 @@ impl BonsaiDerived for RootFastlog {
                 let blobstore = Arc::new(repo.get_blobstore());
                 let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
 
-                if parents.len() < 2 {
-                    let s = match parents.get(0) {
-                        Some(parent) => (*parent)
-                            .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
-                            .filter_map(|diff_entry| match diff_entry {
-                                Diff::Added(_, entry) => Some(entry),
-                                Diff::Removed(..) => None,
-                                Diff::Changed(_, _, entry) => Some(entry),
-                            })
-                            .boxify(),
-                        None => unode_mf_id
-                            .list_all_entries(ctx.clone(), blobstore.clone())
-                            .map(|(_, entry)| entry)
-                            .boxify(),
-                    };
+                let s = find_new_unodes(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
+                    .map(|(_, entry)| entry);
 
-                    s.map(move |entry| {
-                        fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
-                            cloned!(ctx, blobstore);
-                            move |parents| {
-                                create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
-                                    .and_then({
-                                        cloned!(ctx, blobstore);
-                                        move |fastlog_batch| {
-                                            save_fastlog_batch_by_unode_id(
-                                                ctx,
-                                                blobstore,
-                                                entry,
-                                                fastlog_batch,
-                                            )
-                                        }
-                                    })
-                            }
-                        })
+                s.map(move |entry| {
+                    fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
+                        cloned!(ctx, blobstore);
+                        move |parents| {
+                            create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
+                                .and_then({
+                                    cloned!(ctx, blobstore);
+                                    move |fastlog_batch| {
+                                        save_fastlog_batch_by_unode_id(
+                                            ctx,
+                                            blobstore,
+                                            entry,
+                                            fastlog_batch,
+                                        )
+                                    }
+                                })
+                        }
                     })
-                    .buffered(100)
-                    .collect()
-                    .map(move |_| RootFastlog(bcs_id))
-                } else {
-                    // TODO(stash): handle other cases as well i.e. linear history and history with
-                    // merges
-                    unimplemented!()
-                }
+                })
+                .buffered(100)
+                .collect()
+                .map(move |_| RootFastlog(bcs_id))
             })
             .boxify()
+    }
+}
+
+fn find_new_unodes(
+    ctx: CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    unode_mf_id: ManifestUnodeId,
+    parent_unodes: Vec<ManifestUnodeId>,
+) -> impl Stream<Item = (Option<MPath>, Entry<ManifestUnodeId, FileUnodeId>), Error = Error> {
+    match parent_unodes.get(0) {
+        Some(parent) => (*parent)
+            .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
+            .filter_map(|diff_entry| match diff_entry {
+                Diff::Added(path, entry) => Some((path, entry)),
+                Diff::Removed(..) => None,
+                Diff::Changed(path, _, entry) => Some((path, entry)),
+            })
+            .collect()
+            .and_then(move |new_unodes| {
+                let paths: Vec<_> = new_unodes
+                    .clone()
+                    .into_iter()
+                    .map(|(path, _)| path)
+                    .collect();
+
+                let futs: Vec<_> = parent_unodes
+                    .into_iter()
+                    .skip(1)
+                    .map(|p| {
+                        p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
+                            .collect_to::<HashMap<_, _>>()
+                    })
+                    .collect();
+
+                future::join_all(futs).map(move |entries_in_parents| {
+                    let mut res = vec![];
+
+                    for (path, unode) in new_unodes {
+                        let mut new_entry = true;
+                        for p in &entries_in_parents {
+                            if p.get(&path) == Some(&unode) {
+                                new_entry = false;
+                                break;
+                            }
+                        }
+
+                        if new_entry {
+                            res.push((path, unode));
+                        }
+                    }
+
+                    res
+                })
+            })
+            .map(|entries| stream::iter_ok(entries.into_iter()))
+            .flatten_stream()
+            .boxify(),
+        None => unode_mf_id
+            .list_all_entries(ctx.clone(), blobstore.clone())
+            .boxify(),
     }
 }
 
@@ -255,7 +301,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
-    use std::collections::{HashSet, VecDeque};
+    use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
     use tokio::runtime::Runtime;
 
@@ -439,6 +485,186 @@ mod tests {
         verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
     }
 
+    #[test]
+    fn test_find_new_unodes_linear() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock();
+
+        // This commit creates file "1" and "files"
+        // See scm/mononoke/tests/fixtures
+        let parent_root_unode = derive_unode(
+            &mut rt,
+            ctx.clone(),
+            repo.clone(),
+            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+        )?;
+
+        // This commit creates file "2" and modifies "files"
+        // See scm/mononoke/tests/fixtures
+        let child_root_unode = derive_unode(
+            &mut rt,
+            ctx.clone(),
+            repo.clone(),
+            "3e0e761030db6e479a7fb58b12881883f9f8c63f",
+        )?;
+
+        let mut entries = rt.block_on(
+            find_new_unodes(
+                ctx,
+                Arc::new(repo.get_blobstore()),
+                child_root_unode,
+                vec![parent_root_unode],
+            )
+            .map(|(path, _)| match path {
+                Some(path) => String::from_utf8(path.to_vec()).unwrap(),
+                None => String::new(),
+            })
+            .collect(),
+        )?;
+        entries.sort();
+
+        assert_eq!(
+            entries,
+            vec![String::new(), String::from("2"), String::from("files")]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_new_unodes_merge() -> Result<(), Error> {
+        fn test_single_find_unodes_merge(
+            parent_files: Vec<BTreeMap<&str, Option<&str>>>,
+            merge_files: BTreeMap<&str, Option<&str>>,
+            expected: Vec<String>,
+        ) -> Result<(), Error> {
+            let mut rt = Runtime::new().unwrap();
+            let repo = linear::getrepo();
+            let ctx = CoreContext::test_mock();
+
+            let mut bonsais = vec![];
+            let mut parents = vec![];
+
+            for (i, p) in parent_files.into_iter().enumerate() {
+                println!("parent {}, {:?} ", i, p);
+                let stored_files = store_files(ctx.clone(), p, repo.clone());
+                let bcs = create_bonsai_changeset_with_files(vec![], stored_files);
+                parents.push(bcs.get_changeset_id());
+                bonsais.push(bcs);
+            }
+
+            println!("merge {:?} ", merge_files);
+            let merge_stored_files = store_files(ctx.clone(), merge_files, repo.clone());
+            let bcs = create_bonsai_changeset_with_files(parents.clone(), merge_stored_files);
+            let merge_bcs_id = bcs.get_changeset_id();
+
+            bonsais.push(bcs);
+            rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+                .unwrap();
+
+            let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+            let mut parent_unodes = vec![];
+
+            for p in parents {
+                let parent_unode = RootUnodeManifestId::derive(
+                    ctx.clone(),
+                    repo.clone(),
+                    unode_mapping.clone(),
+                    p,
+                );
+                let parent_unode = rt.block_on(parent_unode)?;
+                let parent_unode = parent_unode.manifest_unode_id().clone();
+                parent_unodes.push(parent_unode);
+            }
+
+            let merge_unode = RootUnodeManifestId::derive(
+                ctx.clone(),
+                repo.clone(),
+                unode_mapping.clone(),
+                merge_bcs_id,
+            );
+            let merge_unode = rt.block_on(merge_unode)?;
+            let merge_unode = merge_unode.manifest_unode_id().clone();
+
+            let mut entries = rt.block_on(
+                find_new_unodes(
+                    ctx,
+                    Arc::new(repo.get_blobstore()),
+                    merge_unode,
+                    parent_unodes,
+                )
+                .map(|(path, _)| match path {
+                    Some(path) => String::from_utf8(path.to_vec()).unwrap(),
+                    None => String::new(),
+                })
+                .collect(),
+            )?;
+            entries.sort();
+
+            assert_eq!(entries, expected);
+            Ok(())
+        }
+
+        test_single_find_unodes_merge(
+            vec![
+                btreemap! {
+                    "1" => Some("1"),
+                },
+                btreemap! {
+                    "2" => Some("2"),
+                },
+            ],
+            btreemap! {},
+            vec![String::new()],
+        )?;
+
+        test_single_find_unodes_merge(
+            vec![
+                btreemap! {
+                    "1" => Some("1"),
+                },
+                btreemap! {
+                    "2" => Some("2"),
+                },
+                btreemap! {
+                    "3" => Some("3"),
+                },
+            ],
+            btreemap! {},
+            vec![String::new()],
+        )?;
+
+        test_single_find_unodes_merge(
+            vec![
+                btreemap! {
+                    "1" => Some("1"),
+                },
+                btreemap! {
+                    "2" => Some("2"),
+                },
+            ],
+            btreemap! {
+                "inmerge" => Some("1"),
+            },
+            vec![String::new(), String::from("inmerge")],
+        )?;
+
+        test_single_find_unodes_merge(
+            vec![
+                btreemap! {
+                    "file" => Some("contenta"),
+                },
+                btreemap! {
+                    "file" => Some("contentb"),
+                },
+            ],
+            btreemap! {
+                "file" => Some("mergecontent"),
+            },
+            vec![String::new(), String::from("file")],
+        )?;
+        Ok(())
+    }
     fn verify_all_entries_for_commit(
         rt: &mut Runtime,
         ctx: CoreContext,
@@ -461,6 +687,24 @@ mod tests {
             println!("verifying: path: {:?} unode: {:?}", path, entry);
             verify_list(rt, ctx.clone(), repo.clone(), entry);
         }
+    }
+
+    fn derive_unode(
+        rt: &mut Runtime,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        hg_cs: &str,
+    ) -> Result<ManifestUnodeId, Error> {
+        let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
+        let bcs_id = rt.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+        let bcs_id = bcs_id.unwrap();
+
+        let unode_mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+
+        let root_unode =
+            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), unode_mapping.clone(), bcs_id);
+        let root_unode = rt.block_on(root_unode)?;
+        Ok(root_unode.manifest_unode_id().clone())
     }
 
     fn derive_fastlog_batch_and_unode(
