@@ -33,19 +33,19 @@
   f62f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
 
 # Check that the blobstore is populated
-  $ find .hg/store/lfs/objects | sort
-  .hg/store/lfs/objects
-  .hg/store/lfs/objects/7d
-  .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
-  .hg/store/lfs/objects/f6
-  .hg/store/lfs/objects/f6/2f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
+  $ find .hg/store/snapshots/objects | sort
+  .hg/store/snapshots/objects
+  .hg/store/snapshots/objects/7d
+  .hg/store/snapshots/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+  .hg/store/snapshots/objects/f6
+  .hg/store/snapshots/objects/f6/2f9175588ac550bc215b56b441de94f6b3c859023f971453057342614db332
 
 # Check the contents of the metadata file
-  $ cat .hg/store/lfs/objects/"${OID:0:2}"/"${OID:2}"
+  $ cat .hg/store/snapshots/objects/"${OID:0:2}"/"${OID:2}"
   {"files": {"deleted": {"existingfile": null}, "localvfsfiles": {}, "unknown": {"untrackedfile": {"oid": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730", "size": "4"}}}, "version": "1"} (no-eol)
 
-# Check that the untracked file is stored in lfs
-  $ cat .hg/store/lfs/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
+# Check that the untracked file is stored in local storage
+  $ cat .hg/store/snapshots/objects/7d/865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730
   bar
 
 # Upload the metadata contents to server

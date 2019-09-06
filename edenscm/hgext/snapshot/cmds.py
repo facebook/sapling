@@ -93,7 +93,7 @@ def createsnapshotcommit(ui, repo, opts):
     emptymetadata = snapmetadata.empty
     oid = ""  # this is better than None because of extra serialization rules
     if not emptymetadata:
-        oid, size = snapmetadata.storetolocallfs()
+        oid, size = snapmetadata.localstore()
     extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
     # TODO(alexeyqu): deal with unfinished merge state case
@@ -152,7 +152,7 @@ def snapshotcheckout(ui, repo, *args, **opts):
                 repo.setparents(*parents)
     snapshotmetadataid = cctx.extra().get("snapshotmetadataid")
     if snapshotmetadataid:
-        snapmetadata = snapshotmetadata.restorefromlfs(repo, snapshotmetadataid)
+        snapmetadata = snapshotmetadata.getfromlocalstorage(repo, snapshotmetadataid)
         checkouttosnapshotmetadata(ui, repo, snapmetadata, force)
     ui.status(_("checkout complete\n"))
 
@@ -161,7 +161,7 @@ def snapshotcheckout(ui, repo, *args, **opts):
 def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
     """
     Creates pseudo metadata for untracked files without committing them.
-    Loads untracked files and the created metadata into local lfsstore.
+    Loads untracked files and the created metadata into local blobstore.
     Outputs the oid of the created metadata file.
 
     Be careful, snapshot metadata internal structure may change.
@@ -175,7 +175,7 @@ def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
             )
         )
         return
-    oid, size = snapmetadata.storetolocallfs()
+    oid, size = snapmetadata.localstore()
     ui.status(_("metadata oid: %s\n") % oid)
 
 
@@ -183,13 +183,13 @@ def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
 def debuguploadsnapshotmetadata(ui, repo, *args, **opts):
     """
     Uploads metadata and all related blobs to remote lfs.
-    Takes in an oid of the desired metadata in the local lfs.
+    Takes in an oid of the desired metadata in the local blobstore.
 
     This command does not validate contents of the snapshot metadata.
     """
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a metadata oid\n"))
-    snapmetadata = snapshotmetadata.restorefromlfs(repo, args[0])
+    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, args[0])
     snapmetadata.uploadtoremotelfs()
     ui.status(_("upload complete\n"))
 
@@ -210,7 +210,9 @@ def debugcheckoutsnapshotmetadata(ui, repo, *args, **opts):
     """
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a metadata oid\n"))
-    snapmetadata = snapshotmetadata.restorefromlfs(repo, args[0], allow_remote=True)
+    snapmetadata = snapshotmetadata.getfromlocalstorage(
+        repo, args[0], allow_remote=True
+    )
     checkouttosnapshotmetadata(ui, repo, snapmetadata, force=opts.get("force"))
     ui.status(_("snapshot checkout complete\n"))
 
@@ -232,8 +234,8 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
             ui.warn(_("%s cannot be removed\n") % file.path)
     # populating the untracked files
     for file in snapmetadata.unknown:
-        checkaddfile(repo.svfs.lfslocalblobstore, file, repo.wvfs, force)
+        checkaddfile(repo.svfs.snapshotstore, file, repo.wvfs, force)
     # restoring the merge state
     with repo.wlock():
         for file in snapmetadata.localvfsfiles:
-            checkaddfile(repo.svfs.lfslocalblobstore, file, repo.localvfs, force)
+            checkaddfile(repo.svfs.snapshotstore, file, repo.localvfs, force)

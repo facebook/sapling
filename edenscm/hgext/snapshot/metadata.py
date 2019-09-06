@@ -26,7 +26,7 @@ def extsetup(ui):
 
 
 def checkloadblobbyoid(repo, oid, path, allow_remote=False):
-    localstore = repo.svfs.lfslocalblobstore
+    localstore = repo.svfs.snapshotstore
     if localstore.has(oid):
         return
     if allow_remote:
@@ -126,10 +126,10 @@ class snapshotmetadata(object):
         return metadata
 
     @classmethod
-    def restorefromlfs(cls, repo, oid, allow_remote=False):
+    def getfromlocalstorage(cls, repo, oid, allow_remote=False):
         metadata = cls(repo, oid)
         checkloadblobbyoid(repo, oid, "metadata", allow_remote)
-        metadata.deserialize(repo.svfs.lfslocalblobstore.read(oid))
+        metadata.deserialize(repo.svfs.snapshotstore.read(oid))
         # validate related files
         for file in metadata.unknown:
             checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
@@ -137,25 +137,25 @@ class snapshotmetadata(object):
             checkloadblobbyoid(repo, file.oid, file.path, allow_remote)
         return metadata
 
-    def storetolocallfs(self):
-        def storetolfs(repo, data):
+    def localstore(self):
+        def store(repo, data):
             """
             Util function which uploads data to the local lfs storage.
             Returns oid and size of data.
             """
             # TODO(alexeyqu): do we care about metadata?
             oid = hashlib.sha256(data).hexdigest()
-            repo.svfs.lfslocalblobstore.write(oid, data)
+            repo.svfs.snapshotstore.write(oid, data)
             return oid, str(len(data))
 
         wctx = self.repo[None]
         for f in self.unknown:
-            f.oid, f.size = storetolfs(self.repo, wctx[f.path].data())
+            f.oid, f.size = store(self.repo, wctx[f.path].data())
         for f in self.localvfsfiles:
-            f.oid, f.size = storetolfs(
+            f.oid, f.size = store(
                 self.repo, self.repo.localvfs.open(path=f.path).read()
             )
-        oid, size = storetolfs(self.repo, self.serialize())
+        oid, size = store(self.repo, self.serialize())
         return oid, size
 
     def uploadtoremotelfs(self):
@@ -164,9 +164,13 @@ class snapshotmetadata(object):
             pointers.append(lfs.pointer.gitlfspointer(oid=file.oid, size=file.size))
 
         assert self.oid is not None
+        # TODO(alexeyqu): remove this hack in the next diff
+        lfslocalstore = self.repo.svfs.lfslocalblobstore
+        self.repo.svfs.lfslocalblobstore = self.repo.svfs.snapshotstore
         pointers = [lfs.pointer.gitlfspointer(oid=self.oid)]
         for file in self.unknown:
             checkgetpointer(self.repo, file, pointers)
         for file in self.localvfsfiles:
             checkgetpointer(self.repo, file, pointers)
         lfs.wrapper.uploadblobs(self.repo, pointers)
+        self.repo.svfs.lfslocalblobstore = lfslocalstore

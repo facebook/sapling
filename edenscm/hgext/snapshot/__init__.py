@@ -25,7 +25,7 @@ Configs::
 from edenscm.mercurial import error, extensions, hg, registrar
 from edenscm.mercurial.i18n import _
 
-from . import cmds as snapshotcommands, metadata
+from . import blobstore, cmds as snapshotcommands, metadata
 
 
 cmdtable = snapshotcommands.cmdtable
@@ -33,6 +33,14 @@ cmdtable = snapshotcommands.cmdtable
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("ui", "allow-checkout-snapshot", default=False)
+
+
+def reposetup(ui, repo):
+    # Nothing to do with a remote repo
+    if not repo.local():
+        return
+
+    repo.svfs.snapshotstore = blobstore.local(repo)
 
 
 def extsetup(ui):
