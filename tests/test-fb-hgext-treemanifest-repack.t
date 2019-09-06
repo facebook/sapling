@@ -1,3 +1,4 @@
+  $ enable amend
   $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
   $ setconfig treemanifest.treeonly=False
@@ -272,11 +273,14 @@ Test incremental repack that doesn't take all packs
   $ ls_l .hg/cache/packs/manifests/ | grep datapack
   -r--r--r--     496 bc6c2ebb080844d7a227dacbc847a5b375ec620c.datapack
 
-- Test pruning the manifest cache using packs.maxpackfilecount
-  $ hg repack --incremental --config packs.maxpackfilecount=0
-  $ hg repack --incremental --packsonly --config packs.maxpackfilecount=1
+- Test pruning the manifest cache using packs.maxpackfilecount.
+- (Use 'hg metaedit' as repack itself will not trigger the purge, and
+- 'metaedit' won't create any new objects to pack.)
+  $ hg metaedit -m 'modify a (2)' --config packs.maxpackfilecount=0
+  $ hg metaedit -m 'modify a (3)' --config packs.maxpackfilecount=1
   purging shared treemanifest pack cache (4 entries) -- too many files
-  $ ls_l .hg/cache/packs/manifests/
+  $ test -d .hg/cache/packs/manifests/
+  [1]
   $ cd ..
 
 Test hg gc with multiple repositories

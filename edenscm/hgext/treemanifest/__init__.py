@@ -191,6 +191,7 @@ from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscmnative import cstore
 from edenscmnative.bindings import manifest as rustmanifest, revisionstore
 
+from ..extutil import flock
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     edenapi,
@@ -211,6 +212,7 @@ from ..remotefilelog.repack import (
     _runrepack,
     _topacks,
     domaintenancerepack,
+    repacklockvfs,
 )
 
 
@@ -628,13 +630,27 @@ def _prunesharedpacks(repo, packpath):
         # Note this is based on file count, not pack count.
         config = repo.ui.configint("packs", "maxpackfilecount")
         if config and numentries > config:
-            repo.ui.warn(
-                (
-                    "purging shared treemanifest pack cache (%d entries) "
-                    "-- too many files\n" % numentries
+            try:
+                with flock(
+                    repacklockvfs(repo).join("repacklock"),
+                    _("purging excess packs for %s") % packpath,
+                    timeout=0,
+                ):
+                    repo.ui.warn(
+                        (
+                            "purging shared treemanifest pack cache (%d entries) "
+                            "-- too many files\n" % numentries
+                        )
+                    )
+                    shutil.rmtree(packpath, True)
+            except error.LockHeld:
+                repo.ui.warn(
+                    (
+                        "not purging shared treemanifest pack cache (%d entries) "
+                        "as repack is still running\n"
+                    )
+                    % numentries
                 )
-            )
-            shutil.rmtree(packpath, True)
     except OSError:
         pass
 
