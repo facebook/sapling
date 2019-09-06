@@ -454,7 +454,7 @@ impl Dag {
             // Get parents for a linear set (ex. parent(i) is (i - 1)).
             fn parents_linear(set: &SpanSet) -> SpanSet {
                 debug_assert!(!set.contains(0));
-                SpanSet::from_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
+                SpanSet::from_sorted_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
             }
 
             let parent_set = if seg_set.contains(seg_low) {

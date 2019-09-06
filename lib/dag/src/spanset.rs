@@ -142,6 +142,16 @@ impl SpanSet {
         result
     }
 
+    /// Construct a [`SpanSet`] containing given spans.
+    /// The given spans must be already sorted (i.e. larger ids first), and do
+    /// not have overlapped spans.
+    pub fn from_sorted_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
+        let spans: Vec<Span> = spans.into_iter().map(Into::into).collect();
+        let result = SpanSet { spans };
+        assert!(result.is_valid());
+        result
+    }
+
     /// Construct an empty [`SpanSet`].
     pub fn empty() -> Self {
         let spans = Vec::new();
