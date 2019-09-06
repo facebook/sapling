@@ -12,12 +12,6 @@ from .subcmd import Subcmd
 from .trace_cmd import trace_cmd
 
 
-try:
-    import eden.cli.facebook.trace  # noqa: F401
-except ImportError:
-    pass
-
-
 @trace_cmd("enable", "Enable tracing")
 class EnableTraceCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
