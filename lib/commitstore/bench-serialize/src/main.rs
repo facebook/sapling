@@ -96,6 +96,12 @@ fn main() {
     );
 
     bench_algorithm(
+        "mincode",
+        |c, w| mincode::serialize_into(w, c).unwrap(),
+        |d| mincode::deserialize(d).unwrap(),
+    );
+
+    bench_algorithm(
         "handwritten",
         |c, w| handwritten::encode(w, c),
         |d| handwritten::decode(d),
