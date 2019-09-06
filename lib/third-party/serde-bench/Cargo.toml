@@ -1,0 +1,21 @@
+[package]
+name = "serde-bench"
+version = "0.0.7"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Minimal serialization format for benchmarking Serde"
+repository = "https://github.com/serde-rs/bench"
+documentation = "https://docs.rs/serde-bench/"
+include = ["Cargo.toml", "src/**/*.rs"]
+
+[dependencies]
+byteorder = "1.0"
+serde = "1.0"
+
+[dev-dependencies]
+bincode = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+
+[badges]
+travis-ci = { repository = "serde-rs/bench" }
