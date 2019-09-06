@@ -39,7 +39,7 @@ pub(crate) fn create_new_batch(
                 None => {
                     let mut d = VecDeque::new();
                     d.push_back((linknode, vec![]));
-                    future::ok(FastlogBatch::new(d)).right_future()
+                    FastlogBatch::new_from_raw_list(ctx, blobstore, d).right_future()
                 }
             }
         } else {
@@ -121,31 +121,40 @@ mod test {
     use tokio::runtime::Runtime;
 
     #[test]
-    fn fetch_flattened_simple() {
+    fn fetch_flattened_simple() -> Result<(), Error> {
         let ctx = CoreContext::test_mock();
         let repo = linear::getrepo();
         let mut rt = Runtime::new().unwrap();
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
-        let batch = FastlogBatch::new(d);
         let blobstore = Arc::new(repo.get_blobstore());
+        let batch = rt.block_on(FastlogBatch::new_from_raw_list(
+            ctx.clone(),
+            blobstore.clone(),
+            d,
+        ))?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
             rt.block_on(fetch_flattened(&batch, ctx, blobstore))
                 .unwrap()
         );
+        Ok(())
     }
 
     #[test]
-    fn fetch_flattened_prepend() {
+    fn fetch_flattened_prepend() -> Result<(), Error> {
         let ctx = CoreContext::test_mock();
         let repo = linear::getrepo();
         let mut rt = Runtime::new().unwrap();
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
-        let batch = FastlogBatch::new(d);
         let blobstore = Arc::new(repo.get_blobstore());
+        let batch = rt.block_on(FastlogBatch::new_from_raw_list(
+            ctx.clone(),
+            blobstore.clone(),
+            d,
+        ))?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
@@ -185,5 +194,7 @@ mod test {
             rt.block_on(fetch_flattened(&prepended, ctx, blobstore))
                 .unwrap()
         );
+
+        Ok(())
     }
 }
