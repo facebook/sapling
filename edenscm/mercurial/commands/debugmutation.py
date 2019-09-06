@@ -19,7 +19,7 @@ from .cmdtable import command
 )
 def debugmutation(ui, repo, *revs, **opts):
     """display the mutation history (or future) of a commit"""
-    repo = repo.unfiltered()
+    unfi = repo.unfiltered()
     opts = pycompat.byteskwargs(opts)
 
     def describe(entry, showsplit=False, showfoldwith=None):
@@ -50,7 +50,7 @@ def debugmutation(ui, repo, *revs, **opts):
         return ("%s by %s at %s%s%s") % (mutop, mutuser, mutdate, extra, origin)
 
     def expandhistory(node):
-        entry = mutation.lookup(repo, node)
+        entry = mutation.lookup(unfi, node)
         if entry is not None:
             desc = describe(entry, showsplit=True) + " from:"
             preds = util.removeduplicates(entry.preds())
@@ -59,10 +59,10 @@ def debugmutation(ui, repo, *revs, **opts):
             return []
 
     def expandfuture(node):
-        succsets = mutation.lookupsuccessors(repo, node)
+        succsets = mutation.lookupsuccessors(unfi, node)
         edges = []
         for succset in succsets:
-            entry = mutation.lookupsplit(repo, succset[0])
+            entry = mutation.lookupsplit(unfi, succset[0])
             desc = describe(entry, showfoldwith=node) + " into:"
             edges.append((desc, succset))
         return edges

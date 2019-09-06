@@ -337,7 +337,7 @@ Unhide some old commits and show their mutations in the log
   o  0: d20a80d4def3 'base'
   
 Debugmutatation looking forward
-  $ hg debugmutation -s c4484fcb5ac0f15058c6595a56d239d4ed707bee
+  $ hg debugmutation -s c4484fcb5ac0f15058c6595a56d239d4ed707bee --hidden
    *  c4484fcb5ac0f15058c6595a56d239d4ed707bee diverges
       :=  histedit by test at 1970-01-01T00:00:00 into:
       :   961157b412e21813bbee86fd1704fb09bd25874b
@@ -385,7 +385,7 @@ Histedit with exec that amends in between folds
   |  commit 4'
   o  0: c2a29f8b7d7a 'commit 1'
   
-  $ hg debugmutation "all()"
+  $ hg debugmutation "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
    *  08d8367dafb9bb90c58101707eca32b726ca635a
    *  15a208dbcdc54b4f841ffecf9d13f98675933242
@@ -438,7 +438,7 @@ Histedit with stop, extra commit, and fold
   |
   o  0: c2a29f8b7d7a 'commit 1'
   
-  $ hg debugmutation "all()"
+  $ hg debugmutation "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
    *  08d8367dafb9bb90c58101707eca32b726ca635a
    *  15a208dbcdc54b4f841ffecf9d13f98675933242
@@ -512,7 +512,7 @@ Revsets obey visibility rules
   >    A    # revive: C
   > EOS
 
-  $ hg debugmutation "all()"
+  $ hg debugmutation "all()" --hidden
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
    *  112478962961147124edd43549aedd1a335e44bf
    *  2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
