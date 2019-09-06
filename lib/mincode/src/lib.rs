@@ -8,6 +8,9 @@ mod de;
 mod error;
 mod ser;
 
+#[cfg(test)]
+mod tests;
+
 use self::de::Deserializer;
 use self::ser::Serializer;
 use serde::{Deserialize, Serialize};
