@@ -248,27 +248,21 @@ Lv2: 0-11[]"#
     assert_eq!(parents(vec![]), "");
 
     assert_eq!(parents(vec![0..=0]), "");
-    assert_eq!(parents(vec![0..=1]), "0..=0");
-    assert_eq!(parents(vec![0..=2]), "0..=0");
-    assert_eq!(parents(vec![0..=3]), "2..=2 0..=0");
+    assert_eq!(parents(vec![0..=1]), "0");
+    assert_eq!(parents(vec![0..=2]), "0");
+    assert_eq!(parents(vec![0..=3]), "0 2");
     assert_eq!(parents(vec![0..=4]), "0..=3");
     assert_eq!(parents(vec![0..=5]), "0..=4");
     assert_eq!(parents(vec![0..=6]), "0..=5");
     assert_eq!(parents(vec![0..=7]), "0..=6");
     assert_eq!(parents(vec![0..=8]), "0..=6");
-    assert_eq!(parents(vec![0..=9]), "8..=8 0..=6");
+    assert_eq!(parents(vec![0..=9]), "0..=6 8");
     assert_eq!(parents(vec![0..=10]), "0..=9");
     assert_eq!(parents(vec![0..=11]), "0..=10");
 
     assert_eq!(parents(vec![0..=0, 2..=2]), "");
-    assert_eq!(
-        parents(vec![0..=0, 3..=3, 5..=5, 9..=10]),
-        "7..=9 4..=4 2..=2"
-    );
-    assert_eq!(
-        parents(vec![1..=1, 4..=4, 6..=6, 8..=11]),
-        "5..=10 3..=3 0..=1"
-    );
+    assert_eq!(parents(vec![0..=0, 3..=3, 5..=5, 9..=10]), "2 4 7 8 9");
+    assert_eq!(parents(vec![1..=1, 4..=4, 6..=6, 8..=11]), "0 1 3 5..=10");
 }
 
 #[test]
@@ -298,24 +292,16 @@ Lv2: 0-2[] 3-6[] 7-9[] 10-10[8] 11-11[7]"#
     let heads = |spans| -> String { format_set(dag.heads(SpanSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(heads(vec![]), "");
-    assert_eq!(heads(vec![0..=11]), "9..=11 6..=6 2..=2");
-    assert_eq!(heads(vec![0..=1, 3..=5, 7..=10]), "9..=10 4..=5 1..=1");
-    assert_eq!(heads(vec![0..=0, 2..=2]), "2..=2 0..=0");
-    assert_eq!(
-        heads(vec![1..=2, 4..=6, 7..=7, 11..=11, 9..=9]),
-        "11..=11 9..=9 6..=6 2..=2"
-    );
+    assert_eq!(heads(vec![0..=11]), "2 6 9 10 11");
+    assert_eq!(heads(vec![0..=1, 3..=5, 7..=10]), "1 4 5 9 10");
+    assert_eq!(heads(vec![0..=0, 2..=2]), "0 2");
+    assert_eq!(heads(vec![1..=2, 4..=6, 7..=7, 11..=11, 9..=9]), "2 6 9 11");
 }
 
 // Test utilities
 
 fn format_set(set: SpanSet) -> String {
-    let ranges: Vec<String> = set
-        .as_spans()
-        .iter()
-        .map(|s| format!("{}..={}", s.low, s.high))
-        .collect();
-    ranges.join(" ")
+    format!("{:?}", set)
 }
 
 impl IdMap {

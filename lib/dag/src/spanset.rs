@@ -7,12 +7,12 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
-use std::ops::{Bound, RangeBounds, RangeInclusive};
-
 use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
     PartialOrd,
 };
+use std::fmt::{self, Debug};
+use std::ops::{Bound, RangeBounds, RangeInclusive};
 
 type Id = u64;
 
@@ -24,7 +24,7 @@ pub struct Span {
 }
 
 /// A set of integer spans.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SpanSet {
     spans: Vec<Span>,
 }
@@ -371,6 +371,25 @@ fn push_with_union(spans: &mut Vec<Span>, span: Span) {
                 spans.push(span)
             }
         }
+    }
+}
+
+impl Debug for SpanSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let ranges: Vec<String> = self
+            .spans
+            .iter()
+            .rev()
+            .flat_map(|s| {
+                if s.low + 2 >= s.high {
+                    // "low..=high" form is not shorter.
+                    (s.low..=s.high).map(|i| format!("{}", i)).collect()
+                } else {
+                    vec![format!("{}..={}", s.low, s.high)]
+                }
+            })
+            .collect();
+        write!(f, "{}", ranges.join(" "))
     }
 }
 
