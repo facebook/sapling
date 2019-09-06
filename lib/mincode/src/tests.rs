@@ -17,8 +17,7 @@ struct Foo {
 quickcheck! {
     fn test_roundtrip(bar: String, baz: Option<(f64, i32, u8)>, derp: bool, list: Vec<u32>) -> bool {
         let foo = Foo { bar, baz, derp, list };
-        let mut bytes = Vec::new();
-        crate::serialize(&mut bytes, &foo).unwrap();
+        let bytes = crate::serialize(&foo).unwrap();
         let foo_deserialized: Foo = crate::deserialize(&bytes).unwrap();
         foo == foo_deserialized
     }

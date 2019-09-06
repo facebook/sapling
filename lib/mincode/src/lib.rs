@@ -14,14 +14,25 @@ mod tests;
 use self::de::Deserializer;
 use self::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::io;
 
 pub use self::error::{Error, Result};
 
-pub fn serialize<T>(out: &mut Vec<u8>, value: &T) -> Result<()>
+pub fn serialize<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
-    let mut ser = Serializer::new(out);
+    let mut out = Vec::new();
+    serialize_into(&mut out, value)?;
+    Ok(out)
+}
+
+pub fn serialize_into<W, T: ?Sized>(writer: W, value: &T) -> Result<()>
+where
+    W: io::Write,
+    T: Serialize,
+{
+    let mut ser = Serializer::new(writer);
     Serialize::serialize(value, &mut ser)
 }
 
