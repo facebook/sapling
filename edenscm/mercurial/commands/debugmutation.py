@@ -12,62 +12,101 @@ from ..i18n import _
 from .cmdtable import command
 
 
-@command(b"debugmutation", [], _("[REV]"))
+@command(
+    b"debugmutation",
+    [("s", "successors", False, _("show successors instead of predecessors"))],
+    _("[REV]"),
+)
 def debugmutation(ui, repo, *revs, **opts):
-    """display the mutation history of a commit"""
+    """display the mutation history (or future) of a commit"""
     repo = repo.unfiltered()
     opts = pycompat.byteskwargs(opts)
-    for rev in scmutil.revrange(repo, revs):
-        ctx = repo[rev]
-        nodestack = [[ctx.node()]]
-        while nodestack:
-            node = nodestack[-1].pop()
-            ui.status(("%s%s") % ("  " * len(nodestack), nodemod.hex(node)))
-            entry = mutation.lookup(repo, node)
-            if entry is not None:
-                preds = entry.preds()
-                mutop = entry.op()
-                mutuser = entry.user()
-                mutdate = util.shortdatetime((entry.time(), entry.tz()))
-                mutsplit = entry.split() or None
-                origin = entry.origin()
-                origin = {
-                    None: "",
-                    mutation.ORIGIN_LOCAL: "",
-                    mutation.ORIGIN_COMMIT: " (from remote commit)",
-                    mutation.ORIGIN_OBSMARKER: " (from obsmarker)",
-                    mutation.ORIGIN_SYNTHETIC: " (synthetic)",
-                }.get(origin, " (unknown origin %s)" % origin)
-                extra = ""
-                if mutsplit is not None:
-                    extra += " (split into this and: %s)" % ", ".join(
-                        [nodemod.hex(n) for n in mutsplit]
-                    )
-                ui.status(
-                    (" %s by %s at %s%s%s from:")
-                    % (mutop, mutuser, mutdate, extra, origin)
+
+    def describe(entry, showsplit=False, showfoldwith=None):
+        mutop = entry.op()
+        mutuser = entry.user()
+        mutdate = util.shortdatetime((entry.time(), entry.tz()))
+        mutpreds = entry.preds()
+        mutsplit = entry.split() or None
+        origin = entry.origin()
+        origin = {
+            None: "",
+            mutation.ORIGIN_LOCAL: "",
+            mutation.ORIGIN_COMMIT: " (from remote commit)",
+            mutation.ORIGIN_OBSMARKER: " (from obsmarker)",
+            mutation.ORIGIN_SYNTHETIC: " (synthetic)",
+        }.get(origin, " (unknown origin %s)" % origin)
+        extra = ""
+        if showsplit and mutsplit is not None:
+            extra += " (split into this and: %s)" % ", ".join(
+                [nodemod.hex(n) for n in mutsplit]
+            )
+        if showfoldwith is not None:
+            foldwith = [pred for pred in mutpreds if pred != showfoldwith]
+            if foldwith:
+                extra += " (folded with: %s)" % ", ".join(
+                    [nodemod.hex(n) for n in foldwith]
                 )
+        return ("%s by %s at %s%s%s") % (mutop, mutuser, mutdate, extra, origin)
 
-                # Check for duplicate predecessors.  There shouldn't be any.
-                if len(preds) != len(set(preds)):
-                    predcount = {}
-                    for pred in preds:
-                        predcount.setdefault(pred, []).append(0)
-                    predinfo = [
-                        "%s x %s" % (len(c), nodemod.hex(n))
-                        for n, c in predcount.iteritems()
-                        if len(c) > 1
-                    ]
-                    ui.status(
-                        ("\n%sDUPLICATE PREDECESSORS: %s")
-                        % ("  " * len(nodestack), ", ".join(predinfo))
-                    )
+    def expandhistory(node):
+        entry = mutation.lookup(repo, node)
+        if entry is not None:
+            desc = describe(entry, showsplit=True) + " from:"
+            preds = util.removeduplicates(entry.preds())
+            return [(desc, preds)]
+        else:
+            return []
 
-                    preds = util.removeduplicates(preds)
-                nodestack.append(list(reversed(preds)))
-            ui.status(("\n"))
-            while nodestack and not nodestack[-1]:
-                nodestack.pop()
+    def expandfuture(node):
+        succsets = mutation.lookupsuccessors(repo, node)
+        edges = []
+        for succset in succsets:
+            entry = mutation.lookupsplit(repo, succset[0])
+            desc = describe(entry, showfoldwith=node) + " into:"
+            edges.append((desc, succset))
+        return edges
+
+    expand = expandfuture if opts.get("successors") else expandhistory
+
+    def rendernodes(prefix, nodes):
+        if len(nodes) == 1:
+            render(prefix, prefix, nodes[0])
+        elif len(nodes) > 1:
+            for node in nodes[:-1]:
+                render(prefix + "|-  ", prefix + "|   ", node)
+            render(prefix + "'-  ", prefix + "    ", nodes[-1])
+
+    def render(firstprefix, prefix, nextnode):
+        while nextnode:
+            node = nextnode
+            nextnode = None
+            ui.status(("%s%s") % (firstprefix, nodemod.hex(node)))
+            firstprefix = prefix
+            edges = expand(node)
+            if len(edges) == 0:
+                ui.status(("\n"))
+            elif len(edges) == 1:
+                desc, nextnodes = edges[0]
+                ui.status((" %s\n") % desc)
+                if len(nextnodes) == 1:
+                    # Simple case, don't use recursion
+                    nextnode = nextnodes[0]
+                else:
+                    rendernodes(prefix, nextnodes)
+            elif len(edges) > 1:
+                ui.status((" diverges\n"))
+                for edge in edges[:-1]:
+                    desc, nextnodes = edge
+                    ui.status(("%s:=  %s\n") % (prefix, desc))
+                    rendernodes(prefix + ":   ", nextnodes)
+                desc, nextnodes = edges[-1]
+                ui.status(("%s'=  %s\n") % (prefix, desc))
+                rendernodes(prefix + "    ", nextnodes)
+
+    for rev in scmutil.revrange(repo, revs):
+        render(" *  ", "    ", repo[rev].node())
+
     return 0
 
 

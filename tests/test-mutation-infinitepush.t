@@ -122,11 +122,11 @@ Clone the repo again, and pull an earlier commit.  This will cause the server to
 
 Check the history of the commits has been included.
   $ hg debugmutation f1f3b
-    f1f3b31bcda86dbc8fe6a31ba7c6893bee792127 amend by test at 1970-01-01T00:00:00 (from remote commit) from:
+   *  f1f3b31bcda86dbc8fe6a31ba7c6893bee792127 amend by test at 1970-01-01T00:00:00 (from remote commit) from:
       01c5cd3313b899dca3e059b77aa454e0e2b5df7b amend by test at 1970-01-01T00:00:00 from:
-        598fd30ad50172d0389be262a242092f221bd196 amend by test at 1970-01-01T00:00:00 from:
-          ef7d26c88be0bf3c8d40a3569fd9c018f32a19ab amend by test at 1970-01-01T00:00:00 from:
-            20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+      598fd30ad50172d0389be262a242092f221bd196 amend by test at 1970-01-01T00:00:00 from:
+      ef7d26c88be0bf3c8d40a3569fd9c018f32a19ab amend by test at 1970-01-01T00:00:00 from:
+      20759b6926ce827d5a8c73eb1fa9726d6f7defb2
 
 Pulling in an earlier predecessor makes the predecessor show up.
   $ hg pull -q -r $A

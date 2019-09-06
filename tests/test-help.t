@@ -996,7 +996,7 @@ Test list of internal help commands
    debugmergestate
                  print merge state
    debugmutation
-                 display the mutation history of a commit
+                 display the mutation history (or future) of a commit
    debugmutationfromobsmarkers
                  convert obsolescence markers to mutation records
    debugnamecomplete

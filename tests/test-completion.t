@@ -320,7 +320,7 @@ Show all commands + options
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
   debugmergestate: 
-  debugmutation: 
+  debugmutation: successors
   debugmutationfromobsmarkers: 
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template

@@ -14,11 +14,11 @@
   >   hg amend -m "commit$i"
   > done
   $ hg debugmutation .
-    21c93100b04c543843a7dab4fa0d5bada061b7a0 amend by test at 1970-01-01T00:00:00 from:
+   *  21c93100b04c543843a7dab4fa0d5bada061b7a0 amend by test at 1970-01-01T00:00:00 from:
       672a4910c364d425231d2dd2fb0486f32a2d88f4 amend by test at 1970-01-01T00:00:00 from:
-        d3c8fd338cf40a496d981b2ada8df4108f575897 amend by test at 1970-01-01T00:00:00 from:
-          932f02c9fad3fa46e55b62560c88eb67528b02f0 amend by test at 1970-01-01T00:00:00 from:
-            e6c779c67aa947c951f334f4f312bd2b21d27e55
+      d3c8fd338cf40a496d981b2ada8df4108f575897 amend by test at 1970-01-01T00:00:00 from:
+      932f02c9fad3fa46e55b62560c88eb67528b02f0 amend by test at 1970-01-01T00:00:00 from:
+      e6c779c67aa947c951f334f4f312bd2b21d27e55
 
 Loops are not normally possible, but they can sneak in through backfilling complex
 obsmarker graphs.  Create a fake one to check behaviour.
