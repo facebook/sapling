@@ -918,3 +918,18 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
         # up properly.
         if openedrepo:
             repo.close()
+
+
+@command("debugedenrunpostupdatehook", [])
+def edenrunpostupdatehook(ui, repo):
+    """Run post-update hooks for edenfs"""
+    with repo.wlock():
+        # this isn't at the top of the file because there's already a
+        # binascii.hexlify imported and used in this file
+        from ..node import hex
+
+        parent1, parent2 = ([hex(node) for node in repo.nodes("parents()")] + ["", ""])[
+            :2
+        ]
+        repo.hook("preupdate", throw=False, parent1=parent1, parent2=parent2)
+        repo.hook("update", parent1=parent1, parent2=parent2, error=0)
