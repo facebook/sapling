@@ -19,20 +19,25 @@ use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::debug;
+use slog::warn;
 use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tracing::{trace_args, EventId, Traced};
+use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 define_stats! {
     prefix = "mononoke.derived_data";
     derived_data_latency:
         dynamic_timeseries("{}.deriving.latency_ms", (derived_data_type: &'static str); AVG),
 }
+
+const DERIVE_TRACE_THRESHOLD: Duration = Duration::from_secs(3);
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
@@ -95,10 +100,11 @@ pub(crate) fn derive_impl<
     })
     .flatten_stream()
     .chunks(100)
-    .for_each({
+    .fold(0usize, {
         cloned!(ctx, derived_mapping, repo);
-        move |csids| {
+        move |acc, csids| {
             let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
+            let chunk_size = csids.len();
             stream::iter_ok(csids)
                 .for_each({
                     cloned!(ctx, mapping, repo);
@@ -119,9 +125,50 @@ pub(crate) fn derive_impl<
                     cloned!(ctx);
                     move |_| mapping.persist(ctx)
                 })
+                .map(move |_| acc + chunk_size)
         }
     })
-    .and_then(move |()| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
+    .timed({
+        cloned!(ctx);
+        move |stats, count| {
+            let count = *count.unwrap_or(&0);
+            if stats.completion_time > DERIVE_TRACE_THRESHOLD {
+                warn!(
+                    ctx.logger(),
+                    "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
+                    count,
+                    Derived::NAME,
+                    start_csid,
+                    stats.completion_time,
+                    ctx.trace().id(),
+                );
+                ctx.scuba()
+                    .clone()
+                    .add("trace", ctx.trace().id().to_string())
+                    .add_future_stats(&stats)
+                    .log_with_msg(
+                        "Slow derivation",
+                        Some(format!(
+                            "type={},count={},csid={}",
+                            Derived::NAME,
+                            count,
+                            start_csid.to_string()
+                        )),
+                    );
+                tokio::spawn(
+                    ctx.trace()
+                        .upload_to_manifold(RequestContext {
+                            bucketName: "mononoke_prod".into(),
+                            apiKey: "".into(),
+                            ..Default::default()
+                        })
+                        .map_err(move |err| warn!(ctx.logger(), "failed to upload trace: {}", err)),
+                );
+            }
+            Ok(())
+        }
+    })
+    .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
 }
 
 // Panics if any of the parents is not derived yet
