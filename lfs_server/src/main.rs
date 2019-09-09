@@ -79,6 +79,10 @@ fn upload_handler(state: State) -> Box<HandlerFuture> {
     Box::new(upload::upload(state).boxed().compat())
 }
 
+fn health_handler(state: State) -> (State, &'static str) {
+    (state, "I_AM_ALIVE")
+}
+
 fn router(lfs_ctx: LfsServerContext) -> Router {
     let middleware = StateMiddleware::new(lfs_ctx);
     let pipeline = single_middleware(middleware);
@@ -99,6 +103,8 @@ fn router(lfs_ctx: LfsServerContext) -> Router {
             .put("/:repository/upload/:oid/:size")
             .with_path_extractor::<upload::UploadParams>()
             .to(upload_handler);
+
+        route.get("/health_check").to(health_handler);
     })
 }
 
