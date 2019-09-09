@@ -299,6 +299,9 @@ mod tests {
     };
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
+    use mononoke_types::fastlog_batch::{
+        max_entries_in_fastlog_batch, MAX_BATCHES, MAX_LATEST_LEN,
+    };
     use mononoke_types::{MPath, ManifestUnodeId};
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
@@ -420,7 +423,7 @@ mod tests {
 
         let mut bonsais = vec![];
         let mut parents = vec![];
-        for i in 1..60 {
+        for i in 1..max_entries_in_fastlog_batch() {
             let filename = String::from("1");
             let content = format!("{}", i);
             let stored_files = store_files(
@@ -451,7 +454,7 @@ mod tests {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
         let gen_settings = GenSettings::default();
         let mut changes_count = vec![];
-        changes_count.resize(100, 100);
+        changes_count.resize(200, 10);
         let latest = rt
             .block_on(GenManifest::new().gen_stack(
                 ctx.clone(),
@@ -474,7 +477,7 @@ mod tests {
 
         let mut bonsais = vec![];
         let mut parents = vec![];
-        for _ in 1..60 {
+        for _ in 1..max_entries_in_fastlog_batch() {
             let bcs = create_bonsai_changeset(parents);
             let bcs_id = bcs.get_changeset_id();
             bonsais.push(bcs);
@@ -830,8 +833,8 @@ mod tests {
             batch.latest().len(),
             batch.previous_batches().len(),
         );
-        assert!(batch.latest().len() <= 10);
-        assert!(batch.previous_batches().len() <= 5);
+        assert!(batch.latest().len() <= MAX_LATEST_LEN);
+        assert!(batch.previous_batches().len() <= MAX_BATCHES);
         rt.block_on(fetch_flattened(&batch, ctx, blobstore))
             .unwrap()
     }
@@ -860,7 +863,7 @@ mod tests {
                 .block_on(unode_entry.get_linknode(ctx.clone(), repo.clone()))
                 .unwrap();
             history.push(linknode);
-            if history.len() >= 60 {
+            if history.len() >= max_entries_in_fastlog_batch() {
                 break;
             }
             let parents = runtime

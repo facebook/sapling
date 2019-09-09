@@ -43,10 +43,10 @@ pub struct FastlogBatch {
     previous_batches: VecDeque<FastlogBatchId>,
 }
 
-const MAX_LATEST_LEN: usize = 10;
-const MAX_BATCHES: usize = 5;
+pub const MAX_LATEST_LEN: usize = 10;
+pub const MAX_BATCHES: usize = 10;
 
-fn max_entries_in_fastlog_batch() -> usize {
+pub fn max_entries_in_fastlog_batch() -> usize {
     MAX_BATCHES * MAX_LATEST_LEN + MAX_LATEST_LEN
 }
 
