@@ -364,6 +364,23 @@ impl BlobRepo {
         )
     }
 
+    /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
+    pub fn get_bonsai_bookmarks_by_prefix_maybe_stale(
+        &self,
+        ctx: CoreContext,
+        prefix: &BookmarkPrefix,
+        max: u64,
+    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+        STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
+        self.bookmarks.list_all_by_prefix(
+            ctx.clone(),
+            prefix,
+            self.repoid,
+            Freshness::MaybeStale,
+            max,
+        )
+    }
+
     // TODO(stash): make it accept ChangesetId
     pub fn changeset_exists(
         &self,

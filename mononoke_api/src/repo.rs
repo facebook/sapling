@@ -9,10 +9,12 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
-use bookmarks::BookmarkName;
+use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
+use futures::stream::{self, Stream};
+use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::RepositoryId;
@@ -21,7 +23,7 @@ use slog::Logger;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
-use crate::specifiers::{ChangesetId, ChangesetSpecifier};
+use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 
 pub(crate) struct Repo {
     pub(crate) blob_repo: BlobRepo,
@@ -157,5 +159,92 @@ impl RepoContext {
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
+    }
+
+    /// Get Mercurial ID for multiple changesets
+    ///
+    /// This is a more efficient version of:
+    /// ```ignore
+    /// let ids: Vec<ChangesetId> = ...;
+    /// ids.into_iter().map(|id| {
+    ///     let hg_id = repo
+    ///         .changeset(ChangesetSpecifier::Bonsai(id))
+    ///         .await
+    ///         .hg_id();
+    ///     (id, hg_id)
+    /// });
+    /// ```
+    pub async fn changeset_hg_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>, MononokeError> {
+        let mapping = self
+            .repo
+            .blob_repo
+            .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
+            .compat()
+            .await?
+            .into_iter()
+            .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Get a list of bookmarks.
+    pub fn list_bookmarks(
+        &self,
+        include_scratch: bool,
+        prefix: Option<String>,
+        limit: Option<u64>,
+    ) -> impl Stream<Item = (String, ChangesetId), Error = MononokeError> {
+        if include_scratch {
+            let prefix = match prefix.map(BookmarkPrefix::new) {
+                Some(Ok(prefix)) => prefix,
+                Some(Err(e)) => {
+                    return stream::once(Err(MononokeError::InvalidRequest(format!(
+                        "invalid bookmark prefix: {}",
+                        e
+                    ))))
+                    .boxify()
+                }
+                None => {
+                    return stream::once(Err(MononokeError::InvalidRequest(
+                        "prefix required to list scratch bookmarks".to_string(),
+                    )))
+                    .boxify()
+                }
+            };
+            let limit = match limit {
+                Some(limit) => limit,
+                None => {
+                    return stream::once(Err(MononokeError::InvalidRequest(
+                        "limit required to list scratch bookmarks".to_string(),
+                    )))
+                    .boxify()
+                }
+            };
+            self.repo
+                .blob_repo
+                .get_bonsai_bookmarks_by_prefix_maybe_stale(self.ctx.clone(), &prefix, limit)
+                .map(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
+                .map_err(MononokeError::from)
+                .boxify()
+        } else {
+            // TODO(mbthomas): honour `limit` for publishing bookmarks
+            let prefix = prefix.unwrap_or_else(|| "".to_string());
+            self.repo
+                .blob_repo
+                .get_bonsai_publishing_bookmarks_maybe_stale(self.ctx.clone())
+                .filter_map(move |(bookmark, cs_id)| {
+                    let name = bookmark.into_name().into_string();
+                    if name.starts_with(&prefix) {
+                        Some((name, cs_id))
+                    } else {
+                        None
+                    }
+                })
+                .map_err(MononokeError::from)
+                .boxify()
+        }
     }
 }
