@@ -10,11 +10,12 @@
 
 use clap::Arg;
 use failure::{err_msg, Error};
+use futures::{Future, IntoFuture};
 use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::{
+    bind_server,
     handler::HandlerFuture,
-    init_server,
     middleware::state::StateMiddleware,
     pipeline::{single::single_pipeline, single_middleware},
     router::{
@@ -24,9 +25,13 @@ use gotham::{
     state::State,
 };
 use std::collections::HashMap;
+use std::net::ToSocketAddrs;
 use tokio;
+use tokio::net::TcpListener;
+use tokio_openssl::SslAcceptorExt;
 
 use blobrepo_factory::open_blobrepo;
+use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 
@@ -55,6 +60,10 @@ const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
+const ARG_TLS_CERTIFICATE: &str = "tls-certificate";
+const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
+const ARG_TLS_CA: &str = "tls-ca";
+const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects.
 fn batch_handler(state: State) -> Box<HandlerFuture> {
@@ -113,6 +122,26 @@ fn main() -> Result<(), Error> {
             .help("The port to listen on locally"),
     )
     .arg(
+        Arg::with_name(ARG_TLS_CERTIFICATE)
+            .long("--tls-certificate")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name(ARG_TLS_PRIVATE_KEY)
+            .long("--tls-private-key")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name(ARG_TLS_CA)
+            .long("--tls-ca")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name(ARG_TLS_TICKET_SEEDS)
+            .long("--tls-ticket-seeds")
+            .takes_value(true),
+    )
+    .arg(
         Arg::with_name(ARG_SELF_URL)
             .takes_value(true)
             .required(true)
@@ -134,7 +163,11 @@ fn main() -> Result<(), Error> {
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
-    let addr = format!("{}:{}", listen_host, listen_port);
+
+    let tls_certificate = matches.value_of(ARG_TLS_CERTIFICATE);
+    let tls_private_key = matches.value_of(ARG_TLS_PRIVATE_KEY);
+    let tls_ca = matches.value_of(ARG_TLS_CA);
+    let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
 
     let server = ServerUris::new(
         matches.value_of(ARG_SELF_URL).unwrap(),
@@ -170,13 +203,56 @@ fn main() -> Result<(), Error> {
         .into_iter()
         .collect();
 
-    let root = router(LfsServerContext::new(logger, repos, server)?);
+    let root = router(LfsServerContext::new(logger.clone(), repos, server)?);
+    let addr = format!("{}:{}", listen_host, listen_port);
 
-    let server = init_server(addr, root)
-        .compat()
-        .map_err(|_| err_msg("Server failed"));
+    let addr = addr
+        .to_socket_addrs()
+        .chain_err(err_msg("Invalid Listener Address"))?
+        .next()
+        .ok_or(err_msg("Invalid Socket Address"))?;
 
-    runtime.block_on(server.compat())?;
+    let listener = TcpListener::bind(&addr).chain_err(err_msg("Could not start TCP listener"))?;
+
+    match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
+        (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
+            let config = secure_utils::SslConfig {
+                cert: tls_certificate.to_string(),
+                private_key: tls_private_key.to_string(),
+                ca_pem: tls_ca.to_string(),
+            };
+
+            let tls_ticket_seeds = tls_ticket_seeds
+                .unwrap_or(secure_utils::fb_tls::SEED_PATH)
+                .to_string();
+
+            let tls_builder = secure_utils::build_tls_acceptor_builder(config.clone())?;
+            let fbs_tls_builder = secure_utils::fb_tls::tls_acceptor_builder(
+                logger.clone(),
+                config.clone(),
+                tls_builder,
+                tls_ticket_seeds,
+            )?;
+            let acceptor = fbs_tls_builder.build();
+
+            let server = bind_server(listener, root, move |socket| {
+                // TODO: Log handshake failures here?
+                acceptor.accept_async(socket).map_err(|_| ())
+            });
+
+            runtime
+                .block_on(server)
+                .map_err(|()| err_msg("Server failed"))?;
+        }
+        (None, None, None, None) => {
+            let server = bind_server(listener, root, |socket| Ok(socket).into_future());
+
+            runtime
+                .block_on(server)
+                .map_err(|()| err_msg("Server failed"))?;
+        }
+        _ => return Err(err_msg("TLS flags must be passed together")),
+    }
 
     Ok(())
 }
