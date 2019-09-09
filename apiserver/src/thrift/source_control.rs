@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use faster_hex::hex_string;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
+use futures_util::try_join;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke,
     MononokeError, RepoContext,
@@ -212,6 +213,7 @@ fn commit_id_to_changeset_specifier(
 
 mod errors {
     use super::thrift;
+    use mononoke_api::ChangesetSpecifier;
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
@@ -224,6 +226,13 @@ mod errors {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
             reason: format!("repo not found ({})", reponame.as_ref()),
+        }
+    }
+
+    pub(super) fn commit_not_found(commit: &ChangesetSpecifier) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
+            reason: format!("commit not found ({})", commit),
         }
     }
 }
@@ -344,6 +353,64 @@ impl SourceControlService for SourceControlServiceImpl {
                 exists: false,
                 ids: None,
             }),
+        }
+    }
+
+    /// Get commit info.
+    async fn commit_info(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitInfoParams,
+    ) -> Result<thrift::CommitInfo, service::CommitInfoExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let repo = self
+            .mononoke
+            .repo(ctx, &commit.repo.name)?
+            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+
+        let changeset_specifier = commit_id_to_changeset_specifier(&commit.id)?;
+        match repo.changeset(changeset_specifier).await? {
+            Some(changeset) => {
+                async fn map_parent_identities(
+                    repo: &RepoContext,
+                    changeset: &ChangesetContext,
+                    identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
+                ) -> Result<
+                    Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
+                    MononokeError,
+                > {
+                    let parents = changeset.parents().await?;
+                    let parent_id_mapping =
+                        map_commit_identities(&repo, parents.clone(), identity_schemes).await?;
+                    Ok(parents
+                        .iter()
+                        .map(|parent_id| {
+                            parent_id_mapping
+                                .get(parent_id)
+                                .map(Clone::clone)
+                                .unwrap_or_else(BTreeMap::new)
+                        })
+                        .collect())
+                }
+
+                let (ids, message, date, author, parents, extra) = try_join!(
+                    map_commit_identity(&changeset, &params.identity_schemes),
+                    changeset.message(),
+                    changeset.author_date(),
+                    changeset.author(),
+                    map_parent_identities(&repo, &changeset, &params.identity_schemes),
+                    changeset.extras(),
+                )?;
+                Ok(thrift::CommitInfo {
+                    ids,
+                    message,
+                    date: date.timestamp(),
+                    author,
+                    parents,
+                    extra: extra.into_iter().collect(),
+                })
+            }
+            None => Err(errors::commit_not_found(&changeset_specifier).into()),
         }
     }
 }
