@@ -109,7 +109,6 @@ def subcmd(
             ALIASES = aliases
 
         if cmd_table is not None:
-            # pyre-fixme[18]: Global name `subcmd` is undefined.
             cmd_table.append(typing.cast(Type[Subcmd], SubclassedCmd))
         return typing.cast(Type[Subcmd], SubclassedCmd)
 

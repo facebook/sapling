@@ -416,7 +416,6 @@ re-run `eden clone` with --allow-empty-repo"""
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             if instance.should_use_experimental_systemd_mode():
-                # pyre-fixme[18]: Global name `daemon` is undefined.
                 exit_code = daemon.start_systemd_service(
                     instance=instance,
                     daemon_binary=args.daemon_binary,
@@ -643,7 +642,6 @@ class FsckCmd(Subcmd):
     def check_one(
         self, args: argparse.Namespace, checkout_path: Path, state_dir: Path
     ) -> int:
-        # pyre-fixme[18]: Global name `fsck` is undefined.
         with fsck_mod.FilesystemChecker(state_dir) as checker:
             if not checker._overlay_locked:
                 if args.force:
@@ -686,7 +684,6 @@ class FsckCmd(Subcmd):
             return self.EXIT_ERRORS
 
     def _report_error(self, args: argparse.Namespace, error: "fsck_mod.Error") -> None:
-        # pyre-fixme[18]: Global name `fsck` is undefined.
         print(f"{fsck_mod.ErrorLevel.get_label(error.level)}: {error}")
         if args.verbose:
             details = error.detailed_description()
@@ -1073,7 +1070,6 @@ class StartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden start --takeover'"
             )
 
-        # pyre-fixme[18]: Global name `daemon` is undefined.
         return daemon.start_systemd_service(
             instance=instance,
             daemon_binary=args.daemon_binary,
@@ -1225,7 +1221,6 @@ class RestartCmd(Subcmd):
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
         if instance.should_use_experimental_systemd_mode():
-            # pyre-fixme[18]: Global name `daemon` is undefined.
             return daemon.start_systemd_service(
                 instance=instance, daemon_binary=self.args.daemon_binary
             )
@@ -1268,7 +1263,6 @@ re-open these files after Eden is restarted.
         # precedence over the default timeout passed in by our caller.
         if self.args.shutdown_timeout is not None:
             timeout = typing.cast(float, self.args.shutdown_timeout)
-        # pyre-fixme[18]: Global name `daemon` is undefined.
         daemon.wait_for_shutdown(pid, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
@@ -1289,7 +1283,6 @@ re-open these files after Eden is restarted.
 
     def _finish_restart(self, instance: EdenInstance) -> int:
         if instance.should_use_experimental_systemd_mode():
-            # pyre-fixme[18]: Global name `daemon` is undefined.
             exit_code = daemon.start_systemd_service(
                 instance=instance, daemon_binary=self.args.daemon_binary
             )
@@ -1335,7 +1328,6 @@ class RageCmd(Subcmd):
             proc = None
             sink = sys.stdout.buffer
 
-        # pyre-fixme[18]: Global name `rage` is undefined.
         rage_mod.print_diagnostic_info(instance, sink)
         if proc:
             sink.close()
@@ -1392,7 +1384,6 @@ class StopCmd(Subcmd):
                     client.initiateShutdown(
                         f"`eden stop` requested by pid={os.getpid()} uid={os.getuid()}"
                     )
-            # pyre-fixme[18]: Global name `TTransport` is undefined.
             except thrift.transport.TTransport.TTransportException as e:
                 print_stderr(f"warning: edenfs is not responding: {e}")
                 if pid is None:
@@ -1408,7 +1399,6 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
-            # pyre-fixme[18]: Global name `daemon` is undefined.
             if daemon.wait_for_shutdown(pid, timeout=args.timeout):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
@@ -1430,7 +1420,6 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
         try:
-            # pyre-fixme[18]: Global name `daemon` is undefined.
             daemon.sigkill_process(pid, timeout=args.timeout)
             print_stderr("Terminated edenfs with SIGKILL.")
             return SHUTDOWN_EXIT_CODE_NORMAL

@@ -67,7 +67,6 @@ class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
             if os.environ.get("EDEN_TEST_NO_CLEANUP"):
                 print("Leaving behind eden test directory %r" % path_str)
             else:
-                # pyre-fixme[18]: Global name `eden` is undefined.
                 cleanup_tmp_dir(pathlib.Path(path_str))
 
         path_str = tempfile.mkdtemp(prefix="eden_test.")
