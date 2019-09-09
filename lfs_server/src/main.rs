@@ -24,6 +24,7 @@ use gotham::{
     },
     state::State,
 };
+use slog::warn;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use tokio;
@@ -161,6 +162,10 @@ fn main() -> Result<(), Error> {
     let logger = args::get_logger(&matches);
     let myrouter_port = args::parse_myrouter_port(&matches);
 
+    // NOTE: This captures stdlogs using slog.
+    let log_guard = slog_scope::set_global_logger(logger.clone());
+    slog_stdlog::init_with_level(::log::Level::Info)?;
+
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
 
@@ -236,8 +241,13 @@ fn main() -> Result<(), Error> {
             let acceptor = fbs_tls_builder.build();
 
             let server = bind_server(listener, root, move |socket| {
-                // TODO: Log handshake failures here?
-                acceptor.accept_async(socket).map_err(|_| ())
+                acceptor.accept_async(socket).map_err({
+                    let logger = logger.clone();
+                    move |e| {
+                        warn!(&logger, "TLS handshake failed: {:?}", e);
+                        ()
+                    }
+                })
             });
 
             runtime
@@ -253,6 +263,8 @@ fn main() -> Result<(), Error> {
         }
         _ => return Err(err_msg("TLS flags must be passed together")),
     }
+
+    std::mem::drop(log_guard);
 
     Ok(())
 }
