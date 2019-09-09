@@ -23,6 +23,7 @@ pub struct ChunkStream<S> {
     buff: BytesMut,
     emitted: bool,
     had_data: bool,
+    done: bool,
 }
 
 impl<S> ChunkStream<S> {
@@ -35,6 +36,7 @@ impl<S> ChunkStream<S> {
             buff: BytesMut::with_capacity(chunk_size),
             emitted: false,
             had_data: false,
+            done: false,
         }
     }
 }
@@ -47,6 +49,10 @@ where
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if self.done {
+            return Ok(Async::Ready(None));
+        }
+
         loop {
             if self.buff.len() >= self.chunk_size {
                 // We've buffered more data than we need. Emit some.
@@ -65,8 +71,12 @@ where
                 continue;
             }
 
-            // No more data is coming. Return whatever we have left. However, we need to be a
-            // little careful to handle empty data here.
+            // No more data is coming.
+
+            self.done = true;
+
+            // Return whatever we have left. However, we need to be a little careful to handle
+            // empty data here.
             //
             // If our buffer happens to just be empty, but we emitted data, that just means our
             // data was disivible by our chunk size, and we are done.
@@ -164,6 +174,7 @@ where
 mod test {
     use super::*;
 
+    use assert_matches::assert_matches;
     use futures::stream;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
@@ -311,6 +322,53 @@ mod test {
         // Explicitly test that ChunkStream handles putting chunks together.
         let chunks = vec![vec![1; 10], vec![1; 10]];
         assert!(do_check_chunk_stream(chunks, 15))
+    }
+
+    #[test]
+    fn test_stream_exhaustion() {
+        struct StrictStream {
+            chunks: Vec<Bytes>,
+            done: bool,
+        };
+
+        impl Stream for StrictStream {
+            type Item = Bytes;
+            type Error = ();
+
+            fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+                if self.done {
+                    panic!("StrictStream was done");
+                }
+
+                match self.chunks.pop() {
+                    Some(b) => Ok(Async::Ready(Some(b))),
+                    None => {
+                        self.done = true;
+                        Ok(Async::Ready(None))
+                    }
+                }
+            }
+        }
+
+        let chunks = vec![
+            Bytes::from(vec![1; 5]),
+            Bytes::from(vec![1; 5]),
+            Bytes::from(vec![1; 5]),
+            Bytes::from(vec![1; 5]),
+        ];
+
+        let mut stream = ChunkStream::new(
+            StrictStream {
+                chunks,
+                done: false,
+            },
+            10,
+        );
+
+        assert_matches!(stream.poll(), Ok(Async::Ready(Some(_))));
+        assert_matches!(stream.poll(), Ok(Async::Ready(Some(_))));
+        assert_matches!(stream.poll(), Ok(Async::Ready(None)));
+        assert_matches!(stream.poll(), Ok(Async::Ready(None)));
     }
 
     fn do_check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
