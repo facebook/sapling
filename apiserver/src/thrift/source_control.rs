@@ -7,11 +7,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use mononoke_api::Mononoke;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use source_control::server::SourceControlService;
-
-use super::super::actor::Mononoke;
 
 #[derive(Clone)]
 pub struct SourceControlServiceImpl {

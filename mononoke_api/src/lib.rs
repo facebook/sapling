@@ -10,12 +10,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-#[cfg(test)]
 use blobrepo::BlobRepo;
 use blobrepo_factory::Caching;
 use cloned::cloned;
+use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
 use futures_preview::future;
+use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
 
 use metaconfig_parser::RepoConfigs;
@@ -91,6 +92,36 @@ impl Mononoke {
             repos: repos
                 .into_iter()
                 .map(|(name, repo)| (name, Arc::new(Repo::new_test(repo))))
+                .collect(),
+        }
+    }
+
+    /// Temporary function to create directly from parts.
+    pub fn new_from_parts(
+        repos: impl IntoIterator<
+            Item = (
+                String,
+                BlobRepo,
+                Arc<SkiplistIndex>,
+                Arc<RootUnodeManifestMapping>,
+            ),
+        >,
+    ) -> Self {
+        Self {
+            repos: repos
+                .into_iter()
+                .map(
+                    |(name, blob_repo, skiplist_index, unodes_derived_mapping)| {
+                        (
+                            name,
+                            Arc::new(Repo {
+                                blob_repo,
+                                _skiplist_index: skiplist_index,
+                                _unodes_derived_mapping: unodes_derived_mapping,
+                            }),
+                        )
+                    },
+                )
                 .collect(),
         }
     }

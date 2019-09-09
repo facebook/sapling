@@ -82,11 +82,11 @@ define_stats! {
 }
 
 pub struct MononokeRepo {
-    repo: BlobRepo,
+    pub(crate) repo: BlobRepo,
     logger: Logger,
-    skiplist_index: Arc<SkiplistIndex>,
+    pub(crate) skiplist_index: Arc<SkiplistIndex>,
     cache: Option<CacheManager>,
-    unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
     // Cached public bookmarks that are used by apiserver. They can be outdated but not by much
     // (normally just a few seconds).
     // These bookmarks are updated when derived data is generated for them.

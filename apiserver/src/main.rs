@@ -22,6 +22,7 @@ use tokio::runtime::Runtime;
 use blobrepo_factory::Caching;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
+use mononoke_api::Mononoke as NewMononoke;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
@@ -515,6 +516,7 @@ fn setup_logger(debug: bool) -> Logger {
 #[derive(Clone)]
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
+    new_mononoke: Arc<NewMononoke>,
     logger: Logger,
     scuba_builder: ScubaSampleBuilder,
     use_ssl: bool,
@@ -689,6 +691,16 @@ fn main() -> Fallible<()> {
     ))?;
     let mononoke = Arc::new(mononoke);
 
+    let new_mononoke = NewMononoke::new_from_parts(mononoke.repos.iter().map(|(name, repo)| {
+        (
+            name.clone(),
+            repo.repo.clone(),
+            repo.skiplist_index.clone(),
+            repo.unodes_derived_mapping.clone(),
+        )
+    }));
+    let new_mononoke = Arc::new(new_mononoke);
+
     runtime.spawn(stats_aggregation.map_err(|err| {
         eprintln!("Unexpected error: {:#?}", err);
     }));
@@ -699,12 +711,14 @@ fn main() -> Fallible<()> {
             host.to_string(),
             port,
             mononoke.clone(),
+            new_mononoke.clone(),
             scuba_builder.clone(),
         );
     }
 
     let state = HttpServerState {
         mononoke,
+        new_mononoke,
         logger: actix_logger.clone(),
         scuba_builder: scuba_builder.clone(),
         use_ssl,

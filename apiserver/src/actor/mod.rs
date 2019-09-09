@@ -35,7 +35,7 @@ pub use self::repo::MononokeRepo;
 pub use self::response::MononokeRepoResponse;
 
 pub struct Mononoke {
-    repos: HashMap<String, MononokeRepo>,
+    pub(crate) repos: HashMap<String, MononokeRepo>,
 }
 
 impl Mononoke {
