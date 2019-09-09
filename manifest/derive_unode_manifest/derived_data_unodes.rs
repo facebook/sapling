@@ -4,10 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
-use std::iter::FromIterator;
-
 use crate::derive_unode_manifest;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -25,6 +21,11 @@ use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
 };
 use repo_blobstore::RepoBlobstore;
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    iter::FromIterator,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(ManifestUnodeId);

@@ -4,8 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::BonsaiDerived;
-use crate::BonsaiDerivedMapping;
+use crate::{BonsaiDerived, BonsaiDerivedMapping};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
@@ -14,14 +13,15 @@ use futures::{
     future::{self, Loop},
     stream, Future, IntoFuture, Stream,
 };
-use futures_ext::{bounded_traversal, FutureExt, StreamExt};
+use futures_ext::{bounded_traversal, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
+use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::debug;
 use stats::{define_stats, DynamicTimeseries};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 use time_ext::DurationExt;
@@ -73,7 +73,6 @@ pub(crate) fn derive_impl<
                                         .filter(|p| visited.insert(*p))
                                         .collect()
                                 };
-
                                 // Topological sort needs parents, so return them here
                                 (Some((bcs_id, parents)), parents_to_visit)
                             }
@@ -84,7 +83,7 @@ pub(crate) fn derive_impl<
         }
     })
     .traced(&ctx.trace(), "derive::find_dependencies", None)
-    .filter_map(|x| x) // Remove all None
+    .filter_map(|x| x)
     .collect_to()
     .map(|v| {
         stream::iter_ok(
@@ -95,19 +94,31 @@ pub(crate) fn derive_impl<
         )
     })
     .flatten_stream()
+    .chunks(100)
     .for_each({
         cloned!(ctx, derived_mapping, repo);
-        move |bcs_id| {
-            derive_may_panic(ctx.clone(), repo.clone(), derived_mapping.clone(), bcs_id.clone())
-                .timed({
+        move |csids| {
+            let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
+            stream::iter_ok(csids)
+                .for_each({
+                    cloned!(ctx, mapping, repo);
+                    move |csid| {
+                        derive_may_panic(ctx.clone(), repo.clone(), mapping.clone(), csid).timed({
+                            cloned!(ctx);
+                            move |stats, _| {
+                                ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
+                                    "Generating derived data",
+                                    Some(format!("{} {}", Derived::NAME, csid)),
+                                );
+                                Ok(())
+                            }
+                        })
+                    }
+                })
+                .and_then({
                     cloned!(ctx);
-                    move |stats, _| {
-                        ctx.scuba()
-                            .clone()
-                            .add_future_stats(&stats)
-                            .log_with_msg("Generating derived data", Some(format!("{} {}", Derived::NAME, bcs_id)));
-                        Ok(())
-                }})
+                    move |_| mapping.persist(ctx)
+                })
         }
     })
     .and_then(move |()| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
@@ -117,7 +128,7 @@ pub(crate) fn derive_impl<
 fn derive_may_panic<Derived, Mapping>(
     ctx: CoreContext,
     repo: BlobRepo,
-    derived_mapping: Mapping,
+    mapping: Mapping,
     bcs_id: ChangesetId,
 ) -> impl Future<Item = (), Error = Error>
 where
@@ -142,17 +153,18 @@ where
     ));
 
     let changeset_fetcher = repo.get_changeset_fetcher();
-    let derived_parents =
-        changeset_fetcher
-            .get_parents(ctx.clone(), bcs_id)
-            .and_then({
-                cloned!(ctx, derived_mapping);
-                move |parents| {
-                    future::join_all(parents.into_iter().map(move |p| {
-                        fetch_derived_may_panic(ctx.clone(), p, derived_mapping.clone())
-                    }))
-                }
-            });
+    let derived_parents = changeset_fetcher
+        .get_parents(ctx.clone(), bcs_id)
+        .and_then({
+            cloned!(ctx, mapping);
+            move |parents| {
+                future::join_all(
+                    parents
+                        .into_iter()
+                        .map(move |p| fetch_derived_may_panic(ctx.clone(), p, mapping.clone())),
+                )
+            }
+        });
 
     bcs_fut.join(derived_parents).and_then({
         cloned!(ctx);
@@ -170,13 +182,13 @@ where
                         }
                     })
                     .and_then({
-                        cloned!(ctx, repo, derived_mapping, lease, lease_key, bcs, parents);
+                        cloned!(ctx, repo, mapping, lease, lease_key, bcs, parents);
                         move |(leased, ignored)| {
-                            derived_mapping
+                            mapping
                                 .get(ctx.clone(), vec![bcs_id])
                                 .map(move |mut vs| vs.remove(&bcs_id))
                                 .and_then({
-                                    cloned!(derived_mapping, lease, lease_key);
+                                    cloned!(mapping, lease, lease_key);
                                     move |derived| match derived {
                                         Some(_) => future::ok(Loop::Break(())).left_future(),
                                         None => {
@@ -197,7 +209,7 @@ where
                                                     event_id,
                                                 )
                                                 .and_then(move |derived| {
-                                                    derived_mapping
+                                                    mapping
                                                         .put(ctx.clone(), bcs_id, derived)
                                                         .traced_with_id(
                                                             &ctx.trace(),
@@ -288,6 +300,70 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
                 Some(id) => DeriveNode::Derived(id.clone()),
                 None => DeriveNode::Bonsai(csid),
             })
+    }
+}
+
+#[derive(Clone)]
+struct DeferredDerivedMapping<M: BonsaiDerivedMapping> {
+    cache: Arc<Mutex<HashMap<ChangesetId, M::Value>>>,
+    inner: M,
+}
+
+impl<M> DeferredDerivedMapping<M>
+where
+    M: BonsaiDerivedMapping + Clone,
+{
+    pub fn new(inner: M) -> Self {
+        Self {
+            cache: Default::default(),
+            inner,
+        }
+    }
+
+    pub fn persist(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
+        let cache = self
+            .cache
+            .with(|cache| std::mem::replace(cache, HashMap::new()));
+        let inner = self.inner.clone();
+        stream::iter_ok(cache)
+            .map(move |(csid, id)| inner.put(ctx.clone(), csid, id))
+            .buffered(4096)
+            .for_each(|_| Ok(()))
+    }
+}
+
+impl<M> BonsaiDerivedMapping for DeferredDerivedMapping<M>
+where
+    M: BonsaiDerivedMapping,
+    M::Value: Clone,
+{
+    type Value = M::Value;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        mut csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        let cached: HashMap<_, _> = self.cache.with(|cache| {
+            csids
+                .iter()
+                .map(|csid| cache.get(csid).map(|val| (*csid, val.clone())))
+                .flatten()
+                .collect()
+        });
+        csids.retain(|csid| !cached.contains_key(&csid));
+        self.inner
+            .get(ctx, csids)
+            .map(move |mut noncached| {
+                noncached.extend(cached);
+                noncached
+            })
+            .boxify()
+    }
+
+    fn put(&self, _ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        self.cache.with(|cache| cache.insert(csid, id));
+        future::ok(()).boxify()
     }
 }
 
