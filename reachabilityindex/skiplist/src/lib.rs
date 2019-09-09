@@ -1983,7 +1983,9 @@ mod test {
 
         // This test partially indexes the top few of the graph.
         // Then it does a query that traverses from indexed to unindexed nodes.
-        sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), merge_node, 2);
+        sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), merge_node, 2)
+            .wait()
+            .unwrap();
 
         // Generation 1
         // This call should index the rest of the graph,
