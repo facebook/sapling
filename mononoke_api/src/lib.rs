@@ -116,7 +116,7 @@ impl Mononoke {
                             name,
                             Arc::new(Repo {
                                 blob_repo,
-                                _skiplist_index: skiplist_index,
+                                skiplist_index,
                                 _unodes_derived_mapping: unodes_derived_mapping,
                             }),
                         )

@@ -413,4 +413,28 @@ impl SourceControlService for SourceControlServiceImpl {
             None => Err(errors::commit_not_found(&changeset_specifier).into()),
         }
     }
+
+    /// Returns `true` if this commit is an ancestor of `other_commit`.
+    async fn commit_is_ancestor_of(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitIsAncestorOfParams,
+    ) -> Result<bool, service::CommitIsAncestorOfExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let repo = self
+            .mononoke
+            .repo(ctx, &commit.repo.name)?
+            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+        let changeset_specifier = commit_id_to_changeset_specifier(&commit.id)?;
+        let other_changeset_specifier = commit_id_to_changeset_specifier(&params.other_commit_id)?;
+        let (changeset, other_changeset_id) = try_join!(
+            repo.changeset(changeset_specifier),
+            repo.resolve_specifier(other_changeset_specifier),
+        )?;
+        let changeset = changeset.ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
+        let other_changeset_id = other_changeset_id
+            .ok_or_else(|| errors::commit_not_found(&other_changeset_specifier))?;
+        let is_ancestor_of = changeset.is_ancestor_of(other_changeset_id).await?;
+        Ok(is_ancestor_of)
+    }
 }

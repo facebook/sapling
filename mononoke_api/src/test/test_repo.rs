@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use chrono::{FixedOffset, TimeZone};
 use failure::Error;
-use fixtures::linear;
+use fixtures::{branch_uneven, linear};
 
 use crate::{ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke};
 
@@ -110,5 +110,61 @@ async fn commit_hg_changeset_ids() -> Result<(), Error> {
         Some(&HgChangesetId::from_str(hg_hash2)?)
     );
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn commit_is_ancestor_of() -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), branch_uneven::getrepo())]);
+    let ctx = CoreContext::test_mock();
+    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let mut changesets = Vec::new();
+    for hg_hash in [
+        "5d43888a3c972fe68c224f93d41b30e9f888df7c", // 0: branch 1 near top
+        "d7542c9db7f4c77dab4b315edd328edf1514952f", // 1: branch 1 near bottom
+        "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5", // 2: branch 2
+        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c", // 3: base
+    ]
+    .iter()
+    {
+        let changeset = repo
+            .changeset(ChangesetSpecifier::Hg(HgChangesetId::from_str(hg_hash)?))
+            .await
+            .expect("changeset exists");
+        changesets.push(changeset);
+    }
+    for (index, base_index, is_ancestor_of) in [
+        (0usize, 0usize, true),
+        (0, 1, false),
+        (0, 2, false),
+        (0, 3, false),
+        (1, 0, true),
+        (1, 1, true),
+        (1, 2, false),
+        (1, 3, false),
+        (2, 0, false),
+        (2, 1, false),
+        (2, 2, true),
+        (2, 3, false),
+        (3, 0, true),
+        (3, 1, true),
+        (3, 2, true),
+        (3, 3, true),
+    ]
+    .iter()
+    {
+        assert_eq!(
+            changesets[*index]
+                .as_ref()
+                .unwrap()
+                .is_ancestor_of(changesets[*base_index].as_ref().unwrap().id())
+                .await?,
+            *is_ancestor_of,
+            "changesets[{}].is_ancestor_of(changesets[{}].id()) == {}",
+            *index,
+            *base_index,
+            *is_ancestor_of
+        );
+    }
     Ok(())
 }

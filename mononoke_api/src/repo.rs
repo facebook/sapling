@@ -27,7 +27,7 @@ use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 
 pub(crate) struct Repo {
     pub(crate) blob_repo: BlobRepo,
-    pub(crate) _skiplist_index: Arc<SkiplistIndex>,
+    pub(crate) skiplist_index: Arc<SkiplistIndex>,
     pub(crate) _unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
 }
 
@@ -85,7 +85,7 @@ impl Repo {
 
         Ok(Self {
             blob_repo,
-            _skiplist_index: Arc::new(skiplist_index),
+            skiplist_index: Arc::new(skiplist_index),
             _unodes_derived_mapping: unodes_derived_mapping,
         })
     }
@@ -97,7 +97,7 @@ impl Repo {
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         Self {
             blob_repo,
-            _skiplist_index: Arc::new(SkiplistIndex::new()),
+            skiplist_index: Arc::new(SkiplistIndex::new()),
             _unodes_derived_mapping: unodes_derived_mapping,
         }
     }

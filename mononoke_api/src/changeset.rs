@@ -12,6 +12,7 @@ use cloned::cloned;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use mononoke_types::BonsaiChangeset;
+use reachabilityindex::ReachabilityIndex;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -124,5 +125,22 @@ impl ChangesetContext {
             .extra()
             .map(|(name, value)| (name.to_string(), Vec::from(value)))
             .collect())
+    }
+
+    /// Returns `true` if this commit is an ancestor of `other_commit`.
+    pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
+        let is_ancestor_of = self
+            .repo_ctx
+            .repo
+            .skiplist_index
+            .query_reachability(
+                self.repo_ctx.ctx.clone(),
+                self.repo_ctx.repo.blob_repo.get_changeset_fetcher(),
+                other_commit,
+                self.id,
+            )
+            .compat()
+            .await?;
+        Ok(is_ancestor_of)
     }
 }
