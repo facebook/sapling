@@ -10,6 +10,7 @@ use actix::Arbiter;
 use cloned::cloned;
 use slog::{info, Logger};
 
+use ::source_control::server::make_SourceControlService_server;
 use apiserver_thrift::server::make_MononokeAPIService_server;
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
@@ -21,12 +22,14 @@ use srserver::ThriftServerBuilder;
 use self::dispatcher::ThriftDispatcher;
 use self::facebook::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;
+use self::source_control::SourceControlServiceImpl;
 use super::actor::Mononoke;
 use scuba_ext::ScubaSampleBuilder;
 
 mod dispatcher;
 mod facebook;
 mod mononoke;
+mod source_control;
 
 pub fn make_thrift(
     logger: Logger,
@@ -39,13 +42,23 @@ pub fn make_thrift(
 
     let base = |proto| make_BaseService_server(proto, FacebookServiceImpl);
     let fb_svc = move |proto| make_FacebookService_server(proto, FacebookServiceImpl, base);
+    let sc_svc = {
+        cloned!(addr, logger, scuba_builder);
+        move |proto| {
+            make_SourceControlService_server(
+                proto,
+                SourceControlServiceImpl::new(addr.clone(), logger.clone(), scuba_builder.clone()),
+                fb_svc,
+            )
+        }
+    };
     let api_svc = {
-        cloned!(logger);
+        cloned!(addr, logger, scuba_builder);
         move |proto| {
             make_MononokeAPIService_server(
                 proto,
                 MononokeAPIServiceImpl::new(addr.clone(), logger.clone(), scuba_builder.clone()),
-                fb_svc,
+                sc_svc.clone(),
             )
         }
     };
