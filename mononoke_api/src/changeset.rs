@@ -15,7 +15,7 @@ use mononoke_types::BonsaiChangeset;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-use crate::specifiers::ChangesetId;
+use crate::specifiers::{ChangesetId, HgChangesetId};
 
 #[derive(Clone)]
 pub struct ChangesetContext {
@@ -52,6 +52,18 @@ impl ChangesetContext {
     /// The canonical bonsai changeset ID for the changeset.
     pub fn id(&self) -> ChangesetId {
         self.id
+    }
+
+    /// The Mercurial ID for the changeset.
+    pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
+        let mapping = self
+            .repo_ctx
+            .repo
+            .blob_repo
+            .get_hg_bonsai_mapping(self.repo_ctx.ctx.clone(), self.id)
+            .compat()
+            .await?;
+        Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.

@@ -36,7 +36,7 @@ pub use crate::legacy::get_content_by_path;
 pub use crate::changeset::ChangesetContext;
 pub use crate::errors::MononokeError;
 pub use crate::repo::RepoContext;
-pub use crate::specifiers::{ChangesetId, ChangesetSpecifier};
+pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 
 // Re-export types that are useful for clients.
 pub type CoreContext = context::CoreContext;

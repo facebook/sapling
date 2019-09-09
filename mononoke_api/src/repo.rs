@@ -120,6 +120,13 @@ impl RepoContext {
                     false => None,
                 }
             }
+            ChangesetSpecifier::Hg(hg_cs_id) => {
+                self.repo
+                    .blob_repo
+                    .get_bonsai_from_hg(self.ctx.clone(), hg_cs_id)
+                    .compat()
+                    .await?
+            }
         };
         Ok(id)
     }
