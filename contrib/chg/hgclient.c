@@ -105,23 +105,26 @@ static void freecontext(context_t* ctx) {
 static void readchannel(hgclient_t* hgc) {
   assert(hgc);
 
-  ssize_t rsize = recv(hgc->sockfd, &hgc->ctx.ch, sizeof(hgc->ctx.ch), 0);
-  if (rsize != sizeof(hgc->ctx.ch)) {
+  uint32_t datasize_n;
+  struct iovec iov[2] = {
+      {&hgc->ctx.ch, sizeof(hgc->ctx.ch)},
+      {&datasize_n, sizeof(datasize_n)},
+  };
+  struct msghdr msg = {};
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 2;
+  ssize_t rsize = recvmsg(hgc->sockfd, &msg, 0);
+  if (rsize != sizeof(hgc->ctx.ch) + sizeof(datasize_n)) {
     /* server would have exception and traceback would be printed */
-    debugmsg("failed to read channel");
+    debugmsg("failed to read channel and data size");
     exit(255);
   }
-
-  uint32_t datasize_n;
-  rsize = recv(hgc->sockfd, &datasize_n, sizeof(datasize_n), 0);
-  if (rsize != sizeof(datasize_n))
-    abortmsg("failed to read data size");
 
   /* datasize denotes the maximum size to write if input request */
   hgc->ctx.datasize = ntohl(datasize_n);
   enlargecontext(&hgc->ctx, hgc->ctx.datasize);
 
-  if (isupper(hgc->ctx.ch) && hgc->ctx.ch != 'S')
+  if (isupper(hgc->ctx.ch))
     return; /* assumes input request */
 
   size_t cursize = 0;
@@ -183,7 +186,8 @@ packcmdargs(context_t* ctx, const char* const args[], ssize_t argsize) {
     --ctx->datasize; /* strip last '\0' */
 }
 
-/* Extract '\0'-separated list of args to new buffer, terminated by NULL */
+/* Parse a series of '\0'-terminated strings from ctx-data
+ * Returns an array of pointers to the start of each string */
 static const char** unpackcmdargsnul(const context_t* ctx) {
   const char** args = NULL;
   size_t nargs = 0, maxnargs = 0;
@@ -194,12 +198,12 @@ static const char** unpackcmdargsnul(const context_t* ctx) {
       maxnargs += 256;
       args = chg_reallocx(args, maxnargs * sizeof(args[0]));
     }
+    const char* nulbyte = memchr(s, '\0', e - s);
+    if (!nulbyte)
+      break;
     args[nargs] = s;
     nargs++;
-    s = memchr(s, '\0', e - s);
-    if (!s)
-      break;
-    s++;
+    s = nulbyte + 1;
   }
   args[nargs] = NULL;
   return args;
@@ -224,31 +228,40 @@ static void handlereadlinerequest(hgclient_t* hgc) {
 /* Execute the requested command and write exit code */
 static void handlesystemrequest(hgclient_t* hgc) {
   context_t* ctx = &hgc->ctx;
-  enlargecontext(ctx, ctx->datasize + 1);
-  ctx->data[ctx->datasize] = '\0'; /* terminate last string */
-
   const char** args = unpackcmdargsnul(ctx);
-  if (!args[0] || !args[1] || !args[2])
-    abortmsg("missing type or command or cwd in system request");
-  if (strcmp(args[0], "system") == 0) {
-    debugmsg("run '%s' at '%s'", args[1], args[2]);
-    int32_t r = runshellcmd(args[1], args + 3, args[2]);
-    free(args);
+  if (!args[0] || !args[1])
+    abortmsg("missing command or cwd in system request");
 
-    uint32_t r_n = htonl(r);
-    memcpy(ctx->data, &r_n, sizeof(r_n));
-    ctx->datasize = sizeof(r_n);
-    writeblock(hgc);
-  } else if (strcmp(args[0], "pager") == 0) {
-    setuppager(args[1], args + 3);
-    if (hgc->capflags & CAP_ATTACHIO)
-      attachio(hgc);
-    /* unblock the server */
-    static const char emptycmd[] = "\n";
-    sendall(hgc->sockfd, emptycmd, sizeof(emptycmd) - 1);
-  } else {
-    abortmsg("unknown type in system request: %s", args[0]);
-  }
+  const char* cmd = args[0];
+  const char* cwd = args[1];
+  const char** envp = args + 2;
+
+  debugmsg("run '%s' at '%s'", cmd, cwd);
+  int32_t r = runshellcmd(cmd, envp, cwd);
+  free(args);
+
+  uint32_t r_n = htonl(r);
+  memcpy(ctx->data, &r_n, sizeof(r_n));
+  ctx->datasize = sizeof(r_n);
+  writeblock(hgc);
+}
+
+static void handlepagerrequest(hgclient_t* hgc) {
+  context_t* ctx = &hgc->ctx;
+  const char** args = unpackcmdargsnul(ctx);
+  if (!args[0] || !args[1])
+    abortmsg("missing command or redirect settings in pager request");
+
+  const char* cmd = args[0];
+  const char* redirect = args[1];
+  const char** envp = args + 2;
+
+  setuppager(cmd, envp);
+  if (hgc->capflags & CAP_ATTACHIO)
+    attachio(hgc);
+  /* unblock the server */
+  static const char emptycmd[] = "\n";
+  sendall(hgc->sockfd, emptycmd, sizeof(emptycmd) - 1);
 }
 
 /* Read response of command execution until receiving 'r'-esult */
@@ -277,8 +290,11 @@ static void handleresponse(hgclient_t* hgc) {
       case 'L':
         handlereadlinerequest(hgc);
         break;
-      case 'S':
+      case 's':
         handlesystemrequest(hgc);
+        break;
+      case 'p':
+        handlepagerrequest(hgc);
         break;
       default:
         if (isupper(ctx->ch))

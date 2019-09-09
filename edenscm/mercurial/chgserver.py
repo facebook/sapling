@@ -78,14 +78,11 @@ def _newchgui(srcui, csystem, attachio):
             ):
                 return util.system(cmd, environ=environ, cwd=cwd, out=out)
             self.flush()
-            return self._csystem(cmd, util.shellenviron(environ), cwd)
+            return self._csystem.runsystem(cmd, util.shellenviron(environ), cwd)
 
         def _runpager(self, cmd, env=None):
-            self._csystem(
-                cmd,
-                util.shellenviron(env),
-                type="pager",
-                cmdtable={"attachio": attachio},
+            self._csystem.runpager(
+                cmd, util.shellenviron(env), cmdtable={"attachio": attachio}
             )
             return True
 
@@ -93,58 +90,73 @@ def _newchgui(srcui, csystem, attachio):
 
 
 class channeledsystem(object):
-    """Propagate ui.system() request in the following format:
+    """Propagate ui.system() and ui._runpager() requests to the chg client"""
 
-    payload length (unsigned int),
-    type, '\0',
-    cmd, '\0',
-    cwd, '\0',
-    envkey, '=', val, '\0',
-    ...
-    envkey, '=', val
-
-    if type == 'system', waits for:
-
-    exitcode length (unsigned int),
-    exitcode (int)
-
-    if type == 'pager', repetitively waits for a command name ending with '\n'
-    and executes it defined by cmdtable, or exits the loop if the command name
-    is empty.
-    """
-
-    def __init__(self, in_, out, channel):
+    def __init__(self, in_, out):
         self.in_ = in_
         self.out = out
-        self.channel = channel
 
-    def __call__(self, cmd, environ, cwd=None, type="system", cmdtable=None):
-        args = [type, util.quotecommand(cmd), os.path.abspath(cwd or ".")]
-        args.extend("%s=%s" % (k, v) for k, v in environ.iteritems())
-        data = "\0".join(args)
-        self.out.write(struct.pack(">cI", self.channel, len(data)))
+    def _send_request(self, channel, args):
+        data = "\0".join(args) + "\0"
+        self.out.write(struct.pack(">cI", channel, len(data)))
         self.out.write(data)
         self.out.flush()
 
-        if type == "system":
-            length = self.in_.read(4)
-            length, = struct.unpack(">I", length)
-            if length != 4:
-                raise error.Abort(_("invalid response"))
-            rc, = struct.unpack(">i", self.in_.read(4))
-            return rc
-        elif type == "pager":
-            while True:
-                cmd = self.in_.readline()[:-1]
-                if not cmd:
-                    break
-                if cmdtable and cmd in cmdtable:
-                    _log("pager subcommand: %s" % cmd)
-                    cmdtable[cmd]()
-                else:
-                    raise error.Abort(_("unexpected command: %s") % cmd)
-        else:
-            raise error.ProgrammingError("invalid S channel type: %s" % type)
+    def _environ_to_args(self, environ):
+        return ["%s=%s" % (k, v) for k, v in environ.items()]
+
+    def runsystem(self, cmd, environ, cwd=None):
+        """Send a request to run a system command.
+
+        This request type is sent with the 's' channel code.
+        The request contents are a series of null-terminated strings:
+        - the first string is the command string, to be run with "sh -c"
+        - the second string is the working directory to use for the command
+        - all remaining arguments are environment variables, all in the form
+          "name=value"
+
+        After sending a system request, the server waits for
+
+        exitcode length (unsigned int),
+        exitcode (int)"""
+        args = [util.quotecommand(cmd), os.path.abspath(cwd or ".")]
+        args.extend(self._environ_to_args(environ))
+        self._send_request("s", args)
+
+        length = self.in_.read(4)
+        length, = struct.unpack(">I", length)
+        if length != 4:
+            raise error.Abort(_("invalid response"))
+        rc, = struct.unpack(">i", self.in_.read(4))
+        return rc
+
+    def runpager(self, cmd, environ, cmdtable):
+        """Requests to run a pager command are sent using the 'p' channel code.
+        The request contents are a series of null-terminated strings:
+        - the first string is the pager command string, to be run with "sh -c"
+        - the second string indicates desired I/O redirection settings
+        - all remaining arguments are environment variables, all in the form
+          "name=value"
+
+        After sending a pager request the server repeatedly waits for a command name
+        ending with '\n' and executes it defined by cmdtable, or exits the loop if the
+        command name is empty.
+        """
+        # redirectsettings will be used in the future to send the pager.stderr config
+        redirectsettings = ""
+        args = [util.quotecommand(cmd), redirectsettings]
+        args.extend(self._environ_to_args(environ))
+        self._send_request("p", args)
+
+        while True:
+            cmd = self.in_.readline()[:-1]
+            if not cmd:
+                break
+            if cmd in cmdtable:
+                _log("pager subcommand: %s" % cmd)
+                cmdtable[cmd]()
+            else:
+                raise error.Abort(_("unexpected command: %s") % cmd)
 
 
 _iochannels = [
@@ -158,10 +170,7 @@ _iochannels = [
 class chgcmdserver(commandserver.server):
     def __init__(self, ui, repo, fin, fout, sock, baseaddress):
         super(chgcmdserver, self).__init__(
-            _newchgui(ui, channeledsystem(fin, fout, "S"), self.attachio),
-            repo,
-            fin,
-            fout,
+            _newchgui(ui, channeledsystem(fin, fout), self.attachio), repo, fin, fout
         )
         self.clientsock = sock
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
