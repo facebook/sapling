@@ -15,7 +15,7 @@
 void restoresignalhandler(void);
 void setupsignalhandler(pid_t pid, pid_t pgid);
 
-pid_t setuppager(const char* pagercmd, const char* envp[]);
+pid_t setuppager(const char* pagercmd, const char* envp[], int redirect_stderr);
 void waitpager(void);
 
 #endif /* PROCUTIL_H_ */

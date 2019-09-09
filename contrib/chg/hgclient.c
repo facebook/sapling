@@ -255,8 +255,11 @@ static void handlepagerrequest(hgclient_t* hgc) {
   const char* cmd = args[0];
   const char* redirect = args[1];
   const char** envp = args + 2;
+  int redirect_stderr = (strcmp(redirect, "stderr") == 0);
+  debugmsg(
+      "starting pager: cmd='%s', redirect_stderr='%d'", cmd, redirect_stderr);
 
-  setuppager(cmd, envp);
+  setuppager(cmd, envp, redirect_stderr);
   if (hgc->capflags & CAP_ATTACHIO)
     attachio(hgc);
   /* unblock the server */

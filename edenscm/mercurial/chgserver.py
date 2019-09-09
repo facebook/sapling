@@ -82,7 +82,10 @@ def _newchgui(srcui, csystem, attachio):
 
         def _runpager(self, cmd, env=None):
             self._csystem.runpager(
-                cmd, util.shellenviron(env), cmdtable={"attachio": attachio}
+                cmd,
+                util.shellenviron(env),
+                redirectstderr=self.configbool("pager", "stderr"),
+                cmdtable={"attachio": attachio},
             )
             return True
 
@@ -130,7 +133,7 @@ class channeledsystem(object):
         rc, = struct.unpack(">i", self.in_.read(4))
         return rc
 
-    def runpager(self, cmd, environ, cmdtable):
+    def runpager(self, cmd, environ, redirectstderr, cmdtable):
         """Requests to run a pager command are sent using the 'p' channel code.
         The request contents are a series of null-terminated strings:
         - the first string is the pager command string, to be run with "sh -c"
@@ -142,8 +145,7 @@ class channeledsystem(object):
         ending with '\n' and executes it defined by cmdtable, or exits the loop if the
         command name is empty.
         """
-        # redirectsettings will be used in the future to send the pager.stderr config
-        redirectsettings = ""
+        redirectsettings = "stderr" if redirectstderr else ""
         args = [util.quotecommand(cmd), redirectsettings]
         args.extend(self._environ_to_args(environ))
         self._send_request("p", args)

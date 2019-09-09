@@ -171,7 +171,10 @@ error:
 
 /* This implementation is based on hgext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
-pid_t setuppager(const char* pagercmd, const char* envp[]) {
+pid_t setuppager(
+    const char* pagercmd,
+    const char* envp[],
+    int redirect_stderr) {
   assert(pagerpid == 0);
   if (!pagercmd)
     return 0;
@@ -186,7 +189,7 @@ pid_t setuppager(const char* pagercmd, const char* envp[]) {
     close(pipefds[0]);
     if (dup2(pipefds[1], fileno(stdout)) < 0)
       goto error;
-    if (isatty(fileno(stderr))) {
+    if (redirect_stderr && isatty(fileno(stderr))) {
       if (dup2(pipefds[1], fileno(stderr)) < 0)
         goto error;
     }
