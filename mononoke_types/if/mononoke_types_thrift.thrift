@@ -269,5 +269,6 @@ typedef i32 ParentOffset (hs.newtype)
 
 struct CompressedHashAndParents {
   1: ChangesetId cs_id,
+  # Offsets can be negative!
   2: list<ParentOffset> parent_offsets,
 }

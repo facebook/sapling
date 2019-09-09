@@ -67,7 +67,7 @@ pub fn prefetch_history(
     )
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum FastlogParent {
     /// Parent exists and it's stored in the batch
     Known(ChangesetId),
@@ -291,9 +291,11 @@ mod tests {
     use super::*;
     use benchmark_lib::{GenManifest, GenSettings};
     use blobrepo::save_bonsai_changesets;
+    use bookmarks::BookmarkName;
     use context::CoreContext;
     use fixtures::{
-        create_bonsai_changeset, create_bonsai_changeset_with_files, linear, store_files,
+        create_bonsai_changeset, create_bonsai_changeset_with_files, linear, merge_even,
+        merge_uneven, store_files, unshared_merge_even, unshared_merge_uneven,
     };
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -301,6 +303,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
+    use revset::AncestorsNodeStream;
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
     use tokio::runtime::Runtime;
@@ -665,6 +668,68 @@ mod tests {
         )?;
         Ok(())
     }
+
+    #[test]
+    fn test_derive_merges() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock();
+
+        {
+            let repo = merge_uneven::getrepo();
+            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+
+            for (bcs_id, _hg_cs_id) in all_commits {
+                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+            }
+        }
+
+        {
+            let repo = merge_even::getrepo();
+            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+
+            for (bcs_id, _hg_cs_id) in all_commits {
+                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+            }
+        }
+
+        {
+            let repo = unshared_merge_even::getrepo();
+            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+
+            for (bcs_id, _hg_cs_id) in all_commits {
+                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+            }
+        }
+
+        {
+            let repo = unshared_merge_uneven::getrepo();
+            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+
+            for (bcs_id, _hg_cs_id) in all_commits {
+                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn all_commits(
+        ctx: CoreContext,
+        repo: BlobRepo,
+    ) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+        let master_book = BookmarkName::new("master").unwrap();
+        repo.get_bonsai_bookmark(ctx.clone(), &master_book)
+            .map(move |maybe_bcs_id| {
+                let bcs_id = maybe_bcs_id.unwrap();
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                    .and_then(move |new_bcs_id| {
+                        repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
+                            .map(move |hg_cs_id| (new_bcs_id, hg_cs_id))
+                    })
+            })
+            .flatten_stream()
+    }
+
     fn verify_all_entries_for_commit(
         rt: &mut Runtime,
         ctx: CoreContext,

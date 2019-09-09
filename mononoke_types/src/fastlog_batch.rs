@@ -28,6 +28,10 @@ use std::sync::Arc;
 pub struct ParentOffset(i32);
 
 impl ParentOffset {
+    pub fn new(offset: i32) -> Self {
+        Self(offset)
+    }
+
     pub fn num(&self) -> i32 {
         self.0
     }
@@ -47,14 +51,15 @@ fn max_entries_in_fastlog_batch() -> usize {
 }
 
 impl FastlogBatch {
-    pub fn new_from_raw_list(
+    pub fn new_from_raw_list<I: IntoIterator<Item = (ChangesetId, Vec<ParentOffset>)>>(
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-        mut raw_list: VecDeque<(ChangesetId, Vec<ParentOffset>)>,
+        raw_list: I,
     ) -> impl Future<Item = FastlogBatch, Error = Error> {
-        raw_list.truncate(max_entries_in_fastlog_batch());
-
-        let chunks = raw_list.into_iter().chunks(MAX_LATEST_LEN);
+        let chunks = raw_list
+            .into_iter()
+            .take(max_entries_in_fastlog_batch())
+            .chunks(MAX_LATEST_LEN);
         let chunks: Vec<_> = chunks.into_iter().map(VecDeque::from_iter).collect();
         let mut chunks = chunks.into_iter();
         let latest = chunks.next().unwrap_or(VecDeque::new());
