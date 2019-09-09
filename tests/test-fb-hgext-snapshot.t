@@ -255,6 +255,13 @@
   $ cat .hg/store/snapshots/objects/"${METADATAID:0:2}"/"${METADATAID:2}"
   {"files": {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "fdfea51dfeeae94bd846473c7bef891823af465d33f48e92ed2556bde6b346cb", "size": "166"}, "merge/state2": {"oid": "0e421047ebcf7d0cada48ddd801304725de33da3c4048ccb258041946cd0e81d", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"} (no-eol)
 
+# Check the list of snapshots
+  $ cat .hg/store/snapshotlist
+  v1
+  37c08567761738ed25fa7a8d497dc14de9dfa969
+  aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  c6f3170138389ab1cc8dd2d43fc275e5add2e1a2
+
 # Move back to BASEREV
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ rm mergefile.orig
