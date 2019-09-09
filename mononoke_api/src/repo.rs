@@ -9,6 +9,7 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
@@ -129,6 +130,21 @@ impl RepoContext {
             }
         };
         Ok(id)
+    }
+
+    /// Resolve a bookmark to a changeset.
+    pub async fn resolve_bookmark(
+        &self,
+        bookmark: impl ToString,
+    ) -> Result<Option<ChangesetContext>, MononokeError> {
+        let bookmark = BookmarkName::new(bookmark.to_string())?;
+        let cs_id = self
+            .repo
+            .blob_repo
+            .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
+            .compat()
+            .await?;
+        Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
     }
 
     /// Look up a changeset by specifier.

@@ -58,3 +58,27 @@ async fn commit_info_by_hg_hash() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn commit_info_by_bookmark() -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo())]);
+    let ctx = CoreContext::test_mock();
+    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let cs = repo
+        .resolve_bookmark("master")
+        .await?
+        .expect("bookmark exists");
+
+    let hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
+    assert_eq!(cs.id(), ChangesetId::from_str(hash)?);
+    let hg_hash = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
+    assert_eq!(cs.hg_id().await?, Some(HgChangesetId::from_str(hg_hash)?));
+    assert_eq!(cs.message().await?, "modified 10");
+    assert_eq!(cs.author().await?, "Jeremy Fitzhardinge <jsgf@fb.com>");
+    assert_eq!(
+        cs.author_date().await?,
+        FixedOffset::west(7 * 3600).timestamp(1504041761, 0)
+    );
+
+    Ok(())
+}

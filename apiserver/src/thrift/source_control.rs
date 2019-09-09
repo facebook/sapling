@@ -4,10 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use mononoke_api::{CoreContext, Mononoke};
+use mononoke_api::{ChangesetContext, CoreContext, Mononoke, MononokeError};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use source_control::server::SourceControlService;
@@ -26,6 +27,12 @@ trait ScubaInfoProvider {
     }
     fn scuba_path(&self) -> Option<String> {
         None
+    }
+}
+
+impl ScubaInfoProvider for thrift::RepoSpecifier {
+    fn scuba_reponame(&self) -> Option<String> {
+        Some(self.name.clone())
     }
 }
 
@@ -74,6 +81,39 @@ impl SourceControlServiceImpl {
     }
 }
 
+/// Generate a mapping for a commit's identity into the requested identity
+/// schemes.
+async fn map_commit_identity(
+    changeset_ctx: &ChangesetContext,
+    schemes: &BTreeSet<thrift::CommitIdentityScheme>,
+) -> Result<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>, MononokeError> {
+    let mut ids = BTreeMap::new();
+    ids.insert(
+        thrift::CommitIdentityScheme::BONSAI,
+        thrift::CommitId::bonsai(changeset_ctx.id().as_ref().into()),
+    );
+    if schemes.contains(&thrift::CommitIdentityScheme::HG) {
+        if let Some(hg_cs_id) = changeset_ctx.hg_id().await? {
+            ids.insert(
+                thrift::CommitIdentityScheme::HG,
+                thrift::CommitId::hg(hg_cs_id.as_ref().into()),
+            );
+        }
+    }
+    Ok(ids)
+}
+
+mod errors {
+    use super::thrift;
+
+    pub(super) fn repo_not_found(reponame: impl AsRef<str>) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
+            reason: format!("repo not found ({})", reponame.as_ref()),
+        }
+    }
+}
+
 #[async_trait]
 impl SourceControlService for SourceControlServiceImpl {
     async fn list_repos(
@@ -89,5 +129,34 @@ impl SourceControlService for SourceControlServiceImpl {
             })
             .collect();
         Ok(rsp)
+    }
+
+    /// Resolve a bookmark to a changeset.
+    ///
+    /// Returns whether the bookmark exists, and the IDs of the changeset in
+    /// the requested indentity schemes.
+    async fn repo_resolve_bookmark(
+        &self,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoResolveBookmarkParams,
+    ) -> Result<thrift::RepoResolveBookmarkResponse, service::RepoResolveBookmarkExn> {
+        let ctx = self.create_ctx(Some(&repo));
+        let repo = self
+            .mononoke
+            .repo(ctx, &repo.name)?
+            .ok_or_else(|| errors::repo_not_found(&repo.name))?;
+        match repo.resolve_bookmark(params.bookmark_name).await? {
+            Some(cs) => {
+                let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
+                Ok(thrift::RepoResolveBookmarkResponse {
+                    exists: true,
+                    ids: Some(ids),
+                })
+            }
+            None => Ok(thrift::RepoResolveBookmarkResponse {
+                exists: false,
+                ids: None,
+            }),
+        }
     }
 }
