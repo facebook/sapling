@@ -4,4 +4,46 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// Nothing here.
+use std::fmt;
+use std::sync::Arc;
+
+use failure::{Backtrace, Error, Fail};
+
+#[derive(Clone, Debug)]
+pub struct InternalError(Arc<Error>);
+
+impl fmt::Display for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<Error> for InternalError {
+    fn from(error: Error) -> Self {
+        Self(Arc::new(error))
+    }
+}
+
+impl Fail for InternalError {
+    fn cause(&self) -> Option<&dyn Fail> {
+        Some(self.0.as_fail())
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        Some(self.0.backtrace())
+    }
+}
+
+#[derive(Clone, Debug, Fail)]
+pub enum MononokeError {
+    #[fail(display = "invalid request: {}", _0)]
+    InvalidRequest(String),
+    #[fail(display = "internal error: {}", _0)]
+    InternalError(#[fail(cause)] InternalError),
+}
+
+impl From<Error> for MononokeError {
+    fn from(e: Error) -> Self {
+        MononokeError::InternalError(InternalError(Arc::new(e)))
+    }
+}
