@@ -90,7 +90,7 @@ pub enum ErrorKind {
 pub struct RootFastlog(ChangesetId);
 
 impl BonsaiDerived for RootFastlog {
-    const NAME: &'static str = "rootfastlog";
+    const NAME: &'static str = "fastlog";
 
     fn derive_from_parents(
         ctx: CoreContext,

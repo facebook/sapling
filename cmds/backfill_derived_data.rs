@@ -20,6 +20,7 @@ use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeM
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure::{err_msg, format_err};
 use failure_ext::Error;
+use fastlog::{RootFastlog, RootFastlogMapping};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -122,9 +123,10 @@ fn main() -> Result<(), Error> {
     runtime.block_on(run)
 }
 
-trait DerivedDataUtils: Send + Sync + 'static {
+trait DerivedUtils: Send + Sync + 'static {
     /// Derive data for changeset
     fn derive(&self, ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error>;
+
     /// Find pending changeset (changesets for which data have not been derived)
     fn pending(
         &self,
@@ -134,21 +136,24 @@ trait DerivedDataUtils: Send + Sync + 'static {
     ) -> BoxFuture<Vec<ChangesetId>, Error>;
 }
 
-struct UnodesDerivedDataUtils {
-    mapping: Arc<RootUnodeManifestMapping>,
+#[derive(Clone)]
+struct DerivedUtilsFromMapping<M> {
+    mapping: M,
 }
 
-impl UnodesDerivedDataUtils {
-    fn new(repo: BlobRepo) -> Self {
-        Self {
-            mapping: Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore())),
-        }
+impl<M> DerivedUtilsFromMapping<M> {
+    fn new(mapping: M) -> Self {
+        Self { mapping }
     }
 }
 
-impl DerivedDataUtils for UnodesDerivedDataUtils {
+impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
+where
+    M: BonsaiDerivedMapping + Clone + 'static,
+    M::Value: BonsaiDerived,
+{
     fn derive(&self, ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error> {
-        RootUnodeManifestId::derive(ctx, repo, self.mapping.clone(), csid)
+        <M::Value as BonsaiDerived>::derive(ctx, repo, self.mapping.clone(), csid)
             .map(|_| ())
             .boxify()
     }
@@ -173,9 +178,16 @@ fn derived_data_utils(
     _ctx: CoreContext,
     repo: BlobRepo,
     name: impl AsRef<str>,
-) -> Result<Arc<dyn DerivedDataUtils>, Error> {
+) -> Result<Arc<dyn DerivedUtils>, Error> {
     match name.as_ref() {
-        RootUnodeManifestId::NAME => Ok(Arc::new(UnodesDerivedDataUtils::new(repo))),
+        RootUnodeManifestId::NAME => {
+            let mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        RootFastlog::NAME => {
+            let mapping = RootFastlogMapping::new(repo.get_blobstore().boxed());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
         name => Err(format_err!("Unsuppoerted derived data type: {}", name)),
     }
 }
