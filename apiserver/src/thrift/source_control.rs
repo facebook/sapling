@@ -8,10 +8,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use faster_hex::hex_string;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, CoreContext, Mononoke, MononokeError, RepoContext,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke,
+    MononokeError, RepoContext,
 };
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -39,6 +41,15 @@ trait ScubaInfoProvider {
 impl ScubaInfoProvider for thrift::RepoSpecifier {
     fn scuba_reponame(&self) -> Option<String> {
         Some(self.name.clone())
+    }
+}
+
+impl ScubaInfoProvider for thrift::CommitSpecifier {
+    fn scuba_reponame(&self) -> Option<String> {
+        self.repo.scuba_reponame()
+    }
+    fn scuba_commit(&self) -> Option<String> {
+        Some(commit_id_to_string(&self.id))
     }
 }
 
@@ -137,6 +148,66 @@ async fn map_commit_identities(
         }
     }
     Ok(result)
+}
+
+/// Returns the commit identity scheme of a commit ID.
+fn commit_id_scheme(id: &thrift::CommitId) -> thrift::CommitIdentityScheme {
+    match id {
+        thrift::CommitId::bonsai(_) => thrift::CommitIdentityScheme::BONSAI,
+        thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
+        thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
+        thrift::CommitId::global_rev(_) => thrift::CommitIdentityScheme::GLOBAL_REV,
+        thrift::CommitId::UnknownField(t) => (*t).into(),
+    }
+}
+
+/// Convert a `thrift::CommitId` to a string for display. This would normally
+/// be implemented as `Display for thrift::CommitId`, but it is defined in
+/// the generated crate.
+fn commit_id_to_string(id: &thrift::CommitId) -> String {
+    match id {
+        thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
+        thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
+        thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
+        thrift::CommitId::global_rev(rev) => rev.to_string(),
+        thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
+    }
+}
+
+/// Convert a `thrift::CommitId` into a `mononoke_api::ChangesetSpecifier`.  This would
+/// normally be implemented as `From<thrift::CommitId> for ChangesetSpecifier`, but it is
+/// defined in the generated crate.
+fn commit_id_to_changeset_specifier(
+    commit: &thrift::CommitId,
+) -> Result<ChangesetSpecifier, thrift::RequestError> {
+    match commit {
+        thrift::CommitId::bonsai(id) => {
+            let cs_id = ChangesetId::from_bytes(&id).map_err(|e| {
+                errors::invalid_request(format!(
+                    "invalid commit id (scheme={} {}): {}",
+                    commit_id_scheme(commit),
+                    commit_id_to_string(commit),
+                    e.to_string()
+                ))
+            })?;
+            Ok(ChangesetSpecifier::Bonsai(cs_id))
+        }
+        thrift::CommitId::hg(id) => {
+            let hg_cs_id = HgChangesetId::from_bytes(&id).map_err(|e| {
+                errors::invalid_request(format!(
+                    "invalid commit id (scheme={} {}): {}",
+                    commit_id_scheme(commit),
+                    commit_id_to_string(commit),
+                    e.to_string()
+                ))
+            })?;
+            Ok(ChangesetSpecifier::Hg(hg_cs_id))
+        }
+        _ => Err(errors::invalid_request(format!(
+            "unsupported commit identity scheme ({})",
+            commit_id_scheme(commit)
+        ))),
+    }
 }
 
 mod errors {
@@ -245,5 +316,34 @@ impl SourceControlService for SourceControlServiceImpl {
             })
             .collect();
         Ok(thrift::RepoListBookmarksResponse { bookmarks })
+    }
+
+    /// Look up commit.
+    async fn commit_lookup(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitLookupParams,
+    ) -> Result<thrift::CommitLookupResponse, service::CommitLookupExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let repo = self
+            .mononoke
+            .repo(ctx, &commit.repo.name)?
+            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+        match repo
+            .changeset(commit_id_to_changeset_specifier(&commit.id)?)
+            .await?
+        {
+            Some(cs) => {
+                let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
+                Ok(thrift::CommitLookupResponse {
+                    exists: true,
+                    ids: Some(ids),
+                })
+            }
+            None => Ok(thrift::CommitLookupResponse {
+                exists: false,
+                ids: None,
+            }),
+        }
     }
 }
