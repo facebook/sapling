@@ -358,6 +358,9 @@ fn subcommand_tail(
                                 .map({
                                     cloned!(ctx, repo);
                                     move |derive| {
+                                        // create new context so each derivation would have its own trace
+                                        let ctx =
+                                            CoreContext::new_with_logger(ctx.logger().clone());
                                         derive
                                             .pending(ctx.clone(), repo.clone(), heads.clone())
                                             .map({

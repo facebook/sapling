@@ -13,20 +13,26 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure::{err_msg, format_err, Error};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use lock_ext::LockExt;
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 use mercurial_types::{Changeset, HgChangesetId};
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{info, Logger};
-use std::{collections::BTreeSet, str::FromStr, sync::Arc};
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";
+const COMMAND_REGENERATE: &'static str = "regenerate";
 const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
 const ARG_LIMIT: &'static str = "limit";
@@ -56,6 +62,9 @@ fn csid_resolve(
         .or_else({
             cloned!(hash_or_bookmark);
             move |_| ChangesetId::from_str(&hash_or_bookmark)
+        })
+        .inspect(move |csid| {
+            info!(ctx.logger(), "changset resolved as: {:?}", csid);
         })
         .map_err(move |_| {
             format_err!(
@@ -107,6 +116,11 @@ pub fn subcommand_unodes_build(name: &str) -> App {
                         .required(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name(COMMAND_REGENERATE)
+                .help("regenerate unode")
+                .arg(csid_arg.clone()),
+        )
 }
 
 pub fn subcommand_unodes(
@@ -133,7 +147,7 @@ pub fn subcommand_unodes(
                 .into_future()
                 .and_then(move |(repo, path)| {
                     csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |csid| subcommand_tree(ctx, logger, repo, csid, path))
+                        .and_then(move |csid| subcommand_tree(ctx, repo, csid, path))
                 })
                 .from_err()
                 .boxify()
@@ -154,6 +168,26 @@ pub fn subcommand_unodes(
                 .from_err()
                 .boxify()
         }
+        (COMMAND_REGENERATE, Some(matches)) => {
+            let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
+            repo.into_future()
+                .and_then({
+                    cloned!(ctx);
+                    move |repo| {
+                        csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                            .map(move |csid| (ctx, repo, csid))
+                    }
+                })
+                .and_then(move |(ctx, repo, csid)| {
+                    let mapping =
+                        RegenMapping::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                    mapping.regenerate(Some(csid));
+                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid)
+                        .map(move |root| println!("{:?} -> {:?}", csid, root))
+                })
+                .from_err()
+                .boxify()
+        }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
     };
 
@@ -166,11 +200,10 @@ pub fn subcommand_unodes(
                     ..Default::default()
                 })
                 .then(move |upload_result| {
-                    let logger = ctx.logger();
                     match upload_result {
-                        Err(err) => info!(logger, "failed to upload trace: {:#?}", err),
+                        Err(err) => info!(ctx.logger(), "failed to upload trace: {:#?}", err),
                         Ok(_) => info!(
-                            logger,
+                            ctx.logger(),
                             "trace uploaded: mononoke_prod/flat/{}.trace",
                             ctx.trace().id()
                         ),
@@ -186,12 +219,10 @@ pub fn subcommand_unodes(
 
 fn subcommand_tree(
     ctx: CoreContext,
-    logger: Logger,
     repo: BlobRepo,
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = (), Error = Error> {
-    info!(logger, "changset resolved as: {:?}", csid);
     let mapping = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid).and_then(move |root| {
         println!("ROOT: {:?}", root);
@@ -274,4 +305,45 @@ fn single_verify(
                 Err(err_msg("failed"))
             }
         })
+}
+
+#[derive(Clone)]
+struct RegenMapping<M> {
+    regenerate: Arc<Mutex<HashSet<ChangesetId>>>,
+    base: M,
+}
+
+impl<M> RegenMapping<M> {
+    pub fn new(base: M) -> Self {
+        Self {
+            regenerate: Default::default(),
+            base,
+        }
+    }
+
+    pub fn regenerate<I: IntoIterator<Item = ChangesetId>>(&self, csids: I) {
+        self.regenerate.with(|regenerate| regenerate.extend(csids))
+    }
+}
+
+impl<M> BonsaiDerivedMapping for RegenMapping<M>
+where
+    M: BonsaiDerivedMapping,
+{
+    type Value = M::Value;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        mut csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        self.regenerate
+            .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
+        self.base.get(ctx, csids)
+    }
+
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        self.regenerate.with(|regenerate| regenerate.remove(&csid));
+        self.base.put(ctx, csid, id)
+    }
 }

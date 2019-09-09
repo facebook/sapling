@@ -24,7 +24,7 @@ use stats::{define_stats, DynamicTimeseries};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
@@ -38,6 +38,7 @@ define_stats! {
 }
 
 const DERIVE_TRACE_THRESHOLD: Duration = Duration::from_secs(3);
+const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
@@ -216,16 +217,37 @@ where
     bcs_fut.join(derived_parents).and_then({
         cloned!(ctx);
         move |(bcs, parents)| {
+            let lease_start = Arc::new(Mutex::new(Instant::now()));
+            let lease_total = Arc::new(Mutex::new(Duration::from_secs(0)));
             future::loop_fn((), move |()| {
                 lease
                     .try_add_put_lease(&lease_key)
-                    .then(|result| {
-                        // In case of lease unavailability we do not want to stall
-                        // generation of all derived data, since lease is a soft lock
-                        // it is safe to assume that we successfuly acquired it
-                        match result {
-                            Ok(leased) => Ok((leased, false)),
-                            Err(_) => Ok((false, true)),
+                    .then({
+                        cloned!(ctx, lease_key, lease_start, lease_total);
+                        move |result| {
+                            // In case of lease unavailability we do not want to stall
+                            // generation of all derived data, since lease is a soft lock
+                            // it is safe to assume that we successfuly acquired it
+                            match result {
+                                Ok(leased) => {
+                                    let elapsed = lease_start.with(|elapsed| elapsed.elapsed());
+                                    if elapsed > LEASE_WARNING_THRESHOLD {
+                                        let total = lease_total.with(|total| {
+                                            *total += elapsed;
+                                            *total
+                                        });
+                                        lease_start.with(|elapsed| *elapsed = Instant::now());
+                                        warn!(
+                                            ctx.logger(),
+                                            "Can not acquire lease {} for more than {:?}",
+                                            lease_key,
+                                            total
+                                        );
+                                    }
+                                    Ok((leased, false))
+                                }
+                                Err(_) => Ok((false, true)),
+                            }
                         }
                     })
                     .and_then({
