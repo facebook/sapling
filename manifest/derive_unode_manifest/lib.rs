@@ -114,7 +114,7 @@ pub fn derive_unode_manifest(
         let blobstore_put_stream = receiver.map_err(|()| err_msg("receiver failed"));
 
         blobstore_put_stream
-            .buffered(100)
+            .buffered(1024)
             .for_each(|_| Ok(()))
             .and_then(move |()| result_receiver.from_err().and_then(|res| res))
     })

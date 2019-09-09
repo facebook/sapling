@@ -124,7 +124,13 @@ pub(crate) fn derive_impl<
                 })
                 .and_then({
                     cloned!(ctx);
-                    move |_| mapping.persist(ctx)
+                    move |_| {
+                        mapping.persist(ctx.clone()).traced(
+                            &ctx.trace(),
+                            "derive::update_mapping",
+                            None,
+                        )
+                    }
                 })
                 .map(move |_| acc + chunk_size)
         }
@@ -278,14 +284,7 @@ where
                                                     event_id,
                                                 )
                                                 .and_then(move |derived| {
-                                                    mapping
-                                                        .put(ctx.clone(), bcs_id, derived)
-                                                        .traced_with_id(
-                                                            &ctx.trace(),
-                                                            "derive::update_mapping",
-                                                            None,
-                                                            event_id,
-                                                        )
+                                                    mapping.put(ctx.clone(), bcs_id, derived)
                                                 })
                                                 .timed(move |stats, _| {
                                                     STATS::derived_data_latency.add_value(
