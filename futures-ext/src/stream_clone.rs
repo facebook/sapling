@@ -55,6 +55,7 @@ where
         .collect()
 }
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct CloneCore<S: Stream> {
     /// Input stream
     inner: Fuse<S>,

@@ -139,7 +139,7 @@ mod test {
             count,
         }
     }
-
+    #[must_use = "futures do nothing unless you `.await` or poll them"]
     struct DelayedFuture<T> {
         send: Option<(T, mpsc::Sender<T>)>,
         count: usize,

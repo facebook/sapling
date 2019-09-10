@@ -51,6 +51,7 @@ pub use crate::stream_wrappers::{
 ///
 /// Adapt an existing `Future` to return unit `Item` and `Error`, while still
 /// waiting for the underlying `Future` to complete.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Discard<F>(F);
 
 impl<F> Discard<F> {
@@ -850,7 +851,6 @@ where
 ///
 ///     // receiver is a stream of values written from async_write_interface
 ///  ```
-
 pub struct SinkToAsyncWrite<S> {
     sink: S,
 }

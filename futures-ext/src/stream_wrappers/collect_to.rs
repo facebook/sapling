@@ -8,6 +8,7 @@ use futures::{Async, Future, Poll, Stream};
 use std::default::Default;
 use std::mem;
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct CollectTo<S, C> {
     stream: S,
     collection: C,

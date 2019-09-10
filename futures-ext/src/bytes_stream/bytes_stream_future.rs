@@ -10,6 +10,7 @@ use tokio_io::codec::Decoder;
 
 use super::BytesStream;
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct BytesStreamFuture<S, Dec> {
     inner: Option<BytesStreamFutureInner<S, Dec>>,
 }

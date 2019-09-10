@@ -14,6 +14,7 @@ pub(crate) struct NodeLocation<Index> {
 
 // This is essentially just a `.map`  over futures `{FFut|UFut}`, this only exisists
 // so it would be possible to name `FuturesUnoredered` type parameter.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub(crate) enum Job<In, UFut, FFut> {
     Unfold { value: In, future: UFut },
     Fold { value: In, future: FFut },

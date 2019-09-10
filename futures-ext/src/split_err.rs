@@ -51,6 +51,7 @@ impl<S: Stream> Stream for ErrSplitter<S> {
     }
 }
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 struct ErrFuture<E> {
     err_rx: Option<oneshot::Receiver<E>>,
 }

@@ -35,6 +35,7 @@ where
     }
 }
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Forker<In, Out1, Out2, F, E>
 where
     In: Stream,
