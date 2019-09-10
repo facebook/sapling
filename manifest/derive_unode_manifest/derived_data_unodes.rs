@@ -142,7 +142,6 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::iterate_all_entries;
     use bookmarks::BookmarkName;
     use cloned::cloned;
     use fixtures::{
@@ -153,6 +152,7 @@ mod test {
     use mercurial_types::{Changeset, HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
     use std::sync::Arc;
+    use test_utils::iterate_all_entries;
     use tokio::runtime::Runtime;
 
     fn fetch_manifest_by_cs_id(

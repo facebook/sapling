@@ -28,9 +28,6 @@ use std::collections::BTreeMap;
 pub mod derived_data_unodes;
 pub use derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
-#[cfg(test)]
-mod test_utils;
-
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "cannot fetch FileUnode: {}", _0)]
@@ -300,7 +297,6 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{get_bonsai_changeset, iterate_all_entries};
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Storable;
@@ -316,6 +312,7 @@ mod tests {
         RepoPath,
     };
     use std::collections::{HashSet, VecDeque};
+    use test_utils::{get_bonsai_changeset, iterate_all_entries};
     use tokio::runtime::Runtime;
 
     #[test]
