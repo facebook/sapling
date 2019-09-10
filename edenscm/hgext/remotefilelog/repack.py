@@ -213,7 +213,15 @@ def _manifestpythonrepack(
 def _manifestrepack(repo, options, incremental):
     if repo.ui.configbool("treemanifest", "server"):
         treemfmod = extensions.find("treemanifest")
-        treemfmod.serverrepack(repo, options=options, incremental=incremental)
+        _runrustrepack(
+            repo,
+            options,
+            repo.localvfs.join("cache/packs/manifests"),
+            incremental,
+            lambda repo, options, packpath, incremental: treemfmod.serverrepack(
+                repo, options=options, incremental=incremental
+            ),
+        )
     elif util.safehasattr(repo.manifestlog, "datastore"):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
