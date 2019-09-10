@@ -13,21 +13,16 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerived, RegenerateMapping};
 use failure::{err_msg, format_err, Error};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use lock_ext::LockExt;
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 use mercurial_types::{Changeset, HgChangesetId};
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{info, Logger};
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::{collections::BTreeSet, str::FromStr, sync::Arc};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 const COMMAND_TREE: &'static str = "tree";
@@ -180,7 +175,7 @@ pub fn subcommand_unodes(
                 })
                 .and_then(move |(ctx, repo, csid)| {
                     let mapping =
-                        RegenMapping::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                        RegenerateMapping::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
                     mapping.regenerate(Some(csid));
                     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), mapping, csid)
                         .map(move |root| println!("{:?} -> {:?}", csid, root))
@@ -305,45 +300,4 @@ fn single_verify(
                 Err(err_msg("failed"))
             }
         })
-}
-
-#[derive(Clone)]
-struct RegenMapping<M> {
-    regenerate: Arc<Mutex<HashSet<ChangesetId>>>,
-    base: M,
-}
-
-impl<M> RegenMapping<M> {
-    pub fn new(base: M) -> Self {
-        Self {
-            regenerate: Default::default(),
-            base,
-        }
-    }
-
-    pub fn regenerate<I: IntoIterator<Item = ChangesetId>>(&self, csids: I) {
-        self.regenerate.with(|regenerate| regenerate.extend(csids))
-    }
-}
-
-impl<M> BonsaiDerivedMapping for RegenMapping<M>
-where
-    M: BonsaiDerivedMapping,
-{
-    type Value = M::Value;
-
-    fn get(
-        &self,
-        ctx: CoreContext,
-        mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
-        self.regenerate
-            .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
-        self.base.get(ctx, csids)
-    }
-
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        self.regenerate.with(|regenerate| regenerate.remove(&csid));
-        self.base.put(ctx, csid, id)
-    }
 }

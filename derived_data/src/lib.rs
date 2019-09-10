@@ -10,8 +10,12 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use failure::Error;
 use futures_ext::{BoxFuture, FutureExt};
+use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+};
 
 mod derive_impl;
 
@@ -85,5 +89,49 @@ impl<Mapping: BonsaiDerivedMapping> BonsaiDerivedMapping for Arc<Mapping> {
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
         (**self).put(ctx, csid, id)
+    }
+}
+
+/// This mapping can be used when we want to ignore values before it was put
+/// again for some specific set of commits. It is useful when we want either
+/// re-backfill derived data or investigate performance problems.
+#[derive(Clone)]
+pub struct RegenerateMapping<M> {
+    regenerate: Arc<Mutex<HashSet<ChangesetId>>>,
+    base: M,
+}
+
+impl<M> RegenerateMapping<M> {
+    pub fn new(base: M) -> Self {
+        Self {
+            regenerate: Default::default(),
+            base,
+        }
+    }
+
+    pub fn regenerate<I: IntoIterator<Item = ChangesetId>>(&self, csids: I) {
+        self.regenerate.with(|regenerate| regenerate.extend(csids))
+    }
+}
+
+impl<M> BonsaiDerivedMapping for RegenerateMapping<M>
+where
+    M: BonsaiDerivedMapping,
+{
+    type Value = M::Value;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        mut csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        self.regenerate
+            .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
+        self.base.get(ctx, csids)
+    }
+
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        self.regenerate.with(|regenerate| regenerate.remove(&csid));
+        self.base.put(ctx, csid, id)
     }
 }

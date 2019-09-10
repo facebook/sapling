@@ -17,7 +17,7 @@ use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
 use failure::{err_msg, format_err};
 use failure_ext::Error;
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -37,9 +37,13 @@ use std::{
 };
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "DERIVED_DATA_TYPE";
-const CHUNK_SIZE: usize = 4096;
+const ARG_SKIP: &'static str = "skip-changesets";
+const ARG_REGENERATE: &'static str = "regenerate";
+
 const SUBCOMMAND_BACKFILL: &'static str = "backfill";
 const SUBCOMMAND_TAIL: &'static str = "tail";
+
+const CHUNK_SIZE: usize = 4096;
 
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
@@ -58,6 +62,17 @@ fn main() -> Result<(), Error> {
                     .index(1)
                     .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
                     .help("derived data type for which backfill will be run"),
+            )
+            .arg(
+                Arg::with_name(ARG_SKIP)
+                    .long(ARG_SKIP)
+                    .takes_value(true)
+                    .help("skip this number of changesets"),
+            )
+            .arg(
+                Arg::with_name(ARG_REGENERATE)
+                    .long(ARG_REGENERATE)
+                    .help("regenerate derivations even if mapping contains changeset"),
             ),
     )
     .subcommand(
@@ -86,14 +101,32 @@ fn main() -> Result<(), Error> {
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
                 .to_string();
+            let skip = sub_m
+                .value_of(ARG_SKIP)
+                .map(|skip| skip.parse::<usize>())
+                .transpose()
+                .map(|skip| skip.unwrap_or(0))
+                .into_future()
+                .from_err();
+            let regenerate = sub_m.is_present(ARG_REGENERATE);
+
             (
                 args::open_repo(&logger, &matches),
                 args::open_sql::<SqlChangesets>(&matches),
                 args::open_sql::<SqlPhases>(&matches),
+                skip,
             )
                 .into_future()
-                .and_then(move |(repo, sql_changesets, sql_phases)| {
-                    subcommand_backfill(ctx, repo, sql_changesets, sql_phases, derived_data_type)
+                .and_then(move |(repo, sql_changesets, sql_phases, skip)| {
+                    subcommand_backfill(
+                        ctx,
+                        repo,
+                        sql_changesets,
+                        sql_phases,
+                        derived_data_type,
+                        skip,
+                        regenerate,
+                    )
                 })
                 .boxify()
         }
@@ -134,15 +167,19 @@ trait DerivedUtils: Send + Sync + 'static {
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error>;
+
+    /// Regenerate derived data for specified set of commits
+    fn regenerate(&self, csids: &Vec<ChangesetId>);
 }
 
 #[derive(Clone)]
 struct DerivedUtilsFromMapping<M> {
-    mapping: M,
+    mapping: RegenerateMapping<M>,
 }
 
 impl<M> DerivedUtilsFromMapping<M> {
     fn new(mapping: M) -> Self {
+        let mapping = RegenerateMapping::new(mapping);
         Self { mapping }
     }
 }
@@ -171,6 +208,10 @@ where
                 csids
             })
             .boxify()
+    }
+
+    fn regenerate(&self, csids: &Vec<ChangesetId>) {
+        self.mapping.regenerate(csids.iter().copied())
     }
 }
 
@@ -248,6 +289,8 @@ fn subcommand_backfill(
     sql_changesets: SqlChangesets,
     sql_phases: SqlPhases,
     derived_data_type: String,
+    skip: usize,
+    regenerate: bool,
 ) -> BoxFuture<(), Error> {
     // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
     // `::preserve` is later used to bulk write all pending data.
@@ -272,14 +315,22 @@ fn subcommand_backfill(
         .collect()
         .and_then(move |mut changesets| {
             changesets.sort_by_key(|cs_entry| cs_entry.gen);
+            let changesets: Vec<_> = changesets
+                .into_iter()
+                .skip(skip)
+                .map(|entry| entry.cs_id)
+                .collect();
             println!("starting deriving data for {} changesets", changesets.len());
 
             let total_count = changesets.len();
             let generated_count = Arc::new(AtomicUsize::new(0));
             let total_duration = Arc::new(Mutex::new(Duration::from_secs(0)));
 
+            if regenerate {
+                derived_utils.regenerate(&changesets);
+            }
+
             stream::iter_ok(changesets)
-                .map(|entry| entry.cs_id)
                 .chunks(CHUNK_SIZE)
                 .and_then({
                     let blobstore = repo.get_blobstore();
@@ -306,7 +357,11 @@ fn subcommand_backfill(
                     stream::iter_ok(chunk)
                         .for_each({
                             cloned!(ctx, repo, derived_utils);
-                            move |csid| derived_utils.derive(ctx.clone(), repo.clone(), csid)
+                            move |csid| {
+                                // create new context so each derivation would have its own trace
+                                let ctx = CoreContext::new_with_logger(ctx.logger().clone());
+                                derived_utils.derive(ctx.clone(), repo.clone(), csid)
+                            }
                         })
                         .and_then({
                             cloned!(ctx, memblobstore);
