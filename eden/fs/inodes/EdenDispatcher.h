@@ -28,6 +28,7 @@ class EdenDispatcher : public Dispatcher {
    */
   explicit EdenDispatcher(EdenMount* mount);
 
+  folly::Future<struct fuse_kstatfs> statfs(InodeNumber ino) override;
   folly::Future<Attr> getattr(InodeNumber ino) override;
   folly::Future<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
       override;

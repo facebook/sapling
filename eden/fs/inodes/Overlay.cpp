@@ -73,6 +73,10 @@ void Overlay::close() {
   fsOverlay_.close(optNextInodeNumber);
 }
 
+struct statfs Overlay::statFs() const {
+  return fsOverlay_.statFs();
+}
+
 folly::SemiFuture<Unit> Overlay::initialize() {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.

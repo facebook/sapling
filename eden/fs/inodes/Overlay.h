@@ -177,6 +177,11 @@ class Overlay {
       InodeNumber inodeNumber,
       const folly::IOBuf& contents);
 
+  /**
+   * call statfs(2) on the filesystem in which the overlay is located
+   */
+  struct statfs statFs() const;
+
  private:
   /**
    * A request for the background GC thread.  There are two types of requests:

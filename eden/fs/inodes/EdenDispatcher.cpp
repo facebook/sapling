@@ -426,5 +426,40 @@ Future<vector<string>> EdenDispatcher::listxattr(InodeNumber ino) {
   return inodeMap_->lookupInode(ino).thenValue(
       [](const InodePtr& inode) { return inode->listxattr(); });
 }
+
+folly::Future<struct fuse_kstatfs> EdenDispatcher::statfs(InodeNumber /*ino*/) {
+  struct fuse_kstatfs info = {};
+
+  // Pass through the overlay free space stats; this gives a more reasonable
+  // estimation of available storage space than the zeroes that we'd report
+  // otherwise.  This is important because eg: Finder on macOS inspects disk
+  // space prior to initiating a copy and will refuse to start a copy if
+  // the disk appears to be full.
+  auto overlayStats = mount_->getOverlay()->statFs();
+  info.blocks = overlayStats.f_blocks;
+  info.bfree = overlayStats.f_bfree;
+  info.bavail = overlayStats.f_bavail;
+  info.files = overlayStats.f_files;
+  info.ffree = overlayStats.f_ffree;
+
+  // Suggest a large blocksize to software that looks at that kind of thing
+  // bsize will be returned to applications that call pathconf() with
+  // _PC_REC_MIN_XFER_SIZE
+  info.bsize = getConnInfo().max_readahead;
+
+  // The fragment size is returned as the _PC_REC_XFER_ALIGN and
+  // _PC_ALLOC_SIZE_MIN pathconf() settings.
+  // 4096 is commonly used by many filesystem types.
+  info.frsize = 4096;
+
+  // Ensure that namelen is set to a non-zero value.
+  // The value we return here will be visible to programs that call pathconf()
+  // with _PC_NAME_MAX.  Returning 0 will confuse programs that try to honor
+  // this value.
+  info.namelen = 255;
+
+  return info;
+}
+
 } // namespace eden
 } // namespace facebook

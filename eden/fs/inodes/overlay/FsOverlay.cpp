@@ -134,6 +134,12 @@ std::optional<InodeNumber> FsOverlay::initOverlay(bool createIfNonExisting) {
   return tryLoadNextInodeNumber();
 }
 
+struct statfs FsOverlay::statFs() const {
+  struct statfs fs = {};
+  fstatfs(infoFile_.fd(), &fs);
+  return fs;
+}
+
 void FsOverlay::close(std::optional<InodeNumber> inodeNumber) {
   if (inodeNumber) {
     saveNextInodeNumber(inodeNumber.value());

@@ -16,6 +16,12 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
+#ifdef __APPLE__
+#include <sys/mount.h>
+#include <sys/param.h>
+#else
+#include <sys/vfs.h>
+#endif
 
 namespace facebook {
 namespace eden {
@@ -59,6 +65,11 @@ class FsOverlay {
   const AbsolutePath& getLocalDir() const {
     return localDir_;
   }
+
+  /**
+   * call statfs(2) on the filesystem in which the overlay is located
+   */
+  struct statfs statFs() const;
 
   /**
    *  Get the name of the subdirectory to use for the overlay data for the
