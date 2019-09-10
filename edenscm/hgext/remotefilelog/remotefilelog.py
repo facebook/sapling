@@ -469,9 +469,28 @@ class remotefileslog(filelog.fileslog):
         self.localdatastores = []
         self.localhistorystores = []
 
+        cachecontent = []
+        cachemetadata = []
+        localcontent = []
+        localmetadata = []
+
         spackcontent, spackmetadata, lpackcontent, lpackmetadata = self.makepackstores()
-        cachecontent, cachemetadata = self.makecachestores()
-        localcontent, localmetadata = self.makelocalstores()
+        cachecontent += [spackcontent]
+        cachemetadata += [spackmetadata]
+        localcontent += [lpackcontent]
+        localmetadata += [lpackmetadata]
+
+        if not repo.ui.configbool("format", "noloosefile"):
+            loosecachecontent, loosecachemetadata = self.makecachestores()
+            cachecontent += [loosecachecontent]
+            cachemetadata += [loosecachemetadata]
+
+            looselocalcontent, looselocalmetadata = self.makelocalstores()
+            localcontent += [looselocalcontent]
+            localmetadata += [looselocalmetadata]
+        else:
+            loosecachecontent = None
+            loosecachemetadata = None
 
         mutablelocalstore = mutablestores.mutabledatahistorystore(
             lambda: self._mutablelocalpacks
@@ -509,23 +528,21 @@ class remotefileslog(filelog.fileslog):
             )
         else:
             remotecontent, remotemetadata = self.makeremotestores(
-                cachecontent, cachemetadata
+                loosecachecontent, loosecachemetadata
             )
 
-        contentstores = sharedcontentstores + [
-            cachecontent,
-            lpackcontent,
-            localcontent,
-            mutablelocalstore,
-            remotecontent,
-        ]
-        metadatastores = sharedmetadatastores + [
-            cachemetadata,
-            lpackmetadata,
-            localmetadata,
-            mutablelocalstore,
-            remotemetadata,
-        ]
+        contentstores = (
+            sharedcontentstores
+            + cachecontent
+            + localcontent
+            + [mutablelocalstore, remotecontent]
+        )
+        metadatastores = (
+            sharedmetadatastores
+            + cachemetadata
+            + localmetadata
+            + [mutablelocalstore, remotemetadata]
+        )
 
         # Instantiate union stores
         self.contentstore = unioncontentstore(*contentstores)
@@ -534,8 +551,8 @@ class remotefileslog(filelog.fileslog):
         self.localcontentstore = unioncontentstore(*self.localdatastores)
         self.localmetadatastore = unionmetadatastore(*self.localhistorystores)
 
-        fileservicedatawrite = cachecontent
-        fileservicehistorywrite = cachemetadata
+        fileservicedatawrite = loosecachecontent
+        fileservicehistorywrite = loosecachemetadata
         repo.fileservice.setstore(
             self.contentstore,
             self.metadatastore,
