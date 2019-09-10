@@ -1248,6 +1248,7 @@ fn default_repo_config() -> RepoConfig {
         infinitepush: InfinitepushParams::default(),
         list_keys_patterns_max: 123,
         filestore: None,
+        commit_sync_config: None,
     }
 }
 

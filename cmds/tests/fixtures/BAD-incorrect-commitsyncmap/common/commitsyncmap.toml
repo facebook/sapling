@@ -1,0 +1,19 @@
+[coolsync]
+large_repo_id = 123
+direction = "small_to_large"
+common_pushrebase_bookmarks = ["master"]
+
+  [[coolsync.small_repos]]
+  repoid = 456
+  bookmark_prefix = "repo1"
+  default_action = "prepend_prefix"
+  default_prefix = "subdir"
+
+  [[coolsync.small_repos]]
+  repoid = 789
+  bookmark_prefix = "repo2"
+  default_action = "preserve"
+
+    [coolsync.small_repos.map]
+    p1 = subdir/p2
+

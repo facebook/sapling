@@ -19,16 +19,21 @@ use std::{
 };
 
 use crate::errors::*;
+use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use failure_ext::{format_err, prelude::*};
+use itertools::Itertools;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
-    CacheWarmupParams, CommonConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+    CacheWarmupParams, CommitSyncConfig, CommitSyncDirection, CommonConfig,
+    DefaultCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
     HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
     PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, ShardedFilenodesParams,
-    StorageConfig, WhitelistEntry,
+    SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
 };
+use mononoke_types::MPath;
 use regex::Regex;
+use std::str::FromStr;
 use toml;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
@@ -180,6 +185,166 @@ impl RepoConfigs {
         Ok(None)
     }
 
+    /// Verify the correctness of the commit sync config
+    ///
+    /// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
+    /// from `DefaultCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
+    /// of each other. This is not allowed, because otherwise the mapping is unreversable, and
+    /// we need to reverse it for the large->small direction of sync.
+    /// Also check that no two small repos use the same bookmark prefix. If they did, this would
+    /// mean potentail bookmark name collisions.
+    fn verify_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
+        let small_repos = &commit_sync_config.small_repos;
+
+        let prefixes: Vec<&MPath> = small_repos
+            .iter()
+            .flat_map(|(_, small_repo_sync_config)| {
+                let SmallRepoCommitSyncConfig {
+                    default_action,
+                    map,
+                    bookmark_prefix: _,
+                } = small_repo_sync_config;
+                let iter_to_return = map.into_iter().map(|(_, target_prefix)| target_prefix);
+                match default_action {
+                    DefaultCommitSyncPathAction::PrependPrefix(prefix) => {
+                        iter_to_return.chain(vec![prefix].into_iter())
+                    }
+                    _ => iter_to_return.chain(vec![].into_iter()),
+                }
+            })
+            .collect();
+
+        for (first_prefix, second_prefix) in prefixes.iter().tuple_combinations::<(_, _)>() {
+            if first_prefix.is_prefix_of(*second_prefix) {
+                return Err(format_err!(
+                    "{:?} is a prefix of {:?}, which is disallowed",
+                    first_prefix,
+                    second_prefix
+                ));
+            }
+            if second_prefix.is_prefix_of(*first_prefix) {
+                return Err(format_err!(
+                    "{:?} is a prefix of {:?}, which is disallowed",
+                    second_prefix,
+                    first_prefix
+                ));
+            }
+        }
+
+        let bookmark_prefixes: Vec<&AsciiString> = small_repos
+            .iter()
+            .map(|(_, sr)| &sr.bookmark_prefix)
+            .collect();
+        for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>()
+        {
+            let fp = first_prefix.as_str();
+            let sp = second_prefix.as_str();
+            if fp.starts_with(sp) || sp.starts_with(fp) {
+                return Err(format_err!(
+                    "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
+                    fp,
+                    sp
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Read commit sync config
+    pub fn read_commit_sync_config(
+        config_root_path: impl AsRef<Path>,
+    ) -> Result<HashMap<String, CommitSyncConfig>> {
+        let config_root_path = config_root_path.as_ref();
+        Self::read_raw_commit_sync_config(config_root_path)?
+            .into_iter()
+            .map(|(config_name, v)| {
+                let RawCommitSyncConfig {
+                    large_repo_id,
+                    direction,
+                    common_pushrebase_bookmarks,
+                    small_repos
+                } = v;
+                let small_repos: Result<HashMap<i32, SmallRepoCommitSyncConfig>> = small_repos
+                    .into_iter()
+                    .map(|raw_small_repo_config| {
+                        let RawCommitSyncSmallRepoConfig {
+                            repoid,
+                            default_action,
+                            default_prefix,
+                            bookmark_prefix,
+                            map
+                        } = raw_small_repo_config;
+
+                        let default_action = match default_action.as_str() {
+                            "preserve" => DefaultCommitSyncPathAction::Preserve,
+                            "prepend_prefix" => match default_prefix {
+                                Some(prefix_to_prepend) => {
+                                    let prefix_to_prepend = MPath::new(prefix_to_prepend)?;
+                                    DefaultCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
+                                },
+                                None => return Err(format_err!("default_prefix must be provided when default_action=\"prepend_prefix\""))
+                            },
+                            other => return Err(format_err!("unknown default_action: \"{}\"", other))
+                        };
+
+                        let map: Result<HashMap<MPath, MPath>> = map
+                            .into_iter()
+                            .map(|(k, v)| {
+                                let k = MPath::new(k)?;
+                                let v = MPath::new(v)?;
+                                Ok((k, v))
+                            }).collect();
+
+                        let bookmark_prefix: Result<AsciiString> = AsciiString::from_str(&bookmark_prefix).map_err(|_| format_err!("failed to parse ascii string from: {:?}", bookmark_prefix));
+
+                        Ok((repoid, SmallRepoCommitSyncConfig {
+                            default_action,
+                            map: map?,
+                            bookmark_prefix: bookmark_prefix?,
+                        }))
+
+                    })
+                    .collect();
+
+                let direction = match direction.as_str() {
+                    "large_to_small" => CommitSyncDirection::LargeToSmall,
+                    "small_to_large" => CommitSyncDirection::SmallToLarge,
+                    other => return Err(format_err!("unknown commit sync direction: \"{}\"", other))
+                };
+
+                let common_pushrebase_bookmarks: Result<Vec<_>> = common_pushrebase_bookmarks.into_iter().map(BookmarkName::new).collect();
+
+                let commit_sync_config = CommitSyncConfig {
+                    large_repo_id,
+                    direction,
+                    common_pushrebase_bookmarks: common_pushrebase_bookmarks?,
+                    small_repos: small_repos?,
+                };
+
+                Self::verify_commit_sync_config(&commit_sync_config)
+                    .map(move |_| {
+                        (config_name, commit_sync_config)
+                    })
+            })
+            .collect()
+    }
+
+    fn read_raw_commit_sync_config(
+        config_root_path: &Path,
+    ) -> Result<HashMap<String, RawCommitSyncConfig>> {
+        let commit_sync_config_path = config_root_path.join("common").join("commitsyncmap.toml");
+        let content = fs::read(&commit_sync_config_path).chain_err(format_err!(
+            "While opening {}",
+            commit_sync_config_path.display(),
+        ))?;
+        Ok(
+            toml::from_slice::<HashMap<String, RawCommitSyncConfig>>(&content).chain_err(
+                format_err!("While reading {}", commit_sync_config_path.display()),
+            )?,
+        )
+    }
+
     /// Read all common storage configurations
     pub fn read_storage_configs(
         config_root_path: impl AsRef<Path>,
@@ -228,6 +393,7 @@ impl RepoConfigs {
         config_root_path: &Path,
     ) -> Result<(String, RepoConfig)> {
         let common_storage = Self::read_raw_storage_configs(config_root_path)?;
+        let commit_sync = Self::read_commit_sync_config(config_root_path)?;
         let reponame = repo_config_path
             .file_name()
             .and_then(|s| s.to_str())
@@ -298,7 +464,7 @@ impl RepoConfigs {
         }
         Ok((
             reponame,
-            RepoConfigs::convert_conf(raw_config, common_storage, all_hook_params)?,
+            RepoConfigs::convert_conf(raw_config, common_storage, commit_sync, all_hook_params)?,
         ))
     }
 
@@ -333,9 +499,21 @@ impl RepoConfigs {
         Ok(bypass)
     }
 
+    fn is_commit_sync_config_relevant_to_repo(
+        repoid: &i32,
+        commit_sync_config: &CommitSyncConfig,
+    ) -> bool {
+        &commit_sync_config.large_repo_id == repoid
+            || commit_sync_config
+                .small_repos
+                .iter()
+                .any(|(k, _)| k == repoid)
+    }
+
     fn convert_conf(
         this: RawRepoConfig,
         common_storage: HashMap<String, RawStorageConfig>,
+        commit_sync: HashMap<String, CommitSyncConfig>,
         hooks: Vec<HookParams>,
     ) -> Result<RepoConfig> {
         let mut common_storage = common_storage;
@@ -480,6 +658,27 @@ impl RepoConfigs {
         let filestore = this.filestore.map(|f| f.into());
 
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
+        let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync
+            .iter()
+            .filter_map(|(_, config)| {
+                if Self::is_commit_sync_config_relevant_to_repo(&repoid, config) {
+                    Some(config)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let commit_sync_config = match relevant_commit_sync_configs.as_slice() {
+            [] => None,
+            [commit_sync_config] => Some((*commit_sync_config).clone()),
+            _ => {
+                return Err(format_err!(
+                    "Repo {} participates in more than one commit sync config",
+                    repoid,
+                ))
+            }
+        };
+
         Ok(RepoConfig {
             enabled,
             storage_config,
@@ -504,6 +703,7 @@ impl RepoConfigs {
             infinitepush,
             list_keys_patterns_max,
             filestore,
+            commit_sync_config,
         })
     }
 }
@@ -861,6 +1061,27 @@ impl From<RawFilestoreParams> for FilestoreParams {
     }
 }
 
+/// Raw Commit Sync Config for a small repo
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RawCommitSyncSmallRepoConfig {
+    repoid: i32,
+    default_action: String,
+    default_prefix: Option<String>,
+    bookmark_prefix: String,
+    map: HashMap<String, String>,
+}
+
+/// Raw Commit Sync Config
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RawCommitSyncConfig {
+    large_repo_id: i32,
+    direction: String,
+    common_pushrebase_bookmarks: Vec<String>,
+    small_repos: Vec<RawCommitSyncSmallRepoConfig>,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -883,6 +1104,141 @@ mod test {
         }
 
         tmp_dir
+    }
+
+    #[test]
+    fn test_commit_sync_config_correct() {
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            direction = "small_to_large"
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                default_action = "preserve"
+                bookmark_prefix = "repo2"
+
+                    [mega.small_repos.map]
+                    "p1" = ".r2-legacy/p1"
+                    "p5" = ".r2-legacy/p5"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+                    "p4" = "p5/p4"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path())
+            .expect("failed to read commit sync configs");
+
+        let expected = hashmap! {
+            "mega".to_string() => CommitSyncConfig {
+                large_repo_id: 1,
+                direction: CommitSyncDirection::SmallToLarge,
+                common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
+                small_repos: hashmap! {
+                    2 => SmallRepoCommitSyncConfig {
+                        default_action: DefaultCommitSyncPathAction::Preserve,
+                        bookmark_prefix: AsciiString::from_str("repo2").unwrap(),
+                        map: hashmap! {
+                            MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
+                            MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
+                        }
+                    },
+                    3 => SmallRepoCommitSyncConfig {
+                        default_action: DefaultCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
+                        bookmark_prefix: AsciiString::from_str("repo3").unwrap(),
+                        map: hashmap! {
+                            MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
+                            MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
+                        }
+                    }
+                },
+            }
+        };
+
+        assert_eq!(commit_sync_config, expected);
+    }
+
+    #[test]
+    fn test_commit_sync_config_conflicting_path_prefixes() {
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            direction = "small_to_large"
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+
+                    [mega.small_repos.map]
+                    "p1" = ".r2-legacy/p1"
+                    "p5" = "subdir"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+                    "p4" = "p5/p4"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_err());
+    }
+
+    #[test]
+    fn test_commit_sync_config_conflicting_bookmark_prefixes() {
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            direction = "small_to_large"
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo3/bla"
+                default_action = "preserve"
+
+                    [mega.small_repos.map]
+                    "p1" = ".r2-legacy/p1"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+                    "p4" = "p5/p4"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_err());
     }
 
     #[test]
@@ -1006,6 +1362,7 @@ mod test {
 
         let paths = btreemap! {
             "common/common.toml" => common_content,
+            "common/commitsyncmap.toml" => "",
             "common/hooks/hook1.lua" => hook1_content,
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/fbsource/hooks/hook2.lua" => hook2_content,
@@ -1157,6 +1514,7 @@ mod test {
                     chunk_size: 768,
                     concurrency: 48,
                 }),
+                commit_sync_config: None,
             },
         );
         repos.insert(
@@ -1192,6 +1550,7 @@ mod test {
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 filestore: None,
+                commit_sync_config: None,
             },
         );
         assert_eq!(
@@ -1261,6 +1620,7 @@ mod test {
 
         let paths = btreemap! {
             "common/hooks/hook1.lua" => hook1_content,
+            "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
         };
 
@@ -1296,6 +1656,7 @@ mod test {
 
         let paths = btreemap! {
             "common/hooks/hook1.lua" => hook1_content,
+            "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
         };
 
@@ -1323,6 +1684,7 @@ mod test {
 
             let paths = btreemap! {
                 "common/common.toml" => common,
+                "common/commitsyncmap.toml" => "",
                 "repos/fbsource/server.toml" => content,
             };
 
@@ -1402,6 +1764,7 @@ mod test {
 
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
+            "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
         };
 
@@ -1469,6 +1832,7 @@ mod test {
 
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
+            "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
         };
 

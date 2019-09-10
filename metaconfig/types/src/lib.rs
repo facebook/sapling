@@ -14,7 +14,9 @@ use std::{
     collections::HashMap, mem, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration,
 };
 
+use ascii::AsciiString;
 use bookmarks::BookmarkName;
+use mononoke_types::MPath;
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -100,6 +102,8 @@ pub struct RepoConfig {
     pub list_keys_patterns_max: u64,
     /// Params for File storage
     pub filestore: Option<FilestoreParams>,
+    /// Config for commit sync
+    pub commit_sync_config: Option<CommitSyncConfig>,
 }
 
 impl RepoConfig {
@@ -694,4 +698,49 @@ pub struct FilestoreParams {
     pub chunk_size: u64,
     /// Max number of concurrent chunk uploads to perform in the Filestore.
     pub concurrency: usize,
+}
+
+/// Default path action to perform when syncing commits
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DefaultCommitSyncPathAction {
+    /// Preserve as is
+    Preserve,
+    /// Prepend a given prefix to the path
+    PrependPrefix(MPath),
+}
+
+/// Commit sync configuration for a small repo
+/// Note: this configuration is always from the point of view
+/// of the small repo, meaning a key in the `map` is a path
+/// prefix in the small repo, and a value - in the large repo
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SmallRepoCommitSyncConfig {
+    /// Default action to take on a path
+    pub default_action: DefaultCommitSyncPathAction,
+    /// A map of prefix replacements when syncing
+    pub map: HashMap<MPath, MPath>,
+    /// Bookmark prefix to use in the large repo
+    pub bookmark_prefix: AsciiString,
+}
+
+/// Commit sync direction
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum CommitSyncDirection {
+    /// Syncing commits from large repo to small ones
+    LargeToSmall,
+    /// Syncing commits from small repos to large one
+    SmallToLarge,
+}
+
+/// Commit sync configuration for a large repo
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CommitSyncConfig {
+    /// Large repository id
+    pub large_repo_id: i32,
+    /// Commit sync direction
+    pub direction: CommitSyncDirection,
+    /// Common pushrebase bookmarks
+    pub common_pushrebase_bookmarks: Vec<BookmarkName>,
+    /// Corresponding small repo configs
+    pub small_repos: HashMap<i32, SmallRepoCommitSyncConfig>,
 }

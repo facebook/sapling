@@ -347,6 +347,7 @@ EOF
 
   cd mononoke-config
   mkdir -p common
+  touch common/commitsyncmap.toml
   cat > common/common.toml <<CONFIG
 [[whitelist_entry]]
 identity_type = "USER"
