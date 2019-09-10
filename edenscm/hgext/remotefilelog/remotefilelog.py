@@ -384,31 +384,6 @@ class remotefilelog(object):
                 validatehash = validatehash and vhash
         return text, validatehash
 
-    def _read(self, id):
-        """reads the raw file blob from disk, cache, or server"""
-        fileservice = self.repo.fileservice
-        localcache = fileservice.localcache
-        cachekey = fileserverclient.getcachekey(self.repo.name, self.filename, id)
-        try:
-            return localcache.read(cachekey)
-        except KeyError:
-            pass
-
-        localkey = fileserverclient.getlocalkey(self.filename, id)
-        localpath = os.path.join(self.localpath, localkey)
-        try:
-            return shallowutil.readfile(localpath)
-        except IOError:
-            pass
-
-        fileservice.prefetch([(self.filename, id)])
-        try:
-            return localcache.read(cachekey)
-        except KeyError:
-            pass
-
-        raise error.LookupError(id, self.filename, _("no node"))
-
     def ancestormap(self, node):
         return self.repo.fileslog.metadatastore.getancestors(self.filename, node)
 
