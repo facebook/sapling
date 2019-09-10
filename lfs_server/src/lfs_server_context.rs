@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
-use failure::{Error, Fallible};
+use failure::Error;
 use futures_util::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStreamExt,
@@ -49,7 +49,7 @@ impl LfsServerContext {
         logger: Logger,
         repositories: HashMap<String, BlobRepo>,
         server: ServerUris,
-    ) -> Fallible<Self> {
+    ) -> Result<Self, Error> {
         // TODO: Configure threads?
         let connector = HttpsConnector::new(4)
             .map_err(Error::from)
@@ -68,7 +68,7 @@ impl LfsServerContext {
         })
     }
 
-    pub fn request(&self, repository: String) -> Fallible<RequestContext> {
+    pub fn request(&self, repository: String) -> Result<RequestContext, Error> {
         let inner = self.inner.lock().expect("poisoned lock");
 
         match inner.repositories.get(&repository) {
@@ -95,12 +95,12 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub fn instantiate(state: &State, repository: String) -> Fallible<Self> {
+    pub fn instantiate(state: &State, repository: String) -> Result<Self, Error> {
         let ctx = LfsServerContext::borrow_from(&state);
         ctx.request(repository)
     }
 
-    pub async fn dispatch(&self, request: Request<Body>) -> Fallible<Body> {
+    pub async fn dispatch(&self, request: Request<Body>) -> Result<Body, Error> {
         let res = self
             .client
             .request(request)
@@ -123,7 +123,7 @@ impl RequestContext {
         Ok(body)
     }
 
-    pub async fn upstream_batch(&self, batch: &RequestBatch) -> Fallible<ResponseBatch> {
+    pub async fn upstream_batch(&self, batch: &RequestBatch) -> Result<ResponseBatch, Error> {
         let uri = self.uri_builder.upstream_batch_uri()?;
         let body: Bytes = serde_json::to_vec(&batch)
             .chain_err(ErrorKind::SerializationFailed)?
@@ -153,7 +153,7 @@ pub struct UriBuilder {
 }
 
 impl UriBuilder {
-    pub fn upload_uri(&self, object: &RequestObject) -> Fallible<Uri> {
+    pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, Error> {
         self.server
             .self_uri
             .build(format_args!(
@@ -164,7 +164,7 @@ impl UriBuilder {
             .map_err(Error::from)
     }
 
-    pub fn download_uri(&self, content_id: &ContentId) -> Fallible<Uri> {
+    pub fn download_uri(&self, content_id: &ContentId) -> Result<Uri, Error> {
         self.server
             .self_uri
             .build(format_args!("{}/download/{}", &self.repository, content_id))
@@ -172,7 +172,7 @@ impl UriBuilder {
             .map_err(Error::from)
     }
 
-    pub fn upstream_batch_uri(&self) -> Fallible<Uri> {
+    pub fn upstream_batch_uri(&self) -> Result<Uri, Error> {
         self.server
             .upstream_uri
             .build(format_args!("objects/batch"))
@@ -181,7 +181,7 @@ impl UriBuilder {
     }
 }
 
-fn parse_and_check_uri(src: &str) -> Fallible<BaseUri> {
+fn parse_and_check_uri(src: &str) -> Result<BaseUri, Error> {
     let uri = src.parse::<Uri>().map_err(Error::from)?;
 
     let Parts {
@@ -208,7 +208,7 @@ pub struct ServerUris {
 }
 
 impl ServerUris {
-    pub fn new(self_uri: &str, upstream_uri: &str) -> Fallible<Self> {
+    pub fn new(self_uri: &str, upstream_uri: &str) -> Result<Self, Error> {
         Ok(Self {
             self_uri: parse_and_check_uri(self_uri)?,
             upstream_uri: parse_and_check_uri(upstream_uri)?,
@@ -224,7 +224,7 @@ struct BaseUri {
 }
 
 impl BaseUri {
-    pub fn build(&self, args: Arguments) -> Fallible<Uri> {
+    pub fn build(&self, args: Arguments) -> Result<Uri, Error> {
         let mut p = String::new();
         if let Some(ref path_and_query) = self.path_and_query {
             write!(&mut p, "{}", path_and_query)?;
@@ -252,18 +252,18 @@ mod test {
     const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
     const SIZE: u64 = 123;
 
-    fn obj() -> Fallible<RequestObject> {
+    fn obj() -> Result<RequestObject, Error> {
         Ok(RequestObject {
             oid: Sha256::from_str(ONES_HASH)?,
             size: SIZE,
         })
     }
 
-    fn content_id() -> Fallible<ContentId> {
+    fn content_id() -> Result<ContentId, Error> {
         Ok(ContentId::from_str(ONES_HASH)?)
     }
 
-    fn uri_builder(self_uri: &str, upstream_uri: &str) -> Fallible<UriBuilder> {
+    fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
         let server = ServerUris::new(self_uri, upstream_uri)?;
         Ok(UriBuilder {
             repository: "repo123".to_string(),
@@ -272,7 +272,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_upload_uri() -> Fallible<()> {
+    fn test_basic_upload_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com")?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
@@ -282,7 +282,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_upload_uri_slash() -> Fallible<()> {
+    fn test_basic_upload_uri_slash() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/", "http://bar.com")?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
@@ -292,7 +292,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_upload_uri() -> Fallible<()> {
+    fn test_prefix_upload_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/bar", "http://bar.com")?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
@@ -302,7 +302,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_slash_upload_uri() -> Fallible<()> {
+    fn test_prefix_slash_upload_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/bar/", "http://bar.com")?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
@@ -312,7 +312,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_download_uri() -> Fallible<()> {
+    fn test_basic_download_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com")?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
@@ -322,7 +322,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_download_uri_slash() -> Fallible<()> {
+    fn test_basic_download_uri_slash() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/", "http://bar.com")?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
@@ -332,7 +332,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_download_uri() -> Fallible<()> {
+    fn test_prefix_download_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/bar", "http://bar.com")?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
@@ -342,7 +342,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_slash_download_uri() -> Fallible<()> {
+    fn test_prefix_slash_download_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/bar/", "http://bar.com")?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
@@ -352,7 +352,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_upstream_batch_uri() -> Fallible<()> {
+    fn test_basic_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com")?;
         assert_eq!(
             b.upstream_batch_uri()?.to_string(),
@@ -362,7 +362,7 @@ mod test {
     }
 
     #[test]
-    fn test_basic_upstream_batch_uri_slash() -> Fallible<()> {
+    fn test_basic_upstream_batch_uri_slash() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/", "http://bar.com")?;
         assert_eq!(
             b.upstream_batch_uri()?.to_string(),
@@ -372,7 +372,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_upstream_batch_uri() -> Fallible<()> {
+    fn test_prefix_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com/foo")?;
         assert_eq!(
             b.upstream_batch_uri()?.to_string(),
@@ -382,7 +382,7 @@ mod test {
     }
 
     #[test]
-    fn test_prefix_slash_upstream_batch_uri() -> Fallible<()> {
+    fn test_prefix_slash_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com/foo/")?;
         assert_eq!(
             b.upstream_batch_uri()?.to_string(),
