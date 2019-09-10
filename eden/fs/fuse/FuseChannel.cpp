@@ -1216,6 +1216,12 @@ void FuseChannel::processSession() {
       case FUSE_DESTROY:
         XLOG(DBG7) << "FUSE_DESTROY";
         dispatcher_->destroy();
+        // FUSE on linux doesn't care whether we reply to FUSE_DESTROY
+        // but the macOS implementation blocks the unmount syscall until
+        // we have responded, which in turn blocks our attempt to gracefully
+        // unmount, so we respond here.  It doesn't hurt Linux to respond
+        // so we do it for both platforms.
+        replyError(*header, 0);
         break;
 
       case FUSE_NOTIFY_REPLY:
