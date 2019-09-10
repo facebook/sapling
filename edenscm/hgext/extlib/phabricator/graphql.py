@@ -208,8 +208,13 @@ class Client(object):
 
     def _processrevisioninfo(self, ret):
         try:
-            errormsg = ret["errors"][0]["message"]
-            raise ClientError(None, errormsg)
+            errormsg = None
+            if "error" in ret:
+                errormsg = ret["error"]
+            if "errors" in ret:
+                errormsg = ret["errors"][0]["message"]
+            if errormsg is not None:
+                raise ClientError(None, errormsg)
         except (KeyError, TypeError):
             pass
 
