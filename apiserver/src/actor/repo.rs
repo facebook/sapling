@@ -918,6 +918,11 @@ fn log_result(
         };
     }
 
+    let server_error = match resp {
+        Ok(_) => false,
+        Err(err) => err.is_server_error(),
+    };
+
     scuba
         .add_future_stats(&stats)
         .add("response_time", stats.completion_time.as_micros_unchecked())
@@ -937,7 +942,8 @@ fn log_result(
                 .trim_matches('"'),
         )
         .add("log_tag", "Finished processing")
-        .add("success", resp.is_ok());
+        .add("success", resp.is_ok())
+        .add("server_error", server_error);
 
     scuba.log();
 }

@@ -63,6 +63,13 @@ impl ErrorKind {
         }
     }
 
+    pub fn is_server_error(&self) -> bool {
+        match self {
+            ErrorKind::InternalError(_) => true,
+            _ => false,
+        }
+    }
+
     #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
         use crate::errors::ErrorKind::*;
