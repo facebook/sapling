@@ -11,14 +11,13 @@ use context::CoreContext;
 use failure_ext::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use itertools::Itertools;
 use manifest::Entry;
+use maplit::hashset;
 use mononoke_types::{
     fastlog_batch::{FastlogBatch, ParentOffset},
     ChangesetId, FileUnodeId, ManifestUnodeId,
 };
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::iter::once;
 use std::sync::Arc;
 
 pub(crate) fn create_new_batch(
@@ -65,7 +64,7 @@ pub(crate) fn create_new_batch(
 
 // This function creates a FastlogBatch list for a merge unode.
 // It does so by taking a merge_cs_id (i.e. a linknode of this merge unode) and
-// FastlogBatches for it's parents and merges them together
+// FastlogBatches for it's parents and merges them together in BFS order
 //
 // For example, let's say we have a unode whose history graph is the following:
 //
@@ -95,25 +94,34 @@ fn create_merged_list(
         parents_of_merge_commit.retain(move |p| used.insert(p.clone()));
     }
 
-    let mut used = HashSet::new();
-    // Merge parent lists in the BFS order. To do that we assign indices to entries inside a list
-    // and to each parents.
-    // So if we have parents_lists = [[B, D], [C, D]], then after we assigned indices they
-    // will look like [(1, 1, B), (1, 2, C) (1, 2, D) (2, 2, D)].
-    let merged_parents_lists = parents_lists
+    let mut cs_id_to_parents: HashMap<_, _> = parents_lists
         .into_iter()
-        .enumerate() // Enumerate parents
-        .map(|(parent_order, parent_list)| {
-            // Enumerate entries inside single parent
-            parent_list.into_iter().enumerate().map(move |(idx, hash)| (idx, parent_order, hash))
-        })
-        .kmerge_by(|l, r| (l.0, l.1) < (r.0, r.1))
-        .map(|(_, _, cs_and_parents)| cs_and_parents)
-        .filter(|(cs_id, _)| used.insert(*cs_id));
+        .map(|list| list.into_iter())
+        .flatten()
+        .collect();
+    cs_id_to_parents.insert(merge_cs_id, parents_of_merge_commit.clone());
 
-    once((merge_cs_id, parents_of_merge_commit))
-        .chain(merged_parents_lists)
-        .collect()
+    let mut q = VecDeque::new();
+    q.push_back((merge_cs_id, parents_of_merge_commit));
+
+    let mut res = vec![];
+    let mut used = hashset! {merge_cs_id};
+    while let Some((cs_id, parents)) = q.pop_front() {
+        res.push((cs_id, parents.clone()));
+
+        for p in parents {
+            if let FastlogParent::Known(p) = p {
+                if let Some(parents) = cs_id_to_parents.get(&p) {
+                    if !used.contains(&p) {
+                        used.insert(p);
+                        q.push_back((p, parents.clone()));
+                    }
+                }
+            }
+        }
+    }
+
+    res
 }
 
 // Converts from an "external" representation (i.e. the one used by users of this library)

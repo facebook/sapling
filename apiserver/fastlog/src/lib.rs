@@ -294,8 +294,9 @@ mod tests {
     use bookmarks::BookmarkName;
     use context::CoreContext;
     use fixtures::{
-        create_bonsai_changeset, create_bonsai_changeset_with_files, linear, merge_even,
-        merge_uneven, store_files, unshared_merge_even, unshared_merge_uneven,
+        create_bonsai_changeset, create_bonsai_changeset_with_author,
+        create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
+        unshared_merge_even, unshared_merge_uneven,
     };
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -713,6 +714,66 @@ mod tests {
             }
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_bfs_order() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock();
+
+        //            E
+        //           / \
+        //          D   C
+        //         /   / \
+        //        F   A   B
+        //       /
+        //      G
+        //
+        //   Expected order [E, D, C, F, A, B, G]
+
+        let mut bonsais = vec![];
+
+        let a = create_bonsai_changeset_with_author(vec![], "author1".to_string());
+        println!("a = {}", a.get_changeset_id());
+        bonsais.push(a.clone());
+        let b = create_bonsai_changeset_with_author(vec![], "author2".to_string());
+        println!("b = {}", b.get_changeset_id());
+        bonsais.push(b.clone());
+
+        let c = create_bonsai_changeset(vec![a.get_changeset_id(), b.get_changeset_id()]);
+        println!("c = {}", c.get_changeset_id());
+        bonsais.push(c.clone());
+
+        let g = create_bonsai_changeset_with_author(vec![], "author3".to_string());
+        println!("g = {}", g.get_changeset_id());
+        bonsais.push(g.clone());
+
+        let stored_files =
+            store_files(ctx.clone(), btreemap! { "file" => Some("f") }, repo.clone());
+        let f = create_bonsai_changeset_with_files(vec![g.get_changeset_id()], stored_files);
+        println!("f = {}", f.get_changeset_id());
+        bonsais.push(f.clone());
+
+        let stored_files =
+            store_files(ctx.clone(), btreemap! { "file" => Some("d") }, repo.clone());
+        let d = create_bonsai_changeset_with_files(vec![f.get_changeset_id()], stored_files);
+        println!("d = {}", d.get_changeset_id());
+        bonsais.push(d.clone());
+
+        let stored_files =
+            store_files(ctx.clone(), btreemap! { "file" => Some("e") }, repo.clone());
+        let e = create_bonsai_changeset_with_files(
+            vec![d.get_changeset_id(), c.get_changeset_id()],
+            stored_files,
+        );
+        println!("e = {}", e.get_changeset_id());
+        bonsais.push(e.clone());
+
+        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))?;
+
+        verify_all_entries_for_commit(&mut rt, ctx, repo, e.get_changeset_id());
         Ok(())
     }
 
