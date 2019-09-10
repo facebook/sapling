@@ -37,7 +37,6 @@ mod pyerror;
 mod pyext;
 mod pythondatastore;
 mod pythonutil;
-mod repackablepyext;
 
 pub use crate::revisionstore::pythondatastore::PythonDataStore;
 
