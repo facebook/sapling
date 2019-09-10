@@ -627,6 +627,66 @@ function wait_for_apiserver {
   fi
 }
 
+function lfs_server {
+  local port uri log opts args proto poll
+  port="$(get_free_socket)"
+  log="${TESTTMP}/lfs_server.${port}"
+  proto="http"
+  poll="curl"
+
+  opts=(
+    "${CACHING_ARGS[@]}"
+    --mononoke-config-path "$TESTTMP/mononoke-config"
+    --listen-host 127.0.0.1
+    --listen-port "$port"
+  )
+  args=()
+
+  while [[ "$#" -gt 0 ]]; do
+    if [[ "$1" = "--upstream" ]]; then
+      shift
+      args=("${args[@]}" "$1")
+      shift
+    elif [[ "$1" = "--tls" ]]; then
+      shift
+      proto="https"
+      poll="sslcurl"
+      opts=(
+        "${opts[@]}"
+        --tls-ca "$TEST_CERTDIR/root-ca.crt"
+        --tls-private-key "$TEST_CERTDIR/localhost.key"
+        --tls-certificate "$TEST_CERTDIR/localhost.crt"
+        --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds"
+      )
+      shift
+    elif [[ "$1" = "--log" ]]; then
+      shift
+      log="$1"
+      shift
+    else
+      echo "invalid argument: $1" >&2
+      return 1
+    fi
+  done
+
+  uri="${proto}://localhost:${port}"
+  echo "$uri"
+
+  "$LFS_SERVER" "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
+
+  for _ in $(seq 1 200); do
+    if "$poll" "$uri" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 0.1
+  done
+
+  echo "lfs_server did not start:" >&2
+  cat "$log" >&2
+  return 1
+}
+
 function extract_json_error {
   input=$(< /dev/stdin)
   echo "$input" | head -1 | jq -r '.message'

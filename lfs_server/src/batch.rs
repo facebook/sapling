@@ -37,11 +37,36 @@ pub struct BatchParams {
     repository: String,
 }
 
+enum UpstreamObjects {
+    UpstreamPresence(HashMap<RequestObject, ObjectAction>),
+    NoUpstream,
+}
+
+impl UpstreamObjects {
+    fn should_upload(&self, obj: &RequestObject) -> bool {
+        match self {
+            // Upload to upstream if the object is missing there.
+            UpstreamObjects::UpstreamPresence(map) => !map.contains_key(obj),
+            // Without an upstream, we never need to upload there.
+            UpstreamObjects::NoUpstream => false,
+        }
+    }
+
+    fn download_action(&self, obj: &RequestObject) -> Option<&ObjectAction> {
+        match self {
+            // Passthrough download actions from upstream.
+            UpstreamObjects::UpstreamPresence(map) => map.get(obj),
+            // In the absence of an upstream, we cannot download from there.
+            UpstreamObjects::NoUpstream => None,
+        }
+    }
+}
+
 // TODO: Unit tests for this. We could use a client that lets us do stub things.
 async fn upstream_objects(
     ctx: &RequestContext,
     objects: &[RequestObject],
-) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
+) -> Result<UpstreamObjects, Error> {
     let objects = objects.iter().map(|o| *o).collect();
 
     let batch = RequestBatch {
@@ -51,15 +76,22 @@ async fn upstream_objects(
         objects,
     };
 
-    let ResponseBatch { transfer, objects } = ctx
+    let res = ctx
         .upstream_batch(&batch)
         .await
         .chain_err(ErrorKind::UpstreamBatchError)?;
 
-    match transfer {
+    let ResponseBatch { transfer, objects } = match res {
+        Some(res) => res,
+        None => {
+            return Ok(UpstreamObjects::NoUpstream);
+        }
+    };
+
+    let objects = match transfer {
         Transfer::Basic => {
             // Extract valid download actions from upstream. Those are the objects upstream has.
-            let ret = objects
+            objects
                 .into_iter()
                 .filter_map(|object| {
                     let ResponseObject { object, status } = object;
@@ -77,12 +109,12 @@ async fn upstream_objects(
                         None => None,
                     }
                 })
-                .collect();
-
-            Ok(ret)
+                .collect()
         }
-        Transfer::Unknown => Ok(HashMap::new()),
-    }
+        Transfer::Unknown => HashMap::new(),
+    };
+
+    Ok(UpstreamObjects::UpstreamPresence(objects))
 }
 
 async fn resolve_internal_object(
@@ -152,15 +184,15 @@ async fn internal_objects(
 fn batch_upload_response_objects(
     uri_builder: &UriBuilder,
     objects: &[RequestObject],
-    upstream: &HashMap<RequestObject, ObjectAction>,
+    upstream: &UpstreamObjects,
     internal: &HashMap<RequestObject, ObjectAction>,
 ) -> Result<Vec<ResponseObject>, Error> {
     let objects: Result<Vec<ResponseObject>, Error> = objects
         .iter()
         .map(|object| {
-            let actions = match (upstream.get(object), internal.get(object)) {
-                (Some(_), Some(_)) => {
-                    // Object is present in both locations, no action is required.
+            let actions = match (upstream.should_upload(object), internal.get(object)) {
+                (false, Some(_)) => {
+                    // Object doesn't need to be uploaded anywhere: move on.
                     hashmap! {}
                 }
                 _ => {
@@ -203,7 +235,7 @@ async fn batch_upload(ctx: &RequestContext, batch: RequestBatch) -> Result<Respo
 
 fn batch_download_response_objects(
     objects: &[RequestObject],
-    upstream: &HashMap<RequestObject, ObjectAction>,
+    upstream: &UpstreamObjects,
     internal: &HashMap<RequestObject, ObjectAction>,
 ) -> Vec<ResponseObject> {
     objects
@@ -211,7 +243,10 @@ fn batch_download_response_objects(
         .map(|object| {
             // For downloads, see if we can find it from internal or upstream (which means we
             // prefer internal). If we can't find it in either, then that's an error.
-            let status = match internal.get(object).or_else(|| upstream.get(object)) {
+            let status = match internal
+                .get(object)
+                .or_else(|| upstream.download_action(object))
+            {
                 Some(action) => ObjectStatus::Ok {
                     authenticated: false,
                     actions: hashmap! { Operation::Download => action.clone() },
@@ -317,7 +352,11 @@ mod test {
             o3 => ObjectAction::new("http://bar.com/3".parse()?),
         };
 
-        let res = batch_download_response_objects(&req, &upstream, &internal);
+        let res = batch_download_response_objects(
+            &req,
+            &UpstreamObjects::UpstreamPresence(upstream),
+            &internal,
+        );
 
         assert_eq!(
             vec![
@@ -388,13 +427,18 @@ mod test {
             o3 => ObjectAction::new("http://bar.com/3".parse()?),
         };
 
-        let server = ServerUris::new("http://foo.com", "http://bar.com")?;
+        let server = ServerUris::new("http://foo.com", Some("http://bar.com"))?;
         let uri_builder = UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
         };
 
-        let res = batch_upload_response_objects(&uri_builder, &req, &upstream, &internal)?;
+        let res = batch_upload_response_objects(
+            &uri_builder,
+            &req,
+            &UpstreamObjects::UpstreamPresence(upstream),
+            &internal,
+        )?;
 
         assert_eq!(
             vec![

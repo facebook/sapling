@@ -123,8 +123,17 @@ impl RequestContext {
         Ok(body)
     }
 
-    pub async fn upstream_batch(&self, batch: &RequestBatch) -> Result<ResponseBatch, Error> {
-        let uri = self.uri_builder.upstream_batch_uri()?;
+    pub async fn upstream_batch(
+        &self,
+        batch: &RequestBatch,
+    ) -> Result<Option<ResponseBatch>, Error> {
+        let uri = match self.uri_builder.upstream_batch_uri()? {
+            Some(uri) => uri,
+            None => {
+                return Ok(None);
+            }
+        };
+
         let body: Bytes = serde_json::to_vec(&batch)
             .chain_err(ErrorKind::SerializationFailed)?
             .into();
@@ -139,10 +148,10 @@ impl RequestContext {
             .await
             .chain_err(ErrorKind::UpstreamBatchNoResponse)?;
 
-        let bach = serde_json::from_slice::<ResponseBatch>(&res)
+        let batch = serde_json::from_slice::<ResponseBatch>(&res)
             .chain_err(ErrorKind::UpstreamBatchInvalid)?;
 
-        Ok(bach)
+        Ok(Some(batch))
     }
 }
 
@@ -172,12 +181,16 @@ impl UriBuilder {
             .map_err(Error::from)
     }
 
-    pub fn upstream_batch_uri(&self) -> Result<Uri, Error> {
+    pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, Error> {
         self.server
             .upstream_uri
-            .build(format_args!("objects/batch"))
-            .chain_err(ErrorKind::UriBuilderFailed("upstream_batch_uri"))
-            .map_err(Error::from)
+            .as_ref()
+            .map(|uri| {
+                uri.build(format_args!("objects/batch"))
+                    .chain_err(ErrorKind::UriBuilderFailed("upstream_batch_uri"))
+                    .map_err(Error::from)
+            })
+            .transpose()
     }
 }
 
@@ -204,14 +217,14 @@ pub struct ServerUris {
     /// The root URL to use when composing URLs for this LFS server
     self_uri: BaseUri,
     /// The URL for an upstream LFS server
-    upstream_uri: BaseUri,
+    upstream_uri: Option<BaseUri>,
 }
 
 impl ServerUris {
-    pub fn new(self_uri: &str, upstream_uri: &str) -> Result<Self, Error> {
+    pub fn new(self_uri: &str, upstream_uri: Option<&str>) -> Result<Self, Error> {
         Ok(Self {
             self_uri: parse_and_check_uri(self_uri)?,
-            upstream_uri: parse_and_check_uri(upstream_uri)?,
+            upstream_uri: upstream_uri.map(parse_and_check_uri).transpose()?,
         })
     }
 }
@@ -264,7 +277,7 @@ mod test {
     }
 
     fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
-        let server = ServerUris::new(self_uri, upstream_uri)?;
+        let server = ServerUris::new(self_uri, Some(upstream_uri))?;
         Ok(UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
@@ -355,8 +368,8 @@ mod test {
     fn test_basic_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com")?;
         assert_eq!(
-            b.upstream_batch_uri()?.to_string(),
-            format!("http://bar.com/objects/batch"),
+            b.upstream_batch_uri()?.map(|uri| uri.to_string()),
+            Some(format!("http://bar.com/objects/batch")),
         );
         Ok(())
     }
@@ -365,8 +378,8 @@ mod test {
     fn test_basic_upstream_batch_uri_slash() -> Result<(), Error> {
         let b = uri_builder("http://foo.com/", "http://bar.com")?;
         assert_eq!(
-            b.upstream_batch_uri()?.to_string(),
-            format!("http://bar.com/objects/batch"),
+            b.upstream_batch_uri()?.map(|uri| uri.to_string()),
+            Some(format!("http://bar.com/objects/batch")),
         );
         Ok(())
     }
@@ -375,8 +388,8 @@ mod test {
     fn test_prefix_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com/foo")?;
         assert_eq!(
-            b.upstream_batch_uri()?.to_string(),
-            format!("http://bar.com/foo/objects/batch"),
+            b.upstream_batch_uri()?.map(|uri| uri.to_string()),
+            Some(format!("http://bar.com/foo/objects/batch")),
         );
         Ok(())
     }
@@ -385,8 +398,8 @@ mod test {
     fn test_prefix_slash_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", "http://bar.com/foo/")?;
         assert_eq!(
-            b.upstream_batch_uri()?.to_string(),
-            format!("http://bar.com/foo/objects/batch"),
+            b.upstream_batch_uri()?.map(|uri| uri.to_string()),
+            Some(format!("http://bar.com/foo/objects/batch")),
         );
         Ok(())
     }

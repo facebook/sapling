@@ -9,9 +9,8 @@ use hyper::StatusCode;
 use failure_ext::Fail;
 
 use mononoke_types::ContentId;
-use std::collections::HashMap;
 
-use crate::protocol::{ObjectAction, Operation, RequestObject, ResponseObject};
+use crate::protocol::{RequestObject, ResponseObject};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -44,11 +43,6 @@ pub enum ErrorKind {
     UpstreamBatchError,
     #[fail(display = "Could not perform upstream upload")]
     UpstreamUploadError,
-    #[fail(
-        display = "Upstream batch response did not include expected actions for {:?}: {:?}",
-        _0, _1
-    )]
-    UpstreamBatchNoActions(RequestObject, HashMap<Operation, ObjectAction>),
     #[fail(display = "Upstream batch response included an invalid transfer")]
     UpstreamInvalidTransfer,
     #[fail(

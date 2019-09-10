@@ -159,7 +159,6 @@ fn main() -> Result<(), Error> {
     .arg(
         Arg::with_name(ARG_UPSTREAM_URL)
             .takes_value(true)
-            .required(true)
             .help("The base URL for an upstream server"),
     );
     let app = args::add_fb303_args(app);
@@ -184,7 +183,7 @@ fn main() -> Result<(), Error> {
 
     let server = ServerUris::new(
         matches.value_of(ARG_SELF_URL).unwrap(),
-        matches.value_of(ARG_UPSTREAM_URL).unwrap(),
+        matches.value_of(ARG_UPSTREAM_URL),
     )?;
 
     let RepoConfigs {
@@ -193,21 +192,24 @@ fn main() -> Result<(), Error> {
         common,
     } = args::read_configs(&matches)?;
 
-    let futs = repos.into_iter().map(|(name, config)| {
-        open_blobrepo(
-            config.storage_config.clone(),
-            RepositoryId::new(config.repoid),
-            myrouter_port,
-            caching,
-            config.bookmarks_cache_ttl,
-            config.redaction,
-            common.scuba_censored_table.clone(),
-            config.filestore.clone(),
-            logger.clone(),
-        )
-        .compat()
-        .map(|repo| repo.map(|repo| (name, repo)))
-    });
+    let futs = repos
+        .into_iter()
+        .filter(|(_name, config)| config.enabled)
+        .map(|(name, config)| {
+            open_blobrepo(
+                config.storage_config.clone(),
+                RepositoryId::new(config.repoid),
+                myrouter_port,
+                caching,
+                config.bookmarks_cache_ttl,
+                config.redaction,
+                common.scuba_censored_table.clone(),
+                config.filestore.clone(),
+                logger.clone(),
+            )
+            .compat()
+            .map(|repo| repo.map(|repo| (name, repo)))
+        });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
 

@@ -48,8 +48,13 @@ pub struct UploadParams {
     size: String,
 }
 
-// NOTE: This will need to be sent to a legacy Tokio executor, so it needs to take ownership of
-// RequestContext.
+async fn discard_stream<S>(data: S) -> Result<(), Error>
+where
+    S: Stream<Item = Result<Bytes, Error>> + Unpin + Send + 'static,
+{
+    Ok(data.for_each(|_| ready(())).await)
+}
+
 async fn upstream_upload<S>(
     ctx: &RequestContext,
     oid: Sha256,
@@ -68,10 +73,18 @@ where
         objects: vec![object],
     };
 
-    let ResponseBatch { transfer, objects } = ctx
+    let res = ctx
         .upstream_batch(&batch)
         .await
         .chain_err(ErrorKind::UpstreamBatchError)?;
+
+    let ResponseBatch { transfer, objects } = match res {
+        Some(res) => res,
+        None => {
+            // We have no upstream: discard this copy.
+            return discard_stream(data).await;
+        }
+    };
 
     let actions: Result<HashMap<Operation, ObjectAction>, Error> = match transfer {
         Transfer::Basic => objects
@@ -88,15 +101,9 @@ where
         Transfer::Unknown => Err(ErrorKind::UpstreamInvalidTransfer.into()),
     };
 
-    let mut actions = actions?;
-
-    if actions.contains_key(&Operation::Download) {
-        // Upstream already has this object, so we just consume our stream and do nothing.
-        return Ok(data.for_each(|_| ready(())).await);
-    }
-
-    if let Some(action) = actions.remove(&Operation::Upload) {
+    if let Some(action) = actions?.remove(&Operation::Upload) {
         // TODO: We are discarding expiry and headers here. We probably shouldn't.
+        // TODO: We are discarding verify actions.
         let ObjectAction { href, .. } = action;
 
         let body = Body::wrap_stream(data.compat());
@@ -117,7 +124,7 @@ where
         return Ok(());
     }
 
-    Err(ErrorKind::UpstreamBatchNoActions(object, actions).into())
+    discard_stream(data).await
 }
 
 pub async fn upload(mut state: State) -> HandlerResponse {
