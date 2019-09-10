@@ -30,7 +30,7 @@ def parse(path):
     return parso.parse(open(path).read())
 
 
-def argspans(nested=0, _cwd=os.getcwd()):
+def argspans(nested=0):
     """Return argument positions of the function being called.
 
     The return value is in this form:
@@ -56,15 +56,7 @@ def argspans(nested=0, _cwd=os.getcwd()):
     If nested is 0, check the function calling `argspans`. If nested is 1, check
     function calling the function calling `argspans`, and so on.
     """
-    frame = inspect.currentframe().f_back  # the function calling argspans()
-    for _i in range(nested):
-        frame = frame.f_back
-    funcname = frame.f_code.co_name
-
-    frame = frame.f_back  # the callsite calling "the function" (funcname)
-    lineno = frame.f_lineno
-
-    path = os.path.realpath(os.path.join(_cwd, frame.f_code.co_filename))
+    path, lineno, funcname = sourcelocation(nested + 1)
 
     def locate(node):
         """Find the node that is the callsite invocation"""
@@ -111,3 +103,15 @@ def argspans(nested=0, _cwd=os.getcwd()):
         indent = node.start_pos[1]
 
     return path, lineno, indent, spans
+
+
+def sourcelocation(nested=0, _cwd=os.getcwd()):
+    """Return (path, lineno, funcname) from Python frames"""
+    frame = inspect.currentframe().f_back  # the function calling argspans()
+    for _i in range(nested):
+        frame = frame.f_back
+    funcname = frame.f_code.co_name
+    frame = frame.f_back  # the callsite calling "the function" (funcname)
+    lineno = frame.f_lineno
+    path = os.path.realpath(os.path.join(_cwd, frame.f_code.co_filename))
+    return path, lineno, funcname

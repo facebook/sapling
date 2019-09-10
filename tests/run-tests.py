@@ -779,6 +779,10 @@ if PYTHON3:
 def getdiff(expected, output, ref, err):
     servefail = False
     lines = []
+    if not expected:
+        # No expected output. Do not run diff but just return the (error)
+        # output directly.
+        return servefail, output
     for line in _unified_diff(
         expected, output, os.path.basename(ref), os.path.basename(err)
     ):

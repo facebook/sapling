@@ -11,7 +11,7 @@
   > EOF
 
   $ python a.py 2>&1 | tail -1
-  AssertionError: 3 != 0
+  a.py:3: 3 != 0
 
   $ python a.py --fix
   $ cat a.py

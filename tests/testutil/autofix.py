@@ -10,7 +10,7 @@ import atexit
 import os
 import sys
 
-from .argspans import argspans, parse
+from .argspans import argspans, parse, sourcelocation
 
 
 def eq(actual, expected, nested=0, eqfunc=None, fixfunc=None):
@@ -78,6 +78,8 @@ def eq(actual, expected, nested=0, eqfunc=None, fixfunc=None):
                 % (expected, actual, os.path.basename(path), lineno)
             )
     else:
+        path, lineno, funcname = sourcelocation(nested)
+        filename = os.path.basename(path)
         if multiline:
             # Show the diff of multi-line content.
             import difflib
@@ -86,13 +88,13 @@ def eq(actual, expected, nested=0, eqfunc=None, fixfunc=None):
                 difflib.unified_diff(
                     (expected + "\n").splitlines(True),
                     (actual + "\n").splitlines(True),
-                    "expected",
-                    "actual",
+                    "%s:%s (expected)" % (filename, lineno),
+                    "%s:%s (actual)" % (filename, lineno),
                 )
             )
-            raise AssertionError("actual != expected\n%s" % diff)
+            raise SystemExit(diff)
         else:
-            raise AssertionError("%r != %r" % (actual, expected))
+            raise SystemExit("%s:%s: %r != %r" % (filename, lineno, actual, expected))
 
 
 def _repr(x, indent=0):
