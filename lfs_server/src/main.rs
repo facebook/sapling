@@ -15,15 +15,18 @@ use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::{
     bind_server,
-    handler::HandlerFuture,
+    handler::{HandlerError, HandlerFuture, IntoHandlerError},
+    helpers::http::response::create_response,
     middleware::{logger::RequestLogger, state::StateMiddleware},
     pipeline::{new_pipeline, single::single_pipeline},
     router::{
         builder::{build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::State,
+    state::{request_id, State},
 };
+use hyper::{Body, Response, StatusCode};
+use mime::Mime;
 use slog::warn;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -38,7 +41,9 @@ use mononoke_types::RepositoryId;
 
 use cmdlib::args;
 
+use crate::http::{git_lfs_mime, HttpError};
 use lfs_server_context::{LfsServerContext, ServerUris};
+use protocol::ResponseError;
 
 mod batch;
 mod download;
@@ -66,17 +71,68 @@ const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 
-// These 3 methods are wrappers to go from async fn's to the implementations Gotham expects.
-fn batch_handler(state: State) -> Box<HandlerFuture> {
-    Box::new(batch::batch(state).boxed().compat())
+async fn build_response(
+    res: Result<(Body, Mime), HttpError>,
+    state: State,
+) -> Result<(State, Response<Body>), (State, HandlerError)> {
+    match res {
+        Ok((body, mime)) => {
+            let res = create_response(&state, StatusCode::OK, mime, body);
+            Ok((state, res))
+        }
+        Err(error) => {
+            let HttpError { error, status_code } = error;
+
+            let res = ResponseError {
+                message: error.to_string(),
+                documentation_url: None,
+                request_id: Some(request_id(&state).to_string()),
+            };
+
+            // Bail if we can't convert the response to json.
+            let res = match serde_json::to_string(&res) {
+                Ok(res) => create_response(&state, status_code, git_lfs_mime(), res),
+                Err(error) => return Err((state, error.into_handler_error())),
+            };
+
+            Ok((state, res))
+        }
+    }
 }
 
-fn download_handler(state: State) -> Box<HandlerFuture> {
-    Box::new(download::download(state).boxed().compat())
+// These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
+// as well as creating HTTP responses using build_response().
+fn batch_handler(mut state: State) -> Box<HandlerFuture> {
+    Box::new(
+        (async move || {
+            let res = batch::batch(&mut state).await;
+            build_response(res, state).await
+        })()
+        .boxed()
+        .compat(),
+    )
 }
 
-fn upload_handler(state: State) -> Box<HandlerFuture> {
-    Box::new(upload::upload(state).boxed().compat())
+fn download_handler(mut state: State) -> Box<HandlerFuture> {
+    Box::new(
+        (async move || {
+            let res = download::download(&mut state).await;
+            build_response(res, state).await
+        })()
+        .boxed()
+        .compat(),
+    )
+}
+
+fn upload_handler(mut state: State) -> Box<HandlerFuture> {
+    Box::new(
+        (async move || {
+            let res = upload::upload(&mut state).await;
+            build_response(res, state).await
+        })()
+        .boxed()
+        .compat(),
+    )
 }
 
 fn health_handler(state: State) -> (State, &'static str) {

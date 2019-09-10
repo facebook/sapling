@@ -11,13 +11,10 @@ use futures_preview::{
     SinkExt, Stream, StreamExt, TryStreamExt,
 };
 use futures_util::try_join;
-use gotham::{
-    handler::IntoHandlerError,
-    helpers::http::response::create_empty_response,
-    state::{FromState, State},
-};
+use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use hyper::{Body, Chunk, Request, StatusCode};
+use hyper::{Body, Chunk, Request};
+use mime::Mime;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::result::Result;
@@ -28,13 +25,11 @@ use filestore::StoreRequest;
 use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, HandlerResponse};
+use crate::http::HttpError;
 use crate::lfs_server_context::RequestContext;
 use crate::protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseError, Transfer,
+    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
 };
-use crate::{bail_http_400, bail_http_500};
 
 // Small buffers for Filestore & Dewey
 const BUFFER_SIZE: usize = 5;
@@ -127,19 +122,17 @@ where
     discard_stream(data).await
 }
 
-pub async fn upload(mut state: State) -> HandlerResponse {
+pub async fn upload(state: &mut State) -> Result<(Body, Mime), HttpError> {
     let UploadParams {
         repository,
         oid,
         size,
-    } = UploadParams::borrow_from(&state);
+    } = UploadParams::borrow_from(state);
 
-    let ctx = bail_http_400!(
-        state,
-        RequestContext::instantiate(&state, repository.clone())
-    );
-    let oid = bail_http_400!(state, Sha256::from_str(&oid));
-    let size = bail_http_400!(state, size.parse().map_err(Error::from));
+    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
+
+    let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
+    let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
 
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
     let (upstream_send, upstream_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
@@ -165,7 +158,7 @@ pub async fn upload(mut state: State) -> HandlerResponse {
 
     let upstream_upload = upstream_upload(&ctx, oid, size, upstream_recv);
 
-    let mut data = Body::take_from(&mut state)
+    let mut data = Body::take_from(state)
         .compat()
         .map_ok(Chunk::into_bytes)
         .map_err(|_| ());
@@ -186,11 +179,7 @@ pub async fn upload(mut state: State) -> HandlerResponse {
         Ok(())
     })();
 
-    bail_http_500!(
-        state,
-        try_join!(internal_upload, upstream_upload, consume_stream)
-    );
+    try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500)?;
 
-    let res = create_empty_response(&state, StatusCode::OK);
-    Ok((state, res))
+    Ok((Body::empty(), mime::APPLICATION_OCTET_STREAM))
 }

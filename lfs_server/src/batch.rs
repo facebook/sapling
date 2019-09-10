@@ -7,14 +7,11 @@
 use failure::Error;
 use futures_preview::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
 use futures_util::{try_future::try_join_all, try_join};
-use gotham::{
-    handler::IntoHandlerError,
-    helpers::http::response::create_response,
-    state::{FromState, State},
-};
+use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
+use mime::Mime;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -24,13 +21,12 @@ use filestore::Alias;
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, HandlerResponse};
+use crate::http::{git_lfs_mime, HttpError};
 use crate::lfs_server_context::{RequestContext, UriBuilder};
 use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseError, ResponseObject, Transfer,
+    ResponseObject, Transfer,
 };
-use crate::{bail_http, bail_http_400, bail_http_500};
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct BatchParams {
@@ -283,32 +279,29 @@ async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<Res
 }
 
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
-pub async fn batch(mut state: State) -> HandlerResponse {
-    let BatchParams { repository } = BatchParams::borrow_from(&state);
+pub async fn batch(state: &mut State) -> Result<(Body, Mime), HttpError> {
+    let BatchParams { repository } = BatchParams::borrow_from(state);
 
-    let ctx = bail_http_400!(
-        state,
-        RequestContext::instantiate(&state, repository.clone())
-    );
+    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
 
-    let body = bail_http_400!(
-        state,
-        Body::take_from(&mut state).compat().try_concat().await
-    );
-    let body = body.into_bytes();
+    let body = Body::take_from(state)
+        .compat()
+        .try_concat()
+        .await
+        .map_err(HttpError::e400)?
+        .into_bytes();
 
-    let request_batch = bail_http_400!(state, serde_json::from_slice::<RequestBatch>(&body));
+    let request_batch = serde_json::from_slice::<RequestBatch>(&body).map_err(HttpError::e400)?;
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,
         Operation::Download => batch_download(&ctx, request_batch).await,
     };
 
-    let res = bail_http!(state, StatusCode::BAD_GATEWAY, res);
-    let res = bail_http_500!(state, serde_json::to_string(&res));
+    let res = res.map_err(HttpError::e502)?;
+    let body = serde_json::to_string(&res).map_err(HttpError::e500)?;
 
-    let res = create_response(&state, StatusCode::OK, git_lfs_mime(), res);
-    Ok((state, res))
+    Ok((body.into(), git_lfs_mime()))
 }
 
 #[cfg(test)]

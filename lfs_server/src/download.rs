@@ -5,13 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 use futures_preview::compat::Future01CompatExt;
-use gotham::{
-    handler::IntoHandlerError,
-    helpers::http::response::create_response,
-    state::{FromState, State},
-};
+use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use hyper::{Body, StatusCode};
+use hyper::Body;
 use mime;
 use serde::Deserialize;
 
@@ -19,10 +15,8 @@ use filestore::{self, FetchKey};
 use mononoke_types::ContentId;
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, HandlerResponse};
+use crate::http::HttpError;
 use crate::lfs_server_context::RequestContext;
-use crate::protocol::ResponseError;
-use crate::{bail_http_400, bail_http_404, bail_http_500};
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct DownloadParams {
@@ -30,17 +24,15 @@ pub struct DownloadParams {
     content_id: String,
 }
 
-pub async fn download(state: State) -> HandlerResponse {
+pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError> {
     let DownloadParams {
         repository,
         content_id,
-    } = DownloadParams::borrow_from(&state);
+    } = DownloadParams::borrow_from(state);
 
-    let ctx = bail_http_400!(
-        state,
-        RequestContext::instantiate(&state, repository.clone())
-    );
-    let content_id = bail_http_400!(state, ContentId::from_str(&content_id));
+    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
+
+    let content_id = ContentId::from_str(&content_id).map_err(HttpError::e400)?;
 
     // Query a stream out of the Filestore
     let stream = filestore::fetch(
@@ -49,17 +41,16 @@ pub async fn download(state: State) -> HandlerResponse {
         &FetchKey::Canonical(content_id),
     )
     .compat()
-    .await;
-    let stream = bail_http_500!(state, stream);
+    .await
+    .map_err(HttpError::e500)?;
 
     // Return a 404 if the stream doesn't exist.
-    let stream = stream.ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id));
-    let stream = bail_http_404!(state, stream);
+    let stream = stream
+        .ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id))
+        .map_err(HttpError::e404)?;
 
-    // Got a stream, let's return!
     // NOTE: This is a Futures 0.1 stream ... which is what Hyper wants here (for now).
     let body = Body::wrap_stream(stream);
-    let res = create_response(&state, StatusCode::OK, mime::APPLICATION_OCTET_STREAM, body);
 
-    Ok((state, res))
+    Ok((body, mime::APPLICATION_OCTET_STREAM))
 }
