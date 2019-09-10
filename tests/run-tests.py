@@ -395,7 +395,11 @@ def getparser():
         help="prompt to accept changed output",
     )
     harness.add_argument(
-        "-u", "--update-output", action="store_true", help="update test outputs"
+        "-u",
+        "--update-output",
+        "--fix",
+        action="store_true",
+        help="update test outputs",
     )
     harness.add_argument(
         "-j",
@@ -974,6 +978,7 @@ class Test(unittest.TestCase):
         usechg=False,
         useipv6=False,
         watchman=None,
+        options=None,
     ):
         """Create a test from parameters.
 
@@ -1037,6 +1042,7 @@ class Test(unittest.TestCase):
         self._usechg = usechg
         self._useipv6 = useipv6
         self._watchman = watchman
+        self._options = options
 
         self._aborted = False
         self._daemonpids = []
@@ -1661,6 +1667,9 @@ class PythonTest(Test):
     def _run(self, env):
         py3kswitch = self._py3kwarnings and b" -3" or b""
         cmd = b'%s%s "%s"' % (PYTHON, py3kswitch, self.path)
+        if self._options.interactive and self._isdotttest():
+            # --fix is picked up by testutil.autofix, which will autofix the test.
+            cmd += " --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
         result = self._runcommand(cmd, env, normalizenewlines=normalizenewlines)
@@ -1668,6 +1677,12 @@ class PythonTest(Test):
             raise KeyboardInterrupt()
 
         return result[0], self._processoutput(result[1])
+
+    def _isdotttest(self):
+        """Returns true if the test is using testutil.dott"""
+        # Make it simple. Just test from filename.
+        # A more accurate way is to check the file content.
+        return self.bname.endswith(b"-t.py")
 
 
 # Some glob patterns apply only in some circumstances, so the script
@@ -3591,6 +3606,7 @@ class TestRunner(object):
             usechg=bool(self.options.with_chg or self.options.chg),
             useipv6=useipv6,
             watchman=self._watchman,
+            options=self.options,
             **kwds
         )
         t.should_reload = True
