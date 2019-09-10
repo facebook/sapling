@@ -98,7 +98,7 @@ use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::localstore::LocalStore;
-use crate::repack::{IterableStore, RepackOutputType, Repackable};
+use crate::repack::{IterableStore, Repackable};
 use crate::sliceext::SliceExt;
 use crate::vfs::remove_file;
 
@@ -378,14 +378,6 @@ impl Repackable for HistoryPack {
         result1?;
         result2?;
         Ok(())
-    }
-
-    fn id(&self) -> &Arc<PathBuf> {
-        &self.base_path
-    }
-
-    fn kind(&self) -> RepackOutputType {
-        RepackOutputType::History
     }
 }
 

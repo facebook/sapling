@@ -4,10 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    collections::HashSet,
     fs,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use failure::{format_err, Error, Fail, Fallible};
@@ -23,73 +21,12 @@ use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum RepackOutputType {
-    Data,
-    History,
-}
-
 pub trait IterableStore {
     fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a>;
 }
 
-pub struct RepackResult {
-    packed_keys: HashSet<Key>,
-    created_packs: HashSet<PathBuf>,
-}
-
-impl RepackResult {
-    // new() should probably be crate-local, since the repack implementation is the only thing that
-    // constructs it. But the python integration layer currently needs to construct this, so it
-    // needs to be externally public for now.
-    pub fn new(packed_keys: HashSet<Key>, created_packs: HashSet<PathBuf>) -> Self {
-        RepackResult {
-            packed_keys,
-            created_packs,
-        }
-    }
-
-    /// Returns the set of created pack files. The paths do not include the .pack/.idx suffixes.
-    pub fn created_packs(&self) -> &HashSet<PathBuf> {
-        &self.created_packs
-    }
-
-    pub fn packed_keys(&self) -> &HashSet<Key> {
-        &self.packed_keys
-    }
-}
-
-pub trait Repackable: IterableStore {
+pub trait Repackable {
     fn delete(self) -> Fallible<()>;
-    fn id(&self) -> &Arc<PathBuf>;
-    fn kind(&self) -> RepackOutputType;
-
-    /// An iterator containing every key in the store, and identifying information for where it
-    /// came from and what type it is (data vs history).
-    fn repack_iter<'a>(
-        &'a self,
-    ) -> Box<dyn Iterator<Item = Fallible<(Arc<PathBuf>, RepackOutputType, Key)>> + 'a> {
-        let id = self.id().clone();
-        let kind = self.kind().clone();
-        Box::new(
-            self.iter()
-                .map(move |k| k.map(|k| (id.clone(), kind.clone(), k))),
-        )
-    }
-
-    fn cleanup(self, result: &RepackResult) -> Fallible<()>
-    where
-        Self: Sized,
-    {
-        let owned_keys = self.iter().collect::<Fallible<HashSet<Key>>>()?;
-        if owned_keys.is_subset(result.packed_keys())
-            && !result.created_packs().contains(self.id().as_ref())
-        {
-            self.delete()?;
-        }
-
-        Ok(())
-    }
 }
 
 fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fallible<()> {
@@ -120,7 +57,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable>(
+fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + IterableStore>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Fallible<()>,
@@ -308,105 +245,12 @@ mod tests {
         collections::HashMap,
         fs::{set_permissions, OpenOptions},
         io::Write,
-        rc::Rc,
-        sync::atomic::{AtomicBool, Ordering},
     };
 
     use crate::datapack::tests::make_datapack;
     use crate::datastore::Delta;
     use crate::historypack::tests::{get_nodes, make_historypack};
     use crate::historystore::Ancestors;
-
-    #[derive(Clone)]
-    struct FakeStore {
-        pub kind: RepackOutputType,
-        pub id: Arc<PathBuf>,
-        pub keys: Vec<Key>,
-        pub deleted: Rc<AtomicBool>,
-    }
-
-    impl IterableStore for FakeStore {
-        fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
-            Box::new(self.keys.iter().map(|k| Ok(k.clone())))
-        }
-    }
-
-    impl Repackable for FakeStore {
-        fn delete(self) -> Fallible<()> {
-            self.deleted.store(true, Ordering::Release);
-            Ok(())
-        }
-
-        fn id(&self) -> &Arc<PathBuf> {
-            &self.id
-        }
-
-        fn kind(&self) -> RepackOutputType {
-            self.kind.clone()
-        }
-    }
-
-    #[test]
-    fn test_repackable() {
-        let is_deleted = Rc::new(AtomicBool::new(false));
-        let store = FakeStore {
-            kind: RepackOutputType::Data,
-            id: Arc::new(PathBuf::from("foo/bar")),
-            keys: vec![key("a", "1"), key("b", "2")],
-            deleted: is_deleted.clone(),
-        };
-
-        let mut marked: Vec<(Arc<PathBuf>, RepackOutputType, Key)> = vec![];
-        for entry in store.repack_iter() {
-            marked.push(entry.unwrap());
-        }
-        assert_eq!(
-            marked,
-            vec![
-                (store.id.clone(), store.kind.clone(), store.keys[0].clone()),
-                (store.id.clone(), store.kind.clone(), store.keys[1].clone()),
-            ]
-        );
-
-        let store2 = store.clone();
-
-        // Test cleanup where the pack, testutil::*ed keys don't some store keys
-        let mut packed_keys = HashSet::new();
-        packed_keys.insert(store.keys[0].clone());
-        let mut created_packs = HashSet::new();
-        store
-            .cleanup(&RepackResult::new(
-                packed_keys.clone(),
-                created_packs.clone(),
-            ))
-            .unwrap();
-        assert_eq!(is_deleted.load(Ordering::Acquire), false);
-
-        let store = store2.clone();
-
-        // Test cleanup where all keys are packe but created includes this store
-        packed_keys.insert(store.keys[1].clone());
-        created_packs.insert(store.id().to_path_buf());
-        store
-            .cleanup(&RepackResult::new(
-                packed_keys.clone(),
-                created_packs.clone(),
-            ))
-            .unwrap();
-        assert_eq!(is_deleted.load(Ordering::Acquire), false);
-
-        let store = store2.clone();
-
-        // Test cleanup where all keys are packed and created doesn't include this store
-        created_packs.clear();
-        store
-            .cleanup(&RepackResult::new(
-                packed_keys.clone(),
-                created_packs.clone(),
-            ))
-            .unwrap();
-        assert_eq!(is_deleted.load(Ordering::Acquire), true);
-    }
 
     #[test]
     fn test_repack_no_datapack() {
