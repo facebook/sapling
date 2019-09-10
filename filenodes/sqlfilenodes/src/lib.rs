@@ -14,7 +14,7 @@ mod errors;
 
 use crate::failure::prelude::*;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
@@ -327,30 +327,36 @@ impl SqlFilenodes {
 impl Filenodes for SqlFilenodes {
     fn add_filenodes(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         filenodes: BoxStream<FilenodeInfo, Error>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlInserts);
         self.do_insert(filenodes, repo_id, false)
     }
 
     fn add_or_replace_filenodes(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         filenodes: BoxStream<FilenodeInfo, Error>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlInserts);
         self.do_insert(filenodes, repo_id, true)
     }
 
     fn get_filenode(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         path: &RepoPath,
         filenode: HgFileNodeId,
         repo_id: RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlGetsReplica);
         cloned!(self.read_master_connection, path, filenode, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
@@ -359,6 +365,8 @@ impl Filenodes for SqlFilenodes {
                 Some(filenode_info) => Ok(Some(filenode_info)).into_future().boxify(),
                 None => {
                     STATS::gets_master.add_value(1);
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlGetsMaster);
                     select_filenode(
                         read_master_connection.clone(),
                         &path,
@@ -373,11 +381,13 @@ impl Filenodes for SqlFilenodes {
 
     fn get_all_filenodes_maybe_stale(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::range_gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlGetsReplica);
         cloned!(self.read_connection, path, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 

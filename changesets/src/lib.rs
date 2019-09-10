@@ -9,7 +9,7 @@
 use abomonation_derive::Abomonation;
 use bytes::Bytes;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::{future::ok, stream, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize_derive::HeapSizeOf;
@@ -223,8 +223,11 @@ impl SqlConstructors for SqlChangesets {
 }
 
 impl Changesets for SqlChangesets {
-    fn add(&self, _ctxt: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlInserts);
+
         cloned!(self.write_connection);
 
         let parent_rows = {
@@ -277,11 +280,13 @@ impl Changesets for SqlChangesets {
 
     fn get(
         &self,
-        _ctxt: CoreContext,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlGetsReplica);
         cloned!(self.read_master_connection);
 
         select_changeset(&self.read_connection, repo_id, cs_id)
@@ -289,6 +294,8 @@ impl Changesets for SqlChangesets {
                 Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
                 None => {
                     STATS::gets_master.add_value(1);
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlGetsMaster);
                     select_changeset(&read_master_connection, repo_id, cs_id)
                 }
             })
@@ -297,7 +304,7 @@ impl Changesets for SqlChangesets {
 
     fn get_many(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
@@ -307,6 +314,8 @@ impl Changesets for SqlChangesets {
             ok(vec![]).boxify()
         } else {
             STATS::get_many.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlGetsReplica);
 
             select_many_changesets(&self.read_connection, repo_id, &cs_ids)
                 .and_then(move |fetched_cs| {
@@ -324,6 +333,8 @@ impl Changesets for SqlChangesets {
                         ok(fetched_cs).left_future()
                     } else {
                         STATS::get_many.add_value(1);
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::SqlGetsMaster);
                         select_many_changesets(&read_master_connection, repo_id, &notfetched_cs_ids)
                             .map(move |mut master_fetched_cs| {
                                 master_fetched_cs.extend(fetched_cs);

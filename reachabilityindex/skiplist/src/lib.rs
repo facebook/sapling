@@ -12,7 +12,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use failure_ext::{Error, Result};
 use futures::future::{join_all, loop_fn, ok, Future, Loop};
 use futures::IntoFuture;
@@ -474,9 +474,11 @@ impl ReachabilityIndex for SkiplistIndex {
             ))
             .and_then(move |((desc_hash, desc_gen), (anc_hash, anc_gen))| {
                 ctx.perf_counters()
-                    .set_counter("ancestor_gen", anc_gen.value() as i64);
-                ctx.perf_counters()
-                    .set_counter("descendant_gen", desc_gen.value() as i64);
+                    .set_counter(PerfCounterType::SkiplistAncestorGen, anc_gen.value() as i64);
+                ctx.perf_counters().set_counter(
+                    PerfCounterType::SkiplistDescendantGen,
+                    desc_gen.value() as i64,
+                );
 
                 process_frontier(
                     ctx.clone(),
@@ -563,12 +565,14 @@ fn process_frontier(
                     max_gen,
                 );
                 if skipped_frontier.len() == 0 {
-                    ctx.perf_counters().increment_counter("noskip_iterations");
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SkiplistNoskipIterations);
                 } else {
-                    ctx.perf_counters().increment_counter("skip_iterations");
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SkiplistSkipIterations);
                     if let Some(new) = skipped_frontier.max_gen() {
                         ctx.perf_counters().add_to_counter(
-                            "skipped_generations",
+                            PerfCounterType::SkiplistSkippedGenerations,
                             (val.value() - new.value()) as i64,
                         );
                     }

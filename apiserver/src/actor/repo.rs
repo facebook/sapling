@@ -837,9 +837,7 @@ fn log_result(
     query: &serde_json::value::Value,
 ) {
     if !ctx.perf_counters().is_empty() {
-        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-            scuba.add("extra_context", counters);
-        };
+        ctx.perf_counters().insert_perf_counters(&mut scuba);
     }
 
     let server_error = match resp {

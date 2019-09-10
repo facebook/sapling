@@ -11,7 +11,7 @@ use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
-use context::{CoreContext, Metric};
+use context::{CoreContext, Metric, PerfCounterType};
 use failure::{err_msg, format_err};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
@@ -279,10 +279,9 @@ impl WireprotoLogger {
         self.scuba_logger.add(args_name, &args[..limit]);
     }
 
-    fn add_perf_counters_from_ctx(&mut self, key: &str, ctx: CoreContext) {
-        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-            self.add_trimmed_scuba_field(key, counters);
-        }
+    fn add_perf_counters_from_ctx(&mut self, ctx: CoreContext) {
+        ctx.perf_counters()
+            .insert_perf_counters(&mut self.scuba_logger);
     }
 
     fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats, ctx: CoreContext) {
@@ -466,7 +465,7 @@ impl RepoClient {
                 let blobrepo = self.repo.blobrepo().clone();
                 move |(entry, basepath)| {
                     ctx.perf_counters()
-                        .increment_counter("gettreepack_num_treepacks");
+                        .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
                     ctx.bump_load(Metric::EgressTotalManifests, 1.0);
                     STATS::total_tree_count.add_value(1);
@@ -612,8 +611,10 @@ impl RepoClient {
                         });
                         for (filenode, content, metadata) in contents {
                             let content = content.to_vec();
-                            ctx.perf_counters()
-                                .set_max_counter("getpack_max_file_size", content.len() as i64);
+                            ctx.perf_counters().set_max_counter(
+                                PerfCounterType::GetpackMaxFileSize,
+                                content.len() as i64,
+                            );
                             res.push(wirepack::Part::Data(wirepack::DataEntry {
                                 node: filenode.into_nodehash(),
                                 delta_base: NULL_HASH,
@@ -634,7 +635,7 @@ impl RepoClient {
                     move |bytes| {
                         let len = bytes.len() as i64;
                         ctx.perf_counters()
-                            .add_to_counter("getpack_response_size", len);
+                            .add_to_counter(PerfCounterType::GetpackResponseSize, len);
 
                         STATS::total_fetched_file_size.add_value(len as i64);
                         if ctx.is_quicksand() {
@@ -663,11 +664,13 @@ impl RepoClient {
                             encoded_params
                         };
 
-                        ctx.perf_counters()
-                            .add_to_counter("getpack_num_files", encoded_params.len() as i64);
+                        ctx.perf_counters().add_to_counter(
+                            PerfCounterType::GetpackNumFiles,
+                            encoded_params.len() as i64,
+                        );
 
                         wireproto_logger.set_args(Some(json! {encoded_params}));
-                        wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                        wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
                         wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                         Ok(())
                     }
@@ -1099,7 +1102,7 @@ impl HgCommands for RepoClient {
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+            wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
             wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
             Ok(())
         })
@@ -1280,9 +1283,8 @@ impl HgCommands for RepoClient {
                     .map_err(process_timeout_error)
                     .traced(client.ctx.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
-                        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-                            scuba_logger.add("extra_context", counters);
-                        }
+                        ctx.perf_counters().insert_perf_counters(&mut scuba_logger);
+
                         scuba_logger
                             .add_future_stats(&stats)
                             .log_with_msg("Command processed", None);
@@ -1311,8 +1313,10 @@ impl HgCommands for RepoClient {
             .inspect({
                 cloned!(self.ctx);
                 move |bytes| {
-                    ctx.perf_counters()
-                        .add_to_counter("gettreepack_response_size", bytes.len() as i64);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::GettreepackResponseSize,
+                        bytes.len() as i64,
+                    );
                     STATS::total_tree_size.add_value(bytes.len() as i64);
                     if ctx.is_quicksand() {
                         STATS::quicksand_tree_size.add_value(bytes.len() as i64);
@@ -1324,7 +1328,7 @@ impl HgCommands for RepoClient {
                 move |stats, _| {
                     STATS::gettreepack_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
                     wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                     Ok(())
                 }
@@ -1387,8 +1391,10 @@ impl HgCommands for RepoClient {
                                     .add_value(stats.completion_time.as_millis_unchecked() as i64);
                                 let completion_time =
                                     stats.completion_time.as_millis_unchecked() as i64;
-                                ctx.perf_counters()
-                                    .set_max_counter("getfiles_max_latency", completion_time);
+                                ctx.perf_counters().set_max_counter(
+                                    PerfCounterType::GetfilesMaxLatency,
+                                    completion_time,
+                                );
                                 Ok(())
                             }
                         })
@@ -1400,9 +1406,9 @@ impl HgCommands for RepoClient {
                     move |bytes| {
                         let len = bytes.len() as i64;
                         ctx.perf_counters()
-                            .add_to_counter("getfiles_response_size", len);
+                            .add_to_counter(PerfCounterType::GetfilesResponseSize, len);
                         ctx.perf_counters()
-                            .set_max_counter("getfiles_max_file_size", len);
+                            .set_max_counter(PerfCounterType::GetfilesMaxFileSize, len);
 
                         STATS::total_fetched_file_size.add_value(len as i64);
                         if ctx.is_quicksand() {
@@ -1428,10 +1434,10 @@ impl HgCommands for RepoClient {
                         };
 
                         ctx.perf_counters()
-                            .add_to_counter("getfiles_num_files", stats.count as i64);
+                            .add_to_counter(PerfCounterType::GetfilesNumFiles, stats.count as i64);
 
                         wireproto_logger.set_args(Some(json! {encoded_params}));
-                        wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                        wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
                         wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                         Ok(())
                     }
@@ -1474,7 +1480,7 @@ impl HgCommands for RepoClient {
                                 let ctx = ctx.clone();
                                 move |stats, _| {
                                     ctx.perf_counters().add_to_counter(
-                                        "sum_manifold_poll_time",
+                                        PerfCounterType::SumManifoldPollTime,
                                         stats.poll_time.as_nanos_unchecked() as i64,
                                     );
                                     Ok(())
@@ -1491,7 +1497,7 @@ impl HgCommands for RepoClient {
                                 let ctx = ctx.clone();
                                 move |stats, _| {
                                     ctx.perf_counters().add_to_counter(
-                                        "sum_manifold_poll_time",
+                                        PerfCounterType::SumManifoldPollTime,
                                         stats.poll_time.as_nanos_unchecked() as i64,
                                     );
                                     Ok(())
@@ -1558,7 +1564,7 @@ impl HgCommands for RepoClient {
             .timed({
                 let ctx = self.ctx.clone();
                 move |stats, _| {
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
                     wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                     Ok(())
                 }

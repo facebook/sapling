@@ -11,7 +11,7 @@ use failure_ext::Error;
 use fbwhoami::FbWhoAmI;
 use limits::types::MononokeThrottleLimit;
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
-use serde::{Serialize, Serializer};
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
@@ -147,20 +147,79 @@ pub struct CoreContext {
     inner: Arc<Inner>,
 }
 
+macro_rules! enum_str {
+    (enum $name:ident {
+        $($variant:ident),*,
+    }) => {
+        #[derive(Debug, Clone, PartialEq, Hash)]
+        pub enum $name {
+            $($variant),*
+        }
+
+        impl $name {
+            pub fn name(&self) -> &'static str {
+                match self {
+                    $($name::$variant => stringify!($variant)),*
+                }
+            }
+        }
+    };
+}
+
+enum_str! {
+    enum PerfCounterType {
+        BlobstoreGets,
+        BlobstoreGetsMaxLatency,
+        BlobstorePresenceChecks,
+        BlobstorePresenceChecksMaxLatency,
+        BlobstorePuts,
+        BlobstorePutsMaxLatency,
+        GetbundleNumCommits,
+        GetfilesMaxFileSize,
+        GetfilesMaxLatency,
+        GetfilesNumFiles,
+        GetfilesResponseSize,
+        GettreepackResponseSize,
+        GettreepackNumTreepacks,
+        GetpackMaxFileSize,
+        GetpackNumFiles,
+        GetpackResponseSize,
+        SkiplistAncestorGen,
+        SkiplistDescendantGen,
+        SkiplistNoskipIterations,
+        SkiplistSkipIterations,
+        SkiplistSkippedGenerations,
+        SumManifoldPollTime,
+        SqlGetsReplica,
+        SqlGetsMaster,
+        SqlInserts,
+    }
+}
+
+impl PerfCounterType {
+    pub(crate) fn log_in_separate_column(&self) -> bool {
+        use PerfCounterType::*;
+
+        match self {
+            BlobstoreGets
+            | BlobstoreGetsMaxLatency
+            | BlobstorePresenceChecks
+            | BlobstorePresenceChecksMaxLatency
+            | BlobstorePuts
+            | BlobstorePutsMaxLatency
+            | SqlGetsReplica
+            | SqlGetsMaster
+            | SqlInserts => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PerfCounters {
     // A wrapper around a concurrent HashMap that allows for
     // tracking of arbitrary counters.
-    counters: CHashMap<&'static str, i64>,
-}
-
-impl Serialize for PerfCounters {
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.collect_map(self.counters.clone().into_iter())
-    }
+    counters: CHashMap<PerfCounterType, i64>,
 }
 
 impl PerfCounters {
@@ -170,39 +229,56 @@ impl PerfCounters {
         }
     }
 
-    pub fn change_counter<F>(&self, name: &'static str, default: i64, update: F)
+    pub fn change_counter<F>(&self, counter: PerfCounterType, default: i64, update: F)
     where
         F: FnOnce(&mut i64),
     {
-        self.counters.upsert(name, || default, update);
+        self.counters.upsert(counter, || default, update);
     }
 
-    pub fn set_counter(&self, name: &'static str, val: i64) {
-        self.counters.insert(name, val);
+    pub fn set_counter(&self, counter: PerfCounterType, val: i64) {
+        self.counters.insert(counter, val);
     }
 
-    pub fn increment_counter(&self, name: &'static str) {
-        self.add_to_counter(name, 1);
+    pub fn increment_counter(&self, counter: PerfCounterType) {
+        self.add_to_counter(counter, 1);
     }
 
-    pub fn decrement_counter(&self, name: &'static str) {
-        self.add_to_counter(name, -1);
+    pub fn decrement_counter(&self, counter: PerfCounterType) {
+        self.add_to_counter(counter, -1);
     }
 
-    pub fn add_to_counter(&self, name: &'static str, val: i64) {
-        self.change_counter(name, val, |old| *old += val);
+    pub fn add_to_counter(&self, counter: PerfCounterType, val: i64) {
+        self.change_counter(counter, val, |old| *old += val);
     }
 
     pub fn is_empty(&self) -> bool {
         self.counters.is_empty()
     }
 
-    pub fn set_max_counter(&self, name: &'static str, val: i64) {
-        self.change_counter(name, val, |old| {
+    pub fn set_max_counter(&self, counter: PerfCounterType, val: i64) {
+        self.change_counter(counter, val, |old| {
             if val > *old {
                 *old = val
             }
         });
+    }
+
+    pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
+        let mut extra = HashMap::new();
+        for (key, value) in self.counters.clone().into_iter() {
+            if key.log_in_separate_column() {
+                builder.add(key.name(), format!("{}", value));
+            } else {
+                extra.insert(key.name(), value);
+            }
+        }
+
+        if let Ok(extra) = serde_json::to_string(&extra) {
+            // Scuba does not support columns that are too long, we have to trim it
+            let limit = ::std::cmp::min(extra.len(), 1000);
+            builder.add("extra_context", &extra[..limit]);
+        }
     }
 }
 

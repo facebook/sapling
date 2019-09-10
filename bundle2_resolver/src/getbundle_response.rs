@@ -8,7 +8,7 @@ use crate::errors::*;
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cloned::cloned;
-use context::{CoreContext, Metric};
+use context::{CoreContext, Metric, PerfCounterType};
 use failure::err_msg;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
@@ -98,7 +98,7 @@ pub fn create_getbundle_response(
             move |nodes| {
                 ctx.bump_load(Metric::EgressCommits, 1.0);
                 ctx.perf_counters()
-                    .add_to_counter("getbundle_num_commits", nodes.len() as i64);
+                    .add_to_counter(PerfCounterType::GetbundleNumCommits, nodes.len() as i64);
             }
         })
         .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))

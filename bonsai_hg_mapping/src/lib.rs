@@ -14,7 +14,7 @@ pub use sql_ext::SqlConstructors;
 
 use abomonation_derive::Abomonation;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use failure_ext as failure;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -253,8 +253,10 @@ impl SqlBonsaiHgMapping {
 }
 
 impl BonsaiHgMapping for SqlBonsaiHgMapping {
-    fn add(&self, _ctxt: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlInserts);
 
         let BonsaiHgMappingEntry {
             repo_id,
@@ -278,11 +280,13 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 
     fn get(
         &self,
-        _ctxt: CoreContext,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         ids: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlGetsReplica);
         cloned!(self.read_master_connection);
 
         select_mapping(&self.read_connection, repo_id, &ids)
@@ -293,6 +297,8 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                     Ok(mappings).into_future().left_future()
                 } else {
                     STATS::gets_master.add_value(1);
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlGetsMaster);
                     select_mapping(&read_master_connection, repo_id, &left_to_fetch)
                         .map(move |mut master_mappings| {
                             mappings.append(&mut master_mappings);
