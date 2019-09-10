@@ -597,6 +597,9 @@ class remotefileslog(filelog.fileslog):
 
         self.loosefilewritestore = localcontent
 
+        self.localcontentstore = unioncontentstore(*self.localdatastores)
+        self.localmetadatastore = unionmetadatastore(*self.localhistorystores)
+
         fileservicedatawrite = cachecontent
         fileservicehistorywrite = cachemetadata
         repo.fileservice.setstore(

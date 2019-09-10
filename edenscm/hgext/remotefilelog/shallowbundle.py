@@ -254,11 +254,9 @@ class shallowcg1packer(changegroup.cg1packer):
                     for fnode, cnode in list(linkrevnodes.iteritems()):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            localkey = fileserverclient.getlocalkey(fname, hex(fnode))
-                            localpath = repo.sjoin(os.path.join("data", localkey))
-                            if not os.path.exists(localpath) and repo.shallowmatch(
-                                fname
-                            ):
+                            if repo.fileslog.localcontentstore.getmissing(
+                                [(fname, fnode)]
+                            ) != [] and repo.shallowmatch(fname):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))
