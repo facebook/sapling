@@ -30,7 +30,6 @@ use crate::revisionstore::historystorepyext::{
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythonutil::to_pyerr;
-use crate::revisionstore::repackablepyext::RepackablePyExt;
 
 mod datastorepyext;
 mod historystorepyext;
@@ -134,16 +133,6 @@ fn incremental_repackhist(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> 
     })
 }
 
-fn is_looseonly_repack(py: Python, options: &PyDict) -> bool {
-    if let Some(loose) = options.get_item(py, "looseonly") {
-        if let Ok(value) = loose.extract::<PyBool>(py) {
-            return value.is_true();
-        }
-    }
-
-    return false;
-}
-
 py_class!(class datapack |py| {
     data store: PyOptionalRefCell<Box<DataPack>>;
 
@@ -205,17 +194,8 @@ py_class!(class datapack |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def markledger(&self, ledger: &PyObject, options: &PyDict) -> PyResult<PyObject> {
-        if !is_looseonly_repack(py, options) {
-            let store = self.store(py).get_value(py)?;
-            store.mark_ledger(py, self.as_object(), ledger)?;
-        }
-        Ok(Python::None(py))
-    }
-
-    def cleanup(&self, ledger: &PyObject) -> PyResult<PyObject> {
-        let datapack = self.store(py).take_value(py)?;
-        datapack.cleanup(py, ledger)?;
+    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
+        // Used in Python repack, for loosefiles, so nothing needs to be done here.
         Ok(Python::None(py))
     }
 
@@ -370,17 +350,8 @@ py_class!(class historypack |py| {
         store.get_node_info_py(py, name, node)
     }
 
-    def markledger(&self, ledger: &PyObject, options: &PyDict) -> PyResult<PyObject> {
-        if !is_looseonly_repack(py, options) {
-            let store = self.store(py).get_value(py)?;
-            store.mark_ledger(py, self.as_object(), ledger)?;
-        }
-        Ok(Python::None(py))
-    }
-
-    def cleanup(&self, ledger: &PyObject) -> PyResult<PyObject> {
-        let historypack = self.store(py).take_value(py)?;
-        historypack.cleanup(py, ledger)?;
+    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
+        // Used in Python repack, for loosefiles, so nothing needs to be done here.
         Ok(Python::None(py))
     }
 
