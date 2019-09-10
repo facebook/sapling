@@ -11,11 +11,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use blobrepo::{file_history::get_file_history, BlobRepo, StoreRequest};
+use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
-use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
@@ -24,12 +23,11 @@ use failure::Error;
 use futures::{
     future::{self, err, join_all, ok},
     lazy,
-    stream::{iter_ok, once, repeat, FuturesUnordered},
+    stream::{iter_ok, repeat, FuturesUnordered},
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
-use http::uri::Uri;
 use manifest::{Entry as ManifestEntry, ManifestOps};
 use mononoke_api;
 use remotefilelog::create_getpack_v1_blob;
@@ -56,7 +54,6 @@ use crate::errors::ErrorKind;
 use crate::from_string as FS;
 
 use super::file_stream::IntoFileStream;
-use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryLight, EntryWithSizeAndContentHash};
 use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
@@ -71,9 +68,6 @@ define_stats! {
     get_branches: timeseries(RATE, SUM),
     get_last_commit_on_path: timeseries(RATE, SUM),
     is_ancestor: timeseries(RATE, SUM),
-    download_large_file: timeseries(RATE, SUM),
-    lfs_batch: timeseries(RATE, SUM),
-    upload_large_file: timeseries(RATE, SUM),
     eden_get_data: timeseries(RATE, SUM),
     eden_get_history: timeseries(RATE, SUM),
     eden_get_trees: timeseries(RATE, SUM),
@@ -541,68 +535,6 @@ impl MononokeRepo {
             .boxify()
     }
 
-    fn download_large_file(
-        &self,
-        ctx: CoreContext,
-        oid: String,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        STATS::download_large_file.add_value(1);
-        let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
-
-        // TODO (T47378130): Use a more native filestore interface here.
-        self.repo
-            .get_file_content_id_by_sha256(ctx.clone(), sha256_oid)
-            .and_then({
-                cloned!(self.repo, ctx);
-                move |content_id| {
-                    repo.get_file_content_by_content_id(ctx, content_id)
-                        .into_filestream()
-                }
-            })
-            .from_err()
-            .map(MononokeRepoResponse::DownloadLargeFile)
-            .boxify()
-    }
-
-    fn upload_large_file(
-        &self,
-        ctx: CoreContext,
-        oid: String,
-        body: Bytes,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        STATS::upload_large_file.add_value(1);
-        let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid.clone()));
-
-        // TODO (T47378130): Stream files in.
-        let size = body.len() as u64;
-        let body = once(Ok(body));
-
-        self.repo
-            .upload_file(ctx, &StoreRequest::with_sha256(size, sha256_oid), body)
-            .and_then(|_| Ok(MononokeRepoResponse::UploadLargeFile {}))
-            .from_err()
-            .boxify()
-    }
-
-    fn lfs_batch(
-        &self,
-        repo_name: String,
-        req: BatchRequest,
-        lfs_url: Option<Uri>,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        STATS::lfs_batch.add_value(1);
-        let lfs_address = try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
-            "Lfs batch request is not allowed, host address is missing in HttpRequest header"
-                .to_string(),
-            None
-        )));
-
-        let response = build_response(repo_name, req, lfs_address);
-        Ok(MononokeRepoResponse::LfsBatch { response })
-            .into_future()
-            .boxify()
-    }
-
     fn eden_get_data(
         &self,
         ctx: CoreContext,
@@ -802,14 +734,6 @@ impl MononokeRepo {
                 ancestor,
                 descendant,
             } => self.is_ancestor(ctx, ancestor, descendant),
-
-            DownloadLargeFile { oid } => self.download_large_file(ctx, oid),
-            LfsBatch {
-                repo_name,
-                req,
-                lfs_url,
-            } => self.lfs_batch(repo_name, req, lfs_url),
-            UploadLargeFile { oid, body } => self.upload_large_file(ctx, oid, body),
             EdenGetData {
                 request: DataRequest { keys },
                 stream,

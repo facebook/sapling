@@ -23,13 +23,11 @@ use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 
 mod file_stream;
-mod lfs;
 mod model;
 mod query;
 mod repo;
 mod response;
 
-pub use self::lfs::BatchRequest;
 pub use self::query::{MononokeQuery, MononokeRepoQuery, Revision};
 pub use self::repo::MononokeRepo;
 pub use self::response::MononokeRepoResponse;
@@ -90,14 +88,7 @@ impl Mononoke {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         match self.repos.get(&repo) {
             Some(repo) => repo.send_query(ctx, kind),
-            None => match kind {
-                MononokeRepoQuery::LfsBatch { .. } => {
-                    // LFS batch request require error in the different format:
-                    // json: {"message": "Error message here"}
-                    Err(ErrorKind::LFSNotFound(repo)).into_future().boxify()
-                }
-                _ => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
-            },
+            None => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
         }
     }
 }

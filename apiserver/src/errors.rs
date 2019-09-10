@@ -22,21 +22,9 @@ use mononoke_api::legacy::ErrorKind as ApiError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
 #[derive(Serialize, Debug)]
-#[serde(untagged)]
-enum ErrorResponse {
-    APIErrorResponse(APIErrorResponse),
-    LFSErrorResponse(LFSErrorResponse),
-}
-
-#[derive(Serialize, Debug)]
-struct APIErrorResponse {
+struct ErrorResponse {
     message: String,
     causes: Vec<String>,
-}
-
-#[derive(Serialize, Debug)]
-struct LFSErrorResponse {
-    message: String,
 }
 
 #[derive(Debug)]
@@ -44,7 +32,6 @@ pub enum ErrorKind {
     NotFound(String, Option<Error>),
     InvalidInput(String, Option<Error>),
     InternalError(Error),
-    LFSNotFound(String),
     NotADirectory(String),
     BookmarkNotFound(String),
 }
@@ -57,7 +44,6 @@ impl ErrorKind {
             NotFound(..) => StatusCode::NOT_FOUND,
             InvalidInput(..) => StatusCode::BAD_REQUEST,
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            LFSNotFound(_) => StatusCode::NOT_FOUND,
             NotADirectory(_) => StatusCode::BAD_REQUEST,
             BookmarkNotFound(_) => StatusCode::BAD_REQUEST,
         }
@@ -72,23 +58,16 @@ impl ErrorKind {
 
     #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
-        use crate::errors::ErrorKind::*;
-
-        match &self {
-            NotFound(..) | InvalidInput(..) | InternalError(_) | NotADirectory(_)
-            | BookmarkNotFound(_) => ErrorResponse::APIErrorResponse(APIErrorResponse {
-                message: self.to_string(),
-                causes: self
-                    .causes()
-                    .skip(1)
-                    .map(|cause| cause.to_string())
-                    .collect(),
-            }),
-            LFSNotFound(_) => ErrorResponse::LFSErrorResponse(LFSErrorResponse {
-                message: self.to_string(),
-            }),
+        ErrorResponse {
+            message: self.to_string(),
+            causes: self
+                .causes()
+                .skip(1)
+                .map(|cause| cause.to_string())
+                .collect(),
         }
     }
+
     // Since all non-ErrorKind error including `Context<ErrorKind>` is wrapped in `InternalError`
     // automatically at `From<Error>::from`, we need to downcast the `Context` retrieve the
     // `ErrorKind` in the `Context`.
@@ -111,7 +90,7 @@ impl Fail for ErrorKind {
         match self {
             NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
             InternalError(err) => Some(err.as_fail()),
-            LFSNotFound(_) | NotADirectory(_) | BookmarkNotFound(_) => None,
+            NotADirectory(_) | BookmarkNotFound(_) => None,
         }
     }
 }
@@ -124,7 +103,6 @@ impl fmt::Display for ErrorKind {
             NotFound(_0, _) => write!(f, "{} is not found", _0),
             InvalidInput(_0, _) => write!(f, "Invalid input: {}", _0),
             InternalError(_0) => write!(f, "internal server error: {}", _0),
-            LFSNotFound(_0) => write!(f, "{} is not found on LFS request", _0),
             NotADirectory(_0) => write!(f, "{} is not a directory", _0),
             BookmarkNotFound(_0) => write!(f, "{} is not a valid bookmark", _0),
         }
@@ -234,10 +212,6 @@ impl From<ErrorKind> for MononokeAPIException {
             },
             e @ InternalError(_) => MononokeAPIException {
                 kind: MononokeAPIExceptionKind::InternalError,
-                reason: e.to_string(),
-            },
-            e @ LFSNotFound(_) => MononokeAPIException {
-                kind: MononokeAPIExceptionKind::NotFound,
                 reason: e.to_string(),
             },
             e @ NotADirectory(_) => MononokeAPIException {

@@ -30,6 +30,8 @@ macro_rules! bail_http {
                     request_id: Some(::gotham::state::request_id(&$state).to_string()),
                 };
 
+                // TODO: This is where I need to log errors!
+
                 // NOTE: If we can't serialize an error response, then there really isn't much we
                 // can do.
                 let res = match ::serde_json::to_string(&res) {

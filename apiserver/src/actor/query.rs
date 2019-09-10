@@ -8,10 +8,7 @@ use std::convert::{TryFrom, TryInto};
 
 use crate::errors::ErrorKind;
 use apiserver_thrift::MononokeRevision::UnknownField;
-use bytes::Bytes;
 use failure::Error;
-use http::uri::Uri;
-use serde::Serializer;
 use serde_derive::Serialize;
 
 use apiserver_thrift::types::{
@@ -22,22 +19,10 @@ use apiserver_thrift::types::{
 };
 use types::api::{DataRequest, HistoryRequest, TreeRequest};
 
-use super::lfs::BatchRequest;
-
 #[derive(Debug, Clone, Serialize)]
 pub enum Revision {
     CommitHash(String),
     Bookmark(String),
-}
-
-fn uri_path_to_string<S>(uri: &Option<Uri>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match uri {
-        Some(ref uri) => serializer.serialize_some(uri.path()),
-        None => serializer.serialize_none(),
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -73,19 +58,6 @@ pub enum MononokeRepoQuery {
     IsAncestor {
         ancestor: Revision,
         descendant: Revision,
-    },
-    DownloadLargeFile {
-        oid: String,
-    },
-    LfsBatch {
-        repo_name: String,
-        req: BatchRequest,
-        #[serde(serialize_with = "uri_path_to_string")]
-        lfs_url: Option<Uri>,
-    },
-    UploadLargeFile {
-        oid: String,
-        body: Bytes,
     },
     EdenGetData {
         request: DataRequest,

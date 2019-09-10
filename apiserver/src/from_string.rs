@@ -9,7 +9,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::{hash::Sha256, MPath};
+use mononoke_types::MPath;
 
 use crate::errors::ErrorKind;
 
@@ -23,8 +23,4 @@ pub fn get_changeset_id(changesetid: String) -> Result<HgChangesetId, ErrorKind>
 
 pub fn get_nodehash(hash: &str) -> Result<HgNodeHash, ErrorKind> {
     HgNodeHash::from_str(hash).map_err(|e| ErrorKind::InvalidInput(hash.to_string(), Some(e)))
-}
-
-pub fn get_sha256_oid(oid: String) -> Result<Sha256, ErrorKind> {
-    Sha256::from_str(&oid).map_err(|e| ErrorKind::InvalidInput(oid.to_string(), Some(e.into())))
 }

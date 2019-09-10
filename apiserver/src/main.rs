@@ -9,14 +9,13 @@
 
 use std::sync::Arc;
 
-use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, Query, State};
+use actix_web::{server, App, HttpRequest, HttpResponse, Path, Query, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
 use hostname::get_hostname;
-use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use tokio::runtime::Runtime;
 
 use blobrepo_factory::Caching;
@@ -40,9 +39,7 @@ mod from_string;
 mod middleware;
 mod thrift;
 
-use crate::actor::{
-    BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
-};
+use crate::actor::{Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision};
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 
@@ -216,104 +213,6 @@ fn get_changeset(
             repo: params.repo,
             kind: MononokeRepoQuery::GetChangeset {
                 revision: Revision::CommitHash(params.hash),
-            },
-        },
-    )
-}
-
-#[derive(Deserialize)]
-struct DownloadLargeFileParams {
-    repo: String,
-    oid: String,
-}
-
-fn download_large_file(
-    (state, params, req): (
-        State<HttpServerState>,
-        Path<DownloadLargeFileParams>,
-        HttpRequest<HttpServerState>,
-    ),
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let params = params.into_inner();
-    state.mononoke.send_query(
-        get_ctx(&req, &state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::DownloadLargeFile { oid: params.oid },
-        },
-    )
-}
-
-#[derive(Deserialize)]
-struct LfsBatchParams {
-    repo: String,
-}
-
-fn lfs_batch(
-    (state, req_json, params, req): (
-        State<HttpServerState>,
-        Json<BatchRequest>,
-        Path<LfsBatchParams>,
-        HttpRequest<HttpServerState>,
-    ),
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let params = params.into_inner();
-    let host_url = req.headers().get(header::HOST);
-    let scheme = if state.use_ssl {
-        Scheme::HTTPS
-    } else {
-        Scheme::HTTP
-    };
-    let lfs_url = host_url
-        .and_then(|url_header_value| url_header_value.to_str().ok())
-        .and_then(|url| Authority::from_shared(Bytes::from(url)).ok())
-        .and_then(|url| {
-            let path_and_query = PathAndQuery::from_shared(Bytes::from("")).ok();
-
-            let mut parts = Parts::default();
-            parts.scheme = Some(scheme);
-            parts.authority = Some(url);
-            parts.path_and_query = path_and_query;
-
-            Uri::from_parts(parts).ok()
-        });
-
-    state.mononoke.send_query(
-        req.extensions().get::<CoreContext>().unwrap().clone(),
-        MononokeQuery {
-            repo: params.repo.clone(),
-            kind: MononokeRepoQuery::LfsBatch {
-                req: req_json.into_inner(),
-                repo_name: params.repo,
-                lfs_url,
-            },
-        },
-    )
-}
-
-#[derive(Deserialize)]
-struct UploadLargeFileParams {
-    repo: String,
-    oid: String,
-}
-
-// TODO(anastasiyaz): T32937714 Bytes -> Streaming
-fn upload_large_file(
-    (state, body, params, req): (
-        State<HttpServerState>,
-        Bytes,
-        Path<UploadLargeFileParams>,
-        HttpRequest<HttpServerState>,
-    ),
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let params = params.into_inner();
-    state.mononoke.send_query(
-        get_ctx(&req, &state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::UploadLargeFile {
-                oid: params.oid,
-                body,
             },
         },
     )
@@ -768,15 +667,6 @@ fn main() -> Fallible<()> {
                 })
                 .resource("/changeset/{hash}", |r| {
                     r.method(http::Method::GET).with_async(get_changeset)
-                })
-                .resource("/lfs/download/{oid}", |r| {
-                    r.method(http::Method::GET).with_async(download_large_file)
-                })
-                .resource("/objects/batch", |r| {
-                    r.method(http::Method::POST).with_async(lfs_batch)
-                })
-                .resource("/lfs/upload/{oid}", |r| {
-                    r.method(http::Method::PUT).with_async(upload_large_file)
                 })
                 .resource("/eden/data", |r| {
                     r.method(http::Method::POST)

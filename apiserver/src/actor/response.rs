@@ -21,7 +21,6 @@ use types::{
 };
 
 use super::file_stream::FileStream;
-use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryLight, EntryWithSizeAndContentHash};
 
 type StreamingDataResponse = BoxStream<DataEntry, Error>;
@@ -50,18 +49,12 @@ pub enum MononokeRepoResponse {
     IsAncestor {
         answer: bool,
     },
-    LfsBatch {
-        response: BatchResponse,
-    },
-    UploadLargeFile {},
 
     // NOTE: Please add serializable responses before this line
     #[serde(skip)]
     GetRawFile(FileStream),
     #[serde(skip)]
     GetBlobContent(FileStream),
-    #[serde(skip)]
-    DownloadLargeFile(FileStream),
     #[serde(skip)]
     EdenGetData(DataResponse),
     #[serde(skip)]
@@ -141,10 +134,7 @@ impl Responder for MononokeRepoResponse {
                     "false".into()
                 }
             })),
-            LfsBatch { response } => Json(response).respond_to(req),
-            UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
             GetRawFile(stream) | GetBlobContent(stream) => Ok(streaming_binary_response(stream)),
-            DownloadLargeFile(stream) => Ok(streaming_binary_response(stream)),
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),
             EdenGetTrees(response) => Ok(cbor_response(response)),
