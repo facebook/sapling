@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
                 Arg::with_name(ARG_DERIVED_DATA_TYPE)
                     .required(true)
                     .index(1)
-                    .possible_values(&[RootUnodeManifestId::NAME])
+                    .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
                     .help("derived data type for which backfill will be run"),
             ),
     )
@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
                     .required(true)
                     .multiple(true)
                     .index(1)
-                    .possible_values(&[RootUnodeManifestId::NAME])
+                    .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
                     .help("comma separated list of derived data types"),
             ),
     );
