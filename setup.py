@@ -456,10 +456,18 @@ def pickversion():
 if not os.path.isdir(builddir):
     # Create the "build" directory
     try:
-        # Prefer a symlink to a "scratch path" path if the "mkscratch" tool exists
-        scratchpath = subprocess.check_output(
-            ["mkscratch", "path", "--subdir", "hgbuild"]
-        ).strip()
+        # $DISK_TEMP is a location for scratch files on disk that sandcastle
+        # maintains and cleans up between jobs
+        if ("SANDCASTLE" in os.environ) and ("DISK_TEMP" in os.environ):
+            scratchpath = os.path.join(
+                os.environ["DISK_TEMP"], "hgbuild%d" % os.getpid()
+            )
+            ensureexists(scratchpath)
+        else:
+            # Prefer a symlink to a "scratch path" path if the "mkscratch" tool exists
+            scratchpath = subprocess.check_output(
+                ["mkscratch", "path", "--subdir", "hgbuild"]
+            ).strip()
         assert os.path.isdir(scratchpath)
         os.symlink(scratchpath, builddir)
     except Exception:
