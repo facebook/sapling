@@ -4,8 +4,6 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use serde;
-use serde_json;
 use std::path::{Path, PathBuf};
 use watchman_client::queries::*;
 use watchman_client::transport::Transport;

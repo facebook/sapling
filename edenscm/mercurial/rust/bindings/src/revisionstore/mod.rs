@@ -11,7 +11,6 @@ use std::{
 use cpython::*;
 use failure::{format_err, Error, Fallible};
 
-use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     Ancestors, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta,

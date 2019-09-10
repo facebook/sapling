@@ -6,7 +6,6 @@
 
 use crate::{Error, Result};
 use byteorder::{NetworkEndian, ReadBytesExt};
-use serde;
 use serde::de::{
     self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, SeqAccess, VariantAccess,
     Visitor,

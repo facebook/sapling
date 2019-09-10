@@ -5,7 +5,6 @@ use python27_sys::{
     PyEval_InitThreads, PySys_SetArgv, Py_Finalize, Py_Initialize, Py_IsInitialized,
     Py_SetProgramName,
 };
-use std;
 use std::ffi::CString;
 
 pub fn py_set_argv(args: Vec<CString>) {

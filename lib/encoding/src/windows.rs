@@ -3,14 +3,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use kernel32;
-use std;
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
-use winapi;
 
 const MB_ERR_INVALID_CHARS: winapi::DWORD = 0x00000008;
 const WC_COMPOSITECHECK: winapi::DWORD = 0x00000200;

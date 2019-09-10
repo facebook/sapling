@@ -104,9 +104,6 @@ pub struct FileStateV2 {
 }
 
 #[cfg(test)]
-use rand;
-
-#[cfg(test)]
 impl rand::distributions::Distribution<FileStateV2> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FileStateV2 {
         let mode = rng.gen();

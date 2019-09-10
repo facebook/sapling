@@ -5,7 +5,6 @@ use crate::errors::ErrorKind;
 use crate::store::{BlockId, Store, StoreView};
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use failure::{bail, Fallible};
-use std;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs::File;

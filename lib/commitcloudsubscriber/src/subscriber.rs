@@ -14,7 +14,6 @@ use crate::util;
 use eventsource::reqwest::Client;
 use failure::Fallible;
 use reqwest::Url;
-use serde_json;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::path::PathBuf;

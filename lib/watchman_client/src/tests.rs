@@ -7,8 +7,6 @@ extern crate bytes;
 
 use self::bytes::Buf;
 use crate::queries::*;
-use serde_bser;
-use serde_json;
 use std::io::Cursor;
 
 /// Parsing tests

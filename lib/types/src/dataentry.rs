@@ -3,7 +3,6 @@
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
 use failure::{ensure, Fallible};
-use log;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node, parents::Parents};

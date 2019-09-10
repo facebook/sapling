@@ -403,9 +403,6 @@ fn sha1(value: &[u8]) -> Node {
 }
 
 #[cfg(test)]
-use quickcheck;
-
-#[cfg(test)]
 impl quickcheck::Arbitrary for FileSectionLocation {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         FileSectionLocation {

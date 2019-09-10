@@ -11,7 +11,6 @@ use std::{
 };
 
 use memmap::{Mmap, MmapOptions};
-use tempfile;
 use twox_hash::{XxHash, XxHash32};
 
 /// Return a read-only mmap view of the entire file, and its length.

@@ -5,9 +5,6 @@
 
 use crate::error::*;
 use failure::Fallible;
-use serde;
-use serde_bser;
-use serde_json;
 use std::io::{BufRead, Read, Write};
 
 pub trait Protocol {

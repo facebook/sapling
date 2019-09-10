@@ -12,7 +12,6 @@ use std::hash::Hash;
 use std::path::Path;
 
 use bytes::Bytes;
-use dirs;
 use failure::Fallible;
 
 use crate::config::{expand_path, ConfigSet, Options};

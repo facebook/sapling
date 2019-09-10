@@ -4,7 +4,6 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use serde_json;
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener};
 use std::thread;

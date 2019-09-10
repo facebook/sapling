@@ -16,7 +16,6 @@ use curl::{
 };
 use failure::{format_err, ResultExt};
 use itertools::Itertools;
-use log;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_cbor::Deserializer;
 use url::Url;

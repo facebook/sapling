@@ -6,7 +6,6 @@
 
 use crate::{Error, Result};
 use byteorder::{NetworkEndian, WriteBytesExt};
-use serde;
 use serde::ser::{
     SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
     SerializeTupleStruct, SerializeTupleVariant,

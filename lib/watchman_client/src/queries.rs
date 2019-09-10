@@ -4,7 +4,6 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::path::decode_path_fallible;
-use serde_json;
 use std::path::PathBuf;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]

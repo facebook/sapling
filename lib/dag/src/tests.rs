@@ -6,7 +6,6 @@
 use crate::idmap::IdMap;
 use crate::segment::{Dag, Level};
 use crate::spanset::SpanSet;
-use drawdag;
 use failure::Fallible;
 use tempfile::tempdir;
 

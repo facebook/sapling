@@ -144,7 +144,6 @@ impl Arbitrary for Parents {
 mod tests {
     use super::*;
 
-    use serde_cbor;
     use serde_json::{self, json};
 
     #[test]

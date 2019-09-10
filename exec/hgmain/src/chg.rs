@@ -1,8 +1,6 @@
 // Copyright Facebook, Inc. 2018
-use dirs;
 use encoding::osstring_to_local_cstring;
 use libc::{c_char, c_int};
-use std;
 use std::ffi::{CString, OsString};
 use std::path::Path;
 

@@ -16,7 +16,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use indexmap::IndexMap;
 use pest::{self, Parser, Span};
-use shellexpand;
 
 use crate::error::Error;
 use crate::parser::{ConfigParser, Rule};
