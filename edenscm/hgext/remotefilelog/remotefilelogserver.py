@@ -122,10 +122,21 @@ def onetimesetup(ui):
             if shallowrepo.requirement in repo.requirements:
                 striplen = len(repo.store.path) + 1
                 readdir = repo.store.rawvfs.readdir
-                visit = [os.path.join(repo.store.path, "data")]
+                visit = [
+                    os.path.join(repo.store.path, "packs"),
+                    os.path.join(repo.store.path, "data"),
+                ]
                 while visit:
                     p = visit.pop()
-                    for f, kind, st in readdir(p, stat=True):
+
+                    try:
+                        dirents = readdir(p, stat=True)
+                    except OSError as ex:
+                        if ex.errno != errno.ENOENT:
+                            raise
+                        continue
+
+                    for f, kind, st in dirents:
                         fp = p + "/" + f
                         if kind == stat.S_IFREG:
                             if not fp.endswith(".i") and not fp.endswith(".d"):
