@@ -279,7 +279,17 @@ replace-with = "vendored-sources"
             os.unlink(cargolockpath)
 
         paths = self.rust_binary_paths()
-        cmd = [paths.get("cargo", "cargo"), "build", "--manifest-path", target.manifest]
+        # -j 100 is to workaround a bug in 'cc' that can cause deadlock.
+        # Remove it once cc gets upgrade to include
+        # https://github.com/alexcrichton/cc-rs/commit/238ee4f093c37084314711f05154c14eb6362711
+        cmd = [
+            paths.get("cargo", "cargo"),
+            "build",
+            "-j",
+            "100",
+            "--manifest-path",
+            target.manifest,
+        ]
         if not self.debug:
             cmd.append("--release")
 
