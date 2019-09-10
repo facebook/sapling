@@ -25,7 +25,6 @@ no matter what their creation date is.
   $ cd shallow
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
-  > packlocaldata=True
   > localdatarepack=True
   > prefetchdays=0
   > EOF

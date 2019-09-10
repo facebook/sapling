@@ -80,7 +80,7 @@ Transition to hybrid flat+tree client
 
 Make a local hybrid flat+tree draft commit
   $ echo h >> subdir/x
-  $ ls_l .hg/store | grep packs
+  $ ls_l .hg/store/packs | grep manifests
   [1]
   $ hg commit -qm "hybrid flat+tree commit"
   $ hg up '.^'

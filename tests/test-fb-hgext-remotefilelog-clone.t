@@ -43,7 +43,6 @@
   $ hg add f
   $ hg ci -m 'local content'
   $ ls .hg/store/data
-  4a0a19218e082a343a1b17e5333409af9d98f0f5
 
   $ cd ..
 
@@ -51,8 +50,8 @@
 
   $ hgcloneshallow ssh://user@dummy/shallow shallow2  --noupdate
   streaming all changes
-  5 files to transfer, * of data (glob)
-  transferred 572 bytes in * seconds (*/sec) (glob)
+  7 files to transfer, 2.76 KB of data
+  transferred 2.76 KB in * seconds (*/sec) (glob)
   searching for changes
   no changes found
   $ cd shallow2
@@ -65,7 +64,6 @@
   store
   treestate
   $ ls .hg/store/data
-  4a0a19218e082a343a1b17e5333409af9d98f0f5
 
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -77,57 +77,6 @@ class remotefilelog(object):
         node = revlog.hash(hashtext, p1, p2)
         return self.addrevision(hashtext, transaction, linknode, p1, p2, node=node)
 
-    def _createfileblob(self, text, meta, flags, p1, p2, node, linknode):
-        # text passed to "_createfileblob" does not include filelog metadata
-        header = shallowutil.buildfileblobheader(len(text), flags)
-        data = "%s\0%s" % (header, text)
-
-        realp1 = p1
-        copyfrom = ""
-        if meta and "copy" in meta:
-            copyfrom = meta["copy"]
-            realp1 = bin(meta["copyrev"])
-
-        data += "%s%s%s%s%s\0" % (node, realp1, p2, linknode, copyfrom)
-
-        visited = set()
-
-        pancestors = {}
-        queue = []
-        if realp1 != nullid:
-            p1flog = self
-            if copyfrom:
-                p1flog = remotefilelog(self.opener, copyfrom, self.repo)
-
-            pancestors.update(p1flog.ancestormap(realp1))
-            queue.append(realp1)
-            visited.add(realp1)
-        if p2 != nullid:
-            pancestors.update(self.ancestormap(p2))
-            queue.append(p2)
-            visited.add(p2)
-
-        ancestortext = ""
-
-        # add the ancestors in topological order
-        while queue:
-            c = queue.pop(0)
-            pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
-
-            pacopyfrom = pacopyfrom or ""
-            ancestortext += "%s%s%s%s%s\0" % (c, pa1, pa2, ancestorlinknode, pacopyfrom)
-
-            if pa1 != nullid and pa1 not in visited:
-                queue.append(pa1)
-                visited.add(pa1)
-            if pa2 != nullid and pa2 not in visited:
-                queue.append(pa2)
-                visited.add(pa2)
-
-        data += ancestortext
-
-        return data
-
     def addrevision(
         self,
         text,
@@ -194,30 +143,17 @@ class remotefilelog(object):
             # copy metadata via parsing it.
             meta, unused = shallowutil.parsemeta(rawtext, flags)
 
-        if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
-            dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
+        dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
 
-            dpackmeta = {constants.METAKEYFLAG: flags}
-            dpack.add(self.filename, node, revlog.nullid, rawtext, metadata=dpackmeta)
+        dpackmeta = {constants.METAKEYFLAG: flags}
+        dpack.add(self.filename, node, revlog.nullid, rawtext, metadata=dpackmeta)
 
-            copyfrom = ""
-            realp1node = p1
-            if meta and "copy" in meta:
-                copyfrom = meta["copy"]
-                realp1node = bin(meta["copyrev"])
-            hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
-        else:
-            # The loose file format doesn't expect the copy metadata header, so
-            # let's strip it for non-lfs files.
-            filetext = rawtext
-            if flags == revlog.REVIDX_DEFAULT_FLAGS:
-                # For non-LFS text, remove hg filelog metadata
-                unused, filetext = shallowutil.parsemeta(rawtext, flags)
-
-            writestore = self.repo.fileslog.loosefilewritestore
-            data = self._createfileblob(filetext, meta, flags, p1, p2, node, linknode)
-            # All loose file writes go through the localcontent store
-            writestore.addremotefilelognode(self.filename, node, data)
+        copyfrom = ""
+        realp1node = p1
+        if meta and "copy" in meta:
+            copyfrom = meta["copy"]
+            realp1node = bin(meta["copyrev"])
+        hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
 
         return node
 
@@ -594,8 +530,6 @@ class remotefileslog(filelog.fileslog):
         # Instantiate union stores
         self.contentstore = unioncontentstore(*contentstores)
         self.metadatastore = unionmetadatastore(*metadatastores)
-
-        self.loosefilewritestore = localcontent
 
         self.localcontentstore = unioncontentstore(*self.localdatastores)
         self.localmetadatastore = unionmetadatastore(*self.localhistorystores)

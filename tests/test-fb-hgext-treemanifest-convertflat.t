@@ -103,7 +103,7 @@ Transition to treeonly client
 Test working with flat-only draft commits.
 
 - There are no local tree packs.
-  $ ls_l .hg/store | grep packs
+  $ ls_l .hg/store/packs | grep manifests
   [1]
 
 - Viewing flat draft commit would fail when 'treemanifest.demandgenerate' is
@@ -281,7 +281,7 @@ manifest for commit 'f7febcf0f689'.
 
 - Clean up generated tree manifests for remaining tests.
 
-  $ rm -rf .hg/store/packs
+  $ rm -rf .hg/store/packs/manifests
 
 - Test rebasing of the flat ony commits works as expected.
 

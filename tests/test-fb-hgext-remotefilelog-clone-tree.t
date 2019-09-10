@@ -53,7 +53,6 @@
   $ hg add A/B/F
   $ hg ci -m 'local content'
   $ ls .hg/store/data
-  ca31988f085bfb945cb8115b78fabdee40f741aa
 
   $ cd ..
 
@@ -61,8 +60,8 @@
 
   $ hgcloneshallow ssh://user@dummy/shallow shallow2  --noupdate
   streaming all changes
-  7 files to transfer, * of data (glob)
-  transferred 1020 bytes in * seconds (*/sec) (glob)
+  9 files to transfer, * of data (glob)
+  transferred 3.20 KB in * seconds (*/sec) (glob)
   searching for changes
   no changes found
   $ cd shallow2
@@ -76,7 +75,6 @@
   treemanifest
   treestate
   $ ls .hg/store/data
-  ca31988f085bfb945cb8115b78fabdee40f741aa
 
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

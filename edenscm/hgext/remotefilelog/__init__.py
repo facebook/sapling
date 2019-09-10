@@ -31,9 +31,6 @@ Configs:
 
     ``remotefilelog.localdatarepack`` runs repack on local data loose files
 
-    ``remotefilelog.packlocaldata`` use pack files to store local data instead
-    of storing them as loose files
-
     ``remotefilelog.fetchpacks`` fetch data from the server and scmmemcache in
     pack files format
 
@@ -254,7 +251,6 @@ configitem = registrar.configitem(configtable)
 configitem("remotefilelog", "descendantrevfastpath", default=False)
 configitem("remotefilelog", "fetchpacks", default=False)
 configitem("remotefilelog", "localdatarepack", default=False)
-configitem("remotefilelog", "packlocaldata", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "simplecacheserverstore", default=False)

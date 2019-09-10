@@ -115,8 +115,7 @@ Log on a file via -fr
   1
 
 Trace renames
-- Enable local packs to test a bug involving tracking renames across packs.
-  $ setconfig remotefilelog.packlocaldata=True remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.localdatarepack=True
   $ echo >> x
   $ hg commit -m "Edit x"
   $ hg mv x z

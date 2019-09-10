@@ -429,33 +429,10 @@ Test environment variable resolution
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histidx
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histpack
 
-Test local remotefilelog blob is correct when based on a pack
-  $ hg prefetch -r .
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  $ echo >> y
-  $ hg commit -m y2
-  $ hg debugremotefilelog .hg/store/data/95cb0bfd2977c761298d9624e4b4d4c72a39974a/b70860edba4f8242a1d52f2a94679dd23cb76808
-  size: 9 bytes
-  path: .hg/store/data/95cb0bfd2977c761298d9624e4b4d4c72a39974a/b70860edba4f8242a1d52f2a94679dd23cb76808 
-  key: b70860edba4f 
-  filename: y 
-  
-          node =>           p1            p2      linknode     copyfrom
-  b70860edba4f => 577959738234  000000000000  08d3fbc98c48  
-  577959738234 => 1bb2e6237e03  000000000000  c7faf2fc439a  x
-  1bb2e6237e03 => d4a3ed9310e5  000000000000  0b03bbc9e1e7  
-  d4a3ed9310e5 => aee31534993a  000000000000  421535db10b6  
-  aee31534993a => 1406e7411862  000000000000  a89d614e2364  
-  1406e7411862 => 000000000000  000000000000  b292c1e3311f  
-
 Test limiting the max delta chain length
   $ hg repack --config packs.maxchainlen=1
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.dataidx
-  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812:
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  577959738234  000000000000  70            (missing)
-  
+  $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1406e7411862  000000000000  2             (missing)
@@ -467,35 +444,26 @@ Test limiting the max delta chain length
 Test huge pack cleanup using different values of packs.maxpacksize:
   $ hg repack --incremental --debug
   $ hg repack --incremental --debug --config packs.maxpacksize=512
-  removing oversize packfile $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack (390 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx (1.21 KB)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.datapack (261 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.dataidx (1.17 KB)
 
 # Test repacking loose files
   $ findfilessorted .hg/store/data
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.dataidx
-  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.datapack
-  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histidx
-  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histpack
 
 # new loose file is created
   $ echo "new commit" > new_file
   $ hg commit -qAm "one more node"
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
   $ findfilessorted .hg/store/data
-  .hg/store/data/1855388b65e74b6d30c8c6d1b5f6297dbb5f3e61/2411bd0c33e671502fd32d81e746ba49d0e38c74
-  .hg/store/data/1855388b65e74b6d30c8c6d1b5f6297dbb5f3e61/filename
 
 # repacking only loose files
   $ hg repack --looseonly
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/28506376fd5561b473db1476444f36431fb7de5e.histidx
-  .hg/store/packs/28506376fd5561b473db1476444f36431fb7de5e.histpack
-  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.dataidx
-  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.datapack
-  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histidx
-  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histpack
-  .hg/store/packs/e7d50ec8e593b8c55928fefdee5760348989f7b0.dataidx
-  .hg/store/packs/e7d50ec8e593b8c55928fefdee5760348989f7b0.datapack
+  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histidx
+  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
+  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
+  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
 
 # check that loose files have been removed
   $ findfilessorted .hg/store/data
@@ -503,13 +471,15 @@ Test huge pack cleanup using different values of packs.maxpacksize:
 # repacking all
   $ hg repack
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histidx
-  .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histpack
-  .hg/store/packs/c048acb992171ba60c7f272a6cd74199e487d3f6.dataidx
-  .hg/store/packs/c048acb992171ba60c7f272a6cd74199e487d3f6.datapack
+  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histidx
+  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
+  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
+  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
 
 # incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
   $ hg repack --incremental --debug --config packs.maxpacksize=1
+  removing oversize packfile $TESTTMP/hgcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.datapack (130 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.dataidx (1.05 KB)
 
 # check the commit data
   $ hg cat -r . new_file

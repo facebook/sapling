@@ -159,17 +159,13 @@ TODO: Make this test compatibile with obsstore enabled.
   |
   o  b292c1e3311f x public x
   
+
 # Check the contents of the local blob for incorrect linknode
-  $ hg debugremotefilelog .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
-  size: 6 bytes
-  path: .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
-  key: d4a3ed9310e5 
-  filename: x 
+  $ hg debughistorypack .hg/store/packs/086af52f91c7a0e07b80504e918a6daffadd1d1b.histpack
   
-          node =>           p1            p2      linknode     copyfrom
-  d4a3ed9310e5 => aee31534993a  000000000000  c1254e70bad1  
-  aee31534993a => 1406e7411862  000000000000  0632994590a8  
-  1406e7411862 => 000000000000  000000000000  b292c1e3311f  
+  x
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  d4a3ed9310e5  aee31534993a  000000000000  c1254e70bad1  
 
 # Verify that we do a fetch on the first log (remote blob fetch for linkrev fix)
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'

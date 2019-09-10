@@ -143,17 +143,15 @@ the server supports our custom getfiles method.
 
 # verify files are read-only
 
-  $ ls -l .hg/store/data
-  total * (glob)
-  drwxrwxr-x* 11f6ad8ec52a2984abaafd7c3b516503785c2072 (glob)
-  drwxrwxr-x* 395df8f7c51f007019cb30201c49e884b46b92fa (glob)
-  drwxrwxr-x* 86f7e437faa5a7fce15d1ddcb9eaeaea377667b8 (glob)
-  drwxrwxr-x* 95cb0bfd2977c761298d9624e4b4d4c72a39974a (glob)
-  $ ls -l .hg/store/data/395df8f7c51f007019cb30201c49e884b46b92fa
-  total * (glob)
-  -r--r--r--* 69a1b67522704ec122181c0890bd16e9d3e7516a (glob)
-  -r--r--r--* 69a1b67522704ec122181c0890bd16e9d3e7516a_old (glob)
-  -r--r--r--* filename (glob)
+  $ ls_l .hg/store/packs
+  -r--r--r--    1117 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histidx
+  -r--r--r--      90 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histpack
+  -r--r--r--    1267 da7820d2df8fa4ee2f5a0a281825e3c99bf1767f.histidx
+  -r--r--r--     268 da7820d2df8fa4ee2f5a0a281825e3c99bf1767f.histpack
+  -r--r--r--    1154 e2dde3565e426bfb44f88e531d5a5e8333ec3876.dataidx
+  -r--r--r--     191 e2dde3565e426bfb44f88e531d5a5e8333ec3876.datapack
+  -r--r--r--    1074 fea0528e5e8268df06cd40c39230727aff9901eb.dataidx
+  -r--r--r--      63 fea0528e5e8268df06cd40c39230727aff9901eb.datapack
   $ cd ..
 
 # push from shallow to full
