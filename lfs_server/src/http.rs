@@ -7,7 +7,6 @@
 use failure::Error;
 use hyper::StatusCode;
 use lazy_static::lazy_static;
-use mime;
 use std::str::FromStr;
 
 // Provide an easy way to map from Error -> Http code

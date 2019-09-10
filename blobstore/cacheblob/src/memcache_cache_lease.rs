@@ -11,7 +11,6 @@ use futures::{future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use rust_thrift::compact_protocol;
-use tokio_timer;
 
 use blobstore::{Blobstore, CountedBlobstore};
 use fbwhoami::FbWhoAmI;

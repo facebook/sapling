@@ -31,7 +31,6 @@ use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 use uuid::Uuid;
 
-use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::BlobRepo;

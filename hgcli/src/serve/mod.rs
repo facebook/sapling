@@ -11,7 +11,6 @@ use std::net::{IpAddr, SocketAddr};
 use bytes::Bytes;
 use futures::{future, stream, Future, Sink, Stream};
 use slog::{Drain, Logger};
-use slog_term;
 
 use dns_lookup::lookup_addr;
 use libc::c_ulong;
@@ -20,7 +19,6 @@ use tokio_io::codec::{FramedRead, FramedWrite};
 use tokio_io::AsyncRead;
 use tokio_openssl::{SslConnectorExt, SslStream};
 use users::get_current_username;
-use uuid;
 
 use tokio::net::TcpStream;
 
@@ -29,7 +27,6 @@ use clap::ArgMatches;
 use crate::errors::*;
 
 use crate::failure::SlogKVError;
-use fbwhoami;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};

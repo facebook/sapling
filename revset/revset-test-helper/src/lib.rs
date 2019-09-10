@@ -111,7 +111,6 @@ pub fn assert_changesets_sequence<I>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
     use context::CoreContext;
     use fixtures::linear;
     use futures_ext::StreamExt;

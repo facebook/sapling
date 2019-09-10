@@ -30,7 +30,6 @@ use mime::Mime;
 use slog::warn;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
-use tokio;
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 

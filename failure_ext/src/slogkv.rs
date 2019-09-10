@@ -1,7 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 use super::Error;
-use slog;
 
 pub struct SlogKVError(pub Error);
 

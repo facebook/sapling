@@ -262,7 +262,6 @@ mod test {
     use std::io::Cursor;
 
     use futures::{Future, Stream};
-    use tokio;
     use tokio_codec::FramedRead;
 
     use super::*;

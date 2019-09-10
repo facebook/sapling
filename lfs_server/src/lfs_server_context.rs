@@ -14,7 +14,6 @@ use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
-use serde_json;
 use slog::Logger;
 use std::collections::HashMap;
 use std::fmt::{Arguments, Write};

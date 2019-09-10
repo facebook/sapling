@@ -18,7 +18,6 @@ mod test {
                 use futures::{Future, Stream};
                 use slog::{Drain, Level, Logger};
 
-                use async_unit;
                 use slog_glog_fmt::default_drain as glog_drain;
 
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};

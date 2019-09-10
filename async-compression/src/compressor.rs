@@ -10,9 +10,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::io::{self, Write};
 use std::result;
 
-use bzip2;
 use bzip2::write::BzEncoder;
-use flate2;
 use flate2::write::GzEncoder;
 use futures::Poll;
 use tokio_io::AsyncWrite;

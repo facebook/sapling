@@ -14,7 +14,6 @@ use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
-use pushrebase;
 
 pub fn pushrebased_changesets_to_obsmarkers_part(
     ctx: CoreContext,

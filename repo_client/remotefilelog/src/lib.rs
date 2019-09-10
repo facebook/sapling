@@ -20,7 +20,6 @@ use context::CoreContext;
 use failure::{Error, Fail, Fallible};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
-use lz4_pyframe;
 use mercurial_types::{
     blobs::File, calculate_hg_node_id, FileBytes, HgFileEnvelopeMut, HgFileHistoryEntry,
     HgFileNodeId, HgParents, MPath, RevFlags,

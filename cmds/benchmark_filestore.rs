@@ -8,7 +8,6 @@
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
-use cachelib;
 use clap::{App, Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
@@ -20,7 +19,6 @@ use futures::{stream::iter_ok, Future, IntoFuture, Stream};
 use futures_ext::{FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
-use memblob;
 use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
 use rand::Rng;
@@ -30,7 +28,6 @@ use std::io::BufReader;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::{codec, fs::File};
-use tokio_timer;
 
 const NAME: &str = "benchmark_filestore";
 

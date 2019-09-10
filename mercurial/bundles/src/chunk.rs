@@ -156,7 +156,6 @@ mod test {
 
     use futures::{stream, Future, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
-    use tokio;
     use tokio_codec::{FramedRead, FramedWrite};
 
     use super::*;

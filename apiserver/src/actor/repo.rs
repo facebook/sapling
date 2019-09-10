@@ -29,10 +29,8 @@ use futures::{
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use manifest::{Entry as ManifestEntry, ManifestOps};
-use mononoke_api;
 use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
-use serde_json;
 use slog::{debug, Logger};
 use time_ext::DurationExt;
 

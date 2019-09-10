@@ -994,7 +994,6 @@ fn create_bookmark_update_reason(
 mod tests {
 
     use super::*;
-    use async_unit;
     use failure::err_msg;
     use fixtures::{linear, many_files_dirs};
     use futures::future::join_all;

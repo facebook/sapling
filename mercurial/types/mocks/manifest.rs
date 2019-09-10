@@ -291,7 +291,6 @@ impl HgEntry for MockEntry {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
     use futures::{Future, Stream};
     use maplit::btreemap;
 

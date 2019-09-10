@@ -18,7 +18,6 @@ use futures_ext::{send_discard, BoxFuture};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId};
 use slog::{o, Logger};
 use std::sync::Arc;
-use tokio;
 
 /// This trait enables parallelized walks over changesets.
 pub trait ChangesetVisitor: Clone + Send + Sync + 'static {

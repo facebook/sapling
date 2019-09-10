@@ -8,7 +8,6 @@ use crate::errors::*;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
-use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
@@ -37,7 +36,6 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
-use percent_encoding;
 use phases::Phases;
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;

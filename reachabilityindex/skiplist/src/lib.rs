@@ -28,7 +28,6 @@ use common::{
     fetch_generation_and_join, get_parents,
 };
 use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
-use skiplist_thrift;
 
 use rust_thrift::compact_protocol;
 
@@ -683,7 +682,6 @@ mod test {
         Arc,
     };
 
-    use async_unit;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use chashmap::CHashMap;
@@ -700,7 +698,6 @@ mod test {
     use test_helpers::test_branch_wide_reachability;
     use test_helpers::test_linear_reachability;
     use test_helpers::test_merge_uneven_reachability;
-    use tokio;
 
     #[test]
     fn simple_init() {

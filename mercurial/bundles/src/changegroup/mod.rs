@@ -53,7 +53,6 @@ mod test {
     use futures::{Future, Stream};
     use quickcheck::rand;
     use quickcheck::{QuickCheck, StdGen, TestResult};
-    use tokio;
     use tokio_codec::{FramedRead, FramedWrite};
 
     use futures_ext::StreamLayeredExt;

@@ -12,7 +12,6 @@ use failure::{err_msg, format_err, Error};
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;
 use serde_derive::{Deserialize, Serialize};
-use serde_json;
 use tokio::runtime;
 
 use blobstore::Blobstore;

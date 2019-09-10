@@ -17,7 +17,6 @@ use rand::random;
 use rust_thrift::compact_protocol;
 use stats::{define_stats, Histogram, Timeseries};
 use std::{collections::HashSet, convert::TryFrom, sync::Arc, time::Duration};
-use tokio;
 
 use super::thrift::{MC_CODEVER, MC_SITEVER};
 use crate::{blake2_path_hash, thrift, FilenodeInfo, FilenodeInfoCached, Filenodes};

@@ -24,7 +24,6 @@ use metaconfig_types::{self, BlobConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
-use rocksdb;
 use scuba::ScubaClient;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};

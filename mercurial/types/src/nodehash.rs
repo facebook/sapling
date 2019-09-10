@@ -12,8 +12,6 @@ use heapsize_derive::HeapSizeOf;
 use manifest::Entry;
 use mononoke_types::FileType;
 use quickcheck::{Arbitrary, Gen};
-use serde;
-use slog;
 use std::{
     fmt::{self, Display},
     result,

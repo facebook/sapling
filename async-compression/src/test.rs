@@ -7,11 +7,8 @@
 use std::io::{self, BufReader, Cursor, Read, Write};
 
 use assert_matches::assert_matches;
-use bzip2;
-use flate2;
 use futures::{Async, Poll};
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
-use tokio;
 use tokio_io::io::read_to_end;
 use tokio_io::AsyncWrite;
 

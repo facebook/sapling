@@ -16,7 +16,6 @@ use redactedblobstore::{config::GET_OPERATION, RedactedBlobstore};
 use slog::debug;
 use std::fmt;
 use std::sync::Arc;
-use tokio;
 
 /// Extra operations that can be performed on a cache. Other wrappers can implement this trait for
 /// e.g. all `WrapperBlobstore<CacheBlobstore<T>>`.

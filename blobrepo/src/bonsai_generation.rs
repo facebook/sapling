@@ -13,7 +13,6 @@ use futures::{IntoFuture, Stream};
 use futures_ext::{try_boxfuture, FutureExt};
 
 use blobstore::Blobstore;
-use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEnvelope},

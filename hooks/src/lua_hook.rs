@@ -437,7 +437,6 @@ mod test {
     };
     use aclchecker::AclChecker;
     use assert_matches::assert_matches;
-    use async_unit;
     use bookmarks::BookmarkName;
     use bytes::Bytes;
     use failure_ext::err_downcast;

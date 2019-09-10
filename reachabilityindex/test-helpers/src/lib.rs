@@ -351,7 +351,6 @@ mod test {
 
     use std::sync::Arc;
 
-    use async_unit;
     use context::CoreContext;
     use fixtures::linear;
     use futures::Future;

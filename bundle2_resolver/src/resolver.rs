@@ -36,7 +36,6 @@ use mercurial_types::{blobs::HgBlobEntry, HgChangesetId, HgNodeKey, RepoPath};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use phases::{self, Phases};
-use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;

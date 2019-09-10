@@ -9,7 +9,6 @@
 use std::path::Path;
 
 use failure_ext as failure;
-use rocksdb;
 
 use crate::failure::Error;
 use futures::{Async, Future, Poll};

@@ -7,7 +7,6 @@
 // Support for lz4revlog
 
 use super::parser::{detach_result, Error};
-use lz4_pyframe;
 use nom::{self, IResult};
 
 pub fn lz4_decompress<'a, P, R: 'a>(i: &'a [u8], parse: P) -> IResult<&'a [u8], R, Error>

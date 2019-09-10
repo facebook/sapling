@@ -10,7 +10,6 @@
 
 use futures::{future, lazy, Future};
 use maplit::btreemap;
-use tokio;
 
 use context::CoreContext;
 use mononoke_types_mocks::changesetid as bonsai;

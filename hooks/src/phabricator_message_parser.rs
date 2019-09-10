@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use hlua::{AnyLuaString, AnyLuaValue};
-use itertools;
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
 use std::collections::{HashMap, HashSet};

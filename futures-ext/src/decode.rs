@@ -126,7 +126,6 @@ mod test {
 
     use bytes::Bytes;
     use futures::{stream, Stream};
-    use tokio;
 
     use super::*;
 

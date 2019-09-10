@@ -13,7 +13,6 @@ use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 use hostname::get_hostname;
 use serde::{Deserialize, Serialize};
-use serde_cbor;
 
 use types::{
     api::{DataResponse, HistoryResponse},

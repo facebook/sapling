@@ -16,7 +16,6 @@ use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
 use asyncmemo::Weight;
-use bincode;
 use bytes::Bytes;
 use failure_ext::{bail_err, bail_msg, chain::*, err_msg};
 use heapsize::HeapSizeOf;

@@ -25,7 +25,6 @@ use mononoke_api::Mononoke as NewMononoke;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
-use serde_cbor;
 use serde_derive::Deserialize;
 use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};

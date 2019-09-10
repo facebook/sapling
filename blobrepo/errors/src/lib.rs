@@ -7,7 +7,6 @@
 use std::fmt;
 
 use ascii::AsciiString;
-use bincode;
 use failure_ext::failure;
 use failure_ext::Fail;
 

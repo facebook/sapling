@@ -9,7 +9,6 @@ use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
-use asyncmemo;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure_ext::bail_err;
@@ -17,7 +16,6 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use serde;
 
 use crate::{
     blob::{Blob, BlobstoreValue},

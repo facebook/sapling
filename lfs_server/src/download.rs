@@ -8,7 +8,6 @@ use futures_preview::compat::Future01CompatExt;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::Body;
-use mime;
 use serde::Deserialize;
 
 use filestore::{self, FetchKey};

@@ -15,7 +15,6 @@ use futures::stream;
 use futures::stream::Stream;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
-use tokio;
 
 use cmdlib::args;
 

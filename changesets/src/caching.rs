@@ -6,7 +6,6 @@
 
 use super::{ChangesetEntry, ChangesetInsert, Changesets};
 use bytes::Bytes;
-use cachelib;
 #[cfg(test)]
 use caching_ext::MockStoreStats;
 use caching_ext::{

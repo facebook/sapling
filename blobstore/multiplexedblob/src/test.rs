@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
-use async_unit;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use context::CoreContext;

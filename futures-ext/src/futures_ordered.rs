@@ -106,7 +106,6 @@ mod test {
     use futures::sync::mpsc;
     use futures::task;
     use futures::{Future, Sink, Stream};
-    use tokio;
 
     use super::*;
 

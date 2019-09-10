@@ -367,7 +367,6 @@ impl Blobstore for Sqlblob {
 mod tests {
     use super::*;
     use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
-    use tokio;
 
     #[test]
     fn read_write() {

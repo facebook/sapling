@@ -11,7 +11,6 @@ use context::CoreContext;
 use failure_ext::Error;
 use futures::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
 use std::fmt::Debug;
-use tokio;
 
 mod errors;
 

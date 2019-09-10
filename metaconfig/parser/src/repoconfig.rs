@@ -34,7 +34,6 @@ use metaconfig_types::{
 use mononoke_types::MPath;
 use regex::Regex;
 use std::str::FromStr;
-use toml;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 

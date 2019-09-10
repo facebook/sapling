@@ -12,7 +12,6 @@ use failure_ext::{Error, Result};
 use futures::{stream, Future, IntoFuture, Stream};
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
-use tokio;
 
 const NAME: &str = "lfs_import";
 

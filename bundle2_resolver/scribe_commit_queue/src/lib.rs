@@ -12,7 +12,6 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use scribe::ScribeClient;
 use scribe_cxx::ScribeCxxClient;
 use serde_derive::Serialize;
-use serde_json;
 
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
 

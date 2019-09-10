@@ -11,7 +11,6 @@ use cloned::cloned;
 use failure_ext::{err_msg, Error, Result};
 use futures::prelude::*;
 use rust_thrift::compact_protocol;
-use tokio;
 
 use cacheblob::{CacheOps, CacheOpsUtil};
 use mononoke_types::BlobstoreBytes;

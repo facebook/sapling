@@ -6,7 +6,6 @@
 
 #![deny(warnings)]
 
-use blobimport_lib;
 use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::args;
