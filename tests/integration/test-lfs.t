@@ -1,42 +1,26 @@
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
 
-#setup config repo
-  $ setup_common_config
+# Setup a repository config, with LFS enabled
+  $ LFS_THRESHOLD=1000 setup_common_config
   $ cd $TESTTMP
 
-# Test Scenario:
-# 1. Setup server hg nolfs repo and make several commits to it
-#   1.a Note that it should have a master_bookmark for easy push to it from a different repo.
-#   1.b Note that server and client repos are supposed to be [treemanifest]treeonly=True, to avoid pushes to hybrid state
-# 2. Blobimport hg nolfs to mononoke (rocksDB).
-#   2.a Motivation: Blobimport for now does not support import of lfs hg repos. (Error with RevlogRepo parsing).
-#       So we need to blobimport hg repo without lsf extention.
-# 3. Setup Mononoke API server.
-# 4. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
-# 5. Hg push from hg client repo.
-#   5.a Check that Mononoke API server received POST repo/object/batch
-#   5.b Check that Mononoke API server received PUT repo/lfs/upload/{SHA}
-# 6. Create another Hg client repo. and pull to it.
-#   7.a Check that Mononoke API server received POST repo/object/batch
-#   7.b Check that Mononoke API server received GET repo/lfs/download/{SHA}
-
-
-# 1. Setup nolfs hg repo, create several commit to it
+# Setup nolfs hg repo, create several commit to it
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
   $ setup_hg_server
 
-# Commit small file
+# Commit a small file
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"
 
   $ hg bookmark master_bookmark -r tip
 
-# 2. Blobimport hg nolfs to mononoke (rocksDB).
+# Blobimport hg nolfs to mononoke
   $ cd ..
   $ blobimport repo-hg-nolfs/.hg repo
 
+# Setup hgrc to allow cloning the LFS repository
   $ cd repo-hg-nolfs
   $ cat >> $HGRCPATH << EOF
   > [treemanifest]
@@ -61,12 +45,11 @@
   > usercache=$TESTTMP/lfs-cache
   > EOF
 
-# 3. Setup Mononoke API server.
-  $ APISERVER_PORT=$(get_free_socket)
-  $ no_ssl_apiserver --http-host "127.0.0.1" --http-port $APISERVER_PORT
-  $ wait_for_apiserver --no-ssl
+# Start the Mononoke LFS Server
+  $ LFS_LOG="${TESTTMP}/lfs.log"
+  $ lfs_uri="$(lfs_server --log "$LFS_LOG")/repo"
 
-# 4. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
+# Create a new hg repository clone, with a low threshold for new LFS files
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
@@ -77,24 +60,22 @@
   > lfs=
   > [lfs]
   > threshold=1000B
-  > usercache=$TESTTMP/lfs-cache
-  > url=$APISERVER/repo
+  > usercache=$TESTTMP/lfs-cache1
+  > url=$lfs_uri
   > EOF
 
   $ hg update master_bookmark -q
 
-# ================ large file PUSH ===================
-  $ LONG=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+# Push a large file
+  $ LONG="$(yes A 2>/dev/null | head -c 2000)"
   $ echo $LONG > lfs-largefile
   $ SHA_LARGE_FILE=$(sha256sum lfs-largefile | awk '{print $1;}')
   $ hg commit -Aqm "add lfs-large file"
   $ hg push -r . --to master_bookmark -v
-  pushing rev 0db8825b9792 to destination ssh://user@dummy/repo-hg-nolfs bookmark master_bookmark
+  pushing rev d6c13aab6acd to destination ssh://user@dummy/repo-hg-nolfs bookmark master_bookmark
   searching for changes
-  lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
-  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
-  lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
-  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
+  lfs: uploading 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe (1.95 KB)
+  lfs: processed: 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe
   1 changesets found
   uncompressed size of bundle content:
        205 (changelog)
@@ -105,18 +86,15 @@
   remote: added 1 changesets with 1 changes to 1 files
   updating bookmark master_bookmark
 
-# 5.a Check that Mononoke API server received POST repo/object/batch
-  $ tail -n 2 $TESTTMP/apiserver.out | grep "200 POST /repo/objects/batch" | wc -l
-  1
+# Check that an upload was sent to the LFS server
+  $ cat "$LFS_LOG"
+  *POST /repo/objects/batch * 200 * (glob)
+  *PUT /repo/upload/2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe/2000 * 200 * (glob)
+  *POST /repo/objects/batch * 200 * (glob)
+  $ truncate -s 0 "$LFS_LOG"
 
-# 5.b Check that Mononoke API server received PUT repo/lfs/upload/{SHA}
-  $ tail -n 2 $TESTTMP/apiserver.out | grep "200 PUT /repo/lfs/upload/$SHA_LARGE_FILE" | wc -l
-  1
-
+# Create a new hg repository, and update to the new file
   $ cd ..
-
-# ===================== large file PULL ========================
-# 6. Create another Hg client repo. and pull to it.
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
@@ -128,22 +106,21 @@
   > [lfs]
   > threshold=1000B
   > usercache=$TESTTMP/lfs-cache2
-  > url=$APISERVER/repo
+  > url=$lfs_uri
   > EOF
 
   $ hg update master_bookmark -v
   resolving manifests
-  lfs: downloading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
-  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
+  lfs: downloading 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe (1.95 KB)
+  lfs: processed: 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe
   getting lfs-largefile
   getting smallfile
   calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sha256sum lfs-largefile
+  2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe  lfs-largefile
 
-#   7.a Check that Mononoke API server received POST repo/object/batch
-  $ tail -n 2 $TESTTMP/apiserver.out | grep "200 POST /repo/objects/batch" | wc -l
-  1
-
-#   7.b Check that Mononoke API server received GET repo/lfs/download/{SHA}
-  $ tail -n 2 $TESTTMP/apiserver.out | grep "200 GET /repo/lfs/download/$SHA_LARGE_FILE" | wc -l
-  1
+# Check that the LFS server received a download request (note: this is by Content ID)
+  $ cat "$LFS_LOG"
+  *POST /repo/objects/batch * 200 * (glob)
+  *GET /repo/download/1267b7f944920cc2c6a5d48bcf0996735d3fe984b09d5d3bdbccb710c0b99635 * 200 * (glob)

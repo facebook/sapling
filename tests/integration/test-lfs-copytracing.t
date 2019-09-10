@@ -25,16 +25,14 @@ Setup Mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
-Setup API server
-  $ APISERVER_PORT=$(get_free_socket)
-  $ no_ssl_apiserver --http-host "127.0.0.1" --http-port $APISERVER_PORT
-  $ wait_for_apiserver --no-ssl
+Setup LFS server
+  $ lfs_uri="$(lfs_server)/repo"
 
 Clone the repository, then enable HG LFS
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
-  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache1
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -58,7 +56,7 @@ Create a new repository, enable LFS there as well
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
-  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache2
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

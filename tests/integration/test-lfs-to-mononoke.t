@@ -24,15 +24,13 @@ Start Mononoke with LFS enabled.
   $ wait_for_mononoke "$TESTTMP/repo"
 
 Start Mononoke API server, to serve LFS blobs
-  $ APISERVER_PORT="$(get_free_socket)"
-  $ no_ssl_apiserver --http-host "127.0.0.1" --http-port "$APISERVER_PORT"
-  $ wait_for_apiserver --no-ssl
+  $ lfs_uri="$(lfs_server)/repo"
 
 Create a new client repository. Enable LFS there.
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
-  $ setup_hg_lfs "$APISERVER/repo" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -76,8 +74,6 @@ Perform LFS push
   $ hgmn push -r . --to master_bookmark -v
   pushing rev c651f052c52d to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  lfs: uploading d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982 (1.96 KB)
-  lfs: processed: d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:
@@ -129,7 +125,7 @@ Create a new client repository
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
-  $ setup_hg_lfs "$APISERVER/repo" 1000B "$TESTTMP/lfs-cache2"
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -182,8 +178,6 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 77f499cb0645 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  lfs: uploading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.96 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:
@@ -218,7 +212,7 @@ Create a new client repository, using getpack (with its own cachepath)
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs3
   $ setup_hg_client
-  $ setup_hg_lfs "$APISERVER/repo" 1000B "$TESTTMP/lfs-cache3"
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

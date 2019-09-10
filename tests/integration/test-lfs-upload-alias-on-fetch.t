@@ -34,13 +34,13 @@
   $ wait_for_mononoke $TESTTMP/repo
 
 # 4. Setup Mononoke API server.
-  $ setup_no_ssl_apiserver
+  $ lfs_uri="$(lfs_server)/repo"
 
 # 5. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
-  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache1
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -87,7 +87,7 @@
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
-  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache2
+  $ setup_hg_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
