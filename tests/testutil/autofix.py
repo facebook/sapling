@@ -10,10 +10,10 @@ import atexit
 import os
 import sys
 
-from .argspans import argspans
+from .argspans import argspans, parse
 
 
-def eq(actual, expected, nested=0, eqfunc=None):
+def eq(actual, expected, nested=0, eqfunc=None, fixfunc=None):
     """Check actual == expected.
 
     If autofix is True, record the failure and try to fix it automatically.
@@ -27,6 +27,14 @@ def eq(actual, expected, nested=0, eqfunc=None):
     For nested use-cases (ex. having a `fooeq(...)` function that auto fixes
     the last argument of `fooeq`. Set `nested` to the number of functions
     wrapping this function.
+
+    The default autofix feature rewrites the right-most parameter. It works for
+    both function calls (ex. `f(a, b, c)`, c gets rewritten), and `__eq__`
+    operation (ex. `a == b`, `b` gets rewritten). If the default autofix cannot
+    figure out how to fix the function, `fixfunc` will be called instead with
+    (actual, expected, path, lineno, parso parsed file), `fixfunc` should
+    return either `None` meaning it cannot autofix the code, or `(((start line,
+    start col), (end line, end col)), code)` if it can.
     """
     # For strings. Remove leading spaces and compare them again.
     if isinstance(actual, str) and isinstance(expected, str) and "\n" in expected:
@@ -49,15 +57,21 @@ def eq(actual, expected, nested=0, eqfunc=None):
         path, lineno, indent, spans = argspans(nested)
         # Use ast.literal_eval to make sure the code evaluates to the actual
         # value. It can be `eval`, but less safe.
+        fix = None
         if spans is not None and ast.literal_eval(repr(actual)) == actual:
             code = _repr(actual, indent + 4)
-            if path not in _fixes:
-                _fixes[path] = []
             # Assuming the last argument is "expected" and needs change.
             # (if nested is not 0, the "callsite" might be calling other
             # functions that take a different number of arguments).
-            _fixes[path].append((spans[-1], code))
-            return
+            fix = (spans[-1], code)
+        else:
+            # Try using the customized fixfunc
+            if fixfunc is not None:
+                assert path
+                assert lineno is not None
+                fix = fixfunc(actual, expected, path, lineno, parse(path))
+        if fix is not None:
+            _fixes.setdefault(path, []).append(fix)
         else:
             sys.stderr.write(
                 "Cannot auto-fix %r => %r at %s:%s\n"

@@ -94,8 +94,7 @@ class LazyCommand(object):
             try:
                 out = self.output
                 # Output should be empty
-                if out:
-                    raise AssertionError("%r output %r is not empty" % (self, out))
+                autofix.eq(out, "", nested=1, fixfunc=_fixoutput)
             except Exception:
                 # Cannot raise in __del__. Put it in _delayedexception
                 _delayedexception.append(sys.exc_info())
@@ -220,6 +219,21 @@ def _normalizeerr(out, _errors=_errors):
 def _removetrailingspacesmark(out):
     """Remove '(trailing space)'"""
     return out.replace(" (trailing space)", "")
+
+
+def _fixoutput(actual, expected, path, lineno, parsed):
+    """Fix `sh % "foo"` to `sh % "foo" == actual`"""
+    # XXX: This function does not do any real AST parsing and can in theory
+    # produce wrong autofixes. For example, if `line` ends with a comment
+    # like `# foo`. This is merely because the current implementation is easier
+    # to write and it should work for most cases. If that becomes an issue we
+    # need to change it to do more precise parsing.
+    lines = parsed.get_code().splitlines(True)
+    # - 1: convert 1-based index to 0-based
+    line = lines[lineno - 1]
+    linewidth = len(lines[lineno - 1]) - 1
+    code = "%s == %s" % (line.rstrip(), autofix._repr(actual, indent=4))
+    return ((lineno, 0), (lineno, linewidth)), code
 
 
 def eqglob(a, b):
