@@ -10,6 +10,7 @@ import fnmatch
 import os
 import re
 import shlex
+import sys
 
 from .. import autofix
 from . import shlib
@@ -25,7 +26,8 @@ class LazyCommand(object):
         self._stdoutpath = None
         self._stdoutappend = False
         if _delayedexception:
-            raise _delayedexception[0]
+            exctype, excvalue, traceback = _delayedexception[0]
+            raise exctype, excvalue, traceback
 
     @property
     def output(self):
@@ -94,8 +96,9 @@ class LazyCommand(object):
                 # Output should be empty
                 if out:
                     raise AssertionError("%r output %r is not empty" % (self, out))
-            except Exception as ex:
-                _delayedexception.append(ex)
+            except Exception:
+                # Cannot raise in __del__. Put it in _delayedexception
+                _delayedexception.append(sys.exc_info())
                 raise
 
     def __lshift__(self, heredoc):
