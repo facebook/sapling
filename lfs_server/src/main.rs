@@ -16,8 +16,8 @@ use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::{
     bind_server,
     handler::HandlerFuture,
-    middleware::state::StateMiddleware,
-    pipeline::{single::single_pipeline, single_middleware},
+    middleware::{logger::RequestLogger, state::StateMiddleware},
+    pipeline::{new_pipeline, single::single_pipeline},
     router::{
         builder::{build_router, DefineSingleRoute, DrawRoutes},
         Router,
@@ -84,8 +84,10 @@ fn health_handler(state: State) -> (State, &'static str) {
 }
 
 fn router(lfs_ctx: LfsServerContext) -> Router {
-    let middleware = StateMiddleware::new(lfs_ctx);
-    let pipeline = single_middleware(middleware);
+    let pipeline = new_pipeline()
+        .add(StateMiddleware::new(lfs_ctx))
+        .add(RequestLogger::new(::log::Level::Info))
+        .build();
     let (chain, pipelines) = single_pipeline(pipeline);
 
     build_router(chain, pipelines, |route| {
