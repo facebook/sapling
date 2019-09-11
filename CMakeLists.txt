@@ -49,7 +49,8 @@ if (NOT WIN32)
 endif()
 include(EdenConfigChecks)
 include(FBMercurialFeatures)
-include(FBThriftCppLibrary)
+include(FBPythonBinary)
+include(FBThriftLibrary)
 
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -61,7 +62,9 @@ set_property(
   COMPILE_DEFINITIONS
   "FOLLY_XLOG_STRIP_PREFIXES=\"${CMAKE_SOURCE_DIR}:${CMAKE_BINARY_DIR}\""
 )
+add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
+add_subdirectory(eden/py)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in

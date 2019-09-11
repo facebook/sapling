@@ -14,5 +14,5 @@ target_link_libraries(
     eden_model
     eden_tracing
     eden_utils
-    streamingeden_thrift
+    streamingeden_thrift_cpp
 )

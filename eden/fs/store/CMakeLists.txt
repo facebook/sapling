@@ -28,7 +28,7 @@ target_link_libraries(
     eden_config
     eden_model
     eden_model_git
-    eden_service_thrift
+    eden_service_thrift_cpp
     eden_sqlite
 )
 

@@ -30,7 +30,7 @@ else()
       eden_fuse
       eden_journal
       eden_model_git
-      eden_overlay_thrift
+      eden_overlay_thrift_cpp
       eden_overlay
       eden_service
       eden_store
@@ -38,6 +38,6 @@ else()
       eden_tracing
       eden_utils
   )
-
-  add_subdirectory(overlay)
 endif()
+
+add_subdirectory(overlay)
