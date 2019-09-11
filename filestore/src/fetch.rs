@@ -63,11 +63,11 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
     }
 }
 
-pub fn fetch<B: Blobstore + Clone>(
+pub fn fetch_with_size<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
     content_id: ContentId,
-) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
     content_id
         .load(ctx.clone(), &blobstore)
         .map(Some)
@@ -78,8 +78,10 @@ pub fn fetch<B: Blobstore + Clone>(
         .map({
             cloned!(blobstore, ctx);
             move |maybe_file_contents| {
-                maybe_file_contents
-                    .map(|file_contents| stream_file_bytes(blobstore, ctx, file_contents))
+                maybe_file_contents.map(|file_contents| {
+                    let file_size = file_contents.size();
+                    (stream_file_bytes(blobstore, ctx, file_contents), file_size)
+                })
             }
         })
 }

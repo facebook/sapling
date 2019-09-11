@@ -1088,3 +1088,43 @@ fn filestore_test_rechunk_missing_content() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn filestore_chunked_put_get_with_size() -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = memblob::LazyMemblob::new();
+    let config = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+
+    let ctx = CoreContext::test_mock();
+
+    rt.block_on(filestore::store(
+        blob.clone(),
+        &config,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    let res = rt.block_on(filestore::fetch_with_size(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
+
+    let (stream, size) = res?.unwrap();
+
+    let stream = rt.block_on(stream.concat2());
+
+    println!("{:?}", stream);
+
+    assert_eq!(stream?, Bytes::from(HELLO_WORLD));
+    assert_eq!(size, HELLO_WORLD_LENGTH);
+    Ok(())
+}

@@ -187,17 +187,16 @@ pub fn exists<B: Blobstore + Clone>(
         .map(|exists: Option<bool>| exists.unwrap_or(false))
 }
 
-/// Fetch a file as a stream. This returns either success with a stream of data if the file
-///  exists, success with None if it does not exist, or an Error if either existence can't
-/// be determined or if opening the file failed. File contents are returned in chunks
-/// configured by FilestoreConfig::read_chunk_size - this defines the max chunk size, but
-/// they may be shorter (not just the final chunks - any of them). Chunks are guaranteed to
-/// have non-zero size.
-pub fn fetch<B: Blobstore + Clone>(
+/// Fetch a file as a stream. This returns either success with a stream of data and file size if
+/// the file exists, success with None if it does not exist, or an Error if either existence can't
+/// be determined or if opening the file failed. File contents are returned in chunks configured by
+/// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
+/// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
+pub fn fetch_with_size<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
     key.load(ctx.clone(), blobstore)
         .map(Some)
         .or_else(|err| match err {
@@ -207,10 +206,21 @@ pub fn fetch<B: Blobstore + Clone>(
         .and_then({
             cloned!(blobstore, ctx);
             move |content_id| match content_id {
-                Some(content_id) => fetch::fetch(blobstore, ctx, content_id).left_future(),
+                Some(content_id) => {
+                    fetch::fetch_with_size(blobstore, ctx, content_id).left_future()
+                }
                 None => Ok(None).into_future().right_future(),
             }
         })
+}
+
+/// This function has the same functionality as fetch_with_size, but doesn't return the file size.
+pub fn fetch<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+    fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
