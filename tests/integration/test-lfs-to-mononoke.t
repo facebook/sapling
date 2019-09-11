@@ -171,9 +171,9 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   $ echo "${LONG}inconsistent" > inconsistent_file
   $ hg commit -Aqm "hash check"
 
-  $ FILENODE_TO_CORRUPT=".hg/store/data/181f21543edce858fdf3e7ddba53facb9ba2e2dd/ef5953d600ca68bacb539eab8dffb415441213bb"
-  $ chmod 666 "$FILENODE_TO_CORRUPT"
-  $ sed -i s/sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9/sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d/ "$FILENODE_TO_CORRUPT"
+  $ PACK_TO_CORRUPT=".hg/store/packs/53030272778e08be8e520a61c0848183520e58ba.datapack"
+  $ chmod 666 "$PACK_TO_CORRUPT"
+  $ sed -i s/sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9/sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d/ "$PACK_TO_CORRUPT"
 
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 77f499cb0645 to destination ssh://user@dummy/repo bookmark master_bookmark

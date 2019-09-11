@@ -44,10 +44,10 @@
   $ hg commit -Aqm "commit"
 
 # remotefilelog is True, so reference to filenodes are by hashes (SHA1)
-  $ FILENODE_TO_CORRUPT=".hg/store/data/971c419dd609331343dee105fffd0f4608dc0bf2/979d39e9dea4d1f3f1fea701fd4d3bae43eef76b"
+  $ PACK_TO_CORRUPT=".hg/store/packs/dee3d9750ad87ede865d69e20330c34e51ec83d5.datapack"
 # change access to file, as it is readonly
-  $ chmod 666 $FILENODE_TO_CORRUPT
-  $ sed -i s/hello_world/aaaaaaaaaaa/ $FILENODE_TO_CORRUPT
+  $ chmod 666 "$PACK_TO_CORRUPT"
+  $ sed -i s/hello_world/aaaaaaaaaaa/ "$PACK_TO_CORRUPT"
 
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
