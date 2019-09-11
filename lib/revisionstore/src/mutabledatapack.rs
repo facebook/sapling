@@ -164,11 +164,11 @@ impl MutableDataPack {
 
 impl MutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         self.inner.lock().unwrap().add(delta, metadata)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         let mut guard = self.inner.lock().unwrap();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_basic_creation() {
         let tempdir = tempdir().unwrap();
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -315,8 +315,7 @@ mod tests {
     fn test_basic_abort() {
         let tempdir = tempdir().unwrap();
         {
-            let mut mutdatapack =
-                MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+            let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
             let delta = Delta {
                 data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
@@ -331,7 +330,7 @@ mod tests {
     #[test]
     fn test_get_delta_chain() {
         let tempdir = tempdir().unwrap();
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -355,7 +354,7 @@ mod tests {
     #[test]
     fn test_get_partial_delta_chain() -> Fallible<()> {
         let tempdir = tempdir()?;
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One)?;
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One)?;
 
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
@@ -375,7 +374,7 @@ mod tests {
     fn test_get_meta() {
         let tempdir = tempdir().unwrap();
 
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -412,7 +411,7 @@ mod tests {
     fn test_get_missing() {
         let tempdir = tempdir().unwrap();
 
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -431,7 +430,7 @@ mod tests {
     fn test_empty() {
         let tempdir = tempdir().unwrap();
 
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         mutdatapack.flush().unwrap();
         drop(mutdatapack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);

@@ -443,7 +443,7 @@ pub mod tests {
     use crate::mutabledatapack::MutableDataPack;
 
     pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Metadata)>) -> DataPack {
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         for (delta, metadata) in deltas.iter() {
             mutdatapack.add(delta, metadata).unwrap();
         }

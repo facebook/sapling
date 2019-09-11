@@ -43,7 +43,7 @@ impl<T: MutableDeltaStore + Send> AsyncMutableDeltaStore<T> {
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
-                    let mut inner = inner.expect("The delta store is closed");
+                    let inner = inner.expect("The delta store is closed");
                     inner.add(&delta, &metadata).map(|()| inner)
                 })
             }
@@ -60,7 +60,7 @@ impl<T: MutableDeltaStore + Send> AsyncMutableDeltaStore<T> {
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
-                    let mut inner = inner.expect("The delta store is closed");
+                    let inner = inner.expect("The delta store is closed");
                     inner.flush()
                 })
             }

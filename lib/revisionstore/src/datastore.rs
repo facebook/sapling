@@ -5,7 +5,7 @@
 
 use std::{
     io::{Cursor, Write},
-    ops::{Deref, DerefMut},
+    ops::Deref,
     path::PathBuf,
 };
 
@@ -39,8 +39,8 @@ pub trait DataStore: LocalStore {
 }
 
 pub trait MutableDeltaStore: DataStore {
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
-    fn flush(&mut self) -> Fallible<Option<PathBuf>>;
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
+    fn flush(&self) -> Fallible<Option<PathBuf>>;
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
@@ -60,12 +60,12 @@ impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
     }
 }
 
-impl<T: MutableDeltaStore + ?Sized, U: DerefMut<Target = T>> MutableDeltaStore for U {
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+impl<T: MutableDeltaStore + ?Sized, U: Deref<Target = T>> MutableDeltaStore for U {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         T::add(self, delta, metadata)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         T::flush(self)
     }
 }

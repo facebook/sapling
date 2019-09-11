@@ -45,16 +45,16 @@ impl<'a> MultiplexHistoryStore<'a> {
 
 impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
     /// Write the `Delta` and `Metadata` to all the stores
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        for store in self.stores.iter_mut() {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+        for store in self.stores.iter() {
             store.add(delta, metadata)?;
         }
 
         Ok(())
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        for store in self.stores.iter_mut() {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
+        for store in self.stores.iter() {
             store.flush()?;
         }
 

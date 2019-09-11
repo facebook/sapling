@@ -31,7 +31,7 @@ pub trait IterableDataStorePyExt {
 
 pub trait MutableDeltaStorePyExt: DataStorePyExt {
     fn add_py(
-        &mut self,
+        &self,
         py: Python,
         name: &PyBytes,
         node: &PyBytes,
@@ -39,7 +39,7 @@ pub trait MutableDeltaStorePyExt: DataStorePyExt {
         delta: &PyBytes,
         metadata: Option<PyDict>,
     ) -> PyResult<PyObject>;
-    fn flush_py(&mut self, py: Python) -> PyResult<PyObject>;
+    fn flush_py(&self, py: Python) -> PyResult<PyObject>;
 }
 
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
@@ -143,7 +143,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
 
 impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
     fn add_py(
-        &mut self,
+        &self,
         py: Python,
         name: &PyBytes,
         node: &PyBytes,
@@ -162,7 +162,7 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
         Ok(Python::None(py))
     }
 
-    fn flush_py(&mut self, py: Python) -> PyResult<PyObject> {
+    fn flush_py(&self, py: Python) -> PyResult<PyObject> {
         let opt = self.flush().map_err(|e| to_pyerr(py, &e))?;
         let opt = opt
             .as_ref()

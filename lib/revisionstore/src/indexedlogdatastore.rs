@@ -178,7 +178,7 @@ impl IndexedLogDataStore {
 }
 
 impl MutableDeltaStore for IndexedLogDataStore {
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
@@ -186,7 +186,7 @@ impl MutableDeltaStore for IndexedLogDataStore {
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }
@@ -261,14 +261,14 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogDataStore::new(&tempdir).unwrap();
         log.flush().unwrap();
     }
 
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
-        let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
-        let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_add_chain() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogDataStore::new(&tempdir)?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -335,7 +335,7 @@ mod tests {
     #[test]
     fn test_iter() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogDataStore::new(&tempdir)?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogDataStore::new(&tempdir)?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -373,7 +373,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogDataStore::new(&tempdir)?;
         let k = key("a", "3");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),

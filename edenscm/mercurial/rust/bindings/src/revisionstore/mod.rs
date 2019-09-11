@@ -452,7 +452,7 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.flush_py(py)?;
         Ok(Python::None(py))
     }
@@ -543,12 +543,12 @@ py_class!(pub class mutabledeltastore |py| {
     }
 
     def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.add_py(py, name, node, deltabasenode, delta, metadata)
     }
 
     def flush(&self) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.flush_py(py)
     }
 
@@ -633,24 +633,24 @@ impl LocalStore for mutabledeltastore {
 }
 
 impl MutableDeltaStore for mutabledeltastore {
-    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut store = self
+        let store = self
             .store(py)
-            .get_mut_value(py)
+            .get_value(py)
             .map_err(|e| pyerr_to_error(py, e))?;
         store.add(delta, metadata)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut store = self
+        let store = self
             .store(py)
-            .get_mut_value(py)
+            .get_value(py)
             .map_err(|e| pyerr_to_error(py, e))?;
         store.flush()
     }

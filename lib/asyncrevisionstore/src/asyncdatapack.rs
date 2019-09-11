@@ -39,7 +39,7 @@ mod tests {
         tempdir: &TempDir,
         deltas: &[(Delta, Metadata)],
     ) -> impl Future<Item = AsyncDataPack, Error = Error> + 'static {
-        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         for (delta, metadata) in deltas.iter() {
             mutdatapack.add(delta, metadata).unwrap();
         }
