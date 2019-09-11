@@ -42,6 +42,9 @@ pub enum MononokeRepoResponse {
     GetBranches {
         branches: BTreeMap<String, String>,
     },
+    GetFileHistory {
+        history: Vec<Changeset>,
+    },
     GetLastCommitOnPath {
         commit: Changeset,
     },
@@ -125,6 +128,7 @@ impl Responder for MononokeRepoResponse {
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             GetBranches { branches } => Json(branches).respond_to(req),
+            GetFileHistory { history } => Json(history).respond_to(req),
             GetLastCommitOnPath { commit } => Json(commit).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {

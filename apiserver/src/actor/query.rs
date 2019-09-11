@@ -13,9 +13,9 @@ use serde_derive::Serialize;
 
 use apiserver_thrift::types::{
     MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetLastCommitOnPathParams, MononokeGetRawParams, MononokeGetTreeParams,
-    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeListDirectoryUnodesParams,
-    MononokeRevision,
+    MononokeGetFileHistoryParams, MononokeGetLastCommitOnPathParams, MononokeGetRawParams,
+    MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams,
+    MononokeListDirectoryUnodesParams, MononokeRevision,
 };
 use types::api::{DataRequest, HistoryRequest, TreeRequest};
 
@@ -51,6 +51,12 @@ pub enum MononokeRepoQuery {
         revision: Revision,
     },
     GetBranches,
+    GetFileHistory {
+        path: String,
+        revision: Revision,
+        limit: i32,
+        skip: i32,
+    },
     GetLastCommitOnPath {
         path: String,
         revision: Revision,
@@ -117,6 +123,26 @@ impl TryFrom<MononokeGetBranchesParams> for MononokeQuery {
         Ok(MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetBranches,
+        })
+    }
+}
+
+impl TryFrom<MononokeGetFileHistoryParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeGetFileHistoryParams) -> Result<MononokeQuery, Self::Error> {
+        let repo = params.repo;
+        let path = String::from_utf8(params.path)?;
+        let limit = params.limit;
+        let skip = params.skip;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
+            kind: MononokeRepoQuery::GetFileHistory {
+                path,
+                revision: rev,
+                limit,
+                skip,
+            },
         })
     }
 }

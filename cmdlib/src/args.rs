@@ -802,6 +802,17 @@ pub fn get_u64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<u64> {
 }
 
 #[inline]
+pub fn get_i32<'a>(matches: &ArgMatches<'a>, key: &str, default: i32) -> i32 {
+    matches
+        .value_of(key)
+        .map(|val| {
+            val.parse::<i32>()
+                .expect(&format!("{} must be integer", key))
+        })
+        .unwrap_or(default)
+}
+
+#[inline]
 pub fn get_i64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i64> {
     matches.value_of(key).map(|val| {
         val.parse::<i64>()

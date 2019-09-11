@@ -7,6 +7,7 @@
 use std::string::String;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
+use cmdlib::args;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -50,6 +51,28 @@ fn get_branches(client: MononokeAPIClient) -> BoxFuture<(), ()> {
         })
         .map_err(|e| eprintln!("error: {}", e))
         .map(|res| println!("{}", res))
+        .boxify()
+}
+
+fn get_file_history(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
+    let path = matches.value_of("path").expect("must provide path");
+    let revision = matches.value_of("revision").expect("must provide revision");
+
+    let limit = args::get_i32(&matches, "limit", 100);
+    let skip = args::get_i32(&matches, "skip", 0);
+
+    client
+        .get_file_history(revision.to_string(), path.to_string(), limit, skip)
+        .and_then(|r| {
+            Ok(
+                serde_json::to_string(&r)
+                    .unwrap_or("Error converting response to json".to_string()),
+            )
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
         .boxify()
 }
 
@@ -213,6 +236,40 @@ fn main() -> Result<(), ()> {
         )
         .subcommand(SubCommand::with_name("get_branches").about("get all branches"))
         .subcommand(
+            SubCommand::with_name("get_file_history")
+                .about("get history of changes for the given file")
+                .arg(
+                    Arg::with_name("revision")
+                        .short("c")
+                        .long("revision")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the revision you want to query")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .short("p")
+                        .long("path")
+                        .value_name("PATH")
+                        .help("path to the file or directory")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("limit")
+                        .short("l")
+                        .value_name("NUM")
+                        .help("number of history commits to query")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("skip")
+                        .short("s")
+                        .value_name("NUM")
+                        .help("number of the latest commits in history to skip")
+                        .default_value("0"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("get_last_commit_on_path")
                 .about("get the last commit cantaining changes on the path")
                 .arg(
@@ -330,6 +387,8 @@ fn main() -> Result<(), ()> {
         get_changeset(client, matches)
     } else if let Some(_) = matches.subcommand_matches("get_branches") {
         get_branches(client)
+    } else if let Some(matches) = matches.subcommand_matches("get_file_history") {
+        get_file_history(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("get_last_commit_on_path") {
         get_last_commit_on_path(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("list_directory") {

@@ -54,6 +54,14 @@ struct MononokeGetBranchesParams{
   1: string repo,
 }
 
+struct MononokeGetFileHistoryParams{
+  1: string repo,
+  2: MononokeRevision revision,
+  3: binary path,
+  4: i32 limit,
+  5: i32 skip,
+}
+
 struct MononokeGetLastCommitOnPathParams{
   1: string repo,
   2: MononokeRevision revision,
@@ -114,6 +122,10 @@ struct MononokeFile {
   5: optional string content_sha1,
 }
 
+struct MononokeFileHistory {
+  1: list<MononokeChangeset> history,
+}
+
 struct MononokeDirectoryUnodes {
   1: list<MononokeEntryUnodes> entries,
 }
@@ -142,6 +154,9 @@ service MononokeAPIService extends source_control.SourceControlService {
     throws (1: MononokeAPIException e),
 
   MononokeBranches get_branches(1: MononokeGetBranchesParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeFileHistory get_file_history(1: MononokeGetFileHistoryParams params)
     throws (1: MononokeAPIException e),
 
   MononokeChangeset get_last_commit_on_path(1: MononokeGetLastCommitOnPathParams params)

@@ -6,6 +6,7 @@
 
 use std::time::{Duration, Instant};
 use std::{
+    cmp,
     collections::{BTreeMap, HashMap},
     convert::{TryFrom, TryInto},
     sync::{Arc, RwLock},
@@ -20,10 +21,11 @@ use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::BonsaiDerived;
 use failure::Error;
+use fastlog::{prefetch_history, RootFastlog, RootFastlogMapping};
 use futures::{
     future::{self, err, join_all, ok},
     lazy,
-    stream::{iter_ok, repeat, FuturesUnordered},
+    stream::{futures_ordered, iter_ok, repeat, FuturesUnordered},
     Future, IntoFuture, Stream,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
@@ -34,7 +36,9 @@ use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use time_ext::DurationExt;
 
-use mercurial_types::{manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId};
+use mercurial_types::{
+    blobs::HgBlobChangeset, manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
+};
 use metaconfig_types::{CommonConfig, RepoConfig};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::{define_stats, Timeseries};
@@ -43,7 +47,10 @@ use types::{
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
-use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId, RepositoryId};
+use mononoke_types::{
+    fastlog_batch::max_entries_in_fastlog_batch, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
+    RepositoryId,
+};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 
@@ -64,6 +71,7 @@ define_stats! {
     get_tree: timeseries(RATE, SUM),
     get_changeset: timeseries(RATE, SUM),
     get_branches: timeseries(RATE, SUM),
+    get_file_history: timeseries(RATE, SUM),
     get_last_commit_on_path: timeseries(RATE, SUM),
     is_ancestor: timeseries(RATE, SUM),
     eden_get_data: timeseries(RATE, SUM),
@@ -233,7 +241,7 @@ impl MononokeRepo {
         }
     }
 
-    fn get_root_manifest_unode_entry(
+    fn get_unode_entry(
         &self,
         ctx: CoreContext,
         revision: Revision,
@@ -270,6 +278,37 @@ impl MononokeRepo {
                     format!("{:?} {:?}", revision, mpath),
                     None,
                 ))
+            })
+            .boxify()
+    }
+
+    fn do_get_last_commit_on_path(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+    ) -> BoxFuture<HgBlobChangeset, ErrorKind> {
+        cloned!(ctx, self.repo);
+        let blobstore = repo.get_blobstore();
+        self.get_unode_entry(ctx.clone(), revision, path)
+            .and_then({
+                cloned!(blobstore, ctx);
+                move |entry| entry.load(ctx, &blobstore).map_err(Error::from).from_err()
+            })
+            .and_then({
+                cloned!(ctx, repo);
+                move |unode| {
+                    let changeset_id = match unode {
+                        ManifestEntry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                        ManifestEntry::Leaf(file_unode) => file_unode.linknode().clone(),
+                    };
+                    repo.get_hg_from_bonsai_changeset(ctx, changeset_id)
+                        .from_err()
+                }
+            })
+            .and_then(move |hg_changeset_id| {
+                repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
+                    .from_err()
             })
             .boxify()
     }
@@ -346,6 +385,148 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn get_file_history(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+        limit: i32,
+        skip: i32,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_file_history.add_value(1);
+        let limit = limit as usize;
+        let skip = skip as usize;
+
+        // for now we fetch only one history batch
+        let max_entries = max_entries_in_fastlog_batch();
+        if skip >= max_entries {
+            return future::err(ErrorKind::InvalidInput(
+                format!("cannot skip {}, batch size is {}", skip, max_entries),
+                None,
+            ))
+            .boxify();
+        }
+        if limit + skip > max_entries {
+            return future::err(ErrorKind::InvalidInput(
+                format!("cannot fetch {}, batch size is {}", limit, max_entries),
+                None,
+            ))
+            .boxify();
+        }
+        if limit == 0 {
+            return future::err(ErrorKind::InvalidInput(
+                "0 commits requested".to_string(),
+                None,
+            ))
+            .boxify();
+        }
+
+        // it's not necessary to fetch history in this case, we need just the most recent commit
+        if skip == 0 && limit == 1 {
+            return self
+                .do_get_last_commit_on_path(ctx.clone(), revision, path)
+                .and_then(move |changeset| {
+                    changeset
+                        .try_into()
+                        .map_err(Error::from)
+                        .map_err(ErrorKind::from)
+                })
+                .map(move |changeset| MononokeRepoResponse::GetFileHistory {
+                    history: vec![changeset],
+                })
+                .boxify();
+        }
+
+        cloned!(ctx, self.repo);
+        let bcs_id_fut = self.get_bonsai_id_from_revision(ctx.clone(), revision.clone());
+        self.get_unode_entry(ctx.clone(), revision.clone(), path.clone())
+            .join(bcs_id_fut)
+            .and_then({
+                cloned!(ctx, repo);
+                move |(entry, bcs_id)| {
+                    // optimistically try to fetch history for a unode
+                    prefetch_history(ctx.clone(), repo.clone(), entry)
+                        .map_err(Error::from)
+                        .from_err()
+                        .and_then({
+                            move |maybe_history| match maybe_history {
+                                Some(history) => ok(history).left_future(),
+                                // if there is no history, let's try to derive batched fastlog data
+                                // and fetch history again
+                                None => {
+                                    let fastlog_derived_mapping = Arc::new(
+                                        RootFastlogMapping::new(Arc::new(repo.get_blobstore())),
+                                    );
+                                    RootFastlog::derive(
+                                        ctx.clone(),
+                                        repo.clone(),
+                                        fastlog_derived_mapping,
+                                        bcs_id,
+                                    )
+                                    .map_err(ErrorKind::InternalError)
+                                    .and_then({
+                                        cloned!(ctx, repo);
+                                        move |_| {
+                                            prefetch_history(ctx.clone(), repo.clone(), entry)
+                                                .map_err(Error::from)
+                                                .from_err()
+                                        }
+                                    })
+                                    .and_then(move |maybe_history| {
+                                        maybe_history.ok_or(ErrorKind::NotFound(
+                                            format!("{:?} {:?}", revision, path),
+                                            None,
+                                        ))
+                                    })
+                                    .right_future()
+                                }
+                            }
+                        })
+                }
+            })
+            .and_then({
+                cloned!(ctx, repo);
+                move |history| {
+                    let number = cmp::min(history.len(), skip + limit);
+                    if number < skip {
+                        // we skip more commits than the history has
+                        ok(vec![]).left_future()
+                    } else {
+                        let changeset_ids: Vec<_> = history[skip..number]
+                            .into_iter()
+                            .map(|(cs_id, _)| *cs_id)
+                            .collect();
+                        repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids)
+                            .from_err()
+                            .right_future()
+                    }
+                }
+            })
+            .and_then({
+                move |hg_bcs_id_mapping| {
+                    let mut history_chunk_fut = vec![];
+                    for (hg_changeset_id, _) in hg_bcs_id_mapping {
+                        cloned!(ctx, repo);
+                        history_chunk_fut.push(
+                            repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
+                                .from_err()
+                                .and_then(move |changeset| {
+                                    changeset
+                                        .try_into()
+                                        .map_err(Error::from)
+                                        .map_err(ErrorKind::from)
+                                }),
+                        );
+                    }
+                    futures_ordered(history_chunk_fut).collect()
+                }
+            })
+            .map(move |history_chunk| MononokeRepoResponse::GetFileHistory {
+                history: history_chunk,
+            })
+            .boxify()
+    }
+
     fn get_last_commit_on_path(
         &self,
         ctx: CoreContext,
@@ -354,28 +535,7 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::get_last_commit_on_path.add_value(1);
 
-        cloned!(ctx, self.repo);
-        let blobstore = repo.get_blobstore();
-        self.get_root_manifest_unode_entry(ctx.clone(), revision, path)
-            .and_then({
-                cloned!(blobstore, ctx);
-                move |entry| entry.load(ctx, &blobstore).map_err(Error::from).from_err()
-            })
-            .and_then({
-                cloned!(ctx, repo);
-                move |unode| {
-                    let changeset_id = match unode {
-                        ManifestEntry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                        ManifestEntry::Leaf(file_unode) => file_unode.linknode().clone(),
-                    };
-                    repo.get_hg_from_bonsai_changeset(ctx, changeset_id)
-                        .from_err()
-                }
-            })
-            .and_then(move |hg_changeset_id| {
-                repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
-                    .from_err()
-            })
+        self.do_get_last_commit_on_path(ctx.clone(), revision, path)
             .and_then(move |changeset| {
                 changeset
                     .try_into()
@@ -429,7 +589,7 @@ impl MononokeRepo {
 
         cloned!(ctx, self.repo);
         let blobstore = repo.get_blobstore();
-        self.get_root_manifest_unode_entry(ctx.clone(), revision, path.clone())
+        self.get_unode_entry(ctx.clone(), revision, path.clone())
             .and_then({
                 cloned!(blobstore, ctx);
                 move |entry| match entry {
@@ -725,6 +885,12 @@ impl MononokeRepo {
             GetTree { hash } => self.get_tree(ctx, hash),
             GetChangeset { revision } => self.get_changeset(ctx, revision),
             GetBranches => self.get_branches(ctx),
+            GetFileHistory {
+                revision,
+                path,
+                limit,
+                skip,
+            } => self.get_file_history(ctx, revision, path, limit, skip),
             GetLastCommitOnPath { revision, path } => {
                 self.get_last_commit_on_path(ctx, revision, path)
             }

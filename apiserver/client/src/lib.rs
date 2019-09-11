@@ -11,10 +11,11 @@ use futures_ext::BoxFuture;
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeDirectoryUnodes,
-    MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetLastCommitOnPathParams, MononokeGetRawParams, MononokeGetTreeParams,
-    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeListDirectoryUnodesParams,
-    MononokeNodeHash, MononokeRevision, MononokeTreeHash,
+    MononokeFileHistory, MononokeGetBlobParams, MononokeGetBranchesParams,
+    MononokeGetChangesetParams, MononokeGetFileHistoryParams, MononokeGetLastCommitOnPathParams,
+    MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
+    MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeNodeHash,
+    MononokeRevision, MononokeTreeHash,
 };
 use srclient::SRChannelBuilder;
 
@@ -66,6 +67,22 @@ impl MononokeAPIClient {
     pub fn get_branches(&self) -> BoxFuture<MononokeBranches, failure_ext::Error> {
         self.inner.get_branches(&MononokeGetBranchesParams {
             repo: self.repo.clone(),
+        })
+    }
+
+    pub fn get_file_history(
+        &self,
+        revision: String,
+        path: String,
+        limit: i32,
+        skip: i32,
+    ) -> BoxFuture<MononokeFileHistory, failure_ext::Error> {
+        self.inner.get_file_history(&MononokeGetFileHistoryParams {
+            repo: self.repo.clone(),
+            revision: MononokeRevision::commit_hash(revision),
+            path: path.into_bytes(),
+            limit,
+            skip,
         })
     }
 
