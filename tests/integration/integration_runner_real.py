@@ -36,6 +36,7 @@ EPHEMERAL_DB_WHITELIST = {
     "test-lookup.t",
     "test-mononoke-admin.t",
     "test-bookmarks-filler.t",
+    "test-pushrebase.t",
 }
 
 # At this time, all tests support the network blackhole (except when ephemeral

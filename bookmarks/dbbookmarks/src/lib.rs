@@ -69,16 +69,12 @@ queries! {
         "{insert_or_ignore} INTO bookmarks (repo_id, name, changeset_id, hg_kind) VALUES {values}"
     }
 
-    // NOTE: This query lets you pick up to 2 kinds you want to update (unfortunately, I have not
-    // been, able to get >list to work to make this cleaner).
-    // TODO: (torozco) T45054960 Update UpdateBookmark query to use >list, if possible.
     write UpdateBookmark(
         repo_id: RepositoryId,
         name: BookmarkName,
         old_id: ChangesetId,
-        kind_1: BookmarkHgKind,
-        kind_2: Option<BookmarkHgKind>,
         new_id: ChangesetId,
+        >list kinds: BookmarkHgKind
     ) {
         none,
         "UPDATE bookmarks
@@ -86,7 +82,7 @@ queries! {
          WHERE repo_id = {repo_id}
            AND name = {name}
            AND changeset_id = {old_id}
-           AND (hg_kind = {kind_1} OR hg_kind = {kind_2})"
+           AND hg_kind IN {kinds}"
     }
 
     write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName) {
@@ -852,12 +848,12 @@ impl SqlBookmarksTransaction {
                 use BookmarkHgKind::*;
 
                 let sets_iter = sets.into_iter().map(|(name, (data, _reason))| {
-                    (name, data, PullDefault, Some(PublishingNotPullDefault))
+                    (name, data, vec![PullDefault, PublishingNotPullDefault])
                 });
 
                 let infinitepush_sets_iter = infinitepush_sets
                     .into_iter()
-                    .map(|(name, data)| (name, data, Scratch, None));
+                    .map(|(name, data)| (name, data, vec![Scratch]));
 
                 let updates_iter = sets_iter.chain(infinitepush_sets_iter);
 
@@ -870,8 +866,7 @@ impl SqlBookmarksTransaction {
                                 ref new_cs,
                                 ref old_cs,
                             },
-                            ref _kind1,
-                            ref _kind2,
+                            ref _kinds,
                         )) if new_cs == old_cs => {
                             // no-op update. If bookmark points to a correct update then
                             // let's continue the transaction, otherwise revert it
@@ -892,15 +887,14 @@ impl SqlBookmarksTransaction {
                                 .map(Loop::Continue)
                                 .boxify()
                         }
-                        Some((name, BookmarkSetData { new_cs, old_cs }, kind_1, kind_2)) => {
+                        Some((name, BookmarkSetData { new_cs, old_cs }, kinds)) => {
                             UpdateBookmark::query_with_transaction(
                                 transaction,
                                 &repo_id,
                                 &name,
                                 &old_cs,
-                                &kind_1,
-                                &kind_2,
                                 &new_cs,
+                                &kinds[..],
                             )
                             .then(move |res| match res {
                                 Err(err) => Err(BookmarkTransactionError::Other(err)),
