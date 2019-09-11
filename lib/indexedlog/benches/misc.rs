@@ -4,7 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use indexedlog::base16::Base16Iter;
-use indexedlog::utils::{open_dir, ScopedFileLock};
+use indexedlog::lock::ScopedFileLock;
+use indexedlog::utils::open_dir;
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 

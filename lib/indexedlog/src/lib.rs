@@ -25,7 +25,7 @@ pub mod base16;
 pub mod checksum_table;
 pub mod errors;
 pub mod index;
-mod lock;
+pub mod lock;
 pub mod log;
 pub mod rotate;
 pub mod utils;

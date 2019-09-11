@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use indexedlog::log::{self, ChecksumType, IndexDef, IndexOutput, Log};
+use indexedlog::log::{IndexDef, IndexOutput, Log};
 use minibench::{bench, elapsed, measure, Measure};
 use rand::{ChaChaRng, Rng};
 use std::path::Path;
@@ -32,21 +32,6 @@ fn main() {
     bench("log insertion", || {
         let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), vec![]).unwrap();
-        let buf = gen_buf(N * 20);
-        elapsed(move || {
-            for i in 0..N {
-                log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
-            }
-        })
-    });
-
-    bench("log insertion (no checksum)", || {
-        let dir = tempdir().unwrap();
-        let mut log = log::OpenOptions::new()
-            .create(true)
-            .checksum_type(ChecksumType::None)
-            .open(dir.path())
-            .unwrap();
         let buf = gen_buf(N * 20);
         elapsed(move || {
             for i in 0..N {
