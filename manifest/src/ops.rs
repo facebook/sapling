@@ -190,6 +190,25 @@ where
         )
     }
 
+    fn list_leaf_entries(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+    ) -> BoxStream<
+        (
+            Option<MPath>,
+            Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
+        ),
+        Error,
+    > {
+        self.list_all_entries(ctx, blobstore)
+            .filter_map(|(path, entry)| match entry {
+                Entry::Leaf(_) => Some((path, entry)),
+                _ => None,
+            })
+            .boxify()
+    }
+
     fn diff(
         &self,
         ctx: CoreContext,
