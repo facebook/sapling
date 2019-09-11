@@ -8,6 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 from edenscm.mercurial import (
+    cmdutil,
     context,
     error,
     hg,
@@ -164,6 +165,13 @@ def snapshotcheckout(ui, repo, *args, **opts):
         snapmetadata = snapshotmetadata.getfromlocalstorage(repo, snapshotmetadataid)
         checkouttosnapshotmetadata(ui, repo, snapmetadata, force)
     ui.status(_("checkout complete\n"))
+
+
+@subcmd("list", cmdutil.formatteropts)
+def snapshotlistcmd(ui, repo, *args, **opts):
+    """list the local snapshots
+    """
+    snapshotlist(repo).printsnapshots(ui, **opts)
 
 
 @command("debugcreatesnapshotmetadata", inferrepo=True)
