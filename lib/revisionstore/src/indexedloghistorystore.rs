@@ -7,6 +7,7 @@ use std::{
     fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
+    sync::{Arc, RwLock},
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -31,8 +32,12 @@ use crate::{
     sliceext::SliceExt,
 };
 
-pub struct IndexedLogHistoryStore {
+struct IndexedLogHistoryStoreInner {
     log: RotateLog,
+}
+
+pub struct IndexedLogHistoryStore {
+    inner: Arc<RwLock<IndexedLogHistoryStoreInner>>,
 }
 
 struct Entry {
@@ -200,7 +205,9 @@ impl IndexedLogHistoryStore {
                 open_options.open(&path)?
             }
         };
-        Ok(IndexedLogHistoryStore { log })
+        Ok(IndexedLogHistoryStore {
+            inner: Arc::new(RwLock::new(IndexedLogHistoryStoreInner { log })),
+        })
     }
 }
 
@@ -210,9 +217,10 @@ impl LocalStore for IndexedLogHistoryStore {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let inner = self.inner.read().unwrap();
         Ok(keys
             .iter()
-            .filter(|k| Entry::from_log(k, &self.log).is_err())
+            .filter(|k| Entry::from_log(k, &inner.log).is_err())
             .map(|k| k.clone())
             .collect())
     }
@@ -229,26 +237,31 @@ impl HistoryStore for IndexedLogHistoryStore {
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        let entry = Entry::from_log(key, &self.log)?;
+        let inner = self.inner.read().unwrap();
+        let entry = Entry::from_log(key, &inner.log)?;
         Ok(entry.node_info())
     }
 }
 
 impl MutableHistoryStore for IndexedLogHistoryStore {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        let mut inner = self.inner.write().unwrap();
         let entry = Entry::new(key, info);
-        entry.write_to_log(&mut self.log)
+        entry.write_to_log(&mut inner.log)
     }
 
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        self.log.flush()?;
+        self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }
 }
 
 impl ToKeys for IndexedLogHistoryStore {
     fn to_keys(&self) -> Vec<Fallible<Key>> {
-        self.log
+        self.inner
+            .read()
+            .unwrap()
+            .log
             .iter()
             .map(|entry| Entry::from_slice(entry?))
             .map(|entry| Ok(entry?.key))
@@ -355,7 +368,7 @@ mod tests {
         }
         log.flush()?;
 
-        assert_eq!(log.log.iter().count(), nodes.iter().count());
+        assert_eq!(log.to_keys().len(), nodes.iter().count());
         Ok(())
     }
 
