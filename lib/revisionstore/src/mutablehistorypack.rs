@@ -9,6 +9,7 @@ use std::{
     iter::FromIterator,
     mem::replace,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 
 use byteorder::WriteBytesExt;
@@ -39,7 +40,7 @@ struct MutableHistoryPackInner {
 }
 
 pub struct MutableHistoryPack {
-    inner: MutableHistoryPackInner,
+    inner: Arc<Mutex<MutableHistoryPackInner>>,
 }
 
 impl MutableHistoryPackInner {
@@ -115,13 +116,14 @@ impl MutableHistoryPackInner {
 impl MutableHistoryPack {
     pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
         Ok(Self {
-            inner: MutableHistoryPackInner::new(dir, version)?,
+            inner: Arc::new(Mutex::new(MutableHistoryPackInner::new(dir, version)?)),
         })
     }
 }
 
 impl MutableHistoryStore for MutableHistoryPack {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        let mut inner = self.inner.lock().unwrap();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
         assert_ne!(key.node, info.parents[0].node);
@@ -131,8 +133,7 @@ impl MutableHistoryStore for MutableHistoryPack {
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
-        let entries = self
-            .inner
+        let entries = inner
             .mem_index
             .entry(key.path.clone())
             .or_insert_with(|| HashMap::new());
@@ -141,8 +142,9 @@ impl MutableHistoryStore for MutableHistoryPack {
     }
 
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        let new_inner = MutableHistoryPackInner::new(&self.inner.dir, HistoryPackVersion::One)?;
-        let old_inner = replace(&mut self.inner, new_inner);
+        let mut guard = self.inner.lock().unwrap();
+        let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
+        let old_inner = replace(&mut *guard, new_inner);
 
         let path = old_inner.close_pack()?;
         Ok(Some(path))
@@ -213,11 +215,15 @@ impl MutablePack for MutableHistoryPackInner {
 
 impl MutablePack for MutableHistoryPack {
     fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
-        self.inner.build_files()
+        let mut guard = self.inner.lock().unwrap();
+        let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
+        let old_inner = replace(&mut *guard, new_inner);
+
+        old_inner.build_files()
     }
 
     fn extension(&self) -> &'static str {
-        self.inner.extension()
+        "hist"
     }
 }
 
@@ -297,8 +303,8 @@ impl HistoryStore for MutableHistoryPack {
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        Ok(self
-            .inner
+        let inner = self.inner.lock().unwrap();
+        Ok(inner
             .mem_index
             .get(&key.path)
             .ok_or(KeyError::new(
@@ -322,9 +328,10 @@ impl HistoryStore for MutableHistoryPack {
 
 impl LocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let inner = self.inner.lock().unwrap();
         Ok(keys
             .iter()
-            .filter(|k| match self.inner.mem_index.get(&k.path) {
+            .filter(|k| match inner.mem_index.get(&k.path) {
                 Some(e) => e.get(k).is_none(),
                 None => true,
             })
