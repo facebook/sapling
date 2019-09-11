@@ -206,18 +206,14 @@ impl SqlPhases {
             return future::ok(Default::default()).left_future();
         }
         STATS::get_many.add_value(1);
-        SelectPhases::query(
-            &self.read_connection,
-            &repo_id,
-            &csids.iter().collect::<Vec<_>>(),
-        )
-        .map(move |rows| {
-            rows.into_iter()
-                .filter(|row| row.1 == Phase::Public)
-                .map(|row| row.0)
-                .collect()
-        })
-        .right_future()
+        SelectPhases::query(&self.read_connection, &repo_id, &csids)
+            .map(move |rows| {
+                rows.into_iter()
+                    .filter(|row| row.1 == Phase::Public)
+                    .map(|row| row.0)
+                    .collect()
+            })
+            .right_future()
     }
 
     pub fn add_public(

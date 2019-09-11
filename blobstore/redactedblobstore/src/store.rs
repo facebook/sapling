@@ -86,8 +86,7 @@ impl SqlRedactedContentStore {
     }
 
     pub fn delete_redacted_blobs(&self, content_keys: &[String]) -> BoxFuture<(), Error> {
-        let ref_vec: Vec<&String> = content_keys.iter().collect();
-        DeleteRedactedBlobs::query(&self.write_connection, &ref_vec[..])
+        DeleteRedactedBlobs::query(&self.write_connection, &content_keys[..])
             .map_err(Error::from)
             .map(|_| ())
             .boxify()

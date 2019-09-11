@@ -288,7 +288,7 @@ impl SqlBookmarks {
         _ctx: CoreContext,
         repo_id: RepositoryId,
         prefix: &BookmarkPrefix,
-        kinds: &Vec<&BookmarkHgKind>,
+        kinds: &[BookmarkHgKind],
         freshness: Freshness,
         max: u64,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
@@ -298,9 +298,9 @@ impl SqlBookmarks {
         };
 
         let query = if prefix.is_empty() {
-            SelectAll::query(&conn, &repo_id, &max, &kinds).left_future()
+            SelectAll::query(&conn, &repo_id, &max, kinds).left_future()
         } else {
-            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, &kinds).right_future()
+            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, kinds).right_future()
         };
 
         query_to_stream(query, max)
@@ -329,7 +329,7 @@ impl Bookmarks for SqlBookmarks {
         };
 
         use BookmarkHgKind::*;
-        let kinds = vec![&PublishingNotPullDefault, &PullDefault];
+        let kinds = vec![PublishingNotPullDefault, PullDefault];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
@@ -354,7 +354,7 @@ impl Bookmarks for SqlBookmarks {
         };
 
         use BookmarkHgKind::*;
-        let kinds = vec![&PullDefault];
+        let kinds = vec![PullDefault];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
@@ -380,7 +380,7 @@ impl Bookmarks for SqlBookmarks {
         };
 
         use BookmarkHgKind::*;
-        let kinds = vec![&Scratch, &PublishingNotPullDefault, &PullDefault];
+        let kinds = vec![Scratch, PublishingNotPullDefault, PullDefault];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, max)
     }
 

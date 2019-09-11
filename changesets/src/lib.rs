@@ -231,12 +231,10 @@ impl Changesets for SqlChangesets {
         cloned!(self.write_connection);
 
         let parent_rows = {
-            let parents_ref: Vec<_> = cs.parents.iter().collect();
-
-            if parents_ref.is_empty() {
+            if cs.parents.is_empty() {
                 Ok(Vec::new()).into_future().boxify()
             } else {
-                SelectChangesets::query(&write_connection, &cs.repo_id, &parents_ref[..]).boxify()
+                SelectChangesets::query(&write_connection, &cs.repo_id, &cs.parents[..]).boxify()
             }
         };
 
@@ -487,7 +485,6 @@ fn select_many_changesets(
     repo_id: RepositoryId,
     cs_ids: &Vec<ChangesetId>,
 ) -> impl Future<Item = Vec<ChangesetEntry>, Error = Error> {
-    let cs_ids: Vec<_> = cs_ids.iter().collect();
     SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..]).map(move |fetched_changesets| {
         let mut cs_id_to_cs_entry = HashMap::new();
 

@@ -437,11 +437,10 @@ fn ensure_paths_exists(
         .enumerate()
         .filter_map(|(shard, connection)| {
             if path_rows[shard].len() != 0 {
-                let path_rows_ref: Vec<_> = path_rows[shard].iter().collect();
                 Some(SelectAllPaths::query(
                     &connection.clone(),
                     &repo_id,
-                    path_rows_ref.as_ref(),
+                    &path_rows[shard],
                 ))
             } else {
                 None

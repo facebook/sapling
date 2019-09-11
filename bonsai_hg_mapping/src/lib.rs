@@ -229,8 +229,8 @@ impl SqlBonsaiHgMapping {
         } = entry.clone();
         cloned!(self.read_master_connection);
 
-        let by_hg = SelectMappingByHg::query(&read_master_connection, &repo_id, &[&hg_cs_id]);
-        let by_bcs = SelectMappingByBonsai::query(&read_master_connection, &repo_id, &[&bcs_id]);
+        let by_hg = SelectMappingByHg::query(&read_master_connection, &repo_id, &[hg_cs_id]);
+        let by_bcs = SelectMappingByBonsai::query(&read_master_connection, &repo_id, &[bcs_id]);
 
         by_hg
             .join(by_bcs)
@@ -363,12 +363,10 @@ fn select_mapping(
 
     let rows_fut = match cs_id {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
-            let ref_ids: Vec<_> = bcs_ids.iter().collect();
-            SelectMappingByBonsai::query(&connection, &repo_id, &ref_ids[..]).boxify()
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).boxify()
         }
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
-            let ref_ids: Vec<_> = hg_cs_ids.iter().collect();
-            SelectMappingByHg::query(&connection, &repo_id, &ref_ids[..]).boxify()
+            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..]).boxify()
         }
     };
 

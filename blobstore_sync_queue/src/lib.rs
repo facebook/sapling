@@ -378,10 +378,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         ids.into_future()
             .and_then({
                 cloned!(self.write_connection);
-                move |ids: Vec<u64>| {
-                    let ids: Vec<&u64> = ids.iter().collect();
-                    DeleteEntries::query(&write_connection, &ids[..])
-                }
+                move |ids: Vec<u64>| DeleteEntries::query(&write_connection, &ids[..])
             })
             .map(|_| ())
             .boxify()
