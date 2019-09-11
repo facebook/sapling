@@ -30,10 +30,12 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use fs2::FileExt;
 use memmap::Mmap;
-use std::cell::RefCell;
-use std::fs::{File, OpenOptions};
-use std::io::{self, Cursor, Read};
-use std::path::{Path, PathBuf};
+use std::{
+    fs::{File, OpenOptions},
+    io::{self, Cursor, Read},
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 /// An table of checksums to verify another file.
 ///
@@ -68,7 +70,7 @@ pub struct ChecksumTable {
 
     // A bitvec about What chunks are checked.
     // Using internal mutability so exposed APIs do not need "mut".
-    checked: RefCell<Vec<u64>>,
+    checked: Vec<AtomicU64>,
 }
 
 /// Append extra extension to a Path
@@ -121,8 +123,9 @@ impl ChecksumTable {
     }
 
     fn check_chunk(&self, index: usize) -> bool {
-        let mut checked = self.checked.borrow_mut();
-        if (checked[index / 64] >> (index % 64)) & 1 == 1 {
+        let bit = 1 << (index % 64);
+        let checked = &self.checked[index / 64];
+        if (checked.load(Ordering::Acquire) & bit) == bit {
             true
         } else {
             let start = index << self.chunk_size_log;
@@ -132,7 +135,7 @@ impl ChecksumTable {
             }
             let hash = xxhash(&self.buf[start..end]);
             if hash == self.checksums[index] {
-                checked[index / 64] |= 1 << (index % 64);
+                checked.fetch_or(bit, Ordering::AcqRel);
                 true
             } else {
                 false
@@ -190,7 +193,9 @@ impl ChecksumTable {
             for _ in 0..n {
                 checksums.push(cur.read_u64::<LittleEndian>()?);
             }
-            let checked = vec![0; (n as usize + 63) / 64];
+            let checked = (0..(n as usize + 63) / 64)
+                .map(|_| AtomicU64::new(0))
+                .collect();
             (chunk_size_log, file_size, checksums, checked)
         };
 
@@ -203,7 +208,7 @@ impl ChecksumTable {
             end: chunk_end,
             checksum_path,
             checksums,
-            checked: RefCell::new(checked),
+            checked,
         })
     }
 
@@ -229,7 +234,11 @@ impl ChecksumTable {
             chunk_size_log: self.chunk_size_log,
             end: self.end,
             checksums: self.checksums.clone(),
-            checked: self.checked.clone(),
+            checked: self
+                .checked
+                .iter()
+                .map(|val| AtomicU64::new(val.load(Ordering::Acquire)))
+                .collect(),
         })
     }
 
@@ -312,7 +321,9 @@ impl ChecksumTable {
         // Update fields
         self.buf = mmap;
         self.end = len;
-        self.checked = RefCell::new(vec![0u64; (checksums.len() + 63) / 64]);
+        self.checked = (0..(checksums.len() + 63) / 64)
+            .map(|_| AtomicU64::new(0))
+            .collect();
         self.chunk_size_log = 63 - (chunk_size as u64).leading_zeros();
         self.checksums = checksums;
 
@@ -326,7 +337,7 @@ impl ChecksumTable {
     pub fn clear(&mut self) {
         self.end = 0;
         self.checksums = vec![];
-        self.checked = RefCell::new(vec![]);
+        self.checked = vec![];
     }
 }
 
