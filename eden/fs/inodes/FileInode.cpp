@@ -626,6 +626,10 @@ folly::Future<struct stat> FileInode::stat() {
       updateBlockCount(st);
       return st;
   }
+
+  auto bug = EDEN_BUG() << "unexpected FileInode state tag "
+                        << static_cast<int>(state->tag);
+  return folly::makeFuture<struct stat>(bug.toException());
 }
 
 void FileInode::updateBlockCount(struct stat& st) {
