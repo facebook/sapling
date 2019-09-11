@@ -6,10 +6,12 @@
 
 #![deny(warnings)]
 
+use ascii::AsciiString;
+use blobimport_lib;
 use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::args;
-use failure_ext::{Result, SlogKVError};
+use failure_ext::{format_err, Result, SlogKVError};
 use futures::Future;
 use futures_ext::FutureExt;
 use mercurial_types::HgNodeHash;
@@ -32,6 +34,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <INPUT>                          'input revlog repo'
             --changeset [HASH]               'if provided, the only changeset to be imported'
             --no-bookmark                    'if provided won't update bookmarks'
+            --prefix-bookmark [PREFIX]       'if provided will update bookmarks, but prefix them with PREFIX'
             --no-create                      'if provided won't create a new repo (only meaningful for local)'
             --lfs-helper [LFS_HELPER]        'if provided, path to an executable that accepts OID SIZE and returns a LFS blob to stdout'
             --concurrent-changesets [LIMIT]  'if provided, max number of changesets to upload concurrently'
@@ -81,6 +84,22 @@ fn main() -> Result<()> {
     };
 
     let no_bookmark = matches.is_present("no-bookmark");
+    let prefix_bookmark = matches.value_of("prefix-bookmark");
+    if no_bookmark && prefix_bookmark.is_some() {
+        return Err(format_err!(
+            "--no-bookmark is incompatible with --prefix-bookmark"
+        ));
+    }
+
+    let bookmark_import_policy = if no_bookmark {
+        blobimport_lib::BookmarkImportPolicy::Ignore
+    } else {
+        let prefix = match prefix_bookmark {
+            Some(prefix) => AsciiString::from_ascii(prefix).unwrap(),
+            None => AsciiString::new(),
+        };
+        blobimport_lib::BookmarkImportPolicy::Prefix(prefix)
+    };
 
     let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
 
@@ -109,7 +128,7 @@ fn main() -> Result<()> {
                 changeset,
                 skip,
                 commits_limit,
-                no_bookmark,
+                bookmark_import_policy,
                 phases_store,
                 lfs_helper,
                 concurrent_changesets,

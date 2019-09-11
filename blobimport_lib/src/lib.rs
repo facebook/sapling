@@ -14,6 +14,7 @@ use std::cmp;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use ascii::AsciiString;
 use failure_ext::{err_msg, Error};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
@@ -27,6 +28,14 @@ use phases::Phases;
 
 use crate::changeset::UploadChangesets;
 
+// What to do with bookmarks when blobimporting a repo
+pub enum BookmarkImportPolicy {
+    // Do not import bookmarks
+    Ignore,
+    // Prefix bookmark names when importing
+    Prefix(AsciiString),
+}
+
 pub struct Blobimport {
     pub ctx: CoreContext,
     pub logger: Logger,
@@ -35,7 +44,7 @@ pub struct Blobimport {
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
-    pub no_bookmark: bool,
+    pub bookmark_import_policy: BookmarkImportPolicy,
     pub phases_store: Arc<dyn Phases>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
@@ -53,7 +62,7 @@ impl Blobimport {
             changeset,
             skip,
             commits_limit,
-            no_bookmark,
+            bookmark_import_policy,
             phases_store,
             lfs_helper,
             concurrent_changesets,
@@ -131,24 +140,26 @@ impl Blobimport {
             .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
                 upload_changesets.map(move |()| (stale_bookmarks, mononoke_bookmarks))
             })
-            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
-                if no_bookmark {
-                    info!(
-                        logger,
-                        "since --no-bookmark was provided, bookmarks won't be imported"
-                    );
-                    future::ok(()).boxify()
-                } else {
-                    bookmark::upload_bookmarks(
+            .and_then(
+                move |(stale_bookmarks, mononoke_bookmarks)| match bookmark_import_policy {
+                    BookmarkImportPolicy::Ignore => {
+                        info!(
+                            logger,
+                            "since --no-bookmark was provided, bookmarks won't be imported"
+                        );
+                        future::ok(()).boxify()
+                    }
+                    BookmarkImportPolicy::Prefix(prefix) => bookmark::upload_bookmarks(
                         ctx,
                         &logger,
                         revlogrepo,
                         blobrepo,
                         stale_bookmarks,
                         mononoke_bookmarks,
-                    )
-                }
-            })
+                        bookmark::get_bookmark_prefixer(prefix),
+                    ),
+                },
+            )
             .boxify()
     }
 }

@@ -40,6 +40,17 @@ pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChang
         .boxify()
 }
 
+pub type BookmarkNameTransformer =
+    Box<dyn Fn(BookmarkName) -> BookmarkName + Send + Sync + 'static>;
+
+pub fn get_bookmark_prefixer(prefix: AsciiString) -> BookmarkNameTransformer {
+    Box::new(move |bookmark| {
+        let mut name = prefix.clone();
+        name.push_str(bookmark.as_ascii());
+        BookmarkName::new_ascii(name)
+    })
+}
+
 pub fn upload_bookmarks(
     ctx: CoreContext,
     logger: &Logger,
@@ -47,6 +58,7 @@ pub fn upload_bookmarks(
     blobrepo: BlobRepo,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
     mononoke_bookmarks: Vec<(BookmarkName, ChangesetId)>,
+    bookmark_name_transformer: BookmarkNameTransformer,
 ) -> BoxFuture<(), Error> {
     let logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
@@ -116,10 +128,11 @@ pub fn upload_bookmarks(
 
                 let mut count = 0;
                 for (key, value) in vec {
-                    let key = BookmarkName::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
-                    if mononoke_bookmarks.get(&key) != Some(&value) {
+                    let bookmark_name = BookmarkName::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
+                    let bookmark_name = bookmark_name_transformer(bookmark_name);
+                    if mononoke_bookmarks.get(&bookmark_name) != Some(&value) {
                         count += 1;
-                        try_boxfuture!(transaction.force_set(&key, value, BookmarkUpdateReason::Blobimport))
+                        try_boxfuture!(transaction.force_set(&bookmark_name, value, BookmarkUpdateReason::Blobimport))
                     }
                 }
 
