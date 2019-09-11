@@ -1919,19 +1919,18 @@ fn return_with_rest_of_bundle<T: Send + 'static>(
 fn toposort_changesets(
     changesets: Vec<(HgChangesetId, RevlogChangeset)>,
 ) -> Result<Vec<(HgChangesetId, RevlogChangeset)>> {
-    let changesets: HashMap<_, _> = changesets.into_iter().collect();
+    let mut changesets: HashMap<_, _> = changesets.into_iter().collect();
 
     // Make sure changesets are toposorted
     let cs_id_to_parents: HashMap<_, _> = changesets
-        .clone()
-        .into_iter()
+        .iter()
         .map(|(cs_id, revlog_cs)| {
             let parents: Vec<_> = revlog_cs
                 .parents()
                 .into_iter()
                 .map(HgChangesetId::new)
                 .collect();
-            (cs_id, parents)
+            (*cs_id, parents)
         })
         .collect();
     let sorted_css =
@@ -1940,6 +1939,6 @@ fn toposort_changesets(
     Ok(sorted_css
         .into_iter()
         .rev() // reversing to get parents before the children
-        .filter_map(|cs| changesets.get(&cs).cloned().map(|revlog_cs| (cs, revlog_cs)))
+        .filter_map(|cs| changesets.remove(&cs).map(|revlog_cs| (cs, revlog_cs)))
         .collect())
 }
