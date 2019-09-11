@@ -7,6 +7,7 @@ use std::{
     fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
+    sync::{Arc, RwLock},
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -28,8 +29,12 @@ use crate::{
     sliceext::SliceExt,
 };
 
-pub struct IndexedLogDataStore {
+struct IndexedLogDataStoreInner {
     log: RotateLog,
+}
+
+pub struct IndexedLogDataStore {
+    inner: Arc<RwLock<IndexedLogDataStoreInner>>,
 }
 
 struct Entry {
@@ -166,7 +171,9 @@ impl IndexedLogDataStore {
                 open_options.open(&path)?
             }
         };
-        Ok(IndexedLogDataStore { log })
+        Ok(IndexedLogDataStore {
+            inner: Arc::new(RwLock::new(IndexedLogDataStoreInner { log })),
+        })
     }
 }
 
@@ -175,11 +182,12 @@ impl MutableDeltaStore for IndexedLogDataStore {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
-        entry.write_to_log(&mut self.log)
+        let mut inner = self.inner.write().unwrap();
+        entry.write_to_log(&mut inner.log)
     }
 
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        self.log.flush()?;
+        self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }
 }
@@ -190,9 +198,10 @@ impl LocalStore for IndexedLogDataStore {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let inner = self.inner.read().unwrap();
         Ok(keys
             .iter()
-            .filter(|k| Entry::from_log(k, &self.log).is_err())
+            .filter(|k| Entry::from_log(k, &inner.log).is_err())
             .map(|k| k.clone())
             .collect())
     }
@@ -204,7 +213,8 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let mut entry = Entry::from_log(&key, &self.log)?;
+        let inner = self.inner.read().unwrap();
+        let mut entry = Entry::from_log(&key, &inner.log)?;
         let content = entry.content()?;
         return Ok(Delta {
             data: content,
@@ -219,13 +229,17 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        Ok(Entry::from_log(&key, &self.log)?.metadata().clone())
+        let inner = self.inner.read().unwrap();
+        Ok(Entry::from_log(&key, &inner.log)?.metadata().clone())
     }
 }
 
 impl ToKeys for IndexedLogDataStore {
     fn to_keys(&self) -> Vec<Fallible<Key>> {
-        self.log
+        self.inner
+            .read()
+            .unwrap()
+            .log
             .iter()
             .map(|entry| Entry::from_slice(entry?))
             .map(|entry| Ok(entry?.key))
