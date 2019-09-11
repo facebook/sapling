@@ -25,7 +25,7 @@ use gotham::{
     },
     state::{request_id, State},
 };
-use hyper::{Body, Response, StatusCode};
+use hyper::{header::HeaderValue, Body, Response, StatusCode};
 use mime::Mime;
 use slog::warn;
 use std::collections::HashMap;
@@ -74,11 +74,8 @@ async fn build_response(
     res: Result<(Body, Mime), HttpError>,
     state: State,
 ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-    match res {
-        Ok((body, mime)) => {
-            let res = create_response(&state, StatusCode::OK, mime, body);
-            Ok((state, res))
-        }
+    let mut res = match res {
+        Ok((body, mime)) => create_response(&state, StatusCode::OK, mime, body),
         Err(error) => {
             let HttpError { error, status_code } = error;
 
@@ -89,14 +86,16 @@ async fn build_response(
             };
 
             // Bail if we can't convert the response to json.
-            let res = match serde_json::to_string(&res) {
+            match serde_json::to_string(&res) {
                 Ok(res) => create_response(&state, status_code, git_lfs_mime(), res),
                 Err(error) => return Err((state, error.into_handler_error())),
-            };
-
-            Ok((state, res))
+            }
         }
-    }
+    };
+
+    let headers = res.headers_mut();
+    headers.insert("Server", HeaderValue::from_static("mononoke-lfs"));
+    Ok((state, res))
 }
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
