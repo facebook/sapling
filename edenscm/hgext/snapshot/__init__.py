@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# snapshot.py
+# snapshot - working copy snapshots
 #
 # Copyright 2019 Facebook, Inc.
 #

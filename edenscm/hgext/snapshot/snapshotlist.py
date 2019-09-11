@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# snapshotlist.py
+# snapshotlist.py - list of local snapshots
 #
 # Copyright 2019 Facebook, Inc.
 #

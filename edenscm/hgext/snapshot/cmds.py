@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # commands.py
 #
 # Copyright 2019 Facebook, Inc.

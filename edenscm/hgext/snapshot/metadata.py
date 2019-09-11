@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# metadata.py
+# metadata.py - snapshot metadata
 #
 # Copyright 2019 Facebook, Inc.
 #
