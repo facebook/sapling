@@ -13,7 +13,7 @@ use crate::stats::*;
 use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use crate::upload_changesets::upload_changeset;
 use ascii::AsciiString;
-use blobrepo::{BlobRepo, ContentBlobInfo};
+use blobrepo::{BlobRepo, ChangesetHandle, ContentBlobInfo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -43,6 +43,7 @@ use slog::{debug, o, trace, warn};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
+use topo_sort::sort_topological;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
@@ -1115,7 +1116,7 @@ impl Bundle2Resolver {
         manifests: Manifests,
         force_draft: bool,
     ) -> BoxFuture<(), Error> {
-        let changesets = cg_push.changesets;
+        let changesets = try_boxfuture!(toposort_changesets(cg_push.changesets));
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
         let draft = force_draft || cg_push.infinitepush_payload.is_some();
@@ -1147,32 +1148,53 @@ impl Bundle2Resolver {
         );
 
         let scuba_logger = self.ctx.scuba().clone();
-        stream::iter_ok(changesets)
-            .fold(
-                HashMap::new(),
-                move |uploaded_changesets, (node, revlog_cs)| {
-                    upload_changeset(
-                        ctx.clone(),
-                        repo.clone(),
-                        scuba_logger.clone(),
-                        node.clone(),
-                        revlog_cs,
-                        uploaded_changesets,
-                        &filelogs,
-                        &manifests,
-                        &content_blobs,
-                        draft,
-                    )
-                },
-            )
-            .and_then(|uploaded_changesets| {
-                stream::futures_unordered(
-                    uploaded_changesets
-                        .into_iter()
-                        .map(|(_, cs)| cs.get_completed_changeset()),
+        let upload_changeset_fun = Arc::new({
+            cloned!(ctx);
+            move |uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle>,
+                  node: HgChangesetId,
+                  revlog_cs: RevlogChangeset|
+                  -> BoxFuture<HashMap<HgChangesetId, ChangesetHandle>, Error> {
+                upload_changeset(
+                    ctx.clone(),
+                    repo.clone(),
+                    scuba_logger.clone(),
+                    node.clone(),
+                    revlog_cs,
+                    uploaded_changesets,
+                    &filelogs,
+                    &manifests,
+                    &content_blobs,
+                    draft,
                 )
-                .map_err(Error::from)
-                .for_each(|_| Ok(()))
+            }
+        });
+
+        // Each commit gets a future. This future polls futures of parent commits, which poll futures
+        // of their parents and so on. However that might cause stackoverflow on very large pushes
+        // To avoid it we commit changesets in relatively small chunks.
+        let chunk_size = 100;
+        stream::iter_ok(changesets)
+            .chunks(chunk_size)
+            .for_each(move |chunk| {
+                stream::iter_ok(chunk)
+                    .fold(HashMap::new(), {
+                        cloned!(upload_changeset_fun);
+                        move |uploaded_changesets, (node, revlog_cs)| {
+                            (*upload_changeset_fun)(uploaded_changesets, node, revlog_cs)
+                        }
+                    })
+                    .and_then({
+                        move |uploaded_changesets| {
+                            stream::iter_ok(
+                                uploaded_changesets
+                                    .into_iter()
+                                    .map(move |(_, handle)| handle.get_completed_changeset()),
+                            )
+                            .buffered(chunk_size)
+                            .map_err(Error::from)
+                            .for_each(|_| Ok(()))
+                        }
+                    })
             })
             .chain_err(ErrorKind::WhileUploadingData(changesets_hashes))
             .from_err()
@@ -1892,4 +1914,32 @@ fn return_with_rest_of_bundle<T: Send + 'static>(
         stream::once(Ok(unused_part)).chain(rest_of_bundle).boxify(),
     ))
     .boxify()
+}
+
+fn toposort_changesets(
+    changesets: Vec<(HgChangesetId, RevlogChangeset)>,
+) -> Result<Vec<(HgChangesetId, RevlogChangeset)>> {
+    let changesets: HashMap<_, _> = changesets.into_iter().collect();
+
+    // Make sure changesets are toposorted
+    let cs_id_to_parents: HashMap<_, _> = changesets
+        .clone()
+        .into_iter()
+        .map(|(cs_id, revlog_cs)| {
+            let parents: Vec<_> = revlog_cs
+                .parents()
+                .into_iter()
+                .map(HgChangesetId::new)
+                .collect();
+            (cs_id, parents)
+        })
+        .collect();
+    let sorted_css =
+        sort_topological(&cs_id_to_parents).ok_or(err_msg("cycle in the pushed changesets!"))?;
+
+    Ok(sorted_css
+        .into_iter()
+        .rev() // reversing to get parents before the children
+        .filter_map(|cs| changesets.get(&cs).cloned().map(|revlog_cs| (cs, revlog_cs)))
+        .collect())
 }
