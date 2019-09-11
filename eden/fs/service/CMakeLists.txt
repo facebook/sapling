@@ -24,30 +24,45 @@ add_fbthrift_cpp_library(
 
 file(GLOB SERVICE_SRCS "*.cpp")
 
+# A couple utility files our split out into a separate lower-level library
+# This also effectively includes ThriftUtil.h, which has no corresponding .cpp
+# file.
+# TODO: In the future it would perhaps be nicer to move these to a separate
+# eden/fs/thrift/ subdirectory, perhaps along with eden.thrift too.
+list(
+  REMOVE_ITEM SERVICE_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/EdenError.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
+)
+add_library(
+  eden_service_thrift_util STATIC
+  EdenError.cpp
+  PrettyPrinters.cpp
+)
+target_link_libraries(
+  eden_service_thrift_util
+  PUBLIC
+    eden_model
+    Folly::folly
+)
+
 if (WIN32)
   list(
     REMOVE_ITEM SERVICE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/EdenMain.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StartupLogger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Systemd.cpp
   )
-  add_library(
-    eden_service STATIC
-      ${SERVICE_SRCS}
-  )
-else()
-  add_library(
-    eden_service STATIC
-      ${SERVICE_SRCS}
-      oss/main.cpp
-  )
 endif()
 
+add_library(
+  eden_service STATIC
+  ${SERVICE_SRCS}
+)
 target_link_libraries(
   eden_service
   PUBLIC
-    eden_service_thrift
+    eden_service_thrift_util
     streamingeden_thrift
     eden_config
     eden_inodes
@@ -71,7 +86,6 @@ else()
     eden_service
     PUBLIC
       eden_fuse
-      eden_model_git
       eden_store_git
       eden_takeover
   )
