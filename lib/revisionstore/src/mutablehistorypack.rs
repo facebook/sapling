@@ -122,7 +122,7 @@ impl MutableHistoryPack {
 }
 
 impl MutableHistoryStore for MutableHistoryPack {
-    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         let mut inner = self.inner.lock().unwrap();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
@@ -141,7 +141,7 @@ impl MutableHistoryStore for MutableHistoryPack {
         Ok(())
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         let mut guard = self.inner.lock().unwrap();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
@@ -363,7 +363,7 @@ mod tests {
         // but may take a long time if there is bad time complexity.
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
-        let mut muthistorypack =
+        let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         let null_key = Key::new(RepoPathBuf::new(), Node::null_id().clone());
 
@@ -433,7 +433,7 @@ mod tests {
     #[should_panic]
     fn test_loop() {
         let tempdir = tempdir().unwrap();
-        let mut muthistorypack =
+        let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
 
         let k = key("a", "1");
@@ -448,7 +448,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = tempdir().unwrap();
-        let mut muthistorypack =
+        let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         muthistorypack.flush().unwrap();
         drop(muthistorypack);
@@ -459,7 +459,7 @@ mod tests {
         fn test_get_ancestors(keys: Vec<(Key, bool)>) -> bool {
             let mut rng = ChaChaRng::from_seed([0u8; 32]);
             let tempdir = tempdir().unwrap();
-            let mut muthistorypack =
+            let muthistorypack =
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
 
             // Insert all the keys, randomly choosing nodes from the already inserted keys
@@ -511,7 +511,7 @@ mod tests {
 
         fn test_get_node_info(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
             let tempdir = tempdir().unwrap();
-            let mut muthistorypack =
+            let muthistorypack =
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
 
             for (key, info) in insert.iter() {
@@ -535,7 +535,7 @@ mod tests {
 
         fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
             let tempdir = tempdir().unwrap();
-            let mut muthistorypack =
+            let muthistorypack =
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
 
             for (key, info) in insert.iter() {

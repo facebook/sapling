@@ -499,7 +499,7 @@ py_class!(class indexedloghistorystore |py| {
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.flush_py(py)?;
         Ok(Python::None(py))
     }
@@ -685,12 +685,12 @@ py_class!(pub class mutablehistorystore |py| {
     }
 
     def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.add_py(py, name, node, p1, p2, linknode, copyfrom)
     }
 
     def flush(&self) -> PyResult<PyObject> {
-        let mut store = self.store(py).get_mut_value(py)?;
+        let store = self.store(py).get_value(py)?;
         store.flush_py(py)
     }
 
@@ -749,24 +749,24 @@ impl LocalStore for mutablehistorystore {
 }
 
 impl MutableHistoryStore for mutablehistorystore {
-    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut store = self
+        let store = self
             .store(py)
-            .get_mut_value(py)
+            .get_value(py)
             .map_err(|e| pyerr_to_error(py, e))?;
         store.add(key, info)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut store = self
+        let store = self
             .store(py)
-            .get_mut_value(py)
+            .get_value(py)
             .map_err(|e| pyerr_to_error(py, e))?;
         store.flush()
     }

@@ -244,13 +244,13 @@ impl HistoryStore for IndexedLogHistoryStore {
 }
 
 impl MutableHistoryStore for IndexedLogHistoryStore {
-    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         let mut inner = self.inner.write().unwrap();
         let entry = Entry::new(key, info);
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
         self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }
@@ -286,7 +286,7 @@ mod tests {
     #[test]
     fn test_empty() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         log.flush()?;
         Ok(())
     }
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_add() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -327,7 +327,7 @@ mod tests {
     #[test]
     fn test_add_get_ancestors() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let (nodes, ancestors) = get_nodes(&mut rng);
@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let (nodes, _) = get_nodes(&mut rng);
@@ -362,7 +362,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn test_iter() -> Fallible<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],

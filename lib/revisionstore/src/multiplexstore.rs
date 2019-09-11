@@ -114,16 +114,16 @@ impl<'a> LocalStore for MultiplexDeltaStore<'a> {
 }
 
 impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
-    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
-        for store in self.stores.iter_mut() {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        for store in self.stores.iter() {
             store.add(key, info)?;
         }
 
         Ok(())
     }
 
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        for store in self.stores.iter_mut() {
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
+        for store in self.stores.iter() {
             store.flush()?;
         }
 

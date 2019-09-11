@@ -463,7 +463,7 @@ pub mod tests {
     use crate::{historystore::MutableHistoryStore, mutablehistorypack::MutableHistoryPack};
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
-        let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
@@ -606,7 +606,7 @@ pub mod tests {
 
         let (nodes, _) = get_nodes(&mut rng);
 
-        let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
