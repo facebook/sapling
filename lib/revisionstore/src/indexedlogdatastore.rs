@@ -24,7 +24,7 @@ use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
     error::KeyError,
     localstore::LocalStore,
-    repack::IterableStore,
+    repack::ToKeys,
     sliceext::SliceExt,
 };
 
@@ -223,14 +223,13 @@ impl DataStore for IndexedLogDataStore {
     }
 }
 
-impl IterableStore for IndexedLogDataStore {
-    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
-        Box::new(
-            self.log
-                .iter()
-                .map(|entry| Entry::from_slice(entry?))
-                .map(|entry| Ok(entry?.key)),
-        )
+impl ToKeys for IndexedLogDataStore {
+    fn to_keys(&self) -> Vec<Fallible<Key>> {
+        self.log
+            .iter()
+            .map(|entry| Entry::from_slice(entry?))
+            .map(|entry| Ok(entry?.key))
+            .collect()
     }
 }
 
@@ -333,7 +332,7 @@ mod tests {
         let metadata = Default::default();
 
         log.add(&delta, &metadata)?;
-        assert!(log.iter().all(|e| e.unwrap() == k));
+        assert!(log.to_keys().into_iter().all(|e| e.unwrap() == k));
         Ok(())
     }
 
@@ -372,7 +371,7 @@ mod tests {
         log.flush()?;
 
         // There should be only one key in the store.
-        assert_eq!(log.iter().count(), 1);
+        assert_eq!(log.to_keys().into_iter().count(), 1);
         Ok(())
     }
 }

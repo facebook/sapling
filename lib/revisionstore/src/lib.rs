@@ -40,7 +40,7 @@ pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::packstore::{CorruptionPolicy, DataPackStore, HistoryPackStore};
-pub use crate::repack::IterableStore;
+pub use crate::repack::ToKeys;
 pub use crate::uniondatastore::UnionDataStore;
 
 #[cfg(any(test, feature = "for-tests"))]

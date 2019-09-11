@@ -94,7 +94,7 @@ use types::{Key, Node, RepoPath};
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::localstore::LocalStore;
-use crate::repack::{IterableStore, Repackable};
+use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 use crate::vfs::remove_file;
 
@@ -367,9 +367,9 @@ impl LocalStore for DataPack {
     }
 }
 
-impl IterableStore for DataPack {
-    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
-        Box::new(DataPackIterator::new(self))
+impl ToKeys for DataPack {
+    fn to_keys(&self) -> Vec<Fallible<Key>> {
+        DataPackIterator::new(self).collect()
     }
 }
 
@@ -418,7 +418,12 @@ impl<'a> Iterator for DataPackIterator<'a> {
                 self.offset = e.next_offset;
                 Ok(Key::new(e.filename.to_owned(), e.node))
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                // The entry is corrupted, and we have no way to know where the next one is
+                // located, let's forcibly stop the iteration.
+                self.offset = self.pack.len() as u64;
+                Err(e)
+            }
         })
     }
 }
@@ -638,7 +643,10 @@ pub mod tests {
 
         let pack = make_datapack(&tempdir, &revisions);
         assert_eq!(
-            pack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
+            pack.to_keys()
+                .into_iter()
+                .collect::<Fallible<Vec<Key>>>()
+                .unwrap(),
             revisions
                 .iter()
                 .map(|d| d.0.key.clone())
@@ -730,7 +738,7 @@ pub mod tests {
             }
 
             let pack = make_datapack(&tempdir, &revisions);
-            let same = pack.iter().collect::<Fallible<Vec<Key>>>().unwrap()
+            let same = pack.to_keys().into_iter().collect::<Fallible<Vec<Key>>>().unwrap()
                 == revisions
                     .iter()
                     .map(|d| d.0.key.clone())

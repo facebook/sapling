@@ -9,7 +9,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{HistoryStore, IterableStore, MutableHistoryStore};
+use revisionstore::{HistoryStore, MutableHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::revisionstore::pythonutil::{
@@ -131,9 +131,9 @@ fn to_node_info(
     Ok(NodeInfo { parents, linknode })
 }
 
-impl<T: IterableStore + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
+impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
-        let iter = self.iter().map(|res| {
+        let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
             let node_info = self.get_node_info(&key)?;
             let (name, node) = from_key(py, &key);

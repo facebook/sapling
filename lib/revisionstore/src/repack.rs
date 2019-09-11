@@ -21,8 +21,8 @@ use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
 
-pub trait IterableStore {
-    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a>;
+pub trait ToKeys {
+    fn to_keys(&self) -> Vec<Fallible<Key>>;
 }
 
 pub trait Repackable {
@@ -30,7 +30,7 @@ pub trait Repackable {
 }
 
 fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fallible<()> {
-    for k in data_pack.iter() {
+    for k in data_pack.to_keys() {
         let key = k?;
         let chain = data_pack.get_delta_chain(&key)?;
         for delta in chain.iter() {
@@ -57,7 +57,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + IterableStore>(
+fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Fallible<()>,
@@ -106,7 +106,11 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + IterableStore>(
                 }
             };
 
-            let keys = pack.iter().filter_map(|res| res.ok()).collect::<Vec<Key>>();
+            let keys = pack
+                .to_keys()
+                .into_iter()
+                .filter_map(|res| res.ok())
+                .collect::<Vec<Key>>();
             let missing = new_pack.get_missing(&keys)?;
 
             if missing.len() == 0 {
@@ -142,7 +146,7 @@ fn repack_historypack(
     history_pack: &HistoryPack,
     mut_pack: &mut MutableHistoryPack,
 ) -> Fallible<()> {
-    for k in history_pack.iter() {
+    for k in history_pack.to_keys() {
         let key = k?;
         let node = history_pack.get_node_info(&key)?;
         mut_pack.add(&key, &node)?;
@@ -284,7 +288,11 @@ mod tests {
         assert!(datapack.is_ok());
         let newpack = datapack.unwrap();
         assert_eq!(
-            newpack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
+            newpack
+                .to_keys()
+                .into_iter()
+                .collect::<Fallible<Vec<Key>>>()
+                .unwrap(),
             revisions
                 .iter()
                 .map(|d| d.0.key.clone())
@@ -328,7 +336,11 @@ mod tests {
         assert!(newpath.is_ok());
         let newpack = DataPack::new(&newpath.unwrap()).unwrap();
         assert_eq!(
-            newpack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
+            newpack
+                .to_keys()
+                .into_iter()
+                .collect::<Fallible<Vec<Key>>>()
+                .unwrap(),
             revisions
                 .iter()
                 .flatten()

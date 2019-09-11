@@ -98,7 +98,7 @@ use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::localstore::LocalStore;
-use crate::repack::{IterableStore, Repackable};
+use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 use crate::vfs::remove_file;
 
@@ -357,9 +357,9 @@ impl LocalStore for HistoryPack {
     }
 }
 
-impl IterableStore for HistoryPack {
-    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
-        Box::new(HistoryPackIterator::new(self))
+impl ToKeys for HistoryPack {
+    fn to_keys(&self) -> Vec<Fallible<Key>> {
+        HistoryPackIterator::new(self).collect()
     }
 }
 
@@ -413,6 +413,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
                     self.offset += 4 + 2 + file_name_slice.len() as u64;
                 }
                 Err(e) => {
+                    self.offset = self.pack.len() as u64;
                     return Some(Err(e));
                 }
             };
@@ -433,7 +434,12 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
                 };
                 Ok(Key::new(self.current_name.clone(), e.node))
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                // The entry is corrupted, and we have no way to know where the next one is
+                // located, let's forcibly stop the iteration.
+                self.offset = self.pack.len() as u64;
+                Err(e)
+            }
         })
     }
 }
@@ -584,7 +590,11 @@ pub mod tests {
 
         let mut keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
         keys.sort_unstable();
-        let mut iter_keys = pack.iter().collect::<Fallible<Vec<Key>>>().unwrap();
+        let mut iter_keys = pack
+            .to_keys()
+            .into_iter()
+            .collect::<Fallible<Vec<Key>>>()
+            .unwrap();
         iter_keys.sort_unstable();
         assert_eq!(iter_keys, keys,);
     }

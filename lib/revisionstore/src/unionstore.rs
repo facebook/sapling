@@ -7,8 +7,7 @@ use failure::Fallible;
 
 use types::Key;
 
-use crate::localstore::LocalStore;
-use crate::repack::IterableStore;
+use crate::{localstore::LocalStore, repack::ToKeys};
 
 pub struct UnionStore<T> {
     stores: Vec<T>,
@@ -53,8 +52,11 @@ impl<'a, T> IntoIterator for &'a UnionStore<T> {
     }
 }
 
-impl<T: IterableStore> IterableStore for UnionStore<T> {
-    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
-        Box::new(self.into_iter().map(|store| store.iter()).flatten())
+impl<T: ToKeys> ToKeys for UnionStore<T> {
+    fn to_keys(&self) -> Vec<Fallible<Key>> {
+        self.into_iter()
+            .map(|store| store.to_keys())
+            .flatten()
+            .collect()
     }
 }

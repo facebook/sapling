@@ -9,7 +9,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{DataStore, IterableStore, MutableDeltaStore};
+use revisionstore::{DataStore, MutableDeltaStore, ToKeys};
 use types::{Key, Node};
 
 use crate::revisionstore::pythonutil::{
@@ -120,9 +120,9 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
     }
 }
 
-impl<T: IterableStore + DataStore + ?Sized> IterableDataStorePyExt for T {
+impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
-        let iter = self.iter().map(|res| {
+        let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
             let delta = self.get_delta(&key)?;
             let (name, node) = from_key(py, &key);

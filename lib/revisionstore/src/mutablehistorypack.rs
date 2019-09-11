@@ -348,7 +348,7 @@ mod tests {
     use types::{node::Node, testutil::key};
 
     use crate::historypack::HistoryPack;
-    use crate::repack::IterableStore;
+    use crate::repack::ToKeys;
 
     #[test]
     fn test_topo_order() {
@@ -402,7 +402,11 @@ mod tests {
         let path = muthistorypack.flush().unwrap().unwrap();
         let pack = HistoryPack::new(&path).unwrap();
 
-        let actual_order = pack.iter().map(|x| x.unwrap()).collect::<Vec<Key>>();
+        let actual_order = pack
+            .to_keys()
+            .into_iter()
+            .collect::<Fallible<Vec<Key>>>()
+            .unwrap();
 
         // Compute the expected order
         let mut chains = chains.iter().collect::<Vec<_>>();
