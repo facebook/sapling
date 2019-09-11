@@ -761,15 +761,6 @@ return code of command and shell aliases:
   $ hg exit1
   [1]
 
-#if no-outer-repo
-  $ hg root
-  abort: no repository found in '$TESTTMP' (.hg not found)!
-  [255]
-  $ hg --config alias.hgroot='!hg root' hgroot
-  abort: no repository found in '$TESTTMP' (.hg not found)!
-  [255]
-#endif
-
 documented aliases
 
   $ newrepo

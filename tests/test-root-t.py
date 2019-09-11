@@ -18,6 +18,17 @@ sh % "cd '$TESTTMP'"
 sh % "hg share -q repo1 repo2"
 sh % "cd repo2"
 
-# test repo --shared
+# test root
+
+sh % "hg root" == "$TESTTMP/repo2"
+
+# test root --shared
 
 sh % "hg root --shared" == "$TESTTMP/repo1"
+
+# test error message
+
+sh % "hg root --cwd .." == r"""
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
+    [255]"""

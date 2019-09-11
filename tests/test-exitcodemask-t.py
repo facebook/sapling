@@ -11,26 +11,31 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # Command line flag is effective:
 
 sh % "hg add a --config 'ui.exitcodemask=63'" == r"""
-    abort: no repository found in '$TESTTMP' (.hg not found)!
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
     [63]"""
 
 sh % "'HGPLAIN=1' hg add a --config 'ui.exitcodemask=63'" == r"""
-    abort: no repository found in '$TESTTMP' (.hg not found)!
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
     [63]"""
 
 # Config files are ignored if HGPLAIN is set:
 
 sh % "setconfig 'ui.exitcodemask=31'"
 sh % "hg add a" == r"""
-    abort: no repository found in '$TESTTMP' (.hg not found)!
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
     [31]"""
 
 sh % "'HGPLAIN=1' hg add a" == r"""
-    abort: no repository found in '$TESTTMP' (.hg not found)!
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
     [255]"""
 
 # But HGPLAINEXCEPT can override the behavior:
 
 sh % "'HGPLAIN=1' 'HGPLAINEXCEPT=exitcode' hg add a" == r"""
-    abort: no repository found in '$TESTTMP' (.hg not found)!
+    abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+    (use 'cd' to go to a directory inside a repository and try again)
     [31]"""

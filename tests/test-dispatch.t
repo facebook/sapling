@@ -149,7 +149,8 @@ specified" should include filename even when it is empty
 No repo:
 
   $ hg cat
-  abort: no repository found in '$TESTTMP' (.hg not found)!
+  abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
   [255]
 
 #endif

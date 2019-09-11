@@ -1129,8 +1129,13 @@ def _dispatch(req):
                                     return _dispatch(req)
                             if not path:
                                 raise error.RepoError(
-                                    _("no repository found in" " '%s' (.hg not found)")
-                                    % pycompat.getcwd()
+                                    _(
+                                        "'%s' is not inside a repository, but this command requires a repository"
+                                    )
+                                    % pycompat.getcwd(),
+                                    hint=_(
+                                        "use 'cd' to go to a directory inside a repository and try again"
+                                    ),
                                 )
                             raise
                 if repo:

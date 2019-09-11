@@ -64,14 +64,16 @@ Implicit -R:
   $ hg ann a/a a/a
   0: a
   $ hg ann a/a b/b
-  abort: no repository found in '$TESTTMP' (.hg not found)!
+  abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
   [255]
   $ hg -R b ann a/a
   abort: a/a not under root '$TESTTMP/b'
   (consider using '--cwd b')
   [255]
   $ hg log
-  abort: no repository found in '$TESTTMP' (.hg not found)!
+  abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
   [255]
 
 #endif

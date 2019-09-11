@@ -23,7 +23,10 @@ pub struct UnknownCommand(pub String);
 pub struct FallbackToPython;
 
 #[derive(Debug, Fail)]
-#[fail(display = "no repository found in '{}' (.hg not found)!", _0)]
+#[fail(
+    display = "'{}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)",
+    _0
+)]
 pub struct RepoRequired(pub String);
 
 #[derive(Debug, Fail)]
