@@ -26,14 +26,11 @@ use crate::revisionstore::datastorepyext::{
 use crate::revisionstore::historystorepyext::{
     HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
 };
-use crate::revisionstore::pyerror::pyerr_to_error;
-use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythonutil::to_pyerr;
 
 mod datastorepyext;
 mod historystorepyext;
 mod pyerror;
-mod pyext;
 mod pythondatastore;
 mod pythonutil;
 
@@ -132,7 +129,7 @@ fn incremental_repackhist(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> 
 }
 
 py_class!(class datapack |py| {
-    data store: PyOptionalRefCell<Box<DataPack>>;
+    data store: Box<DataPack>;
 
     def __new__(
         _cls,
@@ -142,53 +139,53 @@ py_class!(class datapack |py| {
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         datapack::create_instance(
             py,
-            PyOptionalRefCell::new(Box::new(match DataPack::new(&path) {
+            Box::new(match DataPack::new(&path) {
                 Ok(pack) => pack,
                 Err(e) => return Err(to_pyerr(py, &e)),
-            })),
+            }),
         )
     }
 
     def path(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.base_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.pack_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.index_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_py(py, name, node)
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
@@ -198,7 +195,7 @@ py_class!(class datapack |py| {
     }
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.iter_py(py)
     }
 });
@@ -297,7 +294,7 @@ py_class!(class datapackstore |py| {
 });
 
 py_class!(class historypack |py| {
-    data store: PyOptionalRefCell<Box<HistoryPack>>;
+    data store: Box<HistoryPack>;
 
     def __new__(
         _cls,
@@ -307,44 +304,44 @@ py_class!(class historypack |py| {
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         historypack::create_instance(
             py,
-            PyOptionalRefCell::new(Box::new(match HistoryPack::new(&path) {
+            Box::new(match HistoryPack::new(&path) {
                 Ok(pack) => pack,
                 Err(e) => return Err(to_pyerr(py, &e)),
-            })),
+            }),
         )
     }
 
     def path(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.base_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.pack_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         let path = encoding::path_to_local_bytes(store.index_path()).map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
         let _known = known;
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_ancestors_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_node_info_py(py, name, node)
     }
 
@@ -354,7 +351,7 @@ py_class!(class historypack |py| {
     }
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.iter_py(py)
     }
 });
@@ -413,37 +410,37 @@ py_class!(class historypackstore |py| {
 });
 
 py_class!(class indexedlogdatastore |py| {
-    data store: PyOptionalRefCell<Box<IndexedLogDataStore>>;
+    data store: Box<IndexedLogDataStore>;
 
     def __new__(_cls, path: &PyBytes) -> PyResult<indexedlogdatastore> {
         let path = encoding::local_bytes_to_path(path.data(py))
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         indexedlogdatastore::create_instance(
             py,
-            PyOptionalRefCell::new(Box::new(match IndexedLogDataStore::new(&path) {
+            Box::new(match IndexedLogDataStore::new(&path) {
                 Ok(log) => log,
                 Err(e) => return Err(to_pyerr(py, &e)),
-            })),
+            }),
         )
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
@@ -452,45 +449,45 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.flush_py(py)?;
         Ok(Python::None(py))
     }
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.iter_py(py)
     }
 });
 
 py_class!(class indexedloghistorystore |py| {
-    data store: PyOptionalRefCell<Box<IndexedLogHistoryStore>>;
+    data store: Box<IndexedLogHistoryStore>;
 
     def __new__(_cls, path: &PyBytes) -> PyResult<indexedloghistorystore> {
         let path = encoding::local_bytes_to_path(path.data(py))
             .map_err(|e| to_pyerr(py, &e.into()))?;
         indexedloghistorystore::create_instance(
             py,
-            PyOptionalRefCell::new(Box::new(match IndexedLogHistoryStore::new(&path) {
+            Box::new(match IndexedLogHistoryStore::new(&path) {
                 Ok(log) => log,
                 Err(e) => return Err(to_pyerr(py, &e)),
-            })),
+            }),
         )
     }
 
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
         let _known = known;
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_ancestors_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_node_info_py(py, name, node)
     }
 
@@ -499,13 +496,13 @@ py_class!(class indexedloghistorystore |py| {
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.flush_py(py)?;
         Ok(Python::None(py))
     }
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.iter_py(py)
     }
 });
@@ -535,40 +532,40 @@ fn make_mutabledeltastore(
 }
 
 py_class!(pub class mutabledeltastore |py| {
-    data store: PyOptionalRefCell<Box<dyn MutableDeltaStore + Send>>;
+    data store: Box<dyn MutableDeltaStore + Send>;
 
     def __new__(_cls, packfilepath: Option<PyBytes> = None, indexedlogpath: Option<PyBytes> = None) -> PyResult<mutabledeltastore> {
         let store = make_mutabledeltastore(py, packfilepath, indexedlogpath).map_err(|e| to_pyerr(py, &e.into()))?;
-        mutabledeltastore::create_instance(py, PyOptionalRefCell::new(store))
+        mutabledeltastore::create_instance(py, store)
     }
 
     def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.add_py(py, name, node, deltabasenode, delta, metadata)
     }
 
     def flush(&self) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.flush_py(py)
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
@@ -578,44 +575,28 @@ impl DataStore for mutabledeltastore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get(key)
+        self.store(py).get(key)
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_delta(key)
+        self.store(py).get_delta(key)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_delta_chain(key)
+        self.store(py).get_delta_chain(key)
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_meta(key)
+        self.store(py).get_meta(key)
     }
 }
 
@@ -624,11 +605,7 @@ impl LocalStore for mutabledeltastore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_missing(keys)
+        self.store(py).get_missing(keys)
     }
 }
 
@@ -637,22 +614,14 @@ impl MutableDeltaStore for mutabledeltastore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.add(delta, metadata)
+        self.store(py).add(delta, metadata)
     }
 
     fn flush(&self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.flush()
+        self.store(py).flush()
     }
 }
 
@@ -677,36 +646,36 @@ fn make_mutablehistorystore(
 }
 
 py_class!(pub class mutablehistorystore |py| {
-    data store: PyOptionalRefCell<Box<dyn MutableHistoryStore + Send>>;
+    data store: Box<dyn MutableHistoryStore + Send>;
 
     def __new__(_cls, packfilepath: Option<PyBytes>) -> PyResult<mutablehistorystore> {
         let store = make_mutablehistorystore(py, packfilepath).map_err(|e| to_pyerr(py, &e.into()))?;
-        mutablehistorystore::create_instance(py, PyOptionalRefCell::new(store))
+        mutablehistorystore::create_instance(py, store)
     }
 
     def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.add_py(py, name, node, p1, p2, linknode, copyfrom)
     }
 
     def flush(&self) -> PyResult<PyObject> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.flush_py(py)
     }
 
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<PyObject>) -> PyResult<PyDict> {
         let _known = known;
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_ancestors_py(py, name, node)
     }
 
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_node_info_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py).get_value(py)?;
+        let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
@@ -716,22 +685,14 @@ impl HistoryStore for mutablehistorystore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_ancestors(key)
+        self.store(py).get_ancestors(key)
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_node_info(key)
+        self.store(py).get_node_info(key)
     }
 }
 
@@ -740,11 +701,7 @@ impl LocalStore for mutablehistorystore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.get_missing(keys)
+        self.store(py).get_missing(keys)
     }
 }
 
@@ -753,21 +710,13 @@ impl MutableHistoryStore for mutablehistorystore {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.add(key, info)
+        self.store(py).add(key, info)
     }
 
     fn flush(&self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let store = self
-            .store(py)
-            .get_value(py)
-            .map_err(|e| pyerr_to_error(py, e))?;
-        store.flush()
+        self.store(py).flush()
     }
 }
