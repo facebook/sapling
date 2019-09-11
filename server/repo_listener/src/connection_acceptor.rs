@@ -18,6 +18,7 @@ use crate::failure::{err_msg, SlogKVError};
 use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
 use configerator::ConfigeratorAPI;
+use fbinit::FacebookInit;
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -49,6 +50,7 @@ lazy_static! {
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
 pub fn connection_acceptor(
+    fb: FacebookInit,
     common_config: CommonConfig,
     sockname: String,
     root_log: Logger,
@@ -64,9 +66,7 @@ pub fn connection_acceptor(
         .map_err(Error::from);
 
     let configerator_api = if !test_instance {
-        let _ = *fbinit::FACEBOOK;
-
-        let api = Arc::new(ConfigeratorAPI::new().expect("failed to create cfgr api"));
+        let api = Arc::new(ConfigeratorAPI::new(fb).expect("failed to create cfgr api"));
         api.subscribe_to_config(CONFIGERATOR_LIMITS_CONFIG)
             .expect("can't subscribe to configerator config");
         Some(api)

@@ -70,6 +70,7 @@ mod repo_handlers;
 mod request_handler;
 
 use blobrepo_factory::Caching;
+use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
@@ -84,6 +85,7 @@ use crate::errors::*;
 use crate::repo_handlers::repo_handlers;
 
 pub fn create_repo_listeners(
+    fb: FacebookInit,
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
@@ -111,6 +113,7 @@ pub fn create_repo_listeners(
         )
         .and_then(move |handlers| {
             connection_acceptor(
+                fb,
                 common_config,
                 sockname,
                 root_log,

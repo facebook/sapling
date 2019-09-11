@@ -11,6 +11,7 @@ mod monitoring;
 
 use clap::{App, ArgMatches};
 use failure_ext::SlogKVError;
+use fbinit::FacebookInit;
 use futures::Future;
 use lazy_static::lazy_static;
 use metaconfig_parser::RepoConfigs;
@@ -91,13 +92,14 @@ fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     RepoConfigs::read_configs(cpath)
 }
 
-fn main() {
+#[fbinit::main]
+fn main(fb: FacebookInit) {
     let matches = setup_app().get_matches();
     let root_log = setup_logger(&matches);
 
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
-    fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
+    fn run_server<'a>(fb: FacebookInit, root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
         info!(root_log, "Starting up");
 
         let stats_aggregation = stats::schedule_stats_aggregation()
@@ -131,6 +133,7 @@ fn main() {
         .expect("failed to build fb_tls acceptor");
 
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
+            fb,
             config.common,
             config.repos.into_iter(),
             cmdlib::args::parse_myrouter_port(&matches),
@@ -170,7 +173,7 @@ fn main() {
         std::process::exit(0);
     }
 
-    match run_server(&root_log, matches) {
+    match run_server(fb, &root_log, matches) {
         Ok(_) => panic!("unexpected success"),
         Err(e) => {
             crit!(root_log, "Server fatal error"; SlogKVError(e));
