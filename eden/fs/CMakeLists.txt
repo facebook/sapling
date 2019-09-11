@@ -44,9 +44,7 @@ add_subdirectory(utils)
 
 # Platform specific code
 if (WIN32)
-  add_subdirectory(win/mount)
-  add_subdirectory(win/store)
-  add_subdirectory(win/utils)
+  add_subdirectory(win)
 else()
   add_subdirectory(fuse)
   add_subdirectory(rocksdb)

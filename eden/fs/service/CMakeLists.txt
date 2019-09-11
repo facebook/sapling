@@ -77,8 +77,7 @@ if (WIN32)
   target_link_libraries(
     eden_service
     PUBLIC
-      eden_win_mount
-      eden_win_store
+      eden_win
       eden_win_utils
   )
 else()
