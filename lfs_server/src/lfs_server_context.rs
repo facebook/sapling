@@ -43,6 +43,25 @@ pub struct LfsServerContext {
     inner: Arc<Mutex<LfsServerContextInner>>,
 }
 
+#[derive(Clone, StateData)]
+pub struct LoggingContext {
+    pub repository: String,
+    pub error_msg: Option<String>,
+}
+
+impl LoggingContext {
+    pub fn new(repository: String) -> Self {
+        Self {
+            repository,
+            error_msg: None,
+        }
+    }
+
+    pub fn set_error_msg(&mut self, error_msg: String) {
+        self.error_msg = Some(error_msg);
+    }
+}
+
 impl LfsServerContext {
     pub fn new(
         logger: Logger,
@@ -94,7 +113,8 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub fn instantiate(state: &State, repository: String) -> Result<Self, Error> {
+    pub fn instantiate(state: &mut State, repository: String) -> Result<Self, Error> {
+        state.put(LoggingContext::new(repository.clone()));
         let ctx = LfsServerContext::borrow_from(&state);
         ctx.request(repository)
     }

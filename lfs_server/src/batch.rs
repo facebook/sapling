@@ -280,7 +280,7 @@ async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<Res
 
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
 pub async fn batch(state: &mut State) -> Result<(Body, Mime), HttpError> {
-    let BatchParams { repository } = BatchParams::borrow_from(state);
+    let BatchParams { repository } = state.take();
 
     let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
 

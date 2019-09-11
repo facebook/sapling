@@ -27,6 +27,7 @@ use gotham::{
 };
 use hyper::{header::HeaderValue, Body, Response, StatusCode};
 use mime::Mime;
+use scuba::ScubaSampleBuilder;
 use slog::warn;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -41,14 +42,16 @@ use mononoke_types::RepositoryId;
 use cmdlib::args;
 
 use crate::http::{git_lfs_mime, HttpError};
-use lfs_server_context::{LfsServerContext, ServerUris};
+use lfs_server_context::{LfsServerContext, LoggingContext, ServerUris};
 use protocol::ResponseError;
+use scuba_middleware::ScubaMiddleware;
 
 mod batch;
 mod download;
 mod errors;
 mod lfs_server_context;
 mod protocol;
+mod scuba_middleware;
 mod str_serialized;
 mod upload;
 #[macro_use]
@@ -69,10 +72,11 @@ const ARG_TLS_CERTIFICATE: &str = "tls-certificate";
 const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
+const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 
 async fn build_response(
     res: Result<(Body, Mime), HttpError>,
-    state: State,
+    mut state: State,
 ) -> Result<(State, Response<Body>), (State, HandlerError)> {
     let mut res = match res {
         Ok((body, mime)) => create_response(&state, StatusCode::OK, mime, body),
@@ -84,6 +88,10 @@ async fn build_response(
                 documentation_url: None,
                 request_id: Some(request_id(&state).to_string()),
             };
+
+            if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
+                log_ctx.set_error_msg(error.to_string());
+            }
 
             // Bail if we can't convert the response to json.
             match serde_json::to_string(&res) {
@@ -137,8 +145,9 @@ fn health_handler(state: State) -> (State, &'static str) {
     (state, "I_AM_ALIVE")
 }
 
-fn router(lfs_ctx: LfsServerContext) -> Router {
+fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router {
     let pipeline = new_pipeline()
+        .add(ScubaMiddleware::new(scuba_logger))
         .add(StateMiddleware::new(lfs_ctx))
         .add(RequestLogger::new(::log::Level::Info))
         .build();
@@ -214,7 +223,14 @@ fn main() -> Result<(), Error> {
         Arg::with_name(ARG_UPSTREAM_URL)
             .takes_value(true)
             .help("The base URL for an upstream server"),
+    )
+    .arg(
+        Arg::with_name(ARG_SCUBA_DATASET)
+            .long(ARG_SCUBA_DATASET)
+            .takes_value(true)
+            .help("The name of the scuba dataset to log to"),
     );
+
     let app = args::add_fb303_args(app);
 
     let matches = app.get_matches();
@@ -234,6 +250,14 @@ fn main() -> Result<(), Error> {
     let tls_private_key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let tls_ca = matches.value_of(ARG_TLS_CA);
     let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
+
+    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
+        ScubaSampleBuilder::new(scuba_dataset)
+    } else {
+        ScubaSampleBuilder::with_discard()
+    };
+
+    scuba_logger.add_common_server_data();
 
     let server = ServerUris::new(
         matches.value_of(ARG_SELF_URL).unwrap(),
@@ -272,7 +296,10 @@ fn main() -> Result<(), Error> {
         .into_iter()
         .collect();
 
-    let root = router(LfsServerContext::new(logger.clone(), repos, server)?);
+    let root = router(
+        LfsServerContext::new(logger.clone(), repos, server)?,
+        scuba_logger,
+    );
     let addr = format!("{}:{}", listen_host, listen_port);
 
     let addr = addr

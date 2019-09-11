@@ -127,7 +127,7 @@ pub async fn upload(state: &mut State) -> Result<(Body, Mime), HttpError> {
         repository,
         oid,
         size,
-    } = UploadParams::borrow_from(state);
+    } = state.take();
 
     let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
 

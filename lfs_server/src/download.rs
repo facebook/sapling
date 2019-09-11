@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use futures_preview::compat::Future01CompatExt;
-use gotham::state::{FromState, State};
+use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::Body;
 use serde::Deserialize;
@@ -27,7 +27,7 @@ pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError
     let DownloadParams {
         repository,
         content_id,
-    } = DownloadParams::borrow_from(state);
+    } = state.take();
 
     let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
 
