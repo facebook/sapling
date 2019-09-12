@@ -8,7 +8,7 @@ use std::{str::from_utf8, sync::Arc};
 use bytes::{Bytes, BytesMut};
 use failure::{format_err, Fallible};
 
-use types::{Node, PathComponent, PathComponentBuf, RepoPath};
+use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath};
 
 use crate::FileType;
 
@@ -19,6 +19,15 @@ pub trait TreeStore {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes>;
 
     fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()>;
+
+    /// Indicate to the store that we will be attempting to access the given
+    /// tree nodes soon. Some stores (especially ones that may perform network
+    /// I/O) may use this information to prepare for these accesses (e.g., by
+    /// by prefetching the nodes in bulk). For some stores this operation does
+    /// not make sense, so the default implementation is a no-op.
+    fn prefetch(&self, _keys: Vec<Key>) -> Fallible<()> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -38,6 +47,10 @@ impl InnerStore {
 
     pub fn insert_entry(&self, path: &RepoPath, node: Node, entry: Entry) -> Fallible<()> {
         self.tree_store.insert(path, node, entry.0)
+    }
+
+    pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<()> {
+        self.tree_store.prefetch(keys.into_iter().collect())
     }
 }
 
@@ -227,18 +240,32 @@ impl Element {
 }
 
 #[cfg(test)]
-use std::{collections::HashMap, sync::RwLock};
+use std::{
+    collections::HashMap,
+    sync::{Mutex, RwLock},
+};
 #[cfg(test)]
 use types::RepoPathBuf;
 
 #[cfg(test)]
 /// An in memory `Store` implementation backed by HashMaps. Primarily intended for tests.
-pub struct TestStore(RwLock<HashMap<RepoPathBuf, HashMap<Node, Bytes>>>);
+pub struct TestStore {
+    entries: RwLock<HashMap<RepoPathBuf, HashMap<Node, Bytes>>>,
+    pub prefetched: Mutex<Vec<Vec<Key>>>,
+}
 
 #[cfg(test)]
 impl TestStore {
     pub fn new() -> Self {
-        TestStore(RwLock::new(HashMap::new()))
+        TestStore {
+            entries: RwLock::new(HashMap::new()),
+            prefetched: Mutex::new(Vec::new()),
+        }
+    }
+
+    #[allow(unused)]
+    pub fn fetches(&self) -> Vec<Vec<Key>> {
+        self.prefetched.lock().unwrap().clone()
     }
 }
 
@@ -246,7 +273,7 @@ impl TestStore {
 impl TreeStore for TestStore {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
         let underlying = self
-            .0
+            .entries
             .read()
             .map_err(|err| format_err!("Failed to acquire read lock: {}", err))?;
         let result = underlying
@@ -258,13 +285,18 @@ impl TreeStore for TestStore {
 
     fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()> {
         let mut underlying = self
-            .0
+            .entries
             .write()
             .map_err(|err| format_err!("Failed to acquire the write lock: {}", err))?;
         underlying
             .entry(path.to_owned())
             .or_insert(HashMap::new())
             .insert(node, data);
+        Ok(())
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        self.prefetched.lock().unwrap().push(keys);
         Ok(())
     }
 }
