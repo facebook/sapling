@@ -52,6 +52,7 @@ using folly::makeFuture;
 using folly::setThreadName;
 using folly::StringPiece;
 using folly::to;
+using folly::Try;
 using folly::Unit;
 using std::make_shared;
 using std::make_unique;
@@ -264,51 +265,121 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
       });
 }
 
-folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
-  auto createDotEdenSymlink = [this](TreeInodePtr dotEdenInode) {
-    auto edenSymlink = dotEdenInode->symlink(
-        kDotEdenSymlinkName,
-        (config_->getMountPath() + PathComponentPiece{kDotEdenName})
-            .stringPiece());
+namespace {
+Future<Unit> ensureDotEdenSymlink(
+    TreeInodePtr directory,
+    PathComponent symlinkName,
+    AbsolutePath symlinkTarget) {
+  enum class Action {
+    Nothing,
+    CreateSymlink,
+    UnlinkThenSymlink,
   };
-  // Set up the magic .eden dir
-  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
-      .thenValue([=](TreeInodePtr dotEdenInode) {
-        // We may be upgrading from an earlier build before we started
-        // to use dot-eden symlinks, so we need to resolve or create
-        // its inode here
-        return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
-            .unit()
-            .thenError(
-                folly::tag_t<InodeError>{},
-                [=](const InodeError& /*err*/) {
-                  createDotEdenSymlink(dotEdenInode);
-                })
-            .ensure([=] {
-              // Assign this number after we've fixed up the directory
-              // contents, otherwise we'll lock ourselves out of
-              // populating more entries.
-              dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+
+  return directory->getOrLoadChild(symlinkName)
+      .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
+        if (!result.hasValue()) {
+          // If we failed to look up the file this generally means it doesn't
+          // exist.
+          // TODO: it would be nicer to actually check the exception to confirm
+          // it is ENOENT.  However, if it was some other error the symlink
+          // creation attempt below will just fail with some additional details
+          // anyway.
+          return Action::CreateSymlink;
+        }
+
+        auto fileInode = result->asFilePtrOrNull();
+        if (!fileInode) {
+          // Hmm, it's unexpected that we would have a directory here.
+          // Just return for now, without trying to replace the directory.
+          // We'll continue mounting the checkout, but this symlink won't be
+          // set up.  This potentially could confuse applications that look
+          // for it later.
+          XLOG(ERR) << "error setting up .eden/" << symlinkName
+                    << " symlink: a directory exists at this location";
+          return Action::Nothing;
+        }
+
+        // If there is a regular file at this location, remove it then create
+        // the symlink.
+        if (dtype_t::Symlink != fileInode->getType()) {
+          return Action::UnlinkThenSymlink;
+        }
+
+        // Check if the symlink already has the desired contents.
+        return fileInode->readlink(CacheHint::LikelyNeededAgain)
+            .thenValue([=](std::string&& contents) {
+              if (contents == symlinkTarget) {
+                // The symlink already contains the desired contents.
+                return Action::Nothing;
+              }
+              // Remove and re-create the symlink with the desired contents.
+              return Action::UnlinkThenSymlink;
             });
       })
-      .thenError(
-          folly::tag_t<facebook::eden::InodeError>{},
-          [=](const InodeError& /*err*/) {
-            auto dotEdenInode =
-                getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
-            dotEdenInode->symlink(
-                "root"_pc, config_->getMountPath().stringPiece());
-            dotEdenInode->symlink(
-                "socket"_pc, serverState_->getSocketPath().stringPiece());
-            dotEdenInode->symlink(
-                "client"_pc, config_->getClientDirectory().stringPiece());
+      .thenValueInline([=](Action action) -> Future<Unit> {
+        switch (action) {
+          case Action::Nothing:
+            return folly::unit;
+          case Action::CreateSymlink:
+            directory->symlink(symlinkName, symlinkTarget.stringPiece());
+            return folly::unit;
+          case Action::UnlinkThenSymlink:
+            return directory->unlink(symlinkName).thenValueInline([=](Unit&&) {
+              directory->symlink(symlinkName, symlinkTarget.stringPiece());
+            });
+        }
+      })
+      .thenError([symlinkName](folly::exception_wrapper&& ew) {
+        // Log the error but don't propagate it up to our caller.
+        // We'll continue mounting the checkout even if we encountered an error
+        // setting up some of these symlinks.  There's not much else we can try
+        // here, and it is better to let the user continue mounting the checkout
+        // so that it isn't completely unusable.
+        XLOG(ERR) << "error setting up .eden/" << symlinkName
+                  << " symlink: " << ew.what();
+      });
+}
+} // namespace
 
-            createDotEdenSymlink(dotEdenInode);
+folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
+  // Set up the magic .eden dir
+  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
+      .thenTryInline([=](Try<TreeInodePtr>&& lookupResult) {
+        TreeInodePtr dotEdenInode;
+        if (lookupResult.hasValue()) {
+          dotEdenInode = *lookupResult;
+        } else {
+          dotEdenInode =
+              getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0755);
+        }
 
-            // We must assign this after we've built out the contents, otherwise
-            // we'll lock ourselves out of populating more entries
-            dotEdenInodeNumber_ = dotEdenInode->getNodeId();
-          });
+        // Make sure all of the symlinks in the .eden directory exist and
+        // have the correct contents.
+        std::vector<Future<Unit>> futures;
+        futures.emplace_back(ensureDotEdenSymlink(
+            dotEdenInode,
+            kDotEdenSymlinkName.copy(),
+            (config_->getMountPath() + PathComponentPiece{kDotEdenName})));
+        futures.emplace_back(ensureDotEdenSymlink(
+            dotEdenInode, "root"_pc.copy(), config_->getMountPath()));
+        futures.emplace_back(ensureDotEdenSymlink(
+            dotEdenInode, "socket"_pc.copy(), serverState_->getSocketPath()));
+        futures.emplace_back(ensureDotEdenSymlink(
+            dotEdenInode, "client"_pc.copy(), config_->getClientDirectory()));
+
+        // Wait until we finish setting up all of the symlinks.
+        // Use collectAll() since we want to wait for everything to complete,
+        // even if one of them fails early.
+        return folly::collectAll(futures).thenValue([=](auto&&) {
+          // Set the dotEdenInodeNumber_ as our final step.
+          // We do this after all of the ensureDotEdenSymlink() calls have
+          // finished, since the TreeInode code will refuse to allow any
+          // modifications to the .eden directory once we have set
+          // dotEdenInodeNumber_.
+          dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+        });
+      });
 }
 
 EdenMount::~EdenMount() {}
@@ -397,7 +468,7 @@ Future<Unit> EdenMount::performBindMounts() {
   }
 
   return folly::collectAll(futures).thenValue(
-      [](std::vector<folly::Try<folly::Unit>> results) {
+      [](std::vector<Try<Unit>> results) {
         std::vector<folly::exception_wrapper> errors;
         for (auto& result : results) {
           if (result.hasException()) {
@@ -567,23 +638,21 @@ folly::Future<folly::Unit> EdenMount::unmount() {
     mountingUnmountingState.unlock();
 
     return std::move(mountFuture)
-        .thenTry([this](folly::Try<folly::Unit>&& mountResult) {
+        .thenTry([this](Try<Unit>&& mountResult) {
           if (mountResult.hasException()) {
             return folly::makeFuture();
           }
           return serverState_->getPrivHelper()->fuseUnmount(
               getPath().stringPiece());
         })
-        .thenTry([this](
-                     folly::Try<folly::Unit> &&
-                     result) noexcept->folly::Future<Unit> {
+        .thenTry([this](Try<Unit> && result) noexcept->folly::Future<Unit> {
           auto mountingUnmountingState = mountingUnmountingState_.wlock();
           DCHECK(mountingUnmountingState->unmountPromise.has_value());
           folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
               &*mountingUnmountingState->unmountPromise;
           mountingUnmountingState.unlock();
 
-          unsafeUnmountPromise->setTry(folly::Try<Unit>{result});
+          unsafeUnmountPromise->setTry(Try<Unit>{result});
           return folly::makeFuture<folly::Unit>(std::move(result));
         });
   });
@@ -979,8 +1048,7 @@ folly::Future<folly::File> EdenMount::fuseMount() {
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece())
             .thenTry(
-                [mountPath, mountPromise, this](
-                    folly::Try<folly::File>&& fuseDevice)
+                [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
                     -> folly::Future<folly::File> {
                   if (fuseDevice.hasException()) {
                     mountPromise->setException(fuseDevice.exception());

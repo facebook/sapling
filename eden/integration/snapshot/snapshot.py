@@ -278,12 +278,17 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # looks like the old path.  For now this is the easiest thing to do, and the
         # chance of other data looking like the source path should be very unlikely.
         #
-        # In practice we normally need to update the overlay files for at least the
-        # following inodes:
+        # The following files typically contain absolute paths to the original
+        # snapshot location:
         #   .eden/root
         #   .eden/client
         #   .eden/socket
         #   .hg/sharedpath
+        #
+        # Everything in the .eden/ directory will be updated automatically by EdenFS
+        # when the checkout is mounted.  Nonetheless it still seems good to update these
+        # files with a generic path after we shut down EdenFS when first generating the
+        # snapshot data.
         #
         for path in dir_path.iterdir():
             stat_info = path.lstat()
