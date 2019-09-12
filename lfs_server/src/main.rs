@@ -26,10 +26,12 @@ use gotham::{
     state::{request_id, State},
 };
 use hyper::{header::HeaderValue, Body, Response, StatusCode};
+use itertools::Itertools;
 use mime::Mime;
 use scuba::ScubaSampleBuilder;
 use slog::warn;
 use std::collections::HashMap;
+use std::iter;
 use std::net::ToSocketAddrs;
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
@@ -57,13 +59,6 @@ mod upload;
 #[macro_use]
 mod http;
 
-// TODO: left to do here:
-// - HTTPS
-// - Logging
-// - VIP-level routing (won't happen in this code base, though)
-// - Verify that we are talking HTTP/2 to upstream
-// - Make upstream optional for tests?
-
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -83,14 +78,18 @@ async fn build_response(
         Err(error) => {
             let HttpError { error, status_code } = error;
 
+            let error_message = iter::once(error.to_string())
+                .chain(error.iter_causes().map(|c| c.to_string()))
+                .join(": ");
+
             let res = ResponseError {
-                message: error.to_string(),
+                message: error_message.clone(),
                 documentation_url: None,
                 request_id: Some(request_id(&state).to_string()),
             };
 
             if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
-                log_ctx.set_error_msg(error.to_string());
+                log_ctx.set_error_msg(error_message);
             }
 
             // Bail if we can't convert the response to json.

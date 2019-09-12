@@ -61,4 +61,12 @@ pub enum ErrorKind {
     GenerateDownloadUrisError,
     #[fail(display = "Could not generate upload URIs")]
     GenerateUploadUrisError,
+    #[fail(display = "Could not parse Request Batch")]
+    InvalidBatch,
+    #[fail(display = "Could not parse Content ID")]
+    InvalidContentId,
+    #[fail(display = "Could not access Filestore for reads")]
+    FilestoreReadFailure,
+    #[fail(display = "Could not access Filestore for writes")]
+    FilestoreWriteFailure,
 }

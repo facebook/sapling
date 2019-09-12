@@ -288,10 +288,13 @@ pub async fn batch(state: &mut State) -> Result<(Body, Mime), HttpError> {
         .compat()
         .try_concat()
         .await
+        .chain_err(ErrorKind::ClientCancelled)
         .map_err(HttpError::e400)?
         .into_bytes();
 
-    let request_batch = serde_json::from_slice::<RequestBatch>(&body).map_err(HttpError::e400)?;
+    let request_batch = serde_json::from_slice::<RequestBatch>(&body)
+        .chain_err(ErrorKind::InvalidBatch)
+        .map_err(HttpError::e400)?;
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,

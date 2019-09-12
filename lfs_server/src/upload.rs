@@ -6,6 +6,7 @@
 
 use bytes::Bytes;
 use failure::Error;
+use futures::Future;
 use futures_preview::{
     channel::mpsc::channel, compat::Future01CompatExt, compat::Stream01CompatExt, future::ready,
     SinkExt, Stream, StreamExt, TryStreamExt,
@@ -154,6 +155,8 @@ pub async fn upload(state: &mut State) -> Result<(Body, Mime), HttpError> {
             &StoreRequest::with_sha256(size, oid),
             internal_recv.compat(),
         )
+        .chain_err(ErrorKind::FilestoreWriteFailure)
+        .map_err(Error::from)
         .compat();
 
     let upstream_upload = upstream_upload(&ctx, oid, size, upstream_recv);

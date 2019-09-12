@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure_ext::chain::ChainExt;
 use futures_preview::compat::Future01CompatExt;
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -31,7 +32,9 @@ pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError
 
     let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
 
-    let content_id = ContentId::from_str(&content_id).map_err(HttpError::e400)?;
+    let content_id = ContentId::from_str(&content_id)
+        .chain_err(ErrorKind::InvalidContentId)
+        .map_err(HttpError::e400)?;
 
     // Query a stream out of the Filestore
     let stream = filestore::fetch(
@@ -41,6 +44,7 @@ pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError
     )
     .compat()
     .await
+    .chain_err(ErrorKind::FilestoreReadFailure)
     .map_err(HttpError::e500)?;
 
     // Return a 404 if the stream doesn't exist.
