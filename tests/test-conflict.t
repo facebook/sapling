@@ -236,7 +236,7 @@ are merging, unlike :local and :other
 
   $ hg up -C
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "e0693e20f496: 123456789012345678901234567890123456789012345678901234567890????"
+  updated to "e0693e20f496: 123456789012345678901234567890123456789012345678901234567890\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88" (esc)
   1 other heads for branch "default"
   $ printf "\n\nEnd of file\n" >> a
   $ hg ci -m "Add some stuff at the end"

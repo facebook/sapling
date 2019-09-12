@@ -229,7 +229,7 @@
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes
@@ -267,7 +267,7 @@
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes

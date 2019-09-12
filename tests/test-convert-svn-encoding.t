@@ -118,15 +118,15 @@ Convert while testing all possible outputs
   committing manifest
   committing changelog
   progress: getting files (end)
-  1 branch to branch?
-  source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
+  1 branch to branch\xc3\xa9 (esc)
+  source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch\xc3\xa9@5 (esc)
   progress: converting: 4/6 revisions (66.67%)
   reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9 (glob)
   progress: scanning paths: /branches/branch\xc3\xa9 0/1 paths (0.00%) (esc)
   progress: scanning paths (end)
   committing changelog
-  0 branch to branch?e
-  source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
+  0 branch to branch\xc3\xa9e (esc)
+  source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch\xc3\xa9e@6 (esc)
   progress: converting: 5/6 revisions (83.33%)
   reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
   progress: scanning paths: /branches/branch\xc3\xa9e 0/1 paths (0.00%) (esc)

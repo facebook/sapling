@@ -83,6 +83,9 @@ def setfromenviron():
         encoding = "ascii"
     encodingmode = environ.get("HGENCODINGMODE", "strict")
 
+    if encoding == "ascii":
+        encoding = "utf-8"
+
     if not _nativeenviron:
         # now encoding and helper functions are available, recreate the environ
         # dict to be exported to other modules
@@ -123,6 +126,12 @@ class localstr(bytes):
         return hash(self._utf8)  # avoid collisions in local string space
 
 
+def _setascii():
+    """Set encoding to ascii. Used by some doctests."""
+    global encoding
+    encoding = "ascii"
+
+
 def tolocal(s):
     """
     Convert a string from internal UTF-8 to local encoding
@@ -137,6 +146,7 @@ def tolocal(s):
     strings next to their local representation to allow lossless
     round-trip conversion back to UTF-8.
 
+    >>> _setascii()
     >>> u = b'foo: \\xc3\\xa4' # utf-8
     >>> l = tolocal(u)
     >>> l
@@ -164,7 +174,7 @@ def tolocal(s):
         try:
             # make sure string is actually stored in UTF-8
             u = s.decode("UTF-8")
-            if encoding == "UTF-8":
+            if encoding == "utf-8":
                 # fast path
                 return s
             r = u.encode(_sysstr(encoding), u"replace")

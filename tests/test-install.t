@@ -1,6 +1,6 @@
 hg debuginstall
   $ hg debuginstall
-  checking encoding (ascii)...
+  checking encoding (utf-8)...
   checking Python executable (*) (glob)
   checking Python version (2.*) (glob)
   checking Python lib (*lib*)... (glob)
@@ -33,7 +33,7 @@ hg debuginstall JSON
     "defaulttemplatenotfound": "default",
     "editor": "* -c \"import sys; sys.exit(0)\"", (glob)
     "editornotfound": false,
-    "encoding": "ascii",
+    "encoding": "utf-8",
     "encodingerror": null,
     "extensionserror": null, (no-pure !)
     "hgmodulepolicy": "*", (glob)
@@ -55,7 +55,7 @@ hg debuginstall JSON
 
 hg debuginstall with no username
   $ HGUSER= hg debuginstall
-  checking encoding (ascii)...
+  checking encoding (utf-8)...
   checking Python executable (*) (glob)
   checking Python version (2.*) (glob)
   checking Python lib (*lib*)... (glob)
@@ -99,7 +99,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   $ chmod 755 tools/testeditor.exe
 #endif
   $ hg debuginstall --config ui.editor=~/tools/testeditor.exe
-  checking encoding (ascii)...
+  checking encoding (utf-8)...
   checking Python executable (*) (glob)
   checking Python version (*) (glob)
   checking Python lib (*lib*)... (glob)

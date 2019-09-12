@@ -486,7 +486,7 @@ Verbose help for add
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes
@@ -2502,7 +2502,7 @@ Dish up an empty repo; serve it cold.
   <td>start debugger</td></tr>
   <tr><td></td>
   <td>--encoding ENCODE</td>
-  <td>set the charset encoding (default: ascii)</td></tr>
+  <td>set the charset encoding (default: utf-8)</td></tr>
   <tr><td></td>
   <td>--encodingmode MODE</td>
   <td>set the charset encoding mode (default: strict)</td></tr>
@@ -2704,7 +2704,7 @@ Dish up an empty repo; serve it cold.
   <td>start debugger</td></tr>
   <tr><td></td>
   <td>--encoding ENCODE</td>
-  <td>set the charset encoding (default: ascii)</td></tr>
+  <td>set the charset encoding (default: utf-8)</td></tr>
   <tr><td></td>
   <td>--encodingmode MODE</td>
   <td>set the charset encoding mode (default: strict)</td></tr>

@@ -623,7 +623,7 @@ hide outer repo
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes
@@ -667,7 +667,7 @@ hide outer repo
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes
@@ -924,7 +924,7 @@ Make sure that single '-v' option shows help and global options for the 'dodo' c
       --configfile FILE [+] enables the given config file
       --debug               enable debugging output
       --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encoding ENCODE     set the charset encoding (default: utf-8)
       --encodingmode MODE   set the charset encoding mode (default: strict)
       --traceback           always print a traceback on exception
       --time                time how long the command takes
