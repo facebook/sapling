@@ -13,6 +13,7 @@ import os
 from edenscm.mercurial import (
     blobstore,
     error,
+    extensions,
     pathutil,
     perftrace,
     progress,
@@ -148,6 +149,7 @@ class _gitlfsremote(object):
         )
         batchreq.add_header("Accept", "application/vnd.git-lfs+json")
         batchreq.add_header("Content-Type", "application/vnd.git-lfs+json")
+        self._addextraheaders(batchreq)
         try:
             rawjson = self.urlopener.open(batchreq).read()
         except util.urlerr.httperror as ex:
@@ -215,6 +217,7 @@ class _gitlfsremote(object):
         headers = obj["actions"][action].get("header", {}).items()
 
         request = util.urlreq.request(href)
+        self._addextraheaders(request)
         if action == "upload":
             # If uploading blobs, read data from local blobstore.
             request.data = filewithprogress(localstore.vfs(oid), None)
@@ -327,6 +330,18 @@ class _gitlfsremote(object):
 
     def getlfsmetrics(self):
         return self._metrics
+
+    def _addextraheaders(self, req):
+        headers = {}
+
+        try:
+            clienttelemetry = extensions.find("clienttelemetry")
+            headers["X-Client-Correlator"] = clienttelemetry.correlator(self.ui)
+        except KeyError:
+            pass
+
+        for k, v in headers.items():
+            req.add_header(k, v)
 
     def __del__(self):
         # copied from mercurial/httppeer.py
