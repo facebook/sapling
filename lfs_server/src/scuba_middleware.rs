@@ -11,11 +11,19 @@ use gotham::handler::HandlerFuture;
 use gotham::middleware::Middleware;
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::NewMiddleware;
-use hyper::{Method, Uri};
+use hyper::{
+    header::{self, HeaderMap},
+    Method, Uri,
+};
+use json_encoded::get_identities;
+use percent_encoding::percent_decode;
 use scuba::ScubaSampleBuilder;
 use time_ext::DurationExt;
 
 use crate::lfs_server_context::LoggingContext;
+
+const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
+const CLIENT_IP: &str = "tfb-orig-client-ip";
 
 #[derive(Clone, NewMiddleware)]
 pub struct ScubaMiddleware {
@@ -59,6 +67,35 @@ impl Middleware for ScubaMiddleware {
 
             if let Some(method) = Method::try_borrow_from(&state) {
                 self.scuba.add("http_method", method.to_string());
+            }
+
+            if let Some(headers) = HeaderMap::try_borrow_from(&state) {
+                if let Some(http_host) = headers.get(header::HOST) {
+                    if let Ok(http_host) = http_host.to_str() {
+                        self.scuba.add("http_host", http_host.to_string());
+                    }
+                }
+
+                if let Some(client_ip) = headers.get(CLIENT_IP) {
+                    if let Ok(client_ip) = client_ip.to_str() {
+                        self.scuba.add("client_ip", client_ip.to_string());
+                    }
+                }
+
+                // NOTE: We decode the identity here, but that's only indicative since we don't
+                // verify the TLS peer's identity, so we don't know if we can trust this header.
+                if let Some(encoded_client_identity) = headers.get(ENCODED_CLIENT_IDENTITY) {
+                    let identities = percent_decode(encoded_client_identity.as_bytes())
+                        .decode_utf8()
+                        .map_err(|_| ())
+                        .and_then(|decoded| get_identities(decoded.as_ref()).map_err(|_| ()));
+
+                    if let Ok(identities) = identities {
+                        let identities: Vec<_> =
+                            identities.into_iter().map(|i| i.to_string()).collect();
+                        self.scuba.add("client_identities", identities);
+                    }
+                }
             }
 
             self.scuba
