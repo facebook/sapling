@@ -151,7 +151,10 @@ class _gitlfsremote(object):
         batchreq.add_header("Content-Type", "application/vnd.git-lfs+json")
         self._addextraheaders(batchreq)
         try:
-            rawjson = self.urlopener.open(batchreq).read()
+            res = self.urlopener.open(batchreq)
+            server = res.info().get("server")
+            self.ui.log("lfs_server", lfs_server=server)
+            rawjson = res.read()
         except util.urlerr.httperror as ex:
             raise LfsRemoteError(_("LFS HTTP error: %s (action=%s)") % (ex, action))
         try:
