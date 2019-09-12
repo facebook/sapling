@@ -3,11 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate lz4_pyframe;
-extern crate minibench;
-extern crate rand_chacha;
-extern crate rand_core;
-
 use lz4_pyframe::{compress, decompress};
 use minibench::{bench, elapsed};
 use rand_core::{RngCore, SeedableRng};

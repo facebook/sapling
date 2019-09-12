@@ -5,8 +5,9 @@
 
 use crate::error::*;
 use crate::subscriber::Subscription;
-use failure::Fallible;
+use failure::{bail, Fallible};
 use ini::Ini;
+use log::{error, info};
 use std::collections::HashMap;
 use std::env;
 use std::fmt;

@@ -14,10 +14,6 @@
 //! check parts can be used independently. See [index::Index] and
 //! [checksum_table::ChecksumTable] for details.
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
 #[macro_use]
 mod macros;
 

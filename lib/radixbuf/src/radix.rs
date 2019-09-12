@@ -75,7 +75,7 @@ use crate::base16::Base16Iter;
 use crate::errors::ErrorKind;
 use crate::key::KeyId;
 use crate::traits::Resize;
-use failure::Fallible;
+use failure::{bail, Fallible};
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;
@@ -397,6 +397,7 @@ mod tests {
     use super::*;
     use crate::key::{FixedKey, VariantKey};
     use failure::AsFail;
+    use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::mem::transmute;
 

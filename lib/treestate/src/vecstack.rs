@@ -18,7 +18,6 @@ use std::mem;
 /// An example is:
 ///
 /// ```
-/// # extern crate treestate;
 /// # use treestate::vecstack::VecStack;
 /// let mut vec = vec![];
 /// let mut stack = VecStack::new(&mut vec);
@@ -82,7 +81,6 @@ impl<'outer, T: ?Sized> VecStack<'outer, T> {
     /// not popped (ex. the result of a previous `push` is not dropped).
     ///
     /// ```should_panic
-    /// # extern crate treestate;
     /// # use treestate::vecstack::VecStack;
     /// let mut vec = vec![];
     /// let mut stack0 = VecStack::new(&mut vec);
@@ -131,7 +129,6 @@ impl<'a, T: ?Sized> AsRef<Vec<&'a T>> for VecStack<'a, T> {
     /// to push again. This is checked statically.
     ///
     /// ```compile_fail
-    /// # extern crate treestate;
     /// # use treestate::vecstack::VecStack;
     /// let mut vec = vec![];
     /// let mut stack = VecStack::new(&mut vec);
@@ -145,7 +142,6 @@ impl<'a, T: ?Sized> AsRef<Vec<&'a T>> for VecStack<'a, T> {
     /// not poped (ex. the result of a previous `push` is not dropped).
     ///
     /// ```should_panic
-    /// # extern crate treestate;
     /// # use treestate::vecstack::VecStack;
     /// let mut vec = vec![];
     /// let mut stack0 = VecStack::new(&mut vec);

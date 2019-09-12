@@ -6,7 +6,7 @@
 use crate::error::*;
 use crate::protocol::{JsonProtocol, Protocol};
 use crate::queries::*;
-use failure::Fallible;
+use failure::{bail, Fallible};
 use std::io::BufReader;
 use std::marker::PhantomData;
 use std::path::Path;

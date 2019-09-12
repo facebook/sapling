@@ -4,9 +4,6 @@
 // GNU General Public License version 2 or any later version.
 //! Integrate cpython with failure
 
-extern crate cpython;
-extern crate failure;
-
 use cpython::{ObjectProtocol, PyClone, PyResult, Python, PythonObjectWithTypeObject};
 use failure::{AsFail, Error, Fallible};
 use std::fmt;
@@ -20,13 +17,9 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
-/// extern crate cpython;
-/// extern crate cpython_failure;
-/// #[macro_use] extern crate failure;
-///
 /// use cpython::{exc, Python, PyResult};
 /// use cpython_failure::ResultPyErrExt;
-/// use failure::Error;
+/// use failure::{format_err, Error};
 ///
 /// fn fail_if_negative(i: i32) -> Result<i32, Error> {
 ///    if (i >= 0) {

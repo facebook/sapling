@@ -5,10 +5,6 @@
 
 //! VLQ (Variable-length quantity) encoding.
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
 use std::io::{self, Read, Write};
 use std::mem::size_of;
 
@@ -237,6 +233,7 @@ impl_signed_primitive!(i8, u8);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
     use std::io::{self, Cursor, Seek, SeekFrom};
 
     macro_rules! check_round_trip {

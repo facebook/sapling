@@ -3,11 +3,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate libc;
-extern crate mpatch_sys;
-
-use self::libc::ssize_t;
-use self::mpatch_sys::*;
+use libc::ssize_t;
+use mpatch_sys::*;
 use std::os::raw::{c_char, c_void};
 use std::ptr;
 

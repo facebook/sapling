@@ -127,6 +127,7 @@ pub(crate) fn single_hex_to_base16(ch: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn check_skip_rev(src: Vec<u8>) -> bool {

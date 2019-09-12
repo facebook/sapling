@@ -3,10 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate minibench;
-extern crate radixbuf;
-extern crate rand;
-
 use minibench::{bench, elapsed};
 use rand::{ChaChaRng, RngCore};
 

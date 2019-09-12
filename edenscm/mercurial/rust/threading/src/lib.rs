@@ -5,6 +5,7 @@
 
 #![allow(non_camel_case_types)]
 
+// Cpython's macros are not well behaved when imported individually.
 #[macro_use]
 extern crate cpython;
 

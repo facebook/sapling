@@ -3,10 +3,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bytes;
-
-use self::bytes::Buf;
 use crate::queries::*;
+use bytes::Buf;
+use serde_json::json;
 use std::io::Cursor;
 
 /// Parsing tests

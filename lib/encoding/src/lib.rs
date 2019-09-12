@@ -3,19 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-/// Cross-platform local bytes and paths conversion.
-///
-/// On POSIX, it's a cost-free conversion. No round-trips with UTF-8 strings.
-/// On Windows, it's using `MultiByteToWideChar` under the hood.
-///
-/// Note: The types returned by the functions are different (`Path` vs `PathBuf`)
-/// because allocation is needed on Windows.
-#[cfg(windows)]
-extern crate kernel32;
-#[cfg(windows)]
-extern crate local_encoding;
-#[cfg(windows)]
-extern crate winapi;
+//! Cross-platform local bytes and paths conversion.
+//!
+//! On POSIX, it's a cost-free conversion. No round-trips with UTF-8 strings.
+//! On Windows, it's using `MultiByteToWideChar` under the hood.
+//!
+//! Note: The types returned by the functions are different (`Path` vs `PathBuf`)
+//! because allocation is needed on Windows.
 
 #[cfg(unix)]
 mod unix;

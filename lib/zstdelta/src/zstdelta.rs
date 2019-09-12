@@ -149,6 +149,7 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
 

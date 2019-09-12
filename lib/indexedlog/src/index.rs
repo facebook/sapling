@@ -2535,6 +2535,7 @@ impl Debug for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
     use std::collections::{BTreeSet, HashMap};
     use std::fs::File;
     use std::io::prelude::*;

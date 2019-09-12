@@ -3,9 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate cpython;
-extern crate python27_sys;
-
 mod bytearrayobject;
 mod bytes;
 mod bytesobject;

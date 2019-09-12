@@ -5,6 +5,8 @@
 
 #![deny(warnings)]
 
+use failure::Fail;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(

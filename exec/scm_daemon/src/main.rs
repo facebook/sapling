@@ -3,17 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate clap;
-extern crate commitcloudsubscriber;
-extern crate env_logger;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-extern crate toml;
-
 pub mod error;
 
 use self::error::*;
@@ -21,6 +10,9 @@ use clap::{App, Arg};
 use commitcloudsubscriber::{
     CommitCloudConfig, CommitCloudTcpReceiverService, CommitCloudWorkspaceSubscriberService,
 };
+use failure::bail;
+use log::info;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
 

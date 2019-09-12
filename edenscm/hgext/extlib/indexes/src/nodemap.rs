@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::ErrorKind;
-use failure::Fallible;
+use failure::{bail, Fallible};
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
 use radixbuf::radix::{

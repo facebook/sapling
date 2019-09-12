@@ -3,17 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-#[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate rand_chacha;
-
-extern crate libc;
-extern crate zstd_sys;
-
 mod zstdelta;
 
 use crate::zstdelta::{apply, diff};

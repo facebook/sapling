@@ -7,19 +7,10 @@
 //! repository.  In addition, "scratch" is aware that sometimes we
 //! may want to use watchman to watch a portion of the scratch space
 //! and can arrange the directory structure to prevent over-watching.
-extern crate clap;
-extern crate dirs;
-#[macro_use]
-extern crate failure;
-extern crate libc;
-#[macro_use]
-extern crate serde_derive;
-extern crate toml;
-
-extern crate telemetry;
 
 use clap::{App, AppSettings, Arg, SubCommand};
-use failure::Error;
+use failure::{bail, format_err, Error};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fs;

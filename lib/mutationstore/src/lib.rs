@@ -25,22 +25,8 @@
 //! an error to refer to later commits, and any entry that causes a cycle will
 //! be ignored.
 
-extern crate byteorder;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-extern crate indexedlog;
-#[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate rand_chacha;
-#[cfg(test)]
-extern crate tempdir;
-extern crate types;
-extern crate vlqencoding;
-
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::{Fail, Fallible};
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;

@@ -11,7 +11,6 @@
 // Write code paths are not used.
 #![allow(dead_code)]
 
-extern crate indexedlog;
 use std::{env, path::Path};
 
 fn main() {

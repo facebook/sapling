@@ -88,6 +88,7 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn check_skip_rev(src: Vec<u8>) -> bool {

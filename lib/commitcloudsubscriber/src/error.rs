@@ -5,6 +5,8 @@
 
 #![deny(warnings)]
 
+use failure::Fail;
+use lazy_static::lazy_static;
 use std::fmt;
 
 #[derive(Debug, Fail)]

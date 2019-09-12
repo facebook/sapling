@@ -25,7 +25,7 @@
 
 use crate::errors::ErrorKind;
 use crate::traits::Resize;
-use failure::Fallible;
+use failure::{bail, Fallible};
 use std::io::{Cursor, Seek, SeekFrom, Write};
 use vlqencoding::{VLQDecode, VLQEncode};
 
@@ -129,11 +129,9 @@ impl VariantKey {
 
 #[cfg(test)]
 mod tests {
-    extern crate rand;
-
     use super::*;
 
-    use self::rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+    use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
     #[test]
     fn test_variant_key_round_trip() {

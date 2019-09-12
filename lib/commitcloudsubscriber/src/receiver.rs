@@ -4,6 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
+use log::{error, info};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener};
 use std::thread;

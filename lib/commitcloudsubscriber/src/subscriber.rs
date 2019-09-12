@@ -12,8 +12,10 @@ use crate::receiver::CommandName::{
 };
 use crate::util;
 use eventsource::reqwest::Client;
-use failure::Fallible;
+use failure::{bail, Fallible};
+use log::{error, info, warn};
 use reqwest::Url;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::path::PathBuf;

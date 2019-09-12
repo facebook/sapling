@@ -3,22 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate failure;
-extern crate hg_watchman_client;
-#[macro_use]
-extern crate serde_derive;
-extern crate watchman_client;
+//! Test binary for manual testing
 
-use clap::{App, Arg};
+use clap::{arg_enum, value_t, App, Arg};
 use watchman_client::protocol::{BserProtocol, JsonProtocol};
 use watchman_client::transport::command_line_transport::CommandLineTransport;
 use watchman_client::transport::unix_socket_transport::UnixSocketTransport;
 use watchman_client::transport::Transport;
-
-/// Test binary for manual testing
 
 arg_enum! {
     #[allow(non_camel_case_types)]
@@ -62,19 +53,21 @@ macro_rules! println_result {
 }
 
 mod test_client {
-
+    use failure::bail;
     use hg_watchman_client::{
         HgWatchmanClient, QueryResponse, StateEnterResponse, StateLeaveResponse,
     };
+    use serde::{Deserialize, Serialize};
     use std::fs::OpenOptions;
     use std::io;
     use std::path::PathBuf;
     use std::process::Command;
     use std::str::from_utf8;
     use std::time::Instant;
-    use watchman_client::error::*;
     use watchman_client::protocol::{JsonProtocol, Protocol};
     use watchman_client::transport::Transport;
+
+    type Result<T> = std::result::Result<T, failure::Error>;
 
     static FILENAME: &str = "tester_watchmanstate";
 

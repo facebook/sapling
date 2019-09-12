@@ -3,7 +3,7 @@
 use std::ops::Range;
 use std::path::Path;
 
-use failure::Fallible;
+use failure::{Fail, Fallible};
 use indexedlog::log::{self, IndexOutput, Log};
 use types::errors::KeyError;
 use types::node::Node;
@@ -101,6 +101,7 @@ impl NodeMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
     use tempfile::TempDir;
 
     quickcheck! {

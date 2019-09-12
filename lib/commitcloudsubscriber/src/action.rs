@@ -5,6 +5,7 @@
 
 use crate::error::*;
 use failure::Fallible;
+use log::{error, info};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Instant;

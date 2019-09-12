@@ -6,13 +6,6 @@
 //!
 //! Bookmarks can be loaded from an existing hg bookmarks file.
 
-#[macro_use]
-extern crate failure;
-extern crate indexedlog;
-#[cfg(test)]
-extern crate tempfile;
-extern crate types;
-
 use std::io::Write;
 use std::path::Path;
 use std::str;

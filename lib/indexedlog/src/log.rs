@@ -1707,6 +1707,7 @@ impl ReadonlyBuffer for ExternalKeyBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
     use tempfile::tempdir;
 
     #[test]

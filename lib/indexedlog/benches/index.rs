@@ -3,11 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate indexedlog;
-extern crate minibench;
-extern crate rand;
-extern crate tempfile;
-
 use indexedlog::index::{InsertKey, OpenOptions};
 use minibench::{bench, elapsed, measure, Measure};
 use rand::{ChaChaRng, Rng};
