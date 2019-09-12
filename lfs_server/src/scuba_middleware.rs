@@ -12,7 +12,7 @@ use gotham::middleware::Middleware;
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::NewMiddleware;
 use hyper::{
-    header::{self, HeaderMap},
+    header::{self, AsHeaderName, HeaderMap},
     Method, Uri,
 };
 use json_encoded::get_identities;
@@ -24,6 +24,7 @@ use crate::lfs_server_context::LoggingContext;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
+const CLIENT_CORRELATOR: &str = "x-client-correlator";
 
 #[derive(Clone, NewMiddleware)]
 pub struct ScubaMiddleware {
@@ -33,6 +34,19 @@ pub struct ScubaMiddleware {
 impl ScubaMiddleware {
     pub fn new(scuba: ScubaSampleBuilder) -> Self {
         Self { scuba }
+    }
+}
+
+fn add_header<T: AsHeaderName>(
+    scuba: &mut ScubaSampleBuilder,
+    headers: &HeaderMap,
+    scuba_key: &str,
+    header: T,
+) {
+    if let Some(header_val) = headers.get(header) {
+        if let Ok(header_val) = header_val.to_str() {
+            scuba.add(scuba_key, header_val.to_string());
+        }
     }
 }
 
@@ -70,17 +84,14 @@ impl Middleware for ScubaMiddleware {
             }
 
             if let Some(headers) = HeaderMap::try_borrow_from(&state) {
-                if let Some(http_host) = headers.get(header::HOST) {
-                    if let Ok(http_host) = http_host.to_str() {
-                        self.scuba.add("http_host", http_host.to_string());
-                    }
-                }
-
-                if let Some(client_ip) = headers.get(CLIENT_IP) {
-                    if let Ok(client_ip) = client_ip.to_str() {
-                        self.scuba.add("client_ip", client_ip.to_string());
-                    }
-                }
+                add_header(&mut self.scuba, headers, "http_host", header::HOST);
+                add_header(&mut self.scuba, headers, "client_ip", CLIENT_IP);
+                add_header(
+                    &mut self.scuba,
+                    headers,
+                    "client_correlator",
+                    CLIENT_CORRELATOR,
+                );
 
                 // NOTE: We decode the identity here, but that's only indicative since we don't
                 // verify the TLS peer's identity, so we don't know if we can trust this header.
