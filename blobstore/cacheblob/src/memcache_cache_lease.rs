@@ -15,7 +15,7 @@ use rust_thrift::compact_protocol;
 use blobstore::{Blobstore, CountedBlobstore};
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
-use stats::{define_stats, Timeseries};
+use stats::{define_stats, DynamicTimeseries, Timeseries};
 
 use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
@@ -29,13 +29,6 @@ define_stats! {
     blob_put_err: timeseries("blob_put_err"; RATE, SUM),
     presence_put: timeseries("presence_put"; RATE, SUM),
     presence_put_err: timeseries("presence_put_err"; RATE, SUM),
-    lease_claim: timeseries("lease_claim"; RATE, SUM),
-    lease_claim_err: timeseries("lease_claim_err"; RATE, SUM),
-    lease_conflict: timeseries("lease_conflict"; RATE, SUM),
-    lease_wait_ms: timeseries("lease_wait_ms"; RATE, SUM),
-    lease_release: timeseries("lease_release"; RATE, SUM),
-    lease_release_good: timeseries("lease_release_good"; RATE, SUM),
-    lease_release_bad: timeseries("lease_release_bad"; RATE, SUM),
     blob_presence: timeseries("blob_presence"; RATE, SUM),
     blob_presence_hit: timeseries("blob_presence_hit"; RATE, SUM),
     blob_presence_miss: timeseries("blob_presence_miss"; RATE, SUM),
@@ -47,9 +40,26 @@ define_stats! {
     presence_err: timeseries("presence_err"; RATE, SUM),
 }
 
+#[allow(non_snake_case)]
+mod LEASE_STATS {
+    use stats::define_stats;
+    define_stats! {
+        prefix = "mononoke.blobstore.memcache.lease";
+        claim: dynamic_timeseries("{}.claim", (lease_type: &'static str); RATE, SUM),
+        claim_err: dynamic_timeseries("{}.claim_err", (lease_type: &'static str); RATE, SUM),
+        conflict: dynamic_timeseries("{}.conflict", (lease_type: &'static str); RATE, SUM),
+        wait_ms: dynamic_timeseries("{}.wait_ms", (lease_type: &'static str); RATE, SUM),
+        release: dynamic_timeseries("{}.release", (lease_type: &'static str); RATE, SUM),
+        release_good: dynamic_timeseries("{}.release_good", (lease_type: &'static str); RATE, SUM),
+        release_bad: dynamic_timeseries("{}.release_bad", (lease_type: &'static str); RATE, SUM),
+    }
+    pub use self::STATS::*;
+}
+
 /// A caching layer over an existing blobstore, backed by memcache
 #[derive(Clone, Debug)]
 pub struct MemcacheOps {
+    lease_type: &'static str,
     memcache: MemcacheClient,
     keygen: KeyGen,
     presence_keygen: KeyGen,
@@ -88,7 +98,7 @@ fn mc_raw_put(
 
 impl MemcacheOps {
     pub fn new(
-        backing_store_name: impl ToString,
+        lease_type: &'static str,
         backing_store_params: impl ToString,
     ) -> Result<Self, Error> {
         let hostname = FbWhoAmI::new()?
@@ -98,17 +108,18 @@ impl MemcacheOps {
 
         let blob_key = format!(
             "scm.mononoke.blobstore.{}.{}",
-            backing_store_name.to_string(),
+            lease_type,
             backing_store_params.to_string()
         );
 
         let presence_key = format!(
             "scm.mononoke.blobstore.presence.{}.{}",
-            backing_store_name.to_string(),
+            lease_type,
             backing_store_params.to_string()
         );
 
         Ok(Self {
+            lease_type,
             memcache: MemcacheClient::new(),
             keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
             presence_keygen: KeyGen::new(presence_key, MC_CODEVER, MC_SITEVER),
@@ -149,7 +160,7 @@ impl MemcacheOps {
 
 pub fn new_memcache_blobstore<T>(
     blobstore: T,
-    backing_store_name: impl ToString,
+    backing_store_name: &'static str,
     backing_store_params: impl ToString,
 ) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, MemcacheOps, T>>, Error>
 where
@@ -164,7 +175,7 @@ where
 
 pub fn new_memcache_blobstore_no_lease<T>(
     blobstore: T,
-    backing_store_name: impl ToString,
+    backing_store_name: &'static str,
     backing_store_params: impl ToString,
 ) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, DummyLease, T>>, Error>
 where
@@ -243,14 +254,14 @@ impl LeaseOps for MemcacheOps {
         let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
         let lock_ttl = Duration::from_secs(10);
         let mc_key = self.presence_keygen.key(key);
-
+        let lease_type = self.lease_type;
         self.memcache
             .add_with_ttl(mc_key, lockstate, lock_ttl)
             .then(move |res| {
                 match res {
-                    Ok(true) => STATS::lease_claim.add_value(1),
-                    Ok(false) => STATS::lease_conflict.add_value(1),
-                    Err(_) => STATS::lease_claim_err.add_value(1),
+                    Ok(true) => LEASE_STATS::claim.add_value(1, (lease_type,)),
+                    Ok(false) => LEASE_STATS::conflict.add_value(1, (lease_type,)),
+                    Err(_) => LEASE_STATS::claim_err.add_value(1, (lease_type,)),
                 }
                 res
             })
@@ -260,20 +271,20 @@ impl LeaseOps for MemcacheOps {
     fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
         let retry_millis = 200;
         let retry_delay = Duration::from_millis(retry_millis);
-        STATS::lease_wait_ms.add_value(retry_millis as i64);
+        LEASE_STATS::wait_ms.add_value(retry_millis as i64, (self.lease_type,));
         tokio_timer::sleep(retry_delay).map_err(|_| ()).boxify()
     }
 
     fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {
         let mc_key = self.presence_keygen.key(key);
-        STATS::lease_release.add_value(1);
+        LEASE_STATS::release.add_value(1, (self.lease_type,));;
         if put_success {
             let uploaded = compact_protocol::serialize(&LockState::uploaded_key(key.to_string()));
-            STATS::lease_release_good.add_value(1);
+            LEASE_STATS::release_good.add_value(1, (self.lease_type,));
 
             self.memcache.set(mc_key, uploaded).boxify()
         } else {
-            STATS::lease_release_bad.add_value(1);
+            LEASE_STATS::release_bad.add_value(1, (self.lease_type,));
             self.memcache.del(mc_key).boxify()
         }
     }
