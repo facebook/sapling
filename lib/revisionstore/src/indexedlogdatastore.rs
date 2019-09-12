@@ -152,13 +152,13 @@ impl Entry {
 impl IndexedLogDataStore {
     /// Create or open an `IndexedLogDataStore`.
     ///
-    /// It is configured to use 10 logs of 1GB each. On data corruption, the entire
+    /// It is configured to use 4 logs of 2.5GB each. On data corruption, the entire
     /// `IndexedLogDataStore` is being recreated, losing all data that was previously stored in
     /// it.
     pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
         let open_options = OpenOptions::new()
-            .max_log_count(10)
-            .max_bytes_per_log(1 * 1024 * 1024 * 1024)
+            .max_log_count(4)
+            .max_bytes_per_log(2500 * 1000 * 1000)
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..Node::len() as u64)]
