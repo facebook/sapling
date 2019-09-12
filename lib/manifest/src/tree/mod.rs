@@ -597,7 +597,10 @@ where
                 (false, false) => Some(left.path().cmp(right.path())),
             }
         }
-        fn evaluate_cursor<M: Matcher>(cursor: &mut Cursor, matcher: &M) -> Option<FileMetadata> {
+        fn evaluate_cursor<M: Matcher>(
+            cursor: &mut Cursor<'_>,
+            matcher: &M,
+        ) -> Option<FileMetadata> {
             if let Leaf(file_metadata) = cursor.link() {
                 if matcher.matches_file(cursor.path()) {
                     return Some(*file_metadata);
@@ -606,7 +609,7 @@ where
             try_skipping(cursor, matcher);
             None
         }
-        fn try_skipping<M: Matcher>(cursor: &mut Cursor, matcher: &M) {
+        fn try_skipping<M: Matcher>(cursor: &mut Cursor<'_>, matcher: &M) {
             if matcher.matches_directory(cursor.path()) == DirectoryMatch::Nothing {
                 cursor.skip_subtree();
             }
