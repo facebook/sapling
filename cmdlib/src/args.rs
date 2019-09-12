@@ -401,6 +401,11 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
         --skip-caching 'do not init cachelib and disable caches (useful for tests)'
         "#,
     )
+    .args_from_usage(
+        r#"
+        --cachelib-only-blobstore 'do not init memcache for blobstore'
+        "#,
+    )
     .args(&cache_args)
 }
 
@@ -439,6 +444,8 @@ impl Default for CachelibSettings {
 fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     if matches.is_present("skip-caching") {
         Caching::Disabled
+    } else if matches.is_present("cachelib-only-blobstore") {
+        Caching::CachelibOnlyBlobstore
     } else {
         Caching::Enabled
     }
@@ -447,7 +454,7 @@ fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) -> Caching {
     let caching = parse_caching(matches);
 
-    if let Caching::Enabled = caching {
+    if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
         let mut settings = CachelibSettings::default();
         if let Some(cache_size) = matches.value_of("cache-size-gb") {
             settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;

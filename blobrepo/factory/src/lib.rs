@@ -40,7 +40,11 @@ use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 pub enum Caching {
     Enabled,
     Disabled,
+    CachelibOnlyBlobstore,
 }
+
+const BLOBSTORE_BLOBS_CACHE_POOL: &'static str = "blobstore-blobs";
+const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
 
 /// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
 /// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
@@ -139,15 +143,29 @@ fn do_open_blobrepo<T: SqlFactory>(
     };
 
     unredacted_blobstore.join(redacted_blobs).and_then(
-        move |(unredacted_blobstore, redacted_blobs)| match caching {
-            Caching::Disabled => new_development(
-                &sql_factory,
-                unredacted_blobstore,
-                redacted_blobs,
-                scuba_censored_table,
-                repoid,
-                filestore_config,
-            ),
+        move |(mut unredacted_blobstore, redacted_blobs)| match caching {
+            Caching::Disabled | Caching::CachelibOnlyBlobstore => {
+                if caching == Caching::CachelibOnlyBlobstore {
+                    // Use cachelib
+                    let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
+                    let presence_pool =
+                        try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
+
+                    unredacted_blobstore = Arc::new(new_cachelib_blobstore_no_lease(
+                        unredacted_blobstore,
+                        Arc::new(blob_pool),
+                        Arc::new(presence_pool),
+                    ));
+                }
+                new_development(
+                    &sql_factory,
+                    unredacted_blobstore,
+                    redacted_blobs,
+                    scuba_censored_table,
+                    repoid,
+                    filestore_config,
+                )
+            }
             Caching::Enabled => new_production(
                 &sql_factory,
                 unredacted_blobstore,
@@ -190,8 +208,6 @@ pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRe
     ))
 }
 
-/// Create a new BlobRepo with purely local state. (Well, it could be a remote blobstore, but
-/// that would be weird to use with a local metadata db.)
 fn new_development<T: SqlFactory>(
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
@@ -252,19 +268,14 @@ fn new_production<T: SqlFactory>(
     bookmarks_cache_ttl: Option<Duration>,
     filestore_config: FilestoreConfig,
 ) -> BoxFuture<BlobRepo, Error> {
-    fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
-        let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
-        cachelib::get_pool(name).ok_or(err)
-    }
-
     fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
         let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
         cachelib::get_volatile_pool(name)?.ok_or(err)
     }
 
     let blobstore = try_boxfuture!(new_memcache_blobstore(blobstore, "multiplexed", ""));
-    let blob_pool = try_boxfuture!(get_cache_pool("blobstore-blobs"));
-    let presence_pool = try_boxfuture!(get_cache_pool("blobstore-presence"));
+    let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
+    let presence_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
 
     let blobstore = Arc::new(new_cachelib_blobstore_no_lease(
         blobstore,
@@ -333,4 +344,9 @@ fn new_production<T: SqlFactory>(
             },
         )
         .boxify()
+}
+
+fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
+    let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
+    cachelib::get_pool(name).ok_or(err)
 }
