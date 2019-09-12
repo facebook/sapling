@@ -10,7 +10,7 @@ use failure_ext::Error;
 use futures::future::{loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt};
 use rust_thrift::compact_protocol;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -60,7 +60,22 @@ pub fn subcommand_skiplist(
             args::init_cachelib(&matches);
             let ctx = CoreContext::test_mock();
             args::open_repo(&logger, &matches)
-                .and_then(move |repo| read_skiplist_index(ctx.clone(), repo, key, logger))
+                .and_then({
+                    cloned!(logger);
+                    move |repo| read_skiplist_index(ctx.clone(), repo, key, logger)
+                })
+                .map(move |maybe_index| match maybe_index {
+                    Some(index) => {
+                        info!(
+                            logger,
+                            "skiplist graph has {} entries",
+                            index.indexed_node_count()
+                        );
+                    }
+                    None => {
+                        info!(logger, "skiplist not found");
+                    }
+                })
                 .from_err()
                 .boxify()
         }
@@ -80,37 +95,62 @@ fn build_skiplist_index<S: ToString>(
     let skiplist_depth = 10;
     // Index all changesets
     let max_index_depth = 20000000000;
-    let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
     let key = key.to_string();
+    let maybe_skiplist_fut =
+        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone());
 
-    let cs_fetcher = fetch_all_changesets(ctx.clone(), repo.get_repoid(), Arc::new(sql_changesets))
-        .map({
+    let cs_fetcher_skiplist = maybe_skiplist_fut.and_then({
+        cloned!(ctx, logger, repo);
+        move |maybe_skiplist| {
             let changeset_fetcher = repo.get_changeset_fetcher();
-            move |fetched_changesets| {
-                let fetched_changesets: HashMap<_, _> = fetched_changesets
-                    .into_iter()
-                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
-                    .collect();
-                InMemoryChangesetFetcher {
-                    fetched_changesets: Arc::new(fetched_changesets),
-                    inner: changeset_fetcher,
+            match maybe_skiplist {
+                Some(skiplist) => {
+                    info!(
+                        logger,
+                        "skiplist graph has {} entries",
+                        skiplist.indexed_node_count()
+                    );
+                    ok((changeset_fetcher, skiplist)).left_future()
+                }
+                None => {
+                    info!(logger, "creating a skiplist from scratch");
+                    let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
+
+                    fetch_all_changesets(ctx.clone(), repo.get_repoid(), Arc::new(sql_changesets))
+                        .map({
+                            move |fetched_changesets| {
+                                let fetched_changesets: HashMap<_, _> = fetched_changesets
+                                    .into_iter()
+                                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
+                                    .collect();
+                                let cs_fetcher: Arc<dyn ChangesetFetcher> =
+                                    Arc::new(InMemoryChangesetFetcher {
+                                        fetched_changesets: Arc::new(fetched_changesets),
+                                        inner: changeset_fetcher,
+                                    });
+                                cs_fetcher
+                            }
+                        })
+                        .map(move |fetcher| (fetcher, skiplist_index))
+                        .right_future()
                 }
             }
-        });
+        }
+    });
 
     repo.get_bonsai_heads_maybe_stale(ctx.clone())
         .collect()
-        .join(cs_fetcher)
+        .join(cs_fetcher_skiplist)
         .and_then({
             cloned!(ctx);
-            move |(heads, cs_fetcher)| {
+            move |(heads, (cs_fetcher, skiplist_index))| {
                 loop_fn(
                     (heads.into_iter(), skiplist_index),
                     move |(mut heads, skiplist_index)| match heads.next() {
                         Some(head) => {
                             let f = skiplist_index.add_node(
                                 ctx.clone(),
-                                Arc::new(cs_fetcher.clone()),
+                                cs_fetcher.clone(),
                                 head,
                                 max_index_depth,
                             );
@@ -165,27 +205,19 @@ fn read_skiplist_index<S: ToString>(
     repo: BlobRepo,
     key: S,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture<Option<SkiplistIndex>, Error> {
     repo.get_blobstore()
         .get(ctx, key.to_string())
-        .and_then(move |maybebytes| {
-            match maybebytes {
-                Some(bytes) => {
-                    debug!(logger, "received {} bytes from blobstore", bytes.len());
-                    let bytes = bytes.into_bytes();
-                    let skiplist_index =
-                        try_boxfuture!(deserialize_skiplist_index(logger.clone(), bytes));
-                    info!(
-                        logger,
-                        "skiplist graph has {} entries",
-                        skiplist_index.indexed_node_count()
-                    );
-                }
-                None => {
-                    println!("not found map");
-                }
-            };
-            ok(()).boxify()
+        .and_then(move |maybebytes| match maybebytes {
+            Some(bytes) => {
+                debug!(logger, "received {} bytes from blobstore", bytes.len());
+                let bytes = bytes.into_bytes();
+                deserialize_skiplist_index(logger.clone(), bytes)
+                    .into_future()
+                    .map(Some)
+                    .left_future()
+            }
+            None => ok(None).right_future(),
         })
         .boxify()
 }
