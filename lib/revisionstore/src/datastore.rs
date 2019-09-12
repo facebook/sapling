@@ -36,6 +36,9 @@ pub trait DataStore: LocalStore {
     fn get_delta(&self, key: &Key) -> Fallible<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
+    fn prefetch(&self, _keys: Vec<Key>) -> Fallible<()> {
+        Ok(())
+    }
 }
 
 pub trait MutableDeltaStore: DataStore {

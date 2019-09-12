@@ -158,6 +158,12 @@ class unioncontentstore(object):
     def removestore(self, store):
         self.stores.remove(store)
 
+    def prefetch(self, keys):
+        for store in self.stores:
+            if util.safehasattr(store, "prefetch"):
+                store.prefetch(keys)
+                break
+
 
 class remotefilelogcontentstore(basestore.basestore):
     def __init__(self, *args, **kwargs):

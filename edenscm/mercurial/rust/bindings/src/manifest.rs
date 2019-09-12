@@ -41,6 +41,10 @@ impl<T: DataStore> manifest::TreeStore for ManifestStore<T> {
             "At this time we don't expect to ever write manifest in rust using python stores."
         );
     }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        self.underlying.prefetch(keys)
+    }
 }
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

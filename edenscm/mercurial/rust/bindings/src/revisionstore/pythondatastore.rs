@@ -103,6 +103,25 @@ impl DataStore for PythonDataStore {
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
         to_metadata(py, &py_dict).map_err(|e| pyerr_to_error(py, e))
     }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let keys = keys
+            .into_iter()
+            .map(|key| {
+                let py_name = PyBytes::new(py, key.path.as_byte_slice());
+                let py_node = PyBytes::new(py, key.node.as_ref());
+                (py_name, py_node)
+            })
+            .collect::<Vec<_>>();
+
+        self.py_store
+            .call_method(py, "prefetch", (keys,), None)
+            .map_err(|e| pyerr_to_error(py, e))?;
+
+        Ok(())
+    }
 }
 
 impl LocalStore for PythonDataStore {

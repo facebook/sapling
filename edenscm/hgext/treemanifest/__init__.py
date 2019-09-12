@@ -2580,6 +2580,16 @@ class remotetreestore(generatingdatastore):
         self._shareddata.markforrefresh()
         self._sharedhistory.markforrefresh()
 
+    def prefetch(self, keys):
+        usehttp = self._repo.ui.configbool("treemanifest", "usehttp")
+        if edenapi.enabled(self._repo.ui) and usehttp:
+            keys = self._shareddata.getmissing(keys)
+            try:
+                self._repo._httpgettrees(keys)
+            except Exception as e:
+                self._repo.ui.warn(_("failed to prefetch trees over HTTPS"))
+                edenapi.logexception(self._repo.ui, e)
+
 
 class ondemandtreedatastore(generatingdatastore):
     def _generatetrees(self, name, node):
