@@ -38,26 +38,38 @@ command = registrar.command(cmdtable)
             "c",
             "cleanup",
             None,
-            _("clean up obsolete commits (e.g. marked as landed, amended, etc.)"),
+            _("clean up obsolete commits (commits that have a newer version)"),
         ),
         ("B", "bookmark", [], _("hide commits only reachable from a bookmark")),
     ],
     _("[OPTION]... [-r] REV..."),
 )
 def hide(ui, repo, *revs, **opts):
-    """hide changesets and their descendants
+    """hide commits and their descendants
 
-    Hidden changesets are still accessible by their hashes which can be found
-    in ``hg journal``.
+    Mark the specified commits as hidden. Hidden commits are not included in
+    the output of most Mercurial commands, including :hg:`log` and
+    :hg:`smartlog.` Any descendants of the specified commits will also be
+    hidden.
 
-    If a parent of the working directory is hidden, then the working directory
-    will automatically be updated to the most recent available ancestor of the
-    hidden parent.
+    Hidden commits are not deleted. They will remain in the repo indefinitely
+    and are still accessible by their hashes. However, :hg:`hide` will delete
+    any bookmarks pointing to hidden commits.
 
-    If there is a bookmark pointing to the commit it will be removed.
+    Use the :hg:`unhide` command to make hidden commits visible again. See
+    :hg:`help unhide` for more information.
 
-    --cleanup hides all the draft, obsolete commits that don't have non-obsolete
-    descendants.
+    To view hidden commits, run :hg:`journal`.
+
+    When you hide the current commit, the most recent visible ancestor is
+    checked out.
+
+    To hide obsolete stacks (stacks that have a newer version), run
+    :hg:`hide --cleanup`. This command is equivalent to:
+
+    :hg:`hide 'obsolete() - ancestors(draft() & not obsolete())'`
+
+    --cleanup skips obsolete commits with non-obsolete descendants.
     """
     if opts.get("cleanup") and len(opts.get("rev") + list(revs)) != 0:
         raise error.Abort(_("--rev and --cleanup are incompatible"))
@@ -165,7 +177,10 @@ def hide(ui, repo, *revs, **opts):
     _("[OPTION]... [-r] REV..."),
 )
 def unhide(ui, repo, *revs, **opts):
-    """unhide changesets and their ancestors
+    """unhide commits and their ancestors
+
+    Mark the specified commits as visible. Any ancestors of the specified
+    commits will also become visible.
     """
     unfi = repo.unfiltered()
     revs = list(revs) + opts.pop("rev", [])
