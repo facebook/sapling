@@ -128,7 +128,7 @@ _hg_prompt() {
       fi
     fi
   else
-    br="$(builtin echo "$dirstate" | command cut -c 1-7)"
+    br="$(builtin echo "$dirstate" | command cut -c 1-8)"
   fi
   if [[ -f "$remote" ]]; then
     local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
@@ -163,7 +163,7 @@ _git_prompt() {
     read br < "$git/HEAD"
     case $br in
       ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
-      *) br="$(builtin echo "$br" | command cut -c 1-7)" ;;
+      *) br="$(builtin echo "$br" | command cut -c 1-8)" ;;
     esac
     if [[ -f "$git/rebase-merge/interactive" ]]; then
       b="$(command cat "$git/rebase-merge/head-name")"
