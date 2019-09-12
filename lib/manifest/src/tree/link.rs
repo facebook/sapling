@@ -52,6 +52,11 @@ impl Link {
         Link::Durable(Arc::new(DurableEntry::new(node)))
     }
 
+    #[cfg(test)]
+    pub fn ephemeral() -> Link {
+        Link::Ephemeral(BTreeMap::new())
+    }
+
     pub fn mut_ephemeral_links(
         &mut self,
         store: &InnerStore,

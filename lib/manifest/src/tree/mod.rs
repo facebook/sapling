@@ -3,6 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod bfs;
 mod cursor;
 mod link;
 mod store;
@@ -22,6 +23,7 @@ use once_cell::sync::OnceCell;
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
+pub use self::bfs::BfsDiff;
 use self::cursor::{Cursor, Step};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
 use self::store::InnerStore;
