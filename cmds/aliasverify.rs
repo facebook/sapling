@@ -6,35 +6,19 @@
 
 #![deny(warnings)]
 
-extern crate blobrepo;
-extern crate changesets;
-extern crate clap;
-#[macro_use]
-extern crate cloned;
-extern crate cmdlib;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate mononoke_types;
-#[macro_use]
-extern crate slog;
-extern crate crypto;
-extern crate tokio;
-
 use std::cmp;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
-use crate::failure::{Error, Result};
 use bytes::Bytes;
 use clap::{App, Arg};
+use cloned::cloned;
+use failure_ext::{format_err, Error, Result};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
-use slog::Logger;
+use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;

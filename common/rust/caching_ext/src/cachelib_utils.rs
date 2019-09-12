@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
-use crate::failure::prelude::*;
 use crate::mock_store::MockStore;
 use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
+use failure_ext::prelude::*;
 
 use crate::CachelibKey;
 
@@ -101,7 +101,7 @@ mod tests {
 
     use std::collections::HashSet;
 
-    use quickcheck::TestResult;
+    use quickcheck::{quickcheck, TestResult};
 
     quickcheck! {
         fn multiple_roundtrip(

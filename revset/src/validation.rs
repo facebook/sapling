@@ -4,11 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::failure::Error;
 use crate::setcommon::{add_generations_by_bonsai, BonsaiInputStream};
 use crate::BonsaiNodeStream;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+use failure::Error;
 use futures::stream::Stream;
 use futures::{Async, Poll};
 use futures_ext::StreamExt;

@@ -11,6 +11,7 @@ use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
+use failure_ext::{bail_err, bail_msg};
 
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};

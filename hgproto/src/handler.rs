@@ -9,7 +9,7 @@ use crate::errors::*;
 use crate::{HgCommands, Request, Response};
 use bytes::Bytes;
 use context::CoreContext;
-use failure::FutureFailureErrorExt;
+use failure_ext::FutureFailureErrorExt;
 use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures::{stream, Future, Poll, Stream};

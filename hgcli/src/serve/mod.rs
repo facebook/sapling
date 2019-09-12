@@ -10,7 +10,7 @@ use std::net::{IpAddr, SocketAddr};
 
 use bytes::Bytes;
 use futures::{future, stream, Future, Sink, Stream};
-use slog::{Drain, Logger};
+use slog::{debug, error, o, Drain, Logger};
 
 use dns_lookup::lookup_addr;
 use libc::c_ulong;
@@ -26,8 +26,8 @@ use clap::ArgMatches;
 
 use crate::errors::*;
 
-use crate::failure::SlogKVError;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use failure_ext::{bail_msg, err_downcast_ref, format_err, SlogKVError};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};

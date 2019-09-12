@@ -4,19 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bytes;
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate maplit;
-extern crate netstring;
-
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate tokio_io;
-extern crate uuid;
-
 use std::collections::HashMap;
 use std::env::var;
 use std::io;
@@ -24,6 +11,8 @@ use std::io;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::{sink::Wait, sync::mpsc};
 use futures_ext::BoxStream;
+use maplit::hashmap;
+use serde::{Deserialize, Serialize};
 use tokio_io::codec::{Decoder, Encoder};
 use uuid::Uuid;
 

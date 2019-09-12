@@ -6,6 +6,7 @@
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+use failure_ext::Error;
 use futures::stream::Stream;
 use futures::Async;
 use futures::Poll;
@@ -15,8 +16,6 @@ use std::collections::HashSet;
 use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
-
-use crate::failure::Error;
 
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
@@ -163,6 +162,7 @@ mod test {
     use crate::tests::TestChangesetFetcher;
     use crate::BonsaiNodeStream;
     use context::CoreContext;
+    use failure_ext::err_downcast;
     use futures::executor::spawn;
     use futures_ext::StreamExt;
     use revset_test_helper::assert_changesets_sequence;

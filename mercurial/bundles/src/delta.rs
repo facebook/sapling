@@ -9,6 +9,7 @@
 use bytes::{BufMut, BytesMut};
 
 use bytes_ext::SizeCounter;
+use failure_ext::bail_err;
 use mercurial_types::delta::{Delta, Fragment};
 
 use crate::errors::*;
@@ -84,6 +85,10 @@ pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use assert_matches::assert_matches;
+    use failure_ext::{err_downcast, err_downcast_ref};
+    use quickcheck::quickcheck;
 
     #[test]
     fn invalid_deltas() {

@@ -12,8 +12,12 @@ use std::io::BufRead;
 use std::str;
 
 use bytes::{Bytes, BytesMut};
+use failure_ext::{bail_err, ensure_msg};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
+use lazy_static::lazy_static;
+use maplit::hashset;
+use slog::{o, warn};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 

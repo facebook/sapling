@@ -6,7 +6,7 @@
 
 use std::convert::From;
 
-use futures::{Async, Poll, Stream};
+use futures::{try_ready, Async, Poll, Stream};
 
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};

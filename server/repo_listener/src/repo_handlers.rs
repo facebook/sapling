@@ -7,13 +7,14 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::failure::prelude::*;
+use cloned::cloned;
+use failure_ext::prelude::*;
 use futures::{
     future::{self, ok},
     Future, IntoFuture,
 };
-use futures_ext::{BoxFuture, FutureExt};
-use slog::Logger;
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use slog::{info, o, Logger};
 
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;

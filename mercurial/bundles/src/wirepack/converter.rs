@@ -8,7 +8,8 @@
 
 use std::mem;
 
-use futures::{Async, Poll, Stream};
+use failure_ext::{bail_err, ensure_err};
+use futures::{try_ready, Async, Poll, Stream};
 
 use mercurial_types::RepoPath;
 

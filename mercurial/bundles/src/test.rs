@@ -11,6 +11,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::iter::Iterator;
 use std::str::FromStr;
 
+use assert_matches::assert_matches;
 use futures::stream;
 use futures::stream::Stream;
 use futures_ext::BoxStream;

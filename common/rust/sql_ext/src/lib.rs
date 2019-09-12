@@ -4,11 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate failure_ext as failure;
-extern crate sql;
-
 use cloned::cloned;
-use failure::{Error, Result};
+use failure_ext::{Error, Result};
 use futures::{
     future::{loop_fn, ok, Loop},
     Future, IntoFuture,

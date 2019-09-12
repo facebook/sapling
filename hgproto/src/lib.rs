@@ -11,7 +11,6 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 #![deny(warnings)]
-extern crate failure_ext as failure;
 
 use bytes::Bytes;
 use mercurial_types::{HgChangesetId, HgManifestId};

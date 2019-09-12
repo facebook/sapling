@@ -12,6 +12,7 @@
 
 use byteorder::BigEndian;
 use bytes::BufMut;
+use failure_ext::bail_err;
 use futures::{Poll, Stream};
 
 use crate::chunk::Chunk;

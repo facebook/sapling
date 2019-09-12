@@ -7,8 +7,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate futures;
-
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,

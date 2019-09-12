@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate failure_ext as failure;
-
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 

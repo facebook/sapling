@@ -7,27 +7,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate bytes;
-#[macro_use]
-extern crate cloned;
-extern crate futures;
-extern crate tokio;
-
-extern crate cachelib;
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate futures_ext;
-extern crate iobuf;
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-extern crate memcache;
-extern crate mononoke_types;
-
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
 mod cachelib_utils;
 mod memcache_utils;
 mod mock_store;
@@ -36,14 +15,15 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::failure::prelude::*;
 use bytes::Bytes;
 use cachelib::Abomonation;
+use cloned::cloned;
+use failure_ext::prelude::*;
 use futures::{
     future::{join_all, ok},
     prelude::*,
 };
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 use mononoke_types::RepositoryId;
@@ -244,6 +224,7 @@ mod test {
     use super::*;
 
     use futures::future::ok;
+    use maplit::{hashmap, hashset};
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,

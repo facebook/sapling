@@ -11,7 +11,7 @@
 
 use crate::errors::*;
 use bytes::Bytes;
-use failure::bail_err;
+use failure_ext::bail_err;
 
 /// Unescape a batch-escaped argument key or value.
 pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {

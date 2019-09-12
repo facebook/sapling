@@ -11,6 +11,7 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
+use failure_ext::bail_err;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
 

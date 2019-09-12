@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, Error, Result};
+use failure_ext::{err_msg, Error, Fail, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};

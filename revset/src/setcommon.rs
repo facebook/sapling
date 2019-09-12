@@ -6,6 +6,8 @@
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+#[cfg(test)]
+use failure_ext::bail_err;
 use futures::future::Future;
 use futures::stream::Stream;
 use futures_ext::{BoxStream, StreamExt};
@@ -17,8 +19,8 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::errors::*;
-use crate::failure::Error;
 use crate::BonsaiNodeStream;
+use failure::Error;
 
 use futures::{Async, Poll};
 

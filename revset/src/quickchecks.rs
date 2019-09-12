@@ -12,7 +12,6 @@ mod test {
     use crate::ancestors::AncestorsNodeStream;
     use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
     use crate::async_unit;
-    use crate::failure::Error;
     use crate::fixtures::branch_even;
     use crate::fixtures::branch_uneven;
     use crate::fixtures::branch_wide;
@@ -33,7 +32,9 @@ mod test {
     use crate::BonsaiNodeStream;
     use blobrepo::BlobRepo;
     use changeset_fetcher::ChangesetFetcher;
+    use cloned::cloned;
     use context::CoreContext;
+    use failure::Error;
     use futures::executor::spawn;
     use futures::{
         future::{join_all, ok},

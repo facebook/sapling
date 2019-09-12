@@ -8,8 +8,6 @@
 
 //! State for a single source control Repo
 
-extern crate failure_ext as failure;
-
 mod client;
 mod errors;
 mod mononoke_repo;

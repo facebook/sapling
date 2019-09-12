@@ -9,11 +9,11 @@ use std::io::{self, Cursor};
 use std::mem;
 use std::vec::IntoIter;
 
-use crate::failure::prelude::*;
 use byteorder::ByteOrder;
 use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
+use failure_ext::{bail_err, prelude::*};
 use futures::stream::Forward;
-use futures::{Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
+use futures::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use tokio_codec::FramedWrite;
 use tokio_io::AsyncWrite;

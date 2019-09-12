@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
+use failure_ext::bail_err;
 use tokio_io::codec::Decoder;
 
 use crate::errors::*;

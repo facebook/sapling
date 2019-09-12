@@ -6,7 +6,8 @@
 
 use crate::part_header::{PartHeader, PartHeaderType};
 
-pub use crate::failure::{Error, Result, ResultExt};
+use failure_ext::Fail;
+pub use failure_ext::{Error, Result, ResultExt};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

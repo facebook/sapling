@@ -6,30 +6,6 @@
 
 #![deny(warnings)]
 
-#[cfg(test)]
-extern crate blobrepo;
-extern crate changeset_fetcher;
-
-#[macro_use]
-extern crate cloned;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial_types;
-extern crate mononoke_types;
-
-extern crate reachabilityindex;
-#[cfg(test)]
-extern crate revset_test_helper;
-#[cfg(test)]
-extern crate skiplist;
-extern crate uniqueheap;
-
 use futures_ext::BoxStream;
 use mononoke_types::ChangesetId;
 
@@ -67,11 +43,11 @@ pub use crate::test::*;
 
 #[cfg(test)]
 mod test {
-    pub extern crate ascii;
-    pub extern crate async_unit;
-    pub extern crate quickcheck;
+    pub use ascii;
+    pub use async_unit;
+    pub use quickcheck;
 
-    pub extern crate fixtures;
+    pub use fixtures;
 }
 #[cfg(not(test))]
 mod test {}

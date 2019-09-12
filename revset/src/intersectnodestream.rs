@@ -175,6 +175,7 @@ mod test {
     use crate::BonsaiNodeStream;
     use crate::UnionNodeStream;
     use context::CoreContext;
+    use failure_ext::err_downcast;
     use futures::executor::spawn;
     use futures_ext::StreamExt;
     use revset_test_helper::assert_changesets_sequence;

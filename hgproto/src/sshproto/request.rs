@@ -8,7 +8,7 @@ use crate::batch;
 use crate::errors::{self, *};
 use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use bytes::{Bytes, BytesMut};
-use failure::bail_msg;
+use failure_ext::bail_msg;
 use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use nom::{

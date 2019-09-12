@@ -98,10 +98,11 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::failure::err_msg;
+    use failure::err_msg;
     use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
     use mercurial_types_mocks::nodehash;
+    use quickcheck::quickcheck;
 
     fn long_string() -> String {
         String::from_utf8(vec![b'T'; u16::max_value() as usize]).unwrap()

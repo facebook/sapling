@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::{BufMut, Bytes, BytesMut};
+use failure_ext::{bail_err, bail_msg};
 use tokio_codec::{Decoder, Encoder};
 
 use crate::errors::*;
@@ -154,6 +155,7 @@ impl Decoder for ChunkDecoder {
 mod test {
     use std::io::Cursor;
 
+    use assert_matches::assert_matches;
     use futures::{stream, Future, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};

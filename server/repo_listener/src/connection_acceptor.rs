@@ -14,19 +14,21 @@ use std::sync::{
 use std::time::Duration;
 
 use crate::acl::VALID_ACL_MEMBER_TYPES;
-use crate::failure::{err_msg, SlogKVError};
 use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
+use cloned::cloned;
 use configerator::ConfigeratorAPI;
+use failure_ext::{err_msg, SlogKVError};
 use fbinit::FacebookInit;
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use itertools::join;
+use lazy_static::lazy_static;
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{Drain, Level, Logger};
+use slog::{crit, error, o, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};

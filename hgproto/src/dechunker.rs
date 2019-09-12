@@ -206,7 +206,7 @@ where
 mod tests {
     use super::*;
     use crate::errors::*;
-    use failure::ensure_msg;
+    use failure_ext::ensure_msg;
     use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::io::Cursor;
 

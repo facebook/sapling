@@ -7,14 +7,11 @@
 #![deny(warnings)]
 #![feature(wait_until)]
 
-#[macro_use]
-extern crate failure_ext as failure;
-
 mod errors;
 
-use crate::failure::prelude::*;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
+use failure_ext::prelude::*;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};

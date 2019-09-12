@@ -12,12 +12,14 @@ use std::collections::hash_set::IntoIter;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
-use crate::failure::prelude::*;
+use failure_ext::prelude::*;
 
+use cloned::cloned;
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
 use futures::{Async, Poll};
 use futures_ext::StreamExt;
+use maplit::hashset;
 
 use crate::UniqueHeap;
 use changeset_fetcher::ChangesetFetcher;

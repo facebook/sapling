@@ -9,60 +9,7 @@
 #![allow(deprecated)]
 #![feature(never_type)]
 
-extern crate aclchecker;
-
-extern crate blobrepo_factory;
-extern crate blobstore;
-extern crate bytes;
-extern crate if_ as acl;
-#[macro_use]
-extern crate cloned;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate futures_stats;
-extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate maplit;
-extern crate openssl;
-#[macro_use]
-extern crate slog;
-extern crate slog_ext;
-extern crate slog_kvfilter;
-extern crate slog_term;
-extern crate sql;
-#[macro_use]
-extern crate stats;
-extern crate time_ext;
-extern crate tokio;
-extern crate tokio_codec;
-extern crate tokio_io;
-extern crate tokio_openssl;
-extern crate tokio_timer;
-#[macro_use]
-extern crate tracing;
-extern crate uuid;
-
-extern crate cache_warmup;
-extern crate hgproto;
-extern crate hooks;
-extern crate hooks_content_stores;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-extern crate phases;
-extern crate reachabilityindex;
-extern crate ready_state;
-extern crate repo_client;
-
-extern crate scuba_ext;
-extern crate skiplist;
-extern crate sshrelay;
-extern crate x509;
+use if_ as acl;
 
 mod connection_acceptor;
 mod errors;

@@ -8,18 +8,21 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::failure::{prelude::*, SlogKVError};
+use cloned::cloned;
 use configerator::ConfigeratorAPI;
+use failure_ext::{prelude::*, SlogKVError};
 use fbwhoami::FbWhoAmI;
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
+use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits};
-use slog::{self, Drain, Level, Logger};
+use maplit::{hashmap, hashset};
+use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
-use stats::Histogram;
+use stats::{define_stats, Histogram};
 use time_ext::DurationExt;
-use tracing::{TraceContext, Traced};
+use tracing::{trace_args, TraceContext, Traced};
 use uuid::Uuid;
 
 use hgproto::{sshproto, HgProtoHandler};

@@ -9,6 +9,7 @@
 use std::collections::HashMap;
 
 use bytes::{BufMut, Bytes};
+use failure_ext::bail_msg;
 use quickcheck::{Arbitrary, Gen};
 
 use crate::chunk::Chunk;

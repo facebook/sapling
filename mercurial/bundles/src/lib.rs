@@ -6,51 +6,6 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-#[cfg(test)]
-extern crate assert_matches;
-extern crate byteorder;
-extern crate bytes;
-#[macro_use]
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate futures;
-extern crate futures_stats;
-
-#[cfg(test)]
-#[macro_use]
-extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate maplit;
-#[cfg(not(test))]
-extern crate quickcheck;
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-#[macro_use]
-extern crate slog;
-
-extern crate tokio;
-extern crate tokio_codec;
-extern crate tokio_io;
-
-extern crate url;
-
-extern crate async_compression;
-extern crate bytes_ext;
-extern crate context;
-extern crate futures_ext;
-
-extern crate mercurial_types;
-#[cfg(test)]
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-#[cfg(test)]
-extern crate partial_io;
-extern crate scuba_ext;
-
 pub mod bundle2;
 pub mod bundle2_encode;
 mod capabilities;
@@ -76,8 +31,8 @@ mod errors;
 pub use crate::errors::*;
 mod utils;
 
-use crate::failure::err_msg;
 use bytes::Bytes;
+use failure_ext::err_msg;
 use futures::sync::{mpsc, oneshot};
 use futures::{Future, Stream};
 use futures_ext::SinkToAsyncWrite;

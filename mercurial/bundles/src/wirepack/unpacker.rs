@@ -10,6 +10,8 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
+use failure_ext::bail_err;
+use slog::trace;
 use tokio_codec::Decoder;
 
 use context::CoreContext;

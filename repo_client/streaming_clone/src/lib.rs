@@ -6,16 +6,13 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate sql;
-
 use std::vec::Vec;
 
 use bytes::Bytes;
 use failure::{Error, Fail};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use sql::Connection;
+use sql::{queries, Connection};
 use sql_ext::SqlConstructors;
 
 use blobstore::Blobstore;

@@ -8,39 +8,13 @@
 // TODO: (rain1) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
 
-extern crate clap;
-#[macro_use]
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate slog;
-extern crate slog_term;
-
-extern crate bytes;
-extern crate dns_lookup;
-extern crate futures;
-extern crate libc;
-extern crate openssl;
-extern crate secure_utils;
-extern crate tokio;
-extern crate tokio_io;
-extern crate tokio_openssl;
-
-extern crate users;
-extern crate uuid;
-
-extern crate fbwhoami;
-#[macro_use]
-extern crate futures_ext;
-extern crate futures_stats;
-extern crate scuba_ext;
-extern crate sshrelay;
-
 use clap::{App, Arg, SubCommand};
+use failure_ext as failure;
 
 mod serve;
 
 pub mod errors {
-    pub use crate::failure::{Error, Result};
+    pub use failure_ext::{Error, Result};
 }
 use crate::errors::Error;
 

@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-pub use crate::failure::{Error, Result, ResultExt};
+use failure::Fail;
+pub use failure_ext::{Error, Result, ResultExt};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

@@ -7,9 +7,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-#[macro_use]
-extern crate failure_ext as failure;
-
 pub mod tailer;
 
 use blobrepo_factory::open_blobrepo;
@@ -17,7 +14,7 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, Error, Result};
+use failure_ext::{err_msg, format_err, Error, Fail, Result};
 use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;
 use futures::Stream;

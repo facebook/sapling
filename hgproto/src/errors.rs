@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-pub use failure::{Error, Fail, Result};
+pub use failure_ext::{Error, Fail, Result};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

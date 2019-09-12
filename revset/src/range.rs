@@ -10,8 +10,9 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
-use crate::failure::prelude::*;
+use failure_ext::prelude::*;
 
+use cloned::cloned;
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, Poll};

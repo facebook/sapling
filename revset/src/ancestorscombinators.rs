@@ -27,11 +27,13 @@ use std::collections::{BTreeMap, HashSet};
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
 
-use crate::failure::prelude::*;
+use cloned::cloned;
+use failure_ext::prelude::*;
 use futures::future::{ok, Future};
 use futures::stream::{self, iter_ok, Stream};
-use futures::{Async, IntoFuture, Poll};
+use futures::{try_ready, Async, IntoFuture, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, SelectAll, StreamExt};
+use maplit::hashset;
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;

@@ -15,7 +15,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use bytes::{Buf, Bytes, BytesMut};
-use failure::{err_msg, FutureFailureErrorExt};
+use failure_ext::{err_msg, FutureFailureErrorExt};
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;

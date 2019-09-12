@@ -11,6 +11,7 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
+use failure_ext::{bail_err, ensure_err};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 use revisionstore::Metadata;
@@ -359,8 +360,10 @@ impl DataEntry {
 mod test {
     use std::cmp;
 
+    use itertools::iproduct;
+    use maplit::hashset;
     use quickcheck::rand::{self, Rng};
-    use quickcheck::{Gen, StdGen};
+    use quickcheck::{quickcheck, Gen, StdGen};
 
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
