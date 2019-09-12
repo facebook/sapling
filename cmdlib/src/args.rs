@@ -4,13 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{
-    cmp::min,
-    collections::HashMap,
-    fs,
-    path::Path,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
+use std::{cmp::min, collections::HashMap, fs, path::Path, time::Duration};
 
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
@@ -18,18 +13,9 @@ use failure_ext::{bail_msg, err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
-use scuba_ext::ScubaSampleBuilder;
-use slog::{debug, info, o, warn, Drain, Logger};
-use sloggers::{
-    terminal::{Destination, TerminalLoggerBuilder},
-    types::{Format, Severity, SourceLocation},
-    Build,
-};
-use sshrelay::SshEnvVars;
+use slog::{debug, info, o, warn, Drain, Level, Logger};
 use std::collections::HashSet;
-use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
-use uuid::Uuid;
 
 use slog_glog_fmt::default_drain as glog_drain;
 
@@ -43,6 +29,8 @@ use metaconfig_types::{
     BlobConfig, CommonConfig, MetadataDBConfig, Redaction, RepoConfig, StorageConfig,
 };
 use mononoke_types::RepositoryId;
+
+use crate::log;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -72,8 +60,6 @@ pub struct MononokeApp {
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
     pub hide_advanced_args: bool,
-    /// Whether to use glog by default.
-    pub default_glog: bool,
 }
 
 impl MononokeApp {
@@ -107,7 +93,7 @@ impl MononokeApp {
                     .help("Path to the Mononoke configs"),
             );
 
-        app = add_logger_args(app, self.default_glog);
+        app = add_logger_args(app);
         app = add_myrouter_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
 
@@ -115,16 +101,14 @@ impl MononokeApp {
     }
 }
 
-pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>, default_glog: bool) -> App<'a, 'b> {
-    let default_log = if default_glog { "glog" } else { "compact" };
+pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("log-style")
             .short("l")
             .long("log-style")
             .value_name("STYLE")
-            .possible_values(&["compact", "glog"])
-            .default_value(default_log)
-            .help("log style to use for output"),
+            .help("DEPRECATED - log style to use for output (doesn't do anything)")
+            .hidden(true),
     )
     .arg(
         Arg::with_name("panic-fate")
@@ -136,7 +120,7 @@ pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>, default_glog: bool) -> App<'a, 
     )
 }
 
-pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
+pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -153,53 +137,34 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         panichandler::set_panichandler(fate);
     }
 
-    let severity = if matches.is_present("debug") {
-        Severity::Debug
+    let stdlog_env = "RUST_LOG";
+
+    let level = if matches.is_present("debug") {
+        Level::Debug
     } else {
-        Severity::Info
+        Level::Info
     };
 
-    let log_style = matches
-        .value_of("log-style")
-        .expect("default style is always specified");
-    match log_style {
-        "glog" => {
-            let glog_drain = glog_drain().filter_level(severity.as_level()).fuse();
-            if matches.is_present("fb303-thrift-port") {
-                Logger::root(slog_stats::StatsDrain::new(glog_drain), o![])
-            } else {
-                Logger::root(glog_drain, o![])
-            }
-        }
-        "compact" => {
-            let mut builder = TerminalLoggerBuilder::new();
-            builder.destination(Destination::Stderr);
-            builder.level(severity);
-            builder.format(Format::Compact);
-            builder.source_location(SourceLocation::None);
+    let glog_drain = Arc::new(glog_drain());
 
-            builder.build().unwrap()
-        }
-        _other => unreachable!("unknown log style"),
-    }
-}
+    // NOTE: We pass an unfitlered Logger to init_stdlog_once. That's because we do the filtering
+    // at the stdlog level there.
+    let stdlog_level = log::init_stdlog_once(Logger::root(glog_drain.clone(), o![]), stdlog_env);
 
-pub fn get_core_context<'a>(matches: &ArgMatches<'a>) -> CoreContext {
-    let session_uuid = Uuid::new_v4();
-    let trace = TraceContext::new(session_uuid, Instant::now());
-    let logger = get_logger(&matches);
+    let glog_drain = glog_drain.filter_level(level).fuse();
 
-    CoreContext::new(
-        session_uuid,
-        logger.clone(),
-        ScubaSampleBuilder::with_discard(),
-        None,
-        trace.clone(),
-        None,
-        SshEnvVars::default(),
-        // TODO(stash): use load limiting?
-        None,
-    )
+    let logger = if matches.is_present("fb303-thrift-port") {
+        Logger::root(slog_stats::StatsDrain::new(glog_drain), o![])
+    } else {
+        Logger::root(glog_drain, o![])
+    };
+
+    debug!(
+        logger,
+        "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
+    );
+
+    logger
 }
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {

@@ -228,7 +228,6 @@ fn ensure_small_db_replication_lag(
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: true,
     };
 
     let app = app_template.build(app_name)
@@ -254,7 +253,7 @@ fn main() -> Result<()> {
     let storage_id = matches
         .value_of("storage-id")
         .ok_or(err_msg("Missing storage-id"))?;
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
     let storage_config = args::read_storage_configs(&matches)?

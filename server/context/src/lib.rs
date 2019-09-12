@@ -14,7 +14,7 @@ use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use futures::{self, Future, IntoFuture};
 use futures_ext::FutureExt;
@@ -347,12 +347,15 @@ impl CoreContext {
     }
 
     pub fn new_with_logger(logger: Logger) -> Self {
+        let session_uuid = Uuid::new_v4();
+        let trace = TraceContext::new(session_uuid, Instant::now());
+
         Self::new(
             Uuid::new_v4(),
             logger,
             ScubaSampleBuilder::with_discard(),
             None,
-            TraceContext::default(),
+            trace,
             None,
             SshEnvVars::default(),
             None,

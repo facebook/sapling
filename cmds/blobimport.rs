@@ -11,6 +11,7 @@ use blobimport_lib;
 use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::args;
+use context::CoreContext;
 use failure_ext::{format_err, Result, SlogKVError};
 use futures::Future;
 use futures_ext::FutureExt;
@@ -24,7 +25,6 @@ use tracing::{trace_args, Traced};
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: true,
     };
     app.build("revlog to blob importer")
         .version("0.0.0")
@@ -57,9 +57,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let ctx = args::get_core_context(&matches);
-
     args::init_cachelib(&matches);
+    let logger = args::init_logging(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let revlogrepo_path = matches
         .value_of("INPUT")

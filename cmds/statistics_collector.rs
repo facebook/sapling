@@ -6,6 +6,7 @@
 
 use clap::{App, Arg};
 use cmdlib::args;
+use context::CoreContext;
 use failure::err_msg;
 use failure_ext::Error;
 use futures::prelude::*;
@@ -18,7 +19,6 @@ use std::sync::Arc;
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: true,
     };
     app.build("Tool to calculate repo statistic")
         .version("0.0.0")
@@ -35,11 +35,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<(), Error> {
     let matches = setup_app().get_matches();
 
-    let ctx = args::get_core_context(&matches);
-
     args::init_cachelib(&matches);
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let changeset = matches
         .value_of("changeset")

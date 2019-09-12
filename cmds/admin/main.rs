@@ -344,7 +344,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     };
 
     app.build("Mononoke admin command line tool")
@@ -370,7 +369,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> ExitCode {
     let matches = setup_app().get_matches();
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let error_logger = logger.clone();
 
     let future = match matches.subcommand() {

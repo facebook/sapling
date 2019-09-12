@@ -112,7 +112,6 @@ impl<'a> From<&'a State> for StateSerde {
 fn parse_args() -> Result<Config, Error> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: true,
     }
     .build("populate healer queue")
     .version("0.0.0")
@@ -170,6 +169,8 @@ fn parse_args() -> Result<Config, Error> {
 
     let matches = app.get_matches();
     let repo_id = args::get_repo_id(&matches)?;
+    let logger = args::init_logging(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
 
     let storage_id = matches
         .value_of("storage-id")
@@ -232,7 +233,7 @@ fn parse_args() -> Result<Config, Error> {
         start_key: matches.value_of("start-key").map(String::from),
         end_key: matches.value_of("end-key").map(String::from),
         state_key: matches.value_of("resume-state-key").map(String::from),
-        ctx: args::get_core_context(&matches),
+        ctx,
         dry_run: matches.is_present("dry-run"),
         started_at: Instant::now(),
     })

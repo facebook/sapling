@@ -24,14 +24,14 @@
 
 # Check that nothing happens if the filestore is not enabled
   $ mononoke_rechunker "$FILENODE"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
 
   $ ls "$TESTTMP/repo/blobs" | grep hgfilenode
   blob-repo0000.hgfilenode.sha1.92c09d364cd563132d6eb5f1424ff63523d51f73
 
 # Check that the rechunker complains about an unknown filenode
   $ mononoke_rechunker "ffffffffffffffffffffffffffffffffffffffff"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
   Error: HgContentMissing(HgNodeHash(Sha1(ffffffffffffffffffffffffffffffffffffffff)), File(Regular))
   [1]
 
@@ -41,7 +41,7 @@
   $ cd "$TESTTMP"
 
   $ mononoke_rechunker "$FILENODE"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
 
   $ ls "$TESTTMP/repo/blobs" | grep chunk | wc -l
   2

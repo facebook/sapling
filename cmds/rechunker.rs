@@ -24,7 +24,6 @@ const DEFAULT_NUM_JOBS: usize = 10;
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     };
 
     let matches = app
@@ -51,8 +50,8 @@ fn main() -> Result<(), Error> {
 
     args::init_cachelib(&matches);
 
-    let logger = args::get_logger(&matches);
-    let ctx = CoreContext::test_mock();
+    let logger = args::init_logging(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let blobrepo = args::open_repo(&logger, &matches);
 
     let jobs: usize = matches

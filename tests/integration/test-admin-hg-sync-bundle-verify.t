@@ -16,13 +16,13 @@ setup configuration
 
 it defaults to zero
   $ mononoke_admin hg-sync-bundle verify
-  * INFO All remaining bundles in RepositoryId(0) are non-blobimports (found 2) (glob)
+  * All remaining bundles in RepositoryId(0) are non-blobimports (found 2) (glob)
 
 it is satisfied with only non-blobimport entries
   $ mononoke_admin hg-sync-bundle last-processed --set 1
-  * INFO Counter for RepositoryId(0) set to 1 (glob)
+  * Counter for RepositoryId(0) set to 1 (glob)
   $ mononoke_admin hg-sync-bundle verify
-  * INFO All remaining bundles in RepositoryId(0) are non-blobimports (found 1) (glob)
+  * All remaining bundles in RepositoryId(0) are non-blobimports (found 1) (glob)
 it is satisfied with only blobimport entries
   $ write_stub_log_entry --blobimport update "$ONE" "$TWO"
   $ write_stub_log_entry --blobimport update "$TWO" "$THREE"
@@ -32,16 +32,16 @@ it is satisfied with only blobimport entries
   3|0|1111111111111111111111111111111111111111111111111111111111111111|blobimport
   4|0|2222222222222222222222222222222222222222222222222222222222222222|blobimport
   $ mononoke_admin hg-sync-bundle last-processed --set 2
-  * INFO Counter for RepositoryId(0) set to 2 (glob)
+  * Counter for RepositoryId(0) set to 2 (glob)
   $ mononoke_admin hg-sync-bundle verify
-  * INFO All remaining bundles in RepositoryId(0) are blobimports (found 2) (glob)
+  * All remaining bundles in RepositoryId(0) are blobimports (found 2) (glob)
 it reports a conflict
   $ mononoke_admin hg-sync-bundle last-processed --set 1
-  * INFO Counter for RepositoryId(0) set to 1 (glob)
+  * Counter for RepositoryId(0) set to 1 (glob)
   $ mononoke_admin hg-sync-bundle verify
-  * INFO Remaining bundles to replay in RepositoryId(0) are not consistent: found 2 blobimports and 1 non-blobimports (glob)
+  * Remaining bundles to replay in RepositoryId(0) are not consistent: found 2 blobimports and 1 non-blobimports (glob)
 it nothing to be found
   $ mononoke_admin hg-sync-bundle last-processed --set 10
-  * INFO Counter for RepositoryId(0) set to 10 (glob)
+  * Counter for RepositoryId(0) set to 10 (glob)
   $ mononoke_admin hg-sync-bundle verify
-  * INFO No replay data found in RepositoryId(0) (glob)
+  * No replay data found in RepositoryId(0) (glob)

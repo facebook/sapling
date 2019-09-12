@@ -33,7 +33,6 @@ where
 fn main() {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     };
     let matches = app
         .build("Blobrepo checker")
@@ -48,7 +47,7 @@ fn main() {
 
     args::init_cachelib(&matches);
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
 
     let ctx = CoreContext::new_with_logger(logger.clone());
 

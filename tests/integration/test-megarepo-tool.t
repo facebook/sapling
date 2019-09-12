@@ -51,32 +51,32 @@ blobimport
   $ export COMMIT_DATE="1985-04-12T23:20:50.52Z"
 move things in fbsource
   $ megarepo_tool move fbsource 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
-  * INFO Requesting the hg changeset (glob)
-  * INFO Hg changeset: HgChangesetId(HgNodeHash(Sha1(ed8feccfa30ef541a15a1616e4e4db66ee7f91e2))) (glob)
-  * INFO Marking changeset as public (glob)
-  * INFO Done marking as public (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Requesting the hg changeset (glob)
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(ed8feccfa30ef541a15a1616e4e4db66ee7f91e2))) (glob)
+  * Marking changeset as public (glob)
+  * Done marking as public (glob)
 
 move things in ovrsource
   $ megarepo_tool move ovrsource 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
-  * INFO Requesting the hg changeset (glob)
-  * INFO Hg changeset: HgChangesetId(HgNodeHash(Sha1(88783bf39cdb412fbc8762d45bad226470b381c6))) (glob)
-  * INFO Marking changeset as public (glob)
-  * INFO Done marking as public (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Requesting the hg changeset (glob)
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(88783bf39cdb412fbc8762d45bad226470b381c6))) (glob)
+  * Marking changeset as public (glob)
+  * Done marking as public (glob)
 
 merge things in both repos
   $ megarepo_tool merge ed8feccfa30ef541a15a1616e4e4db66ee7f91e2 88783bf39cdb412fbc8762d45bad226470b381c6 user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
-  * INFO Creating a merge commit (glob)
-  * INFO Checking if there are any path conflicts (glob)
-  * INFO Done checking path conflicts (glob)
-  * INFO Creating a merge bonsai changeset with parents: * (glob)
-  * INFO Marked as public * (glob)
-  * INFO Created *. Generating an HG equivalent (glob)
-  * INFO Hg changeset: HgChangesetId(HgNodeHash(Sha1(fa2c1aadd78fd99ca6e45a0e1d8b5a80182cf908))) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Creating a merge commit (glob)
+  * Checking if there are any path conflicts (glob)
+  * Done checking path conflicts (glob)
+  * Creating a merge bonsai changeset with parents: * (glob)
+  * Marked as public * (glob)
+  * Created *. Generating an HG equivalent (glob)
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(fa2c1aadd78fd99ca6e45a0e1d8b5a80182cf908))) (glob)
   $ mononoke_admin bookmarks set master fa2c1aadd78fd99ca6e45a0e1d8b5a80182cf908
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
 
 start mononoke server
   $ mononoke

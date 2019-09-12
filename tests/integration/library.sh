@@ -673,7 +673,7 @@ function lfs_server {
   uri="${proto}://localhost:${port}"
   echo "$uri"
 
-  "$LFS_SERVER" "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
+  RUST_LOG=gotham=info "$LFS_SERVER" "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
 
   for _ in $(seq 1 200); do
     if "$poll" "$uri" >/dev/null 2>&1; then

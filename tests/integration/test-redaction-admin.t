@@ -86,13 +86,13 @@ Censor multiple files
 Expect error when censoring tree
   $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * ERRO ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir\")]" } (glob)
+  * ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir\")]" } (glob)
   [1]
 
 Expect error when trying to censor nonexisting file
   $ mononoke_admin redaction add "[TASK]Censor nofile" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir/nofile
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * ERRO ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir/nofile\")]" } (glob)
+  * ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir/nofile\")]" } (glob)
   [1]
 
 No new entry in the table
@@ -104,7 +104,7 @@ No new entry in the table
 
 Uncensor some of the stuff
   $ mononoke_admin redaction remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
 
 Fewer entries in the table
   $ sqlite3 "$TESTTMP/repo/censored_contents" 'SELECT * FROM censored_contents;'

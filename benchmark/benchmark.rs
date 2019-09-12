@@ -106,13 +106,13 @@ fn main() -> Result<()> {
                     .possible_values(&[HG_CHANGESET_TYPE, RootUnodeManifestId::NAME])
                     .help("derived data type"),
             );
-        let app = args::add_logger_args(app, true /* use glog */);
+        let app = args::add_logger_args(app);
         args::add_cachelib_args(app, true /* hide_advanced_args */)
     };
     let matches = app.get_matches();
 
     args::init_cachelib(&matches);
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
     let repo = new_benchmark_repo(Default::default())?;
 

@@ -24,7 +24,6 @@ const DEFAULT_CONCURRENCY: usize = 16;
 fn main() -> Result<()> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     }
     .build(NAME)
     .version("0.0.0")
@@ -52,8 +51,8 @@ fn main() -> Result<()> {
     let matches = app.get_matches();
     args::init_cachelib(&matches);
 
-    let logger = args::get_logger(&matches);
-    let ctx = CoreContext::test_mock();
+    let logger = args::init_logging(&matches);
+    let ctx = CoreContext::new_with_logger(logger.clone());
     let blobrepo = args::open_repo(&logger, &matches);
     let lfs_helper = matches.value_of(ARG_LFS_HELPER).unwrap().to_string();
 

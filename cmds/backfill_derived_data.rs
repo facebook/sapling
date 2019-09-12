@@ -56,7 +56,6 @@ const CHUNK_SIZE: usize = 4096;
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     }
     .build("Utility to work with bonsai derived data")
     .version("0.0.0")
@@ -117,7 +116,7 @@ fn main() -> Result<(), Error> {
     let matches = app.get_matches();
     args::init_cachelib(&matches);
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
     let mut runtime = tokio::runtime::Runtime::new()?;
 

@@ -14,7 +14,6 @@ use failure_ext::{err_msg, Result};
 fn main() -> Result<()> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: false,
     };
     let matches = app
         .build("Lint Mononoke config files")

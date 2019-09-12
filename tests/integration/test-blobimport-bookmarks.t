@@ -19,16 +19,16 @@
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
   $ mononoke_admin bookmarks list --kind publishing
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
   master	* (glob)
   $ rm -rf repo
 
   $ blobimport repo-hg/.hg repo --no-bookmark
   $ mononoke_admin bookmarks list --kind publishing
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
   $ rm -rf repo
 
   $ blobimport repo-hg/.hg repo --prefix-bookmark myrepo/
   $ mononoke_admin bookmarks list --kind publishing
-  * INFO using repo "repo" repoid RepositoryId(0) (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
   myrepo/master	* (glob)

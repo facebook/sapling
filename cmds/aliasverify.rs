@@ -304,7 +304,6 @@ impl AliasVerification {
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: true,
     };
     app.build("Verify and reload all the alias blobs")
         .version("0.0.0")
@@ -336,7 +335,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
 
     args::init_cachelib(&matches);

@@ -10,4 +10,5 @@
 #![feature(never_type, bind_by_move_pattern_guards)]
 
 pub mod args;
+mod log;
 pub mod monitoring;

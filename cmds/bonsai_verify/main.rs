@@ -38,7 +38,6 @@ use std::{
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
-        default_glog: false,
     };
     app.build("bonsai roundtrip verification")
         .version("0.0.0")
@@ -90,7 +89,7 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
 
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
 
     match matches.subcommand() {

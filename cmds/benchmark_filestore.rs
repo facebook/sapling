@@ -159,7 +159,7 @@ fn main() -> Result<(), Error> {
                 .required(false),
         )
         .arg(
-            // This is read by args::get_logger
+            // This is read by args::init_logging
             Arg::with_name(ARG_DEBUG).long("debug").required(false),
         )
         .arg(
@@ -172,7 +172,7 @@ fn main() -> Result<(), Error> {
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
 
-    let app = args::add_logger_args(app, true /* use glog */);
+    let app = args::add_logger_args(app);
     let matches = app.get_matches();
     let input = matches.value_of("input").unwrap().to_string();
 
@@ -266,7 +266,7 @@ fn main() -> Result<(), Error> {
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let ctx = CoreContext::new_with_logger(logger.clone());
 
     let fut = File::open(input)

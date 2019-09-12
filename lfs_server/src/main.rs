@@ -175,7 +175,6 @@ fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: true,
     }
     .build("Mononoke LFS Server")
     .arg(
@@ -235,12 +234,8 @@ fn main() -> Result<(), Error> {
     let matches = app.get_matches();
 
     let caching = args::init_cachelib(&matches);
-    let logger = args::get_logger(&matches);
+    let logger = args::init_logging(&matches);
     let myrouter_port = args::parse_myrouter_port(&matches);
-
-    // NOTE: This captures stdlogs using slog.
-    let log_guard = slog_scope::set_global_logger(logger.clone());
-    slog_stdlog::init_with_level(::log::Level::Info)?;
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
@@ -353,8 +348,6 @@ fn main() -> Result<(), Error> {
         }
         _ => return Err(err_msg("TLS flags must be passed together")),
     }
-
-    std::mem::drop(log_guard);
 
     Ok(())
 }

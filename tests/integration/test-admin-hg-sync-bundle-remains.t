@@ -19,33 +19,33 @@ setup configuration
 
 it should count remaining entries
   $ mononoke_admin hg-sync-bundle last-processed --set 0
-  * INFO Counter for RepositoryId(0) set to 0 (glob)
+  * Counter for RepositoryId(0) set to 0 (glob)
   $ mononoke_admin hg-sync-bundle remains
-  * INFO Remaining bundles to replay in RepositoryId(0): 4 (glob)
+  * Remaining bundles to replay in RepositoryId(0): 4 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --set 1
-  * INFO Counter for RepositoryId(0) set to 1 (glob)
+  * Counter for RepositoryId(0) set to 1 (glob)
   $ mononoke_admin hg-sync-bundle remains
-  * INFO Remaining bundles to replay in RepositoryId(0): 3 (glob)
+  * Remaining bundles to replay in RepositoryId(0): 3 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --set 10
-  * INFO Counter for RepositoryId(0) set to 10 (glob)
+  * Counter for RepositoryId(0) set to 10 (glob)
   $ mononoke_admin hg-sync-bundle remains
-  * INFO Remaining bundles to replay in RepositoryId(0): 0 (glob)
+  * Remaining bundles to replay in RepositoryId(0): 0 (glob)
 it should count remaining entries excluding blobimport
   $ mononoke_admin hg-sync-bundle last-processed --set 0
-  * INFO Counter for RepositoryId(0) set to 0 (glob)
+  * Counter for RepositoryId(0) set to 0 (glob)
   $ mononoke_admin hg-sync-bundle remains --without-blobimport
-  * INFO Remaining non-blobimport bundles to replay in RepositoryId(0): 2 (glob)
+  * Remaining non-blobimport bundles to replay in RepositoryId(0): 2 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --set 1
-  * INFO Counter for RepositoryId(0) set to 1 (glob)
+  * Counter for RepositoryId(0) set to 1 (glob)
   $ mononoke_admin hg-sync-bundle remains --without-blobimport
-  * INFO Remaining non-blobimport bundles to replay in RepositoryId(0): 1 (glob)
+  * Remaining non-blobimport bundles to replay in RepositoryId(0): 1 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --set 10
-  * INFO Counter for RepositoryId(0) set to 10 (glob)
+  * Counter for RepositoryId(0) set to 10 (glob)
   $ mononoke_admin hg-sync-bundle remains --without-blobimport
-  * INFO Remaining non-blobimport bundles to replay in RepositoryId(0): 0 (glob)
+  * Remaining non-blobimport bundles to replay in RepositoryId(0): 0 (glob)
 it should support --quiet
   $ mononoke_admin hg-sync-bundle last-processed --set 0
-  * INFO Counter for RepositoryId(0) set to 0 (glob)
+  * Counter for RepositoryId(0) set to 0 (glob)
   $ mononoke_admin hg-sync-bundle remains --quiet
   4
   $ mononoke_admin hg-sync-bundle remains --quiet --without-blobimport

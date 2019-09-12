@@ -34,7 +34,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
     args::MononokeApp {
         hide_advanced_args: true,
-        default_glog: true,
     }
     .build("Insert stub log entries - use to test e.g. the admin tool")
     .version("0.0.0")
