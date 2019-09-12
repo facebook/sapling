@@ -256,6 +256,10 @@ class Client(object):
                 localcommitnode = active_diff["local_commit_info"]["nodes"]
                 if localcommitnode is not None and len(localcommitnode) == 1:
                     localcommits = json.loads(localcommitnode[0]["property_value"])
+
+                    if not isinstance(localcommits, dict):
+                        continue
+
                     localcommits = sorted(
                         localcommits.values(),
                         key=operator.itemgetter("time"),
