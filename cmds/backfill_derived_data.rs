@@ -9,8 +9,11 @@
 use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::Blobstore;
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
+use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
-use changesets::{ChangesetEntry, Changesets, SqlChangesets};
+use changesets::{
+    deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, SqlChangesets,
+};
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
@@ -29,6 +32,8 @@ use mononoke_types::{ChangesetId, MononokeId, RepositoryId};
 use phases::SqlPhases;
 use slog::info;
 use std::{
+    fs,
+    path::Path,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
@@ -37,11 +42,14 @@ use std::{
 };
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "DERIVED_DATA_TYPE";
+const ARG_OUT_FILENAME: &'static str = "out-filename";
 const ARG_SKIP: &'static str = "skip-changesets";
 const ARG_REGENERATE: &'static str = "regenerate";
+const ARG_PREFETCHED_COMMITS_PATH: &'static str = "prefetched-commits-path";
 
 const SUBCOMMAND_BACKFILL: &'static str = "backfill";
 const SUBCOMMAND_TAIL: &'static str = "tail";
+const SUBCOMMAND_PREFETCH_COMMITS: &'static str = "prefetch-commits";
 
 const CHUNK_SIZE: usize = 4096;
 
@@ -73,6 +81,13 @@ fn main() -> Result<(), Error> {
                 Arg::with_name(ARG_REGENERATE)
                     .long(ARG_REGENERATE)
                     .help("regenerate derivations even if mapping contains changeset"),
+            )
+            .arg(
+                Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
+                    .long(ARG_PREFETCHED_COMMITS_PATH)
+                    .takes_value(true)
+                    .required(false)
+                    .help("a file with a list of bonsai changesets to backfill"),
             ),
     )
     .subcommand(
@@ -85,6 +100,17 @@ fn main() -> Result<(), Error> {
                     .index(1)
                     .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
                     .help("comma separated list of derived data types"),
+            ),
+    )
+    .subcommand(
+        SubCommand::with_name(SUBCOMMAND_PREFETCH_COMMITS)
+            .about("fetch commits metadata from the database and save them to a file")
+            .arg(
+                Arg::with_name(ARG_OUT_FILENAME)
+                    .long(ARG_OUT_FILENAME)
+                    .takes_value(true)
+                    .required(true)
+                    .help("file name where commits will be saved"),
             ),
     );
     let app = args::add_fb303_args(app);
@@ -101,6 +127,14 @@ fn main() -> Result<(), Error> {
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
                 .to_string();
+
+            let prefetched_commits_path = sub_m
+                .value_of(ARG_PREFETCHED_COMMITS_PATH)
+                .ok_or_else(|| {
+                    format_err!("missing required argument: {}", ARG_PREFETCHED_COMMITS_PATH)
+                })?
+                .to_string();
+
             let skip = sub_m
                 .value_of(ARG_SKIP)
                 .map(|skip| skip.parse::<usize>())
@@ -110,22 +144,16 @@ fn main() -> Result<(), Error> {
                 .from_err();
             let regenerate = sub_m.is_present(ARG_REGENERATE);
 
-            (
-                args::open_repo(&logger, &matches),
-                args::open_sql::<SqlChangesets>(&matches),
-                args::open_sql::<SqlPhases>(&matches),
-                skip,
-            )
+            (args::open_repo(&logger, &matches), skip)
                 .into_future()
-                .and_then(move |(repo, sql_changesets, sql_phases, skip)| {
+                .and_then(move |(repo, skip)| {
                     subcommand_backfill(
                         ctx,
                         repo,
-                        sql_changesets,
-                        sql_phases,
                         derived_data_type,
                         skip,
                         regenerate,
+                        prefetched_commits_path,
                     )
                 })
                 .boxify()
@@ -146,6 +174,28 @@ fn main() -> Result<(), Error> {
                 .into_future()
                 .and_then(move |(repo, bookmarks)| {
                     subcommand_tail(ctx, repo, bookmarks, derived_data_types)
+                })
+                .boxify()
+        }
+        (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
+            let out_filename = sub_m
+                .value_of(ARG_OUT_FILENAME)
+                .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
+                .to_string();
+
+            (
+                args::open_repo(&logger, &matches),
+                args::open_sql::<SqlChangesets>(&matches),
+                args::open_sql::<SqlPhases>(&matches),
+            )
+                .into_future()
+                .and_then(move |(repo, changesets, phases)| {
+                    fetch_all_public_changesets(ctx.clone(), repo.get_repoid(), changesets, phases)
+                        .collect()
+                })
+                .and_then(move |css| {
+                    let serialized = serialize_cs_entries(css);
+                    fs::write(out_filename, serialized).map_err(Error::from)
                 })
                 .boxify()
         }
@@ -283,14 +333,18 @@ fn fetch_all_public_changesets(
         .flatten()
 }
 
-fn subcommand_backfill(
+fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>, Error> {
+    let data = fs::read(file).map_err(Error::from)?;
+    deserialize_cs_entries(&Bytes::from(data))
+}
+
+fn subcommand_backfill<P: AsRef<Path>>(
     ctx: CoreContext,
     repo: BlobRepo,
-    sql_changesets: SqlChangesets,
-    sql_phases: SqlPhases,
     derived_data_type: String,
     skip: usize,
     regenerate: bool,
+    prefetched_commits_path: P,
 ) -> BoxFuture<(), Error> {
     // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
     // `::preserve` is later used to bulk write all pending data.
@@ -310,9 +364,9 @@ fn subcommand_backfill(
         derived_data_type
     ));
 
-    println!("collecting all changest for: {:?}", repo.get_repoid());
-    fetch_all_public_changesets(ctx.clone(), repo.get_repoid(), sql_changesets, sql_phases)
-        .collect()
+    println!("reading all changesets for: {:?}", repo.get_repoid());
+    parse_serialized_commits(prefetched_commits_path)
+        .into_future()
         .and_then(move |mut changesets| {
             changesets.sort_by_key(|cs_entry| cs_entry.gen);
             let changesets: Vec<_> = changesets
@@ -376,16 +430,19 @@ fn subcommand_backfill(
                                     *total_duration
                                 });
 
-                                let generated = generated_count.load(Ordering::SeqCst) as f32;
-                                let total = total_count as f32;
-                                println!(
-                                    "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
-                                    generated,
-                                    total_count,
-                                    elapsed.mul_f32((total - generated) / generated),
-                                    chunk_size as f32 / stats.completion_time.as_secs() as f32,
-                                    generated / elapsed.as_secs() as f32,
-                                );
+                                let generated = generated_count.load(Ordering::SeqCst);
+                                if generated != 0 {
+                                    let generated = generated as f32;
+                                    let total = total_count as f32;
+                                    println!(
+                                        "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
+                                        generated,
+                                        total_count,
+                                        elapsed.mul_f32((total - generated) / generated),
+                                        chunk_size as f32 / stats.completion_time.as_secs() as f32,
+                                        generated / elapsed.as_secs() as f32,
+                                    );
+                                }
                                 Ok(())
                             }
                         })
