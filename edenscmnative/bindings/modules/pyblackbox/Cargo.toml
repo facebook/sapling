@@ -1,0 +1,10 @@
+[package]
+name = "pyblackbox"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+blackbox = { path = "../../../../lib/blackbox" }
+cpython-failure = { path = "../../../../lib/cpython-failure" }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
+encoding = { path = "../../../../lib/encoding" }

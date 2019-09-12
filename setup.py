@@ -2056,7 +2056,7 @@ rustextmodules = [
     RustExtension(
         "bindings",
         package="edenscmnative",
-        manifest="edenscm/mercurial/rust/bindings/Cargo.toml",
+        manifest="edenscmnative/bindings/Cargo.toml",
     ),
     RustExtension(
         "indexes",
