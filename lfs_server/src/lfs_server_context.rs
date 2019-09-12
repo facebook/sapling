@@ -47,6 +47,7 @@ pub struct LfsServerContext {
 pub struct LoggingContext {
     pub repository: String,
     pub error_msg: Option<String>,
+    pub response_size: Option<u64>,
 }
 
 impl LoggingContext {
@@ -54,11 +55,16 @@ impl LoggingContext {
         Self {
             repository,
             error_msg: None,
+            response_size: None,
         }
     }
 
     pub fn set_error_msg(&mut self, error_msg: String) {
         self.error_msg = Some(error_msg);
+    }
+
+    pub fn set_response_size(&mut self, size: u64) {
+        self.response_size = Some(size);
     }
 }
 

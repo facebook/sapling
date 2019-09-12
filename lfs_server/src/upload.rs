@@ -15,7 +15,6 @@ use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, Chunk, Request};
-use mime::Mime;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::result::Result;
@@ -26,7 +25,7 @@ use filestore::StoreRequest;
 use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
-use crate::http::HttpError;
+use crate::http::{EmptyBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::RequestContext;
 use crate::protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
@@ -123,7 +122,7 @@ where
     discard_stream(data).await
 }
 
-pub async fn upload(state: &mut State) -> Result<(Body, Mime), HttpError> {
+pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let UploadParams {
         repository,
         oid,
@@ -184,5 +183,5 @@ pub async fn upload(state: &mut State) -> Result<(Body, Mime), HttpError> {
 
     try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500)?;
 
-    Ok((Body::empty(), mime::APPLICATION_OCTET_STREAM))
+    Ok(EmptyBody::new())
 }

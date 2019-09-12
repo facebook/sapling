@@ -16,6 +16,7 @@ use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::{
     bind_server,
     handler::{HandlerError, HandlerFuture, IntoHandlerError},
+    helpers::http::header::X_REQUEST_ID,
     helpers::http::response::create_response,
     middleware::{logger::RequestLogger, state::StateMiddleware},
     pipeline::{new_pipeline, single::single_pipeline},
@@ -25,9 +26,8 @@ use gotham::{
     },
     state::{request_id, State},
 };
-use hyper::{header::HeaderValue, Body, Response, StatusCode};
+use hyper::{header::HeaderValue, Body, Response};
 use itertools::Itertools;
-use mime::Mime;
 use scuba::ScubaSampleBuilder;
 use slog::warn;
 use std::collections::HashMap;
@@ -43,7 +43,8 @@ use mononoke_types::RepositoryId;
 
 use cmdlib::args;
 
-use crate::http::{git_lfs_mime, HttpError};
+use crate::errors::ErrorKind;
+use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use lfs_server_context::{LfsServerContext, LoggingContext, ServerUris};
 use protocol::ResponseError;
 use scuba_middleware::ScubaMiddleware;
@@ -69,12 +70,21 @@ const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 
-async fn build_response(
-    res: Result<(Body, Mime), HttpError>,
+async fn build_response<IR>(
+    res: Result<IR, HttpError>,
     mut state: State,
-) -> Result<(State, Response<Body>), (State, HandlerError)> {
-    let mut res = match res {
-        Ok((body, mime)) => create_response(&state, StatusCode::OK, mime, body),
+) -> Result<(State, Response<Body>), (State, HandlerError)>
+where
+    IR: TryIntoResponse,
+{
+    let res = res.and_then(|c| {
+        c.try_into_response(&mut state)
+            .chain_err(ErrorKind::ResponseCreationFailure)
+            .map_err(HttpError::e500)
+    });
+
+    let mut res: Response<Body> = match res {
+        Ok(resp) => resp,
         Err(error) => {
             let HttpError { error, status_code } = error;
 
@@ -102,6 +112,10 @@ async fn build_response(
 
     let headers = res.headers_mut();
     headers.insert("Server", HeaderValue::from_static("mononoke-lfs"));
+    if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
+        headers.insert(X_REQUEST_ID, id);
+    }
+
     Ok((state, res))
 }
 

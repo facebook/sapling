@@ -11,7 +11,6 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
-use mime::Mime;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -21,7 +20,7 @@ use filestore::Alias;
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, HttpError};
+use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RequestContext, UriBuilder};
 use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -279,7 +278,7 @@ async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<Res
 }
 
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
-pub async fn batch(state: &mut State) -> Result<(Body, Mime), HttpError> {
+pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
 
     let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
@@ -304,7 +303,7 @@ pub async fn batch(state: &mut State) -> Result<(Body, Mime), HttpError> {
     let res = res.map_err(HttpError::e502)?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;
 
-    Ok((body.into(), git_lfs_mime()))
+    Ok(BytesBody::new(body, git_lfs_mime()))
 }
 
 #[cfg(test)]

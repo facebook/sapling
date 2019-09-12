@@ -8,14 +8,13 @@ use failure_ext::chain::ChainExt;
 use futures_preview::compat::Future01CompatExt;
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
-use hyper::Body;
 use serde::Deserialize;
 
 use filestore::{self, FetchKey};
 use mononoke_types::ContentId;
 
 use crate::errors::ErrorKind;
-use crate::http::HttpError;
+use crate::http::{HttpError, StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RequestContext;
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
@@ -24,7 +23,7 @@ pub struct DownloadParams {
     content_id: String,
 }
 
-pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError> {
+pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let DownloadParams {
         repository,
         content_id,
@@ -37,7 +36,7 @@ pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError
         .map_err(HttpError::e400)?;
 
     // Query a stream out of the Filestore
-    let stream = filestore::fetch(
+    let fetch_stream = filestore::fetch_with_size(
         &ctx.repo.get_blobstore(),
         ctx.ctx.clone(),
         &FetchKey::Canonical(content_id),
@@ -48,12 +47,13 @@ pub async fn download(state: &mut State) -> Result<(Body, mime::Mime), HttpError
     .map_err(HttpError::e500)?;
 
     // Return a 404 if the stream doesn't exist.
-    let stream = stream
+    let (stream, size) = fetch_stream
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id))
         .map_err(HttpError::e404)?;
 
-    // NOTE: This is a Futures 0.1 stream ... which is what Hyper wants here (for now).
-    let body = Body::wrap_stream(stream);
-
-    Ok((body, mime::APPLICATION_OCTET_STREAM))
+    Ok(StreamBody::new(
+        stream,
+        size,
+        mime::APPLICATION_OCTET_STREAM,
+    ))
 }

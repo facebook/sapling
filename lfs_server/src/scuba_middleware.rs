@@ -73,6 +73,10 @@ impl Middleware for ScubaMiddleware {
                 if let Some(err_msg) = log_ctx.error_msg {
                     self.scuba.add("error_msg", err_msg);
                 }
+
+                if let Some(response_size) = log_ctx.response_size {
+                    self.scuba.add("response_size", response_size);
+                }
             }
 
             if let Some(uri) = Uri::try_borrow_from(&state) {

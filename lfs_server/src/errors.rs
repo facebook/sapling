@@ -69,4 +69,6 @@ pub enum ErrorKind {
     FilestoreReadFailure,
     #[fail(display = "Could not access Filestore for writes")]
     FilestoreWriteFailure,
+    #[fail(display = "Failed to create response")]
+    ResponseCreationFailure,
 }
