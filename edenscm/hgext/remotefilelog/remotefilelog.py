@@ -507,7 +507,9 @@ class remotefileslog(filelog.fileslog):
                 path = shallowutil.getindexedlogdatastorepath(repo)
                 mask = os.umask(0o002)
                 try:
-                    sharedcontentstores += [revisionstore.indexedlogdatastore(path)]
+                    store = revisionstore.indexedlogdatastore(path)
+                    sharedcontentstores.append(store)
+                    self.shareddatastores.append(store)
                 finally:
                     os.umask(mask)
 
@@ -515,7 +517,9 @@ class remotefileslog(filelog.fileslog):
                 path = shallowutil.getindexedloghistorystorepath(repo)
                 mask = os.umask(0o002)
                 try:
-                    sharedmetadatastores += [revisionstore.indexedloghistorystore(path)]
+                    store = revisionstore.indexedloghistorystore(path)
+                    sharedmetadatastores.append(store)
+                    self.sharedhistorystores.append(store)
                 finally:
                     os.umask(mask)
 
