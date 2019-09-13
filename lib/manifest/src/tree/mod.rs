@@ -10,6 +10,7 @@ mod link;
 mod store;
 
 use std::{
+    cmp::Ordering,
     collections::{btree_map::Entry, BTreeMap},
     fmt,
     sync::Arc,
@@ -21,7 +22,7 @@ use failure::{bail, Fallible};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::{DirectoryMatch, Matcher};
-use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 pub use self::bfs::BfsDiff;
 use self::cursor::{Cursor, Step};
@@ -613,6 +614,140 @@ pub fn compat_subtree_diff(
     Ok(state.result)
 }
 
+/// A file (leaf node) encountered during a tree traversal.
+///
+/// Consists of the full path to the file along with the associated file metadata.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub(crate) struct File {
+    path: RepoPathBuf,
+    meta: FileMetadata,
+}
+
+impl File {
+    pub(crate) fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
+        Self { path, meta }
+    }
+
+    /// Create a file record for a `Link`, failing if the link
+    /// refers to a directory rather than a file.
+    pub(crate) fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
+        match link {
+            Link::Leaf(meta) => Some(Self::new(path, *meta)),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn into_left(self) -> DiffEntry {
+        DiffEntry::new(self.path, DiffType::LeftOnly(self.meta))
+    }
+
+    pub(crate) fn into_right(self) -> DiffEntry {
+        DiffEntry::new(self.path, DiffType::RightOnly(self.meta))
+    }
+
+    pub(crate) fn into_changed(self, other: File) -> DiffEntry {
+        DiffEntry::new(self.path, DiffType::Changed(self.meta, other.meta))
+    }
+}
+
+/// A directory (inner node) encountered during a tree traversal.
+///
+/// The directory may have a manifest node hash if it is unmodified from its
+/// state on disk. If the directory has in-memory modifications that have not
+/// been persisted to disk, it will not have a node hash.
+#[derive(Clone, Debug)]
+pub(crate) struct Directory<'a> {
+    path: RepoPathBuf,
+    node: Option<Node>,
+    link: &'a Link,
+}
+
+impl<'a> Directory<'a> {
+    /// Create a directory record for a `Link`, failing if the link
+    /// refers to a file rather than a directory.
+    pub(crate) fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
+        let node = match link {
+            Link::Leaf(_) => return None,
+            Link::Ephemeral(_) => None,
+            Link::Durable(entry) => Some(entry.node),
+        };
+        Some(Self { path, node, link })
+    }
+
+    /// Same as `from_link`, but set the directory's path to the empty
+    /// path, making this method only useful for the root of the tree.
+    pub(crate) fn from_root(link: &'a Link) -> Option<Self> {
+        Self::from_link(link, RepoPathBuf::new())
+    }
+
+    /// List the contents of this directory.
+    ///
+    /// Returns two sorted vectors of files and directories contained
+    /// in this directory.
+    ///
+    /// This operation may perform I/O to load the tree entry from the store
+    /// if it is not already in memory. Depending on the store implementation,
+    /// this may involve an expensive network request if the required data is
+    /// not available locally. As such, algorithms that require fast access to
+    /// this data should take care to ensure that this content is present
+    /// locally before calling this method.
+    pub(crate) fn list(&self, store: &InnerStore) -> Fallible<(Vec<File>, Vec<Directory<'a>>)> {
+        let mut files = Vec::new();
+        let mut dirs = Vec::new();
+
+        let links = match &self.link {
+            &Link::Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
+            &Link::Ephemeral(ref links) => links,
+            &Link::Durable(entry) => entry.get_links(store, &self.path)?,
+        };
+
+        for (name, link) in links {
+            let mut path = self.path.clone();
+            path.push(name.as_ref());
+            match link {
+                Link::Leaf(_) => {
+                    files.push(File::from_link(link, path).expect("leaf node must be a valid file"))
+                }
+                Link::Ephemeral(_) | Link::Durable(_) => dirs.push(
+                    Directory::from_link(link, path).expect("inner node must be a valid directory"),
+                ),
+            }
+        }
+
+        Ok((files, dirs))
+    }
+
+    /// Create a `Key` (path/node pair) corresponding to this directory. Keys are used
+    /// by the Eden API to fetch data from the server, making this representation useful
+    /// for interacting with Mercurial's data fetching code.
+    pub(crate) fn key(&self) -> Option<Key> {
+        Some(Key::new(self.path.clone(), self.node.clone()?))
+    }
+}
+
+impl Eq for Directory<'_> {}
+
+impl PartialEq for Directory<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path && self.node == other.node
+    }
+}
+
+impl Ord for Directory<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.path.cmp(&other.path) {
+            Ordering::Equal => self.node.cmp(&other.node),
+            ord => ord,
+        }
+    }
+}
+
+impl PartialOrd for Directory<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -623,9 +758,10 @@ mod tests {
     use self::store::TestStore;
     use crate::FileType;
 
-    fn meta(hex: &str) -> FileMetadata {
+    fn make_meta(hex: &str) -> FileMetadata {
         FileMetadata::regular(node(hex))
     }
+
     fn store_element(path: &str, hex: &str, flag: store::Flag) -> Fallible<store::Element> {
         Ok(store::Element::new(
             path_component_buf(path),
@@ -633,6 +769,7 @@ mod tests {
             flag,
         ))
     }
+
     fn get_node(tree: &Tree, path: &RepoPath) -> Node {
         match tree.get_link(path).unwrap().unwrap() {
             Leaf(file_metadata) => file_metadata.node,
@@ -641,38 +778,55 @@ mod tests {
         }
     }
 
+    fn make_tree<'a>(paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>) -> Tree {
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        for (path, filenode) in paths {
+            tree.insert(repo_path_buf(path), make_meta(filenode))
+                .unwrap();
+        }
+        tree
+    }
+
     #[test]
     fn test_insert() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("foo/bar"), meta("10")).unwrap();
+        tree.insert(repo_path_buf("foo/bar"), make_meta("10"))
+            .unwrap();
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
-            Some(meta("10"))
+            Some(make_meta("10"))
         );
         assert_eq!(tree.get_file(repo_path("baz")).unwrap(), None);
 
-        tree.insert(repo_path_buf("baz"), meta("20")).unwrap();
+        tree.insert(repo_path_buf("baz"), make_meta("20")).unwrap();
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
-            Some(meta("10"))
+            Some(make_meta("10"))
         );
-        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("baz")).unwrap(),
+            Some(make_meta("20"))
+        );
 
-        tree.insert(repo_path_buf("foo/bat"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("foo/bat"), make_meta("30"))
+            .unwrap();
         assert_eq!(
             tree.get_file(repo_path("foo/bat")).unwrap(),
-            Some(meta("30"))
+            Some(make_meta("30"))
         );
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
-            Some(meta("10"))
+            Some(make_meta("10"))
         );
-        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("baz")).unwrap(),
+            Some(make_meta("20"))
+        );
 
         assert_eq!(
             format!(
                 "{}",
-                tree.insert(repo_path_buf("foo/bar/error"), meta("40"))
+                tree.insert(repo_path_buf("foo/bar/error"), make_meta("40"))
                     .unwrap_err()
             ),
             "Asked to insert 'foo/bar/error' but 'foo/bar' is already a file.",
@@ -680,7 +834,8 @@ mod tests {
         assert_eq!(
             format!(
                 "{}",
-                tree.insert(repo_path_buf("foo"), meta("50")).unwrap_err()
+                tree.insert(repo_path_buf("foo"), make_meta("50"))
+                    .unwrap_err()
             ),
             "Asked to insert 'foo' but it is already a directory.",
         );
@@ -710,45 +865,56 @@ mod tests {
 
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
-            Some(meta("11"))
+            Some(make_meta("11"))
         );
-        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("baz")).unwrap(),
+            Some(make_meta("20"))
+        );
 
-        tree.insert(repo_path_buf("foo/bat"), meta("12")).unwrap();
+        tree.insert(repo_path_buf("foo/bat"), make_meta("12"))
+            .unwrap();
         assert_eq!(
             tree.get_file(repo_path("foo/bat")).unwrap(),
-            Some(meta("12"))
+            Some(make_meta("12"))
         );
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
-            Some(meta("11"))
+            Some(make_meta("11"))
         );
-        assert_eq!(tree.get_file(repo_path("baz")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("baz")).unwrap(),
+            Some(make_meta("20"))
+        );
     }
 
     #[test]
     fn test_insert_into_directory() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("foo/bar/baz"), meta("10"))
+        tree.insert(repo_path_buf("foo/bar/baz"), make_meta("10"))
             .unwrap();
-        assert!(tree.insert(repo_path_buf("foo/bar"), meta("20")).is_err());
-        assert!(tree.insert(repo_path_buf("foo"), meta("30")).is_err());
+        assert!(tree
+            .insert(repo_path_buf("foo/bar"), make_meta("20"))
+            .is_err());
+        assert!(tree.insert(repo_path_buf("foo"), make_meta("30")).is_err());
     }
 
     #[test]
     fn test_insert_with_file_parent() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("foo"), meta("10")).unwrap();
-        assert!(tree.insert(repo_path_buf("foo/bar"), meta("20")).is_err());
+        tree.insert(repo_path_buf("foo"), make_meta("10")).unwrap();
         assert!(tree
-            .insert(repo_path_buf("foo/bar/baz"), meta("30"))
+            .insert(repo_path_buf("foo/bar"), make_meta("20"))
+            .is_err());
+        assert!(tree
+            .insert(repo_path_buf("foo/bar/baz"), make_meta("30"))
             .is_err());
     }
 
     #[test]
     fn test_get_from_directory() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("foo/bar/baz"), meta("10"))
+        tree.insert(repo_path_buf("foo/bar/baz"), make_meta("10"))
             .unwrap();
         assert_eq!(
             tree.get(repo_path("foo/bar")).unwrap(),
@@ -760,7 +926,7 @@ mod tests {
     #[test]
     fn test_get_with_file_parent() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("foo"), meta("10")).unwrap();
+        tree.insert(repo_path_buf("foo"), make_meta("10")).unwrap();
         assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), None);
         assert_eq!(tree.get(repo_path("foo/bar/baz")).unwrap(), None);
     }
@@ -768,17 +934,19 @@ mod tests {
     #[test]
     fn test_remove_from_ephemeral() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
         assert_eq!(tree.remove(repo_path("a1/b1")).unwrap(), None);
         assert_eq!(tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(), None);
         assert_eq!(
             tree.remove(repo_path("a1/b1/c1/d1")).unwrap(),
-            Some(meta("10"))
+            Some(make_meta("10"))
         );
         assert_eq!(tree.remove(repo_path("a3")).unwrap(), None);
         assert_eq!(tree.remove(repo_path("a1/b3")).unwrap(), None);
@@ -789,18 +957,21 @@ mod tests {
         assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
-            Some(FsNode::File(meta("20")))
+            Some(FsNode::File(make_meta("20")))
         );
-        assert_eq!(tree.remove(repo_path("a1/b2")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.remove(repo_path("a1/b2")).unwrap(),
+            Some(make_meta("20"))
+        );
         assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
 
         assert_eq!(
             tree.get(repo_path("a2/b2/c2")).unwrap(),
-            Some(FsNode::File(meta("30")))
+            Some(FsNode::File(make_meta("30")))
         );
         assert_eq!(
             tree.remove(repo_path("a2/b2/c2")).unwrap(),
-            Some(meta("30"))
+            Some(make_meta("30"))
         );
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
@@ -832,22 +1003,28 @@ mod tests {
         let mut tree = Tree::durable(Arc::new(store), node("1"));
 
         assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
-        assert_eq!(tree.remove(repo_path("a1/b1")).unwrap(), Some(meta("11")));
+        assert_eq!(
+            tree.remove(repo_path("a1/b1")).unwrap(),
+            Some(make_meta("11"))
+        );
         assert_eq!(tree.get(repo_path("a1/b1")).unwrap(), None);
         assert_eq!(
             tree.get(repo_path("a1/b2")).unwrap(),
-            Some(FsNode::File(meta("12")))
+            Some(FsNode::File(make_meta("12")))
         );
-        assert_eq!(tree.remove(repo_path("a1/b2")).unwrap(), Some(meta("12")));
+        assert_eq!(
+            tree.remove(repo_path("a1/b2")).unwrap(),
+            Some(make_meta("12"))
+        );
         assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
         assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
 
         assert_eq!(
             tree.get(repo_path("a2")).unwrap(),
-            Some(FsNode::File(meta("20")))
+            Some(FsNode::File(make_meta("20")))
         );
-        assert_eq!(tree.remove(repo_path("a2")).unwrap(), Some(meta("20")));
+        assert_eq!(tree.remove(repo_path("a2")).unwrap(), Some(make_meta("20")));
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
         assert_eq!(
@@ -860,22 +1037,27 @@ mod tests {
     fn test_flush() {
         let store = Arc::new(TestStore::new());
         let mut tree = Tree::ephemeral(store.clone());
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         let node = tree.flush().unwrap();
 
         let tree = Tree::durable(store.clone(), node);
         assert_eq!(
             tree.get_file(repo_path("a1/b1/c1/d1")).unwrap(),
-            Some(meta("10"))
+            Some(make_meta("10"))
         );
-        assert_eq!(tree.get_file(repo_path("a1/b2")).unwrap(), Some(meta("20")));
+        assert_eq!(
+            tree.get_file(repo_path("a1/b2")).unwrap(),
+            Some(make_meta("20"))
+        );
         assert_eq!(
             tree.get_file(repo_path("a2/b2/c2")).unwrap(),
-            Some(meta("30"))
+            Some(make_meta("30"))
         );
         assert_eq!(tree.get(repo_path("a2/b1")).unwrap(), None);
     }
@@ -884,10 +1066,12 @@ mod tests {
     fn test_finalize_with_zero_and_one_parents() {
         let store = Arc::new(TestStore::new());
         let mut tree = Tree::ephemeral(store.clone());
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
         let tree_changed: Vec<_> = tree.finalize(vec![]).unwrap().collect();
 
         assert_eq!(tree_changed.len(), 6);
@@ -908,9 +1092,13 @@ mod tests {
         }
 
         let mut update = tree.clone();
-        update.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
+        update
+            .insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
         update.remove(repo_path("a2/b2/c2")).unwrap();
-        update.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        update
+            .insert(repo_path_buf("a3/b1"), make_meta("50"))
+            .unwrap();
         let update_changed: Vec<_> = update.finalize(vec![&tree]).unwrap().collect();
         assert_eq!(update_changed[0].0, repo_path_buf("a1"));
         assert_eq!(update_changed[0].3, tree_changed[2].1);
@@ -927,20 +1115,25 @@ mod tests {
     fn test_finalize_merge() {
         let store = Arc::new(TestStore::new());
         let mut p1 = Tree::ephemeral(store.clone());
-        p1.insert(repo_path_buf("a1/b1/c1/d1"), meta("10")).unwrap();
-        p1.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        p1.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        p1.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
+            .unwrap();
+        p1.insert(repo_path_buf("a1/b2"), make_meta("20")).unwrap();
+        p1.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
         let _p1_changed = p1.finalize(vec![]).unwrap();
 
         let mut p2 = Tree::ephemeral(store.clone());
-        p2.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        p2.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        p2.insert(repo_path_buf("a1/b2"), make_meta("40")).unwrap();
+        p2.insert(repo_path_buf("a3/b1"), make_meta("50")).unwrap();
         let _p2_changed = p2.finalize(vec![]).unwrap();
 
         let mut tree = p1.clone();
-        tree.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("60")).unwrap();
-        tree.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("60"))
+            .unwrap();
+        tree.insert(repo_path_buf("a3/b1"), make_meta("50"))
+            .unwrap();
         let tree_changed: Vec<_> = tree.finalize(vec![&p1, &p2]).unwrap().collect();
         assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
         assert_eq!(tree_changed[0].3, get_node(&p1, repo_path("a1")));
@@ -968,13 +1161,15 @@ mod tests {
     fn test_finalize_file_to_directory() {
         let store = Arc::new(TestStore::new());
         let mut tree1 = Tree::ephemeral(store.clone());
-        tree1.insert(repo_path_buf("a1"), meta("10")).unwrap();
+        tree1.insert(repo_path_buf("a1"), make_meta("10")).unwrap();
         let tree1_changed: Vec<_> = tree1.finalize(vec![]).unwrap().collect();
         assert_eq!(tree1_changed[0].0, RepoPathBuf::new());
         assert_eq!(tree1_changed[0].3, NULL_ID);
 
         let mut tree2 = Tree::ephemeral(store.clone());
-        tree2.insert(repo_path_buf("a1/b1"), meta("20")).unwrap();
+        tree2
+            .insert(repo_path_buf("a1/b1"), make_meta("20"))
+            .unwrap();
         let tree2_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
         assert_eq!(tree2_changed[0].0, repo_path_buf("a1"));
         assert_eq!(tree2_changed[0].3, NULL_ID);
@@ -983,7 +1178,7 @@ mod tests {
         assert_eq!(tree2_changed[1].4, NULL_ID);
 
         let mut tree3 = Tree::ephemeral(store.clone());
-        tree3.insert(repo_path_buf("a1"), meta("30")).unwrap();
+        tree3.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
         let tree3_changed: Vec<_> = tree3.finalize(vec![&tree2]).unwrap().collect();
         assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
         assert_eq!(tree3_changed[0].3, tree2_changed[1].1);
@@ -995,16 +1190,26 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let mut tree1 = Tree::ephemeral(store.clone());
         tree1
-            .insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree1.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree1.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree1
+            .insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree1
+            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
         let _tree1_changed = tree1.finalize(vec![]).unwrap();
 
         let mut tree2 = tree1.clone();
-        tree2.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        tree2.insert(repo_path_buf("a2/b2/c2"), meta("60")).unwrap();
-        tree2.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        tree2
+            .insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        tree2
+            .insert(repo_path_buf("a2/b2/c2"), make_meta("60"))
+            .unwrap();
+        tree2
+            .insert(repo_path_buf("a3/b1"), make_meta("50"))
+            .unwrap();
         let tree_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
         assert_eq!(
             tree2.finalize(vec![&tree1]).unwrap().collect::<Vec<_>>(),
@@ -1034,9 +1239,10 @@ mod tests {
             }
         }
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1"), meta("10")).unwrap();
-        tree.insert(repo_path_buf("a2/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a3"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1"), make_meta("10")).unwrap();
+        tree.insert(repo_path_buf("a2/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a3"), make_meta("30")).unwrap();
 
         let mut cursor = tree.root_cursor();
         step(&mut cursor);
@@ -1069,19 +1275,21 @@ mod tests {
     #[test]
     fn test_files_ephemeral() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         assert_eq!(
             tree.files(&AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a1/b1/c1/d1"), meta("10")),
-                (repo_path_buf("a1/b2"), meta("20")),
-                (repo_path_buf("a2/b2/c2"), meta("30")),
+                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")),
+                (repo_path_buf("a1/b2"), make_meta("20")),
+                (repo_path_buf("a2/b2/c2"), make_meta("30")),
             )
         );
     }
@@ -1090,10 +1298,12 @@ mod tests {
     fn test_files_durable() {
         let store = Arc::new(TestStore::new());
         let mut tree = Tree::ephemeral(store.clone());
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
         let node = tree.flush().unwrap();
         let tree = Tree::durable(store.clone(), node);
 
@@ -1102,9 +1312,9 @@ mod tests {
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a1/b1/c1/d1"), meta("10")),
-                (repo_path_buf("a1/b2"), meta("20")),
-                (repo_path_buf("a2/b2/c2"), meta("30")),
+                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")),
+                (repo_path_buf("a1/b2"), make_meta("20")),
+                (repo_path_buf("a2/b2/c2"), make_meta("30")),
             )
         );
     }
@@ -1112,35 +1322,39 @@ mod tests {
     #[test]
     fn test_files_matcher() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c3"), meta("40")).unwrap();
-        tree.insert(repo_path_buf("a3/b2/c3"), meta("50")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c3"), make_meta("40"))
+            .unwrap();
+        tree.insert(repo_path_buf("a3/b2/c3"), make_meta("50"))
+            .unwrap();
 
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["a2/b2"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a2/b2/c2"), meta("30")),
-                (repo_path_buf("a2/b2/c3"), meta("40"))
+                (repo_path_buf("a2/b2/c2"), make_meta("30")),
+                (repo_path_buf("a2/b2/c3"), make_meta("40"))
             )
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["a1/*/c1"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
-            vec!((repo_path_buf("a1/b1/c1/d1"), meta("10")),)
+            vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")),)
         );
         assert_eq!(
             tree.files(&TreeMatcher::from_rules(["**/c3"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                (repo_path_buf("a2/b2/c3"), meta("40")),
-                (repo_path_buf("a3/b2/c3"), meta("50"))
+                (repo_path_buf("a2/b2/c3"), make_meta("40")),
+                (repo_path_buf("a3/b2/c3"), make_meta("50"))
             )
         );
     }
@@ -1161,27 +1375,41 @@ mod tests {
     #[test]
     fn test_diff_generic() {
         let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-        left.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        left.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        left.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        left.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
+        left.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        left.insert(repo_path_buf("a3/b1"), make_meta("40"))
+            .unwrap();
 
         let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        right.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
-        right.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
+        right
+            .insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("a3/b1"), make_meta("40"))
+            .unwrap();
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::LeftOnly(meta("10"))),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
+                ),
                 DiffEntry::new(
                     repo_path_buf("a1/b2"),
-                    DiffType::Changed(meta("20"), meta("40"))
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
                 ),
-                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta("30"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
             )
         );
 
@@ -1193,19 +1421,27 @@ mod tests {
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::LeftOnly(meta("10"))),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
+                ),
                 DiffEntry::new(
                     repo_path_buf("a1/b2"),
-                    DiffType::Changed(meta("20"), meta("40"))
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
                 ),
-                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta("30"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
             )
         );
         right
-            .insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        left.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        left.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        left.insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        left.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
@@ -1231,22 +1467,25 @@ mod tests {
     #[test]
     fn test_diff_one_file_one_directory() {
         let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-        left.insert(repo_path_buf("a1/b1"), meta("10")).unwrap();
-        left.insert(repo_path_buf("a2"), meta("20")).unwrap();
+        left.insert(repo_path_buf("a1/b1"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("a2"), make_meta("20")).unwrap();
 
         let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right.insert(repo_path_buf("a1"), meta("30")).unwrap();
-        right.insert(repo_path_buf("a2/b2"), meta("40")).unwrap();
+        right.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
+        right
+            .insert(repo_path_buf("a2/b2"), make_meta("40"))
+            .unwrap();
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(meta("30"))),
-                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(meta("10"))),
-                DiffEntry::new(repo_path_buf("a2"), DiffType::LeftOnly(meta("20"))),
-                DiffEntry::new(repo_path_buf("a2/b2"), DiffType::RightOnly(meta("40"))),
+                DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(make_meta("30"))),
+                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(make_meta("10"))),
+                DiffEntry::new(repo_path_buf("a2"), DiffType::LeftOnly(make_meta("20"))),
+                DiffEntry::new(repo_path_buf("a2/b2"), DiffType::RightOnly(make_meta("40"))),
             )
         );
     }
@@ -1257,10 +1496,14 @@ mod tests {
 
         let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
         right
-            .insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        right.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        right.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        right
+            .insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -1269,10 +1512,13 @@ mod tests {
             vec!(
                 DiffEntry::new(
                     repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::RightOnly(meta("10"))
+                    DiffType::RightOnly(make_meta("10"))
                 ),
-                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(meta("20"))),
-                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta("30"))),
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
             )
         );
 
@@ -1286,10 +1532,13 @@ mod tests {
             vec!(
                 DiffEntry::new(
                     repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::RightOnly(meta("10"))
+                    DiffType::RightOnly(make_meta("10"))
                 ),
-                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(meta("20"))),
-                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta("30"))),
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
             )
         );
     }
@@ -1297,15 +1546,23 @@ mod tests {
     #[test]
     fn test_diff_matcher() {
         let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-        left.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        left.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        left.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        left.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
+        left.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        left.insert(repo_path_buf("a3/b1"), make_meta("40"))
+            .unwrap();
 
         let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
-        right.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
-        right.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
+        right
+            .insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("a3/b1"), make_meta("40"))
+            .unwrap();
 
         assert_eq!(
             Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
@@ -1313,7 +1570,7 @@ mod tests {
                 .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b1/c1/d1"),
-                DiffType::LeftOnly(meta("10"))
+                DiffType::LeftOnly(make_meta("10"))
             ),)
         );
         assert_eq!(
@@ -1322,7 +1579,7 @@ mod tests {
                 .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a1/b2"),
-                DiffType::Changed(meta("20"), meta("40"))
+                DiffType::Changed(make_meta("20"), make_meta("40"))
             ),)
         );
         assert_eq!(
@@ -1331,7 +1588,7 @@ mod tests {
                 .unwrap(),
             vec!(DiffEntry::new(
                 repo_path_buf("a2/b2/c2"),
-                DiffType::RightOnly(meta("30"))
+                DiffType::RightOnly(make_meta("30"))
             ),)
         );
         assert_eq!(
@@ -1341,9 +1598,12 @@ mod tests {
             vec!(
                 DiffEntry::new(
                     repo_path_buf("a1/b2"),
-                    DiffType::Changed(meta("20"), meta("40"))
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
                 ),
-                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta("30"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
             )
         );
         assert!(
@@ -1359,12 +1619,14 @@ mod tests {
 
         let store = Arc::new(TestStore::new());
         let mut tree = Tree::ephemeral(store.clone());
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
         let _node = tree.flush().unwrap();
 
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
 
         let mut output = String::new();
         write!(output, "{:?}", tree).unwrap();
@@ -1512,11 +1774,15 @@ mod tests {
     #[test]
     fn test_list() {
         let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1"), meta("10")).unwrap();
-        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        tree.insert(repo_path_buf("a1/b1/c1"), make_meta("10"))
+            .unwrap();
+        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
+            .unwrap();
         let _node = tree.flush().unwrap();
-        tree.insert(repo_path_buf("a2/b3/c2"), meta("30")).unwrap();
-        tree.insert(repo_path_buf("a2/b4"), meta("30")).unwrap();
+        tree.insert(repo_path_buf("a2/b3/c2"), make_meta("30"))
+            .unwrap();
+        tree.insert(repo_path_buf("a2/b4"), make_meta("30"))
+            .unwrap();
 
         assert_eq!(tree.list(repo_path("not_found")).unwrap(), List::NotFound);
         assert_eq!(tree.list(repo_path("a1/b1/c1")).unwrap(), List::File);
@@ -1541,5 +1807,103 @@ mod tests {
             tree.list(RepoPath::empty()).unwrap(),
             List::Directory(vec![path_component_buf("a1"), path_component_buf("a2")]),
         );
+    }
+
+    #[test]
+    fn test_file_from_link() {
+        // Leaf link should result in a file.
+        let meta = make_meta("a");
+        let path = repo_path_buf("test/leaf");
+
+        let leaf = Link::Leaf(meta.clone());
+        let file = File::from_link(&leaf, path.clone()).unwrap();
+
+        let expected = File {
+            path: path.clone(),
+            meta,
+        };
+        assert_eq!(file, expected);
+
+        // Attempting to use a directory link should fail.
+        let ephemeral = Link::ephemeral();
+        let _file = File::from_link(&ephemeral, path.clone());;
+
+        // Durable link should result in a directory.
+        let durable = Link::durable(node("a"));
+        let file = File::from_link(&durable, path.clone());;
+        assert!(file.is_none());
+    }
+
+    #[test]
+    fn test_diff_entry_from_file() {
+        let path = repo_path_buf("foo/bar");
+        let meta = make_meta("a");
+        let file = File {
+            path: path.clone(),
+            meta: meta.clone(),
+        };
+
+        let left = file.clone().into_left();
+        let expected = DiffEntry::new(path.clone(), DiffType::LeftOnly(meta.clone()));
+        assert_eq!(left, expected);
+
+        let right = file.clone().into_right();
+        let expected = DiffEntry::new(path.clone(), DiffType::RightOnly(meta.clone()));
+        assert_eq!(right, expected);
+
+        let meta2 = make_meta("b");
+        let file2 = File {
+            path: path.clone(),
+            meta: meta2.clone(),
+        };
+
+        let changed = file.into_changed(file2);
+        let expected = DiffEntry::new(path, DiffType::Changed(meta, meta2));
+        assert_eq!(changed, expected);
+    }
+
+    #[test]
+    fn test_directory_from_link() {
+        let meta = make_meta("a");
+        let path = repo_path_buf("test/leaf");
+
+        let ephemeral = Link::ephemeral();
+        let dir = Directory::from_link(&ephemeral, path.clone()).unwrap();
+        let expected = Directory {
+            path: path.clone(),
+            node: None,
+            link: &ephemeral,
+        };
+        assert_eq!(dir, expected);
+
+        let hash = node("b");
+        let durable = Link::durable(hash);
+        let dir = Directory::from_link(&durable, path.clone()).unwrap();
+        let expected = Directory {
+            path: path.clone(),
+            node: Some(hash),
+            link: &ephemeral,
+        };
+        assert_eq!(dir, expected);
+
+        // If the Link is actually a file, we should get None.
+        let leaf = Link::Leaf(meta.clone());
+        let dir = Directory::from_link(&leaf, path.clone());
+        assert!(dir.is_none());
+    }
+
+    #[test]
+    fn test_list_directory() -> Fallible<()> {
+        let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
+        let dir = Directory::from_root(&tree.root).unwrap();
+        let (files, dirs) = dir.list(&tree.store)?;
+
+        let file_names = files.into_iter().map(|f| f.path).collect::<Vec<_>>();
+        let dir_names = dirs.into_iter().map(|d| d.path).collect::<Vec<_>>();
+
+        assert_eq!(file_names, vec![repo_path_buf("a"), repo_path_buf("c")]);
+        assert_eq!(dir_names, vec![repo_path_buf("b"), repo_path_buf("d")]);
+
+        Ok(())
     }
 }

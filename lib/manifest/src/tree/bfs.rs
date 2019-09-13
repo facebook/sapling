@@ -8,146 +8,9 @@ use std::{cmp::Ordering, collections::VecDeque, mem};
 use failure::Fallible;
 
 use pathmatcher::{DirectoryMatch, Matcher};
-use types::{Key, Node, RepoPath, RepoPathBuf};
+use types::RepoPath;
 
-use crate::{
-    tree::{link::Link, store::InnerStore, DiffEntry, DiffType, Tree},
-    FileMetadata,
-};
-
-/// A file (leaf node) encountered during a tree traversal.
-///
-/// Consists of the full path to the file along with the associated file metadata.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct File {
-    path: RepoPathBuf,
-    meta: FileMetadata,
-}
-
-impl File {
-    fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
-        Self { path, meta }
-    }
-
-    /// Create a file record for a `Link`, failing if the link
-    /// refers to a directory rather than a file.
-    fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
-        match link {
-            Link::Leaf(meta) => Some(Self::new(path, *meta)),
-            _ => None,
-        }
-    }
-
-    fn into_left(self) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::LeftOnly(self.meta))
-    }
-
-    fn into_right(self) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::RightOnly(self.meta))
-    }
-
-    fn into_changed(self, other: File) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::Changed(self.meta, other.meta))
-    }
-}
-
-/// A directory (inner node) encountered during a tree traversal.
-///
-/// The directory may have a manifest node hash if it is unmodified from its
-/// state on disk. If the directory has in-memory modifications that have not
-/// been persisted to disk, it will not have a node hash.
-#[derive(Clone, Debug)]
-struct Directory<'a> {
-    path: RepoPathBuf,
-    node: Option<Node>,
-    link: &'a Link,
-}
-
-impl<'a> Directory<'a> {
-    /// Create a directory record for a `Link`, failing if the link
-    /// refers to a file rather than a directory.
-    fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
-        let node = match link {
-            Link::Leaf(_) => return None,
-            Link::Ephemeral(_) => None,
-            Link::Durable(entry) => Some(entry.node),
-        };
-        Some(Self { path, node, link })
-    }
-
-    /// Same as `from_link`, but set the directory's path to the empty
-    /// path, making this method only useful for the root of the tree.
-    fn from_root(link: &'a Link) -> Option<Self> {
-        Self::from_link(link, RepoPathBuf::new())
-    }
-
-    /// List the contents of this directory.
-    ///
-    /// Returns two sorted vectors of files and directories contained
-    /// in this directory.
-    ///
-    /// This operation may perform I/O to load the tree entry from the store
-    /// if it is not already in memory. Depending on the store implementation,
-    /// this may involve an expensive network request if the required data is
-    /// not available locally. As such, algorithms that require fast access to
-    /// this data should take care to ensure that this content is present
-    /// locally before calling this method.
-    fn list(&self, store: &InnerStore) -> Fallible<(Vec<File>, Vec<Directory<'a>>)> {
-        let mut files = Vec::new();
-        let mut dirs = Vec::new();
-
-        let links = match &self.link {
-            &Link::Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
-            &Link::Ephemeral(ref links) => links,
-            &Link::Durable(entry) => entry.get_links(store, &self.path)?,
-        };
-
-        for (name, link) in links {
-            let mut path = self.path.clone();
-            path.push(name.as_ref());
-            match link {
-                Link::Leaf(_) => {
-                    files.push(File::from_link(link, path).expect("leaf node must be a valid file"))
-                }
-                Link::Ephemeral(_) | Link::Durable(_) => dirs.push(
-                    Directory::from_link(link, path).expect("inner node must be a valid directory"),
-                ),
-            }
-        }
-
-        Ok((files, dirs))
-    }
-
-    /// Create a `Key` (path/node pair) corresponding to this directory. Keys are used
-    /// by the Eden API to fetch data from the server, making this representation useful
-    /// for interacting with Mercurial's data fetching code.
-    fn key(&self) -> Option<Key> {
-        Some(Key::new(self.path.clone(), self.node.clone()?))
-    }
-}
-
-impl Eq for Directory<'_> {}
-
-impl PartialEq for Directory<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.path == other.path && self.node == other.node
-    }
-}
-
-impl Ord for Directory<'_> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.path.cmp(&other.path) {
-            Ordering::Equal => self.node.cmp(&other.node),
-            ord => ord,
-        }
-    }
-}
-
-impl PartialOrd for Directory<'_> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+use crate::tree::{store::InnerStore, DiffEntry, Directory, File, Tree};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -515,7 +378,10 @@ mod tests {
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::{tree::store::TestStore, FileType, Manifest};
+    use crate::{
+        tree::{store::TestStore, DiffType, Link},
+        FileMetadata, FileType, Manifest,
+    };
 
     fn make_meta(hex: &str) -> FileMetadata {
         FileMetadata::regular(node(hex))
@@ -543,104 +409,6 @@ mod tests {
                 .unwrap();
         }
         tree
-    }
-
-    #[test]
-    fn test_file_from_link() {
-        // Leaf link should result in a file.
-        let meta = make_meta("a");
-        let path = repo_path_buf("test/leaf");
-
-        let leaf = Link::Leaf(meta.clone());
-        let file = File::from_link(&leaf, path.clone()).unwrap();
-
-        let expected = File {
-            path: path.clone(),
-            meta,
-        };
-        assert_eq!(file, expected);
-
-        // Attempting to use a directory link should fail.
-        let ephemeral = Link::ephemeral();
-        let _file = File::from_link(&ephemeral, path.clone());;
-
-        // Durable link should result in a directory.
-        let durable = Link::durable(node("a"));
-        let file = File::from_link(&durable, path.clone());;
-        assert!(file.is_none());
-    }
-
-    #[test]
-    fn test_diff_entry_from_file() {
-        let path = repo_path_buf("foo/bar");
-        let meta = make_meta("a");
-        let file = File {
-            path: path.clone(),
-            meta: meta.clone(),
-        };
-
-        let left = file.clone().into_left();
-        let expected = DiffEntry::new(path.clone(), DiffType::LeftOnly(meta.clone()));
-        assert_eq!(left, expected);
-
-        let right = file.clone().into_right();
-        let expected = DiffEntry::new(path.clone(), DiffType::RightOnly(meta.clone()));
-        assert_eq!(right, expected);
-
-        let meta2 = make_meta("b");
-        let file2 = File {
-            path: path.clone(),
-            meta: meta2.clone(),
-        };
-
-        let changed = file.into_changed(file2);
-        let expected = DiffEntry::new(path, DiffType::Changed(meta, meta2));
-        assert_eq!(changed, expected);
-    }
-
-    #[test]
-    fn test_directory_from_link() {
-        let meta = make_meta("a");
-        let path = repo_path_buf("test/leaf");
-
-        let ephemeral = Link::ephemeral();
-        let dir = Directory::from_link(&ephemeral, path.clone()).unwrap();
-        let expected = Directory {
-            path: path.clone(),
-            node: None,
-            link: &ephemeral,
-        };
-        assert_eq!(dir, expected);
-
-        let hash = node("b");
-        let durable = Link::durable(hash);
-        let dir = Directory::from_link(&durable, path.clone()).unwrap();
-        let expected = Directory {
-            path: path.clone(),
-            node: Some(hash),
-            link: &ephemeral,
-        };
-        assert_eq!(dir, expected);
-
-        // If the Link is actually a file, we should get None.
-        let leaf = Link::Leaf(meta.clone());
-        let dir = Directory::from_link(&leaf, path.clone());
-        assert!(dir.is_none());
-    }
-
-    #[test]
-    fn test_list_directory() -> Fallible<()> {
-        let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
-        let dir = Directory::from_root(&tree.root).unwrap();
-        let (files, dirs) = dir.list(&tree.store)?;
-
-        let file_names = files.into_iter().map(|f| f.path).collect::<Vec<_>>();
-        let dir_names = dirs.into_iter().map(|d| d.path).collect::<Vec<_>>();
-
-        assert_eq!(file_names, vec![repo_path_buf("a"), repo_path_buf("c")]);
-        assert_eq!(dir_names, vec![repo_path_buf("b"), repo_path_buf("d")]);
-
-        Ok(())
     }
 
     #[test]
