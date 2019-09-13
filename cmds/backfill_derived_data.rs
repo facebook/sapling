@@ -41,17 +41,21 @@ use std::{
     time::Duration,
 };
 
-const ARG_DERIVED_DATA_TYPE: &'static str = "DERIVED_DATA_TYPE";
+const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
 const ARG_OUT_FILENAME: &'static str = "out-filename";
 const ARG_SKIP: &'static str = "skip-changesets";
 const ARG_REGENERATE: &'static str = "regenerate";
 const ARG_PREFETCHED_COMMITS_PATH: &'static str = "prefetched-commits-path";
+const ARG_CHANGESET: &'static str = "changeset";
 
 const SUBCOMMAND_BACKFILL: &'static str = "backfill";
 const SUBCOMMAND_TAIL: &'static str = "tail";
 const SUBCOMMAND_PREFETCH_COMMITS: &'static str = "prefetch-commits";
+const SUBCOMMAND_SINGLE: &'static str = "single";
 
 const CHUNK_SIZE: usize = 4096;
+
+const POSSIBLE_TYPES: &[&str] = &[RootUnodeManifestId::NAME, RootFastlog::NAME];
 
 fn main() -> Result<(), Error> {
     let app = args::MononokeApp {
@@ -67,7 +71,7 @@ fn main() -> Result<(), Error> {
                 Arg::with_name(ARG_DERIVED_DATA_TYPE)
                     .required(true)
                     .index(1)
-                    .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
+                    .possible_values(POSSIBLE_TYPES)
                     .help("derived data type for which backfill will be run"),
             )
             .arg(
@@ -97,7 +101,7 @@ fn main() -> Result<(), Error> {
                     .required(true)
                     .multiple(true)
                     .index(1)
-                    .possible_values(&[RootUnodeManifestId::NAME, RootFastlog::NAME])
+                    .possible_values(POSSIBLE_TYPES)
                     .help("comma separated list of derived data types"),
             ),
     )
@@ -110,6 +114,23 @@ fn main() -> Result<(), Error> {
                     .takes_value(true)
                     .required(true)
                     .help("file name where commits will be saved"),
+            ),
+    )
+    .subcommand(
+        SubCommand::with_name(SUBCOMMAND_SINGLE)
+            .about("backfill single changeset (mainly for performance testing purposes)")
+            .arg(
+                Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                    .required(true)
+                    .index(1)
+                    .possible_values(POSSIBLE_TYPES)
+                    .help("derived data type for which backfill will be run"),
+            )
+            .arg(
+                Arg::with_name(ARG_CHANGESET)
+                    .required(true)
+                    .index(2)
+                    .help("changeset by {hd|bonsai} hash or bookmark"),
             ),
     );
     let app = args::add_fb303_args(app);
@@ -198,6 +219,22 @@ fn main() -> Result<(), Error> {
                 })
                 .boxify()
         }
+        (SUBCOMMAND_SINGLE, Some(sub_m)) => {
+            let hash_or_bookmark = sub_m
+                .value_of_lossy(ARG_CHANGESET)
+                .ok_or_else(|| format_err!("missing required argument: {}", ARG_CHANGESET))?
+                .to_string();
+            let derived_data_type = sub_m
+                .value_of(ARG_DERIVED_DATA_TYPE)
+                .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
+                .to_string();
+            args::open_repo(&logger, &matches)
+                .and_then(move |repo| {
+                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                        .and_then(move |csid| subcommand_single(ctx, repo, csid, derived_data_type))
+                })
+                .boxify()
+        }
         (name, _) => {
             return Err(format_err!("unhandled subcommand: {}", name));
         }
@@ -207,7 +244,12 @@ fn main() -> Result<(), Error> {
 
 trait DerivedUtils: Send + Sync + 'static {
     /// Derive data for changeset
-    fn derive(&self, ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error>;
+    fn derive(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csid: ChangesetId,
+    ) -> BoxFuture<String, Error>;
 
     /// Find pending changeset (changesets for which data have not been derived)
     fn pending(
@@ -236,11 +278,16 @@ impl<M> DerivedUtilsFromMapping<M> {
 impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
 where
     M: BonsaiDerivedMapping + Clone + 'static,
-    M::Value: BonsaiDerived,
+    M::Value: BonsaiDerived + std::fmt::Debug,
 {
-    fn derive(&self, ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error> {
+    fn derive(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csid: ChangesetId,
+    ) -> BoxFuture<String, Error> {
         <M::Value as BonsaiDerived>::derive(ctx, repo, self.mapping.clone(), csid)
-            .map(|_| ())
+            .map(|result| format!("{:?}", result))
             .boxify()
     }
 
@@ -363,7 +410,11 @@ fn subcommand_backfill<P: AsRef<Path>>(
         derived_data_type
     ));
 
-    println!("reading all changesets for: {:?}", repo.get_repoid());
+    info!(
+        ctx.logger(),
+        "reading all changesets for: {:?}",
+        repo.get_repoid()
+    );
     parse_serialized_commits(prefetched_commits_path)
         .into_future()
         .and_then(move |mut changesets| {
@@ -373,7 +424,11 @@ fn subcommand_backfill<P: AsRef<Path>>(
                 .skip(skip)
                 .map(|entry| entry.cs_id)
                 .collect();
-            println!("starting deriving data for {} changesets", changesets.len());
+            info!(
+                ctx.logger(),
+                "starting deriving data for {} changesets",
+                changesets.len()
+            );
 
             let total_count = changesets.len();
             let generated_count = Arc::new(AtomicUsize::new(0));
@@ -413,7 +468,9 @@ fn subcommand_backfill<P: AsRef<Path>>(
                             move |csid| {
                                 // create new context so each derivation would have its own trace
                                 let ctx = CoreContext::new_with_logger(ctx.logger().clone());
-                                derived_utils.derive(ctx.clone(), repo.clone(), csid)
+                                derived_utils
+                                    .derive(ctx.clone(), repo.clone(), csid)
+                                    .map(|_| ())
                             }
                         })
                         .and_then({
@@ -421,7 +478,7 @@ fn subcommand_backfill<P: AsRef<Path>>(
                             move |()| memblobstore.persist(ctx)
                         })
                         .timed({
-                            cloned!(generated_count, total_duration);
+                            cloned!(ctx, generated_count, total_duration);
                             move |stats, _| {
                                 generated_count.fetch_add(chunk_size, Ordering::SeqCst);
                                 let elapsed = total_duration.with(|total_duration| {
@@ -433,7 +490,8 @@ fn subcommand_backfill<P: AsRef<Path>>(
                                 if generated != 0 {
                                     let generated = generated as f32;
                                     let total = total_count as f32;
-                                    println!(
+                                    info!(
+                                        ctx.logger(),
                                         "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
                                         generated,
                                         total_count,
@@ -537,4 +595,29 @@ fn subcommand_tail(
             })
             .for_each(|_| Ok(()))
     })
+}
+
+fn subcommand_single(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    csid: ChangesetId,
+    derived_data_type: String,
+) -> impl Future<Item = (), Error = Error> {
+    let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
+    let derived_utils = match derived_data_utils(ctx.clone(), repo.clone(), derived_data_type) {
+        Ok(derived_utils) => derived_utils,
+        Err(error) => return future::err(error).left_future(),
+    };
+    derived_utils.regenerate(&vec![csid]);
+    derived_utils
+        .derive(ctx.clone(), repo, csid)
+        .timed(move |stats, result| {
+            info!(
+                ctx.logger(),
+                "derived in {:?}: {:?}", stats.completion_time, result
+            );
+            Ok(())
+        })
+        .map(|_| ())
+        .right_future()
 }

@@ -7,23 +7,21 @@
 use crate::error::SubcommandError;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, RegenerateMapping};
-use failure::{err_msg, format_err, Error};
+use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
-use mercurial_types::{Changeset, HgChangesetId};
+use mercurial_types::Changeset;
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
-use slog::{info, Logger};
-use std::{collections::BTreeSet, str::FromStr, sync::Arc};
-use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
+use slog::Logger;
+use std::{collections::BTreeSet, sync::Arc};
 
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";
@@ -32,42 +30,6 @@ const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
 const ARG_LIMIT: &'static str = "limit";
 const ARG_TRACE: &'static str = "trace";
-
-fn csid_resolve(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    hash_or_bookmark: String,
-) -> impl Future<Item = ChangesetId, Error = Error> {
-    BookmarkName::new(hash_or_bookmark.clone())
-        .into_future()
-        .and_then({
-            cloned!(repo, ctx);
-            move |name| repo.get_bonsai_bookmark(ctx, &name)
-        })
-        .and_then(|csid| csid.ok_or(err_msg("invalid bookmark")))
-        .or_else({
-            cloned!(ctx, repo, hash_or_bookmark);
-            move |_| {
-                HgChangesetId::from_str(&hash_or_bookmark)
-                    .into_future()
-                    .and_then(move |hg_csid| repo.get_bonsai_from_hg(ctx, hg_csid))
-                    .and_then(|csid| csid.ok_or(err_msg("invalid hg changeset")))
-            }
-        })
-        .or_else({
-            cloned!(hash_or_bookmark);
-            move |_| ChangesetId::from_str(&hash_or_bookmark)
-        })
-        .inspect(move |csid| {
-            info!(ctx.logger(), "changset resolved as: {:?}", csid);
-        })
-        .map_err(move |_| {
-            format_err!(
-                "invalid (hash|bookmark) or does not exist in this repository: {}",
-                hash_or_bookmark
-            )
-        })
-}
 
 fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
     match path {
@@ -141,7 +103,7 @@ pub fn subcommand_unodes(
             (repo, path)
                 .into_future()
                 .and_then(move |(repo, path)| {
-                    csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_tree(ctx, repo, csid, path))
                 })
                 .from_err()
@@ -157,7 +119,7 @@ pub fn subcommand_unodes(
             cloned!(ctx);
             repo.into_future()
                 .and_then(move |repo| {
-                    csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_verify(ctx, repo, csid, limit))
                 })
                 .from_err()
@@ -169,7 +131,7 @@ pub fn subcommand_unodes(
                 .and_then({
                     cloned!(ctx);
                     move |repo| {
-                        csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                        args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                             .map(move |csid| (ctx, repo, csid))
                     }
                 })
@@ -187,26 +149,8 @@ pub fn subcommand_unodes(
     };
 
     if tracing_enable {
-        run.then(move |result| {
-            ctx.trace()
-                .upload_to_manifold(RequestContext {
-                    bucketName: "mononoke_prod".into(),
-                    apiKey: "".into(),
-                    ..Default::default()
-                })
-                .then(move |upload_result| {
-                    match upload_result {
-                        Err(err) => info!(ctx.logger(), "failed to upload trace: {:#?}", err),
-                        Ok(_) => info!(
-                            ctx.logger(),
-                            "trace uploaded: mononoke_prod/flat/{}.trace",
-                            ctx.trace().id()
-                        ),
-                    }
-                    result
-                })
-        })
-        .boxify()
+        run.then(move |result| ctx.trace_upload().then(move |_| result))
+            .boxify()
     } else {
         run
     }

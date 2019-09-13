@@ -4,12 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::sync::Arc;
-use std::{cmp::min, collections::HashMap, fs, path::Path, time::Duration};
+use std::{
+    cmp::min, collections::HashMap, fs, path::Path, str::FromStr, sync::Arc, time::Duration,
+};
 
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
-use failure_ext::{bail_msg, err_msg, Error, Result, ResultExt};
+use failure_ext::{bail_msg, err_msg, format_err, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
@@ -22,13 +23,15 @@ use slog_glog_fmt::default_drain as glog_drain;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore_factory::Scrubbing;
+use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
+use mercurial_types::HgChangesetId;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{
     BlobConfig, CommonConfig, MetadataDBConfig, Redaction, RepoConfig, StorageConfig,
 };
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::log;
 
@@ -809,4 +812,41 @@ pub fn parse_disabled_hooks(matches: &ArgMatches, logger: &Logger) -> HashSet<St
     }
 
     disabled_hooks
+}
+
+/// Resovle changeset id by either bookmark name, hg hash, or changset id hash
+pub fn csid_resolve(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hash_or_bookmark: String,
+) -> impl Future<Item = ChangesetId, Error = Error> {
+    BookmarkName::new(hash_or_bookmark.clone())
+        .into_future()
+        .and_then({
+            cloned!(repo, ctx);
+            move |name| repo.get_bonsai_bookmark(ctx, &name)
+        })
+        .and_then(|csid| csid.ok_or(err_msg("invalid bookmark")))
+        .or_else({
+            cloned!(ctx, repo, hash_or_bookmark);
+            move |_| {
+                HgChangesetId::from_str(&hash_or_bookmark)
+                    .into_future()
+                    .and_then(move |hg_csid| repo.get_bonsai_from_hg(ctx, hg_csid))
+                    .and_then(|csid| csid.ok_or(err_msg("invalid hg changeset")))
+            }
+        })
+        .or_else({
+            cloned!(hash_or_bookmark);
+            move |_| ChangesetId::from_str(&hash_or_bookmark)
+        })
+        .inspect(move |csid| {
+            info!(ctx.logger(), "changset resolved as: {:?}", csid);
+        })
+        .map_err(move |_| {
+            format_err!(
+                "invalid (hash|bookmark) or does not exist in this repository: {}",
+                hash_or_bookmark
+            )
+        })
 }

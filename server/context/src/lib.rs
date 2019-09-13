@@ -11,17 +11,20 @@ use failure_ext::Error;
 use fbwhoami::FbWhoAmI;
 use limits::types::MononokeThrottleLimit;
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
-use std::collections::HashMap;
-use std::fmt;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashMap,
+    fmt,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use futures::{self, Future, IntoFuture};
 use futures_ext::FutureExt;
 use scuba_ext::ScubaSampleBuilder;
-use slog::{o, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
+use slog::{info, o, warn, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
+use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -463,5 +466,26 @@ impl CoreContext {
                 .left_future(),
             None => Ok(false).into_future().right_future(),
         }
+    }
+
+    pub fn trace_upload(&self) -> impl Future<Item = (), Error = Error> {
+        let logger = self.logger().clone();
+        let id = self.trace().id().clone();
+        self.trace()
+            .upload_to_manifold(RequestContext {
+                bucketName: "mononoke_prod".into(),
+                apiKey: "".into(),
+                ..Default::default()
+            })
+            .then(move |result| match result {
+                Err(err) => {
+                    warn!(&logger, "failed to upload trace: {:#?}", err);
+                    Err(err)
+                }
+                Ok(()) => {
+                    info!(&logger, "trace uploaded: mononoke_prod/flat/{}.trace", id);
+                    Ok(())
+                }
+            })
     }
 }

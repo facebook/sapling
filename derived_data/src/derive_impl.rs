@@ -29,7 +29,6 @@ use std::{
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tracing::{trace_args, EventId, Traced};
-use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -162,15 +161,7 @@ pub(crate) fn derive_impl<
                             start_csid.to_string()
                         )),
                     );
-                tokio::spawn(
-                    ctx.trace()
-                        .upload_to_manifold(RequestContext {
-                            bucketName: "mononoke_prod".into(),
-                            apiKey: "".into(),
-                            ..Default::default()
-                        })
-                        .map_err(move |err| warn!(ctx.logger(), "failed to upload trace: {}", err)),
-                );
+                tokio::spawn(ctx.trace_upload().discard());
             }
             Ok(())
         }

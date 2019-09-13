@@ -40,6 +40,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath, ManifestU
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
+use tracing::{trace_args, EventId, Traced};
 
 mod fastlog_impl;
 mod thrift {
@@ -86,7 +87,7 @@ pub enum ErrorKind {
     DeserializationError(String, String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RootFastlog(ChangesetId);
 
 impl BonsaiDerived for RootFastlog {
@@ -112,13 +113,18 @@ impl BonsaiDerived for RootFastlog {
                 unode_mapping,
             ))
             .and_then(move |(root_unode_mf_id, parents)| {
-                let blobstore = Arc::new(repo.get_blobstore());
+                let blobstore = repo.get_blobstore().boxed();
                 let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
 
-                let s = find_new_unodes(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
-                    .map(|(_, entry)| entry);
-
-                s.map(move |entry| {
+                let event_id = EventId::new();
+                find_new_unodes(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    unode_mf_id,
+                    parents,
+                    Some(event_id),
+                )
+                .map(move |(_, entry)| {
                     let f = fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
                         cloned!(ctx, blobstore);
                         move |parents| {
@@ -140,7 +146,7 @@ impl BonsaiDerived for RootFastlog {
                     spawn_future(f)
                 })
                 .buffered(100)
-                .collect()
+                .for_each(|_| Ok(()))
                 .map(move |_| RootFastlog(bcs_id))
             })
             .boxify()
@@ -152,6 +158,7 @@ fn find_new_unodes(
     blobstore: Arc<dyn Blobstore>,
     unode_mf_id: ManifestUnodeId,
     parent_unodes: Vec<ManifestUnodeId>,
+    event_id: Option<EventId>,
 ) -> impl Stream<Item = (Option<MPath>, Entry<ManifestUnodeId, FileUnodeId>), Error = Error> {
     match parent_unodes.get(0) {
         Some(parent) => (*parent)
@@ -162,42 +169,51 @@ fn find_new_unodes(
                 Diff::Changed(path, _, entry) => Some((path, entry)),
             })
             .collect()
-            .and_then(move |new_unodes| {
-                let paths: Vec<_> = new_unodes
-                    .clone()
-                    .into_iter()
-                    .map(|(path, _)| path)
-                    .collect();
+            .and_then({
+                cloned!(ctx);
+                move |new_unodes| {
+                    let paths: Vec<_> = new_unodes
+                        .clone()
+                        .into_iter()
+                        .map(|(path, _)| path)
+                        .collect();
 
-                let futs: Vec<_> = parent_unodes
-                    .into_iter()
-                    .skip(1)
-                    .map(|p| {
-                        p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
-                            .collect_to::<HashMap<_, _>>()
-                    })
-                    .collect();
+                    let futs: Vec<_> = parent_unodes
+                        .into_iter()
+                        .skip(1)
+                        .map(|p| {
+                            p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
+                                .collect_to::<HashMap<_, _>>()
+                        })
+                        .collect();
 
-                future::join_all(futs).map(move |entries_in_parents| {
-                    let mut res = vec![];
+                    future::join_all(futs).map(move |entries_in_parents| {
+                        let mut res = vec![];
 
-                    for (path, unode) in new_unodes {
-                        let mut new_entry = true;
-                        for p in &entries_in_parents {
-                            if p.get(&path) == Some(&unode) {
-                                new_entry = false;
-                                break;
+                        for (path, unode) in new_unodes {
+                            let mut new_entry = true;
+                            for p in &entries_in_parents {
+                                if p.get(&path) == Some(&unode) {
+                                    new_entry = false;
+                                    break;
+                                }
+                            }
+
+                            if new_entry {
+                                res.push((path, unode));
                             }
                         }
 
-                        if new_entry {
-                            res.push((path, unode));
-                        }
-                    }
-
-                    res
-                })
+                        res
+                    })
+                }
             })
+            .traced_with_id(
+                &ctx.trace(),
+                "derive_fastlog::find_new_unodes",
+                trace_args! {},
+                event_id.unwrap_or_else(|| EventId::new()),
+            )
             .map(|entries| stream::iter_ok(entries.into_iter()))
             .flatten_stream()
             .boxify(),
@@ -524,6 +540,7 @@ mod tests {
                 Arc::new(repo.get_blobstore()),
                 child_root_unode,
                 vec![parent_root_unode],
+                None,
             )
             .map(|(path, _)| match path {
                 Some(path) => String::from_utf8(path.to_vec()).unwrap(),
@@ -601,6 +618,7 @@ mod tests {
                     Arc::new(repo.get_blobstore()),
                     merge_unode,
                     parent_unodes,
+                    None,
                 )
                 .map(|(path, _)| match path {
                     Some(path) => String::from_utf8(path.to_vec()).unwrap(),
