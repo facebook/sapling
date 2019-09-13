@@ -18,5 +18,6 @@ rust-crypto = "0.2"
 types = { path = "../types" }
 
 [dev-dependencies]
+parking_lot = "0.9"
 quickcheck = "0.6.2"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

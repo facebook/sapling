@@ -240,10 +240,9 @@ impl Element {
 }
 
 #[cfg(test)]
-use std::{
-    collections::HashMap,
-    sync::{Mutex, RwLock},
-};
+use parking_lot::{Mutex, RwLock};
+#[cfg(test)]
+use std::collections::HashMap;
 #[cfg(test)]
 use types::RepoPathBuf;
 
@@ -265,17 +264,14 @@ impl TestStore {
 
     #[allow(unused)]
     pub fn fetches(&self) -> Vec<Vec<Key>> {
-        self.prefetched.lock().unwrap().clone()
+        self.prefetched.lock().clone()
     }
 }
 
 #[cfg(test)]
 impl TreeStore for TestStore {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
-        let underlying = self
-            .entries
-            .read()
-            .map_err(|err| format_err!("Failed to acquire read lock: {}", err))?;
+        let underlying = self.entries.read();
         let result = underlying
             .get(path)
             .and_then(|node_hash| node_hash.get(&node))
@@ -284,10 +280,7 @@ impl TreeStore for TestStore {
     }
 
     fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()> {
-        let mut underlying = self
-            .entries
-            .write()
-            .map_err(|err| format_err!("Failed to acquire the write lock: {}", err))?;
+        let mut underlying = self.entries.write();
         underlying
             .entry(path.to_owned())
             .or_insert(HashMap::new())
@@ -296,7 +289,7 @@ impl TreeStore for TestStore {
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
-        self.prefetched.lock().unwrap().push(keys);
+        self.prefetched.lock().push(keys);
         Ok(())
     }
 }

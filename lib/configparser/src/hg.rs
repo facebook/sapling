@@ -533,7 +533,7 @@ mod tests {
     use crate::config::tests::write_file;
 
     use lazy_static::lazy_static;
-    use std::sync::Mutex;
+    use parking_lot::Mutex;
 
     lazy_static! {
         /// Lock for the environment.  This should be acquired by tests that rely on particular
@@ -543,7 +543,7 @@ mod tests {
 
     #[test]
     fn test_basic_hgplain() {
-        let _guard = ENV_LOCK.lock().unwrap();
+        let _guard = ENV_LOCK.lock();
         env::set_var(HGPLAIN, "1");
         env::remove_var(HGPLAINEXCEPT);
 
@@ -568,7 +568,7 @@ mod tests {
 
     #[test]
     fn test_hgplainexcept() {
-        let _guard = ENV_LOCK.lock().unwrap();
+        let _guard = ENV_LOCK.lock();
         env::remove_var(HGPLAIN);
         env::set_var(HGPLAINEXCEPT, "alias,revsetalias");
 
@@ -624,7 +624,7 @@ mod tests {
 
         write_file(path.clone(), "[x]\na=1\n[alias]\nb=c\n");
 
-        let _guard = ENV_LOCK.lock().unwrap();
+        let _guard = ENV_LOCK.lock();
         env::set_var(HGPLAIN, "1");
         env::remove_var(HGPLAINEXCEPT);
 

@@ -9,13 +9,14 @@ use std::{
     iter::FromIterator,
     mem::replace,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
+use parking_lot::Mutex;
 use tempfile::NamedTempFile;
 
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
@@ -123,7 +124,7 @@ impl MutableHistoryPack {
 
 impl MutableHistoryStore for MutableHistoryPack {
     fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
         assert_ne!(key.node, info.parents[0].node);
@@ -142,7 +143,7 @@ impl MutableHistoryStore for MutableHistoryPack {
     }
 
     fn flush(&self) -> Fallible<Option<PathBuf>> {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = self.inner.lock();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
@@ -215,7 +216,7 @@ impl MutablePack for MutableHistoryPackInner {
 
 impl MutablePack for MutableHistoryPack {
     fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = self.inner.lock();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
@@ -303,7 +304,7 @@ impl HistoryStore for MutableHistoryPack {
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         Ok(inner
             .mem_index
             .get(&key.path)
@@ -328,7 +329,7 @@ impl HistoryStore for MutableHistoryPack {
 
 impl LocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         Ok(keys
             .iter()
             .filter(|k| match inner.mem_index.get(&k.path) {

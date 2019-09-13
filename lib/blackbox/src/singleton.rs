@@ -10,8 +10,8 @@
 use crate::{Blackbox, BlackboxOptions};
 use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
+use parking_lot::Mutex;
 use std::ops::{Deref, DerefMut};
-use std::sync::Mutex;
 
 lazy_static! {
     pub static ref SINGLETON: Mutex<Blackbox> =
@@ -23,7 +23,7 @@ lazy_static! {
 /// If [`log`] was called, their side effects will be re-applied to the
 /// specified blackbox.
 pub fn init(mut blackbox: Blackbox) {
-    let mut singleton = SINGLETON.lock().unwrap();
+    let mut singleton = SINGLETON.lock();
 
     // Insert dirty entries to the new blackbox.
     let old_blackbox = singleton.deref();
@@ -42,18 +42,12 @@ pub fn init(mut blackbox: Blackbox) {
 ///
 /// If [`init`] was not called, log requests will be buffered in memory.
 pub fn log(data: &impl serde::Serialize) {
-    if let Ok(mut singleton) = SINGLETON.lock() {
-        let blackbox = singleton.deref_mut();
-        blackbox.log(data);
-    }
+    SINGLETON.lock().log(data);
 }
 
 /// Write buffered data to disk.
 pub fn sync() {
-    if let Ok(mut singleton) = SINGLETON.lock() {
-        let blackbox = singleton.deref_mut();
-        blackbox.sync();
-    }
+    SINGLETON.lock().sync();
 }
 
 #[cfg(test)]
@@ -77,7 +71,7 @@ mod tests {
             log(e);
         }
 
-        let mut singleton = SINGLETON.lock().unwrap();
+        let mut singleton = SINGLETON.lock();
         let blackbox = singleton.deref_mut();
         assert_eq!(blackbox.filter::<Event>(IndexFilter::Nop, None).len(), 3);
     }

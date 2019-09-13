@@ -79,30 +79,27 @@ fn filter(
     end: f64,
     json: String,
 ) -> PyResult<Vec<(u64, f64, String, String)>> {
-    if let Ok(blackbox) = blackbox::SINGLETON.lock() {
-        let blackbox = blackbox.deref();
-        // Blackbox uses millisecond integers. Translate seconds to milliseconds.
-        let filter = blackbox::IndexFilter::Time((start * 1000.0) as u64, (end * 1000.0) as u64);
-        let pattern = if json.is_empty() {
-            None
-        } else {
-            Some(serde_json::from_str(&json).map_pyerr::<exc::RuntimeError>(py)?)
-        };
-        let events = blackbox.filter::<Event>(filter, pattern);
-        return Ok(events
-            .into_iter()
-            .map(|e| {
-                (
-                    e.session_id,
-                    // Translate back to float seconds.
-                    (e.timestamp as f64) / 1000.0,
-                    format!("{}", e.data),
-                    // JSON formatted string.
-                    serde_json::to_string(&e.data.to_value()).unwrap(),
-                )
-            })
-            .collect());
-    }
-
-    Ok(Vec::new())
+    let blackbox = blackbox::SINGLETON.lock();
+    let blackbox = blackbox.deref();
+    // Blackbox uses millisecond integers. Translate seconds to milliseconds.
+    let filter = blackbox::IndexFilter::Time((start * 1000.0) as u64, (end * 1000.0) as u64);
+    let pattern = if json.is_empty() {
+        None
+    } else {
+        Some(serde_json::from_str(&json).map_pyerr::<exc::RuntimeError>(py)?)
+    };
+    let events = blackbox.filter::<Event>(filter, pattern);
+    return Ok(events
+        .into_iter()
+        .map(|e| {
+            (
+                e.session_id,
+                // Translate back to float seconds.
+                (e.timestamp as f64) / 1000.0,
+                format!("{}", e.data),
+                // JSON formatted string.
+                serde_json::to_string(&e.data.to_value()).unwrap(),
+            )
+        })
+        .collect());
 }

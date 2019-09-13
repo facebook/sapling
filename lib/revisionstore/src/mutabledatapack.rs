@@ -8,7 +8,7 @@ use std::{
     io::{Read, Seek, SeekFrom, Write},
     mem::replace,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
     u16,
 };
 
@@ -16,6 +16,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use failure::{format_err, Error, Fail, Fallible};
+use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
 
 use lz4_pyframe::compress;
@@ -165,11 +166,11 @@ impl MutableDataPack {
 impl MutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        self.inner.lock().unwrap().add(delta, metadata)
+        self.inner.lock().add(delta, metadata)
     }
 
     fn flush(&self) -> Fallible<Option<PathBuf>> {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = self.inner.lock();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
@@ -201,7 +202,7 @@ impl MutablePack for MutableDataPackInner {
 
 impl MutablePack for MutableDataPack {
     fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = self.inner.lock();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
@@ -222,14 +223,14 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let (delta, _metadata) = self.inner.lock().unwrap().read_entry(&key)?;
+        let (delta, _metadata) = self.inner.lock().read_entry(&key)?;
         Ok(delta)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         while let Some(key) = next_key {
             let (delta, _metadata) = match inner.read_entry(&key) {
                 Ok(entry) => entry,
@@ -249,14 +250,14 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let (_, metadata) = self.inner.lock().unwrap().read_entry(&key)?;
+        let (_, metadata) = self.inner.lock().read_entry(&key)?;
         Ok(metadata)
     }
 }
 
 impl LocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock();
         Ok(keys
             .iter()
             .filter(|k| inner.mem_index.get(&k.node).is_none())

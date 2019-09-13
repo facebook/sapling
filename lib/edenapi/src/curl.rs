@@ -1,12 +1,6 @@
 // Copyright Facebook, Inc. 2019
 
-use std::{
-    cmp,
-    sync::mpsc::channel,
-    sync::{Arc, Mutex, MutexGuard},
-    thread,
-    time::Instant,
-};
+use std::{cmp, sync::mpsc::channel, sync::Arc, thread, time::Instant};
 
 use bytes::Bytes;
 use curl::{
@@ -16,6 +10,7 @@ use curl::{
 };
 use failure::{format_err, ResultExt};
 use itertools::Itertools;
+use parking_lot::{Mutex, MutexGuard};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_cbor::Deserializer;
 use url::Url;
@@ -72,7 +67,7 @@ impl SyncMulti {
     }
 
     fn lock(&self) -> MutexGuard<'_, Multi> {
-        self.0.lock().expect("curl multi handle lock poisoned")
+        self.0.lock()
     }
 }
 

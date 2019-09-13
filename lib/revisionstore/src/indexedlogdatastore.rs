@@ -7,12 +7,13 @@ use std::{
     fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use failure::{bail, ensure, format_err, Fallible};
+use parking_lot::RwLock;
 
 use indexedlog::{
     log::IndexOutput,
@@ -182,12 +183,12 @@ impl MutableDeltaStore for IndexedLogDataStore {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
         entry.write_to_log(&mut inner.log)
     }
 
     fn flush(&self) -> Fallible<Option<PathBuf>> {
-        self.inner.write().unwrap().log.flush()?;
+        self.inner.write().log.flush()?;
         Ok(None)
     }
 }
@@ -198,7 +199,7 @@ impl LocalStore for IndexedLogDataStore {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         Ok(keys
             .iter()
             .filter(|k| Entry::from_log(k, &inner.log).is_err())
@@ -213,7 +214,7 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         let mut entry = Entry::from_log(&key, &inner.log)?;
         let content = entry.content()?;
         return Ok(Delta {
@@ -229,7 +230,7 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         Ok(Entry::from_log(&key, &inner.log)?.metadata().clone())
     }
 }
@@ -238,7 +239,6 @@ impl ToKeys for IndexedLogDataStore {
     fn to_keys(&self) -> Vec<Fallible<Key>> {
         self.inner
             .read()
-            .unwrap()
             .log
             .iter()
             .map(|entry| Entry::from_slice(entry?))
