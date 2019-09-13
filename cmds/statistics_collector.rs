@@ -9,7 +9,9 @@ use cmdlib::args;
 use context::CoreContext;
 use failure::err_msg;
 use failure_ext::Error;
-use futures::prelude::*;
+use futures::future;
+use futures::future::Future;
+use futures::stream::Stream;
 use manifest::ManifestOps;
 use mercurial_types::Changeset;
 use mercurial_types::HgChangesetId;
@@ -32,6 +34,21 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
+#[derive(Clone, Copy)]
+pub struct RepoStatistics {
+    num_files: u64,
+    total_file_size: u64,
+}
+
+impl RepoStatistics {
+    pub fn new(num_files: u64, total_file_size: u64) -> Self {
+        Self {
+            num_files,
+            total_file_size,
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     let matches = setup_app().get_matches();
 
@@ -45,21 +62,30 @@ fn main() -> Result<(), Error> {
         .ok_or(err_msg("required parameter `changeset` is not set"))?;
     let changeset = HgChangesetId::from_str(changeset)?;
 
-    let files_number = args::open_repo(&logger, &matches).and_then(move |repo| {
+    let repo_statistics = args::open_repo(&logger, &matches).and_then(move |repo| {
         let blobstore = Arc::new(repo.get_blobstore());
         repo.get_changeset_by_changesetid(ctx.clone(), changeset.clone())
-            .map(|changeset| changeset.manifestid())
+            .map(move |changeset| changeset.manifestid())
             .and_then(move |manifest_id| {
                 manifest_id
                     .list_leaf_entries(ctx.clone(), blobstore.clone())
-                    .collect()
+                    .map(move |(_, file_id)| repo.get_file_size(ctx.clone(), file_id.1))
+                    .buffered(100)
+                    .fold(RepoStatistics::new(0, 0), |mut statistics, file_size| {
+                        statistics.num_files += 1;
+                        statistics.total_file_size += file_size;
+                        future::ok::<_, Error>(statistics)
+                    })
             })
-            .map(|leaf_list| leaf_list.len())
     });
+
     let mut runtime = tokio::runtime::Runtime::new()?;
-    let files_number = runtime.block_on(files_number)?;
+    let repo_statistics = runtime.block_on(repo_statistics)?;
     runtime.shutdown_on_idle();
 
-    println!("Number of files: {}", files_number);
+    println!(
+        "Number of files: {}, total file size: {}",
+        repo_statistics.num_files, repo_statistics.total_file_size
+    );
     Ok(())
 }

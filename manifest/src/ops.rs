@@ -197,13 +197,13 @@ where
     ) -> BoxStream<
         (
             Option<MPath>,
-            Entry<Self, <<Self as Loadable>::Value as Manifest>::LeafId>,
+            <<Self as Loadable>::Value as Manifest>::LeafId,
         ),
         Error,
     > {
         self.list_all_entries(ctx, blobstore)
             .filter_map(|(path, entry)| match entry {
-                Entry::Leaf(_) => Some((path, entry)),
+                Entry::Leaf(filenode_id) => Some((path, filenode_id)),
                 _ => None,
             })
             .boxify()
