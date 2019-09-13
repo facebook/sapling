@@ -8,6 +8,8 @@ mod cursor;
 mod diff;
 mod link;
 mod store;
+#[cfg(test)]
+mod testutil;
 
 use std::{
     cmp::Ordering,
@@ -755,37 +757,8 @@ mod tests {
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::{node::NULL_ID, testutil::*};
 
-    use self::store::TestStore;
+    use self::{store::TestStore, testutil::*};
     use crate::FileType;
-
-    fn make_meta(hex: &str) -> FileMetadata {
-        FileMetadata::regular(node(hex))
-    }
-
-    fn store_element(path: &str, hex: &str, flag: store::Flag) -> Fallible<store::Element> {
-        Ok(store::Element::new(
-            path_component_buf(path),
-            node(hex),
-            flag,
-        ))
-    }
-
-    fn get_node(tree: &Tree, path: &RepoPath) -> Node {
-        match tree.get_link(path).unwrap().unwrap() {
-            Leaf(file_metadata) => file_metadata.node,
-            Durable(ref entry) => entry.node,
-            Ephemeral(_) => panic!("Asked for node on path {} but found ephemeral node.", path),
-        }
-    }
-
-    fn make_tree<'a>(paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>) -> Tree {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        for (path, filenode) in paths {
-            tree.insert(repo_path_buf(path), make_meta(filenode))
-                .unwrap();
-        }
-        tree
-    }
 
     #[test]
     fn test_insert() {

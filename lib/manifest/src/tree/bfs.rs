@@ -373,43 +373,13 @@ impl<'a> Iterator for BfsDiff<'a> {
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
-
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
     use crate::{
-        tree::{store::TestStore, DiffType, Link},
-        FileMetadata, FileType, Manifest,
+        tree::{testutil::*, DiffType, Link},
+        FileMetadata, FileType,
     };
-
-    fn make_meta(hex: &str) -> FileMetadata {
-        FileMetadata::regular(node(hex))
-    }
-
-    fn make_file(path: &str, hex: &str) -> File {
-        File {
-            path: repo_path_buf(path),
-            meta: make_meta(hex),
-        }
-    }
-
-    fn make_dir<'a>(path: &str, hex: Option<&str>, link: &'a Link) -> Directory<'a> {
-        Directory {
-            path: repo_path_buf(path),
-            node: hex.map(node),
-            link,
-        }
-    }
-
-    fn make_tree<'a>(paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>) -> Tree {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        for (path, filenode) in paths {
-            tree.insert(repo_path_buf(path), make_meta(filenode))
-                .unwrap();
-        }
-        tree
-    }
 
     #[test]
     fn test_diff_single() {
