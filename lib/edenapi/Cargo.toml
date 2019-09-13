@@ -14,6 +14,5 @@ parking_lot = "0.9"
 revisionstore = { path = "../revisionstore" }
 serde = "1.0.89"
 serde_cbor = "0.9.0"
-tokio = "0.1.11"
 types = { path = "../types" }
 url = "1.7.2"
