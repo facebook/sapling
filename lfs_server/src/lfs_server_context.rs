@@ -4,6 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::HashMap;
+use std::fmt::{Arguments, Write};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
 use bytes::Bytes;
 use failure::Error;
 use futures_util::{
@@ -15,9 +20,6 @@ use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::Logger;
-use std::collections::HashMap;
-use std::fmt::{Arguments, Write};
-use std::sync::{Arc, Mutex};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -48,6 +50,7 @@ pub struct LoggingContext {
     pub repository: String,
     pub error_msg: Option<String>,
     pub response_size: Option<u64>,
+    pub duration: Option<Duration>,
 }
 
 impl LoggingContext {
@@ -56,6 +59,7 @@ impl LoggingContext {
             repository,
             error_msg: None,
             response_size: None,
+            duration: None,
         }
     }
 
@@ -65,6 +69,10 @@ impl LoggingContext {
 
     pub fn set_response_size(&mut self, size: u64) {
         self.response_size = Some(size);
+    }
+
+    pub fn set_duration(&mut self, duration: Duration) {
+        self.duration = Some(duration);
     }
 }
 

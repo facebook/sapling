@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::time::Instant;
-
 use futures::{future, Future};
 use gotham::handler::HandlerFuture;
 use gotham::middleware::Middleware;
@@ -62,8 +60,6 @@ impl Middleware for ScubaMiddleware {
             }
         }
 
-        let start_time = Instant::now();
-
         let f = chain(state).and_then(move |(mut state, response)| {
             let log_ctx = state.try_take::<LoggingContext>();
 
@@ -76,6 +72,11 @@ impl Middleware for ScubaMiddleware {
 
                 if let Some(response_size) = log_ctx.response_size {
                     self.scuba.add("response_size", response_size);
+                }
+
+                if let Some(duration) = log_ctx.duration {
+                    self.scuba
+                        .add("duration_ms", duration.as_millis_unchecked());
                 }
             }
 
@@ -115,8 +116,7 @@ impl Middleware for ScubaMiddleware {
 
             self.scuba
                 .add("http_status", response.status().as_u16())
-                .add("request_id", request_id(&state))
-                .add("duration_ms", start_time.elapsed().as_millis_unchecked());
+                .add("request_id", request_id(&state));
 
             self.scuba.log();
             future::ok((state, response))

@@ -46,15 +46,15 @@ use cmdlib::args;
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use lfs_server_context::{LfsServerContext, LoggingContext, ServerUris};
+use middleware::{ScubaMiddleware, TimerMiddleware};
 use protocol::ResponseError;
-use scuba_middleware::ScubaMiddleware;
 
 mod batch;
 mod download;
 mod errors;
 mod lfs_server_context;
+mod middleware;
 mod protocol;
-mod scuba_middleware;
 mod str_serialized;
 mod upload;
 #[macro_use]
@@ -160,9 +160,10 @@ fn health_handler(state: State) -> (State, &'static str) {
 
 fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router {
     let pipeline = new_pipeline()
-        .add(ScubaMiddleware::new(scuba_logger))
-        .add(StateMiddleware::new(lfs_ctx))
         .add(RequestLogger::new(::log::Level::Info))
+        .add(ScubaMiddleware::new(scuba_logger))
+        .add(TimerMiddleware::new())
+        .add(StateMiddleware::new(lfs_ctx))
         .build();
     let (chain, pipelines) = single_pipeline(pipeline);
 
