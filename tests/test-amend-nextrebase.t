@@ -484,10 +484,9 @@ Rebase when other predecessors are still visible
   o  0 r0
   
   $ hg next --rebase
-  note: not rebasing 2:776c07fa2b12 "r2" and its descendants as this would cause divergence
   rebasing 5:bd2075358087 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2ee7bd] r2
+  [88a893] r2
   $ showgraph
   @  7 r2
   |
@@ -501,4 +500,3 @@ Rebase when other predecessors are still visible
   |/
   o  0 r0
   
-BUG! The obsolete r2 got rebased.

@@ -55,9 +55,11 @@ def restackonce(
        NOTE(phillco): This function shouldn't be used; prefer restack.restack
        or a custom rebase using `-d _destrestack(SRC)`.
     """
-    # Get visible descendants of precusors of rev.
+    # Get visible, non-obsolete descendants of precusors of rev.
     allpredecessors = repo.revs("predecessors(%d) - (%d)", rev, rev)
-    fmt = "%s(%%ld) - %%ld" % ("children" if childrenonly else "descendants")
+    fmt = "%s(%%ld) - %%ld - obsolete()" % (
+        "children" if childrenonly else "descendants"
+    )
     descendants = repo.revs(fmt, allpredecessors, allpredecessors)
 
     # Nothing to do if there are no descendants.
