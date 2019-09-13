@@ -143,6 +143,14 @@ implementation rather than the C++ one.
 
     [treemanifest]
     rustmanifest = True
+
+`treemanifest.bfsdiff` causes the Rust implementation to use a breadth-first
+traversal during the diff operation rather than the usual depth-first traversal.
+This setting has no effect if treemanifest.rustmanifest is not enabeld.
+::
+
+    [treemanifest]
+    bfsdiff = True
 """
 from __future__ import absolute_import
 
@@ -1031,16 +1039,22 @@ def _userustmanifest(manifestlog):
 def _buildtree(manifestlog, node=None):
     # this code seems to belong in manifestlog but I have no idea how
     # manifestlog objects work
-    if _userustmanifest(manifestlog):
-        manifestbuilder = rustmanifest.treemanifest
-    else:
-        manifestbuilder = cstore.treemanifest
     store = manifestlog.datastore
-    if node is not None and node != nullid:
-        tree = manifestbuilder(store, node)
+    if _userustmanifest(manifestlog):
+        bfsdiff = manifestlog.ui.configbool("treemanifest", "bfsdiff", False)
+        kwargs = {"bfsdiff": bfsdiff}
+        if node is not None and node != nullid:
+            kwargs["node"] = node
+        return rustmanifest.treemanifest(store, **kwargs)
     else:
-        tree = manifestbuilder(store)
-    return tree
+        # XXX: The C++ treemanifest constructor does not support
+        # keyword arguments, so we need to manually call it with
+        # the correct number of arguments rather than relying on
+        # argument unpacking.
+        if node is not None and node != nullid:
+            return cstore.treemanifest(store, node)
+        else:
+            return cstore.treemanifest(store)
 
 
 def _finalize(manifestlog, tree, p1node=None, p2node=None):

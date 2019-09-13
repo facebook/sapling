@@ -504,7 +504,22 @@ where
     }
 }
 
-/// Returns an iterator over all the differences between two [`Tree`]s. Keeping in mind that
+/// Wrapper around `Diff` and `BfsDiff`, allowing the diff algorithm to be dynamically
+/// chosen via user configuration.
+pub fn diff<'a, M: Matcher>(
+    left: &'a Tree,
+    right: &'a Tree,
+    matcher: &'a M,
+    bfs_diff: bool,
+) -> Box<dyn Iterator<Item = Fallible<DiffEntry>> + 'a> {
+    if bfs_diff {
+        Box::new(BfsDiff::new(left, right, matcher))
+    } else {
+        Box::new(Diff::new(left, right, matcher))
+    }
+}
+
+/// An iterator over all the differences between two [`Tree`]s. Keeping in mind that
 /// manifests operate over files, the difference space is limited to three cases described by
 /// [`DiffType`]:
 ///  * a file may be present only in the left tree manifest
@@ -515,24 +530,24 @@ where
 /// directory in the `right` tree manifest, the differences returned will be:
 ///  1. DiffEntry("foo", LeftOnly(_))
 ///  2. DiffEntry(file, RightOnly(_)) for all `file`s under the "foo" directory
-pub fn diff<'a, M>(left: &'a Tree, right: &'a Tree, matcher: &'a M) -> Diff<'a, M> {
-    Diff {
-        left: left.root_cursor(),
-        step_left: false,
-        right: right.root_cursor(),
-        step_right: false,
-        matcher,
-    }
-}
-
-/// An iterator over the differences between two tree manifests.
-/// See [`diff()`].
 pub struct Diff<'a, M> {
     left: Cursor<'a>,
     step_left: bool,
     right: Cursor<'a>,
     step_right: bool,
     matcher: &'a M,
+}
+
+impl<'a, M> Diff<'a, M> {
+    pub fn new(left: &'a Tree, right: &'a Tree, matcher: &'a M) -> Self {
+        Self {
+            left: left.root_cursor(),
+            step_left: false,
+            right: right.root_cursor(),
+            step_right: false,
+            matcher,
+        }
+    }
 }
 
 /// Represents a file that is different between two tree manifests.
@@ -1351,7 +1366,7 @@ mod tests {
         right.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
 
         assert_eq!(
-            diff(&left, &right, &AlwaysMatcher::new())
+            Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1368,7 +1383,7 @@ mod tests {
         right.flush().unwrap();
 
         assert_eq!(
-            diff(&left, &right, &AlwaysMatcher::new())
+            Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1386,7 +1401,9 @@ mod tests {
         left.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
         left.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
 
-        assert!(diff(&left, &right, &AlwaysMatcher::new()).next().is_none());
+        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
+            .next()
+            .is_none());
     }
 
     #[test]
@@ -1394,10 +1411,12 @@ mod tests {
         // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
         let left = Tree::durable(Arc::new(TestStore::new()), node("10"));
         let right = Tree::durable(Arc::new(TestStore::new()), node("10"));
-        assert!(diff(&left, &right, &AlwaysMatcher::new()).next().is_none());
+        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
+            .next()
+            .is_none());
 
         let right = Tree::durable(Arc::new(TestStore::new()), node("20"));
-        assert!(diff(&left, &right, &AlwaysMatcher::new())
+        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
             .unwrap()
             .is_err());
@@ -1414,7 +1433,7 @@ mod tests {
         right.insert(repo_path_buf("a2/b2"), meta("40")).unwrap();
 
         assert_eq!(
-            diff(&left, &right, &AlwaysMatcher::new())
+            Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1438,7 +1457,7 @@ mod tests {
         right.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
 
         assert_eq!(
-            diff(&left, &right, &AlwaysMatcher::new())
+            Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1455,7 +1474,7 @@ mod tests {
         right.flush().unwrap();
 
         assert_eq!(
-            diff(&left, &right, &AlwaysMatcher::new())
+            Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1483,7 +1502,7 @@ mod tests {
         right.insert(repo_path_buf("a3/b1"), meta("40")).unwrap();
 
         assert_eq!(
-            diff(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(DiffEntry::new(
@@ -1492,7 +1511,7 @@ mod tests {
             ),)
         );
         assert_eq!(
-            diff(&left, &right, &TreeMatcher::from_rules(["a1/b2"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b2"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(DiffEntry::new(
@@ -1501,7 +1520,7 @@ mod tests {
             ),)
         );
         assert_eq!(
-            diff(&left, &right, &TreeMatcher::from_rules(["a2/b2"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a2/b2"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(DiffEntry::new(
@@ -1510,7 +1529,7 @@ mod tests {
             ),)
         );
         assert_eq!(
-            diff(&left, &right, &TreeMatcher::from_rules(["*/b2"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["*/b2"].iter()))
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -1522,7 +1541,7 @@ mod tests {
             )
         );
         assert!(
-            diff(&left, &right, &TreeMatcher::from_rules(["a3/**"].iter()))
+            Diff::new(&left, &right, &TreeMatcher::from_rules(["a3/**"].iter()))
                 .next()
                 .is_none()
         );
