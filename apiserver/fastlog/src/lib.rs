@@ -34,7 +34,7 @@ use futures::{
     stream::{self, FuturesUnordered},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::HashMap;
@@ -119,7 +119,7 @@ impl BonsaiDerived for RootFastlog {
                     .map(|(_, entry)| entry);
 
                 s.map(move |entry| {
-                    fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
+                    let f = fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
                         cloned!(ctx, blobstore);
                         move |parents| {
                             create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
@@ -135,7 +135,9 @@ impl BonsaiDerived for RootFastlog {
                                     }
                                 })
                         }
-                    })
+                    });
+
+                    spawn_future(f)
                 })
                 .buffered(100)
                 .collect()
