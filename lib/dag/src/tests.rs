@@ -44,7 +44,7 @@ static ASCII_DAG5: &str = r#"
 #[test]
 fn test_segment_examples() {
     assert_eq!(
-        build_segments(ASCII_DAG1, "L", 3, 2).ascii[0],
+        build_segments(ASCII_DAG1, "L", 3, 5).ascii[0],
         r#"
                 2-3-\     /--8--9--\
             0-1------4-5-6-7--------10-11

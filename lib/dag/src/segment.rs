@@ -418,6 +418,12 @@ impl Dag {
                 new_segments.pop();
             }
 
+            // No point to introduce new levels if it has the same segment count
+            // as the loweer level.
+            if segments.len() == new_segments.len() && self.max_level < level {
+                return Ok(0);
+            }
+
             new_segments
         };
 
