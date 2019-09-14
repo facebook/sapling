@@ -26,6 +26,7 @@ import UserDict
 
 from edenscm.mercurial import (
     bookmarks,
+    changelog as changelogmod,
     commands,
     discovery,
     encoding,
@@ -923,7 +924,31 @@ def exreachablerevs(orig, repo, bookmarks):
     return orig(repo, bookmarks) - repo.revs("ancestors(remotenames())")
 
 
+def _remotenodes(orig, cl):
+    """Return (remote public nodes, and draft nodes)"""
+    publicnodes = []
+    draftnodes = []
+
+    draftpattern = cl._uiconfig.config("infinitepush", "branchpattern")
+    if draftpattern:
+        isdraft = util.stringmatcher(draftpattern)[-1]
+    else:
+
+        def isdraft(name):
+            return False
+
+    svfs = cl.opener
+    for hexnode, nametype, remotename, rname in readremotenames(svfs=svfs):
+        if isdraft(rname):
+            draftnodes.append(bin(hexnode))
+        else:
+            publicnodes.append(bin(hexnode))
+
+    return publicnodes, draftnodes
+
+
 def extsetup(ui):
+    extensions.wrapfunction(changelogmod, "_remotenodes", _remotenodes)
     extensions.wrapfunction(bookmarks, "calculateupdate", exbookcalcupdate)
     extensions.wrapfunction(exchange.pushoperation, "__init__", expushop)
     extensions.wrapfunction(exchange, "push", expush)
@@ -1792,8 +1817,12 @@ def readbookmarknames(repo, remote):
             yield rname
 
 
-def readremotenames(repo):
-    return _readremotenamesfrom(repo.sharedvfs, "remotenames")
+def readremotenames(repo=None, svfs=None):
+    if repo is not None:
+        svfs = repo.svfs
+    else:
+        assert svfs is not None, "either repo or svfs should be set"
+    return _readremotenamesfrom(svfs, "remotenames")
 
 
 def _writesingleremotename(fd, remote, nametype, name, node):
@@ -1843,10 +1872,9 @@ def saveremotenames(repo, remotebookmarks):
     if not remotebookmarks:
         return
 
-    vfs = repo.sharedvfs
-    wlock = repo.wlock()
-    try:
-        if not vfs.exists("remotenames"):
+    svfs = repo.svfs
+    with repo.wlock(), repo.lock():
+        if not svfs.exists("remotenames"):
             transition(repo, repo.ui)
 
         # read in all data first before opening file to write
@@ -1854,7 +1882,7 @@ def saveremotenames(repo, remotebookmarks):
         oldbooks = {}
 
         remotepaths = remotebookmarks.keys()
-        f = vfs("remotenames", "w", atomictemp=True)
+        f = svfs("remotenames", "w", atomictemp=True)
         for node, nametype, remote, rname in olddata:
             if remote not in remotepaths:
                 _writesingleremotename(f, remote, nametype, rname, node)
@@ -1883,8 +1911,6 @@ def saveremotenames(repo, remotebookmarks):
 
         # Old paths have been deleted, refresh remotenames
         repo._remotenames.clearnames()
-    finally:
-        wlock.release()
 
 
 def calculatedistance(repo, fromrev, torev):

@@ -49,8 +49,15 @@ def _assignobjects(objects, repo):
 )
 def debugshell(ui, repo, **opts):
     command = opts.get("command")
+
+    _assignobjects(locals(), repo)
+
     if command:
-        _assignobjects(locals(), repo)
+        exec(command)
+        return 0
+
+    if not ui.interactive():
+        command = ui.fin.read()
         exec(command)
         return 0
 
@@ -70,8 +77,6 @@ def debugshell(ui, repo, **opts):
         bannermsg += (
             "\n repo: the repo object\n cl: repo.changelog\n mf: repo.manifestlog"
         )
-
-    _assignobjects(locals(), repo)
 
     import IPython
 

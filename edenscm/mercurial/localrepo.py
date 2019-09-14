@@ -568,6 +568,15 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
 
+        # Migrate 'remotenames' state from sharedvfs to storevfs.
+        # This cannot be safely done in the remotenames extension because
+        # changelog might access 'remotenames' and other extensions might
+        # use changelog before 'remotenames.reposetup'.
+        for name in ["remotenames"]:
+            if self.sharedvfs.exists(name) and not self.svfs.exists(name):
+                with self.wlock(), self.lock():
+                    self.svfs.write(name, self.sharedvfs.read(name))
+
     @property
     def vfs(self):
         self.ui.develwarn(

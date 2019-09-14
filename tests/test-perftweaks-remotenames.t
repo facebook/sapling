@@ -35,7 +35,7 @@ remotenames
   no changes found
   $ hg book --remote
      default/master            0:cb9a9f314b8b
-  $ cat .hg/remotenames
+  $ cat .hg/store/remotenames
   cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b bookmarks default/master
 
   $ hg pull --rebase -d master

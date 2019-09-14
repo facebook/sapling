@@ -104,11 +104,11 @@ _hg_prompt() {
     command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
     builtin echo "empty")"
 
-  local remote="$hg/remotenames"
+  local remote="$hg/store/remotenames"
   local shared_hg="$hg"
   if [[ -f "$hg/sharedpath" ]]; then
     shared_hg="$(command cat $hg/sharedpath)"
-    remote="$shared_hg/remotenames"
+    remote="$shared_hg/store/remotenames"
   fi
 
   local active="$hg/bookmarks.current"

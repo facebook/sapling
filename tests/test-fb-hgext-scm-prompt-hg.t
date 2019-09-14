@@ -155,7 +155,7 @@ Test out-of-date bookmark
 Test remotenames
   $ hg log -r . -T '{node}\n'
   4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba
-  $ echo 4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba bookmarks remote/@ > .hg/remotenames
+  $ echo 4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba bookmarks remote/@ > .hg/store/remotenames
   $ cmd
   (4b6cc7d5|remote/@)
 
@@ -219,13 +219,13 @@ Test many remotenames
   $ hg log -r . -T '{node}\n'
   ced0c431a4731a9d5048efdb60a3535f5450167e
   $ for i in `$PYTHON $TESTDIR/seq.py 1 10`; do
-  > echo ced0c431a4731a9d5048efdb60a3535f5450167e bookmarks remote/remote$i >> .hg/remotenames
+  > echo ced0c431a4731a9d5048efdb60a3535f5450167e bookmarks remote/remote$i >> .hg/store/remotenames
   > done
   $ cmd
   (ced0c431|remote/remote9...)
-  $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/abc/master >> .hg/remotenames
+  $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/abc/master >> .hg/store/remotenames
   $ cmd
   (ced0c431|remote/remote9...)
-  $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .hg/remotenames
+  $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .hg/store/remotenames
   $ cmd
   (ced0c431|remote/remote9...)

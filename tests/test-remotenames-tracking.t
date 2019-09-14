@@ -131,7 +131,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
 Test renaming a remote and tracking
 
-  $ rm .hg/remotenames
+  $ rm .hg/store/remotenames
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "rename.default = remote" >> $HGRCPATH
   $ hg pull

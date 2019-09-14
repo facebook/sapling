@@ -89,7 +89,7 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
 
 sh % "cat" << r"""
 6dd477f76ca35ae46e82972648735867cf335d3e bookmarks remote/master
-""" > ".hg/remotenames"
+""" > ".hg/store/remotenames"
 sh % "hg sl" == r"""
     o  changeset:   3:8e2253d950ae
     |  tag:         tip

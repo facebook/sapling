@@ -358,6 +358,15 @@ class changelog(revlog.revlog):
         self.rev(self.node(0))
         return self._nodecache
 
+    def _remotenodes(self):
+        """Return (remote public nodes, and draft nodes).
+
+        The returned nodes are likely heads.
+        The remotenames extension should replace '_remotenodes' in this module
+        to an actual implementation.
+        """
+        return _remotenodes(self)
+
     def reachableroots(self, minroot, heads, roots, includepath=False):
         return self.index.reachableroots2(minroot, heads, roots, includepath)
 
@@ -571,3 +580,15 @@ class changelog(revlog.revlog):
                 revs = xrange(rev, rev + 1)
             transaction.changes["revs"] = revs
         return node
+
+
+def _remotenodes(changelog):
+    """Return (remote public nodes, remote draft nodes).
+
+    The returned nodes are likely heads.
+    The remotenames extension should replace this method to an actual
+    implementation.
+    """
+    raise NotImplementedError(
+        "The remotenames extension is required for this operation"
+    )
