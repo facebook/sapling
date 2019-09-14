@@ -43,11 +43,12 @@ impl Blobstore for DisabledBlob {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fbinit::FacebookInit;
 
-    #[test]
-    fn test_disabled() {
+    #[fbinit::test]
+    fn test_disabled(fb: FacebookInit) {
         let disabled = DisabledBlob::new("test");
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 

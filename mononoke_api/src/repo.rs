@@ -13,6 +13,7 @@ use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
+use fbinit::FacebookInit;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
@@ -39,6 +40,7 @@ pub struct RepoContext {
 
 impl Repo {
     pub(crate) async fn new(
+        fb: FacebookInit,
         logger: Logger,
         config: RepoConfig,
         common_config: CommonConfig,
@@ -50,6 +52,7 @@ impl Repo {
         let repoid = RepositoryId::new(config.repoid);
 
         let blob_repo = open_blobrepo(
+            fb,
             config.storage_config.clone(),
             repoid,
             myrouter_port,
@@ -65,7 +68,7 @@ impl Repo {
 
         let skiplist_index = match skiplist_index_blobstore_key.clone() {
             Some(skiplist_index_blobstore_key) => {
-                let ctx = CoreContext::new_with_logger(logger.clone());
+                let ctx = CoreContext::new_with_logger(fb, logger.clone());
                 let bytes = blob_repo
                     .get_blobstore()
                     .get(ctx, skiplist_index_blobstore_key)

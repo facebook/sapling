@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error};
+use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use futures::future::{join_all, Future};
 use futures::IntoFuture;
@@ -147,14 +148,15 @@ fn handle_filenodes_at_revision(
 }
 
 pub fn subcommand_filenodes(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(logger.clone());
-    args::init_cachelib(&matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    args::init_cachelib(fb, &matches);
 
-    let blobrepo = args::open_repo(&ctx.logger(), &matches);
+    let blobrepo = args::open_repo(fb, &ctx.logger(), &matches);
 
     match sub_m.subcommand() {
         (COMMAND_REVISION, Some(matches)) => {

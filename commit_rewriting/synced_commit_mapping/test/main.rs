@@ -8,6 +8,7 @@
 
 #![deny(warnings)]
 
+use fbinit::FacebookInit;
 use futures::{future, lazy, Future};
 use maplit::btreemap;
 
@@ -18,8 +19,8 @@ use synced_commit_mapping::{
     SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 
-fn add_and_get<M: SyncedCommitMapping>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let entry =
         SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::ONES_CSID, REPO_ONE, bonsai::TWOS_CSID);
     assert_eq!(
@@ -49,8 +50,8 @@ fn add_and_get<M: SyncedCommitMapping>(mapping: M) {
     assert_eq!(result, Some(bonsai::ONES_CSID));
 }
 
-fn get_all<M: SyncedCommitMapping>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn get_all<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let entry =
         SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::ONES_CSID, REPO_ONE, bonsai::TWOS_CSID);
     mapping
@@ -80,8 +81,8 @@ fn get_all<M: SyncedCommitMapping>(mapping: M) {
     assert_eq!(result, btreemap! {REPO_ZERO => bonsai::ONES_CSID});
 }
 
-fn missing<M: SyncedCommitMapping>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let result = mapping
         .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
         .wait()
@@ -89,28 +90,31 @@ fn missing<M: SyncedCommitMapping>(mapping: M) {
     assert_eq!(result, None);
 }
 
-#[test]
-fn test_add_and_get() {
-    tokio::run(lazy(|| {
+#[fbinit::test]
+fn test_add_and_get(fb: FacebookInit) {
+    tokio::run(lazy(move || {
         future::ok(add_and_get(
+            fb,
             SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
         ))
     }));
 }
 
-#[test]
-fn test_missing() {
-    tokio::run(lazy(|| {
+#[fbinit::test]
+fn test_missing(fb: FacebookInit) {
+    tokio::run(lazy(move || {
         future::ok(missing(
+            fb,
             SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
         ))
     }));
 }
 
-#[test]
-fn test_get_all() {
-    tokio::run(lazy(|| {
+#[fbinit::test]
+fn test_get_all(fb: FacebookInit) {
+    tokio::run(lazy(move || {
         future::ok(get_all(
+            fb,
             SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
         ))
     }));

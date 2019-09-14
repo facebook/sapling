@@ -18,6 +18,7 @@ use cmdlib::{args, monitoring};
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use failure_ext::{bail_msg, err_msg, format_err, prelude::*};
+use fbinit::FacebookInit;
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
     prelude::*,
@@ -38,6 +39,7 @@ use tokio_timer::Delay;
 const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 
 fn maybe_schedule_healer_for_storage(
+    fb: FacebookInit,
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
@@ -60,7 +62,7 @@ fn maybe_schedule_healer_for_storage(
         for (id, args) in blobstores_args {
             match args {
                 BlobConfig::Manifold { bucket, prefix } => {
-                    let blobstore = ThriftManifoldBlob::new(bucket)
+                    let blobstore = ThriftManifoldBlob::new(fb, bucket)
                         .chain_err("While opening ThriftManifoldBlob")?;
                     let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
                     let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
@@ -70,7 +72,7 @@ fn maybe_schedule_healer_for_storage(
                     shard_map,
                     shard_num,
                 } => {
-                    let blobstore = Sqlblob::with_myrouter(shard_map, myrouter_port, shard_num)
+                    let blobstore = Sqlblob::with_myrouter(fb, shard_map, myrouter_port, shard_num)
                         .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
                     blobstores.insert(id, blobstore.boxify());
                 }
@@ -138,10 +140,10 @@ fn maybe_schedule_healer_for_storage(
             );
 
             if dry_run {
-                let ctx = CoreContext::new_with_logger(logger);
+                let ctx = CoreContext::new_with_logger(fb, logger);
                 repo_healer.heal(ctx).boxify()
             } else {
-                schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
+                schedule_everlasting_healing(fb, logger, repo_healer, replication_lag_db_conns)
             }
         },
     );
@@ -151,6 +153,7 @@ fn maybe_schedule_healer_for_storage(
 }
 
 fn schedule_everlasting_healing(
+    fb: FacebookInit,
     logger: Logger,
     repo_healer: Healer,
     replication_lag_db_conns: Vec<(String, Connection)>,
@@ -158,7 +161,7 @@ fn schedule_everlasting_healing(
     let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
 
     let fut = loop_fn((), move |()| {
-        let ctx = CoreContext::new_with_logger(logger.clone());
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
         cloned!(logger, replication_lag_db_conns);
         repo_healer.heal(ctx).and_then(move |()| {
@@ -246,7 +249,8 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     args::add_fb303_args(app)
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let app_name = "blobstore_healer";
     let matches = setup_app(app_name).get_matches();
 
@@ -272,6 +276,7 @@ fn main() -> Result<()> {
 
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
+            fb,
             dry_run,
             drain_only,
             blobstore_sync_queue_limit,
@@ -302,7 +307,7 @@ fn main() -> Result<()> {
     let mut runtime = tokio::runtime::Runtime::new()?;
 
     // Thread with a thrift service is now detached
-    monitoring::start_fb303_and_stats_agg(&mut runtime, app_name, &logger, &matches)?;
+    monitoring::start_fb303_and_stats_agg(fb, &mut runtime, app_name, &logger, &matches)?;
 
     let result = runtime.block_on(healer.map(|_| ()));
     runtime.shutdown_on_idle();

@@ -242,16 +242,17 @@ mod test {
     use super::*;
     use crate::hash::Blake2;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use pretty_assertions::assert_eq;
     use quickcheck::{quickcheck, TestResult};
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn test_fastlog_batch_empty() -> Result<()> {
+    #[fbinit::test]
+    fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(linear::getrepo().get_blobstore());
-        let ctx = CoreContext::test_mock();
+        let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());
+        let ctx = CoreContext::test_mock(fb);
 
         let list = VecDeque::new();
         let f = FastlogBatch::new_from_raw_list(ctx, blobstore, list);
@@ -262,11 +263,11 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_fastlog_batch_single() -> Result<()> {
+    #[fbinit::test]
+    fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(linear::getrepo().get_blobstore());
-        let ctx = CoreContext::test_mock();
+        let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());
+        let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
         let csid = ChangesetId::new(Blake2::from_byte_array([1; 32]));
@@ -279,11 +280,11 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_fastlog_batch_large() -> Result<()> {
+    #[fbinit::test]
+    fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(linear::getrepo().get_blobstore());
-        let ctx = CoreContext::test_mock();
+        let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());
+        let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
         for i in 0..max_entries_in_fastlog_batch() {
@@ -302,11 +303,11 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_fastlog_batch_overflow() -> Result<()> {
+    #[fbinit::test]
+    fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(linear::getrepo().get_blobstore());
-        let ctx = CoreContext::test_mock();
+        let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());
+        let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
         for i in 0..max_entries_in_fastlog_batch() + 1 {
@@ -328,9 +329,12 @@ mod test {
 
     quickcheck! {
         fn fastlog_roundtrip(hashes: Vec<(ChangesetId, i32)>) -> TestResult {
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
             let mut rt = Runtime::new().unwrap();
-            let blobstore = Arc::new(linear::getrepo().get_blobstore());
-            let ctx = CoreContext::test_mock();
+            let blobstore = Arc::new(linear::getrepo(fb).get_blobstore());
+            let ctx = CoreContext::test_mock(fb);
 
             let mut raw_list = VecDeque::new();
             for (cs_id, offset) in hashes {

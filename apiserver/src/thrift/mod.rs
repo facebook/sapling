@@ -14,6 +14,7 @@ use ::source_control::server::make_SourceControlService_server;
 use apiserver_thrift::server::make_MononokeAPIService_server;
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
+use fbinit::FacebookInit;
 use mononoke_api::Mononoke as NewMononoke;
 use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
@@ -33,6 +34,7 @@ mod mononoke;
 mod source_control;
 
 pub fn make_thrift(
+    fb: FacebookInit,
     logger: Logger,
     host: String,
     port: u16,
@@ -50,6 +52,7 @@ pub fn make_thrift(
             make_SourceControlService_server(
                 proto,
                 SourceControlServiceImpl::new(
+                    fb,
                     new_mononoke.clone(),
                     logger.clone(),
                     scuba_builder.clone(),
@@ -64,6 +67,7 @@ pub fn make_thrift(
             make_MononokeAPIService_server(
                 proto,
                 MononokeAPIServiceImpl::new(
+                    fb,
                     mononoke.clone(),
                     logger.clone(),
                     scuba_builder.clone(),
@@ -74,7 +78,7 @@ pub fn make_thrift(
     };
 
     dispatcher.start(move |dispatcher| {
-        let thrift_server = ThriftServerBuilder::new()
+        let thrift_server = ThriftServerBuilder::new(fb)
             .with_address(&host, port.into(), false)
             .expect(&format!("cannot bind to {}:{}", host, port))
             .with_tls()

@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use cloned::cloned;
 use configerator::ConfigeratorAPI;
 use failure_ext::{prelude::*, SlogKVError};
+use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
@@ -57,6 +58,7 @@ define_stats! {
 }
 
 pub fn request_handler(
+    fb: FacebookInit,
     RepoHandler {
         logger,
         scuba,
@@ -143,6 +145,7 @@ pub fn request_handler(
     };
 
     let ctx = CoreContext::new(
+        fb,
         session_uuid,
         conn_log,
         scuba_logger.clone(),

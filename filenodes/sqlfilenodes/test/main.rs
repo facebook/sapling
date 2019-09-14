@@ -176,11 +176,12 @@ macro_rules! filenodes_tests {
     ($test_suite_name:ident, $create_db:ident) => {
         mod $test_suite_name {
             use super::*;
+            use fbinit::FacebookInit;
 
-            #[test]
-            fn test_simple_filenode_insert_and_get() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_simple_filenode_insert_and_get(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
@@ -212,10 +213,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_identical_in_batch() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_identical_in_batch(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenodes(
                         ctx.clone(),
@@ -228,10 +229,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_filenode_insert_twice() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_filenode_insert_twice(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
@@ -240,10 +241,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_filenode_with_parent() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_filenode_with_parent(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO);
@@ -268,10 +269,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_root_filenode_with_two_parents() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_root_filenode_with_two_parents(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO);
@@ -290,10 +291,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_file_filenode() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_file_filenode(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenode(ctx.clone(), filenodes, file_a_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, file_b_first_filenode(), REPO_ZERO);
@@ -326,10 +327,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_different_repo() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_different_repo(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ONE);
@@ -364,10 +365,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn test_insert_parent_and_child_in_same_batch() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn test_insert_parent_and_child_in_same_batch(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
                     do_add_filenodes(
@@ -399,10 +400,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn insert_copied_file() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn insert_copied_file(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
                     do_add_filenodes(
@@ -424,10 +425,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn insert_same_copied_file() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn insert_same_copied_file(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
                     do_add_filenodes(
@@ -447,10 +448,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn insert_copied_file_to_different_repo() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn insert_copied_file_to_different_repo(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
                     let copied = FilenodeInfo {
@@ -500,10 +501,10 @@ macro_rules! filenodes_tests {
                 .expect("test failed");
             }
 
-            #[test]
-            fn get_all_filenodes_maybe_stale() {
-                async_unit::tokio_unit_test(|| -> Result<_, !> {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn get_all_filenodes_maybe_stale(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                    let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     let root_filenodes = vec![
                         root_first_filenode(),

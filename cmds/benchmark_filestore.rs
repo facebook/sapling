@@ -14,6 +14,7 @@ use cmdlib::args;
 use context::CoreContext;
 use failure::Error;
 use failure_ext::format_err;
+use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{stream::iter_ok, Future, IntoFuture, Stream};
 use futures_ext::{FutureExt, StreamExt};
@@ -93,7 +94,8 @@ fn read<B: Blobstore + Clone>(
         .map(move |_| content_metadata)
 }
 
-fn main() -> Result<(), Error> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let manifold_subcommand = SubCommand::with_name("manifold").arg(
         Arg::with_name(ARG_MANIFOLD_BUCKET)
             .takes_value(true)
@@ -214,7 +216,8 @@ fn main() -> Result<(), Error> {
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {
             let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
-            let manifold = ThriftManifoldBlob::new(bucket).map_err(|e| -> Error { e.into() })?;
+            let manifold =
+                ThriftManifoldBlob::new(fb, bucket).map_err(|e| -> Error { e.into() })?;
             let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
             Arc::new(blobstore)
         }
@@ -229,9 +232,9 @@ fn main() -> Result<(), Error> {
             let fut = match sub.value_of(ARG_MYROUTER_PORT) {
                 Some(port) => {
                     let port = port.parse().map_err(Error::from)?;
-                    Sqlblob::with_myrouter(shardmap, port, shard_count)
+                    Sqlblob::with_myrouter(fb, shardmap, port, shard_count)
                 }
-                None => Sqlblob::with_raw_xdb_shardmap(shardmap, shard_count),
+                None => Sqlblob::with_raw_xdb_shardmap(fb, shardmap, shard_count),
             };
             let blobstore = runtime.block_on(fut)?;
             Arc::new(blobstore)
@@ -240,7 +243,7 @@ fn main() -> Result<(), Error> {
     };
 
     let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
-        Arc::new(new_memcache_blobstore_no_lease(blob, NAME, "")?)
+        Arc::new(new_memcache_blobstore_no_lease(fb, blob, NAME, "")?)
     } else {
         blob
     };
@@ -248,7 +251,7 @@ fn main() -> Result<(), Error> {
     let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
         Some(size) => {
             let cache_size_bytes = size.parse().map_err(Error::from)?;
-            cachelib::init_cache_once(cachelib::LruCacheConfig::new(cache_size_bytes))?;
+            cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
 
             let presence_pool =
                 cachelib::get_or_create_pool("presence", cachelib::get_available_space()? / 20)?;
@@ -267,7 +270,7 @@ fn main() -> Result<(), Error> {
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let fut = File::open(input)
         .and_then(|file| file.metadata())

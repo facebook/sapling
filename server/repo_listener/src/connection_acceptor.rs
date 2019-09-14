@@ -80,13 +80,12 @@ pub fn connection_acceptor(
         .loadlimiter_category
         .clone()
         .and_then(|category| configerator_api.map(|api| (api, category)));
-    let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(common_config).map_err(
-        |err| {
+    let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(fb, common_config)
+        .map_err(|err| {
             let e: Error =
                 err_msg(format!("error while creating security checker: {}", err)).into();
             e
-        }
-    ));
+        }));
 
     let security_checker = Arc::new(security_checker);
 
@@ -103,6 +102,7 @@ pub fn connection_acceptor(
             OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
             tokio::spawn(future::lazy(move || {
                 accept(
+                    fb,
                     sock,
                     root_log,
                     repo_handlers,
@@ -131,6 +131,7 @@ pub fn connection_acceptor(
 }
 
 fn accept(
+    fb: FacebookInit,
     sock: TcpStream,
     root_log: Logger,
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
@@ -215,6 +216,7 @@ fn accept(
 
                     if security_checker.check_if_connections_allowed(&identities) {
                         request_handler(
+                            fb,
                             handler.clone(),
                             stdio,
                             handler.repo.hook_manager(),
@@ -255,7 +257,7 @@ struct ConnectionsSecurityChecker {
 }
 
 impl ConnectionsSecurityChecker {
-    fn new(common_config: CommonConfig) -> Result<Self> {
+    fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
         let mut whitelisted_identities = vec![];
         let mut tier_aclchecker = None;
 
@@ -275,7 +277,7 @@ impl ConnectionsSecurityChecker {
                         ));
                     }
                     let tier = Identity::with_tier(&tier);
-                    let acl_checker = AclChecker::new(&tier)?;
+                    let acl_checker = AclChecker::new(fb, &tier)?;
                     if !acl_checker.do_wait_updated(180_000) {
                         return Err(ErrorKind::AclCheckerCreationFailed(tier.to_string()).into());
                     }

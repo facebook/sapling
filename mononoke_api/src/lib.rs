@@ -15,6 +15,7 @@ use blobrepo_factory::Caching;
 use cloned::cloned;
 use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
+use fbinit::FacebookInit;
 use futures_preview::future;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
@@ -50,6 +51,7 @@ pub struct Mononoke {
 impl Mononoke {
     /// Create a Mononoke instance.
     pub async fn new(
+        fb: FacebookInit,
         logger: Logger,
         configs: RepoConfigs,
         myrouter_port: Option<u16>,
@@ -66,6 +68,7 @@ impl Mononoke {
                     async move {
                         info!(logger, "Initializing repo: {}", &name);
                         let repo = Repo::new(
+                            fb,
                             logger.new(o!("repo" => name.clone())),
                             config,
                             common_config,

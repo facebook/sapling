@@ -14,6 +14,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, DisplayChain, Result};
+use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
     Future, IntoFuture, Stream,
@@ -87,10 +88,11 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
     res.expect("failed to parse start points as hashes")
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match matches.subcommand() {
         ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger, &matches, sub_m),
@@ -107,8 +109,8 @@ fn subcommand_round_trip(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(&matches);
-    let repo = args::open_repo(&logger, &matches);
+    args::init_cachelib(ctx.fb, &matches);
+    let repo = args::open_repo(ctx.fb, &logger, &matches);
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&sub_m);
@@ -309,12 +311,12 @@ fn subcommmand_hg_manifest_verify(
         .ok_or(err_msg("required parameter `count` is not set"))
         .and_then(|count_str| Ok(count_str.parse()?));
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(ctx.fb, &matches);
 
     let total = Arc::new(AtomicUsize::new(0));
     let total_millis = Arc::new(AtomicU64::new(0));
     let bad = Arc::new(Mutex::new(HashSet::new()));
-    let run = (args::open_repo(&logger, &matches), hg_csid, count)
+    let run = (args::open_repo(ctx.fb, &logger, &matches), hg_csid, count)
         .into_future()
         .and_then({
             cloned!(ctx);

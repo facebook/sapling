@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::Future;
 use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
@@ -24,14 +25,14 @@ use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
 
-fn simple<B>(blobstore: B)
+fn simple<B>(fb: FacebookInit, blobstore: B)
 where
     B: IntoFuture,
     B::Item: Blobstore,
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let blobstore = blobstore.into_future().map_err(|err| err.into());
 
     let foo = "foo".to_string();
@@ -57,14 +58,14 @@ where
     assert_eq!(out.into_bytes(), Bytes::from_static(b"bar"));
 }
 
-fn missing<B>(blobstore: B)
+fn missing<B>(fb: FacebookInit, blobstore: B)
 where
     B: IntoFuture,
     B::Item: Blobstore,
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let blobstore = blobstore.into_future().map_err(|err| err.into());
 
     let fut = future::lazy(move || {
@@ -77,14 +78,14 @@ where
     assert!(out.is_none());
 }
 
-fn boxable<B>(blobstore: B)
+fn boxable<B>(fb: FacebookInit, blobstore: B)
 where
     B: IntoFuture,
     B::Item: Blobstore,
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let blobstore = Box::new(blobstore.into_future().map_err(|err| err.into()));
 
     let foo = "foo".to_string();
@@ -119,22 +120,22 @@ macro_rules! blobstore_test_impl {
         mod $mod_name {
             use super::*;
 
-            #[test]
-            fn test_simple() {
+            #[fbinit::test]
+            fn test_simple(fb: FacebookInit) {
                 let state = $state;
-                simple($new_cb(state.clone()));
+                simple(fb, $new_cb(state.clone()));
             }
 
-            #[test]
-            fn test_missing() {
+            #[fbinit::test]
+            fn test_missing(fb: FacebookInit) {
                 let state = $state;
-                missing($new_cb(state.clone()));
+                missing(fb, $new_cb(state.clone()));
             }
 
-            #[test]
-            fn test_boxable() {
+            #[fbinit::test]
+            fn test_boxable(fb: FacebookInit) {
                 let state = $state;
-                boxable($new_cb(state.clone()));
+                boxable(fb, $new_cb(state.clone()));
             }
         }
     };

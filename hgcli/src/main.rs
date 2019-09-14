@@ -10,6 +10,7 @@
 
 use clap::{App, Arg, SubCommand};
 use failure_ext as failure;
+use fbinit::FacebookInit;
 
 mod serve;
 
@@ -18,7 +19,8 @@ pub mod errors {
 }
 use crate::errors::Error;
 
-fn main() {
+#[fbinit::main]
+fn main(fb: FacebookInit) {
     let matches = App::new("Mononoke CLI")
         .about("Provide minimally compatible CLI to Mononoke server")
         .arg(Arg::from_usage("-R, --repository=<REPO> 'repository name'"))
@@ -75,7 +77,7 @@ fn main() {
         tokio::runtime::Runtime::new()
             .map_err(Error::from)
             .and_then(|mut runtime| {
-                let result = runtime.block_on(serve::cmd(&matches, subcmd));
+                let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));
                 runtime.shutdown_on_idle();
                 result
             })

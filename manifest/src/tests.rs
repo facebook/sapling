@@ -10,6 +10,7 @@ use crate::{
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use failure::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
 use lock_ext::LockExt;
@@ -242,11 +243,11 @@ fn test_path_tree() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
-fn test_derive_manifest() -> Result<(), Error> {
+#[fbinit::test]
+fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     let runtime = Arc::new(Mutex::new(Runtime::new()?));
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
     let derive = |parents, changes| -> Result<TestManifestId, Error> {
@@ -462,11 +463,11 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
         .collect()
 }
 
-#[test]
-fn test_find_entries() -> Result<(), Error> {
+#[fbinit::test]
+fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
     let rt = Arc::new(Mutex::new(Runtime::new()?));
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
     let derive = |parents, changes| -> Result<TestManifestId, Error> {
@@ -614,11 +615,11 @@ fn test_find_entries() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
-fn test_diff() -> Result<(), Error> {
+#[fbinit::test]
+fn test_diff(fb: FacebookInit) -> Result<(), Error> {
     let runtime = Arc::new(Mutex::new(Runtime::new()?));
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
     let derive = |parents, changes| -> Result<TestManifestId, Error> {

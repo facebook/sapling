@@ -14,6 +14,7 @@ use context::CoreContext;
 use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, RegenerateMapping};
 use failure::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
@@ -81,6 +82,7 @@ pub fn subcommand_unodes_build(name: &str) -> App {
 }
 
 pub fn subcommand_unodes(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_matches: &ArgMatches<'_>,
@@ -90,10 +92,10 @@ pub fn subcommand_unodes(
         tracing::enable();
     }
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
-    let repo = args::open_repo(&logger, &matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let repo = args::open_repo(fb, &logger, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let run = match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {

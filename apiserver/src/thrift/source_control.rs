@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use faster_hex::hex_string;
+use fbinit::FacebookInit;
 use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
@@ -56,14 +57,21 @@ impl ScubaInfoProvider for thrift::CommitSpecifier {
 
 #[derive(Clone)]
 pub struct SourceControlServiceImpl {
+    fb: FacebookInit,
     mononoke: Arc<Mononoke>,
     logger: Logger,
     scuba_builder: ScubaSampleBuilder,
 }
 
 impl SourceControlServiceImpl {
-    pub fn new(mononoke: Arc<Mononoke>, logger: Logger, scuba_builder: ScubaSampleBuilder) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        mononoke: Arc<Mononoke>,
+        logger: Logger,
+        scuba_builder: ScubaSampleBuilder,
+    ) -> Self {
         Self {
+            fb,
             mononoke,
             logger,
             scuba_builder,
@@ -87,6 +95,7 @@ impl SourceControlServiceImpl {
         let uuid = Uuid::new_v4();
         scuba.add("session_uuid", uuid.to_string());
         CoreContext::new(
+            self.fb,
             uuid,
             self.logger.clone(),
             scuba,

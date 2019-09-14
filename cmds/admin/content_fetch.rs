@@ -10,6 +10,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{format_err, Error};
+use fbinit::FacebookInit;
 use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
@@ -22,6 +23,7 @@ use crate::common::resolve_hg_rev;
 use crate::error::SubcommandError;
 
 pub fn subcommand_content_fetch(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -29,11 +31,11 @@ pub fn subcommand_content_fetch(
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
     let path = sub_m.value_of("PATH").unwrap().to_string();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    args::open_repo(&logger, &matches)
+    args::open_repo(fb, &logger, &matches)
         .and_then(move |blobrepo| fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path))
         .and_then(|content| match content {
             Content::Executable(_) => {

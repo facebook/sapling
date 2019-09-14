@@ -9,6 +9,7 @@
 #![feature(process_exitcode_placeholder)]
 
 use clap::{App, Arg, SubCommand};
+use fbinit::FacebookInit;
 use futures::IntoFuture;
 use futures_ext::FutureExt;
 use std::process::ExitCode;
@@ -366,33 +367,34 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(subcommand_unodes::subcommand_unodes_build(UNODES))
 }
 
-fn main() -> ExitCode {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> ExitCode {
     let matches = setup_app().get_matches();
 
     let logger = args::init_logging(&matches);
     let error_logger = logger.clone();
 
     let future = match matches.subcommand() {
-        (BLOBSTORE_FETCH, Some(sub_m)) => subcommand_blobstore_fetch(logger, &matches, sub_m),
-        (BONSAI_FETCH, Some(sub_m)) => subcommand_bonsai_fetch(logger, &matches, sub_m),
-        (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(logger, &matches, sub_m),
+        (BLOBSTORE_FETCH, Some(sub_m)) => subcommand_blobstore_fetch(fb, logger, &matches, sub_m),
+        (BONSAI_FETCH, Some(sub_m)) => subcommand_bonsai_fetch(fb, logger, &matches, sub_m),
+        (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(fb, logger, &matches, sub_m),
         (BOOKMARKS, Some(sub_m)) => {
-            args::init_cachelib(&matches);
-            let ctx = CoreContext::new_with_logger(logger.clone());
-            let repo_fut = args::open_repo(&logger, &matches).boxify();
+            args::init_cachelib(fb, &matches);
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let repo_fut = args::open_repo(fb, &logger, &matches).boxify();
             bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
         }
-        (HG_CHANGESET, Some(sub_m)) => subcommand_hg_changeset(logger, &matches, sub_m),
+        (HG_CHANGESET, Some(sub_m)) => subcommand_hg_changeset(fb, logger, &matches, sub_m),
         (HG_SYNC_BUNDLE, Some(sub_m)) => {
-            subcommand_process_hg_sync(sub_m, &matches, logger.clone())
+            subcommand_process_hg_sync(fb, sub_m, &matches, logger.clone())
         }
-        (SKIPLIST, Some(sub_m)) => subcommand_skiplist(logger, &matches, sub_m),
-        (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
-        (REDACTION, Some(sub_m)) => subcommand_redaction(logger, &matches, sub_m),
-        (FILENODES, Some(sub_m)) => subcommand_filenodes(logger, &matches, sub_m),
-        (FILESTORE, Some(sub_m)) => filestore::execute_command(logger, &matches, sub_m),
-        (PHASES, Some(sub_m)) => phases::subcommand_phases(logger, &matches, sub_m),
-        (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(logger, &matches, sub_m),
+        (SKIPLIST, Some(sub_m)) => subcommand_skiplist(fb, logger, &matches, sub_m),
+        (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(fb, logger, &matches, sub_m),
+        (REDACTION, Some(sub_m)) => subcommand_redaction(fb, logger, &matches, sub_m),
+        (FILENODES, Some(sub_m)) => subcommand_filenodes(fb, logger, &matches, sub_m),
+        (FILESTORE, Some(sub_m)) => filestore::execute_command(fb, logger, &matches, sub_m),
+        (PHASES, Some(sub_m)) => phases::subcommand_phases(fb, logger, &matches, sub_m),
+        (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 

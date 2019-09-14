@@ -311,6 +311,7 @@ mod tests {
     use blobrepo::save_bonsai_changesets;
     use bookmarks::BookmarkName;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use fixtures::{
         create_bonsai_changeset, create_bonsai_changeset_with_author,
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
@@ -330,11 +331,11 @@ mod tests {
     use std::str::FromStr;
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn test_derive_single_empty_commit_no_parents() {
+    #[fbinit::test]
+    fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
         rt.block_on(save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()))
@@ -352,11 +353,11 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
-    #[test]
-    fn test_derive_single_commit_no_parents() {
+    #[fbinit::test]
+    fn test_derive_single_commit_no_parents(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         // This is the initial diff with no parents
         // See tests/fixtures/src/lib.rs
@@ -404,11 +405,11 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
-    #[test]
-    fn test_derive_linear() {
+    #[fbinit::test]
+    fn test_derive_linear(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let bcs_id = rt
@@ -434,11 +435,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_derive_overflow() {
+    #[fbinit::test]
+    fn test_derive_overflow(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
         let mut parents = vec![];
@@ -464,11 +465,11 @@ mod tests {
         verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
     }
 
-    #[test]
-    fn test_random_repo() {
+    #[fbinit::test]
+    fn test_random_repo(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
         let gen_settings = GenSettings::default();
@@ -488,11 +489,11 @@ mod tests {
         verify_all_entries_for_commit(&mut rt, ctx, repo, latest);
     }
 
-    #[test]
-    fn test_derive_empty_commits() {
+    #[fbinit::test]
+    fn test_derive_empty_commits(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
         let mut parents = vec![];
@@ -510,11 +511,11 @@ mod tests {
         verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
     }
 
-    #[test]
-    fn test_find_new_unodes_linear() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_find_new_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         // This commit creates file "1" and "files"
         // See scm/mononoke/tests/fixtures
@@ -557,16 +558,17 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_find_new_unodes_merge() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_find_new_unodes_merge(fb: FacebookInit) -> Result<(), Error> {
         fn test_single_find_unodes_merge(
+            fb: FacebookInit,
             parent_files: Vec<BTreeMap<&str, Option<&str>>>,
             merge_files: BTreeMap<&str, Option<&str>>,
             expected: Vec<String>,
         ) -> Result<(), Error> {
             let mut rt = Runtime::new().unwrap();
-            let repo = linear::getrepo();
-            let ctx = CoreContext::test_mock();
+            let repo = linear::getrepo(fb);
+            let ctx = CoreContext::test_mock(fb);
 
             let mut bonsais = vec![];
             let mut parents = vec![];
@@ -633,6 +635,7 @@ mod tests {
         }
 
         test_single_find_unodes_merge(
+            fb,
             vec![
                 btreemap! {
                     "1" => Some("1"),
@@ -646,6 +649,7 @@ mod tests {
         )?;
 
         test_single_find_unodes_merge(
+            fb,
             vec![
                 btreemap! {
                     "1" => Some("1"),
@@ -662,6 +666,7 @@ mod tests {
         )?;
 
         test_single_find_unodes_merge(
+            fb,
             vec![
                 btreemap! {
                     "1" => Some("1"),
@@ -677,6 +682,7 @@ mod tests {
         )?;
 
         test_single_find_unodes_merge(
+            fb,
             vec![
                 btreemap! {
                     "file" => Some("contenta"),
@@ -693,13 +699,13 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_derive_merges() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_derive_merges(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         {
-            let repo = merge_uneven::getrepo();
+            let repo = merge_uneven::getrepo(fb);
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -708,7 +714,7 @@ mod tests {
         }
 
         {
-            let repo = merge_even::getrepo();
+            let repo = merge_even::getrepo(fb);
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -717,7 +723,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_even::getrepo();
+            let repo = unshared_merge_even::getrepo(fb);
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -726,7 +732,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_uneven::getrepo();
+            let repo = unshared_merge_uneven::getrepo(fb);
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -737,11 +743,11 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_bfs_order() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo();
-        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(fb);
+        let ctx = CoreContext::test_mock(fb);
 
         //            E
         //           / \
@@ -888,7 +894,7 @@ mod tests {
         let list = fetch_list(rt, ctx.clone(), repo.clone(), entry);
         let actual_bonsais: Vec<_> = list.into_iter().map(|(bcs_id, _)| bcs_id).collect();
 
-        let expected_bonsais = find_unode_history(rt, repo, entry);
+        let expected_bonsais = find_unode_history(ctx.fb, rt, repo, entry);
         assert_eq!(actual_bonsais, expected_bonsais);
     }
 
@@ -921,11 +927,12 @@ mod tests {
     }
 
     fn find_unode_history(
+        fb: FacebookInit,
         runtime: &mut Runtime,
         repo: BlobRepo,
         start: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<ChangesetId> {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let mut q = VecDeque::new();
         q.push_back(start.clone());
 

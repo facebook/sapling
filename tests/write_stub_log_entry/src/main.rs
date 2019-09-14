@@ -12,6 +12,7 @@ use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use failure_ext::Result;
+use fbinit::FacebookInit;
 use futures::future::Future;
 use mononoke_types::ChangesetId;
 
@@ -53,8 +54,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     .subcommand(update)
 }
 
-fn main() -> Result<()> {
-    let ctx = CoreContext::test_mock();
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
 
     let matches = setup_app().get_matches();
 

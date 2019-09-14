@@ -14,6 +14,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures::Async;
@@ -117,9 +118,9 @@ fn make_value(value: &str) -> BlobstoreBytes {
     BlobstoreBytes::from_bytes(value.as_bytes())
 }
 
-#[test]
-fn base() {
-    async_unit::tokio_unit_test(|| {
+#[fbinit::test]
+fn base(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
         let bs0 = Arc::new(TickBlobstore::new());
         let bs1 = Arc::new(TickBlobstore::new());
         let log = Arc::new(LogHandler::new());
@@ -131,7 +132,7 @@ fn base() {
             log.clone(),
             None,
         );
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         // succeed as soon as first blobstore succeeded
         {
@@ -245,10 +246,10 @@ fn base() {
     });
 }
 
-#[test]
-fn multiplexed() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn multiplexed(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
         let bid0 = BlobstoreId::new(0);
@@ -316,10 +317,10 @@ fn multiplexed() {
     });
 }
 
-#[test]
-fn scrubbed() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn scrubbed(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
         let bid0 = BlobstoreId::new(0);

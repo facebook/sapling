@@ -995,6 +995,7 @@ mod tests {
 
     use super::*;
     use failure::err_msg;
+    use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
     use futures::future::join_all;
     use futures_ext::spawn_future;
@@ -1033,11 +1034,11 @@ mod tests {
         book
     }
 
-    #[test]
-    fn pushrebase_one_commit() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_one_commit(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1076,11 +1077,11 @@ mod tests {
         });
     }
 
-    #[test]
-    fn pushrebase_stack() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_stack(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1145,11 +1146,11 @@ mod tests {
         });
     }
 
-    #[test]
-    fn pushrebase_stack_with_renames() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_stack_with_renames(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -1215,8 +1216,8 @@ mod tests {
         });
     }
 
-    #[test]
-    fn pushrebase_multi_root() {
+    #[fbinit::test]
+    fn pushrebase_multi_root(fb: FacebookInit) {
         //
         // master -> o
         //           |
@@ -1231,9 +1232,9 @@ mod tests {
         //           |/
         //  root0 -> o
         //
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let config = PushrebaseParams::default();
 
             let root0 = repo
@@ -1359,11 +1360,11 @@ mod tests {
         });
     }
 
-    #[test]
-    fn pushrebase_conflict() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_conflict(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1440,11 +1441,11 @@ mod tests {
         });
     }
 
-    #[test]
-    fn pushrebase_caseconflicting_rename() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_caseconflicting_rename(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1506,11 +1507,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn pushrebase_caseconflicting_dirs() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_caseconflicting_dirs(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1563,11 +1564,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn pushrebase_recursion_limit() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_recursion_limit(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1666,11 +1667,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn pushrebase_rewritedates() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_rewritedates(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1746,11 +1747,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn pushrebase_case_conflict() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = many_files_dirs::getrepo();
+    #[fbinit::test]
+    fn pushrebase_case_conflict(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = many_files_dirs::getrepo(fb);
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
@@ -1843,13 +1844,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn pushrebase_executable_bit_change() {
+    #[fbinit::test]
+    fn pushrebase_executable_bit_change(fb: FacebookInit) {
         use mononoke_types::FileType;
 
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             let path_1 = MPath::new("1").unwrap();
 
             let root_hg =
@@ -1981,11 +1982,11 @@ mod tests {
             })
     }
 
-    #[test]
-    fn pushrebase_simultaneously() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_simultaneously(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -2067,11 +2068,11 @@ mod tests {
         runtime.block_on(future)
     }
 
-    #[test]
-    fn pushrebase_create_new_bookmark() {
+    #[fbinit::test]
+    fn pushrebase_create_new_bookmark(fb: FacebookInit) {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2104,11 +2105,11 @@ mod tests {
         .is_ok());
     }
 
-    #[test]
-    fn pushrebase_simultaneously_and_create_new() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = linear::getrepo();
+    #[fbinit::test]
+    fn pushrebase_simultaneously_and_create_new(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
@@ -2171,12 +2172,12 @@ mod tests {
         })
     }
 
-    #[test]
-    fn pushrebase_one_commit_with_bundle_id() {
+    #[fbinit::test]
+    fn pushrebase_one_commit_with_bundle_id(fb: FacebookInit) {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2222,14 +2223,14 @@ mod tests {
         .expect("pushrebase failed");
     }
 
-    #[test]
-    fn pushrebase_timezone() {
+    #[fbinit::test]
+    fn pushrebase_timezone(fb: FacebookInit) {
         // We shouldn't change timezone even if timestamp changes
 
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
         // Bottom commit of the repo
         let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
@@ -2291,11 +2292,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn forbid_p2_root_rebases() {
+    #[fbinit::test]
+    fn forbid_p2_root_rebases(fb: FacebookInit) {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
 
         let root = run_future(
             &mut runtime,

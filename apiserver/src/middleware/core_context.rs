@@ -13,6 +13,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use context::CoreContext;
+use fbinit::FacebookInit;
 use openssl::x509::X509;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
@@ -25,6 +26,7 @@ use tracing::TraceContext;
 use time_ext::DurationExt;
 
 pub struct CoreContextMiddleware {
+    fb: FacebookInit,
     logger: Logger,
     scuba: ScubaSampleBuilder,
 }
@@ -36,8 +38,12 @@ enum TimeMeasurement {
 }
 
 impl CoreContextMiddleware {
-    pub fn new(logger: Logger, scuba: ScubaSampleBuilder) -> CoreContextMiddleware {
-        CoreContextMiddleware { logger, scuba }
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        scuba: ScubaSampleBuilder,
+    ) -> CoreContextMiddleware {
+        CoreContextMiddleware { fb, logger, scuba }
     }
 
     fn start_timer<S>(&self, req: &HttpRequest<S>) {
@@ -103,6 +109,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             .add("session_uuid", session_uuid.to_string());
 
         let ctx = CoreContext::new(
+            self.fb,
             session_uuid,
             self.logger.clone(),
             scuba,

@@ -89,6 +89,7 @@ mod test {
     use super::*;
     use bytes::Bytes;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use futures::stream;
     use memblob::EagerMemblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata};
@@ -109,11 +110,11 @@ mod test {
         ctx.finish()
     }
 
-    #[test]
-    fn test_copy_blob() {
+    #[fbinit::test]
+    fn test_copy_blob(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
 
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         let inner1 = Arc::new(EagerMemblob::new());
         let inner2 = Arc::new(EagerMemblob::new());
@@ -165,10 +166,10 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_copy_content() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_copy_content(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let inner1 = Arc::new(EagerMemblob::new());
         let inner2 = Arc::new(EagerMemblob::new());
         let bs1: RepoBlobstore = RedactedBlobstore::new(

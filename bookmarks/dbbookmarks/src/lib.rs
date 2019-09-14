@@ -1170,6 +1170,7 @@ fn get_bundle_replay_data(
 #[cfg(test)]
 mod test {
     use super::*;
+    use fbinit::FacebookInit;
     use mononoke_types_mocks::{
         changesetid::{ONES_CSID, TWOS_CSID},
         repo::REPO_ZERO,
@@ -1211,15 +1212,15 @@ mod test {
         BookmarkName::new(book.to_string()).unwrap()
     }
 
-    #[test]
-    fn test_update_kind_compatibility() {
+    #[fbinit::test]
+    fn test_update_kind_compatibility(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
 
         let data = BookmarkUpdateReason::TestMove {
             bundle_replay_data: None,
         };
 
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
         let scratch_name = create_bookmark_name("book1");
         let publishing_name = create_bookmark_name("book2");
@@ -1300,6 +1301,7 @@ mod test {
     }
 
     fn insert_then_query(
+        fb: FacebookInit,
         bookmarks: &Vec<(Bookmark, ChangesetId)>,
         query: fn(
             SqlBookmarks,
@@ -1312,7 +1314,7 @@ mod test {
     ) -> HashSet<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
 
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(123);
 
         let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
@@ -1336,31 +1338,40 @@ mod test {
 
     quickcheck! {
         fn filter_publishing(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
-            let have = insert_then_query(&bookmarks, query, freshness);
+            let have = insert_then_query(fb, &bookmarks, query, freshness);
             let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.publishing()));
             want == have
         }
 
         fn filter_pull_default(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
-            let have = insert_then_query(&bookmarks, query, freshness);
+            let have = insert_then_query(fb, &bookmarks, query, freshness);
             let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.pull_default()));
             want == have
         }
 
         fn filter_all(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, DEFAULT_MAX)
             }
 
-            let have = insert_then_query(&bookmarks, query, freshness);
+            let have = insert_then_query(fb, &bookmarks, query, freshness);
             let want = HashSet::from_iter(bookmarks);
             want == have
         }

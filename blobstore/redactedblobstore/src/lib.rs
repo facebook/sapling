@@ -235,20 +235,21 @@ mod test {
     use super::*;
     use assert_matches::assert_matches;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use maplit::hashmap;
     use memblob::EagerMemblob;
     use prefixblob::PrefixBlobstore;
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn test_redacted_key() {
+    #[fbinit::test]
+    fn test_redacted_key(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
 
         let unredacted_key = "foo".to_string();
         let redacted_key = "bar".to_string();
         let redacted_task = "bar task".to_string();
 
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         let inner = EagerMemblob::new();
         let redacted_pairs = hashmap! {

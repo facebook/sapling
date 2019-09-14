@@ -35,6 +35,7 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use failure::Error;
+    use fbinit::FacebookInit;
     use futures::executor::spawn;
     use futures::{
         future::{join_all, ok},
@@ -322,9 +323,12 @@ mod test {
             #[test]
             fn $test_name() {
                 fn prop(set: RevsetSpec) -> bool {
-                    async_unit::tokio_unit_test(|| {
-                        let ctx = CoreContext::test_mock();
-                        let repo = Arc::new($repo::getrepo());
+                    // TODO: this needs to be passed down from #[fbinit::test] instead.
+                    let fb = *fbinit::FACEBOOK;
+
+                    async_unit::tokio_unit_test(move || {
+                        let ctx = CoreContext::test_mock(fb);
+                        let repo = Arc::new($repo::getrepo(fb));
                         match_hashset_to_revset(ctx, repo, set)
                     })
                 }
@@ -398,12 +402,12 @@ mod test {
 
     macro_rules! ancestors_check {
         ($test_name:ident, $repo:ident) => {
-            #[test]
-            fn $test_name() {
-                async_unit::tokio_unit_test(|| {
-                    let ctx = CoreContext::test_mock();
+            #[fbinit::test]
+            fn $test_name(fb: FacebookInit) {
+                async_unit::tokio_unit_test(move || {
+                    let ctx = CoreContext::test_mock(fb);
 
-                    let repo = Arc::new($repo::getrepo());
+                    let repo = Arc::new($repo::getrepo(fb));
                     let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                         Arc::new(TestChangesetFetcher::new(repo.clone()));
 

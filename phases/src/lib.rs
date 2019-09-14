@@ -391,6 +391,7 @@ where
 mod tests {
     use super::*;
     use bookmarks::{BookmarkName, BookmarkUpdateReason};
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Stream;
     use maplit::hashset;
@@ -399,10 +400,10 @@ mod tests {
     use std::str::FromStr;
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn add_get_phase_sql_test() -> Result<()> {
+    #[fbinit::test]
+    fn add_get_phase_sql_test(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new()?;
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let phases = SqlPhases::with_sqlite_in_memory()?;
 
@@ -476,11 +477,11 @@ mod tests {
         assert!(rt.block_on(txn.commit()).unwrap());
     }
 
-    #[test]
-    fn get_phase_hint_test() {
+    #[fbinit::test]
+    fn get_phase_hint_test(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
 
-        let repo = linear::getrepo();
+        let repo = linear::getrepo(fb);
         //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
         //  |
         //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
@@ -503,7 +504,7 @@ mod tests {
         //  |
         //  o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
 
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
 
@@ -627,11 +628,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_mark_reachable_as_public() -> Result<()> {
+    #[fbinit::test]
+    fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new()?;
 
-        let repo = fixtures::branch_even::getrepo();
+        let repo = fixtures::branch_even::getrepo(fb);
         // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
         // |
         // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)
@@ -655,7 +656,7 @@ mod tests {
             "b65231269f651cfe784fd1d97ef02a049a37b8a0",
             "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
         ];
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
 

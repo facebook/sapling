@@ -50,6 +50,7 @@ pub fn create_repo_listeners(
 
     (
         repo_handlers(
+            fb,
             repos,
             myrouter_port,
             caching,

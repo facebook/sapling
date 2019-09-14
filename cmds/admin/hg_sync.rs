@@ -11,6 +11,7 @@ use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use failure_ext::{err_msg, Error, FutureFailureErrorExt};
+use fbinit::FacebookInit;
 use futures::future::{self, ok};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -26,6 +27,7 @@ use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
 use crate::error::SubcommandError;
 
 pub fn subcommand_process_hg_sync(
+    fb: FacebookInit,
     sub_m: &ArgMatches<'_>,
     matches: &ArgMatches<'_>,
     logger: Logger,
@@ -33,7 +35,7 @@ pub fn subcommand_process_hg_sync(
     let repo_id =
         try_boxfuture!(args::get_repo_id(&matches).map_err(|e| SubcommandError::Error(e)));
 
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(&matches)
         .context("While opening SqlMutableCounters")
@@ -243,8 +245,8 @@ pub fn subcommand_process_hg_sync(
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
             let limit = args::get_u64(sub_m, "limit", 10);
-            args::init_cachelib(&matches);
-            let repo = args::open_repo(&logger, &matches);
+            args::init_cachelib(fb, &matches);
+            let repo = args::open_repo(fb, &logger, &matches);
 
             repo.join3(mutable_counters, bookmarks)
                 .and_then(move |(repo, mutable_counters, bookmarks)| {
@@ -302,8 +304,8 @@ pub fn subcommand_process_hg_sync(
                 .boxify()
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
-            args::init_cachelib(&matches);
-            let repo_fut = args::open_repo(&logger, &matches);
+            args::init_cachelib(fb, &matches);
+            let repo_fut = args::open_repo(fb, &logger, &matches);
             let id = args::get_u64_opt(sub_m, "id");
             let id = try_boxfuture!(id.ok_or(err_msg("--id is not specified")));
             if id == 0 {

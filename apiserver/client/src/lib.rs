@@ -17,6 +17,7 @@ use apiserver_thrift::types::{
     MononokeListDirectoryParams, MononokeListDirectoryUnodesParams, MononokeNodeHash,
     MononokeRevision, MononokeTreeHash,
 };
+use fbinit::FacebookInit;
 use srclient::SRChannelBuilder;
 
 pub struct MononokeAPIClient {
@@ -25,9 +26,13 @@ pub struct MononokeAPIClient {
 }
 
 impl MononokeAPIClient {
-    pub fn new_with_tier_repo(tier: &str, repo: &str) -> Result<Self, failure_ext::Error> {
+    pub fn new_with_tier_repo(
+        fb: FacebookInit,
+        tier: &str,
+        repo: &str,
+    ) -> Result<Self, failure_ext::Error> {
         let inner =
-            SRChannelBuilder::from_service_name(tier)?.build_client(make_MononokeAPIService)?;
+            SRChannelBuilder::from_service_name(fb, tier)?.build_client(make_MononokeAPIService)?;
 
         Ok(Self {
             inner,

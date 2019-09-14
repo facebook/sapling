@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use failure::Error;
+use fbinit::FacebookInit;
 use futures_util::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStreamExt,
@@ -42,6 +43,7 @@ struct LfsServerContextInner {
 
 #[derive(Clone, StateData)]
 pub struct LfsServerContext {
+    fb: FacebookInit,
     inner: Arc<Mutex<LfsServerContextInner>>,
 }
 
@@ -78,6 +80,7 @@ impl LoggingContext {
 
 impl LfsServerContext {
     pub fn new(
+        fb: FacebookInit,
         logger: Logger,
         repositories: HashMap<String, BlobRepo>,
         server: ServerUris,
@@ -96,6 +99,7 @@ impl LfsServerContext {
         };
 
         Ok(LfsServerContext {
+            fb,
             inner: Arc::new(Mutex::new(inner)),
         })
     }
@@ -105,7 +109,7 @@ impl LfsServerContext {
 
         match inner.repositories.get(&repository) {
             Some(repo) => Ok(RequestContext {
-                ctx: CoreContext::new_with_logger(inner.logger.clone()),
+                ctx: CoreContext::new_with_logger(self.fb, inner.logger.clone()),
                 repo: repo.clone(),
                 uri_builder: UriBuilder {
                     repository,

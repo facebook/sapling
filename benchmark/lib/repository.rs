@@ -18,6 +18,7 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use failure::{err_msg, Error};
 use failure_ext::Result;
+use fbinit::FacebookInit;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{future, Future};
@@ -53,7 +54,7 @@ impl Default for DelaySettings {
     }
 }
 
-pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
+pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<BlobRepo> {
     let blobstore: Arc<dyn Blobstore> = {
         let delayed: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
             EagerMemblob::new(),
@@ -74,6 +75,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
             settings.db_put_dist,
         ));
         Arc::new(CachingFilenodes::new(
+            fb,
             filenodes,
             cachelib::get_volatile_pool("filenodes")
                 .unwrap()
@@ -90,6 +92,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
             settings.db_put_dist,
         ));
         Arc::new(CachingChangesets::new(
+            fb,
             changesets,
             cachelib::get_volatile_pool("changesets")
                 .unwrap()
@@ -104,6 +107,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
             settings.db_put_dist,
         ));
         Arc::new(CachingBonsaiHgMapping::new(
+            fb,
             mapping,
             cachelib::get_volatile_pool("bonsai_hg_mapping")
                 .unwrap()

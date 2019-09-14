@@ -12,6 +12,7 @@ use super::{
 use assert_matches::assert_matches;
 use caching_ext::MockStoreStats;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use maplit::hashset;
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
@@ -20,19 +21,19 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
-fn run_test(test_fn: fn(SqlChangesets)) {
-    test_fn(SqlChangesets::with_sqlite_in_memory().unwrap());
+fn run_test(fb: FacebookInit, test_fn: fn(FacebookInit, SqlChangesets)) {
+    test_fn(fb, SqlChangesets::with_sqlite_in_memory().unwrap());
 }
 
-fn run_caching_test(test_fn: fn(CachingChangesets)) {
+fn run_caching_test(fb: FacebookInit, test_fn: fn(FacebookInit, CachingChangesets)) {
     let real_changesets = Arc::new(SqlChangesets::with_sqlite_in_memory().unwrap());
     let changesets = CachingChangesets::mocked(real_changesets);
-    test_fn(changesets);
+    test_fn(fb, changesets);
 }
 
-fn add_and_get<C: Changesets + 'static>(changesets: C) {
+fn add_and_get<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -58,9 +59,9 @@ fn add_and_get<C: Changesets + 'static>(changesets: C) {
     );
 }
 
-fn add_missing_parents<C: Changesets>(changesets: C) {
+fn add_missing_parents<C: Changesets>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -78,9 +79,9 @@ fn add_missing_parents<C: Changesets>(changesets: C) {
     );
 }
 
-fn missing<C: Changesets + 'static>(changesets: C) {
+fn missing<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let result = rt
         .block_on(changesets.get(ctx, REPO_ZERO, ONES_CSID))
@@ -89,9 +90,9 @@ fn missing<C: Changesets + 'static>(changesets: C) {
     assert_eq!(result, None);
 }
 
-fn duplicate<C: Changesets + 'static>(changesets: C) {
+fn duplicate<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -114,9 +115,9 @@ fn duplicate<C: Changesets + 'static>(changesets: C) {
     );
 }
 
-fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
+fn broken_duplicate<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -156,9 +157,9 @@ fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
     };
 }
 
-fn complex<C: Changesets>(changesets: C) {
+fn complex<C: Changesets>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -256,9 +257,9 @@ fn complex<C: Changesets>(changesets: C) {
     );
 }
 
-fn get_many<C: Changesets>(changesets: C) {
+fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -415,9 +416,9 @@ fn get_many<C: Changesets>(changesets: C) {
     );
 }
 
-fn get_many_missing<C: Changesets>(changesets: C) {
+fn get_many_missing<C: Changesets>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -462,13 +463,13 @@ fn get_many_missing<C: Changesets>(changesets: C) {
     );
 }
 
-fn caching_fill<C: Changesets + 'static>(changesets: C) {
+fn caching_fill<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
 
     let changesets = Arc::new(changesets);
     let mut cc = CachingChangesets::mocked(changesets.clone());
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -664,13 +665,13 @@ fn caching_fill<C: Changesets + 'static>(changesets: C) {
     );
 }
 
-fn caching_shared<C: Changesets + 'static>(changesets: C) {
+fn caching_shared<C: Changesets + 'static>(fb: FacebookInit, changesets: C) {
     let mut rt = Runtime::new().unwrap();
 
     let changesets = Arc::new(changesets);
     let cc = CachingChangesets::mocked(changesets.clone());
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
@@ -787,14 +788,14 @@ fn caching_shared<C: Changesets + 'static>(changesets: C) {
 // CachingChangesets.
 macro_rules! testify {
     ($plain_name: ident, $caching_name: ident, $input: ident) => {
-        #[test]
-        fn $plain_name() {
-            run_test($input);
+        #[fbinit::test]
+        fn $plain_name(fb: FacebookInit) {
+            run_test(fb, $input);
         }
 
-        #[test]
-        fn $caching_name() {
-            run_caching_test($input);
+        #[fbinit::test]
+        fn $caching_name(fb: FacebookInit) {
+            run_caching_test(fb, $input);
         }
     };
 }
@@ -820,12 +821,12 @@ testify!(
     get_many_missing
 );
 
-#[test]
-fn test_caching_fill() {
-    run_test(caching_fill);
+#[fbinit::test]
+fn test_caching_fill(fb: FacebookInit) {
+    run_test(fb, caching_fill);
 }
 
-#[test]
-fn test_caching_shared() {
-    run_test(caching_shared);
+#[fbinit::test]
+fn test_caching_shared(fb: FacebookInit) {
+    run_test(fb, caching_shared);
 }

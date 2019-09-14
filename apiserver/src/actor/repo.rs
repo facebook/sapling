@@ -22,6 +22,7 @@ use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeM
 use derived_data::BonsaiDerived;
 use failure::Error;
 use fastlog::{prefetch_history, RootFastlog, RootFastlogMapping};
+use fbinit::FacebookInit;
 use futures::{
     future::{self, err, join_all, ok},
     lazy,
@@ -95,6 +96,7 @@ pub struct MononokeRepo {
 
 impl MononokeRepo {
     pub fn new(
+        fb: FacebookInit,
         logger: Logger,
         config: RepoConfig,
         common_config: CommonConfig,
@@ -103,7 +105,7 @@ impl MononokeRepo {
         with_cachelib: Caching,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
-        let ctx = CoreContext::new_with_logger(logger.clone());
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
@@ -112,6 +114,7 @@ impl MononokeRepo {
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
 
         open_blobrepo(
+            fb,
             config.storage_config.clone(),
             repoid,
             myrouter_port,

@@ -14,6 +14,7 @@ use bookmarks::{
 };
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
+use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use maplit::hashmap;
 use mercurial_types_mocks::nodehash as mercurial_mocks;
@@ -49,9 +50,9 @@ fn compare_log_entries(
     }
 }
 
-#[test]
-fn test_simple_unconditional_set_get() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_simple_unconditional_set_get(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_correct = create_bookmark_name("book");
     let name_incorrect = create_bookmark_name("book2");
@@ -102,9 +103,9 @@ fn test_simple_unconditional_set_get() {
     );
 }
 
-#[test]
-fn test_multi_unconditional_set_get() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_multi_unconditional_set_get(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
     let name_2 = create_bookmark_name("book2");
@@ -145,9 +146,9 @@ fn test_multi_unconditional_set_get() {
     );
 }
 
-#[test]
-fn test_unconditional_set_same_bookmark() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -182,9 +183,9 @@ fn test_unconditional_set_same_bookmark() {
     );
 }
 
-#[test]
-fn test_simple_create() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_simple_create(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -227,9 +228,9 @@ fn test_simple_create() {
     );
 }
 
-#[test]
-fn test_create_already_existing() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_create_already_existing(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -256,9 +257,9 @@ fn test_create_already_existing() {
     assert!(!txn.commit().wait().unwrap());
 }
 
-#[test]
-fn test_create_change_same_bookmark() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_create_change_same_bookmark(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -419,9 +420,9 @@ fn test_create_change_same_bookmark() {
         .is_err());
 }
 
-#[test]
-fn test_simple_update_bookmark() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_simple_update_bookmark(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -476,9 +477,9 @@ fn test_simple_update_bookmark() {
     );
 }
 
-#[test]
-fn test_noop_update() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_noop_update(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -514,9 +515,9 @@ fn test_noop_update() {
     );
 }
 
-#[test]
-fn test_infinitepush_update_bookmark() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_infinitepush_update_bookmark(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -547,9 +548,9 @@ fn test_infinitepush_update_bookmark() {
     );
 }
 
-#[test]
-fn test_update_non_existent_bookmark() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_update_non_existent_bookmark(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -566,9 +567,9 @@ fn test_update_non_existent_bookmark() {
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
-#[test]
-fn test_update_existing_bookmark_with_incorrect_commit() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -596,9 +597,9 @@ fn test_update_existing_bookmark_with_incorrect_commit() {
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
-#[test]
-fn test_force_delete() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_force_delete(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -674,9 +675,9 @@ fn test_force_delete() {
     );
 }
 
-#[test]
-fn test_delete() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_delete(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -738,9 +739,9 @@ fn test_delete() {
     );
 }
 
-#[test]
-fn test_delete_incorrect_hash() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_delete_incorrect_hash(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -772,9 +773,9 @@ fn test_delete_incorrect_hash() {
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
-#[test]
-fn test_list_by_prefix() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_list_by_prefix(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book1");
     let name_2 = create_bookmark_name("book2");
@@ -858,9 +859,9 @@ fn test_list_by_prefix() {
     );
 }
 
-#[test]
-fn test_create_different_repos() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_create_different_repos(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -946,8 +947,8 @@ fn test_create_different_repos() {
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
-fn fetch_single(bookmarks: &SqlBookmarks, id: u64) -> BookmarkUpdateLogEntry {
-    let ctx = CoreContext::test_mock();
+fn fetch_single(fb: FacebookInit, bookmarks: &SqlBookmarks, id: u64) -> BookmarkUpdateLogEntry {
+    let ctx = CoreContext::test_mock(fb);
     bookmarks
         .read_next_bookmark_log_entries(ctx, id, REPO_ZERO, 1)
         .collect()
@@ -958,9 +959,9 @@ fn fetch_single(bookmarks: &SqlBookmarks, id: u64) -> BookmarkUpdateLogEntry {
         .clone()
 }
 
-#[test]
-fn test_log_correct_order() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_log_correct_order(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
     let name_2 = create_bookmark_name("book2");
@@ -1047,19 +1048,19 @@ fn test_log_correct_order() {
     .unwrap();
     txn.commit().wait().unwrap();
 
-    let log_entry = fetch_single(&bookmarks, 0);
+    let log_entry = fetch_single(fb, &bookmarks, 0);
     assert_eq!(log_entry.to_changeset_id.unwrap(), ONES_CSID);
 
-    let log_entry = fetch_single(&bookmarks, 1);
+    let log_entry = fetch_single(fb, &bookmarks, 1);
     assert_eq!(log_entry.to_changeset_id.unwrap(), TWOS_CSID);
 
-    let log_entry = fetch_single(&bookmarks, 2);
+    let log_entry = fetch_single(fb, &bookmarks, 2);
     assert_eq!(log_entry.to_changeset_id.unwrap(), THREES_CSID);
 
-    let log_entry = fetch_single(&bookmarks, 3);
+    let log_entry = fetch_single(fb, &bookmarks, 3);
     assert_eq!(log_entry.to_changeset_id.unwrap(), FOURS_CSID);
 
-    let log_entry = fetch_single(&bookmarks, 5);
+    let log_entry = fetch_single(fb, &bookmarks, 5);
     assert_eq!(log_entry.to_changeset_id.unwrap(), FIVES_CSID);
 
     assert_eq!(
@@ -1131,9 +1132,9 @@ fn test_log_correct_order() {
     assert_eq!(cs_ids, vec![FIVES_CSID]);
 }
 
-#[test]
-fn test_log_bundle_replay_data() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_log_bundle_replay_data(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
     let timestamp = Timestamp::now();
@@ -1153,7 +1154,7 @@ fn test_log_bundle_replay_data() {
     .unwrap();
     assert!(txn.commit().wait().is_ok());
 
-    let log_entry = fetch_single(&bookmarks, 0);
+    let log_entry = fetch_single(fb, &bookmarks, 0);
     let bundle_replay_data = match log_entry.reason {
         BookmarkUpdateReason::TestMove { bundle_replay_data } => bundle_replay_data,
         _ => {
@@ -1165,9 +1166,9 @@ fn test_log_bundle_replay_data() {
     assert_eq!(actual, expected);
 }
 
-#[test]
-fn test_read_log_entry_many_repos() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_read_log_entry_many_repos(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 
@@ -1234,9 +1235,9 @@ fn test_read_log_entry_many_repos() {
     );
 }
 
-#[test]
-fn test_list_bookmark_log_entries() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_list_bookmark_log_entries(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark_name("book");
 

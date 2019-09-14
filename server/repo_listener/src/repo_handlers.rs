@@ -20,6 +20,7 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
@@ -63,6 +64,7 @@ fn open_db_from_config<S: SqlConstructors>(
 }
 
 pub fn repo_handlers(
+    fb: FacebookInit,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     caching: Caching,
@@ -85,7 +87,7 @@ pub fn repo_handlers(
                 root_log,
                 "Start warming for repo {}, type {:?}", reponame, config.storage_config.blobstore
             );
-            let ctx = CoreContext::new_with_logger(root_log.clone());
+            let ctx = CoreContext::new_with_logger(fb, root_log.clone());
 
             let ready_handle = ready.create_handle(reponame.clone());
 
@@ -95,6 +97,7 @@ pub fn repo_handlers(
             let disabled_hooks = disabled_hooks.clone();
 
             open_blobrepo(
+                fb,
                 config.storage_config.clone(),
                 repoid,
                 myrouter_port,
@@ -138,6 +141,7 @@ pub fn repo_handlers(
                 // TODO: Don't require full config in load_hooks so we can avoid a clone here.
                 info!(root_log, "Loading hooks");
                 try_boxfuture!(load_hooks(
+                    fb,
                     &mut hook_manager,
                     config.clone(),
                     &disabled_hooks
@@ -194,7 +198,8 @@ pub fn repo_handlers(
                             );
 
                             let listen_log = root_log.new(o!("repo" => reponame.clone()));
-                            let mut scuba_logger = ScubaSampleBuilder::with_opt_table(scuba_table);
+                            let mut scuba_logger =
+                                ScubaSampleBuilder::with_opt_table(fb, scuba_table);
                             scuba_logger.add_common_server_data();
                             let hash_validation_percentage = hash_validation_percentage;
                             let wireproto_scribe_category = wireproto_scribe_category;
@@ -263,7 +268,10 @@ pub fn repo_handlers(
                                         // initialize phases hint from the skip index
                                         let phases_hint: Arc<dyn Phases> =
                                             if let MetadataDBConfig::Mysql { .. } = dbconfig {
-                                                Arc::new(CachingPhases::new(Arc::new(phases_hint)))
+                                                Arc::new(CachingPhases::new(
+                                                    fb,
+                                                    Arc::new(phases_hint),
+                                                ))
                                             } else {
                                                 Arc::new(phases_hint)
                                             };

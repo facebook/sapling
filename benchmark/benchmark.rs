@@ -18,6 +18,7 @@ use derive_unode_manifest::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::BonsaiDerived;
 use failure::{err_msg, format_err, Error};
 use failure_ext::Result;
+use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -88,7 +89,8 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
     }
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let app = {
         let app = App::new("mononoke benchmark")
             .arg(
@@ -111,10 +113,10 @@ fn main() -> Result<()> {
     };
     let matches = app.get_matches();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
-    let repo = new_benchmark_repo(Default::default())?;
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo = new_benchmark_repo(fb, Default::default())?;
 
     let seed = matches
         .value_of("seed")

@@ -9,6 +9,7 @@ use clap::Arg;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{Error, Result};
+use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
@@ -21,7 +22,8 @@ const ARG_POINTERS: &str = "pointers";
 
 const DEFAULT_CONCURRENCY: usize = 16;
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
     }
@@ -49,11 +51,11 @@ fn main() -> Result<()> {
     );
 
     let matches = app.get_matches();
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
-    let blobrepo = args::open_repo(&logger, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let blobrepo = args::open_repo(fb, &logger, &matches);
     let lfs_helper = matches.value_of(ARG_LFS_HELPER).unwrap().to_string();
 
     let concurrency: usize = matches

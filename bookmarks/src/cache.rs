@@ -436,6 +436,7 @@ impl Transaction for CachedBookmarksTransaction {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fbinit::FacebookInit;
     use futures::{
         future::Either,
         stream::StreamFuture,
@@ -742,10 +743,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_cached_bookmarks() {
+    #[fbinit::test]
+    fn test_cached_bookmarks(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let repoid = RepositoryId::new(0);
 
         let (mock, requests) = MockBookmarks::create();
@@ -876,6 +877,7 @@ mod tests {
     }
 
     fn mock_then_query(
+        fb: FacebookInit,
         bookmarks: &Vec<(Bookmark, ChangesetId)>,
         query: fn(
             CachedBookmarks,
@@ -888,7 +890,7 @@ mod tests {
         expected_downstream_request: Request,
     ) -> HashSet<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
 
         let (mock, requests) = MockBookmarks::create();
@@ -938,16 +940,22 @@ mod tests {
 
     quickcheck! {
         fn filter_publishing(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test].
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
-            let have = mock_then_query(&bookmarks, query, freshness, Request::Publishing);
+            let have = mock_then_query(fb, &bookmarks, query, freshness, Request::Publishing);
             let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.publishing()));
             want == have
         }
 
         fn filter_pull_default(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test].
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
             }
@@ -961,17 +969,20 @@ mod tests {
                 Freshness::MostRecent => Request::PullDefault,
             };
 
-            let have = mock_then_query(&bookmarks, query, freshness, downstream_set);
+            let have = mock_then_query(fb, &bookmarks, query, freshness, downstream_set);
             let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.pull_default()));
             want == have
         }
 
         fn filter_all(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
+            // TODO: this needs to be passed down from #[fbinit::test].
+            let fb = *fbinit::FACEBOOK;
+
             fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
                 bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, std::u64::MAX)
             }
 
-            let have = mock_then_query(&bookmarks, query, freshness, Request::All);
+            let have = mock_then_query(fb, &bookmarks, query, freshness, Request::All);
             let want = HashSet::from_iter(bookmarks.into_iter());
             want == have
         }

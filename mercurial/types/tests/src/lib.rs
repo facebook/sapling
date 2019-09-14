@@ -10,6 +10,7 @@
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
@@ -357,11 +358,11 @@ fn do_check(
     )
 }
 
-#[test]
-fn test_recursive_changed_entry_stream_linear() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo());
+#[fbinit::test]
+fn test_recursive_changed_entry_stream_linear(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb));
         let main_hash = HgNodeHash::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let base_hash = HgNodeHash::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
 
@@ -380,11 +381,11 @@ fn test_recursive_changed_entry_stream_linear() {
     .expect("test failed")
 }
 
-#[test]
-fn test_recursive_changed_entry_stream_simple() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_recursive_changed_entry_stream_simple(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let main_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
         // main_hash is a child of base_hash
@@ -423,11 +424,11 @@ fn test_recursive_changed_entry_stream_simple() {
     .expect("test failed")
 }
 
-#[test]
-fn test_recursive_entry_stream() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_recursive_entry_stream(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let changesetid = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
 
         // hg up 2f866e7e549760934e31bf0420a873f65100ad63
@@ -501,11 +502,11 @@ fn test_recursive_entry_stream() {
     .expect("test failed")
 }
 
-#[test]
-fn test_recursive_changed_entry_stream_changed_dirs() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_recursive_changed_entry_stream_changed_dirs(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         // main_hash is a child of base_hash
@@ -535,11 +536,11 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
     .expect("test failed")
 }
 
-#[test]
-fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_recursive_changed_entry_stream_dirs_replaced_with_file(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let main_hash = HgNodeHash::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash
@@ -579,11 +580,11 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     .expect("test failed")
 }
 
-#[test]
-fn test_depth_parameter() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_depth_parameter(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         // main_hash is a child of base_hash
@@ -685,11 +686,11 @@ where
     }
 }
 
-#[test]
-fn test_recursive_changed_entry_prune() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(many_files_dirs::getrepo());
+#[fbinit::test]
+fn test_recursive_changed_entry_prune(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(many_files_dirs::getrepo(fb));
         let main_hash = HgNodeHash::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         // main_hash is a child of base_hash
@@ -767,10 +768,10 @@ fn test_recursive_changed_entry_prune() {
     .expect("test failed")
 }
 
-#[test]
-fn test_file_pruner() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_pruner(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
         let paths = btreemap! {
             "foo1" => (FileType::Regular, "content", NULL_HASH),
             "foo2" => (FileType::Symlink, "content", NULL_HASH),
@@ -796,10 +797,10 @@ fn test_file_pruner() {
     .expect("test failed")
 }
 
-#[test]
-fn test_deleted_pruner() {
-    async_unit::tokio_unit_test(|| -> Result<_, !> {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_deleted_pruner(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || -> Result<_, !> {
+        let ctx = CoreContext::test_mock(fb);
         let paths = btreemap! {
             "foo1" => (FileType::Regular, "content", NULL_HASH),
             "foo2" => (FileType::Symlink, "content", NULL_HASH),

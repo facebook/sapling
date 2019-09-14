@@ -9,6 +9,7 @@ use cmdlib::args;
 use context::CoreContext;
 use failure::err_msg;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::future;
 use futures::future::Future;
 use futures::stream::Stream;
@@ -49,20 +50,21 @@ impl RepoStatistics {
     }
 }
 
-fn main() -> Result<(), Error> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = setup_app().get_matches();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let changeset = matches
         .value_of("changeset")
         .ok_or(err_msg("required parameter `changeset` is not set"))?;
     let changeset = HgChangesetId::from_str(changeset)?;
 
-    let repo_statistics = args::open_repo(&logger, &matches).and_then(move |repo| {
+    let repo_statistics = args::open_repo(fb, &logger, &matches).and_then(move |repo| {
         let blobstore = Arc::new(repo.get_blobstore());
         repo.get_changeset_by_changesetid(ctx.clone(), changeset.clone())
             .map(move |changeset| changeset.manifestid())

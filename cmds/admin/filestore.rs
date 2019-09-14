@@ -9,6 +9,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Result};
+use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -70,13 +71,14 @@ pub fn build_subcommand(name: &str) -> App {
 }
 
 pub fn execute_command(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_matches: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    args::init_cachelib(&matches);
-    let blobrepo = args::open_repo(&logger, &matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    args::init_cachelib(fb, &matches);
+    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {
         (COMMAND_METADATA, Some(matches)) => (blobrepo, extract_fetch_key(matches).into_future())

@@ -704,7 +704,7 @@ impl Bundle2Resolver {
     ) -> Self {
         let scribe_commit_queue = match pushrebase.commit_scribe_category.clone() {
             Some(category) => Arc::new(scribe_commit_queue::LogToScribe::new_with_default_scribe(
-                category,
+                ctx.fb, category,
             )),
             None => Arc::new(scribe_commit_queue::LogToScribe::new_with_discard()),
         };

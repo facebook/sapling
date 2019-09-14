@@ -13,6 +13,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{format_err, Result, SlogKVError};
+use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::FutureExt;
 use mercurial_types::HgNodeHash;
@@ -54,12 +55,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let revlogrepo_path = matches
         .value_of("INPUT")
@@ -110,9 +112,9 @@ fn main() -> Result<()> {
     let phases_store = args::open_sql::<SqlPhases>(&matches);
 
     let blobrepo = if matches.is_present("no-create") {
-        args::open_repo_unredacted(&ctx.logger(), &matches).left_future()
+        args::open_repo_unredacted(fb, &ctx.logger(), &matches).left_future()
     } else {
-        args::create_repo_unredacted(&ctx.logger(), &matches).right_future()
+        args::create_repo_unredacted(fb, &ctx.logger(), &matches).right_future()
     };
 
     let blobimport = blobrepo

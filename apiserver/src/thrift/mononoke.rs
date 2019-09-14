@@ -24,6 +24,7 @@ use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
 use futures_preview::compat::Future01CompatExt;
@@ -37,14 +38,21 @@ use super::super::actor::{Mononoke, MononokeQuery, MononokeRepoResponse};
 
 #[derive(Clone)]
 pub struct MononokeAPIServiceImpl {
+    fb: FacebookInit,
     addr: Arc<Mononoke>,
     logger: Logger,
     scuba_builder: ScubaSampleBuilder,
 }
 
 impl MononokeAPIServiceImpl {
-    pub fn new(addr: Arc<Mononoke>, logger: Logger, scuba_builder: ScubaSampleBuilder) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        addr: Arc<Mononoke>,
+        logger: Logger,
+        scuba_builder: ScubaSampleBuilder,
+    ) -> Self {
         Self {
+            fb,
             addr,
             logger,
             scuba_builder,
@@ -115,6 +123,7 @@ impl MononokeAPIServiceImpl {
         scuba.add("session_uuid", uuid.to_string());
 
         CoreContext::new(
+            self.fb,
             uuid,
             self.logger.clone(),
             scuba,

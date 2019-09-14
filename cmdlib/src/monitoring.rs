@@ -10,6 +10,7 @@ use std::thread::{self};
 
 use clap::ArgMatches;
 use failure_ext::{format_err, Error};
+use fbinit::FacebookInit;
 use futures::future::Future;
 use services::{self, AliveService};
 use slog::{info, Logger};
@@ -18,6 +19,7 @@ use stats::schedule_stats_aggregation;
 /// `service_name` should match tupperware to avoid confusion.
 /// e.g. for mononoke/blobstore_healer, pass blobstore_healer
 pub fn start_fb303_and_stats_agg(
+    fb: FacebookInit,
     runtime: &mut tokio::runtime::Runtime,
     service_name: &str,
     logger: &Logger,
@@ -34,6 +36,7 @@ pub fn start_fb303_and_stats_agg(
                 .name("fb303_thrift_service".to_owned())
                 .spawn(move || {
                     services::run_service_framework(
+                        fb,
                         service_name,
                         port,
                         0, // Disables separate status http server

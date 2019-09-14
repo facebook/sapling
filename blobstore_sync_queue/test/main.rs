@@ -12,14 +12,15 @@ use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue, SqlConstructors,
 };
 use context::CoreContext;
+use fbinit::FacebookInit;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::DateTime;
 
-#[test]
-fn test_simple() {
+#[fbinit::test]
+fn test_simple(fb: FacebookInit) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let queue = SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap();
     let bs0 = BlobstoreId::new(0);
     let bs1 = BlobstoreId::new(1);

@@ -10,6 +10,7 @@ use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::future::Future;
 use futures::stream;
 use futures::stream::Stream;
@@ -21,7 +22,8 @@ use cmdlib::args;
 const NAME: &str = "rechunker";
 const DEFAULT_NUM_JOBS: usize = 10;
 
-fn main() -> Result<(), Error> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
     };
@@ -48,11 +50,11 @@ fn main() -> Result<(), Error> {
         )
         .get_matches();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
-    let blobrepo = args::open_repo(&logger, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let blobrepo = args::open_repo(fb, &logger, &matches);
 
     let jobs: usize = matches
         .value_of("jobs")

@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use clap::ArgMatches;
 use failure_ext::{format_err, Error, Result};
+use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 
@@ -59,6 +60,7 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
 }
 
 fn get_blobstore(
+    fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
@@ -66,12 +68,13 @@ fn get_blobstore(
 
     match storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => {
-            make_blobstore(&blobconfig, &SqliteFactory::new(path), None)
+            make_blobstore(fb, &blobconfig, &SqliteFactory::new(path), None)
         }
         MetadataDBConfig::Mysql {
             db_address,
             sharded_filenodes,
         } => make_blobstore(
+            fb,
             &blobconfig,
             &XdbFactory::new(db_address, None, sharded_filenodes),
             None,
@@ -80,6 +83,7 @@ fn get_blobstore(
 }
 
 pub fn subcommand_blobstore_fetch(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -89,13 +93,13 @@ pub fn subcommand_blobstore_fetch(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let blobstore_fut = get_blobstore(storage_config, inner_blobstore_id);
+    let blobstore_fut = get_blobstore(fb, storage_config, inner_blobstore_id);
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;
-    let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+    let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let key = sub_m.value_of("KEY").unwrap().to_string();
     let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
@@ -119,6 +123,7 @@ pub fn subcommand_blobstore_fetch(
         move |(blobstore, maybe_redacted_blobs)| {
             info!(logger, "using blobstore: {:?}", blobstore);
             get_from_sources(
+                fb,
                 use_memcache,
                 blobstore,
                 no_prefix,
@@ -164,6 +169,7 @@ pub fn subcommand_blobstore_fetch(
 }
 
 fn get_from_sources<T: Blobstore + Clone>(
+    fb: FacebookInit,
     use_memcache: Option<String>,
     blobstore: T,
     no_prefix: bool,
@@ -177,7 +183,7 @@ fn get_from_sources<T: Blobstore + Clone>(
 
     match use_memcache {
         Some(mode) => {
-            let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "").unwrap();
+            let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "").unwrap();
             let blobstore = match no_prefix {
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),

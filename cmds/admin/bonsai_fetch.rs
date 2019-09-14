@@ -7,6 +7,7 @@
 use clap::ArgMatches;
 use cmdlib::args;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
@@ -18,6 +19,7 @@ use crate::common::fetch_bonsai_changeset;
 use crate::error::SubcommandError;
 
 pub fn subcommand_bonsai_fetch(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -27,12 +29,12 @@ pub fn subcommand_bonsai_fetch(
         .unwrap()
         .to_string();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let json_flag = sub_m.is_present("json");
 
-    args::open_repo(&logger, &matches)
+    args::open_repo(fb, &logger, &matches)
         .and_then(move |blobrepo| fetch_bonsai_changeset(ctx, &rev, &blobrepo))
         .map(move |bcs| {
             if json_flag {

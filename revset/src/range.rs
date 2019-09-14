@@ -237,6 +237,7 @@ mod test {
     use crate::fixtures::merge_uneven;
     use blobrepo::BlobRepo;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use futures_ext::StreamExt;
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
@@ -250,11 +251,11 @@ mod test {
             .unwrap()
     }
 
-    #[test]
-    fn linear_range() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn linear_range(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -303,11 +304,11 @@ mod test {
         })
     }
 
-    #[test]
-    fn linear_direct_parent_range() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn linear_direct_parent_range(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -341,11 +342,11 @@ mod test {
         })
     }
 
-    #[test]
-    fn linear_single_node_range() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn linear_single_node_range(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -376,11 +377,11 @@ mod test {
         })
     }
 
-    #[test]
-    fn linear_empty_range() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn linear_empty_range(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
 
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
@@ -403,11 +404,11 @@ mod test {
         })
     }
 
-    #[test]
-    fn merge_range_from_merge() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo());
+    #[fbinit::test]
+    fn merge_range_from_merge(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(merge_uneven::getrepo(fb));
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -446,11 +447,11 @@ mod test {
         })
     }
 
-    #[test]
-    fn merge_range_everything() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo());
+    #[fbinit::test]
+    fn merge_range_everything(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(merge_uneven::getrepo(fb));
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),

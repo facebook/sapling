@@ -21,6 +21,7 @@ use tokio_io::AsyncRead;
 use crate::parts::phases_part;
 use async_compression::membuf::MemBuf;
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
+use fbinit::FacebookInit;
 use mercurial_types::{HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::rand;
@@ -70,7 +71,10 @@ fn test_parse_bzip2() {
 }
 
 fn parse_bzip2(read_ops: PartialWithErrors<GenWouldBlock>) {
-    parse_bundle(BZIP2_BUNDLE2, Some("BZ"), read_ops);
+    // TODO: this needs to be passed down from #[fbinit::test] instead.
+    let fb = *fbinit::FACEBOOK;
+
+    parse_bundle(fb, BZIP2_BUNDLE2, Some("BZ"), read_ops);
 }
 
 #[test]
@@ -81,34 +85,38 @@ fn test_parse_uncompressed() {
 }
 
 fn parse_uncompressed(read_ops: PartialWithErrors<GenWouldBlock>) {
-    parse_bundle(UNCOMP_BUNDLE2, None, read_ops);
+    // TODO: this needs to be passed down from #[fbinit::test] instead.
+    let fb = *fbinit::FACEBOOK;
+
+    parse_bundle(fb, UNCOMP_BUNDLE2, None, read_ops);
 }
 
-#[test]
-fn test_parse_unknown_compression() {
+#[fbinit::test]
+fn test_parse_unknown_compression(fb: FacebookInit) {
     let mut runtime = Runtime::new().unwrap();
     let bundle2_buf = BufReader::new(MemBuf::from(Vec::from(UNKNOWN_COMPRESSION_BUNDLE2)));
-    let outer_stream_err = parse_stream_start(&mut runtime, bundle2_buf, Some("IL")).unwrap_err();
+    let outer_stream_err =
+        parse_stream_start(fb, &mut runtime, bundle2_buf, Some("IL")).unwrap_err();
     assert_matches!(outer_stream_err.downcast::<ErrorKind>().unwrap(),
                     ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
 }
 
-#[test]
-fn test_empty_bundle_roundtrip_bzip() {
-    empty_bundle_roundtrip(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
+#[fbinit::test]
+fn test_empty_bundle_roundtrip_bzip(fb: FacebookInit) {
+    empty_bundle_roundtrip(fb, Some(CompressorType::Bzip2(Bzip2Compression::Default)));
 }
 
-#[test]
-fn test_empty_bundle_roundtrip_gzip() {
-    empty_bundle_roundtrip(Some(CompressorType::Gzip(FlateCompression::best())));
+#[fbinit::test]
+fn test_empty_bundle_roundtrip_gzip(fb: FacebookInit) {
+    empty_bundle_roundtrip(fb, Some(CompressorType::Gzip(FlateCompression::best())));
 }
 
-#[test]
-fn test_empty_bundle_roundtrip_uncompressed() {
-    empty_bundle_roundtrip(None);
+#[fbinit::test]
+fn test_empty_bundle_roundtrip_uncompressed(fb: FacebookInit) {
+    empty_bundle_roundtrip(fb, None);
 }
 
-fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
+fn empty_bundle_roundtrip(fb: FacebookInit, ct: Option<CompressorType>) {
     // Encode an empty bundle.
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
@@ -126,7 +134,7 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     buf.set_position(0);
 
     // Now decode it.
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let stream = Bundle2Stream::new(ctx, buf);
     let (item, stream) = runtime.block_on(stream.into_future()).unwrap();
 
@@ -152,9 +160,9 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     assert!(item.is_none());
 }
 
-#[test]
-fn test_phases_part_encording() {
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_phases_part_encording(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
     let phases_entries = stream::iter_ok(vec![
         (
             HgChangesetId::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
@@ -189,22 +197,22 @@ fn test_phases_part_encording() {
     );
 }
 
-#[test]
-fn test_unknown_part_bzip() {
-    unknown_part(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
+#[fbinit::test]
+fn test_unknown_part_bzip(fb: FacebookInit) {
+    unknown_part(fb, Some(CompressorType::Bzip2(Bzip2Compression::Default)));
 }
 
-#[test]
-fn test_unknown_part_gzip() {
-    unknown_part(Some(CompressorType::Gzip(FlateCompression::best())));
+#[fbinit::test]
+fn test_unknown_part_gzip(fb: FacebookInit) {
+    unknown_part(fb, Some(CompressorType::Gzip(FlateCompression::best())));
 }
 
-#[test]
-fn test_unknown_part_uncompressed() {
-    unknown_part(None);
+#[fbinit::test]
+fn test_unknown_part_uncompressed(fb: FacebookInit) {
+    unknown_part(fb, None);
 }
 
-fn unknown_part(ct: Option<CompressorType>) {
+fn unknown_part(fb: FacebookInit, ct: Option<CompressorType>) {
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
 
@@ -219,7 +227,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     let mut buf = runtime.block_on(encode_fut).unwrap();
     buf.set_position(0);
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let stream = Bundle2Stream::new(ctx, buf);
     let parts = Vec::new();
 
@@ -254,6 +262,7 @@ fn unknown_part(ct: Option<CompressorType>) {
 }
 
 fn parse_bundle(
+    fb: FacebookInit,
     input: &[u8],
     compression: Option<&str>,
     read_ops: PartialWithErrors<GenWouldBlock>,
@@ -262,7 +271,7 @@ fn parse_bundle(
 
     let bundle2_buf = MemBuf::from(Vec::from(input));
     let partial_read = BufReader::new(PartialAsyncRead::new(bundle2_buf, read_ops));
-    let stream = parse_stream_start(&mut runtime, partial_read, compression).unwrap();
+    let stream = parse_stream_start(fb, &mut runtime, partial_read, compression).unwrap();
 
     let (stream, cg2s) = {
         let (res, stream) = runtime.next_stream(stream);
@@ -440,12 +449,15 @@ fn test_parse_wirepack() {
 }
 
 fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
+    // TODO: this needs to be passed down from #[fbinit::test] instead.
+    let fb = *fbinit::FACEBOOK;
+
     let mut runtime = Runtime::new().unwrap();
 
     let cursor = Cursor::new(WIREPACK_BUNDLE2);
     let partial_read = BufReader::new(PartialAsyncRead::new(cursor, read_ops));
 
-    let stream = parse_stream_start(&mut runtime, partial_read, None).unwrap();
+    let stream = parse_stream_start(fb, &mut runtime, partial_read, None).unwrap();
 
     let stream = {
         let (res, stream) = runtime.next_stream(stream);
@@ -578,6 +590,7 @@ fn path(bytes: &[u8]) -> MPath {
 }
 
 fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
+    fb: FacebookInit,
     runtime: &mut Runtime,
     reader: R,
     compression: Option<&str>,
@@ -592,7 +605,7 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
         a_stream_params,
     };
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let stream = Bundle2Stream::new(ctx, reader);
     match runtime.block_on(stream.into_future()) {
         Ok((item, stream)) => {

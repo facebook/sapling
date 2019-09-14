@@ -14,6 +14,7 @@ use caching_ext::{
 };
 use cloned::cloned;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
@@ -61,11 +62,15 @@ pub struct CachingBonsaiHgMapping {
 }
 
 impl CachingBonsaiHgMapping {
-    pub fn new(mapping: Arc<dyn BonsaiHgMapping>, cache_pool: VolatileLruCachePool) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        mapping: Arc<dyn BonsaiHgMapping>,
+        cache_pool: VolatileLruCachePool,
+    ) -> Self {
         Self {
             mapping,
             cache_pool: cache_pool.into(),
-            memcache: MemcacheClient::new().into(),
+            memcache: MemcacheClient::new(fb).into(),
             keygen: CachingBonsaiHgMapping::create_key_gen(),
         }
     }

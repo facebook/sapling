@@ -8,6 +8,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use failure_ext::{format_err, Error, Result};
+use fbinit::FacebookInit;
 use futures::{
     future::{self, Future},
     stream,
@@ -80,8 +81,8 @@ fn check_metadata<B: Blobstore + Clone>(
         .map(|r| r.is_some())
 }
 
-#[test]
-fn test_invariants() -> Result<()> {
+#[fbinit::test]
+fn test_invariants(fb: FacebookInit) -> Result<()> {
     // NOTE: We make calls to our Blobstore succeed with 75% probability below. This might seem
     // high, but this actually makes most store() calls fail, since there is a lot that needs to go
     // right for a store() call to succeed (all the chunks need to be saved, then we need to write
@@ -95,7 +96,7 @@ fn test_invariants() -> Result<()> {
         chunk_size: Some(16),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     for _ in 0..1000 {
         let bytes = Bytes::from(Vec::arbitrary(&mut gen));

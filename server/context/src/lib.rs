@@ -8,6 +8,7 @@
 
 use chashmap::CHashMap;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use limits::types::MononokeThrottleLimit;
 use ratelim::loadlimiter::{self, LoadCost, LoadLimitCounter};
@@ -51,6 +52,7 @@ fn make_limit_key(prefix: &str) -> String {
 }
 
 struct LoadLimiter {
+    fb: FacebookInit,
     egress_bytes: LoadLimitCounter,
     ingress_blobstore_bytes: LoadLimitCounter,
     egress_total_manifests: LoadLimitCounter,
@@ -62,8 +64,9 @@ struct LoadLimiter {
 }
 
 impl LoadLimiter {
-    fn new(limits: MononokeThrottleLimit, category: String) -> Self {
+    fn new(fb: FacebookInit, limits: MononokeThrottleLimit, category: String) -> Self {
         Self {
+            fb,
             egress_bytes: LoadLimitCounter {
                 category: category.clone(),
                 key: make_limit_key("egress-bytes"),
@@ -120,11 +123,11 @@ impl LoadLimiter {
             Metric::EgressCommits => self.limits.commits,
         };
 
-        loadlimiter::should_throttle(&self.counter(metric), limit, window)
+        loadlimiter::should_throttle(self.fb, &self.counter(metric), limit, window)
     }
 
     pub fn bump_load(&self, metric: Metric, load: LoadCost) {
-        loadlimiter::bump_load(&self.counter(metric), load)
+        loadlimiter::bump_load(self.fb, &self.counter(metric), load)
     }
 }
 
@@ -147,6 +150,7 @@ pub fn is_quicksand(ssh_env_vars: &SshEnvVars) -> bool {
 
 #[derive(Debug, Clone)]
 pub struct CoreContext {
+    pub fb: FacebookInit,
     inner: Arc<Inner>,
 }
 
@@ -324,6 +328,7 @@ impl ::std::fmt::Debug for Inner {
 
 impl CoreContext {
     pub fn new(
+        fb: FacebookInit,
         session: Uuid,
         logger: Logger,
         scuba: ScubaSampleBuilder,
@@ -334,6 +339,7 @@ impl CoreContext {
         load_limiter: Option<(MononokeThrottleLimit, String)>,
     ) -> Self {
         Self {
+            fb,
             inner: Arc::new(Inner {
                 session,
                 logger,
@@ -344,16 +350,17 @@ impl CoreContext {
                 user_unix_name,
                 ssh_env_vars,
                 load_limiter: load_limiter
-                    .map(|(limits, category)| Arc::new(LoadLimiter::new(limits, category))),
+                    .map(|(limits, category)| Arc::new(LoadLimiter::new(fb, limits, category))),
             }),
         }
     }
 
-    pub fn new_with_logger(logger: Logger) -> Self {
+    pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
         let session_uuid = Uuid::new_v4();
         let trace = TraceContext::new(session_uuid, Instant::now());
 
         Self::new(
+            fb,
             Uuid::new_v4(),
             logger,
             ScubaSampleBuilder::with_discard(),
@@ -370,6 +377,7 @@ impl CoreContext {
         T: SendSyncRefUnwindSafeKV + 'static,
     {
         Self {
+            fb: self.fb,
             inner: Arc::new(Inner {
                 session: self.inner.session.clone(),
                 logger: self.inner.logger.new(values),
@@ -389,6 +397,7 @@ impl CoreContext {
         F: FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
     {
         Self {
+            fb: self.fb,
             inner: Arc::new(Inner {
                 session: self.inner.session.clone(),
                 logger: self.inner.logger.clone(),
@@ -403,8 +412,9 @@ impl CoreContext {
         }
     }
 
-    pub fn test_mock() -> Self {
+    pub fn test_mock(fb: FacebookInit) -> Self {
         Self::new(
+            fb,
             Uuid::new_v4(),
             Logger::root(::slog::Discard, o!()),
             ScubaSampleBuilder::with_discard(),

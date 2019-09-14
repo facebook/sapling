@@ -9,14 +9,15 @@ use std::str::FromStr;
 
 use chrono::{FixedOffset, TimeZone};
 use failure::Error;
+use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear};
 
 use crate::{ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke};
 
-#[tokio::test]
-async fn commit_info_by_hash() -> Result<(), Error> {
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo())]);
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
+    let ctx = CoreContext::test_mock(fb);
     let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
     let hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
     let cs_id = ChangesetId::from_str(hash)?;
@@ -35,10 +36,10 @@ async fn commit_info_by_hash() -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::test]
-async fn commit_info_by_hg_hash() -> Result<(), Error> {
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo())]);
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
+    let ctx = CoreContext::test_mock(fb);
     let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
     let hg_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
     let hg_cs_id = HgChangesetId::from_str(hg_hash)?;
@@ -60,10 +61,10 @@ async fn commit_info_by_hg_hash() -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::test]
-async fn commit_info_by_bookmark() -> Result<(), Error> {
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo())]);
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
+    let ctx = CoreContext::test_mock(fb);
     let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
     let cs = repo
         .resolve_bookmark("master")
@@ -84,10 +85,10 @@ async fn commit_info_by_bookmark() -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::test]
-async fn commit_hg_changeset_ids() -> Result<(), Error> {
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo())]);
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
+    let ctx = CoreContext::test_mock(fb);
     let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
     let hash1 = "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48";
     let hash2 = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
@@ -113,10 +114,10 @@ async fn commit_hg_changeset_ids() -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::test]
-async fn commit_is_ancestor_of() -> Result<(), Error> {
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), branch_uneven::getrepo())]);
-    let ctx = CoreContext::test_mock();
+#[fbinit::test]
+async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), branch_uneven::getrepo(fb))]);
+    let ctx = CoreContext::test_mock(fb);
     let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
     let mut changesets = Vec::new();
     for hg_hash in [

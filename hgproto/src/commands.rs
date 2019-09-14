@@ -758,6 +758,7 @@ mod test {
 
     use bytes::{BufMut, BytesMut};
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use futures::{future, stream};
 
     struct Dummy;
@@ -783,9 +784,9 @@ mod test {
         HgFileNodeId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
-    #[test]
-    fn hello() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn hello(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let handler = HgCommandHandler::new(ctx, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
@@ -801,9 +802,9 @@ mod test {
         }
     }
 
-    #[test]
-    fn unimpl() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn unimpl(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let handler = HgCommandHandler::new(ctx, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));

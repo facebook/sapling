@@ -291,13 +291,14 @@ impl HgEntry for MockEntry {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fbinit::FacebookInit;
     use futures::{Future, Stream};
     use maplit::btreemap;
 
-    #[test]
-    fn lookup() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn lookup(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let paths = btreemap! {
                 "foo/bar1" => (FileType::Regular, "bar1"),
                 "foo/bar2" => (FileType::Symlink, "bar2"),

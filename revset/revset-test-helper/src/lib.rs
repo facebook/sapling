@@ -7,6 +7,7 @@
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::Stream;
@@ -34,8 +35,8 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
-pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
-    let ctx = CoreContext::test_mock();
+pub fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
+    let ctx = CoreContext::test_mock(fb);
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
         .wait()
@@ -112,16 +113,17 @@ pub fn assert_changesets_sequence<I>(
 mod test {
     use super::*;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use futures_ext::StreamExt;
     use mononoke_types_mocks::changesetid::ONES_CSID;
 
-    #[test]
-    fn valid_changeset() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
-            let bcs_id = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+    #[fbinit::test]
+    fn valid_changeset(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
+            let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
             assert_changesets_sequence(
@@ -133,11 +135,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn invalid_changeset() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn invalid_changeset(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
             let cs_id = ONES_CSID;
             let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 

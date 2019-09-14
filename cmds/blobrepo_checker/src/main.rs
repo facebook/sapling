@@ -9,6 +9,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
 use std::fmt::Debug;
 
@@ -30,7 +31,8 @@ where
         .map_err(|e| panic!("While printing errors: {:#?}", e))
 }
 
-fn main() {
+#[fbinit::main]
+fn main(fb: FacebookInit) {
     let app = args::MononokeApp {
         hide_advanced_args: true,
     };
@@ -45,13 +47,13 @@ fn main() {
         )
         .get_matches();
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
     let logger = args::init_logging(&matches);
 
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo_fut = args::open_scrub_repo(&logger, &matches);
+    let repo_fut = args::open_scrub_repo(fb, &logger, &matches);
 
     let bookmarks: Vec<_> = matches
         .values_of("BOOKMARK")

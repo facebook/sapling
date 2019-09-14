@@ -13,6 +13,7 @@ use actix_web::{server, App, HttpRequest, HttpResponse, Path, Query, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
+use fbinit::FacebookInit;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
 use hostname::get_hostname;
@@ -50,7 +51,7 @@ mod config {
 fn get_ctx(req: &HttpRequest<HttpServerState>, state: &State<HttpServerState>) -> CoreContext {
     match req.extensions().get::<CoreContext>() {
         Some(ctx) => ctx.clone(),
-        None => CoreContext::new_with_logger(state.logger.clone()),
+        None => CoreContext::new_with_logger(state.fb, state.logger.clone()),
     }
 }
 
@@ -393,13 +394,13 @@ fn eden_prefetch_trees(
     }
 }
 
-fn setup_logger(debug: bool) -> Logger {
+fn setup_logger(fb: FacebookInit, debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
     let decorator = slog_term::TermDecorator::new().build();
     let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer).fuse();
     let stderr_drain = slog_async::Async::new(stderr_drain).build().fuse();
-    let logview_drain = LogViewDrain::new("errorlog_mononoke_apiserver");
+    let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke_apiserver");
 
     let drain = slog::Duplicate::new(stderr_drain, logview_drain);
     let drain = slog_stats::StatsDrain::new(drain);
@@ -413,6 +414,7 @@ fn setup_logger(debug: bool) -> Logger {
 
 #[derive(Clone)]
 struct HttpServerState {
+    fb: FacebookInit,
     mononoke: Arc<Mononoke>,
     new_mononoke: Arc<NewMononoke>,
     logger: Logger,
@@ -420,7 +422,8 @@ struct HttpServerState {
     use_ssl: bool,
 }
 
-fn main() -> Fallible<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Fallible<()> {
     panichandler::set_panichandler(Fate::Abort);
 
     let app = clap::App::new("Mononoke API Server")
@@ -492,7 +495,7 @@ fn main() -> Fallible<()> {
     let app = cmdlib::args::add_myrouter_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
-    let with_cachelib = cmdlib::args::init_cachelib(&matches);
+    let with_cachelib = cmdlib::args::init_cachelib(fb, &matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
@@ -508,7 +511,7 @@ fn main() -> Fallible<()> {
 
     let address = format!("{}:{}", host, port);
 
-    let root_logger = setup_logger(debug);
+    let root_logger = setup_logger(fb, debug);
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
     let thrift_logger = root_logger.clone();
@@ -563,7 +566,7 @@ fn main() -> Fallible<()> {
     };
 
     let mut scuba_builder = if with_scuba {
-        ScubaSampleBuilder::new(config::SCUBA_TABLE)
+        ScubaSampleBuilder::new(fb, config::SCUBA_TABLE)
     } else {
         ScubaSampleBuilder::with_discard()
     };
@@ -574,12 +577,13 @@ fn main() -> Fallible<()> {
     let sys = actix::System::new("mononoke-apiserver");
 
     let cache = if with_cache && with_cachelib == Caching::Enabled {
-        Some(CacheManager::new()?)
+        Some(CacheManager::new(fb)?)
     } else {
         None
     };
 
     let mononoke = runtime.block_on(Mononoke::new(
+        fb,
         mononoke_logger.clone(),
         repo_configs,
         cmdlib::args::parse_myrouter_port(&matches),
@@ -605,6 +609,7 @@ fn main() -> Fallible<()> {
 
     if let Ok(port) = thrift_port {
         thrift::make_thrift(
+            fb,
             thrift_logger,
             host.to_string(),
             port,
@@ -615,6 +620,7 @@ fn main() -> Fallible<()> {
     }
 
     let state = HttpServerState {
+        fb,
         mononoke,
         new_mononoke,
         logger: actix_logger.clone(),
@@ -625,6 +631,7 @@ fn main() -> Fallible<()> {
     let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(middleware::CoreContextMiddleware::new(
+                fb,
                 actix_logger.clone(),
                 scuba_builder.clone(),
             ))

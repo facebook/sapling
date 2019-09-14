@@ -9,6 +9,7 @@
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::future::ok;
 use futures::Future;
@@ -437,10 +438,10 @@ fn length_matching_file_hook(length: u64) -> Box<dyn Hook<HookFile>> {
     Box::new(LengthMatchingFileHook { length })
 }
 
-#[test]
-fn test_changeset_hook_accepted() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_accepted(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook()
         };
@@ -455,10 +456,10 @@ fn test_changeset_hook_accepted() {
     });
 }
 
-#[test]
-fn test_changeset_hook_rejected() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_rejected(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_rejecting_changeset_hook()
         };
@@ -473,10 +474,10 @@ fn test_changeset_hook_rejected() {
     });
 }
 
-#[test]
-fn test_changeset_hook_mix() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_mix(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook(),
             "hook2".to_string() => always_rejecting_changeset_hook(),
@@ -497,10 +498,10 @@ fn test_changeset_hook_mix() {
     });
 }
 
-#[test]
-fn test_changeset_hook_context() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_context(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let files = vec![
             ("dir1/subdir1/subsubdir1/file_1".to_string(), ONES_FNID),
             ("dir1/subdir1/subsubdir2/file_1".to_string(), TWOS_FNID),
@@ -551,10 +552,10 @@ fn test_changeset_hook_context() {
     });
 }
 
-#[test]
-fn test_changeset_hook_contains_string() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_contains_string(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hook1_map = hashmap![
             "dir1/subdir1/subsubdir1/file_1".to_string() => "elephants".to_string(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
@@ -590,10 +591,10 @@ fn test_changeset_hook_contains_string() {
     });
 }
 
-#[test]
-fn test_changeset_hook_other_file_content() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_other_file_content(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("elephants".to_string())),
             "hook2".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("giraffes".to_string())),
@@ -618,10 +619,10 @@ fn test_changeset_hook_other_file_content() {
     });
 }
 
-#[test]
-fn test_changeset_hook_file_content() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_file_content(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hook1_map = hashmap![
             "dir1/subdir1/subsubdir1/file_1".to_string() => "elephants".to_string(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
@@ -657,10 +658,10 @@ fn test_changeset_hook_file_content() {
     });
 }
 
-#[test]
-fn test_changeset_hook_lengths() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_changeset_hook_lengths(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hook1_map = hashmap![
             "dir1/subdir1/subsubdir1/file_1".to_string() => 9,
             "dir1/subdir1/subsubdir2/file_1".to_string() => 11,
@@ -696,10 +697,10 @@ fn test_changeset_hook_lengths() {
     });
 }
 
-#[test]
-fn test_file_hook_accepted() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_hook_accepted(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_accepting_file_hook()
         };
@@ -718,10 +719,10 @@ fn test_file_hook_accepted() {
     });
 }
 
-#[test]
-fn test_file_hook_rejected() {
+#[fbinit::test]
+fn test_file_hook_rejected(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_rejecting_file_hook()
         };
@@ -740,10 +741,10 @@ fn test_file_hook_rejected() {
     });
 }
 
-#[test]
-fn test_file_hook_mix() {
+#[fbinit::test]
+fn test_file_hook_mix(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_rejecting_file_hook(),
             "hook2".to_string() => always_accepting_file_hook()
@@ -770,10 +771,10 @@ fn test_file_hook_mix() {
     });
 }
 
-#[test]
-fn test_file_hooks_paths() {
+#[fbinit::test]
+fn test_file_hooks_paths(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let matching_paths = hashset![
             "dir1/subdir1/subsubdir2/file_1".to_string(),
             "dir1/subdir1/subsubdir2/file_2".to_string(),
@@ -796,10 +797,10 @@ fn test_file_hooks_paths() {
     });
 }
 
-#[test]
-fn test_file_hooks_paths_mix() {
+#[fbinit::test]
+fn test_file_hooks_paths_mix(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let matching_paths1 = hashset![
             "dir1/subdir1/subsubdir2/file_1".to_string(),
             "dir1/subdir1/subsubdir2/file_2".to_string(),
@@ -831,10 +832,10 @@ fn test_file_hooks_paths_mix() {
     });
 }
 
-#[test]
-fn test_file_hook_contains_string() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_hook_contains_string(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => contains_string_matching_file_hook("elephants".to_string()),
             "hook2".to_string() => contains_string_matching_file_hook("hippopatami".to_string()),
@@ -867,10 +868,10 @@ fn test_file_hook_contains_string() {
     });
 }
 
-#[test]
-fn test_file_hook_file_content() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_hook_file_content(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => file_content_matching_file_hook("elephants".to_string()),
             "hook2".to_string() => file_content_matching_file_hook("hippopatami".to_string()),
@@ -903,10 +904,10 @@ fn test_file_hook_file_content() {
     });
 }
 
-#[test]
-fn test_file_hook_is_symlink() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_hook_is_symlink(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => is_symlink_matching_file_hook(true),
             "hook2".to_string() => is_symlink_matching_file_hook(false),
@@ -933,10 +934,10 @@ fn test_file_hook_is_symlink() {
     });
 }
 
-#[test]
-fn test_file_hook_length() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_file_hook_length(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => length_matching_file_hook("elephants".len() as u64),
             "hook2".to_string() => length_matching_file_hook("hippopatami".len() as u64),
@@ -975,10 +976,10 @@ fn test_file_hook_length() {
     });
 }
 
-#[test]
-fn test_register_changeset_hooks() {
-    async_unit::tokio_unit_test(|| {
-        let mut hook_manager = hook_manager_inmem();
+#[fbinit::test]
+fn test_register_changeset_hooks(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let mut hook_manager = hook_manager_inmem(fb);
         let hook1 = always_accepting_changeset_hook();
         hook_manager.register_changeset_hook("hook1", hook1.into(), Default::default());
         let hook2 = always_accepting_changeset_hook();
@@ -991,10 +992,10 @@ fn test_register_changeset_hooks() {
     });
 }
 
-#[test]
-fn test_with_blob_store() {
-    async_unit::tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn test_with_blob_store(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook()
         };
@@ -1037,7 +1038,7 @@ fn run_changeset_hooks_with_mgr(
     expected: HashMap<String, HookExecution>,
     inmem: bool,
 ) {
-    let mut hook_manager = setup_hook_manager(bookmarks, regexes, inmem);
+    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, inmem);
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
     }
@@ -1083,7 +1084,7 @@ fn run_file_hooks_with_mgr(
     expected: HashMap<String, HashMap<String, HookExecution>>,
     inmem: bool,
 ) {
-    let mut hook_manager = setup_hook_manager(bookmarks, regexes, inmem);
+    let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes, inmem);
     for (hook_name, hook) in hooks {
         hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
     }
@@ -1108,14 +1109,15 @@ fn run_file_hooks_with_mgr(
 }
 
 fn setup_hook_manager(
+    fb: FacebookInit,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     inmem: bool,
 ) -> HookManager {
     let mut hook_manager = if inmem {
-        hook_manager_inmem()
+        hook_manager_inmem(fb)
     } else {
-        hook_manager_blobrepo()
+        hook_manager_blobrepo(fb)
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
@@ -1138,9 +1140,9 @@ fn default_changeset_id() -> HgChangesetId {
     HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap()
 }
 
-fn hook_manager_blobrepo() -> HookManager {
-    let ctx = CoreContext::test_mock();
-    let repo = many_files_dirs::getrepo();
+fn hook_manager_blobrepo(fb: FacebookInit) -> HookManager {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = many_files_dirs::getrepo(fb);
     let changeset_store = BlobRepoChangesetStore::new(repo.clone());
     let content_store = BlobRepoFileContentStore::new(repo);
     let logger = Logger::root(Discard {}.ignore_res(), o!());
@@ -1158,9 +1160,9 @@ fn to_mpath(string: &str) -> MPath {
     MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
 }
 
-fn hook_manager_inmem() -> HookManager {
-    let ctx = CoreContext::test_mock();
-    let repo = many_files_dirs::getrepo();
+fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = many_files_dirs::getrepo(fb);
     // Load up an in memory store with a single commit from the many_files_dirs store
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
     let cs = repo
@@ -1252,9 +1254,9 @@ fn default_repo_config() -> RepoConfig {
     }
 }
 
-#[test]
-fn test_load_hooks() {
-    async_unit::tokio_unit_test(|| {
+#[fbinit::test]
+fn test_load_hooks(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
         let mut config = default_repo_config();
         config.bookmarks = vec![
             BookmarkParams {
@@ -1303,16 +1305,16 @@ fn test_load_hooks() {
             },
         ];
 
-        let mut hm = hook_manager_blobrepo();
-        match load_hooks(&mut hm, config, &hashset![]) {
+        let mut hm = hook_manager_blobrepo(fb);
+        match load_hooks(fb, &mut hm, config, &hashset![]) {
             Err(e) => assert!(false, format!("Failed to load hooks {}", e)),
             Ok(()) => (),
         };
     });
 }
 
-#[test]
-fn test_verify_integrity_fast_failure() {
+#[fbinit::test]
+fn test_verify_integrity_fast_failure(fb: FacebookInit) {
     let mut config = default_repo_config();
     config.bookmarks = vec![BookmarkParams {
         bookmark: Regex::new("bm2").unwrap().into(),
@@ -1331,14 +1333,14 @@ fn test_verify_integrity_fast_failure() {
         },
     }];
 
-    let mut hm = hook_manager_blobrepo();
-    load_hooks(&mut hm, config, &hashset![])
+    let mut hm = hook_manager_blobrepo(fb);
+    load_hooks(fb, &mut hm, config, &hashset![])
         .expect_err("`verify_integrity` hook loading should have failed");
 }
 
-#[test]
-fn test_load_hooks_no_such_hook() {
-    async_unit::tokio_unit_test(|| {
+#[fbinit::test]
+fn test_load_hooks_no_such_hook(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
         let book_or_rex = BookmarkOrRegex::Bookmark(BookmarkName::new("bm1").unwrap());
         let mut config = default_repo_config();
         config.bookmarks = vec![BookmarkParams {
@@ -1356,9 +1358,9 @@ fn test_load_hooks_no_such_hook() {
             config: Default::default(),
         }];
 
-        let mut hm = hook_manager_blobrepo();
+        let mut hm = hook_manager_blobrepo(fb);
 
-        match load_hooks(&mut hm, config, &hashset![])
+        match load_hooks(fb, &mut hm, config, &hashset![])
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
@@ -1370,9 +1372,9 @@ fn test_load_hooks_no_such_hook() {
     });
 }
 
-#[test]
-fn test_load_hooks_bad_rust_hook() {
-    async_unit::tokio_unit_test(|| {
+#[fbinit::test]
+fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
         let mut config = default_repo_config();
         config.bookmarks = vec![BookmarkParams {
             bookmark: BookmarkName::new("bm1").unwrap().into(),
@@ -1389,9 +1391,9 @@ fn test_load_hooks_bad_rust_hook() {
             config: Default::default(),
         }];
 
-        let mut hm = hook_manager_blobrepo();
+        let mut hm = hook_manager_blobrepo(fb);
 
-        match load_hooks(&mut hm, config, &hashset![])
+        match load_hooks(fb, &mut hm, config, &hashset![])
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
@@ -1403,8 +1405,8 @@ fn test_load_hooks_bad_rust_hook() {
     });
 }
 
-#[test]
-fn test_load_disabled_hooks() {
+#[fbinit::test]
+fn test_load_disabled_hooks(fb: FacebookInit) {
     let mut config = default_repo_config();
 
     config.bookmarks = vec![];
@@ -1416,14 +1418,14 @@ fn test_load_disabled_hooks() {
         config: Default::default(),
     }];
 
-    let mut hm = hook_manager_blobrepo();
+    let mut hm = hook_manager_blobrepo(fb);
 
-    load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+    load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .expect("disabling a broken hook should allow loading to succeed");
 }
 
-#[test]
-fn test_load_disabled_hooks_referenced_by_bookmark() {
+#[fbinit::test]
+fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
     let mut config = default_repo_config();
 
     config.bookmarks = vec![BookmarkParams {
@@ -1441,22 +1443,22 @@ fn test_load_disabled_hooks_referenced_by_bookmark() {
         config: Default::default(),
     }];
 
-    let mut hm = hook_manager_blobrepo();
+    let mut hm = hook_manager_blobrepo(fb);
 
-    load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+    load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .expect("disabling a broken hook should allow loading to succeed");
 }
 
-#[test]
-fn test_load_disabled_hooks_hook_does_not_exist() {
+#[fbinit::test]
+fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     let mut config = default_repo_config();
 
     config.bookmarks = vec![];
     config.hooks = vec![];
 
-    let mut hm = hook_manager_blobrepo();
+    let mut hm = hook_manager_blobrepo(fb);
 
-    match load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+    match load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
         .unwrap_err()
         .downcast::<ErrorKind>()
     {

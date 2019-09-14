@@ -6,6 +6,7 @@
 
 use bytes::Bytes;
 use failure::err_msg;
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 
 use caching_ext::{CachelibHandler, MemcacheHandler};
@@ -27,7 +28,7 @@ impl CacheManager {
     const MC_CODEVER: u32 = 1;
     const MC_SITEVER: u32 = 1;
 
-    pub fn new() -> Result<Self, ErrorKind> {
+    pub fn new(fb: FacebookInit) -> Result<Self, ErrorKind> {
         let cachelib = match cachelib::get_volatile_pool("content-sha1") {
             Ok(Some(e)) => Ok(e),
             _ => Err(ErrorKind::InternalError(err_msg(
@@ -36,7 +37,7 @@ impl CacheManager {
         }?;
 
         Ok(CacheManager {
-            memcache: MemcacheClient::new().into(),
+            memcache: MemcacheClient::new(fb).into(),
             cachelib: cachelib.into(),
             keygen: KeyGen::new(Self::KEY_PREFIX, Self::MC_CODEVER, Self::MC_SITEVER),
         })

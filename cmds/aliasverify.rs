@@ -16,6 +16,7 @@ use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
 use failure_ext::{format_err, Error, Result};
+use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::{debug, info, Logger};
@@ -332,13 +333,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
     let sqlchangesets = args::open_sql::<SqlChangesets>(&matches);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
@@ -359,7 +361,7 @@ fn main() -> Result<()> {
 
     let repoid = args::get_repo_id(&matches).expect("Need repo id");
 
-    let blobrepo = args::open_repo(&logger, &matches);
+    let blobrepo = args::open_repo(fb, &logger, &matches);
     let aliasimport = blobrepo
         .join(sqlchangesets)
         .and_then(move |(blobrepo, sqlchangesets)| {

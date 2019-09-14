@@ -17,6 +17,7 @@ use bonsai_hg_mapping::{
     ErrorKind, MemWritesBonsaiHgMapping, SqlBonsaiHgMapping, SqlConstructors,
 };
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures_ext::BoxFuture;
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
@@ -28,8 +29,8 @@ use std::sync::{
     Arc,
 };
 
-fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let entry = BonsaiHgMappingEntry {
         repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
@@ -95,8 +96,8 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
     );
 }
 
-fn missing<M: BonsaiHgMapping>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let result = mapping
         .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID.into())
         .wait()
@@ -104,8 +105,8 @@ fn missing<M: BonsaiHgMapping>(mapping: M) {
     assert_eq!(result, vec![]);
 }
 
-fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn mem_writes<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let entry = BonsaiHgMappingEntry {
         repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
@@ -218,8 +219,8 @@ impl BonsaiHgMapping for CountedBonsaiHgMapping {
     }
 }
 
-fn caching<M: BonsaiHgMapping + 'static>(mapping: M) {
-    let ctx = CoreContext::test_mock();
+fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
     let gets = Arc::new(AtomicUsize::new(0));
     let adds = Arc::new(AtomicUsize::new(0));
     let mapping = CountedBonsaiHgMapping::new(Arc::new(mapping), gets.clone(), adds.clone());
@@ -260,30 +261,30 @@ fn caching<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(gets.load(Ordering::Relaxed), 2);
 }
 
-#[test]
-fn test_add_and_get() {
-    async_unit::tokio_unit_test(|| {
-        add_and_get(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+#[fbinit::test]
+fn test_add_and_get(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        add_and_get(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }
 
-#[test]
-fn test_missing() {
-    async_unit::tokio_unit_test(|| {
-        missing(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+#[fbinit::test]
+fn test_missing(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }
 
-#[test]
-fn test_mem_writes() {
-    async_unit::tokio_unit_test(|| {
-        mem_writes(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+#[fbinit::test]
+fn test_mem_writes(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        mem_writes(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }
 
-#[test]
-fn test_caching() {
-    async_unit::tokio_unit_test(|| {
-        caching(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+#[fbinit::test]
+fn test_caching(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        caching(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }

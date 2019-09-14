@@ -15,6 +15,7 @@ use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Fail, Result};
+use fbinit::FacebookInit;
 use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;
 use futures::Stream;
@@ -39,7 +40,8 @@ pub struct HookResults {
     cs_hooks_result: Vec<(ChangesetHookExecutionID, HookExecution)>,
 }
 
-fn main() -> Result<()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
     let matches = setup_app().get_matches();
@@ -77,9 +79,10 @@ fn main() -> Result<()> {
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks(&matches, &logger);
 
-    let caching = cmdlib::args::init_cachelib(&matches);
+    let caching = cmdlib::args::init_cachelib(fb, &matches);
 
     let blobrepo = open_blobrepo(
+        fb,
         config.storage_config.clone(),
         RepositoryId::new(config.repoid),
         cmdlib::args::parse_myrouter_port(&matches),
@@ -99,8 +102,8 @@ fn main() -> Result<()> {
 
     let id = "ManifoldBlob";
 
-    let manifold_client = ManifoldHttpClient::new(id, rc)?;
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let manifold_client = ManifoldHttpClient::new(fb, id, rc)?;
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let fut = blobrepo.and_then({
         cloned!(logger, config);
         move |blobrepo| {

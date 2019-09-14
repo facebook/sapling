@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use failure_ext::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::futures_unordered;
@@ -40,34 +41,34 @@ pub fn get_empty_lazy_repo() -> BlobRepo {
 #[macro_export]
 macro_rules! test_both_repotypes {
     ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[test]
-        fn $lazy_test() {
-            async_unit::tokio_unit_test(|| {
-                $impl_name(get_empty_lazy_repo());
+        #[fbinit::test]
+        fn $lazy_test(fb: FacebookInit) {
+            async_unit::tokio_unit_test(move || {
+                $impl_name(fb, get_empty_lazy_repo());
             })
         }
 
-        #[test]
-        fn $eager_test() {
-            async_unit::tokio_unit_test(|| {
-                $impl_name(get_empty_eager_repo());
+        #[fbinit::test]
+        fn $eager_test(fb: FacebookInit) {
+            async_unit::tokio_unit_test(move || {
+                $impl_name(fb, get_empty_eager_repo());
             })
         }
     };
     (should_panic, $impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[test]
+        #[fbinit::test]
         #[should_panic]
-        fn $lazy_test() {
-            async_unit::tokio_unit_test(|| {
-                $impl_name(get_empty_lazy_repo());
+        fn $lazy_test(fb: FacebookInit) {
+            async_unit::tokio_unit_test(move || {
+                $impl_name(fb, get_empty_lazy_repo());
             })
         }
 
-        #[test]
+        #[fbinit::test]
         #[should_panic]
-        fn $eager_test() {
-            async_unit::tokio_unit_test(|| {
-                $impl_name(get_empty_eager_repo());
+        fn $eager_test(fb: FacebookInit) {
+            async_unit::tokio_unit_test(move || {
+                $impl_name(fb, get_empty_eager_repo());
             })
         }
     };
@@ -189,6 +190,7 @@ fn upload_hg_file_entry(
 }
 
 pub fn create_changeset_no_parents(
+    fb: FacebookInit,
     repo: &BlobRepo,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
@@ -211,13 +213,14 @@ pub fn create_changeset_no_parents(
         draft: false,
     };
     create_changeset.create(
-        CoreContext::test_mock(),
+        CoreContext::test_mock(fb),
         repo,
         ScubaSampleBuilder::with_discard(),
     )
 }
 
 pub fn create_changeset_one_parent(
+    fb: FacebookInit,
     repo: &BlobRepo,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     other_nodes: Vec<BoxFuture<(HgBlobEntry, RepoPath), Error>>,
@@ -241,7 +244,7 @@ pub fn create_changeset_one_parent(
         draft: false,
     };
     create_changeset.create(
-        CoreContext::test_mock(),
+        CoreContext::test_mock(fb),
         repo,
         ScubaSampleBuilder::with_discard(),
     )

@@ -12,6 +12,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
 use failure::{err_msg, format_err};
+use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
@@ -240,6 +241,7 @@ struct WireprotoLogger {
 
 impl WireprotoLogger {
     fn new(
+        fb: FacebookInit,
         scuba_logger: ScubaSampleBuilder,
         wireproto_command: &'static str,
         args: Option<serde_json::Value>,
@@ -248,7 +250,7 @@ impl WireprotoLogger {
     ) -> Self {
         let mut logger = Self {
             scuba_logger,
-            scribe_client: Arc::new(ScribeClientImplementation::new()),
+            scribe_client: Arc::new(ScribeClientImplementation::new(fb)),
             wireproto_scribe_category,
             wireproto_command,
             args: args.clone(),
@@ -689,6 +691,7 @@ impl RepoClient {
         args: Option<serde_json::Value>,
     ) -> WireprotoLogger {
         WireprotoLogger::new(
+            self.ctx.fb,
             self.ctx.scuba().clone(),
             wireproto_command,
             args,

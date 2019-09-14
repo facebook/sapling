@@ -440,16 +440,17 @@ mod test {
     use bookmarks::BookmarkName;
     use bytes::Bytes;
     use failure_ext::err_downcast;
+    use fbinit::FacebookInit;
     use futures::Future;
     use mercurial_types::{HgChangesetId, MPath};
     use std::str::FromStr;
     use std::sync::Arc;
 
-    #[test]
-    fn test_cs_hook_simple_rejected() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_simple_rejected(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, 'fail'\n\
@@ -462,11 +463,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_simple_fails_on_deleted_read() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_simple_fails_on_deleted_read(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  for _, file in ipairs(ctx.files) do\n\
@@ -481,11 +482,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_reviewers() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_reviewers(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  local reviewers = ctx.parse_commit_msg()['reviewers']\n\
@@ -500,7 +501,7 @@ mod test {
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
-            let reviewers_acl_checker = acl_checker();
+            let reviewers_acl_checker = acl_checker(fb);
             let hcs = HookChangeset::new(
                 "some-author".into(),
                 vec![],
@@ -523,11 +524,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_test_plan() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_test_plan(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  local test_plan = ctx.parse_commit_msg()['test plan']\n\
@@ -542,7 +543,7 @@ mod test {
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
-            let reviewers_acl_checker = acl_checker();
+            let reviewers_acl_checker = acl_checker(fb);
             let hcs = HookChangeset::new(
                 "some-author".into(),
                 vec![],
@@ -565,11 +566,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_author_unixname() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_author_unixname(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.author_unixname == 'some-author'\n\
@@ -583,7 +584,7 @@ mod test {
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
-            let reviewers_acl_checker = acl_checker();
+            let reviewers_acl_checker = acl_checker(fb);
             let hcs = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 vec![],
@@ -605,11 +606,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_not_valid_reviewer() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_not_valid_reviewer(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return not ctx.is_valid_reviewer('uyqdyqduygqwduygqwuydgqdfgbducbe2ubjweuhqwudh37')\n\
@@ -622,11 +623,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_valid_reviewer() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_valid_reviewer(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.is_valid_reviewer('zuck')\n\
@@ -639,11 +640,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_valid_reviewer_other() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_valid_reviewer_other(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.is_valid_reviewer('svcscm')\n\
@@ -656,11 +657,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_rejected_short_and_long_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_rejected_short_and_long_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, \"emus\", \"ostriches\"\n\
@@ -675,11 +676,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_author() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_author(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.author == \"some-author\"\n\
@@ -692,11 +693,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_file_paths() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_file_paths(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             // Arrays passed from rust -> lua appear to be 1 indexed in Lua land
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -712,11 +713,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_file_contains_string_match() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_file_contains_string_match(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.files[1].contains_string(\"file1sausages\") and\n
@@ -731,11 +732,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_path_regex_match() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_path_regex_match(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.files[1].path_regex_match(\"file[0-9]\") and\n
@@ -750,11 +751,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_regex_match() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_regex_match(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.regex_match(\"file[0-9]\", ctx.files[1].path) and\n
@@ -769,11 +770,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_file_content_match() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_file_content_match(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.files[1].content() == \"file1sausages\" and\n
@@ -789,11 +790,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_other_file_content_match() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_other_file_content_match(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file_content(\"file1\") == \"file1sausages\" and\n
@@ -808,11 +809,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_content_not_found_returns_nil() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_file_content_not_found_returns_nil(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file_content(\"no/such/path\") == nil\n
@@ -825,11 +826,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_check_type() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_check_type(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  local added_file = ctx.files[1]
@@ -854,11 +855,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_deleted() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_deleted(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  for _, f in ipairs(ctx.files) do
@@ -876,11 +877,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_file_len() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_file_len(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.files[1].len() == 13 and\n
@@ -896,11 +897,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_comments() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_comments(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.comments == \"some-comments\"\n\
@@ -913,11 +914,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_one_parent() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_one_parent(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.parent1_hash == \"p1-hash\" and \n\
@@ -931,11 +932,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_two_parents() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let mut changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_two_parents(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let mut changeset = default_changeset(fb);
             changeset.parents = HookChangesetParents::Two("p1-hash".into(), "p2-hash".into());
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -950,11 +951,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_no_parents() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let mut changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_no_parents(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let mut changeset = default_changeset(fb);
             changeset.parents = HookChangesetParents::None;
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -969,11 +970,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_no_hook_func() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_no_hook_func(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "elephants = function (ctx)\n\
                  return true\n\
@@ -986,11 +987,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_invalid_hook() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_invalid_hook(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from("invalid code");
             assert_matches!(
                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
@@ -1000,11 +1001,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_exception() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_exception(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  if ctx.info.author == \"some-author\" then\n\
@@ -1021,11 +1022,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_invalid_return_val() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_invalid_return_val(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return \"aardvarks\"\n\
@@ -1039,11 +1040,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_no_short_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_no_short_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false\n\
@@ -1057,11 +1058,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_invalid_short_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_invalid_short_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, 23, \"long desc\"\n\
@@ -1075,11 +1076,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_invalid_long_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_invalid_long_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, \"short desc\", 23\n\
@@ -1093,11 +1094,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_desc_when_hooks_is_accepted() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_desc_when_hooks_is_accepted(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return true, \"short\", \"long\"\n\
@@ -1111,11 +1112,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_long_desc_when_hooks_is_accepted() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_long_desc_when_hooks_is_accepted(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return true, nil, \"long\"\n\
@@ -1129,11 +1130,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_cs_hook_no_io_nor_os() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
+    #[fbinit::test]
+    fn test_cs_hook_no_io_nor_os(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
                  return io == nil and os == nil\n
@@ -1146,10 +1147,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_path() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_path(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1163,10 +1164,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_contains_string_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_contains_string_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1180,10 +1181,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_contains_string_no_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_contains_string_no_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1197,10 +1198,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_path_regex_match_no_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_path_regex_match_no_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1214,10 +1215,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_regex_match_no_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_regex_match_no_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1231,10 +1232,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_path_regex_match_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_path_regex_match_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1248,10 +1249,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_regex_match_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_regex_match_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1265,10 +1266,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_path_regex_match_invalid_regex() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_path_regex_match_invalid_regex(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1283,10 +1284,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_regex_match_invalid_regex() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_regex_match_invalid_regex(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1301,10 +1302,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_content_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_content_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1318,10 +1319,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_is_symlink() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_is_symlink(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_symlink_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1335,10 +1336,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_is_not_symlink() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_is_not_symlink(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1352,10 +1353,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_removed() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_removed(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_removed_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1369,10 +1370,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_len_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_len_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1386,10 +1387,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_len_no_matches() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_len_no_matches(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1403,10 +1404,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_rejected() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_rejected(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1420,10 +1421,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_no_hook_func() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_no_hook_func(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "elephants = function (ctx)\n\
@@ -1437,10 +1438,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_invalid_hook() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_invalid_hook(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from("invalid code");
             assert_matches!(
@@ -1451,10 +1452,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_exception() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_exception(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1472,10 +1473,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_invalid_return_val() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_invalid_return_val(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1490,10 +1491,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_no_short_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_no_short_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1508,10 +1509,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_invalid_short_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_invalid_short_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1526,10 +1527,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_invalid_long_desc() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_invalid_long_desc(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1544,10 +1545,10 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_file_hook_no_io_nor_os() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_no_io_nor_os(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1652,26 +1653,26 @@ end"#;
         );
     }
 
-    #[test]
-    fn test_cs_hook_config_reading() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_cs_hook_config_reading(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
 
             run_test_for_config_reading(ctx, |conf| {
                 HookContext::new(
                     "testhook".into(),
                     conf,
-                    default_changeset(),
+                    default_changeset(fb),
                     BookmarkName::new("book").unwrap(),
                 )
             });
         });
     }
 
-    #[test]
-    fn test_file_hook_config_reading() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_file_hook_config_reading(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
 
             run_test_for_config_reading(ctx, |conf| {
                 HookContext::new(
@@ -1719,7 +1720,7 @@ end"#;
         FIVES_FNID, FOURS_FNID, ONES_FNID, THREES_FNID, TWOS_FNID,
     };
 
-    fn default_changeset() -> HookChangeset {
+    fn default_changeset(fb: FacebookInit) -> HookChangeset {
         let added = vec![
             ("file1".into(), ONES_FNID),
             ("file2".into(), TWOS_FNID),
@@ -1727,7 +1728,7 @@ end"#;
         ];
         let deleted = vec![("deleted".into(), FOURS_FNID)];
         let modified = vec![("modified".into(), FIVES_FNID)];
-        create_hook_changeset(added, deleted, modified)
+        create_hook_changeset(fb, added, deleted, modified)
     }
 
     fn to_mpath(string: &str) -> MPath {
@@ -1736,6 +1737,7 @@ end"#;
     }
 
     fn create_hook_changeset(
+        fb: FacebookInit,
         added: Vec<(String, HgFileNodeId)>,
         deleted: Vec<(String, HgFileNodeId)>,
         modified: Vec<(String, HgFileNodeId)>,
@@ -1770,7 +1772,7 @@ end"#;
         hook_files.extend(create_hook_files(added, ChangedFileType::Added));
         hook_files.extend(create_hook_files(deleted, ChangedFileType::Deleted));
         hook_files.extend(create_hook_files(modified, ChangedFileType::Modified));
-        let reviewers_acl_checker = acl_checker();
+        let reviewers_acl_checker = acl_checker(fb);
         HookChangeset::new(
             "some-author".into(),
             hook_files,
@@ -1822,10 +1824,11 @@ end"#;
         )
     }
 
-    fn acl_checker() -> Arc<Option<AclChecker>> {
-        let checker = AclChecker::new(&Identity::from_groupname(
-            facebook::REVIEWERS_ACL_GROUP_NAME,
-        ))
+    fn acl_checker(fb: FacebookInit) -> Arc<Option<AclChecker>> {
+        let checker = AclChecker::new(
+            fb,
+            &Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME),
+        )
         .expect("couldnt get acl checker");
         assert!(checker.do_wait_updated(10000));
         Arc::new(Some(checker))

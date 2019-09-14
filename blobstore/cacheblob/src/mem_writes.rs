@@ -100,11 +100,12 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
 mod test {
     use super::*;
     use bytes::Bytes;
+    use fbinit::FacebookInit;
     use memblob::EagerMemblob;
 
-    #[test]
-    fn basic_read() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn basic_read(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let inner = EagerMemblob::new();
         let foo_key = "foo".to_string();
         inner
@@ -133,9 +134,9 @@ mod test {
         );
     }
 
-    #[test]
-    fn redirect_writes() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn redirect_writes(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let inner = EagerMemblob::new();
         let foo_key = "foo".to_string();
 
@@ -176,9 +177,9 @@ mod test {
         );
     }
 
-    #[test]
-    fn test_persist() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_persist(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let mut rt = tokio::runtime::Runtime::new()?;
 
         let inner = EagerMemblob::new();

@@ -66,13 +66,14 @@ mod test {
     use super::*;
 
     use bytes::Bytes;
+    use fbinit::FacebookInit;
     use futures::Future;
 
     use memblob::EagerMemblob;
 
-    #[test]
-    fn test_prefix() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_prefix(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let prefixed = PrefixBlobstore::new(base.clone(), "prefix123-");
         let unprefixed_key = "foobar".to_string();

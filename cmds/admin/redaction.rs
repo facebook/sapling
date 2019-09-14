@@ -13,6 +13,7 @@ use crate::common::{get_file_nodes, resolve_hg_rev};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
+use fbinit::FacebookInit;
 use futures::future::{self, join_all, Future};
 use futures::stream::Stream;
 use futures_ext::{
@@ -118,14 +119,15 @@ fn find_files_with_given_content_id_blobstore_keys(
 
 /// Entrypoint for redaction subcommand handling
 pub fn subcommand_redaction(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     match sub_m.subcommand() {
-        (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(logger, matches, sub_sub_m),
-        (REDACTION_REMOVE, Some(sub_sub_m)) => redaction_remove(logger, matches, sub_sub_m),
-        (REDACTION_LIST, Some(sub_sub_m)) => redaction_list(logger, matches, sub_sub_m),
+        (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m),
+        (REDACTION_REMOVE, Some(sub_sub_m)) => redaction_remove(fb, logger, matches, sub_sub_m),
+        (REDACTION_LIST, Some(sub_sub_m)) => redaction_list(fb, logger, matches, sub_sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
@@ -160,6 +162,7 @@ fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>),
 
 /// Boilerplate to prepare a bunch of prerequisites for the rest of blaclisting operations
 fn get_ctx_blobrepo_redacted_blobs_cs_id(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -177,14 +180,14 @@ fn get_ctx_blobrepo_redacted_blobs_cs_id(
         None => return future::err(SubcommandError::InvalidArgs).boxify(),
     };
 
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
-    let blobrepo = args::open_repo(&logger, &matches);
+    let blobrepo = args::open_repo(fb, &logger, &matches);
     let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(&matches)
         .context("While opening SqlRedactedContentStore")
         .from_err();
 
-    let ctx = CoreContext::new_with_logger(logger);
+    let ctx = CoreContext::new_with_logger(fb, logger);
 
     blobrepo
         .and_then({
@@ -222,12 +225,13 @@ fn content_ids_for_paths(
 }
 
 fn redaction_add(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let (task, paths) = try_boxfuture!(task_and_paths_parser(sub_m));
-    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
         .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
                 .and_then(move |content_ids| {
@@ -244,11 +248,12 @@ fn redaction_add(
 }
 
 fn redaction_list(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
         .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             info!(
                 logger,
@@ -290,12 +295,13 @@ fn redaction_list(
 }
 
 fn redaction_remove(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
     let paths = try_boxfuture!(paths_parser(sub_m));
-    get_ctx_blobrepo_redacted_blobs_cs_id(logger.clone(), matches, sub_m)
+    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
         .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
                 .and_then(move |content_ids| {

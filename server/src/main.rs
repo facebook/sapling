@@ -59,7 +59,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     app
 }
 
-fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
+fn setup_logger<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     let level = if matches.is_present("debug") {
         Level::Debug
     } else {
@@ -73,7 +73,7 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
             let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
             // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
             // since logview is sampled anyway.
-            let logview_drain = LogViewDrain::new("errorlog_mononoke").ignore_res();
+            let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke").ignore_res();
             slog::Duplicate::new(stderr_drain, logview_drain)
         };
         let drain = slog_stats::StatsDrain::new(drain);
@@ -95,7 +95,7 @@ fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
 #[fbinit::main]
 fn main(fb: FacebookInit) {
     let matches = setup_app().get_matches();
-    let root_log = setup_logger(&matches);
+    let root_log = setup_logger(fb, &matches);
 
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
@@ -137,7 +137,7 @@ fn main(fb: FacebookInit) {
             config.common,
             config.repos.into_iter(),
             cmdlib::args::parse_myrouter_port(&matches),
-            cmdlib::args::init_cachelib(&matches),
+            cmdlib::args::init_cachelib(fb, &matches),
             &cmdlib::args::parse_disabled_hooks(&matches, &root_log),
             root_log,
             matches
@@ -148,7 +148,7 @@ fn main(fb: FacebookInit) {
             matches.is_present("test-instance"),
         );
 
-        tracing_fb303::register();
+        tracing_fb303::register(fb);
 
         let sigterm = 15;
         unsafe {
@@ -156,7 +156,7 @@ fn main(fb: FacebookInit) {
         }
 
         // Thread with a thrift service is now detached
-        monitoring::start_thrift_service(&root_log, &matches, ready);
+        monitoring::start_thrift_service(fb, &root_log, &matches, ready);
 
         runtime.spawn(
             repo_listeners

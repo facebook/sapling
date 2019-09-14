@@ -303,6 +303,7 @@ mod tests {
     use bytes::Bytes;
     use derived_data_unodes::get_file_changes;
     use failure_ext::Result;
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Stream;
     use maplit::btreemap;
@@ -315,11 +316,11 @@ mod tests {
     use test_utils::{get_bonsai_changeset, iterate_all_entries};
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn linear_test() {
-        let repo = linear::getrepo();
+    #[fbinit::test]
+    fn linear_test(fb: FacebookInit) {
+        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
             let (bcs_id, bcs) =
@@ -376,10 +377,15 @@ mod tests {
             let root_unode = root_unode.unwrap();
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
-            let root_filenode_id = fetch_root_filenode_id(&mut runtime, repo.clone(), bcs_id);
+            let root_filenode_id = fetch_root_filenode_id(fb, &mut runtime, repo.clone(), bcs_id);
             assert_eq!(
-                find_unode_history(&mut runtime, repo.clone(), UnodeEntry::Directory(unode_id)),
-                find_filenode_history(&mut runtime, repo.clone(), root_filenode_id),
+                find_unode_history(
+                    fb,
+                    &mut runtime,
+                    repo.clone(),
+                    UnodeEntry::Directory(unode_id)
+                ),
+                find_filenode_history(fb, &mut runtime, repo.clone(), root_filenode_id),
             );
 
             let all_unodes = runtime
@@ -401,11 +407,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_same_content_different_paths() {
-        let repo = linear::getrepo();
+    #[fbinit::test]
+    fn test_same_content_different_paths(fb: FacebookInit) {
+        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         fn check_unode_uniqeness(
             ctx: CoreContext,
@@ -413,7 +419,7 @@ mod tests {
             runtime: &mut Runtime,
             file_changes: BTreeMap<MPath, Option<FileChange>>,
         ) {
-            let bcs = create_bonsai_changeset(repo.clone(), runtime, file_changes);
+            let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), runtime, file_changes);
             let bcs_id = bcs.get_changeset_id();
 
             let f = derive_unode_manifest(
@@ -452,11 +458,11 @@ mod tests {
         check_unode_uniqeness(ctx.clone(), repo.clone(), &mut runtime, file_changes);
     }
 
-    #[test]
-    fn test_same_content_no_change() {
-        let repo = linear::getrepo();
+    #[fbinit::test]
+    fn test_same_content_no_change(fb: FacebookInit) {
+        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         assert!(build_diamond_graph(
             ctx.clone(),
@@ -494,11 +500,11 @@ mod tests {
         .is_err());
     }
 
-    #[test]
-    fn test_parent_order() {
+    #[fbinit::test]
+    fn test_parent_order(fb: FacebookInit) {
         let repo = new_memblob_empty(None).unwrap();
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         let p1_root_unode_id = create_changeset_and_derive_unode(
             ctx.clone(),
@@ -520,7 +526,7 @@ mod tests {
             btreemap! { "A" => Some(("C", FileType::Regular)) },
             repo.clone(),
         );
-        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+        let bcs = create_bonsai_changeset(fb, repo.clone(), &mut runtime, file_changes);
         let bcs_id = bcs.get_changeset_id();
 
         let f = derive_unode_manifest(
@@ -563,7 +569,7 @@ mod tests {
         file_changes: BTreeMap<&str, Option<(&str, FileType)>>,
     ) -> ManifestUnodeId {
         let file_changes = store_files(ctx.clone(), &mut runtime, file_changes, repo.clone());
-        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, file_changes);
 
         let bcs_id = bcs.get_changeset_id();
         let f = derive_unode_manifest(
@@ -587,7 +593,7 @@ mod tests {
     ) -> Result<ManifestUnodeId> {
         let file_changes = store_files(ctx.clone(), &mut runtime, changes_first, repo.clone());
 
-        let bcs = create_bonsai_changeset(repo.clone(), &mut runtime, file_changes);
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, file_changes);
         let first_bcs_id = bcs.get_changeset_id();
 
         let f = derive_unode_manifest(
@@ -603,6 +609,7 @@ mod tests {
             let file_changes =
                 store_files(ctx.clone(), &mut runtime, changes_merge_p1, repo.clone());
             let merge_p1 = create_bonsai_changeset_with_params(
+                ctx.fb,
                 repo.clone(),
                 &mut runtime,
                 file_changes.clone(),
@@ -626,6 +633,7 @@ mod tests {
                 store_files(ctx.clone(), &mut runtime, changes_merge_p2, repo.clone());
 
             let merge_p2 = create_bonsai_changeset_with_params(
+                ctx.fb,
                 repo.clone(),
                 &mut runtime,
                 file_changes,
@@ -646,6 +654,7 @@ mod tests {
 
         let file_changes = store_files(ctx.clone(), &mut runtime, changes_merge, repo.clone());
         let merge = create_bonsai_changeset_with_params(
+            ctx.fb,
             repo.clone(),
             &mut runtime,
             file_changes,
@@ -664,14 +673,16 @@ mod tests {
     }
 
     fn create_bonsai_changeset(
+        fb: FacebookInit,
         repo: BlobRepo,
         runtime: &mut Runtime,
         file_changes: BTreeMap<MPath, Option<FileChange>>,
     ) -> BonsaiChangeset {
-        create_bonsai_changeset_with_params(repo, runtime, file_changes, "message", vec![])
+        create_bonsai_changeset_with_params(fb, repo, runtime, file_changes, "message", vec![])
     }
 
     fn create_bonsai_changeset_with_params(
+        fb: FacebookInit,
         repo: BlobRepo,
         runtime: &mut Runtime,
         file_changes: BTreeMap<MPath, Option<FileChange>>,
@@ -694,7 +705,7 @@ mod tests {
         runtime
             .block_on(save_bonsai_changesets(
                 vec![bcs.clone()],
-                CoreContext::test_mock(),
+                CoreContext::test_mock(fb),
                 repo.clone(),
             ))
             .unwrap();
@@ -792,11 +803,12 @@ mod tests {
     }
 
     fn find_unode_history(
+        fb: FacebookInit,
         runtime: &mut Runtime,
         repo: BlobRepo,
         start: UnodeEntry,
     ) -> Vec<ChangesetId> {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let mut q = VecDeque::new();
         q.push_back(start.clone());
 
@@ -825,11 +837,12 @@ mod tests {
     }
 
     fn find_filenode_history(
+        fb: FacebookInit,
         runtime: &mut Runtime,
         repo: BlobRepo,
         start: HgFileNodeId,
     ) -> Vec<ChangesetId> {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
 
         let mut q = VecDeque::new();
         q.push_back(start);
@@ -880,11 +893,12 @@ mod tests {
     }
 
     fn fetch_root_filenode_id(
+        fb: FacebookInit,
         runtime: &mut Runtime,
         repo: BlobRepo,
         bcs_id: ChangesetId,
     ) -> HgFileNodeId {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         let hg_cs_id = runtime
             .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
             .unwrap();

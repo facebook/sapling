@@ -16,6 +16,7 @@ use cacheblob::{dummy::DummyCache, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, Result};
+use fbinit::FacebookInit;
 use futures::future::join_all;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
@@ -69,11 +70,12 @@ pub struct Sqlblob {
 
 impl Sqlblob {
     pub fn with_myrouter(
+        fb: FacebookInit,
         shardmap: String,
         port: u16,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        Self::with_connection_factory(shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
                 Some(shard_id),
@@ -87,15 +89,17 @@ impl Sqlblob {
     }
 
     pub fn with_raw_xdb_shardmap(
+        fb: FacebookInit,
         shardmap: String,
         shard_num: NonZeroUsize,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        Self::with_connection_factory(shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(format!("{}.{}", shardmap, shard_id)).boxify()
         })
     }
 
     fn with_connection_factory(
+        fb: FacebookInit,
         label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
@@ -153,14 +157,14 @@ impl Sqlblob {
                         ),
                         data_cache: SqlblobCacheOps::new(
                             Arc::new(
-                                MemcacheOps::new("sqlblob.data", 0)
+                                MemcacheOps::new(fb, "sqlblob.data", 0)
                                     .expect("failed to create MemcacheOps"),
                             ),
                             DataCacheTranslator::new(),
                         ),
                         chunk_cache: SqlblobCacheOps::new(
                             Arc::new(
-                                MemcacheOps::new("sqlblob.chunk", 0)
+                                MemcacheOps::new(fb, "sqlblob.chunk", 0)
                                     .expect("failed to create MemcacheOps"),
                             ),
                             ChunkCacheTranslator::new(),
@@ -366,11 +370,12 @@ impl Blobstore for Sqlblob {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fbinit::FacebookInit;
     use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
-    #[test]
-    fn read_write() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn read_write(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         // Generate unique keys.
         let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
         let key = format!("manifoldblob_test_{}", suffix);

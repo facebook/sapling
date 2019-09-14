@@ -61,7 +61,12 @@ pub fn get_single_bonsai_streams(
     hashes
         .iter()
         .map(|hash| {
-            single_changeset_id(ctx.clone(), string_to_bonsai(&repo.clone(), hash), &repo).boxify()
+            single_changeset_id(
+                ctx.clone(),
+                string_to_bonsai(ctx.fb, &repo.clone(), hash),
+                &repo,
+            )
+            .boxify()
         })
         .collect()
 }

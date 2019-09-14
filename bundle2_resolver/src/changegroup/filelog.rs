@@ -358,6 +358,7 @@ mod tests {
     use std::cmp::min;
 
     use blobrepo_factory::new_memblob_empty;
+    use fbinit::FacebookInit;
     use futures::stream::iter_ok;
     use futures::Future;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
@@ -483,9 +484,9 @@ mod tests {
         Delta::new(frags).unwrap()
     }
 
-    #[test]
-    fn two_fulltext_files() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn two_fulltext_files(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let f1 = Filelog {
             node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
@@ -570,14 +571,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn files_order_correct() {
-        files_check_order(CoreContext::test_mock(), true);
+    #[fbinit::test]
+    fn files_order_correct(fb: FacebookInit) {
+        files_check_order(CoreContext::test_mock(fb), true);
     }
 
-    #[test]
-    fn files_order_incorrect() {
-        files_check_order(CoreContext::test_mock(), false);
+    #[fbinit::test]
+    fn files_order_incorrect(fb: FacebookInit) {
+        files_check_order(CoreContext::test_mock(fb), false);
     }
 
     quickcheck! {
@@ -587,7 +588,10 @@ mod tests {
         }
 
         fn correct_conversion_single(f: Filelog) -> bool {
-            let ctx = CoreContext::test_mock();
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
+            let ctx = CoreContext::test_mock(fb);
             check_conversion(
                 ctx,
                 vec![filelog_to_deltaed(&f)],
@@ -598,7 +602,10 @@ mod tests {
         }
 
         fn correct_conversion_delta_against_first(f: Filelog, fs: Vec<Filelog>) -> bool {
-    let ctx = CoreContext::test_mock();
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
+            let ctx = CoreContext::test_mock(fb);
             let mut hash_gen = NodeHashGen::new();
 
             let mut f = f.clone();
@@ -624,7 +631,10 @@ mod tests {
         }
 
         fn correct_conversion_delta_against_next(fs: Vec<Filelog>) -> bool {
-    let ctx = CoreContext::test_mock();
+            // TODO: this needs to be passed down from #[fbinit::test] instead.
+            let fb = *fbinit::FACEBOOK;
+
+            let ctx = CoreContext::test_mock(fb);
             let mut hash_gen = NodeHashGen::new();
 
             let mut fs = fs.clone();

@@ -10,6 +10,7 @@
 
 use clap::Arg;
 use failure::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
@@ -187,7 +188,8 @@ fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router
     })
 }
 
-fn main() -> Result<(), Error> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
     }
@@ -248,7 +250,7 @@ fn main() -> Result<(), Error> {
 
     let matches = app.get_matches();
 
-    let caching = args::init_cachelib(&matches);
+    let caching = args::init_cachelib(fb, &matches);
     let logger = args::init_logging(&matches);
     let myrouter_port = args::parse_myrouter_port(&matches);
 
@@ -261,7 +263,7 @@ fn main() -> Result<(), Error> {
     let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
 
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(ARG_SCUBA_DATASET) {
-        ScubaSampleBuilder::new(scuba_dataset)
+        ScubaSampleBuilder::new(fb, scuba_dataset)
     } else {
         ScubaSampleBuilder::with_discard()
     };
@@ -284,6 +286,7 @@ fn main() -> Result<(), Error> {
         .filter(|(_name, config)| config.enabled)
         .map(|(name, config)| {
             open_blobrepo(
+                fb,
                 config.storage_config.clone(),
                 RepositoryId::new(config.repoid),
                 myrouter_port,
@@ -306,7 +309,7 @@ fn main() -> Result<(), Error> {
         .collect();
 
     let root = router(
-        LfsServerContext::new(logger.clone(), repos, server)?,
+        LfsServerContext::new(fb, logger.clone(), repos, server)?,
         scuba_logger,
     );
     let addr = format!("{}:{}", listen_host, listen_port);

@@ -437,6 +437,7 @@ fn requeue_partial_heal(
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
+    use fbinit::FacebookInit;
     use futures::Future;
     use futures_ext::BoxFuture;
     use std::iter::FromIterator;
@@ -582,9 +583,9 @@ mod tests {
         store.map(|s| s.put(ctx.clone(), key.to_string(), make_value(value)));
     }
 
-    #[test]
-    fn fetch_blob_missing_all() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn fetch_blob_missing_all(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         let fut = fetch_blob(
             ctx,
@@ -602,9 +603,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn heal_blob_missing_all_stores() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_missing_all_stores(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap();
@@ -651,9 +652,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn heal_blob_where_queue_and_stores_match_on_missing() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
@@ -690,9 +691,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn fetch_blob_missing_none() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn fetch_blob_missing_none(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
@@ -708,9 +709,9 @@ mod tests {
         assert_eq!(make_value("specialv"), foundv);
     }
 
-    #[test]
-    fn heal_blob_entry_too_recent() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_entry_too_recent(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z").unwrap();
         let t0 = DateTime::from_rfc3339("2019-07-01T11:59:59.00Z").unwrap();
@@ -739,9 +740,9 @@ mod tests {
         assert_eq!(0, underlying_stores.get(&bids[2]).unwrap().len());
     }
 
-    #[test]
-    fn heal_blob_missing_none() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_missing_none(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
@@ -771,9 +772,9 @@ mod tests {
         assert_eq!(1, underlying_stores.get(&bids[2]).unwrap().len());
     }
 
-    #[test]
-    fn heal_blob_only_unknown_queue_entry() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_only_unknown_queue_entry(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
         let (bids_from_different_config, _, _) = make_empty_stores(5);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -804,9 +805,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn heal_blob_some_unknown_queue_entry() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
         let (bids_from_different_config, _, _) = make_empty_stores(5);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -836,9 +837,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn fetch_blob_missing_some() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn fetch_blob_missing_some(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, _underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         let fut = fetch_blob(
@@ -856,9 +857,9 @@ mod tests {
         assert_eq!(fetch_data.missing_sources, &bids[1..3]);
     }
 
-    #[test]
-    fn heal_blob_where_queue_and_stores_mismatch_on_missing() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_where_queue_and_stores_mismatch_on_missing(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
@@ -899,9 +900,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn heal_blob_where_store_and_queue_match_all_put_fails() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_where_store_and_queue_match_all_put_fails(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
@@ -948,9 +949,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn heal_blob_where_store_and_queue_mismatch_some_put_fails() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn heal_blob_where_store_and_queue_mismatch_some_put_fails(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(3);
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
         put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyk");

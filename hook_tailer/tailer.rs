@@ -58,7 +58,7 @@ impl Tailer {
             logger.clone(),
         );
 
-        load_hooks(&mut hook_manager, config, disabled_hooks)?;
+        load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;
 
         let repo_id = repo.get_repoid().id();
         let last_rev_key = format!("{}{}", "__mononoke_hook_tailer_last_rev.", repo_id).to_string();

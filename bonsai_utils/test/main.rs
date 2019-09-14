@@ -9,6 +9,7 @@
 use async_unit::tokio_unit_test;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::{Future, Stream};
 use mercurial_types::{HgEntry, HgFileNodeId};
 use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
@@ -19,10 +20,10 @@ use pretty_assertions::assert_eq;
 mod fixtures;
 use crate::fixtures::ManifestFixture;
 
-#[test]
-fn diff_basic() {
-    tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn diff_basic(fb: FacebookInit) {
+    tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let parent_entry = root_entry(&fixtures::BASIC1);
         let working_entry = root_entry(&fixtures::BASIC2);
 
@@ -52,10 +53,10 @@ fn diff_basic() {
     })
 }
 
-#[test]
-fn diff_truncate() {
-    tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn diff_truncate(fb: FacebookInit) {
+    tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let parent_entry = root_entry(&fixtures::TRUNCATE1);
         let working_entry = root_entry(&fixtures::TRUNCATE2);
 
@@ -65,10 +66,10 @@ fn diff_truncate() {
     })
 }
 
-#[test]
-fn diff_merge1() {
-    tokio_unit_test(|| {
-        let ctx = CoreContext::test_mock();
+#[fbinit::test]
+fn diff_merge1(fb: FacebookInit) {
+    tokio_unit_test(move || {
+        let ctx = CoreContext::test_mock(fb);
         let parent1 = root_entry(&fixtures::BASIC1);
         let parent2 = root_entry(&fixtures::BASIC2);
         let working_entry = root_entry(&fixtures::BASIC2);

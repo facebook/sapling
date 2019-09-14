@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use fixtures::{branch_wide, linear, merge_uneven};
 use futures::future::Future;
 
@@ -31,10 +32,13 @@ pub fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str)
         .unwrap()
 }
 
-pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
+pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(
+    fb: FacebookInit,
+    index_creator: fn() -> T,
+) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo());
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb));
         let index = index_creator();
         let ordered_hashes = vec![
             string_to_bonsai(
@@ -94,10 +98,13 @@ pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: f
     });
 }
 
-pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
+pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(
+    fb: FacebookInit,
+    index_creator: fn() -> T,
+) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(merge_uneven::getrepo());
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(merge_uneven::getrepo(fb));
         let index = index_creator();
         let root_node = string_to_bonsai(
             ctx.clone(),
@@ -217,11 +224,14 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_crea
     });
 }
 
-pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creator: fn() -> T) {
+pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
+    fb: FacebookInit,
+    index_creator: fn() -> T,
+) {
     async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock();
+        let ctx = CoreContext::test_mock(fb);
         // this repo has no merges but many branches
-        let repo = Arc::new(branch_wide::getrepo());
+        let repo = Arc::new(branch_wide::getrepo(fb));
         let index = index_creator();
         let root_node = string_to_bonsai(
             ctx.clone(),
@@ -352,15 +362,16 @@ mod test {
     use std::sync::Arc;
 
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::Future;
     use mononoke_types::Generation;
 
-    #[test]
-    fn test_helpers() {
+    #[fbinit::test]
+    fn test_helpers(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
             let mut ordered_hashes_oldest_to_newest = vec![
                 string_to_bonsai(
                     ctx.clone(),

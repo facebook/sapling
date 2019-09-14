@@ -10,6 +10,7 @@ use blobrepo_factory::Caching;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
+use fbinit::FacebookInit;
 use futures::{
     future::{join_all, lazy},
     Future, IntoFuture,
@@ -38,6 +39,7 @@ pub struct Mononoke {
 
 impl Mononoke {
     pub fn new(
+        fb: FacebookInit,
         logger: Logger,
         configs: RepoConfigs,
         myrouter_port: Option<u16>,
@@ -59,6 +61,7 @@ impl Mononoke {
                             move || {
                                 info!(logger, "Initializing repo: {}", &name);
                                 MononokeRepo::new(
+                                    fb,
                                     logger.clone(),
                                     config,
                                     common_config,

@@ -11,6 +11,7 @@ use std::{
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use failure_ext::{bail_msg, err_msg, format_err, Error, Result, ResultExt};
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
@@ -256,10 +257,12 @@ where
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
 #[inline]
 pub fn create_repo<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     open_repo_internal(
+        fb,
         logger,
         matches,
         true,
@@ -273,10 +276,12 @@ pub fn create_repo<'a>(
 /// Make sure that the opened repo has redaction disabled
 #[inline]
 pub fn create_repo_unredacted<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     open_repo_internal(
+        fb,
         logger,
         matches,
         true,
@@ -289,10 +294,12 @@ pub fn create_repo_unredacted<'a>(
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
 pub fn open_repo<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     open_repo_internal(
+        fb,
         logger,
         matches,
         false,
@@ -306,10 +313,12 @@ pub fn open_repo<'a>(
 /// Make sure that the opened repo has redaction disabled
 #[inline]
 pub fn open_repo_unredacted<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     open_repo_internal(
+        fb,
         logger,
         matches,
         false,
@@ -324,10 +333,12 @@ pub fn open_repo_unredacted<'a>(
 /// the blobstore contents all match.
 #[inline]
 pub fn open_scrub_repo<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     open_repo_internal(
+        fb,
         logger,
         matches,
         false,
@@ -454,7 +465,7 @@ fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     }
 }
 
-pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) -> Caching {
+pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching {
     let caching = parse_caching(matches);
 
     if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
@@ -489,13 +500,13 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) -> Caching {
             settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
         }
 
-        init_cachelib_from_settings(settings).unwrap();
+        init_cachelib_from_settings(fb, settings).unwrap();
     }
 
     caching
 }
 
-pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
+pub fn init_cachelib_from_settings(fb: FacebookInit, settings: CachelibSettings) -> Result<()> {
     // Millions of lookups per second
     let lock_power = 10;
     // Assume 200 bytes average cache item size and compute bucketsPower
@@ -560,7 +571,7 @@ pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
         };
     }
 
-    cachelib::init_cache_once(cache_config)?;
+    cachelib::init_cache_once(fb, cache_config)?;
     cachelib::init_cacheadmin("mononoke")?;
 
     // Give each cache 5% of the available space, bar the blob cache which gets everything left
@@ -683,6 +694,7 @@ pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> 
 }
 
 fn open_repo_internal<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
     create: bool,
@@ -721,6 +733,7 @@ fn open_repo_internal<'a>(
         .into_future()
         .and_then(move |repo_id| {
             open_blobrepo(
+                fb,
                 config.storage_config,
                 repo_id,
                 myrouter_port,

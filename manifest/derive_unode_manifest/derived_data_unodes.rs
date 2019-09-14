@@ -144,6 +144,7 @@ mod test {
     use super::*;
     use bookmarks::BookmarkName;
     use cloned::cloned;
+    use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
@@ -224,8 +225,8 @@ mod test {
             .flatten_stream()
     }
 
-    fn verify_repo(repo: BlobRepo, runtime: &mut Runtime) {
-        let ctx = CoreContext::test_mock();
+    fn verify_repo(fb: FacebookInit, repo: BlobRepo, runtime: &mut Runtime) {
+        let ctx = CoreContext::test_mock(fb);
 
         let cache = Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
         runtime
@@ -239,19 +240,19 @@ mod test {
             .unwrap();
     }
 
-    #[test]
-    fn test_derive_data() {
+    #[fbinit::test]
+    fn test_derive_data(fb: FacebookInit) {
         let mut runtime = Runtime::new().unwrap();
-        verify_repo(linear::getrepo(), &mut runtime);
-        verify_repo(branch_even::getrepo(), &mut runtime);
-        verify_repo(branch_uneven::getrepo(), &mut runtime);
-        verify_repo(branch_wide::getrepo(), &mut runtime);
-        let repo = many_diamonds::getrepo(&mut runtime);
-        verify_repo(repo, &mut runtime);
-        verify_repo(many_files_dirs::getrepo(), &mut runtime);
-        verify_repo(merge_even::getrepo(), &mut runtime);
-        verify_repo(merge_uneven::getrepo(), &mut runtime);
-        verify_repo(unshared_merge_even::getrepo(), &mut runtime);
-        verify_repo(unshared_merge_uneven::getrepo(), &mut runtime);
+        verify_repo(fb, linear::getrepo(fb), &mut runtime);
+        verify_repo(fb, branch_even::getrepo(fb), &mut runtime);
+        verify_repo(fb, branch_uneven::getrepo(fb), &mut runtime);
+        verify_repo(fb, branch_wide::getrepo(fb), &mut runtime);
+        let repo = many_diamonds::getrepo(fb, &mut runtime);
+        verify_repo(fb, repo, &mut runtime);
+        verify_repo(fb, many_files_dirs::getrepo(fb), &mut runtime);
+        verify_repo(fb, merge_even::getrepo(fb), &mut runtime);
+        verify_repo(fb, merge_uneven::getrepo(fb), &mut runtime);
+        verify_repo(fb, unshared_merge_even::getrepo(fb), &mut runtime);
+        verify_repo(fb, unshared_merge_uneven::getrepo(fb), &mut runtime);
     }
 }

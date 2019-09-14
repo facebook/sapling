@@ -13,6 +13,7 @@ use caching_ext::{
 };
 use changeset_entry_thrift as thrift;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
@@ -58,13 +59,14 @@ fn get_keygen() -> KeyGen {
 
 impl CachingChangesets {
     pub fn new(
+        fb: FacebookInit,
         changesets: Arc<dyn Changesets>,
         cache_pool: cachelib::VolatileLruCachePool,
     ) -> Self {
         Self {
             changesets,
             cachelib: cache_pool.into(),
-            memcache: MemcacheClient::new().into(),
+            memcache: MemcacheClient::new(fb).into(),
             keygen: get_keygen(),
         }
     }

@@ -434,6 +434,7 @@ mod test {
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
     use failure::err_msg;
+    use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
@@ -569,50 +570,50 @@ mod test {
             .unwrap();
     }
 
-    #[test]
-    fn test_derive_linear() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_derive_linear(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = branch_even::getrepo();
+        let repo = branch_even::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = branch_uneven::getrepo();
+        let repo = branch_uneven::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = branch_wide::getrepo();
+        let repo = branch_wide::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = linear::getrepo();
+        let repo = linear::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = many_files_dirs::getrepo();
+        let repo = many_files_dirs::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = merge_even::getrepo();
+        let repo = merge_even::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = merge_uneven::getrepo();
+        let repo = merge_uneven::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = unshared_merge_even::getrepo();
+        let repo = unshared_merge_even::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = unshared_merge_uneven::getrepo();
+        let repo = unshared_merge_uneven::getrepo(fb);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = many_diamonds::getrepo(&mut runtime);
+        let repo = many_diamonds::getrepo(fb, &mut runtime);
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
         Ok(())
     }
 
-    #[test]
-    fn test_leases() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_leases(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
         let mapping = Arc::new(TestMapping::new());
-        let repo = linear::getrepo();
+        let repo = linear::getrepo(fb);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime
@@ -709,13 +710,13 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_always_failing_lease() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
         let mapping = Arc::new(TestMapping::new());
         let repo =
-            linear::getrepo().dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
+            linear::getrepo(fb).dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime

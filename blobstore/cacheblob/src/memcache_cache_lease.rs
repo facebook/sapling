@@ -7,6 +7,7 @@
 use std::time::Duration;
 
 use failure_ext::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
@@ -98,6 +99,7 @@ fn mc_raw_put(
 
 impl MemcacheOps {
     pub fn new(
+        fb: FacebookInit,
         lease_type: &'static str,
         backing_store_params: impl ToString,
     ) -> Result<Self, Error> {
@@ -120,7 +122,7 @@ impl MemcacheOps {
 
         Ok(Self {
             lease_type,
-            memcache: MemcacheClient::new(),
+            memcache: MemcacheClient::new(fb),
             keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
             presence_keygen: KeyGen::new(presence_key, MC_CODEVER, MC_SITEVER),
             hostname,
@@ -159,6 +161,7 @@ impl MemcacheOps {
 }
 
 pub fn new_memcache_blobstore<T>(
+    fb: FacebookInit,
     blobstore: T,
     backing_store_name: &'static str,
     backing_store_params: impl ToString,
@@ -166,7 +169,7 @@ pub fn new_memcache_blobstore<T>(
 where
     T: Blobstore + Clone,
 {
-    let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
+    let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
         "memcache".to_string(),
         CacheBlobstore::new(cache_ops.clone(), cache_ops, blobstore),
@@ -174,6 +177,7 @@ where
 }
 
 pub fn new_memcache_blobstore_no_lease<T>(
+    fb: FacebookInit,
     blobstore: T,
     backing_store_name: &'static str,
     backing_store_params: impl ToString,
@@ -181,7 +185,7 @@ pub fn new_memcache_blobstore_no_lease<T>(
 where
     T: Blobstore + Clone,
 {
-    let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
+    let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
         "memcache".to_string(),
         CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),

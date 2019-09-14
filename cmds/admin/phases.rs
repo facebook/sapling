@@ -8,6 +8,7 @@ use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC};
 use clap::ArgMatches;
 use cloned::cloned;
 use failure_ext::{err_msg, Error};
+use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_preview::{
@@ -36,14 +37,15 @@ use slog::{info, Logger};
 use crate::error::SubcommandError;
 
 pub fn subcommand_phases(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let repo = args::open_repo(&logger, &matches);
+    let repo = args::open_repo(fb, &logger, &matches);
     let phases = args::open_sql::<SqlPhases>(&matches);
-    args::init_cachelib(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    args::init_cachelib(fb, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {
         (FETCH_PHASE, Some(sub_m)) => {
@@ -57,7 +59,7 @@ pub fn subcommand_phases(
                 .map(|s| s.to_string())
                 .ok_or(err_msg("changeset hash is not specified"));
 
-            subcommand_fetch_phase_impl(repo, phases, hash, ty)
+            subcommand_fetch_phase_impl(fb, repo, phases, hash, ty)
                 .boxed()
                 .compat()
                 .from_err()
@@ -181,12 +183,13 @@ async fn subcommand_list_public_impl(
 }
 
 pub async fn subcommand_fetch_phase_impl<'a>(
+    fb: FacebookInit,
     repo: impl Future<Item = BlobRepo, Error = Error>,
     phases: impl Future<Item = SqlPhases, Error = Error>,
     hash: Result<String, Error>,
     ty: String,
 ) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let repo = repo.compat().await?;
     let phases = phases.compat().await?;
     let hash = hash?;

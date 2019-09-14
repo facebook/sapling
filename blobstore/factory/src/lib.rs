@@ -9,6 +9,7 @@ use std::{path::PathBuf, sync::Arc};
 use cloned::cloned;
 use failure_ext::prelude::*;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::{
     future::{self, IntoFuture},
     Future,
@@ -130,6 +131,7 @@ impl SqlFactory for SqliteFactory {
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
 pub fn make_blobstore<T: SqlFactory>(
+    fb: FacebookInit,
     blobconfig: &BlobConfig,
     sql_factory: &T,
     myrouter_port: Option<u16>,
@@ -167,7 +169,7 @@ pub fn make_blobstore<T: SqlFactory>(
             .into_future()
             .boxify(),
 
-        Manifold { bucket, prefix } => ThriftManifoldBlob::new(bucket.clone())
+        Manifold { bucket, prefix } => ThriftManifoldBlob::new(fb, bucket.clone())
             .map({
                 cloned!(prefix);
                 move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
@@ -182,9 +184,9 @@ pub fn make_blobstore<T: SqlFactory>(
             shard_map,
             shard_num,
         } => if let Some(myrouter_port) = myrouter_port {
-            Sqlblob::with_myrouter(shard_map.clone(), myrouter_port, *shard_num)
+            Sqlblob::with_myrouter(fb, shard_map.clone(), myrouter_port, *shard_num)
         } else {
-            Sqlblob::with_raw_xdb_shardmap(shard_map.clone(), *shard_num)
+            Sqlblob::with_raw_xdb_shardmap(fb, shard_map.clone(), *shard_num)
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()
@@ -200,7 +202,7 @@ pub fn make_blobstore<T: SqlFactory>(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(config, sql_factory, myrouter_port)
+                        make_blobstore(fb, config, sql_factory, myrouter_port)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -215,7 +217,7 @@ pub fn make_blobstore<T: SqlFactory>(
                                 Arc::new(MultiplexedBlobstore::new(
                                     components,
                                     queue,
-                                    scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
+                                    scuba_table.map(|table| Arc::new(ScubaClient::new(fb, table))),
                                 )) as Arc<dyn Blobstore>
                             }
                         })
@@ -233,7 +235,7 @@ pub fn make_blobstore<T: SqlFactory>(
                 .map({
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(config, sql_factory, myrouter_port)
+                        make_blobstore(fb, config, sql_factory, myrouter_port)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
@@ -249,7 +251,7 @@ pub fn make_blobstore<T: SqlFactory>(
                                 Arc::new(ScrubBlobstore::new(
                                     components,
                                     queue,
-                                    scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
+                                    scuba_table.map(|table| Arc::new(ScubaClient::new(fb, table))),
                                 )) as Arc<dyn Blobstore>
                             }
                         })

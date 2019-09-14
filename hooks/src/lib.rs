@@ -73,6 +73,7 @@ impl HookManager {
         hook_manager_params: HookManagerParams,
         logger: Logger,
     ) -> HookManager {
+        let fb = ctx.fb;
         let changeset_hooks = HashMap::new();
         let file_hooks = Arc::new(Mutex::new(HashMap::new()));
 
@@ -91,7 +92,7 @@ impl HookManager {
             let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
 
             // This can block, but not too big a deal as we create hook manager in server startup
-            AclChecker::new(&identity)
+            AclChecker::new(fb, &identity)
                 .and_then(|reviewers_acl_checker| {
                     if reviewers_acl_checker.do_wait_updated(10000) {
                         Ok(reviewers_acl_checker)

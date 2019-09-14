@@ -91,16 +91,24 @@ where
     T: ?Sized,
     &'a T: AsRef<str>,
 {
+    // TODO(dtolnay): this needs to be passed down from main instead.
+    let fb = *fbinit::FACEBOOK;
+
     let tier: &str = tier.as_ref();
 
     let write_connection =
-        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::Master, None, None);
+        raw::RawConnection::new_from_tier(fb, tier, raw::InstanceRequirement::Master, None, None);
 
-    let read_connection =
-        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::ReplicaFirst, None, None);
+    let read_connection = raw::RawConnection::new_from_tier(
+        fb,
+        tier,
+        raw::InstanceRequirement::ReplicaFirst,
+        None,
+        None,
+    );
 
     let read_master_connection =
-        raw::RawConnection::new_from_tier(tier, raw::InstanceRequirement::Master, None, None);
+        raw::RawConnection::new_from_tier(fb, tier, raw::InstanceRequirement::Master, None, None);
 
     (write_connection, read_connection, read_master_connection)
         .into_future()

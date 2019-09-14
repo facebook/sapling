@@ -19,6 +19,7 @@ use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
 use failure_ext::prelude::*;
 use failure_ext::{Error, Result};
+use fbinit::FacebookInit;
 use filenodes::CachingFilenodes;
 use filestore::FilestoreConfig;
 use futures::{future::IntoFuture, Future};
@@ -54,6 +55,7 @@ const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
 /// configure a local blobstore with a remote db, or vice versa. There's no error checking
 /// at this level (aside from disallowing a multiplexed blobstore with a local db).
 pub fn open_blobrepo(
+    fb: FacebookInit,
     storage_config: StorageConfig,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
@@ -85,6 +87,7 @@ pub fn open_blobrepo(
     )
     .and_then(move |()| match storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
+            fb,
             SqliteFactory::new(path),
             storage_config.blobstore,
             caching,
@@ -100,6 +103,7 @@ pub fn open_blobrepo(
             db_address,
             sharded_filenodes,
         } => do_open_blobrepo(
+            fb,
             XdbFactory::new(db_address, myrouter_port, sharded_filenodes),
             storage_config.blobstore,
             caching,
@@ -116,6 +120,7 @@ pub fn open_blobrepo(
 }
 
 fn do_open_blobrepo<T: SqlFactory>(
+    fb: FacebookInit,
     sql_factory: T,
     blobconfig: BlobConfig,
     caching: Caching,
@@ -126,7 +131,7 @@ fn do_open_blobrepo<T: SqlFactory>(
     scuba_censored_table: Option<String>,
     filestore_config: FilestoreConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let unredacted_blobstore = make_blobstore(&blobconfig, &sql_factory, myrouter_port);
+    let unredacted_blobstore = make_blobstore(fb, &blobconfig, &sql_factory, myrouter_port);
 
     let redacted_blobs = match redaction {
         Redaction::Enabled => sql_factory
@@ -158,6 +163,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                     ));
                 }
                 new_development(
+                    fb,
                     &sql_factory,
                     unredacted_blobstore,
                     redacted_blobs,
@@ -167,6 +173,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                 )
             }
             Caching::Enabled => new_production(
+                fb,
                 &sql_factory,
                 unredacted_blobstore,
                 redacted_blobs,
@@ -209,6 +216,7 @@ pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRe
 }
 
 fn new_development<T: SqlFactory>(
+    fb: FacebookInit,
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, String>>,
@@ -241,7 +249,7 @@ fn new_development<T: SqlFactory>(
         .join4(filenodes, changesets, bonsai_hg_mapping)
         .map({
             move |(bookmarks, filenodes, changesets, bonsai_hg_mapping)| {
-                let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+                let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
                 BlobRepo::new(
                     bookmarks,
@@ -260,6 +268,7 @@ fn new_development<T: SqlFactory>(
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
 fn new_production<T: SqlFactory>(
+    fb: FacebookInit,
     sql_factory: &T,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, String>>,
@@ -273,7 +282,7 @@ fn new_production<T: SqlFactory>(
         cachelib::get_volatile_pool(name)?.ok_or(err)
     }
 
-    let blobstore = try_boxfuture!(new_memcache_blobstore(blobstore, "multiplexed", ""));
+    let blobstore = try_boxfuture!(new_memcache_blobstore(fb, blobstore, "multiplexed", ""));
     let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
     let presence_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
 
@@ -287,7 +296,7 @@ fn new_production<T: SqlFactory>(
     let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
     let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
 
-    let derive_data_lease = try_boxfuture!(MemcacheOps::new("derived-data-lease", ""));
+    let derive_data_lease = try_boxfuture!(MemcacheOps::new(fb, "derived-data-lease", ""));
 
     let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
     let bookmarks = sql_factory.open::<SqlBookmarks>();
@@ -299,6 +308,7 @@ fn new_production<T: SqlFactory>(
         .map(
             move |((filenodes_tier, filenodes), bookmarks, changesets, bonsai_hg_mapping)| {
                 let filenodes = CachingFilenodes::new(
+                    fb,
                     filenodes,
                     filenodes_pool,
                     "sqlfilenodes",
@@ -313,11 +323,17 @@ fn new_production<T: SqlFactory>(
                     }
                 };
 
-                let changesets =
-                    Arc::new(CachingChangesets::new(changesets, changesets_cache_pool));
+                let changesets = Arc::new(CachingChangesets::new(
+                    fb,
+                    changesets,
+                    changesets_cache_pool,
+                ));
 
-                let bonsai_hg_mapping =
-                    CachingBonsaiHgMapping::new(bonsai_hg_mapping, bonsai_hg_mapping_cache_pool);
+                let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+                    fb,
+                    bonsai_hg_mapping,
+                    bonsai_hg_mapping_cache_pool,
+                );
 
                 let changeset_fetcher_factory = {
                     cloned!(changesets, repoid);
@@ -329,7 +345,7 @@ fn new_production<T: SqlFactory>(
                     }
                 };
 
-                let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+                let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
                 BlobRepo::new_with_changeset_fetcher_factory(
                     bookmarks,

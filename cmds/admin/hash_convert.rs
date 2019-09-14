@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use clap::ArgMatches;
+use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use std::str::FromStr;
@@ -18,6 +19,7 @@ use slog::Logger;
 use crate::error::SubcommandError;
 
 pub fn subcommand_hash_convert(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -31,9 +33,9 @@ pub fn subcommand_hash_convert(
         (source == "hg") ^ (target == "bonsai"),
         "source and target should be different"
     );
-    args::init_cachelib(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
-    args::open_repo(&logger, &matches)
+    args::init_cachelib(fb, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    args::open_repo(fb, &logger, &matches)
         .and_then(move |repo| {
             if source == "hg" {
                 repo.get_bonsai_from_hg(

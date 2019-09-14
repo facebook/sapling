@@ -11,6 +11,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error};
+use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath};
@@ -26,11 +27,12 @@ use crate::cmdargs::{HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
 use crate::error::SubcommandError;
 
 pub fn subcommand_hg_changeset(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {
         (HG_CHANGESET_DIFF, Some(sub_m)) => {
@@ -43,8 +45,8 @@ pub fn subcommand_hg_changeset(
                 .ok_or(format_err!("RIGHT_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(&matches);
-            args::open_repo(&logger, &matches)
+            args::init_cachelib(fb, &matches);
+            args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
                     (left_cs, right_cs)
                         .into_future()
@@ -70,8 +72,8 @@ pub fn subcommand_hg_changeset(
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(&matches);
-            args::open_repo(&logger, &matches)
+            args::init_cachelib(fb, &matches);
+            args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
                     (start_cs, stop_cs)
                         .into_future()

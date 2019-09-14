@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use scribe::ScribeClient;
@@ -52,9 +53,9 @@ where
 }
 
 impl LogToScribe<ScribeCxxClient> {
-    pub fn new_with_default_scribe(category: String) -> Self {
+    pub fn new_with_default_scribe(fb: FacebookInit, category: String) -> Self {
         Self {
-            client: Some(Arc::new(ScribeCxxClient::new())),
+            client: Some(Arc::new(ScribeCxxClient::new(fb))),
             category,
         }
     }

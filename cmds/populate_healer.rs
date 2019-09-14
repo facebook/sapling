@@ -9,6 +9,7 @@ use std::{sync::Arc, time::Instant};
 use clap::Arg;
 use cloned::cloned;
 use failure::{err_msg, format_err, Error};
+use fbinit::FacebookInit;
 use futures::{future, stream::Stream, Future, IntoFuture};
 use futures_ext::FutureExt;
 use serde_derive::{Deserialize, Serialize};
@@ -109,7 +110,7 @@ impl<'a> From<&'a State> for StateSerde {
     }
 }
 
-fn parse_args() -> Result<Config, Error> {
+fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
     }
@@ -170,7 +171,7 @@ fn parse_args() -> Result<Config, Error> {
     let matches = app.get_matches();
     let repo_id = args::get_repo_id(&matches)?;
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let storage_id = matches
         .value_of("storage-id")
@@ -360,9 +361,10 @@ fn populate_healer_queue(
     })
 }
 
-fn main() -> Result<(), Error> {
-    let config = Arc::new(parse_args()?);
-    let manifold = ThriftManifoldBlob::new(config.manifold_args.bucket.clone())?.into_inner();
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
+    let config = Arc::new(parse_args(fb)?);
+    let manifold = ThriftManifoldBlob::new(fb, config.manifold_args.bucket.clone())?.into_inner();
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
         config.db_address.clone(),
         config.myrouter_port,

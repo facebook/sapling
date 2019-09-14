@@ -16,11 +16,13 @@ use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
 use crate::{Hook, HookChangeset, HookManager};
 use failure::Error;
+use fbinit::FacebookInit;
 use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;
 use std::sync::Arc;
 
 pub fn load_hooks(
+    fb: FacebookInit,
     hook_manager: &mut HookManager,
     config: RepoConfig,
     disabled_hooks: &HashSet<String>,
@@ -42,7 +44,7 @@ pub fn load_hooks(
             let rust_hook: Arc<dyn Hook<HookChangeset>> = match rust_name.as_ref() {
                 "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
                 "verify_integrity" => Arc::new(VerifyIntegrityHook::new(&hook.config)?),
-                "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),
+                "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(fb, &hook.config)),
                 "restrict_users" => Arc::new(RestrictUsersHook::new(&hook.config)?),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
             };

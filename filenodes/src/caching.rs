@@ -8,6 +8,7 @@ use cachelib::{get_cached_or_fill, VolatileLruCachePool};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Result};
+use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
@@ -57,6 +58,7 @@ pub struct CachingFilenodes {
 
 impl CachingFilenodes {
     pub fn new(
+        fb: FacebookInit,
         filenodes: Arc<dyn Filenodes>,
         cache_pool: VolatileLruCachePool,
         backing_store_name: impl ToString,
@@ -71,7 +73,7 @@ impl CachingFilenodes {
         Self {
             filenodes,
             cache_pool,
-            memcache: MemcacheClient::new(),
+            memcache: MemcacheClient::new(fb),
             keygen: KeyGen::new(key_prefix, MC_CODEVER as u32, MC_SITEVER as u32),
         }
     }

@@ -9,6 +9,7 @@ use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
 
 use bytes::Bytes;
+use fbinit::FacebookInit;
 use futures::{future, stream, Future, Sink, Stream};
 use slog::{debug, error, o, Drain, Logger};
 
@@ -42,7 +43,7 @@ const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 // Wait for up to 1sec to let Scuba flush it's data to the server.
 const SCUBA_TIMEOUT_MS: i64 = 1000;
 
-pub fn cmd(main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> {
+pub fn cmd(fb: FacebookInit, main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let query_string = main.value_of("query-string").unwrap_or("");
@@ -67,6 +68,7 @@ pub fn cmd(main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> 
             let mock_username = sub.value_of("mock-username");
 
             return StdioRelay {
+                fb,
                 path: mononoke_path,
                 repo,
                 query_string,
@@ -88,6 +90,7 @@ pub fn cmd(main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> 
 }
 
 struct StdioRelay<'a> {
+    fb: FacebookInit,
     path: &'a str,
     repo: &'a str,
     query_string: &'a str,
@@ -105,7 +108,7 @@ struct StdioRelay<'a> {
 impl<'a> StdioRelay<'a> {
     fn run(self) -> BoxFuture<(), Error> {
         let mut scuba_logger =
-            ScubaSampleBuilder::with_opt_table(self.scuba_table.map(|v| v.to_owned()));
+            ScubaSampleBuilder::with_opt_table(self.fb, self.scuba_table.map(|v| v.to_owned()));
 
         let session_uuid = uuid::Uuid::new_v4();
         let unix_username = if let Some(mock_username) = self.mock_username {

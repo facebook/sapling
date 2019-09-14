@@ -15,6 +15,7 @@ mod test {
             mod $repo {
                 use std::collections::HashSet;
 
+                use fbinit::FacebookInit;
                 use futures::{Future, Stream};
                 use slog::{Drain, Level, Logger};
 
@@ -25,14 +26,14 @@ mod test {
 
                 use crate::$repo;
 
-                #[test]
-                fn test() {
-                    async_unit::tokio_unit_test(|| {
-                        let ctx = CoreContext::test_mock();
+                #[fbinit::test]
+                fn test(fb: FacebookInit) {
+                    async_unit::tokio_unit_test(move || {
+                        let ctx = CoreContext::test_mock(fb);
                         let drain = glog_drain().filter_level(Level::Debug).fuse();
                         let logger = Logger::root(drain, slog::o![]);
 
-                        let repo = $repo::getrepo();
+                        let repo = $repo::getrepo(fb);
                         let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
                         let verify = BonsaiMFVerify {

@@ -7,6 +7,7 @@
 use clap::ArgMatches;
 use cloned::cloned;
 use failure_ext::Error;
+use fbinit::FacebookInit;
 use futures::future::{loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
@@ -29,6 +30,7 @@ use crate::cmdargs::{SKIPLIST_BUILD, SKIPLIST_READ};
 use crate::error::SubcommandError;
 
 pub fn subcommand_skiplist(
+    fb: FacebookInit,
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
@@ -40,10 +42,10 @@ pub fn subcommand_skiplist(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(&matches);
-            let ctx = CoreContext::new_with_logger(logger.clone());
+            args::init_cachelib(fb, &matches);
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let sql_changesets = args::open_sql::<SqlChangesets>(&matches);
-            let repo = args::open_repo(&logger, &matches);
+            let repo = args::open_repo(fb, &logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {
                     build_skiplist_index(ctx, repo, key, logger, sql_changesets)
@@ -57,9 +59,9 @@ pub fn subcommand_skiplist(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(&matches);
-            let ctx = CoreContext::test_mock();
-            args::open_repo(&logger, &matches)
+            args::init_cachelib(fb, &matches);
+            let ctx = CoreContext::test_mock(fb);
+            args::open_repo(fb, &logger, &matches)
                 .and_then({
                     cloned!(logger);
                     move |repo| read_skiplist_index(ctx.clone(), repo, key, logger)

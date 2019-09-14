@@ -234,14 +234,15 @@ fn flatten_raw_list(
 #[cfg(test)]
 mod test {
     use super::*;
+    use fbinit::FacebookInit;
     use fixtures::linear;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
     use tokio::runtime::Runtime;
 
-    #[test]
-    fn fetch_flattened_simple() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+    #[fbinit::test]
+    fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
         let mut rt = Runtime::new().unwrap();
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
@@ -260,10 +261,10 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn fetch_flattened_prepend() -> Result<(), Error> {
-        let ctx = CoreContext::test_mock();
-        let repo = linear::getrepo();
+    #[fbinit::test]
+    fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb);
         let mut rt = Runtime::new().unwrap();
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));

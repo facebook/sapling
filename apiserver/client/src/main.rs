@@ -8,6 +8,7 @@ use std::string::String;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
+use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -177,7 +178,8 @@ fn get_tree(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<()
         .boxify()
 }
 
-fn main() -> Result<(), ()> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), ()> {
     let matches = App::new("Mononoke API Server Thrift client")
         .about("Send requests to Mononoke API Server thrift port")
         .arg(
@@ -378,8 +380,8 @@ fn main() -> Result<(), ()> {
     let tier = matches.value_of("tier").expect("must provide tier name");
     let repo = matches.value_of("repo").expect("must provide repo name");
 
-    let client =
-        MononokeAPIClient::new_with_tier_repo(tier, repo).map_err(|e| eprintln!("error: {}", e))?;
+    let client = MononokeAPIClient::new_with_tier_repo(fb, tier, repo)
+        .map_err(|e| eprintln!("error: {}", e))?;
 
     let future = if let Some(matches) = matches.subcommand_matches("cat") {
         cat(client, matches)

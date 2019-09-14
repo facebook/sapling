@@ -24,6 +24,7 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
 use failure::{err_msg, format_err};
 use failure_ext::Error;
 use fastlog::{RootFastlog, RootFastlogMapping};
+use fbinit::FacebookInit;
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -57,7 +58,8 @@ const CHUNK_SIZE: usize = 4096;
 
 const POSSIBLE_TYPES: &[&str] = &[RootUnodeManifestId::NAME, RootFastlog::NAME];
 
-fn main() -> Result<(), Error> {
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeApp {
         hide_advanced_args: true,
     }
@@ -135,10 +137,10 @@ fn main() -> Result<(), Error> {
     );
     let app = args::add_fb303_args(app);
     let matches = app.get_matches();
-    args::init_cachelib(&matches);
+    args::init_cachelib(fb, &matches);
 
     let logger = args::init_logging(&matches);
-    let ctx = CoreContext::new_with_logger(logger.clone());
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let mut runtime = tokio::runtime::Runtime::new()?;
 
     let run = match matches.subcommand() {
@@ -164,7 +166,7 @@ fn main() -> Result<(), Error> {
                 .from_err();
             let regenerate = sub_m.is_present(ARG_REGENERATE);
 
-            (args::open_repo(&logger, &matches), skip)
+            (args::open_repo(fb, &logger, &matches), skip)
                 .into_future()
                 .and_then(move |(repo, skip)| {
                     subcommand_backfill(
@@ -186,9 +188,9 @@ fn main() -> Result<(), Error> {
                 })?;
             let service_name =
                 std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string());
-            start_fb303_and_stats_agg(&mut runtime, &service_name, &logger, &matches)?;
+            start_fb303_and_stats_agg(fb, &mut runtime, &service_name, &logger, &matches)?;
             (
-                args::open_repo(&logger, &matches),
+                args::open_repo(fb, &logger, &matches),
                 args::open_sql::<SqlBookmarks>(&matches),
             )
                 .into_future()
@@ -204,7 +206,7 @@ fn main() -> Result<(), Error> {
                 .to_string();
 
             (
-                args::open_repo(&logger, &matches),
+                args::open_repo(fb, &logger, &matches),
                 args::open_sql::<SqlChangesets>(&matches),
                 args::open_sql::<SqlPhases>(&matches),
             )
@@ -228,7 +230,7 @@ fn main() -> Result<(), Error> {
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
                 .to_string();
-            args::open_repo(&logger, &matches)
+            args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
                     args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_single(ctx, repo, csid, derived_data_type))
@@ -467,7 +469,8 @@ fn subcommand_backfill<P: AsRef<Path>>(
                             cloned!(ctx, repo, derived_utils);
                             move |csid| {
                                 // create new context so each derivation would have its own trace
-                                let ctx = CoreContext::new_with_logger(ctx.logger().clone());
+                                let ctx =
+                                    CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
                                 derived_utils
                                     .derive(ctx.clone(), repo.clone(), csid)
                                     .map(|_| ())
@@ -540,8 +543,10 @@ fn subcommand_tail(
                                     cloned!(ctx, repo);
                                     move |derive| {
                                         // create new context so each derivation would have its own trace
-                                        let ctx =
-                                            CoreContext::new_with_logger(ctx.logger().clone());
+                                        let ctx = CoreContext::new_with_logger(
+                                            ctx.fb,
+                                            ctx.logger().clone(),
+                                        );
                                         derive
                                             .pending(ctx.clone(), repo.clone(), heads.clone())
                                             .map({

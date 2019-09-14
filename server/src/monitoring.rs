@@ -9,6 +9,7 @@
 use std::thread::{self, JoinHandle};
 
 use clap::ArgMatches;
+use fbinit::FacebookInit;
 use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 
@@ -32,6 +33,7 @@ impl Fb303Service for MononokeService {
 }
 
 pub(crate) fn start_thrift_service<'a>(
+    fb: FacebookInit,
     logger: &Logger,
     matches: &ArgMatches<'a>,
     ready: ReadyState,
@@ -44,6 +46,7 @@ pub(crate) fn start_thrift_service<'a>(
             .name("thrift_service".to_owned())
             .spawn(move || {
                 services::run_service_framework(
+                    fb,
                     "mononoke_server",
                     port,
                     0, // Disables separate status http server

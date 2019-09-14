@@ -263,14 +263,15 @@ enum DecodeRes<T> {
 mod test {
     use std::io::Cursor;
 
+    use fbinit::FacebookInit;
     use futures::{Future, Stream};
     use tokio_codec::FramedRead;
 
     use super::*;
 
-    #[test]
-    fn test_empty() {
-        let ctx = CoreContext::test_mock();
+    #[fbinit::test]
+    fn test_empty(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
 
         // Absolutely nothing in here.
         let empty_1 = Cursor::new(WIREPACK_END);

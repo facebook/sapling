@@ -684,6 +684,7 @@ mod test {
     use bookmarks::BookmarkName;
     use chashmap::CHashMap;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use futures::stream::iter_ok;
     use futures::stream::Stream;
     use revset::AncestorsNodeStream;
@@ -717,11 +718,11 @@ mod test {
         is_send::<Arc<CHashMap<ChangesetId, SkiplistNodeType>>>();
     }
 
-    #[test]
-    fn test_add_node() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn test_add_node(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -780,11 +781,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_skip_edges_reach_end_in_linear() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn test_skip_edges_reach_end_in_linear(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -862,11 +863,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_skip_edges_progress_powers_of_2() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(linear::getrepo());
+    #[fbinit::test]
+    fn test_skip_edges_progress_powers_of_2(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(
                 ctx.clone(),
@@ -924,11 +925,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_skip_edges_reach_end_in_merge() {
+    #[fbinit::test]
+    fn test_skip_edges_reach_end_in_merge(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo());
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(merge_uneven::getrepo(fb));
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -1031,11 +1032,11 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_partial_index_in_merge() {
+    #[fbinit::test]
+    fn test_partial_index_in_merge(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock();
-            let repo = Arc::new(merge_uneven::getrepo());
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(merge_uneven::getrepo(fb));
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -1165,12 +1166,12 @@ mod test {
         });
     }
 
-    #[test]
-    fn test_simul_index_on_wide_branch() {
+    #[fbinit::test]
+    fn test_simul_index_on_wide_branch(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock();
+            let ctx = CoreContext::test_mock(fb);
             // this repo has no merges but many branches
-            let repo = Arc::new(branch_wide::getrepo());
+            let repo = Arc::new(branch_wide::getrepo(fb));
             let root_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
@@ -1233,22 +1234,22 @@ mod test {
         });
     }
 
-    #[test]
-    fn linear_reachability() {
+    #[fbinit::test]
+    fn linear_reachability(fb: FacebookInit) {
         let sli_constructor = || SkiplistIndex::new();
-        test_linear_reachability(sli_constructor);
+        test_linear_reachability(fb, sli_constructor);
     }
 
-    #[test]
-    fn merge_uneven_reachability() {
+    #[fbinit::test]
+    fn merge_uneven_reachability(fb: FacebookInit) {
         let sli_constructor = || SkiplistIndex::new();
-        test_merge_uneven_reachability(sli_constructor);
+        test_merge_uneven_reachability(fb, sli_constructor);
     }
 
-    #[test]
-    fn branch_wide_reachability() {
+    #[fbinit::test]
+    fn branch_wide_reachability(fb: FacebookInit) {
         let sli_constructor = || SkiplistIndex::new();
-        test_branch_wide_reachability(sli_constructor);
+        test_branch_wide_reachability(fb, sli_constructor);
     }
 
     struct CountingChangesetFetcher {
@@ -1360,19 +1361,19 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             mod $test_name {
                 use super::*;
-                #[test]
-                fn no_index() {
+                #[fbinit::test]
+                fn no_index(fb: FacebookInit) {
                     let mut runtime = tokio::runtime::Runtime::new().unwrap();
-                    let ctx = CoreContext::test_mock();
-                    let repo = Arc::new($repo::getrepo());
+                    let ctx = CoreContext::test_mock(fb);
+                    let repo = Arc::new($repo::getrepo(fb));
                     let sli = SkiplistIndex::new();
                     $test_name(&mut runtime, ctx, repo, sli)
                 }
 
-                #[test]
-                fn all_indexed() {
-                    let ctx = CoreContext::test_mock();
-                    let repo = Arc::new($repo::getrepo());
+                #[fbinit::test]
+                fn all_indexed(fb: FacebookInit) {
+                    let ctx = CoreContext::test_mock(fb);
+                    let repo = Arc::new($repo::getrepo(fb));
                     let sli = SkiplistIndex::new();
                     {
                         let mut runtime = tokio::runtime::Runtime::new().unwrap();
@@ -1457,11 +1458,11 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_query_reachability_from_unindexed_node() {
+    #[fbinit::test]
+    fn test_query_reachability_from_unindexed_node(fb: FacebookInit) {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock();
-        let repo = Arc::new(linear::getrepo());
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb));
         let sli = SkiplistIndex::new();
         let get_parents_count = Arc::new(AtomicUsize::new(0));
         let get_gen_number_count = Arc::new(AtomicUsize::new(0));

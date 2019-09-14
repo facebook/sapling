@@ -9,6 +9,7 @@ use crate::{Phase, Phases};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
@@ -47,11 +48,11 @@ pub struct CachingPhases {
 }
 
 impl CachingPhases {
-    pub fn new(phases_store: Arc<dyn Phases>) -> Self {
+    pub fn new(fb: FacebookInit, phases_store: Arc<dyn Phases>) -> Self {
         let key_prefix = "scm.mononoke.phases";
         Self {
             phases_store,
-            memcache: MemcacheClient::new(),
+            memcache: MemcacheClient::new(fb),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
         }
     }

@@ -13,6 +13,7 @@ use assert_matches::assert_matches;
 use bytes::Bytes;
 use context::CoreContext;
 use failure_ext::Result;
+use fbinit::FacebookInit;
 use futures::{
     future::Future,
     stream::{self, Stream},
@@ -50,15 +51,15 @@ lazy_static! {
     static ref DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig::default();
 }
 
-#[test]
-fn filestore_put_alias() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -89,15 +90,15 @@ fn filestore_put_alias() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_get_canon() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -120,14 +121,14 @@ fn filestore_put_get_canon() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_get_sha1() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -153,14 +154,14 @@ fn filestore_put_get_sha1() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_get_git_sha1() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -186,14 +187,14 @@ fn filestore_put_get_git_sha1() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_get_sha256() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -219,8 +220,8 @@ fn filestore_put_get_sha256() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_chunked_put_get() -> Result<()> {
+#[fbinit::test]
+fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
@@ -232,7 +233,7 @@ fn filestore_chunked_put_get() -> Result<()> {
         concurrency: 5,
     };
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -254,8 +255,8 @@ fn filestore_chunked_put_get() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_chunked_put_get_nested() -> Result<()> {
+#[fbinit::test]
+fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -268,7 +269,7 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
@@ -309,12 +310,12 @@ fn filestore_chunked_put_get_nested() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_content_not_found() -> Result<()> {
+#[fbinit::test]
+fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // Missing content shouldn't throw an error
 
@@ -333,8 +334,8 @@ fn filestore_content_not_found() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_chunk_not_found() -> Result<()> {
+#[fbinit::test]
+fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -342,7 +343,7 @@ fn filestore_chunk_not_found() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let data = &b"foobar"[..];
     let req = request(data);
@@ -373,8 +374,8 @@ fn filestore_chunk_not_found() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_invalid_size() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -382,7 +383,7 @@ fn filestore_put_invalid_size() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let data = &b"foobar"[..];
     let req = StoreRequest::new(123);
@@ -402,8 +403,8 @@ fn filestore_put_invalid_size() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_content_id() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -411,7 +412,7 @@ fn filestore_put_content_id() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // Bad Content Id should fail
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
@@ -443,8 +444,8 @@ fn filestore_put_content_id() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_sha1() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -452,7 +453,7 @@ fn filestore_put_sha1() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // Bad Content Id should fail
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
@@ -484,8 +485,8 @@ fn filestore_put_sha1() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_git_sha1() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -493,7 +494,7 @@ fn filestore_put_git_sha1() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // Bad Content Id should fail
     let req = StoreRequest::with_git_sha1(
@@ -528,8 +529,8 @@ fn filestore_put_git_sha1() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_put_sha256() -> Result<()> {
+#[fbinit::test]
+fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -537,7 +538,7 @@ fn filestore_put_sha256() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // Bad Content Id should fail
     let req = StoreRequest::with_sha256(
@@ -572,8 +573,8 @@ fn filestore_put_sha256() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_rebuild_metadata() -> Result<()> {
+#[fbinit::test]
+fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
@@ -589,7 +590,7 @@ fn filestore_rebuild_metadata() -> Result<()> {
     });
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -639,14 +640,14 @@ fn filestore_rebuild_metadata() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_missing_metadata() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     // No matter the Fetchkey, querying the metadata should return None.
 
@@ -685,15 +686,15 @@ fn filestore_test_missing_metadata() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_peek() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -717,8 +718,8 @@ fn filestore_test_peek() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_chunked_peek() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
@@ -730,7 +731,7 @@ fn filestore_test_chunked_peek() -> Result<()> {
     };
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -754,15 +755,15 @@ fn filestore_test_chunked_peek() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_short_peek() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -785,8 +786,8 @@ fn filestore_test_short_peek() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_empty_peek() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let bytes = Bytes::new();
@@ -795,7 +796,7 @@ fn filestore_test_empty_peek() -> Result<()> {
     let content_id = canonical(&bytes);
 
     let blob = memblob::LazyMemblob::new();
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
@@ -818,13 +819,13 @@ fn filestore_test_empty_peek() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_store_bytes() -> Result<()> {
+#[fbinit::test]
+fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
     let (contents, fut) =
         filestore::store_bytes(blob.clone(), ctx.clone(), Bytes::from(HELLO_WORLD));
     let content_id = *contents.into_blob().id();
@@ -844,8 +845,8 @@ fn filestore_store_bytes() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_store_error() -> Result<()> {
+#[fbinit::test]
+fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let memblob = memblob::LazyMemblob::new();
@@ -859,7 +860,7 @@ fn filestore_store_error() -> Result<()> {
     let res = rt.block_on(filestore::store(
         blob,
         &config,
-        CoreContext::test_mock(),
+        CoreContext::test_mock(fb),
         &request(HELLO_WORLD),
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ));
@@ -872,8 +873,8 @@ fn filestore_store_error() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_rechunk() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -886,7 +887,7 @@ fn filestore_test_rechunk() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
@@ -937,8 +938,8 @@ fn filestore_test_rechunk() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_rechunk_larger() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -951,7 +952,7 @@ fn filestore_test_rechunk_larger() -> Result<()> {
         chunk_size: Some(3),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
@@ -1002,8 +1003,8 @@ fn filestore_test_rechunk_larger() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_rechunk_unchunked() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -1017,7 +1018,7 @@ fn filestore_test_rechunk_unchunked() -> Result<()> {
         chunk_size: Some(100),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
@@ -1057,8 +1058,8 @@ fn filestore_test_rechunk_unchunked() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_test_rechunk_missing_content() -> Result<()> {
+#[fbinit::test]
+fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let blob = memblob::LazyMemblob::new();
@@ -1067,7 +1068,7 @@ fn filestore_test_rechunk_missing_content() -> Result<()> {
         chunk_size: Some(1),
         concurrency: 5,
     };
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobar"[..];
     let full_id = canonical(full_data);
@@ -1089,8 +1090,8 @@ fn filestore_test_rechunk_missing_content() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn filestore_chunked_put_get_with_size() -> Result<()> {
+#[fbinit::test]
+fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
     let req = request(HELLO_WORLD);
@@ -1102,7 +1103,7 @@ fn filestore_chunked_put_get_with_size() -> Result<()> {
         concurrency: 5,
     };
 
-    let ctx = CoreContext::test_mock();
+    let ctx = CoreContext::test_mock(fb);
 
     rt.block_on(filestore::store(
         blob.clone(),
