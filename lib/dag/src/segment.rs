@@ -280,6 +280,31 @@ impl Dag {
         Ok(result)
     }
 
+    /// Iterate through segments at the given level in descending order.
+    fn iter_segments_descending(
+        &self,
+        max_high_id: Id,
+        level: Level,
+    ) -> Fallible<impl Iterator<Item = Fallible<Segment>>> {
+        let lower_bound = Self::serialize_lookup_key(0, level);
+        let upper_bound = Self::serialize_lookup_key(max_high_id, level);
+        let iter = self
+            .log
+            .lookup_range(Self::INDEX_HEAD, &lower_bound[..]..=&upper_bound[..])?
+            .rev();
+        let iter = iter.flat_map(|entry| match entry {
+            Ok((_key, values)) => values
+                .into_iter()
+                .map(|value| {
+                    let value = value?;
+                    Ok(Segment(value))
+                })
+                .collect(),
+            Err(err) => vec![Err(err)],
+        });
+        Ok(iter)
+    }
+
     /// Incrementally build high level segments at the given `level`.
     ///
     /// The new, high level segments are built on top of the lower level
@@ -476,6 +501,92 @@ impl Dag {
     pub fn heads(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
         let set = set.into();
         Ok(set.difference(&self.parents(set.clone())?))
+    }
+
+    /// Calculate children of the given set.
+    pub fn children(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+
+        // The algorithm works as follows:
+        // - Iterate through level N segments [1].
+        // - Considering a level N segment S:
+        //   Do S or parents of S overlap with `set`?
+        //   - No:  Skip S and check the next level N segment.
+        //   - Yes: Is S a flat segment?
+        //     - No:  Iterate through level N-1 segments covered by S,
+        //            recursively (goto [1]).
+        //     - Yes: Figure out children in the flat segment.
+        //            Push them to the result.
+
+        // There could be a fast path if a high-level segment contains
+        // more information, like "Does this segment have roots without
+        // parents"? If that is marked "no", and the `set` covers
+        // `S - S.head + S.parents`. Then we can push S to result
+        // without checking lower level segments.
+
+        // FIXME: The algorithm relies on the fact that the highest level
+        // segments contain all known ids, which is not guaranteed in all
+        // setups (ex. build_high_level_segments can have "drop_last" set).
+
+        struct Context<'a> {
+            this: &'a Dag,
+            set: SpanSet,
+            result_lower_bound: Id,
+            result: SpanSet,
+        }
+
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+            for seg in ctx.this.iter_segments_descending(range.high, level)? {
+                let seg = seg?;
+                let span = seg.span()?;
+                if span.low < range.low || span.high < ctx.result_lower_bound {
+                    break;
+                }
+
+                // Remove the `high`. This segment cannot calculate
+                // `children(high)`. If `high` matches a `parent` of
+                // another segment, that segment will handle it.
+                let intersection = ctx
+                    .set
+                    .intersection(&span.into())
+                    .difference(&span.high.into());
+                if !intersection.is_empty() {
+                    if level > 0 {
+                        visit_segments(ctx, span, level - 1)?;
+                        continue;
+                    } else {
+                        let seg_children = SpanSet::from_spans(
+                            intersection
+                                .as_spans()
+                                .iter()
+                                .map(|s| s.low + 1..=s.high + 1),
+                        );
+                        ctx.result.push_set(&seg_children);
+                    }
+                }
+
+                if seg.parents()?.into_iter().any(|p| ctx.set.contains(p)) {
+                    if level > 0 {
+                        visit_segments(ctx, span, level - 1)?;
+                    } else {
+                        // child(any parent) = lowest id in this flag segment.
+                        ctx.result.push_span(span.low.into());
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        let result_lower_bound = set.min().unwrap_or(Id::max_value());
+        let mut ctx = Context {
+            this: self,
+            set,
+            result_lower_bound,
+            result: SpanSet::empty(),
+        };
+
+        visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+        Ok(ctx.result)
     }
 
     /// Calculate one "greatest common ancestor" of the given set.

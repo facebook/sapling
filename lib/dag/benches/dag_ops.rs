@@ -91,6 +91,14 @@ fn main() {
         })
     });
 
+    bench("children", || {
+        elapsed(|| {
+            for set in &sample_sets {
+                dag.children(set.clone()).unwrap();
+            }
+        })
+    });
+
     bench("common_ancestors (spans)", || {
         elapsed(|| {
             for set in &sample_sets {

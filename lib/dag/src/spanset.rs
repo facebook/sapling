@@ -173,6 +173,11 @@ impl SpanSet {
         Span::full().into()
     }
 
+    /// Check if this [`SpanSet`] contains nothing.
+    pub fn is_empty(&self) -> bool {
+        self.spans.is_empty()
+    }
+
     /// Check if the spans satisfies internal assumptions: sorted and not
     /// overlapped.
     fn is_valid(&self) -> bool {

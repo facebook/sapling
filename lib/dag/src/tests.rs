@@ -265,6 +265,46 @@ Lv2: 0-11[]"#
 }
 
 #[test]
+fn test_children() {
+    let result = build_segments(ASCII_DAG1, "L", 3, 2);
+    let dag = result.dag;
+    let children =
+        |spans| -> String { format_set(dag.children(SpanSet::from_spans(spans)).unwrap()) };
+
+    // See test_parents above for the ASCII DAG.
+
+    assert_eq!(children(vec![]), "");
+    assert_eq!(children(vec![0..=0]), "1");
+
+    assert_eq!(children(vec![0..=1]), "1 4");
+    assert_eq!(children(vec![0..=2]), "1 3 4");
+    assert_eq!(children(vec![0..=3]), "1 3 4");
+    assert_eq!(children(vec![0..=4]), "1 3 4 5");
+    assert_eq!(children(vec![0..=5]), "1 3..=6");
+    assert_eq!(children(vec![0..=6]), "1 3..=8");
+    assert_eq!(children(vec![0..=7]), "1 3..=8 10");
+    assert_eq!(children(vec![0..=8]), "1 3..=10");
+    assert_eq!(children(vec![0..=9]), "1 3..=10");
+    assert_eq!(children(vec![0..=10]), "1 3..=11");
+    assert_eq!(children(vec![0..=11]), "1 3..=11");
+
+    assert_eq!(children(vec![1..=10]), "3..=11");
+    assert_eq!(children(vec![2..=10]), "3..=11");
+    assert_eq!(children(vec![3..=10]), "4..=11");
+    assert_eq!(children(vec![4..=10]), "5..=11");
+    assert_eq!(children(vec![5..=10]), "6..=11");
+    assert_eq!(children(vec![6..=10]), "7..=11");
+    assert_eq!(children(vec![7..=10]), "9 10 11");
+    assert_eq!(children(vec![8..=10]), "9 10 11");
+    assert_eq!(children(vec![9..=10]), "10 11");
+    assert_eq!(children(vec![10..=10]), "11");
+
+    assert_eq!(children(vec![0..=0, 2..=2]), "1 3");
+    assert_eq!(children(vec![0..=0, 3..=3, 5..=5, 9..=10]), "1 4 6 10 11");
+    assert_eq!(children(vec![1..=1, 4..=4, 6..=6, 10..=10]), "4 5 7 8 11");
+}
+
+#[test]
 fn test_heads() {
     let ascii = r#"
     C G   K L
