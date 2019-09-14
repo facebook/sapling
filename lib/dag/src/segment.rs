@@ -9,6 +9,7 @@
 
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
+use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use failure::{bail, Fallible};
 use fs2::FileExt;
@@ -68,7 +69,7 @@ pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 
 impl Dag {
     const INDEX_HEAD: usize = 0;
-    const KEY_LEN: usize = Segment::OFFSET_DELTA;
+    const KEY_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
     /// Open [`Dag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Fallible<Self> {
@@ -76,7 +77,10 @@ impl Dag {
         let log = log::OpenOptions::new()
             .create(true)
             .index("head", |_| {
-                vec![log::IndexOutput::Reference(0..Self::KEY_LEN as u64)]
+                // (level, high)
+                vec![log::IndexOutput::Reference(
+                    Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
+                )]
             })
             .open(path)?;
         // The first byte of the largest key is the maximum level.
@@ -132,8 +136,15 @@ impl Dag {
     /// For simplicity, it does not check if the new segment overlaps with
     /// an existing segment (which is a logic error). Those checks can be
     /// offline.
-    pub fn insert(&mut self, level: Level, low: Id, high: Id, parents: &[Id]) -> Fallible<()> {
-        let buf = Segment::serialize(level, low, high, parents);
+    pub fn insert(
+        &mut self,
+        flags: SegmentFlags,
+        level: Level,
+        low: Id,
+        high: Id,
+        parents: &[Id],
+    ) -> Fallible<()> {
+        let buf = Segment::serialize(flags, level, low, high, parents);
         self.log.append(buf)?;
         Ok(())
     }
@@ -151,12 +162,18 @@ impl Dag {
         {
             None => Ok(0),
             Some(result) => {
-                let (key, _) = result?;
-                // This is an abuse of Segment. Segment expects the input buffer
-                // to be a complete entry. This input buffer is the key, which is
-                // the prefix of a complete entry (see `index` in `open`). However,
-                // the prefix is enough to answer the "high" question.
-                Ok(Segment(&key).high()? + 1)
+                let (key, mut values) = result?;
+                // PERF: The "next id" information can be also extracted from
+                // `key` without going through values. Right now the code path
+                // goes through values so `Segment` format changes wouldn't
+                // break the logic here. If perf is really needed, we can change
+                // logic here to not checking values.
+                if let Some(bytes) = values.next() {
+                    let seg = Segment(bytes?);
+                    Ok(seg.high()? + 1)
+                } else {
+                    bail!("key {:?} should have some values", key);
+                }
             }
         }
     }
@@ -244,7 +261,12 @@ impl Dag {
                 // Must start a new segment.
                 if let Some(low) = current_low {
                     debug_assert!(id > 0);
-                    self.insert(0, low, id - 1, &current_parents)?;
+                    let flags = if current_parents.is_empty() {
+                        SegmentFlags::HAS_ROOT
+                    } else {
+                        SegmentFlags::empty()
+                    };
+                    self.insert(flags, 0, low, id - 1, &current_parents)?;
                     insert_count += 1;
                 }
                 current_parents = parents;
@@ -255,7 +277,12 @@ impl Dag {
         // For the last flat segment, only build it if its length satisfies the threshold.
         if let Some(low) = current_low {
             if low + last_threshold <= high {
-                self.insert(0, low, high, &current_parents)?;
+                let flags = if current_parents.is_empty() {
+                    SegmentFlags::HAS_ROOT
+                } else {
+                    SegmentFlags::empty()
+                };
+                self.insert(flags, 0, low, high, &current_parents)?;
                 insert_count += 1;
             }
         }
@@ -351,8 +378,12 @@ impl Dag {
                 let mut heads = BTreeSet::new();
                 let mut parents = IndexSet::new();
                 let mut candidate = None;
+                let mut has_root = false;
                 for i in low_idx..segments.len().min(low_idx + size) {
                     let head = segments[i].head()?;
+                    if !has_root && segments[i].has_root()? {
+                        has_root = true;
+                    }
                     heads.insert(head);
                     let direct_parents = get_parents(head)?;
                     for p in &direct_parents {
@@ -364,14 +395,14 @@ impl Dag {
                         }
                     }
                     if heads.len() == 1 {
-                        candidate = Some((i, segment_low, head, parents.len()));
+                        candidate = Some((i, segment_low, head, parents.len(), has_root));
                     }
                 }
                 // There must be at least one valid high-level segment,
                 // because `segments[low_idx]` is such a high-level segment.
-                let (new_idx, low, high, parent_count) = candidate.unwrap();
+                let (new_idx, low, high, parent_count, has_root) = candidate.unwrap();
                 let parents = parents.into_iter().take(parent_count).collect::<Vec<Id>>();
-                Ok((new_idx, low, high, parents))
+                Ok((new_idx, low, high, parents, has_root))
             };
 
             let mut idx = 0;
@@ -392,8 +423,13 @@ impl Dag {
 
         let insert_count = new_segments.len();
 
-        for (_, low, high, parents) in new_segments {
-            self.insert(level, low, high, &parents)?;
+        for (_, low, high, parents, has_root) in new_segments {
+            let flags = if has_root {
+                SegmentFlags::HAS_ROOT
+            } else {
+                SegmentFlags::empty()
+            };
+            self.insert(flags, level, low, high, &parents)?;
         }
 
         if level > self.max_level && insert_count > 0 {
@@ -700,10 +736,30 @@ impl<'a> Drop for SyncableDag<'a> {
     }
 }
 
+bitflags! {
+    pub struct SegmentFlags: u8 {
+        /// This segment has roots (i.e. there is at least one id in
+        /// `low..=high`, `parents(id)` is empty).
+        const HAS_ROOT = 0b1;
+    }
+}
+
 impl<'a> Segment<'a> {
-    const OFFSET_LEVEL: usize = 0;
+    const OFFSET_FLAGS: usize = 0;
+    const OFFSET_LEVEL: usize = Self::OFFSET_FLAGS + 1;
     const OFFSET_HIGH: usize = Self::OFFSET_LEVEL + 1;
     const OFFSET_DELTA: usize = Self::OFFSET_HIGH + 8;
+
+    pub(crate) fn flags(&self) -> Fallible<SegmentFlags> {
+        match self.0.get(Self::OFFSET_FLAGS) {
+            Some(bits) => Ok(SegmentFlags::from_bits_truncate(*bits)),
+            None => bail!("cannot read flags"),
+        }
+    }
+
+    pub(crate) fn has_root(&self) -> Fallible<bool> {
+        Ok(self.flags()?.contains(SegmentFlags::HAS_ROOT))
+    }
 
     pub(crate) fn high(&self) -> Fallible<Id> {
         match self.0.get(Self::OFFSET_HIGH..Self::OFFSET_HIGH + 8) {
@@ -748,9 +804,16 @@ impl<'a> Segment<'a> {
         Ok(result)
     }
 
-    pub(crate) fn serialize(level: Level, low: Id, high: Id, parents: &[Id]) -> Vec<u8> {
+    pub(crate) fn serialize(
+        flags: SegmentFlags,
+        level: Level,
+        low: Id,
+        high: Id,
+        parents: &[Id],
+    ) -> Vec<u8> {
         assert!(high >= low);
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
+        buf.write_u8(flags.bits()).unwrap();
         buf.write_u8(level).unwrap();
         buf.write_u64::<BigEndian>(high).unwrap();
         buf.write_vlq(high - low).unwrap();
@@ -806,15 +869,21 @@ mod tests {
 
     #[test]
     fn test_segment_roundtrip() {
-        fn prop(level: Level, low: Id, delta: Id, parents: Vec<Id>) -> bool {
+        fn prop(has_root: bool, level: Level, low: Id, delta: Id, parents: Vec<Id>) -> bool {
+            let flags = if has_root {
+                SegmentFlags::HAS_ROOT
+            } else {
+                SegmentFlags::empty()
+            };
             let high = low + delta;
-            let buf = Segment::serialize(level, low, high, &parents);
+            let buf = Segment::serialize(flags, level, low, high, &parents);
             let node = Segment(&buf);
-            node.level().unwrap() == level
+            node.flags().unwrap() == flags
+                && node.level().unwrap() == level
                 && node.span().unwrap() == (low..=high).into()
                 && node.parents().unwrap() == parents
         }
-        quickcheck(prop as fn(Level, Id, Id, Vec<Id>) -> bool);
+        quickcheck(prop as fn(bool, Level, Id, Id, Vec<Id>) -> bool);
     }
 
     #[test]
@@ -825,17 +894,18 @@ mod tests {
         assert_eq!(dag.next_free_id(1).unwrap(), 0);
 
         let mut dag = dag.prepare_filesystem_sync().unwrap();
+        let flags = SegmentFlags::empty();
 
-        dag.insert(0, 0, 50, &vec![]).unwrap();
+        dag.insert(flags, 0, 0, 50, &vec![]).unwrap();
         assert_eq!(dag.next_free_id(0).unwrap(), 51);
-        dag.insert(0, 51, 100, &vec![50]).unwrap();
+        dag.insert(flags, 0, 51, 100, &vec![50]).unwrap();
         assert_eq!(dag.next_free_id(0).unwrap(), 101);
-        dag.insert(0, 101, 150, &vec![100]).unwrap();
+        dag.insert(flags, 0, 101, 150, &vec![100]).unwrap();
         assert_eq!(dag.next_free_id(0).unwrap(), 151);
         assert_eq!(dag.next_free_id(1).unwrap(), 0);
-        dag.insert(1, 0, 100, &vec![]).unwrap();
+        dag.insert(flags, 1, 0, 100, &vec![]).unwrap();
         assert_eq!(dag.next_free_id(1).unwrap(), 101);
-        dag.insert(1, 101, 150, &vec![100]).unwrap();
+        dag.insert(flags, 1, 101, 150, &vec![100]).unwrap();
         assert_eq!(dag.next_free_id(1).unwrap(), 151);
         dag.sync().unwrap();
 
