@@ -19,7 +19,6 @@ use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::Cursor;
-use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
@@ -931,20 +930,6 @@ impl<'a> SyncableDag<'a> {
     }
 }
 
-impl<'a> Deref for SyncableDag<'a> {
-    type Target = Dag;
-
-    fn deref(&self) -> &Self::Target {
-        self.dag
-    }
-}
-
-impl<'a> DerefMut for SyncableDag<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.dag
-    }
-}
-
 impl<'a> Drop for SyncableDag<'a> {
     fn drop(&mut self) {
         // TODO: handles `sync` failures gracefully.
@@ -1168,7 +1153,6 @@ mod tests {
         assert_eq!(dag.next_free_id(0).unwrap(), 0);
         assert_eq!(dag.next_free_id(1).unwrap(), 0);
 
-        let mut dag = dag.prepare_filesystem_sync().unwrap();
         let flags = SegmentFlags::empty();
 
         dag.insert(flags, 0, 0, 50, &vec![]).unwrap();
@@ -1182,7 +1166,6 @@ mod tests {
         assert_eq!(dag.next_free_id(1).unwrap(), 101);
         dag.insert(flags, 1, 101, 150, &vec![100]).unwrap();
         assert_eq!(dag.next_free_id(1).unwrap(), 151);
-        dag.sync().unwrap();
 
         // Helper functions to make the below lines shorter.
         let low_by_head = |head, level| match dag.find_segment_by_head(head, level) {
