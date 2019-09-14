@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::idmap::IdMap;
-use crate::segment::{Dag, Level};
+use crate::segment::Dag;
 use crate::spanset::SpanSet;
 use failure::Fallible;
 use tempfile::tempdir;
@@ -44,7 +44,7 @@ static ASCII_DAG5: &str = r#"
 #[test]
 fn test_segment_examples() {
     assert_eq!(
-        build_segments(ASCII_DAG1, "L", 3, 5).ascii[0],
+        build_segments(ASCII_DAG1, "L", 3).ascii[0],
         r#"
                 2-3-\     /--8--9--\
             0-1------4-5-6-7--------10-11
@@ -54,7 +54,7 @@ Lv2: R0-11[]"#
     );
 
     assert_eq!(
-            build_segments(ASCII_DAG2, "W", 3, 3).ascii[0],
+            build_segments(ASCII_DAG2, "W", 3).ascii[0],
             r#"
                       19/---------------13-14--\           19
                      / /                        \           \
@@ -68,7 +68,7 @@ Lv3: R0-22[]"#
         );
 
     assert_eq!(
-        build_segments(ASCII_DAG3, "G", 3, 1).ascii[0],
+        build_segments(ASCII_DAG3, "G", 3).ascii[0],
         r#"
               3---4---5--\
             0---1---2-----6
@@ -77,7 +77,7 @@ Lv1: R0-6[]"#
     );
 
     assert_eq!(
-        build_segments(ASCII_DAG4, "G", 3, 3).ascii[0],
+        build_segments(ASCII_DAG4, "G", 3).ascii[0],
         r#"
              3  1  0
               \  \  \
@@ -89,7 +89,7 @@ Lv3: R0-6[]"#
     );
 
     assert_eq!(
-        build_segments(ASCII_DAG5, "G", 3, 2).ascii[0],
+        build_segments(ASCII_DAG5, "G", 3).ascii[0],
         r#"
         1---3---5
          \   \   \
@@ -112,7 +112,7 @@ Lv2: R0-6[]"#
                       X--R--U--V
                        \  \  \  \
                         A--N--S--Y"#;
-    assert_eq!(build_segments(ascii_dag, "Y", 3, 3).ascii[0], r#"
+    assert_eq!(build_segments(ascii_dag, "Y", 3).ascii[0], r#"
             0---1--6--11-16
                  \  \  \  \
                   2--7--12-17
@@ -139,7 +139,7 @@ Lv3: R0-20[]"#);
                        \     \     \
                         N--S--Y--B--G"#;
     assert_eq!(
-        build_segments(ascii_dag, "G", 3, 3).ascii[0],
+        build_segments(ascii_dag, "G", 3).ascii[0],
         r#"
             0---1--2--3--4--5
                  \     \     \
@@ -163,7 +163,7 @@ fn test_segment_ancestors_example1() {
     let ascii_dag = r#"
             2-3-\     /--8--9--\
         0-1------4-5-6-7--------10-11"#;
-    let result = build_segments(ascii_dag, "11", 3, 3);
+    let result = build_segments(ascii_dag, "11", 3);
     let dag = result.dag;
 
     for (id, count) in vec![
@@ -207,7 +207,7 @@ fn test_segment_multiple_gcas() {
         B---C
          \ /
         A---D"#;
-    let result = build_segments(ascii_dag, "C D", 3, 1);
+    let result = build_segments(ascii_dag, "C D", 3);
     assert_eq!(
         result.ascii[1],
         r#"
@@ -228,7 +228,7 @@ Lv1: R0-2[] 3-3[0, 1]"#
 
 #[test]
 fn test_parents() {
-    let result = build_segments(ASCII_DAG1, "L", 3, 2);
+    let result = build_segments(ASCII_DAG1, "L", 3);
     assert_eq!(
         result.ascii[0],
         r#"
@@ -266,7 +266,7 @@ Lv2: R0-11[]"#
 
 #[test]
 fn test_children() {
-    let result = build_segments(ASCII_DAG1, "L", 3, 2);
+    let result = build_segments(ASCII_DAG1, "L", 3);
     let dag = result.dag;
     let children =
         |spans| -> String { format_set(dag.children(SpanSet::from_spans(spans)).unwrap()) };
@@ -313,7 +313,7 @@ fn test_heads() {
     | |/  |/
     A D   H"#;
 
-    let result = build_segments(ascii, "C G K L J", 2, 2);
+    let result = build_segments(ascii, "C G K L J", 2);
     assert_eq!(
         result.ascii[4],
         r#"
@@ -346,7 +346,7 @@ fn test_roots() {
     | |/  |\
     A D   H L"#;
 
-    let result = build_segments(ascii, "C G J", 2, 2);
+    let result = build_segments(ascii, "C G J", 2);
     assert_eq!(
         result.ascii[2],
         r#"
@@ -382,7 +382,7 @@ fn test_range() {
          /|/|\
         A B C D"#;
 
-    let result = build_segments(ascii, "J", 2, 4);
+    let result = build_segments(ascii, "J", 2);
     assert_eq!(
         result.ascii[0],
         r#"
@@ -516,12 +516,7 @@ struct BuildSegmentResult {
 
 /// Take an ASCII DAG, assign segments from given heads.
 /// Return the ASCII DAG and segments strings, together with the IdMap and Dag.
-fn build_segments(
-    text: &str,
-    heads: &str,
-    segment_size: usize,
-    _max_segment_level: Level,
-) -> BuildSegmentResult {
+fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
     let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
     let mut dag = Dag::open(dir.path().join("seg")).unwrap();
