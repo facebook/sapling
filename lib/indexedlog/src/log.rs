@@ -377,6 +377,18 @@ impl Log {
         Ok(())
     }
 
+    /// Remove dirty (in-memory) state. Restore the [`Log`] to the state as
+    /// if it's just loaded from disk without modifications.
+    pub fn clear_dirty(&mut self) -> Fallible<()> {
+        self.maybe_return_index_error()?;
+        for index in self.indexes.iter_mut() {
+            index.clear_dirty();
+        }
+        self.mem_buf.clear();
+        self.update_indexes_for_on_disk_entries()?;
+        Ok(())
+    }
+
     /// Load the latest data from disk. Write in-memory entries to disk.
     ///
     /// After writing, update on-disk indexes. These happen in a same critical
@@ -2392,6 +2404,25 @@ mod tests {
 
         let log = Log::open(dir.path(), Vec::new()).unwrap();
         assert!(log.iter().any(|e| e.is_err()));
+    }
+
+    #[test]
+    fn test_clear_dirty() {
+        for lag in vec![0, 1000] {
+            let dir = tempdir().unwrap();
+            let mut log = log_with_index(dir.path(), lag);
+            log.append([b'a'; 10]).unwrap();
+            log.sync().unwrap();
+            log.append([b'b'; 10]).unwrap();
+            assert_eq!(log.lookup_range(0, ..).unwrap().count(), 2);
+
+            log.clear_dirty().unwrap();
+            assert_eq!(
+                log.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+                vec![[b'a'; 10]],
+            );
+            assert_eq!(log.lookup_range(0, ..).unwrap().count(), 1);
+        }
     }
 
     quickcheck! {
