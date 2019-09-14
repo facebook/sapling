@@ -131,11 +131,7 @@ py_class!(class dagindex |py| {
         let mut dag = self.dag(py).borrow_mut();
         {
             let mut dag = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-            dag.build_flat_segments(id, &get_parents, 0).map_pyerr::<exc::IOError>(py)?;
-            let segment_size = *self.segment_size(py);
-            for level in 1..=*self.max_segment_level(py) {
-                dag.build_high_level_segments(level, segment_size, true).map_pyerr::<exc::IOError>(py)?;
-            }
+            dag.build_segments_persistent(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
             dag.sync().map_pyerr::<exc::IOError>(py)?;
         }
         Ok(None)
@@ -159,11 +155,7 @@ py_class!(class dagindex |py| {
         let get_parents = map.build_get_parents_by_id(&get_parents);
 
         let mut dag = self.dag(py).borrow_mut();
-        dag.build_flat_segments(id, &get_parents, 0).map_pyerr::<exc::IOError>(py)?;
-        let segment_size = *self.segment_size(py);
-        for level in 1..=*self.max_segment_level(py) {
-            dag.build_high_level_segments(level, segment_size, false).map_pyerr::<exc::IOError>(py)?;
-        }
+        dag.build_segments_volatile(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
         Ok(None)
     }
 

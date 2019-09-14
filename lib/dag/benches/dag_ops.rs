@@ -32,21 +32,13 @@ fn main() {
     let head_id = id_map.find_id_by_slice(&head_name).unwrap().unwrap();
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
 
-    let segment_size = 16;
     let dag_dir = tempdir().unwrap();
 
     bench("building segments", || {
         let mut dag = Dag::open(&dag_dir.path()).unwrap();
         elapsed(|| {
-            dag.build_flat_segments(head_id, &parents_by_id, 0).unwrap();
-            for level in 1..7 {
-                let segment_len = dag
-                    .build_high_level_segments(level, segment_size, false)
-                    .unwrap();
-                if segment_len == 0 {
-                    break;
-                }
-            }
+            dag.build_segments_volatile(head_id, &parents_by_id)
+                .unwrap();
         })
     });
 
@@ -54,15 +46,8 @@ fn main() {
     let mut dag = Dag::open(&dag_dir.path()).unwrap();
     {
         let mut dag = dag.prepare_filesystem_sync().unwrap();
-        dag.build_flat_segments(head_id, &parents_by_id, 0).unwrap();
-        for level in 1.. {
-            let segment_len = dag
-                .build_high_level_segments(level, segment_size, true)
-                .unwrap();
-            if segment_len == 0 {
-                break;
-            }
-        }
+        dag.build_segments_persistent(head_id, &parents_by_id)
+            .unwrap();
         dag.sync().unwrap();
     }
 

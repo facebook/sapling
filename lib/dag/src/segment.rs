@@ -42,6 +42,7 @@ pub struct Dag {
     pub(crate) log: log::Log,
     path: PathBuf,
     max_level: Level,
+    new_seg_size: usize,
 }
 
 /// Guard to make sure [`Dag`] on-disk writes are race-free.
@@ -88,11 +89,14 @@ impl Dag {
             None => 0,
             Some(key) => key?.0.get(0).cloned().unwrap_or(0),
         };
-        Ok(Self {
+        let mut dag = Self {
             log,
             path: path.to_path_buf(),
             max_level,
-        })
+            new_seg_size: 16, // see D16660078 for this default setting
+        };
+        dag.build_all_high_level_segments(false)?;
+        Ok(dag)
     }
 
     /// Find segment by level and head.
@@ -186,13 +190,8 @@ impl Dag {
     ///
     /// Block if another instance is taking the lock.
     ///
-    /// Panic if there are pending in-memory writes.
+    /// Pending in-memory writes will be dropped.
     pub fn prepare_filesystem_sync(&mut self) -> Fallible<SyncableDag> {
-        assert!(
-            self.log.iter_dirty().next().is_none(),
-            "programming error: prepare_filesystem_sync must be called without dirty in-memory entries",
-        );
-
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -208,12 +207,24 @@ impl Dag {
         lock_file.lock_exclusive()?;
 
         // Reload. So we get latest data.
+        self.log.clear_dirty()?;
         self.log.sync()?;
 
         Ok(SyncableDag {
             dag: self,
             lock_file,
         })
+    }
+
+    /// Set the maximum size of a new high-level segment.
+    ///
+    /// This does not affect existing segments.
+    ///
+    /// This might help performance a bit for certain rare types of DAGs.
+    /// The default value is Usually good enough.
+    pub fn set_new_segment_size(&mut self, size: usize) {
+        assert!(size > 1);
+        self.new_seg_size = size;
     }
 
     // Used internally to generate the index key for lookup
@@ -231,6 +242,25 @@ impl Dag {
 
 // Build segments.
 impl Dag {
+    /// Make sure the [`Dag`] contains the given id (and all ids smaller than
+    /// `high`) by building up segments on demand.
+    ///
+    /// `get_parents` describes the DAG. Its input and output are `Id`s.
+    ///
+    /// This is often used together with [`crate::idmap::IdMap`].
+    ///
+    /// Content inserted by this function *will not* be written to disk.
+    /// For example, [`Dag::prepare_filesystem_sync`] will drop them.
+    pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Fallible<usize>
+    where
+        F: Fn(Id) -> Fallible<Vec<Id>>,
+    {
+        let mut count = 0;
+        count += self.build_flat_segments(high, get_parents, 0)?;
+        count += self.build_all_high_level_segments(false)?;
+        Ok(count)
+    }
+
     /// Incrementally build flat (level 0) segments towards `high` (inclusive).
     ///
     /// `get_parents` describes the DAG. Its input and output are `Id`s.
@@ -242,7 +272,7 @@ impl Dag {
     /// [`Dag`] covers less ids.
     ///
     /// Return number of segments inserted.
-    pub fn build_flat_segments<F>(
+    fn build_flat_segments<F>(
         &mut self,
         high: Id,
         get_parents: &F,
@@ -343,13 +373,9 @@ impl Dag {
     /// are built frequently.
     ///
     /// Return number of segments inserted.
-    pub fn build_high_level_segments(
-        &mut self,
-        level: Level,
-        size: usize,
-        drop_last: bool,
-    ) -> Fallible<usize> {
+    fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Fallible<usize> {
         assert!(level > 0);
+        let size = self.new_seg_size;
 
         // `get_parents` is on the previous level of segments.
         let get_parents = |head: Id| -> Fallible<Vec<Id>> {
@@ -443,6 +469,24 @@ impl Dag {
         }
 
         Ok(insert_count)
+    }
+
+    /// Build high level segments using default setup.
+    ///
+    /// If `drop_last` is `true`, the last segment is dropped to help
+    /// reduce fragmentation.
+    ///
+    /// Return number of segments inserted.
+    fn build_all_high_level_segments(&mut self, drop_last: bool) -> Fallible<usize> {
+        let mut total = 0;
+        for level in 1.. {
+            let count = self.build_high_level_segments(level, drop_last)?;
+            if count == 0 {
+                break;
+            }
+            total += count;
+        }
+        Ok(total)
     }
 }
 
@@ -578,10 +622,6 @@ impl Dag {
         //            recursively (goto [1]).
         //     - Yes: Figure out children in the flat segment.
         //            Push them to the result.
-
-        // FIXME: The algorithm relies on the fact that the highest level
-        // segments contain all known ids, which is not guaranteed in all
-        // setups (ex. build_high_level_segments can have "drop_last" set).
 
         struct Context<'a> {
             this: &'a Dag,
@@ -775,10 +815,6 @@ impl Dag {
         //   If above fast paths do not work, then go deeper:
         //     - Iterate through level N-1 segments covered by S.
 
-        // FIXME: The algorithm relies on the fact that the highest level
-        // segments contain all known ids, which is not guaranteed in all
-        // setups (ex. build_high_level_segments can have "drop_last" set).
-
         struct Context<'a> {
             this: &'a Dag,
             roots: SpanSet,
@@ -869,6 +905,22 @@ impl Dag {
 }
 
 impl<'a> SyncableDag<'a> {
+    /// Make sure the [`Dag`] contains the given id (and all ids smaller than
+    /// `high`) by building up segments on demand.
+    ///
+    /// This is similar to [`Dag::build_segments_volatile`]. However, the build
+    /// result is intended to be written to the filesystem. Therefore high-level
+    /// segments are intentionally made lagging to reduce fragmentation.
+    pub fn build_segments_persistent<F>(&mut self, high: Id, get_parents: &F) -> Fallible<usize>
+    where
+        F: Fn(Id) -> Fallible<Vec<Id>>,
+    {
+        let mut count = 0;
+        count += self.dag.build_flat_segments(high, get_parents, 0)?;
+        count += self.dag.build_all_high_level_segments(true)?;
+        Ok(count)
+    }
+
     /// Write pending changes to disk.
     ///
     /// This method must be called if there are new entries inserted.

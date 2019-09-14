@@ -357,7 +357,8 @@ fn test_roots() {
     0 3   7 8
 Lv0: R0-2[] R3-4[] 5-5[3] 6-6[4, 5] R7-7[] R8-8[] 9-9[7, 8] R10-10[] 11-11[9, 10]
 Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-7[] R8-9[7] R10-11[9]
-Lv2: R0-2[] R3-6[] R7-9[] R10-11[9]"#
+Lv2: R0-2[] R3-6[] R7-9[] R10-11[9]
+Lv3: R0-2[] R3-6[] R7-11[]"#
     );
 
     let dag = result.dag;
@@ -519,7 +520,7 @@ fn build_segments(
     text: &str,
     heads: &str,
     segment_size: usize,
-    max_segment_level: Level,
+    _max_segment_level: Level,
 ) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
     let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
@@ -540,11 +541,9 @@ fn build_segments(
             id_map.assign_head(head, &parents_by_name).unwrap();
             let head_id = id_map.find_id_by_slice(head).unwrap().unwrap();
             let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
-            dag.build_flat_segments(head_id, &parents_by_id, 0).unwrap();
-            for level in 1..=max_segment_level {
-                dag.build_high_level_segments(level, segment_size, false)
-                    .unwrap();
-            }
+            dag.set_new_segment_size(segment_size);
+            dag.build_segments_volatile(head_id, &parents_by_id)
+                .unwrap();
             format!("{}\n{}", id_map.replace(text), dag.dump())
         })
         .collect();

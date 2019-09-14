@@ -44,23 +44,14 @@ fn main() {
             built = true;
             measure::Both::<measure::WallClock, String>::measure(|| {
                 let mut dag = Dag::open(&dag_dir.path()).unwrap();
+                dag.set_segment_size(segment_size);
                 let mut dag = dag.prepare_filesystem_sync().unwrap();
-                let mut segment_lens = Vec::new();
-                let segment_len = dag.build_flat_segments(head_id, &parents_by_id, 0).unwrap();
-                segment_lens.push(segment_len);
-                for level in 1..=99 {
-                    // true: drop the last (potentially incomplete) segment
-                    let segment_len = dag
-                        .build_high_level_segments(level, segment_size, true)
-                        .unwrap();
-                    if segment_len == 0 {
-                        break;
-                    }
-                    segment_lens.push(segment_len);
-                }
+                let segment_len = dag
+                    .build_segments_persistent(head_id, &parents_by_id)
+                    .unwrap();
                 dag.sync().unwrap();
                 let log_len = dag_dir.path().join("log").metadata().unwrap().len();
-                format!("segments: {:?}  log len: {}", segment_lens, log_len)
+                format!("segments: {}  log len: {}", segment_len, log_len)
             })
         });
 
