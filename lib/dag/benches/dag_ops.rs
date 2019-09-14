@@ -171,4 +171,12 @@ fn main() {
             }
         })
     });
+
+    bench("roots", || {
+        elapsed(|| {
+            for set in &sample_sets {
+                dag.roots(set.clone()).unwrap();
+            }
+        })
+    });
 }

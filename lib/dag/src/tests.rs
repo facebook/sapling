@@ -337,6 +337,39 @@ Lv2: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]"#
     assert_eq!(heads(vec![1..=2, 4..=6, 7..=7, 11..=11, 9..=9]), "2 6 9 11");
 }
 
+#[test]
+fn test_roots() {
+    let ascii = r#"
+    C G   J
+    | |\  |\
+    B E F I K
+    | |/  |\
+    A D   H L"#;
+
+    let result = build_segments(ascii, "C G J", 2, 2);
+    assert_eq!(
+        result.ascii[2],
+        r#"
+    2 6   11
+    | |\  |\
+    1 4 5 9 10
+    | |/  |\
+    0 3   7 8
+Lv0: R0-2[] R3-4[] 5-5[3] 6-6[4, 5] R7-7[] R8-8[] 9-9[7, 8] R10-10[] 11-11[9, 10]
+Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-7[] R8-9[7] R10-11[9]
+Lv2: R0-2[] R3-6[] R7-9[] R10-11[9]"#
+    );
+
+    let dag = result.dag;
+    let roots = |spans| -> String { format_set(dag.roots(SpanSet::from_spans(spans)).unwrap()) };
+
+    assert_eq!(roots(vec![]), "");
+    assert_eq!(roots(vec![0..=11]), "0 3 7 8 10");
+    assert_eq!(roots(vec![1..=2, 4..=6, 8..=10]), "1 4 5 8 10");
+    assert_eq!(roots(vec![0..=0, 2..=3, 5..=6, 9..=11]), "0 2 3 9 10");
+    assert_eq!(roots(vec![1..=1, 3..=3, 6..=8, 11..=11]), "1 3 6 7 8 11");
+}
+
 // Test utilities
 
 fn format_set(set: SpanSet) -> String {

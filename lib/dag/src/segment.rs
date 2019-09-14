@@ -640,6 +640,12 @@ impl Dag {
         Ok(ctx.result)
     }
 
+    /// Calculate roots of the given set.
+    pub fn roots(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        let set = set.into();
+        Ok(set.difference(&self.children(set.clone())?))
+    }
+
     /// Calculate one "greatest common ancestor" of the given set.
     ///
     /// If there are no common ancestors, return None.
