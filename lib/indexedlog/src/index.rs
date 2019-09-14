@@ -1682,7 +1682,12 @@ impl OpenOptions {
 
 impl Index {
     /// Return a cloned [`Index`].
-    pub(crate) fn clone(&self) -> Fallible<Index> {
+    ///
+    /// If `copy_dirty` is true, then copy the in-memory portion.
+    /// Otherwise, do not copy the in-memory portion, which is
+    /// logically equivalent to calling `clear_dirty` immediately
+    /// on the result, but much cheaper.
+    pub fn clone(&self, copy_dirty: bool) -> Fallible<Index> {
         let (file, mmap) = match &self.file {
             Some(f) => (Some(f.duplicate()?), mmap_readonly(&f, Some(self.len))?.0),
             None => {
@@ -1694,22 +1699,49 @@ impl Index {
             Some(ref table) => Some(table.clone()?),
             None => None,
         };
-        Ok(Index {
-            file,
-            buf: mmap,
-            path: self.path.clone(),
-            open_options: self.open_options.clone(),
-            clean_root: self.clean_root.clone(),
-            dirty_root: self.dirty_root.clone(),
-            dirty_keys: self.dirty_keys.clone(),
-            dirty_ext_keys: self.dirty_ext_keys.clone(),
-            dirty_leafs: self.dirty_leafs.clone(),
-            dirty_links: self.dirty_links.clone(),
-            dirty_radixes: self.dirty_radixes.clone(),
-            checksum,
-            key_buf: self.key_buf.clone(),
-            len: self.len,
-        })
+
+        let index = if copy_dirty {
+            Index {
+                file,
+                buf: mmap,
+                path: self.path.clone(),
+                open_options: self.open_options.clone(),
+                clean_root: self.clean_root.clone(),
+                dirty_root: self.dirty_root.clone(),
+                dirty_keys: self.dirty_keys.clone(),
+                dirty_ext_keys: self.dirty_ext_keys.clone(),
+                dirty_leafs: self.dirty_leafs.clone(),
+                dirty_links: self.dirty_links.clone(),
+                dirty_radixes: self.dirty_radixes.clone(),
+                checksum,
+                key_buf: self.key_buf.clone(),
+                len: self.len,
+            }
+        } else {
+            Index {
+                file,
+                buf: mmap,
+                path: self.path.clone(),
+                open_options: self.open_options.clone(),
+                clean_root: self.clean_root.clone(),
+                dirty_root: self.clean_root.clone(),
+                dirty_keys: Vec::new(),
+                dirty_ext_keys: Vec::new(),
+                dirty_leafs: Vec::new(),
+                dirty_links: Vec::new(),
+                dirty_radixes: if self.clean_root.radix_offset.is_dirty() {
+                    // See `clear_dirty` for this special case.
+                    vec![MemRadix::default()]
+                } else {
+                    Vec::new()
+                },
+                checksum,
+                key_buf: self.key_buf.clone(),
+                len: self.len,
+            }
+        };
+
+        Ok(index)
     }
 
     /// Get metadata attached to the root node. This is what previously set by
@@ -3007,28 +3039,43 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        // Test on-disk Index
         let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
+        // Test clone empty index
+        assert_eq!(
+            format!("{:?}", index.clone(true).unwrap()),
+            format!("{:?}", index)
+        );
+        assert_eq!(
+            format!("{:?}", index.clone(false).unwrap()),
+            format!("{:?}", index)
+        );
+
+        // Test on-disk Index
         index.insert(&[], 55).expect("insert");
         index.insert(&[0x12], 77).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x15], 99).expect("insert");
 
-        let index2 = index.clone().expect("clone");
+        let mut index2 = index.clone(true).expect("clone");
         assert_eq!(format!("{:?}", index), format!("{:?}", index2));
+
+        // Test clone without in-memory part
+        let index2clean = index.clone(false).unwrap();
+        index2.clear_dirty();
+        assert_eq!(format!("{:?}", index2), format!("{:?}", index2clean));
 
         // Test in-memory Index
         let mut index3 = open_opts()
             .checksum_chunk_size(0)
             .create_in_memory()
             .unwrap();
-        let index4 = index3.clone().unwrap();
+        let index4 = index3.clone(true).unwrap();
         assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
 
         index3.insert(&[0x15], 99).expect("insert");
-        let index4 = index3.clone().unwrap();
+        let index4 = index3.clone(true).unwrap();
         assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
     }
 

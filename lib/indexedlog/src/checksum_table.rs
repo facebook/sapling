@@ -25,7 +25,7 @@
 // embed checksum logic into them.
 
 use crate::errors::{self, data_error, parameter_error};
-use crate::utils::{atomic_write, mmap_readonly, xxhash};
+use crate::utils::{atomic_write, mmap_empty, mmap_readonly, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use fs2::FileExt;
@@ -224,7 +224,12 @@ impl ChecksumTable {
     /// Clone the checksum table.
     pub fn clone(&self) -> Fallible<Self> {
         let file = self.file.duplicate()?;
-        let mmap = mmap_readonly(&file, (self.buf.len() as u64).into())?.0;
+        // Special case: buf.len() == 1 might still mean an empty file.
+        let mmap = if self.buf.len() == 1 && file.metadata()?.len() == 0 {
+            mmap_empty()?
+        } else {
+            mmap_readonly(&file, (self.buf.len() as u64).into())?.0
+        };
         Ok(ChecksumTable {
             file,
             buf: mmap,
