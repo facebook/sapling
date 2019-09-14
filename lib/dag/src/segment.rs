@@ -514,8 +514,9 @@ impl Dag {
                 self.ancestors(a)?.intersection(&self.ancestors(b)?)
             }
             _ => {
-                // PERF: If the set is too large, `common_ancestors(heads(X))`
-                // might be faster.
+                // Try to reduce the size of `set`.
+                // `common_ancestors(X)` = `common_ancestors(heads(X))`.
+                let set = self.heads(set)?;
                 set.iter()
                     .fold(Ok(SpanSet::full()), |set: Fallible<SpanSet>, id| {
                         Ok(set?.intersection(&self.ancestors(id)?))
