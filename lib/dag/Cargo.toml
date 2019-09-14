@@ -23,5 +23,9 @@ name = "spanset"
 harness = false
 
 [[bench]]
-name = "segment"
+name = "segment_sizes"
+harness = false
+
+[[bench]]
+name = "dag_ops"
 harness = false
