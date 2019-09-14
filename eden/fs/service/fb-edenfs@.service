@@ -73,6 +73,8 @@ ExecStart=/bin/sh -c ' \
     exec_edenfs_as_root() { \
         if [ "$${EDENFS_USER_ID}" -eq 0 ]; then \
             exec "$${EDENFS_EXECUTABLE_PATH}" --allowRoot "$${@}"; \
+        elif [ -u "$${EDENFS_EXECUTABLE_PATH}" ]; then \
+            exec "$${EDENFS_EXECUTABLE_PATH}" "$${@}"; \
         else \
             exec /usr/bin/sudo -- "$${EDENFS_EXECUTABLE_PATH}" "$${@}"; \
         fi; \
