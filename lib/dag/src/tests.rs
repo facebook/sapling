@@ -370,6 +370,107 @@ Lv2: R0-2[] R3-6[] R7-9[] R10-11[9]"#
     assert_eq!(roots(vec![1..=1, 3..=3, 6..=8, 11..=11]), "1 3 6 7 8 11");
 }
 
+#[test]
+fn test_range() {
+    let ascii = r#"
+            J
+           /|\
+          G H I
+          |/|/
+          E F
+         /|/|\
+        A B C D"#;
+
+    let result = build_segments(ascii, "J", 2, 4);
+    assert_eq!(
+        result.ascii[0],
+        r#"
+            9
+           /|\
+          3 7 8
+          |/|/
+          2 6
+         /|/|\
+        0 1 4 5
+Lv0: R0-0[] R1-1[] 2-3[0, 1] R4-4[] R5-5[] 6-6[1, 4, 5] 7-7[2, 6] 8-8[6] 9-9[3, 7, 8]
+Lv1: R0-0[] R1-3[0] R4-4[] R5-6[1, 4] 7-7[2, 6] 8-9[6, 3, 7]
+Lv2: R0-3[] R4-6[1] 7-9[2, 6, 3]
+Lv3: R0-3[] R4-9[1, 2, 3]
+Lv4: R0-9[]"#
+    );
+
+    let dag = result.dag;
+    let range = |roots, heads| -> String {
+        format_set(
+            dag.range(SpanSet::from_spans(roots), SpanSet::from_spans(heads))
+                .unwrap(),
+        )
+    };
+
+    assert_eq!(range(vec![6], vec![3]), "");
+    assert_eq!(range(vec![1], vec![3, 8]), "1 2 3 6 8");
+    assert_eq!(range(vec![4], vec![3, 8]), "4 6 8");
+    assert_eq!(range(vec![0, 5], vec![7]), "0 2 5 6 7");
+    assert_eq!(range(vec![0, 5], vec![3, 8]), "0 2 3 5 6 8");
+    assert_eq!(range(vec![0, 1, 4, 5], vec![3, 7, 8]), "0..=8");
+
+    assert_eq!(range(vec![0], vec![0]), "0");
+    assert_eq!(range(vec![0], vec![1]), "");
+    assert_eq!(range(vec![0], vec![2]), "0 2");
+    assert_eq!(range(vec![0], vec![3]), "0 2 3");
+    assert_eq!(range(vec![0], vec![4]), "");
+    assert_eq!(range(vec![0], vec![5]), "");
+    assert_eq!(range(vec![0], vec![6]), "");
+    assert_eq!(range(vec![0], vec![7]), "0 2 7");
+    assert_eq!(range(vec![0], vec![8]), "");
+    assert_eq!(range(vec![0], vec![9]), "0 2 3 7 9");
+    assert_eq!(range(vec![1], vec![1]), "1");
+    assert_eq!(range(vec![1], vec![2]), "1 2");
+    assert_eq!(range(vec![1], vec![3]), "1 2 3");
+    assert_eq!(range(vec![1], vec![4]), "");
+    assert_eq!(range(vec![1], vec![5]), "");
+    assert_eq!(range(vec![1], vec![6]), "1 6");
+    assert_eq!(range(vec![1], vec![7]), "1 2 6 7");
+    assert_eq!(range(vec![1], vec![8]), "1 6 8");
+    assert_eq!(range(vec![1], vec![9]), "1 2 3 6..=9");
+    assert_eq!(range(vec![2], vec![2]), "2");
+    assert_eq!(range(vec![2], vec![3]), "2 3");
+    assert_eq!(range(vec![2], vec![4]), "");
+    assert_eq!(range(vec![2], vec![5]), "");
+    assert_eq!(range(vec![2], vec![6]), "");
+    assert_eq!(range(vec![2], vec![7]), "2 7");
+    assert_eq!(range(vec![2], vec![8]), "");
+    assert_eq!(range(vec![2], vec![9]), "2 3 7 9");
+    assert_eq!(range(vec![3], vec![3]), "3");
+    assert_eq!(range(vec![3], vec![4]), "");
+    assert_eq!(range(vec![3], vec![5]), "");
+    assert_eq!(range(vec![3], vec![6]), "");
+    assert_eq!(range(vec![3], vec![7]), "");
+    assert_eq!(range(vec![3], vec![8]), "");
+    assert_eq!(range(vec![3], vec![9]), "3 9");
+    assert_eq!(range(vec![4], vec![4]), "4");
+    assert_eq!(range(vec![4], vec![5]), "");
+    assert_eq!(range(vec![4], vec![6]), "4 6");
+    assert_eq!(range(vec![4], vec![7]), "4 6 7");
+    assert_eq!(range(vec![4], vec![8]), "4 6 8");
+    assert_eq!(range(vec![4], vec![9]), "4 6..=9");
+    assert_eq!(range(vec![5], vec![5]), "5");
+    assert_eq!(range(vec![5], vec![6]), "5 6");
+    assert_eq!(range(vec![5], vec![7]), "5 6 7");
+    assert_eq!(range(vec![5], vec![8]), "5 6 8");
+    assert_eq!(range(vec![5], vec![9]), "5..=9");
+    assert_eq!(range(vec![6], vec![6]), "6");
+    assert_eq!(range(vec![6], vec![7]), "6 7");
+    assert_eq!(range(vec![6], vec![8]), "6 8");
+    assert_eq!(range(vec![6], vec![9]), "6..=9");
+    assert_eq!(range(vec![7], vec![7]), "7");
+    assert_eq!(range(vec![7], vec![8]), "");
+    assert_eq!(range(vec![7], vec![9]), "7 9");
+    assert_eq!(range(vec![8], vec![8]), "8");
+    assert_eq!(range(vec![8], vec![9]), "8 9");
+    assert_eq!(range(vec![9], vec![9]), "9");
+}
+
 // Test utilities
 
 fn format_set(set: SpanSet) -> String {

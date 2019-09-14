@@ -720,6 +720,130 @@ impl Dag {
         }
         Ok(result)
     }
+
+    /// Calculate the "dag range" - ids reachable from both sides.
+    ///
+    /// ```plain,ignore
+    /// intersect(ancestors(heads), descendants(roots))
+    /// ```
+    pub fn range(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        // Pre-calculate ancestors.
+        let ancestors = self.ancestors(heads)?;
+        let roots = roots.into();
+
+        if ancestors.is_empty() || roots.is_empty() {
+            return Ok(SpanSet::empty());
+        }
+
+        // The problem then becomes:
+        // Given `roots`, find `ancestors & descendants(roots)`.
+        //
+        // The algorithm is divide and conquer:
+        // - Iterate through level N segments [1].
+        // - Considering a level N segment S:
+        //   Can we ignore the entire segment and go check next?
+        //      - Is `intersect(S, ancestors)` empty?
+        //      - Are `roots` unreachable from `S.head`?
+        //        (i.e. `interact(ancestors(S.head), roots)` is empty)
+        //      If either is "yes", then skip and continue.
+        //   Can we add the entire segment to result?
+        //      - Is S.head part of `ancestors`?
+        //      - Is S rootless, and all of `S.parents` can reach `roots`?
+        //      If both are "yes", then take S and continue.
+        //   If above fast paths do not work, then go deeper:
+        //     - Iterate through level N-1 segments covered by S.
+
+        // FIXME: The algorithm relies on the fact that the highest level
+        // segments contain all known ids, which is not guaranteed in all
+        // setups (ex. build_high_level_segments can have "drop_last" set).
+
+        struct Context<'a> {
+            this: &'a Dag,
+            roots: SpanSet,
+            ancestors: SpanSet,
+            roots_min: Id,
+            ancestors_max: Id,
+            result: SpanSet,
+        }
+
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+            for seg in ctx.this.iter_segments_descending(range.high, level)? {
+                let seg = seg?;
+                let span = seg.span()?;
+                if span.low < range.low {
+                    break;
+                }
+
+                // Skip this segment entirely?
+                let intersection = ctx.ancestors.intersection(&span.into());
+                if span.low > ctx.ancestors_max
+                    || span.high < ctx.roots_min
+                    || intersection.is_empty()
+                    || ctx
+                        .this
+                        .ancestors(span.high)?
+                        .intersection(&ctx.roots)
+                        .is_empty()
+                {
+                    continue;
+                }
+
+                // Include the entire segment?
+                let parents = seg.parents()?;
+                let mut overlapped_parents = LazyPredicate::new(parents, |p| {
+                    Ok(!ctx.this.ancestors(p)?.intersection(&ctx.roots).is_empty())
+                });
+
+                if !seg.has_root()?
+                    && ctx.ancestors.contains(span.high)
+                    && overlapped_parents.all()?
+                {
+                    ctx.result.push_span(span);
+                    continue;
+                }
+
+                if level == 0 {
+                    // Figure out what subset of this flat segment to be added to `result`.
+                    let span_low = if overlapped_parents.any()? {
+                        span.low
+                    } else {
+                        // Because
+                        // - This is a flat segment.
+                        //   i.e. only span.low has parents outside span.
+                        // - Tested above: ancestors(seg.head).intersection(roots) is not empty.
+                        //   i.e. descendants(roots).intersection(seg.head) is not empty.
+                        // - Tested just now: no parents reach any of roots.
+                        // Therefore: intersect(roots, span) cannot be empty.
+                        ctx.roots.intersection(&span.into()).min().unwrap()
+                    };
+                    let span_high = intersection.max().unwrap();
+                    if span_high >= span_low {
+                        ctx.result.push_span(Span::from(span_low..=span_high));
+                    }
+                } else {
+                    // Go deeper.
+                    visit_segments(ctx, span, level - 1)?;
+                }
+            }
+            Ok(())
+        }
+
+        let roots_min = roots.min().unwrap();
+        let ancestors_max = ancestors.max().unwrap();
+        let mut ctx = Context {
+            this: self,
+            roots,
+            ancestors,
+            roots_min,
+            ancestors_max,
+            result: SpanSet::empty(),
+        };
+
+        if ctx.roots_min <= ctx.ancestors_max {
+            visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+        }
+        Ok(ctx.result)
+    }
 }
 
 impl<'a> SyncableDag<'a> {
@@ -880,6 +1004,59 @@ impl Debug for Dag {
                 span.high,
                 segment.parents().unwrap(),
             )?;
+        }
+        Ok(())
+    }
+}
+
+/// Lazily answer `any(...)`, `all(...)`.
+struct LazyPredicate<P> {
+    ids: Vec<Id>,
+    predicate: P,
+    true_count: usize,
+    false_count: usize,
+}
+
+impl<P: Fn(Id) -> Fallible<bool>> LazyPredicate<P> {
+    pub fn new(ids: Vec<Id>, predicate: P) -> Self {
+        Self {
+            ids,
+            predicate,
+            true_count: 0,
+            false_count: 0,
+        }
+    }
+
+    pub fn any(&mut self) -> Fallible<bool> {
+        loop {
+            if self.true_count > 0 {
+                return Ok(true);
+            }
+            if self.true_count + self.false_count == self.ids.len() {
+                return Ok(false);
+            }
+            self.test_one()?;
+        }
+    }
+
+    pub fn all(&mut self) -> Fallible<bool> {
+        loop {
+            if self.true_count == self.ids.len() {
+                return Ok(true);
+            }
+            if self.false_count > 0 {
+                return Ok(false);
+            }
+            self.test_one()?;
+        }
+    }
+
+    fn test_one(&mut self) -> Fallible<()> {
+        let i = self.true_count + self.false_count;
+        if (self.predicate)(self.ids[i])? {
+            self.true_count += 1;
+        } else {
+            self.false_count += 1;
         }
         Ok(())
     }

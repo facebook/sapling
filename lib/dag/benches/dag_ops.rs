@@ -172,6 +172,24 @@ fn main() {
         })
     });
 
+    bench("range (2 ids)", || {
+        elapsed(|| {
+            for set in &sample_two_ids {
+                let ids: Vec<_> = set.iter().collect();
+                dag.range(ids[0], ids[1]).unwrap();
+            }
+        })
+    });
+
+    bench("range (spans)", || {
+        elapsed(|| {
+            let mut iter = sample_sets.iter();
+            if let (Some(set1), Some(set2)) = (iter.next(), iter.next_back()) {
+                dag.range(set1.clone(), set2.clone()).unwrap();
+            }
+        })
+    });
+
     bench("roots", || {
         elapsed(|| {
             for set in &sample_sets {
