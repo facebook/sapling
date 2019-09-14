@@ -62,7 +62,7 @@ impl Span {
         Self { low, high }
     }
 
-    fn count(self) -> u64 {
+    pub fn count(self) -> u64 {
         self.high - self.low + 1
     }
 
