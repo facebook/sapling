@@ -849,12 +849,15 @@ impl Debug for Dag {
             } else {
                 write!(f, " ")?;
             }
+            if segment.has_root().unwrap() {
+                write!(f, "R")?;
+            }
             write!(
                 f,
                 "{}-{}{:?}",
                 span.low,
                 span.high,
-                segment.parents().unwrap()
+                segment.parents().unwrap(),
             )?;
         }
         Ok(())
