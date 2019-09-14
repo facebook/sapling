@@ -1424,8 +1424,11 @@ pub struct Index {
     // OpenOptions
     open_options: OpenOptions,
 
+    // Used by `clear_dirty`.
+    clean_root: MemRoot,
+
     // In-memory entries. The root entry is always in-memory.
-    root: MemRoot,
+    dirty_root: MemRoot,
     dirty_radixes: Vec<MemRadix>,
     dirty_leafs: Vec<MemLeaf>,
     dirty_links: Vec<MemLink>,
@@ -1604,7 +1607,7 @@ impl OpenOptions {
             None
         };
 
-        let (dirty_radixes, root) = if len == 0 {
+        let (dirty_radixes, clean_root) = if len == 0 {
             // Empty file. Create root radix entry as an dirty entry, and
             // rebuild checksum table (in case it's corrupted).
             let radix_offset = RadixOffset::from_dirty_index(0);
@@ -1621,13 +1624,15 @@ impl OpenOptions {
         };
 
         let key_buf = self.key_buf.clone();
+        let dirty_root = clean_root.clone();
 
         Ok(Index {
             file: Some(file),
             buf: mmap,
             path: path.as_ref().to_path_buf(),
             open_options,
-            root,
+            clean_root,
+            dirty_root,
             dirty_radixes,
             dirty_links: vec![],
             dirty_leafs: vec![],
@@ -1648,19 +1653,21 @@ impl OpenOptions {
             ));
         }
         let dirty_radixes = vec![MemRadix::default()];
-        let root = {
+        let clean_root = {
             let radix_offset = RadixOffset::from_dirty_index(0);
             let meta = Default::default();
             MemRoot { radix_offset, meta }
         };
         let key_buf = self.key_buf.clone();
+        let dirty_root = clean_root.clone();
 
         Ok(Index {
             file: None,
             buf: mmap_empty()?,
             path: PathBuf::new(),
             open_options: self.clone(),
-            root,
+            clean_root,
+            dirty_root,
             dirty_radixes,
             dirty_links: vec![],
             dirty_leafs: vec![],
@@ -1692,7 +1699,8 @@ impl Index {
             buf: mmap,
             path: self.path.clone(),
             open_options: self.open_options.clone(),
-            root: self.root.clone(),
+            clean_root: self.clean_root.clone(),
+            dirty_root: self.dirty_root.clone(),
             dirty_keys: self.dirty_keys.clone(),
             dirty_ext_keys: self.dirty_ext_keys.clone(),
             dirty_leafs: self.dirty_leafs.clone(),
@@ -1707,13 +1715,34 @@ impl Index {
     /// Get metadata attached to the root node. This is what previously set by
     /// [Index::set_meta].
     pub fn get_meta(&self) -> &[u8] {
-        &self.root.meta
+        &self.dirty_root.meta
     }
 
     /// Set metadata attached to the root node. Will be written at
     /// [`Index::flush`] time.
     pub fn set_meta<B: AsRef<[u8]>>(&mut self, meta: B) {
-        self.root.meta = meta.as_ref().to_vec().into_boxed_slice()
+        self.dirty_root.meta = meta.as_ref().to_vec().into_boxed_slice()
+    }
+
+    /// Remove dirty (in-memory) state. Restore the [`Index`] to the state as
+    /// if it's just loaded from disk without modifications.
+    pub fn clear_dirty(&mut self) {
+        self.dirty_root = self.clean_root.clone();
+        self.dirty_radixes.clear();
+        if self.dirty_root.radix_offset.is_dirty() {
+            // In case the disk buffer is empty, a "dirty radix" entry
+            // is created automatically. Check OpenOptions::open for
+            // details.
+            assert_eq!(
+                self.dirty_root.radix_offset,
+                RadixOffset::from_dirty_index(0)
+            );
+            self.dirty_radixes.push(MemRadix::default());
+        }
+        self.dirty_leafs.clear();
+        self.dirty_links.clear();
+        self.dirty_keys.clear();
+        self.dirty_ext_keys.clear();
     }
 
     /// Flush changes to disk.
@@ -1763,7 +1792,7 @@ impl Index {
         }
 
         let mut new_len = self.len;
-        if !self.root.radix_offset.is_dirty() {
+        if !self.dirty_root.radix_offset.is_dirty() {
             // Nothing changed
             return Ok(new_len);
         }
@@ -1843,7 +1872,7 @@ impl Index {
                 offset_map.radix_map[i] = offset;
             }
 
-            self.root.write_to(&mut buf, &offset_map)?;
+            self.dirty_root.write_to(&mut buf, &offset_map)?;
             new_len = buf.len() as u64 + len;
             lock.as_mut().write_all(&buf)?;
 
@@ -1867,16 +1896,12 @@ impl Index {
                     63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
                 table.update(chunk_size_log.into())?;
             }
-            self.root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
+            self.clean_root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
         }
 
         // Outside critical section
-        self.dirty_radixes.clear();
-        self.dirty_leafs.clear();
-        self.dirty_links.clear();
-        self.dirty_keys.clear();
-        self.dirty_ext_keys.clear();
         self.len = new_len;
+        self.clear_dirty();
 
         Ok(new_len)
     }
@@ -1886,7 +1911,7 @@ impl Index {
     /// To test if the key exists or not, use [Offset::is_null].
     /// To obtain all values, use [`LinkOffset::values`].
     pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> Fallible<LinkOffset> {
-        let mut offset: Offset = self.root.radix_offset.into();
+        let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
 
         while !offset.is_null() {
@@ -1924,7 +1949,7 @@ impl Index {
     /// Scan entries which match the given prefix in base16 form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
     pub fn scan_prefix_base16(&self, mut base16: impl Iterator<Item = u8>) -> Fallible<RangeIter> {
-        let mut offset: Offset = self.root.radix_offset.into();
+        let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut front_stack = Vec::<IterState>::new();
 
         while !offset.is_null() {
@@ -2037,7 +2062,7 @@ impl Index {
         value: u64,
         link: Option<LinkOffset>,
     ) -> Fallible<()> {
-        let mut offset: Offset = self.root.radix_offset.into();
+        let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut step = 0;
         let (key, key_buf_offset) = match key {
             InsertKey::Embed(k) => (k, None),
@@ -2063,7 +2088,7 @@ impl Index {
                     offset = radix.into();
 
                     if step == 0 {
-                        self.root.radix_offset = radix;
+                        self.dirty_root.radix_offset = radix;
                     } else {
                         last_radix.set_child(self, last_child, offset);
                     }
@@ -2142,7 +2167,7 @@ impl Index {
     // `side` is the side of the `bound`, starting side of the iteration,
     // the opposite of "towards" side.
     fn iter_stack_by_bound(&self, bound: Bound<&&[u8]>, side: Side) -> Fallible<Vec<IterState>> {
-        let root_radix = self.root.radix_offset;
+        let root_radix = self.dirty_root.radix_offset;
         let (inclusive, mut base16iter) = match bound {
             Unbounded => {
                 return Ok(match side {
@@ -2440,7 +2465,7 @@ impl Debug for Index {
             f,
             "Index {{ len: {}, root: {:?} }}\n",
             self.buf.len(),
-            self.root.radix_offset
+            self.dirty_root.radix_offset
         )?;
 
         // On-disk entries
@@ -3296,6 +3321,29 @@ mod tests {
             .cloned()
             .collect(),
         );
+    }
+
+    #[test]
+    fn test_clear_dirty() {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+
+        index.insert(&"foo", 2).unwrap();
+        assert!(!index.get(&"foo").unwrap().is_null());
+
+        index.clear_dirty();
+        assert!(index.get(&"foo").unwrap().is_null());
+
+        index.set_meta(&vec![42]);
+        index.insert(&"foo", 1).unwrap();
+        index.flush().unwrap();
+
+        index.set_meta(&vec![43]);
+        index.insert(&"bar", 2).unwrap();
+        index.clear_dirty();
+
+        assert_eq!(index.get_meta(), [42]);
+        assert!(index.get(&"bar").unwrap().is_null());
     }
 
     quickcheck! {
