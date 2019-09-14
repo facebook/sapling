@@ -487,6 +487,9 @@ impl Dag {
     }
 
     /// Calculate parents of the given set.
+    ///
+    /// Note: [`SpanSet`] does not preserve order. Use [`Dag::parent_ids`] if
+    /// order is needed.
     pub fn parents(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
         let mut result = SpanSet::empty();
         let mut set = set.into();
@@ -537,6 +540,19 @@ impl Dag {
         }
 
         Ok(result)
+    }
+
+    /// Get parents of a single `id`. Preserve the order.
+    pub fn parent_ids(&self, id: Id) -> Fallible<Vec<Id>> {
+        let seg = self
+            .find_segment_including_id(id, 0)?
+            .expect("logic error: flat segments are expected to cover everything but they do not");
+        let span = seg.span()?;
+        if id == span.low {
+            Ok(seg.parents()?)
+        } else {
+            Ok(vec![id - 1])
+        }
     }
 
     /// Calculate heads of the given set.

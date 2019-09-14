@@ -172,6 +172,16 @@ fn main() {
         })
     });
 
+    bench("parent_ids", || {
+        elapsed(|| {
+            for set in &sample_two_ids {
+                for id in set.iter() {
+                    dag.parent_ids(id).unwrap();
+                }
+            }
+        })
+    });
+
     bench("range (2 ids)", || {
         elapsed(|| {
             for set in &sample_two_ids {
