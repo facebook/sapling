@@ -385,6 +385,32 @@ impl SpanSet {
     pub(crate) fn as_spans(&self) -> &Vec<Span> {
         &self.spans
     }
+
+    /// Make this [`SpanSet`] contain the specified `span`.
+    ///
+    /// The current implementation works best if `span.high` is smaller than
+    /// `min()`.
+    pub fn push(&mut self, span: impl Into<Span>) {
+        let span = span.into();
+        match self.spans.last_mut() {
+            None => self.spans.push(span),
+            Some(mut last) => {
+                if last.high >= span.high {
+                    if last.low <= span.high + 1 {
+                        // Union spans in-place.
+                        last.low = last.low.min(span.low);
+                    } else {
+                        self.spans.push(span)
+                    }
+                } else {
+                    // PERF: There is a better way to do this by bisecting
+                    // spans and insert in-place.  For now, this code path is
+                    // rarely used.
+                    *self = self.union(&SpanSet::from(span))
+                }
+            }
+        }
+    }
 }
 
 /// Push a span to `Vec<Span>`. Try to union them in-place.
@@ -652,5 +678,42 @@ mod tests {
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut set = SpanSet::from(10..=20);
+        set.push(5..=15);
+        assert_eq!(set.as_spans(), &vec![Span::from(5..=20)]);
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(5..=9);
+        assert_eq!(set.as_spans(), &vec![Span::from(5..=20)]);
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(5..=8);
+        assert_eq!(
+            set.as_spans(),
+            &vec![Span::from(10..=20), Span::from(5..=8)]
+        );
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(5..=30);
+        assert_eq!(set.as_spans(), &vec![Span::from(5..=30)]);
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(20..=30);
+        assert_eq!(set.as_spans(), &vec![Span::from(10..=30)]);
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(10..=20);
+        assert_eq!(set.as_spans(), &vec![Span::from(10..=20)]);
+
+        let mut set = SpanSet::from(10..=20);
+        set.push(22..=30);
+        assert_eq!(
+            set.as_spans(),
+            &vec![Span::from(22..=30), Span::from(10..=20)]
+        );
     }
 }
