@@ -42,12 +42,12 @@ use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 
-use cmdlib::args;
+use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use lfs_server_context::{LfsServerContext, LoggingContext, ServerUris};
-use middleware::{ScubaMiddleware, TimerMiddleware};
+use middleware::{OdsMiddleware, ScubaMiddleware, TimerMiddleware};
 use protocol::ResponseError;
 
 mod batch;
@@ -70,6 +70,8 @@ const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
+
+const SERVICE_NAME: &str = "mononoke_lfs_server";
 
 async fn build_response<IR>(
     res: Result<IR, HttpError>,
@@ -163,6 +165,7 @@ fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router
     let pipeline = new_pipeline()
         .add(RequestLogger::new(::log::Level::Info))
         .add(ScubaMiddleware::new(scuba_logger))
+        .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
         .add(StateMiddleware::new(lfs_ctx))
         .build();
@@ -302,6 +305,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
+
+    start_fb303_and_stats_agg(fb, &mut runtime, SERVICE_NAME, &logger, &matches)?;
 
     let repos: HashMap<_, _> = runtime
         .block_on(try_join_all(futs).compat())?

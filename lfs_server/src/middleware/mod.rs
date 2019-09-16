@@ -4,8 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod ods;
 mod scuba;
 mod timer;
 
+pub use self::ods::OdsMiddleware;
 pub use self::scuba::ScubaMiddleware;
 pub use self::timer::TimerMiddleware;

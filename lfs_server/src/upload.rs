@@ -16,6 +16,7 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, Chunk, Request};
 use serde::Deserialize;
+use stats::{define_stats, Histogram, Timeseries};
 use std::collections::HashMap;
 use std::result::Result;
 use std::str::FromStr;
@@ -30,6 +31,15 @@ use crate::lfs_server_context::RequestContext;
 use crate::protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
 };
+
+define_stats! {
+    prefix ="mononoke.lfs.upload";
+    upstream_uploads: timeseries(RATE, SUM),
+    upstream_success: timeseries(RATE, SUM),
+    internal_uploads: timeseries(RATE, SUM),
+    internal_success: timeseries(RATE, SUM),
+    size_bytes: histogram(1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+}
 
 // Small buffers for Filestore & Dewey
 const BUFFER_SIZE: usize = 5;
@@ -99,6 +109,7 @@ where
     if let Some(action) = actions?.remove(&Operation::Upload) {
         // TODO: We are discarding expiry and headers here. We probably shouldn't.
         // TODO: We are discarding verify actions.
+        STATS::upstream_uploads.add_value(1);
         let ObjectAction { href, .. } = action;
 
         let body = Body::wrap_stream(data.compat());
@@ -116,6 +127,7 @@ where
             .await
             .chain_err(ErrorKind::UpstreamUploadError)?;
 
+        STATS::upstream_success.add_value(1);
         return Ok(());
     }
 
@@ -147,16 +159,27 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         .map_err(|()| ErrorKind::ClientCancelled)
         .err_into();
 
-    let internal_upload = ctx
-        .repo
-        .upload_file(
-            ctx.ctx.clone(),
-            &StoreRequest::with_sha256(size, oid),
-            internal_recv.compat(),
-        )
-        .chain_err(ErrorKind::FilestoreWriteFailure)
-        .map_err(Error::from)
-        .compat();
+    let internal_upload = (async || {
+        STATS::internal_uploads.add_value(1);
+
+        let res = ctx
+            .repo
+            .upload_file(
+                ctx.ctx.clone(),
+                &StoreRequest::with_sha256(size, oid),
+                internal_recv.compat(),
+            )
+            .chain_err(ErrorKind::FilestoreWriteFailure)
+            .map_err(Error::from)
+            .compat()
+            .await;
+
+        if !res.is_err() {
+            STATS::internal_success.add_value(1);
+        }
+
+        res
+    })();
 
     let upstream_upload = upstream_upload(&ctx, oid, size, upstream_recv);
 
@@ -182,6 +205,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     })();
 
     try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500)?;
+    STATS::size_bytes.add_value(size as i64);
 
     Ok(EmptyBody::new())
 }

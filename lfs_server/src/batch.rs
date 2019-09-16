@@ -12,6 +12,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
 use serde::Deserialize;
+use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -26,6 +27,20 @@ use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     ResponseObject, Transfer,
 };
+
+define_stats! {
+    prefix ="mononoke.lfs.batch";
+    download_redirect_internal: timeseries(RATE, SUM),
+    download_redirect_upstream: timeseries(RATE, SUM),
+    download_unknown: timeseries(RATE, SUM),
+    upload_redirect: timeseries(RATE, SUM),
+    upload_no_redirect: timeseries(RATE, SUM),
+}
+
+enum Source {
+    Internal,
+    Upstream,
+}
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct BatchParams {
@@ -188,10 +203,12 @@ fn batch_upload_response_objects(
             let actions = match (upstream.should_upload(object), internal.get(object)) {
                 (false, Some(_)) => {
                     // Object doesn't need to be uploaded anywhere: move on.
+                    STATS::upload_no_redirect.add_value(1);
                     hashmap! {}
                 }
                 _ => {
                     // Object is missing in at least one location. Require uploading it.
+                    STATS::upload_redirect.add_value(1);
                     let uri = uri_builder.upload_uri(&object)?;
                     let action = ObjectAction::new(uri);
                     hashmap! { Operation::Upload => action }
@@ -238,20 +255,32 @@ fn batch_download_response_objects(
         .map(|object| {
             // For downloads, see if we can find it from internal or upstream (which means we
             // prefer internal). If we can't find it in either, then that's an error.
-            let status = match internal
-                .get(object)
-                .or_else(|| upstream.download_action(object))
-            {
-                Some(action) => ObjectStatus::Ok {
-                    authenticated: false,
-                    actions: hashmap! { Operation::Download => action.clone() },
-                },
-                None => ObjectStatus::Err {
-                    error: ObjectError {
-                        code: StatusCode::NOT_FOUND.as_u16(),
-                        message: "Object does not exist".to_string(),
-                    },
-                },
+            let internal_action = internal.get(object).map(|o| (Source::Internal, o));
+            let upstream_action = upstream
+                .download_action(object)
+                .map(|o| (Source::Upstream, o));
+
+            let status = match internal_action.or(upstream_action) {
+                Some((source, action)) => {
+                    match source {
+                        Source::Internal => STATS::download_redirect_internal.add_value(1),
+                        Source::Upstream => STATS::download_redirect_upstream.add_value(1),
+                    };
+
+                    ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: hashmap! { Operation::Download => action.clone() },
+                    }
+                }
+                None => {
+                    STATS::download_unknown.add_value(1);
+                    ObjectStatus::Err {
+                        error: ObjectError {
+                            code: StatusCode::NOT_FOUND.as_u16(),
+                            message: "Object does not exist".to_string(),
+                        },
+                    }
+                }
             };
 
             ResponseObject {
