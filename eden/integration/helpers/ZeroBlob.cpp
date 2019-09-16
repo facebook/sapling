@@ -9,6 +9,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/RocksDbLocalStore.h"

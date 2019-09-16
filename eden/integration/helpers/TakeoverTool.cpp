@@ -9,6 +9,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 
