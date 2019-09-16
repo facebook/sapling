@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 use fbinit::FacebookInit;
-use futures::{future, lazy, Future};
+use futures::Future;
 use maplit::btreemap;
 
 use context::CoreContext;
@@ -92,30 +92,21 @@ fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
 
 #[fbinit::test]
 fn test_add_and_get(fb: FacebookInit) {
-    tokio::run(lazy(move || {
-        future::ok(add_and_get(
-            fb,
-            SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
-        ))
-    }));
+    async_unit::tokio_unit_test(move || {
+        add_and_get(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
+    });
 }
 
 #[fbinit::test]
 fn test_missing(fb: FacebookInit) {
-    tokio::run(lazy(move || {
-        future::ok(missing(
-            fb,
-            SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
-        ))
-    }));
+    async_unit::tokio_unit_test(move || {
+        missing(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
+    });
 }
 
 #[fbinit::test]
 fn test_get_all(fb: FacebookInit) {
-    tokio::run(lazy(move || {
-        future::ok(get_all(
-            fb,
-            SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap(),
-        ))
-    }));
+    async_unit::tokio_unit_test(move || {
+        get_all(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
+    });
 }
