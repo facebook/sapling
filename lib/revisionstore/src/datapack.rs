@@ -90,13 +90,13 @@ use memmap::{Mmap, MmapOptions};
 
 use lz4_pyframe::decompress;
 use types::{Key, Node, RepoPath};
+use util::path::remove_file;
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::localstore::LocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
-use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]

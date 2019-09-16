@@ -22,6 +22,7 @@ serde = "1.0.84"
 serde_derive = "1.0.84"
 tempfile = "3.0.4"
 types = { path = "../types" }
+util = { path = "../util" }
 
 [dev-dependencies]
 rand = "0.6"

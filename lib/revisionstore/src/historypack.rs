@@ -93,6 +93,7 @@ use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use types::{Key, Node, NodeInfo, RepoPath, RepoPathBuf};
+use util::path::remove_file;
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
@@ -100,7 +101,6 @@ use crate::historystore::{Ancestors, HistoryStore};
 use crate::localstore::LocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
-use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
