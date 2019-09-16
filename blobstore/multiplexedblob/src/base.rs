@@ -13,13 +13,11 @@ use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
 use itertools::{Either, Itertools};
-use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
-use scuba::{ScubaClient, ScubaSample};
+use scuba::ScubaSampleBuilder;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::fmt;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -34,29 +32,6 @@ use tokio::timer::timeout::Error as TimeoutError;
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / 100.0);
-
-lazy_static! {
-    static ref TW_STATS: Vec<(&'static str, String)> = {
-        let mut stats = Vec::new();
-        if let (Ok(cluster), Ok(user), Ok(name)) = (
-            env::var("TW_JOB_CLUSTER"),
-            env::var("TW_JOB_USER"),
-            env::var("TW_JOB_NAME"),
-        ) {
-            stats.push(("tw_handle", format!("{}/{}/{}", cluster, user, name)));
-        };
-        if let Ok(smc_tier) = env::var("SMC_TIERS") {
-            stats.push(("server_tier", smc_tier));
-        }
-        if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
-            stats.push(("tw_task_id", tw_task_id));
-        }
-        if let Ok(tw_canary_id) = env::var("TW_CANARY_ID") {
-            stats.push(("tw_canary_id", tw_canary_id));
-        }
-        stats
-    };
-}
 
 type BlobstoresWithEntry = HashSet<BlobstoreId>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
@@ -94,19 +69,21 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 pub struct MultiplexedBlobstoreBase {
     blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-    scuba_logger: Option<Arc<ScubaClient>>,
+    scuba: ScubaSampleBuilder,
 }
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-        scuba_logger: Option<Arc<ScubaClient>>,
+        mut scuba: ScubaSampleBuilder,
     ) -> Self {
+        scuba.add_common_server_data();
+
         Self {
             blobstores: blobstores.into(),
             handler,
-            scuba_logger,
+            scuba,
         }
     }
 
@@ -132,46 +109,42 @@ impl MultiplexedBlobstoreBase {
                         move |error| (blobstore_id, remap_timeout_error(error))
                     })
                     .timed({
-                        let session = ctx.session().clone();
-                        cloned!(self.scuba_logger);
-                        move |stats, result| {
-                            if !should_log {
-                                return future::ok(());
-                            }
+                        cloned!(key);
+                        {
+                            let session = ctx.session().clone();
+                            cloned!(mut self.scuba);
+                            move |stats, result| {
+                                if !should_log {
+                                    return future::ok(());
+                                }
 
-                            if let (Ok((_, Some(data))), Some(ref scuba_logger)) =
-                                (result, scuba_logger)
-                            {
-                                let mut sample = ScubaSample::new();
-                                sample
+                                scuba
+                                    .add("key", key.clone())
                                     .add("operation", operation)
                                     .add("blobstore_id", blobstore_id)
-                                    .add("size", data.len())
                                     .add(
                                         "completion_time",
                                         stats.completion_time.as_micros_unchecked(),
                                     );
-                                for (key, value) in TW_STATS.iter() {
-                                    sample.add(*key, value.clone());
-                                }
-                                // logging session uuid only for slow requests
+
+                                // log session uuid only for slow requests
                                 if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                    sample.add("session", session.to_string());
+                                    scuba.add("session", session.to_string());
                                 }
 
                                 match result {
                                     Ok((_, Some(data))) => {
-                                        sample.add("size", data.len());
+                                        scuba.add("size", data.len());
                                     }
                                     Err((_, error)) => {
-                                        sample.add("error", error.to_string());
+                                        scuba.add("error", error.to_string());
                                     }
                                     Ok((_, None)) => {}
                                 }
-                                scuba_logger.log(&sample);
-                            }
+                                scuba.log();
 
-                            future::ok(())
+                                future::ok(())
+                            }
                         }
                     })
             })
@@ -319,35 +292,30 @@ impl Blobstore for MultiplexedBlobstoreBase {
                 })
                 .timed({
                     let session = ctx.session().clone();
-                    cloned!(blobstore_id, write_order, size, self.scuba_logger);
+                    cloned!(blobstore_id, key, write_order, size, mut self.scuba);
                     move |stats, result| {
                         if should_log {
-                            if let Some(scuba_logger) = scuba_logger {
-                                let mut sample = ScubaSample::new();
-                                sample
-                                    .add("operation", "put")
-                                    .add("blobstore_id", blobstore_id)
-                                    .add("size", size)
-                                    .add(
-                                        "completion_time",
-                                        stats.completion_time.as_micros_unchecked(),
-                                    );
-                                match result {
-                                    Ok(_) => sample.add(
-                                        "write_order",
-                                        write_order.fetch_add(1, Ordering::SeqCst),
-                                    ),
-                                    Err(error) => sample.add("error", error.to_string()),
-                                };
-                                for (key, value) in TW_STATS.iter() {
-                                    sample.add(*key, value.clone());
-                                }
-                                // logging session uuid only for slow requests
-                                if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                    sample.add("session", session.to_string());
-                                }
-                                scuba_logger.log(&sample);
+                            scuba
+                                .add("key", key.clone())
+                                .add("operation", "put")
+                                .add("blobstore_id", blobstore_id)
+                                .add("size", size)
+                                .add(
+                                    "completion_time",
+                                    stats.completion_time.as_micros_unchecked(),
+                                );
+
+                            match result {
+                                Ok(_) => scuba
+                                    .add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
+                                Err(error) => scuba.add("error", error.to_string()),
+                            };
+
+                            // log session uuid only for slow requests
+                            if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                                scuba.add("session", session.to_string());
                             }
+                            scuba.log();
                         }
                         future::ok(())
                     }

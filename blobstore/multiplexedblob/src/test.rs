@@ -22,6 +22,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
+use scuba::ScubaSampleBuilder;
 
 pub struct TickBlobstore {
     pub storage: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
@@ -130,7 +131,7 @@ fn base(fb: FacebookInit) {
                 (BlobstoreId::new(1), bs1.clone()),
             ],
             log.clone(),
-            None,
+            ScubaSampleBuilder::with_discard(),
         );
         let ctx = CoreContext::test_mock(fb);
 
@@ -259,7 +260,7 @@ fn multiplexed(fb: FacebookInit) {
         let bs = MultiplexedBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
-            None,
+            ScubaSampleBuilder::with_discard(),
         );
 
         // non-existing key when one blobstore failing
@@ -330,7 +331,7 @@ fn scrubbed(fb: FacebookInit) {
         let bs = ScrubBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
-            None,
+            ScubaSampleBuilder::with_discard(),
         );
 
         // non-existing key when one blobstore failing
@@ -392,7 +393,7 @@ fn scrubbed(fb: FacebookInit) {
         let bs = ScrubBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
-            None,
+            ScubaSampleBuilder::with_discard(),
         );
 
         // Non-existing key in both blobstores, new blobstore failing

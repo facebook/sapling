@@ -25,7 +25,7 @@ use metaconfig_types::{self, BlobConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
-use scuba::ScubaClient;
+use scuba::ScubaSampleBuilder;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
@@ -217,7 +217,10 @@ pub fn make_blobstore<T: SqlFactory>(
                                 Arc::new(MultiplexedBlobstore::new(
                                     components,
                                     queue,
-                                    scuba_table.map(|table| Arc::new(ScubaClient::new(fb, table))),
+                                    scuba_table
+                                        .map_or(ScubaSampleBuilder::with_discard(), |table| {
+                                            ScubaSampleBuilder::new(fb, table)
+                                        }),
                                 )) as Arc<dyn Blobstore>
                             }
                         })
@@ -251,7 +254,10 @@ pub fn make_blobstore<T: SqlFactory>(
                                 Arc::new(ScrubBlobstore::new(
                                     components,
                                     queue,
-                                    scuba_table.map(|table| Arc::new(ScubaClient::new(fb, table))),
+                                    scuba_table
+                                        .map_or(ScubaSampleBuilder::with_discard(), |table| {
+                                            ScubaSampleBuilder::new(fb, table)
+                                        }),
                                 )) as Arc<dyn Blobstore>
                             }
                         })

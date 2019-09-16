@@ -14,7 +14,7 @@ use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime};
-use scuba::ScubaClient;
+use scuba::ScubaSampleBuilder;
 use std::fmt;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ impl MultiplexedBlobstore {
     pub fn new(
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
-        scuba_logger: Option<Arc<ScubaClient>>,
+        scuba: ScubaSampleBuilder,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
             queue: queue.clone(),
@@ -37,7 +37,7 @@ impl MultiplexedBlobstore {
             blobstore: Arc::new(MultiplexedBlobstoreBase::new(
                 blobstores,
                 put_handler,
-                scuba_logger,
+                scuba,
             )),
             queue,
         }
@@ -147,9 +147,9 @@ impl ScrubBlobstore {
     pub fn new(
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
-        scuba_logger: Option<Arc<ScubaClient>>,
+        scuba: ScubaSampleBuilder,
     ) -> Self {
-        let inner = MultiplexedBlobstore::new(blobstores, queue, scuba_logger);
+        let inner = MultiplexedBlobstore::new(blobstores, queue, scuba);
         Self { inner }
     }
 }
