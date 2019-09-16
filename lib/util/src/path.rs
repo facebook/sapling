@@ -5,10 +5,10 @@
 
 //! Path-related utilities.
 
-use std::fs::remove_file as fs_remove_file;
 #[cfg(not(unix))]
 use std::fs::rename;
-use std::io;
+use std::fs::{self, remove_file as fs_remove_file};
+use std::io::{self, ErrorKind};
 use std::path::{Component, Path, PathBuf};
 
 use failure::Fallible;
@@ -118,9 +118,27 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Fallible<()> {
     Ok(())
 }
 
+/// Create the directory and ignore failures when a directory of the same name already exists.
+pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    match fs::create_dir(path.as_ref()) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if e.kind() == ErrorKind::AlreadyExists && path.as_ref().is_dir() {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::File;
+
+    use tempfile::TempDir;
 
     #[cfg(windows)]
     mod windows {
@@ -160,5 +178,38 @@ mod tests {
             );
             assert_eq!(absolute("//").unwrap(), Path::new("/"));
         }
+    }
+
+    #[test]
+    fn test_create_dir_non_exist() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut path = tempdir.path().to_path_buf();
+        path.push("dir");
+        create_dir(&path)?;
+        assert!(path.is_dir());
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_dir_exist() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut path = tempdir.path().to_path_buf();
+        path.push("dir");
+        create_dir(&path)?;
+        assert!(&path.is_dir());
+        create_dir(&path)?;
+        assert!(&path.is_dir());
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_dir_file_exist() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut path = tempdir.path().to_path_buf();
+        path.push("dir");
+        File::create(&path)?;
+        let err = create_dir(&path).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::AlreadyExists);
+        Ok(())
     }
 }
