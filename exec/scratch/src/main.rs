@@ -284,20 +284,12 @@ impl PasswordEntry {
 /// If we cannot stat the path, raise an error.
 #[cfg(unix)]
 fn get_file_owner(path: &Path) -> Result<String, Error> {
-    use libc::getpwuid;
-    use std::ffi::CStr;
-
     let meta = fs::metadata(path)
         .map_err(|e| format_err!("unable to get metadata for {}: {}", path.display(), e))?;
     let uid = meta.uid();
+    let pw = PasswordEntry::by_uid(uid)?;
 
-    let pw = unsafe { getpwuid(uid) };
-    if !pw.is_null() {
-        let cstr = unsafe { CStr::from_ptr((*pw).pw_name) };
-        cstr.to_str().map_err(|e| e.into()).map(|x| x.to_owned())
-    } else {
-        bail!("unable to resolve unixname for uid {}", uid);
-    }
+    Ok(pw.unixname)
 }
 
 /// This should return the owner of a path, but for now it just returns
