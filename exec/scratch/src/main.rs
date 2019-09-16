@@ -9,7 +9,7 @@
 //! and can arrange the directory structure to prevent over-watching.
 
 use clap::{App, AppSettings, Arg, SubCommand};
-use failure::{bail, format_err, Error};
+use failure::{bail, format_err, Error, Fallible};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
@@ -222,6 +222,62 @@ fn main() {
 /// string `$USER` for env var expansion.
 fn get_current_user() -> String {
     hostinfo::get_user_name().unwrap_or("$USER".into())
+}
+
+#[cfg(unix)]
+struct PasswordEntry {
+    unixname: String,
+    home_dir: String,
+    uid: u32,
+    gid: u32,
+}
+
+#[cfg(unix)]
+impl PasswordEntry {
+    fn maybe_string(cstr: *const libc::c_char, context: &str) -> Fallible<String> {
+        if cstr.is_null() {
+            Err(failure::err_msg(context.to_string()))
+        } else {
+            let cstr = unsafe { std::ffi::CStr::from_ptr(cstr) };
+            cstr.to_str().map_err(|e| e.into()).map(|x| x.to_owned())
+        }
+    }
+
+    fn from_password(pwent: *const libc::passwd) -> Fallible<Self> {
+        failure::ensure!(!pwent.is_null(), "password ptr is null");
+        let pw = unsafe { &*pwent };
+        Ok(Self {
+            unixname: Self::maybe_string(pw.pw_name, "pw_name is null")?,
+            home_dir: Self::maybe_string(pw.pw_dir, "pw_dir is null")?,
+            uid: pw.pw_uid,
+            gid: pw.pw_gid,
+        })
+    }
+
+    /// Lookup a PasswordEntry for a uid.
+    /// Not thread safe.
+    pub fn by_uid(uid: u32) -> Fallible<Self> {
+        let pw = unsafe { libc::getpwuid(uid) };
+        if pw.is_null() {
+            let err = std::io::Error::last_os_error();
+            bail!("getpwuid({}) failed: {}", uid, err);
+        }
+        Self::from_password(pw)
+    }
+
+    /// Lookup a PasswordEntry for a unix username.
+    /// Not thread safe.
+    pub fn by_name(unixname: &str) -> Fallible<Self> {
+        let user_cstr = std::ffi::CString::new(unixname.to_string())?;
+
+        let pw = unsafe { libc::getpwnam(user_cstr.as_ptr()) };
+        if pw.is_null() {
+            let err = std::io::Error::last_os_error();
+            bail!("getpwnam({}) failed: {}", unixname, err);
+        }
+
+        Self::from_password(pw)
+    }
 }
 
 /// Given a path, return the unix name of the owner of that path.
