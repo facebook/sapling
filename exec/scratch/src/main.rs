@@ -68,6 +68,19 @@ fn home_dir() -> String {
         .into()
 }
 
+#[cfg(unix)]
+fn lookup_home_dir_for_user(user: &str) -> Fallible<String> {
+    let pw = PasswordEntry::by_name(user)?;
+    Ok(pw.home_dir)
+}
+
+/// This is technically wrong for windows, but is at least
+/// wrong in a backwards compatible way
+#[cfg(windows)]
+fn lookup_home_dir_for_user(user: &str) -> Fallible<String> {
+    Ok(home_dir())
+}
+
 impl Config {
     /// Attempt to load a Config instance from the specified path.
     /// If path does not exist, None is returned.
@@ -350,10 +363,12 @@ fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf, Error> {
 
     let user = get_current_user();
     let home = home_dir();
+    let repo_owner_home = lookup_home_dir_for_user(&repo_owner)?;
 
     let mut root = PathBuf::from(
         template
             .replace("$REPO_OWNER_USER", &repo_owner)
+            .replace("$REPO_OWNER_HOME", &repo_owner_home)
             .replace("$USER", &user)
             .replace("$HOME", &home),
     );
