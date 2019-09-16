@@ -159,12 +159,21 @@ fn derive_test_manifest(
                 let ctx = ctx.clone();
                 let blobstore = blobstore.clone();
                 move |TreeInfo { subentries, .. }| {
-                    TestManifest(subentries).store(ctx.clone(), &blobstore)
+                    let subentries = subentries
+                        .into_iter()
+                        .map(|(path, (_, id))| (path, id))
+                        .collect();
+                    TestManifest(subentries)
+                        .store(ctx.clone(), &blobstore)
+                        .map(|id| ((), id))
                 }
             },
             move |leaf_info| match leaf_info.leaf {
                 None => future::err(err_msg("leaf only conflict")).left_future(),
-                Some(leaf) => leaf.store(ctx.clone(), &blobstore).right_future(),
+                Some(leaf) => leaf
+                    .store(ctx.clone(), &blobstore)
+                    .map(|id| ((), id))
+                    .right_future(),
             },
         )
     })

@@ -69,7 +69,9 @@ pub fn derive_hg_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info).right_future()
+            create_hg_manifest(ctx, blobstore, incomplete_filenodes, tree_info)
+                .map(|(_, tree_id)| tree_id)
+                .right_future()
         }
     })
 }
@@ -91,8 +93,8 @@ fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes,
-    tree_info: TreeInfo<HgManifestId, (FileType, HgFileNodeId)>,
-) -> impl Future<Item = HgManifestId, Error = Error> {
+    tree_info: TreeInfo<HgManifestId, (FileType, HgFileNodeId), ()>,
+) -> impl Future<Item = ((), HgManifestId), Error = Error> {
     let TreeInfo {
         subentries,
         path,
@@ -100,7 +102,7 @@ fn create_hg_manifest(
     } = tree_info;
 
     let mut contents = Vec::new();
-    for (name, subentry) in subentries {
+    for (name, (_context, subentry)) in subentries {
         contents.extend(name.as_ref());
         let (tag, hash) = match subentry {
             Entry::Tree(manifest_id) => ("t", manifest_id.into_nodehash()),
@@ -147,7 +149,7 @@ fn create_hg_manifest(
                         p2: p2.map(HgFileNodeId::new),
                         copyfrom: None,
                     });
-                    HgManifestId::new(hash)
+                    ((), HgManifestId::new(hash))
                 }
             })
         })
@@ -160,7 +162,7 @@ fn create_hg_file(
     blobstore: Arc<dyn Blobstore>,
     incomplete_filenodes: IncompleteFilenodes,
     leaf_info: LeafInfo<(FileType, HgFileNodeId), HgBlobEntry>,
-) -> impl Future<Item = (FileType, HgFileNodeId), Error = Error> {
+) -> impl Future<Item = ((), (FileType, HgFileNodeId)), Error = Error> {
     let LeafInfo {
         leaf,
         path,
@@ -174,7 +176,7 @@ fn create_hg_file(
                 future::err(err_msg("changes can not contain tree entry")).left_future()
             }
             HgEntryId::File(file_type, filenode_id) => {
-                future::ok((file_type, filenode_id)).left_future()
+                future::ok(((), (file_type, filenode_id))).left_future()
             }
         };
     }
@@ -241,5 +243,6 @@ fn create_hg_file(
                 future::err(error).left_future()
             }
         })
+        .map(|tree_id| ((), tree_id))
         .right_future()
 }

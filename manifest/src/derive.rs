@@ -21,10 +21,14 @@ use std::{
 use tracing::{trace_args, EventId, Traced};
 
 /// Information passed to `create_tree` function when tree node is constructed
-pub struct TreeInfo<TreeId, LeafId> {
+///
+/// `Ctx` is any additional data which is useful for particular implementation of
+/// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
+/// generate them, and `None` if subentry was reused from one of its parents.
+pub struct TreeInfo<TreeId, LeafId, Ctx> {
     pub path: Option<MPath>,
     pub parents: Vec<TreeId>,
-    pub subentries: BTreeMap<MPathElement, Entry<TreeId, LeafId>>,
+    pub subentries: BTreeMap<MPathElement, (Option<Ctx>, Entry<TreeId, LeafId>)>,
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
@@ -82,7 +86,7 @@ pub struct LeafInfo<LeafId, Leaf> {
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
 ///
-pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut>(
+pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx>(
     ctx: CoreContext,
     blobstore: impl Blobstore + Clone,
     parents: impl IntoIterator<Item = TreeId>,
@@ -94,12 +98,13 @@ where
     LeafId: Send + Copy + Eq + Hash + fmt::Debug + 'static,
     TreeId: Loadable + Send + Copy + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    T: FnMut(TreeInfo<TreeId, LeafId>) -> TFut,
-    TFut: IntoFuture<Item = TreeId, Error = Error>,
+    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
+    TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
     TFut::Future: Send + 'static,
     L: FnMut(LeafInfo<LeafId, Leaf>) -> LFut,
-    LFut: IntoFuture<Item = LeafId, Error = Error>,
+    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
     LFut::Future: Send + 'static,
+    Ctx: Send + 'static,
 {
     let event_id = EventId::new();
     bounded_traversal(
@@ -123,7 +128,9 @@ where
         {
             let ctx = ctx.clone();
             move |merge_result, subentries| match merge_result {
-                MergeResult::Reuse { name, entry } => future::ok(Some((name, entry))).boxify(),
+                MergeResult::Reuse { name, entry } => {
+                    future::ok(Some((name, None, entry))).boxify()
+                }
                 MergeResult::Delete => future::ok(None).boxify(),
                 MergeResult::CreateTree {
                     name,
@@ -132,9 +139,11 @@ where
                 } => {
                     let subentries: BTreeMap<_, _> = subentries
                         .flatten()
-                        .filter_map(|(name, entry): (Option<MPathElement>, _)| {
-                            name.map(|name| (name, entry))
-                        })
+                        .filter_map(
+                            |(name, context, entry): (Option<MPathElement>, Option<Ctx>, _)| {
+                                name.map(move |name| (name, (context, entry)))
+                            },
+                        )
                         .collect();
                     if subentries.is_empty() {
                         future::ok(None).boxify()
@@ -145,7 +154,9 @@ where
                             subentries,
                         })
                         .into_future()
-                        .map(move |tree_id| Some((name, Entry::Tree(tree_id))))
+                        .map(move |(context, tree_id)| {
+                            Some((name, Some(context), Entry::Tree(tree_id)))
+                        })
                         .traced_with_id(
                             &ctx.trace(),
                             "derive_manifest::create_tree",
@@ -168,7 +179,7 @@ where
                     parents,
                 })
                 .into_future()
-                .map(move |leaf_id| Some((name, Entry::Leaf(leaf_id))))
+                .map(move |(context, leaf_id)| Some((name, Some(context), Entry::Leaf(leaf_id))))
                 .traced_with_id(
                     &ctx.trace(),
                     "derive_manifest::create_leaf",
@@ -181,7 +192,7 @@ where
             }
         },
     )
-    .map(|result: Option<_>| result.and_then(|(_, entry)| entry.into_tree()))
+    .map(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
     .traced_with_id(&ctx.trace(), "derive_manifest", None, event_id)
 }
 

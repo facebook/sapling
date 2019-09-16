@@ -97,7 +97,9 @@ pub fn derive_unode_manifest(
                         parents,
                         subentries: Default::default(),
                     };
-                    create_unode_manifest(ctx, cs_id, blobstore, sender, tree_info).right_future()
+                    create_unode_manifest(ctx, cs_id, blobstore, sender, tree_info)
+                        .map(|((), tree_id)| tree_id)
+                        .right_future()
                 }
             }
         })
@@ -138,10 +140,10 @@ fn create_unode_manifest(
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
-    tree_info: TreeInfo<ManifestUnodeId, FileUnodeId>,
-) -> impl Future<Item = ManifestUnodeId, Error = Error> {
+    tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
+) -> impl Future<Item = ((), ManifestUnodeId), Error = Error> {
     let mut subentries = BTreeMap::new();
-    for (basename, entry) in tree_info.subentries {
+    for (basename, (_context, entry)) in tree_info.subentries {
         match entry {
             Entry::Tree(mf_unode) => {
                 subentries.insert(basename, UnodeEntry::Directory(mf_unode));
@@ -162,7 +164,7 @@ fn create_unode_manifest(
     sender
         .unbounded_send(f)
         .into_future()
-        .map(move |()| mf_unode_id)
+        .map(move |()| ((), mf_unode_id))
         .map_err(|err| err_msg(format!("failed to send manifest future {}", err)))
 }
 
@@ -172,7 +174,7 @@ fn create_unode_file(
     blobstore: RepoBlobstore,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
-) -> BoxFuture<FileUnodeId, Error> {
+) -> impl Future<Item = ((), FileUnodeId), Error = Error> {
     fn save_unode(
         ctx: CoreContext,
         blobstore: RepoBlobstore,
@@ -279,6 +281,8 @@ fn create_unode_file(
         )
         .boxify()
     }
+    .map(|leaf_id| ((), leaf_id))
+    .boxify()
 }
 
 // If all elements in `unodes` are the same than this element is returned, otherwise None is returned
