@@ -292,6 +292,46 @@ fn get_file_owner(path: &Path) -> Result<String, Error> {
     Ok(pw.unixname)
 }
 
+#[cfg(unix)]
+fn set_file_owner(path: &Path, owner: &str) -> Fallible<()> {
+    use std::ffi::CString;
+
+    let is_root = unsafe { libc::geteuid() } == 0;
+
+    if !is_root {
+        // Can't change the ownership, so stick with who we are
+        return Ok(());
+    }
+
+    let pw = PasswordEntry::by_name(owner)?;
+
+    let path_cstr =
+        CString::new(path.to_str().ok_or_else(|| {
+            format_err!("path {} cannot be represented as String", path.display())
+        })?)?;
+    let result = unsafe { libc::chown(path_cstr.as_ptr(), pw.uid, pw.gid) };
+    if result != 0 {
+        let err = std::io::Error::last_os_error();
+        bail!(
+            "Failed to chown({}, {} (uid={}, gid={})): {}",
+            path.display(),
+            owner,
+            pw.uid,
+            pw.gid,
+            err
+        );
+    }
+
+    Ok(())
+}
+
+/// This should alter the file ACLs on windows, but for now we're just
+/// ignoring this, as we don't think the issue a practical problem.
+#[cfg(windows)]
+fn set_file_owner(_path: &Path, _owner: &str) -> Fallible<()> {
+    Ok(())
+}
+
 /// This should return the owner of a path, but for now it just returns
 /// the current user name on Windows systems.  This is probably correct
 /// and good enough for the moment, and we can add support for the real
@@ -327,11 +367,12 @@ fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf, Error> {
 
 /// A watchable path needs a .watchmanconfig file to define the boundary
 /// of the watch and allow the watch of occur.
-fn create_watchmanconfig(_config: &Config, path: &Path) -> Result<(), Error> {
+fn create_watchmanconfig(_config: &Config, path: &Path, repo_owner: &str) -> Result<(), Error> {
     let filename = path.join(".watchmanconfig");
-    let mut file = fs::File::create(filename)?;
+    let mut file = fs::File::create(&filename)?;
     // Write out an empty json object
     file.write_all("{}".as_bytes())?;
+    set_file_owner(&filename, repo_owner)?;
     Ok(())
 }
 
@@ -360,6 +401,7 @@ fn path_command(
 
     // Get the base scratch path for this repo
     let mut result = scratch_root(&config, repo_root)?;
+    let repo_owner = get_file_owner(repo_root)?;
 
     // If they asked for a subdir, compute it
     if let Some(subdir) = subdir {
@@ -371,8 +413,9 @@ fn path_command(
 
     if !no_create {
         fs::create_dir_all(&result)?;
+        set_file_owner(&result, &repo_owner)?;
         if watchable {
-            create_watchmanconfig(&config, &result)?;
+            create_watchmanconfig(&config, &result, &repo_owner)?;
         }
     }
 
