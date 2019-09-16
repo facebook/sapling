@@ -17,6 +17,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     m.add(py, "decode", py_fn!(py, decode(data: PyBytes)))?;
     m.add(py, "encode", py_fn!(py, encode(value: u64)))?;
+    m.add(py, "read", py_fn!(py, read(io: PyObject)))?;
     Ok(m)
 }
 
@@ -37,4 +38,10 @@ fn encode(py: Python, value: u64) -> PyResult<PyBytes> {
     let mut buf = Vec::new();
     buf.write_vlq(value).unwrap();
     Ok(PyBytes::new(py, &buf))
+}
+
+fn read(py: Python, io: PyObject) -> PyResult<u64> {
+    let mut io = cpython_ext::wrap_pyio(io);
+    let value = io.read_vlq().map_pyerr::<exc::ValueError>(py)?;
+    Ok(value)
 }
