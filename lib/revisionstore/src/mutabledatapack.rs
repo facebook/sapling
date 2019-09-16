@@ -37,6 +37,7 @@ struct MutableDataPackInner {
     hasher: Sha1,
 }
 
+#[derive(Clone)]
 pub struct MutableDataPack {
     inner: Arc<Mutex<MutableDataPackInner>>,
 }

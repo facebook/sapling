@@ -39,7 +39,10 @@ pub use crate::localstore::LocalStore;
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
-pub use crate::packstore::{CorruptionPolicy, DataPackStore, HistoryPackStore};
+pub use crate::packstore::{
+    CorruptionPolicy, DataPackStore, HistoryPackStore, MutableDataPackStore,
+    MutableHistoryPackStore,
+};
 pub use crate::repack::ToKeys;
 pub use crate::uniondatastore::UnionDataStore;
 

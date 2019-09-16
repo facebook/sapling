@@ -7,6 +7,7 @@ use std::{
     fs::read_dir,
     io::ErrorKind,
     path::{Path, PathBuf},
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -14,13 +15,17 @@ use failure::{format_err, Fallible};
 
 use types::{Key, NodeInfo};
 
-use crate::datapack::DataPack;
-use crate::datastore::{DataStore, Delta, Metadata};
+use crate::datapack::{DataPack, DataPackVersion};
+use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
 use crate::error::KeyError;
-use crate::historypack::HistoryPack;
-use crate::historystore::{Ancestors, HistoryStore};
+use crate::historypack::{HistoryPack, HistoryPackVersion};
+use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
+use crate::mutabledatapack::MutableDataPack;
+use crate::mutablehistorypack::MutableHistoryPack;
 use crate::repack::Repackable;
+use crate::uniondatastore::UnionDataStore;
+use crate::unionhistorystore::UnionHistoryStore;
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
 /// data in them. This helps in reducing the number of stores that are iterated on.
@@ -49,6 +54,11 @@ impl<T> LruStore<T> {
         if let Some(store) = self.stores.remove(index) {
             self.stores.push_front(store);
         }
+    }
+
+    /// Add the store at the front of the `LruStore`.
+    fn add(&mut self, store: T) {
+        self.stores.push_front(store);
     }
 
     /// Remove an element from the `LruStore`. The order will not be preserved.
@@ -165,6 +175,11 @@ impl<T> PackStore<T> {
     pub fn force_rescan(&self) {
         self.last_scanned
             .replace(Instant::now() - self.scan_frequency);
+    }
+
+    /// Add a packfile to this store.
+    fn add_pack(&self, pack: T) {
+        self.packs.borrow_mut().add(pack);
     }
 }
 
@@ -344,6 +359,139 @@ impl HistoryStore for HistoryPackStore {
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         self.run(|store| store.get_node_info(key), key)
+    }
+}
+
+struct MutableDataPackStoreInner {
+    pack_store: Arc<DataPackStore>,
+    mutable_pack: MutableDataPack,
+    union_store: UnionDataStore<Box<dyn DataStore>>,
+}
+
+/// A `MutableDataPackStore` allows both reading and writing to data packfiles.
+#[derive(Clone)]
+pub struct MutableDataPackStore {
+    inner: Arc<MutableDataPackStoreInner>,
+}
+
+impl MutableDataPackStore {
+    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Fallible<Self> {
+        let pack_store = Arc::new(DataPackStore::new(pack_dir.as_ref(), corruption_policy));
+        let mutable_pack = MutableDataPack::new(pack_dir, DataPackVersion::One)?;
+        let mut union_store: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
+        union_store.add(Box::new(pack_store.clone()));
+        union_store.add(Box::new(mutable_pack.clone()));
+
+        Ok(Self {
+            inner: Arc::new(MutableDataPackStoreInner {
+                pack_store,
+                mutable_pack,
+                union_store,
+            }),
+        })
+    }
+}
+
+impl DataStore for MutableDataPackStore {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        self.inner.union_store.get(key)
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        self.inner.union_store.get_delta(key)
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        self.inner.union_store.get_delta_chain(key)
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        self.inner.union_store.get_meta(key)
+    }
+}
+
+impl LocalStore for MutableDataPackStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        self.inner.union_store.get_missing(keys)
+    }
+}
+
+impl MutableDeltaStore for MutableDataPackStore {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+        self.inner.mutable_pack.add(delta, metadata)
+    }
+
+    /// Flush the current mutable datapack to disk and add it to the `PackStore`.
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
+        if let Some(path) = self.inner.mutable_pack.flush()? {
+            let datapack = DataPack::new(path.as_path())?;
+            self.inner.pack_store.add_pack(datapack);
+            Ok(Some(path))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+struct MutableHistoryPackStoreInner {
+    pack_store: Arc<HistoryPackStore>,
+    mutable_pack: MutableHistoryPack,
+    union_store: UnionHistoryStore<Box<dyn HistoryStore>>,
+}
+
+/// A `MutableHistoryPackStore` allows both reading and writing to history packfiles.
+pub struct MutableHistoryPackStore {
+    inner: Arc<MutableHistoryPackStoreInner>,
+}
+
+impl MutableHistoryPackStore {
+    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Fallible<Self> {
+        let pack_store = Arc::new(HistoryPackStore::new(pack_dir.as_ref(), corruption_policy));
+        let mutable_pack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
+        let mut union_store: UnionHistoryStore<Box<dyn HistoryStore>> = UnionHistoryStore::new();
+        union_store.add(Box::new(pack_store.clone()));
+        union_store.add(Box::new(mutable_pack.clone()));
+
+        Ok(Self {
+            inner: Arc::new(MutableHistoryPackStoreInner {
+                pack_store,
+                mutable_pack,
+                union_store,
+            }),
+        })
+    }
+}
+
+impl HistoryStore for MutableHistoryPackStore {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+        self.inner.union_store.get_ancestors(key)
+    }
+
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+        self.inner.union_store.get_node_info(key)
+    }
+}
+
+impl LocalStore for MutableHistoryPackStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        self.inner.union_store.get_missing(keys)
+    }
+}
+
+impl MutableHistoryStore for MutableHistoryPackStore {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        self.inner.mutable_pack.add(key, info)
+    }
+
+    /// Flush the current mutable historypack to disk and add it to the `PackStore`.
+    fn flush(&self) -> Fallible<Option<PathBuf>> {
+        if let Some(path) = self.inner.mutable_pack.flush()? {
+            let histpack = HistoryPack::new(path.as_path())?;
+            self.inner.pack_store.add_pack(histpack);
+            Ok(Some(path))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -627,6 +775,96 @@ mod tests {
         assert!(packstore.get_delta(&k1).is_err());
 
         assert_eq!(read_dir(&tempdir)?.count(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_flush() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: Some(key("a", "1")),
+            key: k1.clone(),
+        };
+
+        packstore.add(&delta, &Default::default())?;
+        packstore.flush()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_get_delta() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: Some(key("a", "1")),
+            key: k1.clone(),
+        };
+
+        packstore.add(&delta, &Default::default())?;
+        assert_eq!(packstore.get_delta(&k1)?, delta);
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_flush_get_delta() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: Some(key("a", "1")),
+            key: k1.clone(),
+        };
+
+        packstore.add(&delta, &Default::default())?;
+        packstore.flush()?;
+        assert_eq!(packstore.get_delta(&k1)?, delta);
+        Ok(())
+    }
+
+    #[test]
+    fn test_histpack_add_get() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let (nodes, _) = get_nodes(&mut rng);
+        for (key, info) in &nodes {
+            packstore.add(key, info)?;
+        }
+
+        for (key, info) in nodes {
+            let nodeinfo = packstore.get_node_info(&key)?;
+            assert_eq!(nodeinfo, info);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_histpack_add_flush_get() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let (nodes, _) = get_nodes(&mut rng);
+        for (key, info) in &nodes {
+            packstore.add(key, info)?;
+        }
+
+        packstore.flush()?;
+
+        for (key, info) in nodes {
+            let nodeinfo = packstore.get_node_info(&key)?;
+            assert_eq!(nodeinfo, info);
+        }
         Ok(())
     }
 }

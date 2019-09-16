@@ -40,6 +40,7 @@ struct MutableHistoryPackInner {
     mem_index: HashMap<RepoPathBuf, HashMap<Key, NodeInfo>>,
 }
 
+#[derive(Clone)]
 pub struct MutableHistoryPack {
     inner: Arc<Mutex<MutableHistoryPackInner>>,
 }
