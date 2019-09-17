@@ -117,11 +117,11 @@ impl Mononoke {
                     |(name, blob_repo, skiplist_index, unodes_derived_mapping)| {
                         (
                             name,
-                            Arc::new(Repo {
+                            Arc::new(Repo::new_from_parts(
                                 blob_repo,
                                 skiplist_index,
-                                _unodes_derived_mapping: unodes_derived_mapping,
-                            }),
+                                unodes_derived_mapping,
+                            )),
                         )
                     },
                 )
@@ -136,10 +136,10 @@ impl Mononoke {
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
         let name = name.as_ref();
-        let repo = self.repos.get(name).map(move |repo| RepoContext {
-            repo: repo.clone(),
-            ctx,
-        });
+        let repo = self
+            .repos
+            .get(name)
+            .map(move |repo| RepoContext::new(ctx, repo.clone()));
         Ok(repo)
     }
 

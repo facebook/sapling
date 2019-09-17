@@ -34,8 +34,8 @@ pub(crate) struct Repo {
 
 #[derive(Clone)]
 pub struct RepoContext {
-    pub(crate) repo: Arc<Repo>,
-    pub(crate) ctx: CoreContext,
+    ctx: CoreContext,
+    repo: Arc<Repo>,
 }
 
 impl Repo {
@@ -93,6 +93,19 @@ impl Repo {
         })
     }
 
+    /// Temporary function to create directly from parts.
+    pub(crate) fn new_from_parts(
+        blob_repo: BlobRepo,
+        skiplist_index: Arc<SkiplistIndex>,
+        unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    ) -> Self {
+        Self {
+            blob_repo,
+            skiplist_index,
+            _unodes_derived_mapping: unodes_derived_mapping,
+        }
+    }
+
     #[cfg(test)]
     /// Construct a Repo from a test BlobRepo
     pub(crate) fn new_test(blob_repo: BlobRepo) -> Self {
@@ -106,7 +119,27 @@ impl Repo {
     }
 }
 
+/// A context object representing a query to a particular repo.
 impl RepoContext {
+    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Self {
+        Self { repo, ctx }
+    }
+
+    /// The context for this query.
+    pub(crate) fn ctx(&self) -> &CoreContext {
+        &self.ctx
+    }
+
+    /// The underlying `BlobRepo`.
+    pub(crate) fn blob_repo(&self) -> &BlobRepo {
+        &self.repo.blob_repo
+    }
+
+    /// The skiplist index for the referenced repository.
+    pub(crate) fn skiplist_index(&self) -> &SkiplistIndex {
+        &self.repo.skiplist_index
+    }
+
     /// Look up a changeset specifier to find the canonical bonsai changeset
     /// ID for a changeset.
     pub async fn resolve_specifier(
@@ -116,8 +149,7 @@ impl RepoContext {
         let id = match specifier {
             ChangesetSpecifier::Bonsai(cs_id) => {
                 let exists = self
-                    .repo
-                    .blob_repo
+                    .blob_repo()
                     .changeset_exists_by_bonsai(self.ctx.clone(), cs_id)
                     .compat()
                     .await?;
@@ -127,8 +159,7 @@ impl RepoContext {
                 }
             }
             ChangesetSpecifier::Hg(hg_cs_id) => {
-                self.repo
-                    .blob_repo
+                self.blob_repo()
                     .get_bonsai_from_hg(self.ctx.clone(), hg_cs_id)
                     .compat()
                     .await?
@@ -144,8 +175,7 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let bookmark = BookmarkName::new(bookmark.to_string())?;
         let cs_id = self
-            .repo
-            .blob_repo
+            .blob_repo()
             .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
             .compat()
             .await?;
@@ -182,8 +212,7 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, MononokeError> {
         let mapping = self
-            .repo
-            .blob_repo
+            .blob_repo()
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
             .compat()
             .await?
@@ -226,8 +255,7 @@ impl RepoContext {
                     .boxify()
                 }
             };
-            self.repo
-                .blob_repo
+            self.blob_repo()
                 .get_bonsai_bookmarks_by_prefix_maybe_stale(self.ctx.clone(), &prefix, limit)
                 .map(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
                 .map_err(MononokeError::from)
@@ -235,8 +263,7 @@ impl RepoContext {
         } else {
             // TODO(mbthomas): honour `limit` for publishing bookmarks
             let prefix = prefix.unwrap_or_else(|| "".to_string());
-            self.repo
-                .blob_repo
+            self.blob_repo()
                 .get_bonsai_publishing_bookmarks_maybe_stale(self.ctx.clone())
                 .filter_map(move |(bookmark, cs_id)| {
                     let name = bookmark.into_name().into_string();

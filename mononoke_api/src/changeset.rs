@@ -9,6 +9,7 @@ use std::pin::Pin;
 
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
+use context::CoreContext;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use mononoke_types::BonsaiChangeset;
@@ -20,23 +21,22 @@ use crate::specifiers::{ChangesetId, HgChangesetId};
 
 #[derive(Clone)]
 pub struct ChangesetContext {
-    repo_ctx: RepoContext,
+    repo: RepoContext,
     id: ChangesetId,
     bonsai_changeset:
         Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
 }
 
+/// A context object representing a query to a particular commit in a repo.
 impl ChangesetContext {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
-    pub(crate) fn new(repo_ctx: RepoContext, id: ChangesetId) -> Self {
+    pub(crate) fn new(repo: RepoContext, id: ChangesetId) -> Self {
         let bonsai_changeset = {
-            cloned!(repo_ctx);
+            cloned!(repo);
             async move {
-                repo_ctx
-                    .repo
-                    .blob_repo
-                    .get_bonsai_changeset(repo_ctx.ctx.clone(), id)
+                repo.blob_repo()
+                    .get_bonsai_changeset(repo.ctx().clone(), id)
                     .compat()
                     .await
                     .map_err(MononokeError::from)
@@ -44,10 +44,20 @@ impl ChangesetContext {
         };
         let bonsai_changeset = bonsai_changeset.boxed().shared();
         Self {
-            repo_ctx,
+            repo,
             id,
             bonsai_changeset,
         }
+    }
+
+    /// The context for this query.
+    pub(crate) fn ctx(&self) -> &CoreContext {
+        &self.repo.ctx()
+    }
+
+    /// The `RepoContext` for this query.
+    pub(crate) fn repo(&self) -> &RepoContext {
+        &self.repo
     }
 
     /// The canonical bonsai changeset ID for the changeset.
@@ -58,10 +68,9 @@ impl ChangesetContext {
     /// The Mercurial ID for the changeset.
     pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
         let mapping = self
-            .repo_ctx
-            .repo
-            .blob_repo
-            .get_hg_bonsai_mapping(self.repo_ctx.ctx.clone(), self.id)
+            .repo()
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), self.id)
             .compat()
             .await?;
         Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
@@ -130,12 +139,11 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
         let is_ancestor_of = self
-            .repo_ctx
-            .repo
-            .skiplist_index
+            .repo()
+            .skiplist_index()
             .query_reachability(
-                self.repo_ctx.ctx.clone(),
-                self.repo_ctx.repo.blob_repo.get_changeset_fetcher(),
+                self.ctx().clone(),
+                self.repo().blob_repo().get_changeset_fetcher(),
                 other_commit,
                 self.id,
             )
