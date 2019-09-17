@@ -44,12 +44,11 @@ fn main() {
 
     // Write segments to filesystem.
     let mut dag = Dag::open(&dag_dir.path()).unwrap();
-    {
-        let mut dag = dag.prepare_filesystem_sync().unwrap();
-        dag.build_segments_persistent(head_id, &parents_by_id)
-            .unwrap();
-        dag.sync().unwrap();
-    }
+    let mut syncable = dag.prepare_filesystem_sync().unwrap();
+    syncable
+        .build_segments_persistent(head_id, &parents_by_id)
+        .unwrap();
+    syncable.sync(std::iter::once(&mut dag)).unwrap();
 
     let sample_two_ids: Vec<SpanSet> = (0..parents.len() as u64)
         .step_by(10079)

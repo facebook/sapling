@@ -44,12 +44,12 @@ fn main() {
             built = true;
             measure::Both::<measure::WallClock, String>::measure(|| {
                 let mut dag = Dag::open(&dag_dir.path()).unwrap();
-                dag.set_segment_size(segment_size);
-                let mut dag = dag.prepare_filesystem_sync().unwrap();
-                let segment_len = dag
+                dag.set_new_segment_size(segment_size);
+                let mut syncable = dag.prepare_filesystem_sync().unwrap();
+                let segment_len = syncable
                     .build_segments_persistent(head_id, &parents_by_id)
                     .unwrap();
-                dag.sync().unwrap();
+                syncable.sync(std::iter::once(&mut dag)).unwrap();
                 let log_len = dag_dir.path().join("log").metadata().unwrap().len();
                 format!("segments: {}  log len: {}", segment_len, log_len)
             })

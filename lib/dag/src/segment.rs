@@ -6,6 +6,11 @@
 //! # segment
 //!
 //! Segmented DAG. See [`Dag`] for the main structure.
+//!
+//! There are 2 flavors of DAG: [`Dag`] and [`SyncableDag`]. [`Dag`] loads
+//! from the filesystem, is responsible for all kinds of queires, and can
+//! have in-memory-only changes. [`SyncableDag`] is the only way to update
+//! the filesystem state, and does not support queires.
 
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
@@ -45,8 +50,8 @@ pub struct Dag {
 }
 
 /// Guard to make sure [`Dag`] on-disk writes are race-free.
-pub struct SyncableDag<'a> {
-    dag: &'a mut Dag,
+pub struct SyncableDag {
+    dag: Dag,
     lock_file: File,
 }
 
@@ -83,11 +88,7 @@ impl Dag {
                 )]
             })
             .open(path)?;
-        // The first byte of the largest key is the maximum level.
-        let max_level = match log.lookup_range(Self::INDEX_HEAD, ..)?.rev().nth(0) {
-            None => 0,
-            Some(key) => key?.0.get(0).cloned().unwrap_or(0),
-        };
+        let max_level = Self::max_level_from_log(&log)?;
         let mut dag = Self {
             log,
             path: path.to_path_buf(),
@@ -96,6 +97,15 @@ impl Dag {
         };
         dag.build_all_high_level_segments(false)?;
         Ok(dag)
+    }
+
+    fn max_level_from_log(log: &log::Log) -> Fallible<Level> {
+        // The first byte of the largest key is the maximum level.
+        let max_level = match log.lookup_range(Self::INDEX_HEAD, ..)?.rev().nth(0) {
+            None => 0,
+            Some(key) => key?.0.get(0).cloned().unwrap_or(0),
+        };
+        Ok(max_level)
     }
 
     /// Find segment by level and head.
@@ -188,9 +198,7 @@ impl Dag {
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    ///
-    /// Pending in-memory writes will be dropped.
-    pub fn prepare_filesystem_sync(&mut self) -> Fallible<SyncableDag> {
+    pub fn prepare_filesystem_sync(&self) -> Fallible<SyncableDag> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -205,12 +213,20 @@ impl Dag {
         };
         lock_file.lock_exclusive()?;
 
-        // Reload. So we get latest data.
-        self.log.clear_dirty()?;
-        self.log.sync()?;
+        // Clone. But drop in-memory data.
+        let mut log = self.log.clone(false)?;
+
+        // Read new entries from filesystem.
+        log.sync()?;
+        let max_level = Self::max_level_from_log(&log)?;
 
         Ok(SyncableDag {
-            dag: self,
+            dag: Dag {
+                log,
+                path: self.path.clone(),
+                max_level,
+                new_seg_size: self.new_seg_size,
+            },
             lock_file,
         })
     }
@@ -486,6 +502,18 @@ impl Dag {
             total += count;
         }
         Ok(total)
+    }
+}
+
+// Reload.
+impl Dag {
+    /// Reload from the filesystem. Discard pending changes.
+    pub fn reload(&mut self) -> Fallible<()> {
+        self.log.clear_dirty()?;
+        self.log.sync()?;
+        self.max_level = Self::max_level_from_log(&self.log)?;
+        self.build_all_high_level_segments(false)?;
+        Ok(())
     }
 }
 
@@ -903,9 +931,9 @@ impl Dag {
     }
 }
 
-impl<'a> SyncableDag<'a> {
-    /// Make sure the [`Dag`] contains the given id (and all ids smaller than
-    /// `high`) by building up segments on demand.
+impl SyncableDag {
+    /// Make sure the [`SyncableDag`] contains the given id (and all ids smaller
+    /// than `high`) by building up segments on demand.
     ///
     /// This is similar to [`Dag::build_segments_volatile`]. However, the build
     /// result is intended to be written to the filesystem. Therefore high-level
@@ -920,23 +948,19 @@ impl<'a> SyncableDag<'a> {
         Ok(count)
     }
 
-    /// Write pending changes to disk.
+    /// Write pending changes to disk. Release the exclusive lock.
     ///
-    /// This method must be called if there are new entries inserted.
-    /// Otherwise [`SyncableDag`] will panic once it gets dropped.
-    pub fn sync(&mut self) -> Fallible<()> {
+    /// The newly written entries can be fetched by [`Dag::reload`].
+    ///
+    /// To avoid races, [`Dag`]s in the `reload_dags` list will be
+    /// reloaded while [`SyncableDag`] still holds the lock.
+    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut Dag>) -> Fallible<()> {
         self.dag.log.sync()?;
+        for dag in reload_dags {
+            dag.reload()?;
+        }
+        let _lock_file = self.lock_file; // Make sure lock is not dropped until here.
         Ok(())
-    }
-}
-
-impl<'a> Drop for SyncableDag<'a> {
-    fn drop(&mut self) {
-        // TODO: handles `sync` failures gracefully.
-        assert!(
-            self.dag.log.iter_dirty().next().is_none(),
-            "programming error: sync must be called before dropping WritableIdMap"
-        );
     }
 }
 
@@ -1200,5 +1224,32 @@ mod tests {
         assert_eq!(low_by_id(149, 0), 101);
         assert_eq!(low_by_id(150, 0), 101);
         assert_eq!(low_by_id(151, 0), -1);
+    }
+
+    fn get_parents(id: Id) -> Fallible<Vec<Id>> {
+        match id {
+            0 | 1 | 2 => Ok(Vec::new()),
+            _ => Ok(vec![id - 1, id / 2]),
+        }
+    }
+
+    #[test]
+    fn test_sync_reload() {
+        let dir = tempdir().unwrap();
+        let mut dag = Dag::open(dir.path()).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap(), 0);
+
+        let mut syncable = dag.prepare_filesystem_sync().unwrap();
+        syncable
+            .build_segments_persistent(1001, &get_parents)
+            .unwrap();
+
+        syncable.sync(std::iter::once(&mut dag)).unwrap();
+
+        assert_eq!(dag.max_level, 3);
+        assert_eq!(
+            dag.children(1000).unwrap().iter().collect::<Vec<Id>>(),
+            vec![1001]
+        );
     }
 }

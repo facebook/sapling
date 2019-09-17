@@ -108,6 +108,7 @@ py_class!(class dagindex |py| {
         Self::create_instance(py, RefCell::new(dag), RefCell::new(map), segment_size, max_segment_level)
     }
 
+    /// Build segments on disk. This discards changes by `buildmem`.
     def builddisk(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Save state on disk.
         // Must be called from a clean state (ex. `build_mem` is not called).
@@ -130,13 +131,15 @@ py_class!(class dagindex |py| {
 
         let mut dag = self.dag(py).borrow_mut();
         {
-            let mut dag = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
-            dag.build_segments_persistent(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
-            dag.sync().map_pyerr::<exc::IOError>(py)?;
+            use std::ops::DerefMut;
+            let mut syncable = dag.prepare_filesystem_sync().map_pyerr::<exc::IOError>(py)?;
+            syncable.build_segments_persistent(id, &get_parents).map_pyerr::<exc::IOError>(py)?;
+            syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr::<exc::IOError>(py)?;
         }
         Ok(None)
     }
 
+    /// Build segments in memory. Note: This gets discarded by `builddisk`.
     def buildmem(&self, nodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<Option<u8>> {
         // Build indexes towards `node`. Do not save state to disk.
         if nodes.is_empty() {
