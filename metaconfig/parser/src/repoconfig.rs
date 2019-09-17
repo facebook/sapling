@@ -26,10 +26,10 @@ use itertools::Itertools;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommitSyncConfig, CommitSyncDirection, CommonConfig,
-    DefaultCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
-    HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
-    PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, ShardedFilenodesParams,
-    SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
+    DefaultSmallToLargeCommitSyncPathAction, FilestoreParams, HookBypass, HookConfig,
+    HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
+    MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
+    ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
 };
 use mononoke_types::MPath;
 use regex::Regex;
@@ -187,13 +187,15 @@ impl RepoConfigs {
     /// Verify the correctness of the commit sync config
     ///
     /// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
-    /// from `DefaultCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
-    /// of each other. This is not allowed, because otherwise the mapping is unreversable, and
-    /// we need to reverse it for the large->small direction of sync.
+    /// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
+    /// of each other, if the sync direction is small-to-large. This is not allowed, because
+    /// otherwise the mapping is unreversable, while we need to reverse it for the large-to-small
+    /// direction of sync.
     /// Also check that no two small repos use the same bookmark prefix. If they did, this would
     /// mean potentail bookmark name collisions.
     fn verify_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
         let small_repos = &commit_sync_config.small_repos;
+        let direction = &commit_sync_config.direction;
 
         let prefixes: Vec<&MPath> = small_repos
             .iter()
@@ -205,7 +207,7 @@ impl RepoConfigs {
                 } = small_repo_sync_config;
                 let iter_to_return = map.into_iter().map(|(_, target_prefix)| target_prefix);
                 match default_action {
-                    DefaultCommitSyncPathAction::PrependPrefix(prefix) => {
+                    DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
                         iter_to_return.chain(vec![prefix].into_iter())
                     }
                     _ => iter_to_return.chain(vec![].into_iter()),
@@ -214,6 +216,11 @@ impl RepoConfigs {
             .collect();
 
         for (first_prefix, second_prefix) in prefixes.iter().tuple_combinations::<(_, _)>() {
+            if direction == &CommitSyncDirection::LargeToSmall && first_prefix == second_prefix {
+                // when syncing large-to-small, it is allowed to have identical prefixes,
+                // but not prefixes that are proper prefixes of other prefixes
+                continue;
+            }
             if first_prefix.is_prefix_of(*second_prefix) {
                 return Err(format_err!(
                     "{:?} is a prefix of {:?}, which is disallowed",
@@ -276,11 +283,11 @@ impl RepoConfigs {
                         } = raw_small_repo_config;
 
                         let default_action = match default_action.as_str() {
-                            "preserve" => DefaultCommitSyncPathAction::Preserve,
+                            "preserve" => DefaultSmallToLargeCommitSyncPathAction::Preserve,
                             "prepend_prefix" => match default_prefix {
                                 Some(prefix_to_prepend) => {
                                     let prefix_to_prepend = MPath::new(prefix_to_prepend)?;
-                                    DefaultCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
+                                    DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
                                 },
                                 None => return Err(format_err!("default_prefix must be provided when default_action=\"prepend_prefix\""))
                             },
@@ -1147,7 +1154,7 @@ mod test {
                 common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
                 small_repos: hashmap! {
                     2 => SmallRepoCommitSyncConfig {
-                        default_action: DefaultCommitSyncPathAction::Preserve,
+                        default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                         bookmark_prefix: AsciiString::from_str("repo2").unwrap(),
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
@@ -1155,7 +1162,7 @@ mod test {
                         }
                     },
                     3 => SmallRepoCommitSyncConfig {
-                        default_action: DefaultCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
+                        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
                         bookmark_prefix: AsciiString::from_str("repo3").unwrap(),
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),

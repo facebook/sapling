@@ -701,8 +701,9 @@ pub struct FilestoreParams {
 }
 
 /// Default path action to perform when syncing commits
+/// from small to large repos
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum DefaultCommitSyncPathAction {
+pub enum DefaultSmallToLargeCommitSyncPathAction {
     /// Preserve as is
     Preserve,
     /// Prepend a given prefix to the path
@@ -716,7 +717,7 @@ pub enum DefaultCommitSyncPathAction {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SmallRepoCommitSyncConfig {
     /// Default action to take on a path
-    pub default_action: DefaultCommitSyncPathAction,
+    pub default_action: DefaultSmallToLargeCommitSyncPathAction,
     /// A map of prefix replacements when syncing
     pub map: HashMap<MPath, MPath>,
     /// Bookmark prefix to use in the large repo
