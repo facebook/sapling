@@ -117,12 +117,9 @@ impl Dag {
         }
     }
 
-    /// Find segment of the specified level containing the given id.
-    pub(crate) fn find_segment_including_id(&self, id: Id, level: u8) -> Fallible<Option<Segment>> {
-        debug_assert_eq!(
-            level, 0,
-            "logic error: find_segment_by_value is only meaningful for level 0"
-        );
+    /// Find flat segment containing the given id.
+    fn find_flat_segment_including_id(&self, id: Id) -> Fallible<Option<Segment>> {
+        let level = 0;
         let low = Self::serialize_lookup_key(id, level);
         let high = [level + 1];
         let iter = self
@@ -539,7 +536,7 @@ impl Dag {
             }
             for level in (0..=self.max_level).rev() {
                 let seg = match level {
-                    0 => self.find_segment_including_id(id, 0)?,
+                    0 => self.find_flat_segment_including_id(id)?,
                     _ => self.find_segment_by_head(id, level)?,
                 };
                 if let Some(seg) = seg {
@@ -584,7 +581,7 @@ impl Dag {
 
             // A flat segment contains information to calculate
             // parents(subset of the segment).
-            let seg = self.find_segment_including_id(head, 0)?.expect(
+            let seg = self.find_flat_segment_including_id(head)?.expect(
                 "logic error: flat segments are expected to cover everything but they do not",
             );
             let seg_span = seg.span()?;
@@ -616,7 +613,7 @@ impl Dag {
     /// Get parents of a single `id`. Preserve the order.
     pub fn parent_ids(&self, id: Id) -> Fallible<Vec<Id>> {
         let seg = self
-            .find_segment_including_id(id, 0)?
+            .find_flat_segment_including_id(id)?
             .expect("logic error: flat segments are expected to cover everything but they do not");
         let span = seg.span()?;
         if id == span.low {
@@ -1198,7 +1195,7 @@ mod tests {
             _ => panic!("unexpected error"),
         };
 
-        let low_by_id = |id, level| match dag.find_segment_including_id(id, level) {
+        let low_by_id = |id| match dag.find_flat_segment_including_id(id) {
             Ok(Some(seg)) => seg.span().unwrap().low as i64,
             Ok(None) => -1,
             _ => panic!("unexpected error"),
@@ -1211,19 +1208,19 @@ mod tests {
         assert_eq!(low_by_head(150, 0), 101);
         assert_eq!(low_by_head(100, 1), 0);
 
-        assert_eq!(low_by_id(0, 0), 0);
-        assert_eq!(low_by_id(30, 0), 0);
-        assert_eq!(low_by_id(49, 0), 0);
-        assert_eq!(low_by_id(50, 0), 0);
-        assert_eq!(low_by_id(51, 0), 51);
-        assert_eq!(low_by_id(52, 0), 51);
-        assert_eq!(low_by_id(99, 0), 51);
-        assert_eq!(low_by_id(100, 0), 51);
-        assert_eq!(low_by_id(101, 0), 101);
-        assert_eq!(low_by_id(102, 0), 101);
-        assert_eq!(low_by_id(149, 0), 101);
-        assert_eq!(low_by_id(150, 0), 101);
-        assert_eq!(low_by_id(151, 0), -1);
+        assert_eq!(low_by_id(0), 0);
+        assert_eq!(low_by_id(30), 0);
+        assert_eq!(low_by_id(49), 0);
+        assert_eq!(low_by_id(50), 0);
+        assert_eq!(low_by_id(51), 51);
+        assert_eq!(low_by_id(52), 51);
+        assert_eq!(low_by_id(99), 51);
+        assert_eq!(low_by_id(100), 51);
+        assert_eq!(low_by_id(101), 101);
+        assert_eq!(low_by_id(102), 101);
+        assert_eq!(low_by_id(149), 101);
+        assert_eq!(low_by_id(150), 101);
+        assert_eq!(low_by_id(151), -1);
     }
 
     fn get_parents(id: Id) -> Fallible<Vec<Id>> {
