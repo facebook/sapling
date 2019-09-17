@@ -280,55 +280,56 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let size = value.len();
         let write_order = Arc::new(AtomicUsize::new(0));
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
+        let session = ctx.session();
 
-        let requests = self.blobstores.iter().map(|(blobstore_id, blobstore)| {
-            blobstore
-                .put(ctx.clone(), key.clone(), value.clone())
-                .timeout(REQUEST_TIMEOUT)
-                .map_err({ move |error| remap_timeout_error(error) })
-                .and_then({
-                    cloned!(ctx, key, blobstore_id, self.handler);
-                    move |_| handler.on_put(ctx, blobstore_id, key)
-                })
-                .timed({
-                    let session = ctx.session().clone();
-                    cloned!(blobstore_id, key, write_order, size, mut self.scuba);
-                    move |stats, result| {
-                        if should_log {
-                            scuba
-                                .add("key", key.clone())
-                                .add("operation", "put")
-                                .add("blobstore_id", blobstore_id)
-                                .add("size", size)
-                                .add(
-                                    "completion_time",
-                                    stats.completion_time.as_micros_unchecked(),
-                                );
+        let puts = self
+            .blobstores
+            .iter()
+            .map(|(blobstore_id, blobstore)| {
+                blobstore
+                    .put(ctx.clone(), key.clone(), value.clone())
+                    .timeout(REQUEST_TIMEOUT)
+                    .map({
+                        cloned!(blobstore_id);
+                        move |_| blobstore_id
+                    })
+                    .map_err(remap_timeout_error)
+                    .timed({
+                        cloned!(blobstore_id, key, write_order, size, session, mut self.scuba);
+                        move |stats, result| {
+                            if should_log {
+                                scuba
+                                    .add("key", key.clone())
+                                    .add("operation", "put")
+                                    .add("blobstore_id", blobstore_id)
+                                    .add("size", size)
+                                    .add(
+                                        "completion_time",
+                                        stats.completion_time.as_micros_unchecked(),
+                                    );
 
-                            match result {
-                                Ok(_) => scuba
-                                    .add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
-                                Err(error) => scuba.add("error", error.to_string()),
-                            };
+                                match result {
+                                    Ok(_) => scuba.add(
+                                        "write_order",
+                                        write_order.fetch_add(1, Ordering::SeqCst),
+                                    ),
+                                    Err(error) => scuba.add("error", error.to_string()),
+                                };
 
-                            // log session uuid only for slow requests
-                            if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-                                scuba.add("session", session.to_string());
+                                // log session uuid only for slow requests
+                                if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                                    scuba.add("session", session.to_string());
+                                }
+                                scuba.log();
                             }
-                            scuba.log();
-                        }
-                        future::ok(())
-                    }
-                })
-        });
 
-        future::select_ok(requests)
-            .map(|(_, requests)| {
-                let requests_fut =
-                    future::join_all(requests.into_iter().map(|request| request.then(|_| Ok(()))))
-                        .map(|_| ());
-                spawn(requests_fut);
+                            Ok(())
+                        }
+                    })
             })
+            .collect();
+
+        multiplexed_put(ctx.clone(), self.handler.clone(), key, puts)
             .timed(move |stats, _| {
                 ctx.perf_counters().set_max_counter(
                     PerfCounterType::BlobstorePutsMaxLatency,
@@ -402,4 +403,66 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
             .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))
             .finish()
     }
+}
+
+fn multiplexed_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
+    ctx: CoreContext,
+    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
+    key: String,
+    puts: Vec<F>,
+) -> impl Future<Item = (), Error = Error> {
+    future::select_ok(puts).and_then(move |(blobstore_id, other_puts)| {
+        finish_put(ctx, handler, key, blobstore_id, other_puts)
+    })
+}
+
+fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
+    ctx: CoreContext,
+    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
+    key: String,
+    blobstore_id: BlobstoreId,
+    other_puts: Vec<F>,
+) -> BoxFuture<(), Error> {
+    // Ocne we finished a put in one blobstore, we want to return once this blob is in a position
+    // to be replicated properly to the multiplexed stores. This can happen in two cases:
+    // - We wrote it to the SQL queue that will replicate it to other blobstores.
+    // - We wrote it to all the blobstores.
+    // As soon as either of those things happen, we can report the put as successful.
+    use futures::future::Either;
+
+    let queue_write = handler.on_put(ctx.clone(), blobstore_id, key.clone());
+
+    let rest_put = if other_puts.len() > 0 {
+        multiplexed_put(ctx, handler, key, other_puts).left_future()
+    } else {
+        // We have no remaining puts to perform, which means we've successfully written to all
+        // blobstores.
+        future::ok(()).right_future()
+    };
+
+    queue_write
+        .select2(rest_put)
+        .then(|res| match res {
+            Ok(Either::A((_, rest_put))) => {
+                // Blobstore queue write succeeded. Spawn the rest of the puts to give them a
+                // chance to complete, but we're done.
+                spawn(rest_put.discard());
+                future::ok(()).boxify()
+            }
+            Ok(Either::B((_, queue_write))) => {
+                // Remaininig puts succeeded (note that this might mean one of them and its
+                // corresponding SQL write succeeded). Spawn the queue write, but we're done.
+                spawn(queue_write.discard());
+                future::ok(()).boxify()
+            }
+            Err(Either::A((_, rest_put))) => {
+                // Blobstore queue write failed. We might still succeed if the other puts succeed.
+                rest_put.boxify()
+            }
+            Err(Either::B((_, queue_write))) => {
+                // Remaining puts failed. We might sitll succeed if the queue write succeeds.
+                queue_write
+            }
+        })
+        .boxify()
 }

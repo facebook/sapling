@@ -12,6 +12,7 @@ use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
@@ -24,22 +25,22 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
 
-pub struct TickBlobstore {
-    pub storage: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
+pub struct Tickable<T> {
+    pub storage: Arc<Mutex<HashMap<String, T>>>,
     // queue of pending operations
     queue: Arc<Mutex<VecDeque<oneshot::Sender<Option<String>>>>>,
 }
 
-impl fmt::Debug for TickBlobstore {
+impl<T: fmt::Debug> fmt::Debug for Tickable<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TickBlobstore")
+        f.debug_struct("Tickable")
             .field("storage", &self.storage)
             .field("pending", &self.queue.with(|q| q.len()))
             .finish()
     }
 }
 
-impl TickBlobstore {
+impl<T> Tickable<T> {
     pub fn new() -> Self {
         Self {
             storage: Default::default(),
@@ -68,7 +69,7 @@ impl TickBlobstore {
     }
 }
 
-impl Blobstore for TickBlobstore {
+impl Blobstore for Tickable<BlobstoreBytes> {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let storage = self.storage.clone();
         self.on_tick()
@@ -82,6 +83,24 @@ impl Blobstore for TickBlobstore {
             .map(move |_| {
                 storage.with(|s| {
                     s.insert(key, value);
+                })
+            })
+            .boxify()
+    }
+}
+
+impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
+    fn on_put(
+        &self,
+        _ctx: CoreContext,
+        blobstore_id: BlobstoreId,
+        key: String,
+    ) -> BoxFuture<(), Error> {
+        let storage = self.storage.clone();
+        self.on_tick()
+            .map(move |_| {
+                storage.with(|s| {
+                    s.insert(key, blobstore_id);
                 })
             })
             .boxify()
@@ -122,8 +141,8 @@ fn make_value(value: &str) -> BlobstoreBytes {
 #[fbinit::test]
 fn base(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
-        let bs0 = Arc::new(TickBlobstore::new());
-        let bs1 = Arc::new(TickBlobstore::new());
+        let bs0 = Arc::new(Tickable::new());
+        let bs1 = Arc::new(Tickable::new());
         let log = Arc::new(LogHandler::new());
         let bs = MultiplexedBlobstoreBase::new(
             vec![
@@ -254,9 +273,9 @@ fn multiplexed(fb: FacebookInit) {
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
         let bid0 = BlobstoreId::new(0);
-        let bs0 = Arc::new(TickBlobstore::new());
+        let bs0 = Arc::new(Tickable::new());
         let bid1 = BlobstoreId::new(1);
-        let bs1 = Arc::new(TickBlobstore::new());
+        let bs1 = Arc::new(Tickable::new());
         let bs = MultiplexedBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
@@ -325,9 +344,9 @@ fn scrubbed(fb: FacebookInit) {
         let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
         let bid0 = BlobstoreId::new(0);
-        let bs0 = Arc::new(TickBlobstore::new());
+        let bs0 = Arc::new(Tickable::new());
         let bid1 = BlobstoreId::new(1);
-        let bs1 = Arc::new(TickBlobstore::new());
+        let bs1 = Arc::new(Tickable::new());
         let bs = ScrubBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
@@ -389,7 +408,7 @@ fn scrubbed(fb: FacebookInit) {
 
         // Now replace bs1 with an empty blobstore, and see the scrub work
         let bid1 = BlobstoreId::new(1);
-        let bs1 = Arc::new(TickBlobstore::new());
+        let bs1 = Arc::new(Tickable::new());
         let bs = ScrubBlobstore::new(
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
@@ -449,6 +468,103 @@ fn scrubbed(fb: FacebookInit) {
             // TODO: Once we scrub properly, this will succeed
             assert!(get_fut.wait().is_err(), "Got from working replica");
             // TODO: Check queue here to ensure that bs1 is now scheduled for healing
+        }
+    });
+}
+
+#[fbinit::test]
+fn queue_waits(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        let bs0 = Arc::new(Tickable::new());
+        let bs1 = Arc::new(Tickable::new());
+        let bs2 = Arc::new(Tickable::new());
+        let log = Arc::new(Tickable::new());
+        let bs = MultiplexedBlobstoreBase::new(
+            vec![
+                (BlobstoreId::new(0), bs0.clone()),
+                (BlobstoreId::new(1), bs1.clone()),
+                (BlobstoreId::new(2), bs2.clone()),
+            ],
+            log.clone(),
+            ScubaSampleBuilder::with_discard(),
+        );
+        let ctx = CoreContext::test_mock(fb);
+
+        let clear = {
+            cloned!(bs0, bs1, bs2, log);
+            move || {
+                bs0.tick(None);
+                bs1.tick(None);
+                bs2.tick(None);
+                log.tick(None);
+            }
+        };
+
+        let k = String::from("k");
+        let v = make_value("v");
+
+        // Put succeeds once all blobstores have succeded, even if the queue hasn't.
+        {
+            let mut fut = bs.put(ctx.clone(), k.clone(), v.clone());
+
+            assert_eq!(fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(None);
+            bs1.tick(None);
+            bs2.tick(None);
+
+            assert_eq!(fut.poll().unwrap(), Async::Ready(()));
+
+            clear();
+        }
+
+        // Put succeeds after 1 write + a write to the queue
+        {
+            let mut fut = bs.put(ctx.clone(), k.clone(), v.clone());
+
+            assert_eq!(fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(None);
+            assert_eq!(fut.poll().unwrap(), Async::NotReady);
+
+            log.tick(None);
+            assert_eq!(fut.poll().unwrap(), Async::Ready(()));
+
+            clear();
+        }
+
+        // Put succeeds despite errors, if the queue succeeds
+        {
+            let mut fut = bs.put(ctx.clone(), k.clone(), v.clone());
+
+            assert_eq!(fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(None);
+            bs1.tick(Some("oops"));
+            bs2.tick(Some("oops"));
+            assert_eq!(fut.poll().unwrap(), Async::NotReady); // Trigger on_put
+
+            log.tick(None);
+            assert_eq!(fut.poll().unwrap(), Async::Ready(()));
+
+            clear();
+        }
+
+        // Put succeeds if any blobstore succeeds and writes to the queue
+        {
+            let mut fut = bs.put(ctx.clone(), k.clone(), v.clone());
+
+            assert_eq!(fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(Some("oops"));
+            bs1.tick(None);
+            bs2.tick(Some("oops"));
+            assert_eq!(fut.poll().unwrap(), Async::NotReady); // Trigger on_put
+
+            log.tick(None);
+            assert_eq!(fut.poll().unwrap(), Async::Ready(()));
+
+            clear();
         }
     });
 }
