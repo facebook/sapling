@@ -164,6 +164,9 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
             .get(ctx.clone(), source_repo_id, *commit, target_repo_id)
             .compat()
             .await?;
+        // This will be passed out to the caller to validate, as Mercurial has trouble if
+        // the parent is missing in the repo
+        // TODO(T54125963): Walk backwards when this happens, to find a valid parent in the child repo
         let changeset = remapped_commit.unwrap_or(*commit);
         changesets.push(changeset);
         *commit = changeset;
