@@ -470,6 +470,27 @@ Lv4: R0-9[]"#
     assert_eq!(range(vec![8], vec![8]), "8");
     assert_eq!(range(vec![8], vec![9]), "8 9");
     assert_eq!(range(vec![9], vec![9]), "9");
+
+    // Test descendants() and ancestors() against range().
+    for bits in 0..(1 << 10) {
+        let mut set = SpanSet::empty();
+        for i in (0..=9).rev() {
+            if bits & (1 << i) != 0 {
+                set.push_span(i.into());
+            }
+        }
+
+        let all = dag.all().unwrap();
+        assert_eq!(
+            dag.range(set.clone(), all.clone()).unwrap().as_spans(),
+            dag.descendants(set.clone()).unwrap().as_spans(),
+        );
+
+        assert_eq!(
+            dag.range(all.clone(), set.clone()).unwrap().as_spans(),
+            dag.ancestors(set.clone()).unwrap().as_spans(),
+        );
+    }
 }
 
 // Test utilities

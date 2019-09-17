@@ -934,6 +934,83 @@ impl Dag {
         }
         Ok(ctx.result)
     }
+
+    /// Calculate the descendants of the given set.
+    ///
+    /// Logically equvilent to `range(set, all())`.
+    pub fn descendants(&self, set: impl Into<SpanSet>) -> Fallible<SpanSet> {
+        // The algorithm is a manually "inlined" version of `range` where `ancestors`
+        // is known to be `all()`.
+
+        let roots = set.into();
+        if roots.is_empty() {
+            return Ok(SpanSet::empty());
+        }
+
+        struct Context<'a> {
+            this: &'a Dag,
+            roots: SpanSet,
+            roots_min: Id,
+            result: SpanSet,
+        }
+
+        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Fallible<()> {
+            for seg in ctx.this.iter_segments_descending(range.high, level)? {
+                let seg = seg?;
+                let span = seg.span()?;
+                if span.low < range.low || span.high < ctx.roots_min {
+                    break;
+                }
+
+                // Skip this segment entirely?
+                if ctx
+                    .this
+                    .ancestors(span.high)?
+                    .intersection(&ctx.roots)
+                    .is_empty()
+                {
+                    continue;
+                }
+
+                // Include the entire segment?
+                let parents = seg.parents()?;
+                let mut overlapped_parents = LazyPredicate::new(parents, |p| {
+                    Ok(!ctx.this.ancestors(p)?.intersection(&ctx.roots).is_empty())
+                });
+                if !seg.has_root()? && overlapped_parents.all()? {
+                    ctx.result.push_span(span);
+                    continue;
+                }
+
+                if level == 0 {
+                    let span_low = if overlapped_parents.any()? {
+                        span.low
+                    } else {
+                        ctx.roots.intersection(&span.into()).min().unwrap()
+                    };
+                    let span_high = span.high;
+                    if span_high >= span_low {
+                        ctx.result.push_span(Span::from(span_low..=span_high));
+                    }
+                } else {
+                    // Go deeper.
+                    visit_segments(ctx, span, level - 1)?;
+                }
+            }
+            Ok(())
+        }
+
+        let roots_min: Id = roots.min().unwrap();
+        let mut ctx = Context {
+            this: self,
+            roots,
+            roots_min,
+            result: SpanSet::empty(),
+        };
+
+        visit_segments(&mut ctx, (0..=Id::max_value()).into(), self.max_level)?;
+        Ok(ctx.result)
+    }
 }
 
 impl SyncableDag {

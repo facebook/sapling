@@ -91,6 +91,16 @@ fn main() {
         })
     });
 
+    bench("descendants (small subset)", || {
+        elapsed(|| {
+            // "descendants" is extremely slow. Therefore only test a very
+            // small subset.
+            for set in sample_sets.iter().skip(500).take(2) {
+                dag.descendants(set.clone()).unwrap();
+            }
+        })
+    });
+
     bench("gca_one (2 ids)", || {
         elapsed(|| {
             for set in &sample_two_ids {
