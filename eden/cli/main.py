@@ -905,18 +905,20 @@ class ChownCmd(Subcmd):
         parser.add_argument("gid", metavar="gid", help="The gid to chown to", type=int)
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        bindmounts: List[bytes] = []
+        instance, checkout, _rel_path = require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
             print("Chowning Eden repository...", end="", flush=True)
             client.chown(args.path, args.uid, args.gid)
             print("done")
-            bindmounts = client.getBindMounts(args.path)
-        for bindmount in bindmounts:
-            mount = bindmount.decode("utf-8")
-            print(f"Chowning bindmount: {mount}...", end="", flush=True)
-            full_path = os.path.join(args.path, mount)
-            subprocess.run(["sudo", "chown", "-R", f"{args.uid}:{args.gid}", full_path])
+
+        for redir in redirect_mod.get_effective_redirections(
+            checkout, mtab.new()
+        ).values():
+            target = redir.expand_target_abspath(checkout)
+            print(f"Chowning bindmount: {redir.repo_path}...", end="", flush=True)
+            subprocess.run(
+                ["sudo", "chown", "-R", f"{args.uid}:{args.gid}", str(target)]
+            )
             print("done")
 
         return 0

@@ -66,7 +66,11 @@ class ChownTest(testcase.EdenRepoTest):
                 self.assert_path(os.path.join(root, f))
 
     def run_chown(self, mount: str) -> None:
-        self.eden.run_cmd("chown", mount, str(self.nobody_uid), str(self.nobody_gid))
+        print(
+            self.eden.run_cmd(
+                "chown", mount, str(self.nobody_uid), str(self.nobody_gid)
+            )
+        )
 
     def test_chown(self) -> None:
         self.run_chown(self.mount)
