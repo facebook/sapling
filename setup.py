@@ -1474,6 +1474,7 @@ packages = [
     "edenscm.hgext.p4fastimport",
     "edenscm.hgext.pushrebase",
     "edenscm.hgext.remotefilelog",
+    "edenscm.hgext.snapshot",
     "edenscm.hgext.treemanifest",
     "edenscm.mercurial",
     "edenscm.mercurial.cffi",
