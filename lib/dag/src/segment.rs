@@ -73,15 +73,15 @@ pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 // only 1 byte overhead.
 
 impl Dag {
-    const INDEX_HEAD: usize = 0;
-    const KEY_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
+    const INDEX_LEVEL_HEAD: usize = 0;
+    const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
     /// Open [`Dag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Fallible<Self> {
         let path = path.as_ref();
         let log = log::OpenOptions::new()
             .create(true)
-            .index("head", |_| {
+            .index("level-head", |_| {
                 // (level, high)
                 vec![log::IndexOutput::Reference(
                     Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
@@ -101,7 +101,7 @@ impl Dag {
 
     fn max_level_from_log(log: &log::Log) -> Fallible<Level> {
         // The first byte of the largest key is the maximum level.
-        let max_level = match log.lookup_range(Self::INDEX_HEAD, ..)?.rev().nth(0) {
+        let max_level = match log.lookup_range(Self::INDEX_LEVEL_HEAD, ..)?.rev().nth(0) {
             None => 0,
             Some(key) => key?.0.get(0).cloned().unwrap_or(0),
         };
@@ -109,9 +109,9 @@ impl Dag {
     }
 
     /// Find segment by level and head.
-    pub(crate) fn find_segment_by_head(&self, head: Id, level: u8) -> Fallible<Option<Segment>> {
-        let key = Self::serialize_lookup_key(head, level);
-        match self.log.lookup(Self::INDEX_HEAD, &key)?.nth(0) {
+    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Fallible<Option<Segment>> {
+        let key = Self::serialize_head_level_lookup_key(head, level);
+        match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
             None => Ok(None),
             Some(bytes) => Ok(Some(Segment(bytes?))),
         }
@@ -120,11 +120,11 @@ impl Dag {
     /// Find flat segment containing the given id.
     fn find_flat_segment_including_id(&self, id: Id) -> Fallible<Option<Segment>> {
         let level = 0;
-        let low = Self::serialize_lookup_key(id, level);
+        let low = Self::serialize_head_level_lookup_key(id, level);
         let high = [level + 1];
         let iter = self
             .log
-            .lookup_range(Self::INDEX_HEAD, &low[..]..&high[..])?;
+            .lookup_range(Self::INDEX_LEVEL_HEAD, &low[..]..&high[..])?;
         for entry in iter {
             let (_, entries) = entry?;
             for entry in entries {
@@ -166,7 +166,7 @@ impl Dag {
         let prefix = [level];
         match self
             .log
-            .lookup_prefix(Self::INDEX_HEAD, &prefix)?
+            .lookup_prefix(Self::INDEX_LEVEL_HEAD, &prefix)?
             .rev()
             .nth(0)
         {
@@ -240,13 +240,13 @@ impl Dag {
     }
 
     // Used internally to generate the index key for lookup
-    fn serialize_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEN] {
-        let mut buf = [0u8; Self::KEY_LEN];
+    fn serialize_head_level_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEVEL_HEAD_LEN] {
+        let mut buf = [0u8; Self::KEY_LEVEL_HEAD_LEN];
         {
             let mut cur = Cursor::new(&mut buf[..]);
             cur.write_u8(level).unwrap();
             cur.write_u64::<BigEndian>(value).unwrap();
-            debug_assert_eq!(cur.position(), Self::KEY_LEN as u64);
+            debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
         }
         buf
     }
@@ -334,12 +334,12 @@ impl Dag {
 
     /// Find segments that covers `id..` range at the given level.
     fn next_segments(&self, id: Id, level: Level) -> Fallible<Vec<Segment>> {
-        let lower_bound = Self::serialize_lookup_key(id, level);
+        let lower_bound = Self::serialize_head_level_lookup_key(id, level);
         let upper_bound = [level + 1];
         let mut result = Vec::new();
         for entry in self
             .log
-            .lookup_range(Self::INDEX_HEAD, (&lower_bound[..])..&upper_bound)?
+            .lookup_range(Self::INDEX_LEVEL_HEAD, (&lower_bound[..])..&upper_bound)?
         {
             let (_, values) = entry?;
             for value in values {
@@ -355,11 +355,11 @@ impl Dag {
         max_high_id: Id,
         level: Level,
     ) -> Fallible<impl Iterator<Item = Fallible<Segment>>> {
-        let lower_bound = Self::serialize_lookup_key(0, level);
-        let upper_bound = Self::serialize_lookup_key(max_high_id, level);
+        let lower_bound = Self::serialize_head_level_lookup_key(0, level);
+        let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
         let iter = self
             .log
-            .lookup_range(Self::INDEX_HEAD, &lower_bound[..]..=&upper_bound[..])?
+            .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?
             .rev();
         let iter = iter.flat_map(|entry| match entry {
             Ok((_key, values)) => values
@@ -391,7 +391,7 @@ impl Dag {
 
         // `get_parents` is on the previous level of segments.
         let get_parents = |head: Id| -> Fallible<Vec<Id>> {
-            if let Some(seg) = self.find_segment_by_head(head, level - 1)? {
+            if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
                 seg.parents()
             } else {
                 panic!("programming error: get_parents called with wrong head");
@@ -537,7 +537,7 @@ impl Dag {
             for level in (0..=self.max_level).rev() {
                 let seg = match level {
                     0 => self.find_flat_segment_including_id(id)?,
-                    _ => self.find_segment_by_head(id, level)?,
+                    _ => self.find_segment_by_head_and_level(id, level)?,
                 };
                 if let Some(seg) = seg {
                     let span = (seg.span()?.low..=id).into();
@@ -566,7 +566,7 @@ impl Dag {
             // For high-level segments. If the set covers the entire segment, then
             // the parents is (the segment - its head + its parents).
             for level in (1..=self.max_level).rev() {
-                if let Some(seg) = self.find_segment_by_head(head, level)? {
+                if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
                     let seg_span = seg.span()?;
                     if set.contains(seg_span) {
                         let seg_set = SpanSet::from(seg_span);
@@ -1189,7 +1189,7 @@ mod tests {
         assert_eq!(dag.next_free_id(1).unwrap(), 151);
 
         // Helper functions to make the below lines shorter.
-        let low_by_head = |head, level| match dag.find_segment_by_head(head, level) {
+        let low_by_head = |head, level| match dag.find_segment_by_head_and_level(head, level) {
             Ok(Some(seg)) => seg.span().unwrap().low as i64,
             Ok(None) => -1,
             _ => panic!("unexpected error"),
