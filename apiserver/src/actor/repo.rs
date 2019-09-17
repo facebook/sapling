@@ -499,16 +499,37 @@ impl MononokeRepo {
                             .into_iter()
                             .map(|(cs_id, _)| *cs_id)
                             .collect();
-                        repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids)
+
+                        repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids.clone())
                             .from_err()
+                            .and_then({
+                                cloned!(ctx, repo);
+                                move |hg_bonsai_list| {
+                                    let mapping: HashMap<_, _> = hg_bonsai_list
+                                        .into_iter()
+                                        .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
+                                        .collect();
+
+                                    let hg_cs_ids_fut = changeset_ids.into_iter().map(|bcs_id| {
+                                        match mapping.get(&bcs_id) {
+                                            Some(hg_cs_id) => ok(*hg_cs_id).left_future(),
+                                            None => repo
+                                                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                                                .map_err(ErrorKind::InternalError)
+                                                .right_future(),
+                                        }
+                                    });
+                                    futures_ordered(hg_cs_ids_fut).collect()
+                                }
+                            })
                             .right_future()
                     }
                 }
             })
             .and_then({
-                move |hg_bcs_id_mapping| {
+                move |hg_changeset_ids| {
                     let mut history_chunk_fut = vec![];
-                    for (hg_changeset_id, _) in hg_bcs_id_mapping {
+                    for hg_changeset_id in hg_changeset_ids {
                         cloned!(ctx, repo);
                         history_chunk_fut.push(
                             repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
