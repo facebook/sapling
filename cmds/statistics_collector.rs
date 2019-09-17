@@ -13,9 +13,11 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::future::Future;
 use futures::stream::Stream;
+use futures_ext::BoxStream;
+use futures_ext::FutureExt;
 use manifest::ManifestOps;
-use mercurial_types::Changeset;
-use mercurial_types::HgChangesetId;
+use mercurial_types::{Changeset, FileBytes, HgChangesetId};
+use mononoke_types::FileType;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -35,19 +37,39 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct RepoStatistics {
     num_files: u64,
     total_file_size: u64,
+    num_lines: u64,
 }
 
 impl RepoStatistics {
-    pub fn new(num_files: u64, total_file_size: u64) -> Self {
+    pub fn new(num_files: u64, total_file_size: u64, num_lines: u64) -> Self {
         Self {
             num_files,
             total_file_size,
+            num_lines,
         }
     }
+}
+
+pub fn number_of_lines(
+    bytes_stream: BoxStream<FileBytes, Error>,
+) -> impl Future<Item = u64, Error = Error> {
+    bytes_stream
+        .map(|bytes| {
+            bytes.into_iter().fold(0, |num_lines, byte| {
+                if byte == '\n' as u8 {
+                    num_lines + 1
+                } else {
+                    num_lines
+                }
+            })
+        })
+        .fold(0, |result, num_lines| {
+            future::ok::<_, Error>(result + num_lines)
+        })
 }
 
 #[fbinit::main]
@@ -71,13 +93,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .and_then(move |manifest_id| {
                 manifest_id
                     .list_leaf_entries(ctx.clone(), blobstore.clone())
-                    .map(move |(_, file_id)| repo.get_file_size(ctx.clone(), file_id.1))
-                    .buffered(100)
-                    .fold(RepoStatistics::new(0, 0), |mut statistics, file_size| {
-                        statistics.num_files += 1;
-                        statistics.total_file_size += file_size;
-                        future::ok::<_, Error>(statistics)
+                    .map(move |(_, (file_type, filenode_id))| {
+                        if file_type == FileType::Regular {
+                            number_of_lines(repo.get_file_content(ctx.clone(), filenode_id))
+                                .left_future()
+                        } else {
+                            future::ok(0).right_future()
+                        }
+                        .join(repo.get_file_size(ctx.clone(), filenode_id))
                     })
+                    .buffered(100)
+                    .fold(
+                        RepoStatistics::default(),
+                        |mut statistics, (lines, file_size)| {
+                            statistics.num_files += 1;
+                            statistics.total_file_size += file_size;
+                            statistics.num_lines += lines;
+                            future::ok::<_, Error>(statistics)
+                        },
+                    )
             })
     });
 
@@ -86,8 +120,66 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     runtime.shutdown_on_idle();
 
     println!(
-        "Number of files: {}, total file size: {}",
-        repo_statistics.num_files, repo_statistics.total_file_size
+        "Number of files: {}, total file size: {}, number of lines: {}",
+        repo_statistics.num_files, repo_statistics.total_file_size, repo_statistics.num_lines
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+    use futures::stream;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_number_of_lines_empty_stream() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+
+        let stream: BoxStream<FileBytes, Error> =
+            Box::new(stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
+        let result = rt.block_on(number_of_lines(stream))?;
+        assert_eq!(result, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_number_of_lines_one_line() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+
+        let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
+            Bytes::from(&b"First line\n"[..]),
+        ))));
+        let result = rt.block_on(number_of_lines(stream))?;
+        assert_eq!(result, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_number_of_lines_many_lines() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+
+        let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
+            Bytes::from(&b"First line\nSecond line\nThird line\n"[..]),
+        ))));
+        let result = rt.block_on(number_of_lines(stream))?;
+        assert_eq!(result, 3);
+        Ok(())
+    }
+
+    #[test]
+    fn test_number_of_lines_many_items() -> Result<(), Error> {
+        let mut rt = Runtime::new().unwrap();
+
+        let vec = vec![
+            FileBytes(Bytes::from(&b"First line\n"[..])),
+            FileBytes(Bytes::from(&b""[..])),
+            FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
+        ];
+        let stream: BoxStream<FileBytes, Error> = Box::new(stream::iter_ok(vec));
+        let result = rt.block_on(number_of_lines(stream))?;
+        assert_eq!(result, 4);
+        Ok(())
+    }
 }
