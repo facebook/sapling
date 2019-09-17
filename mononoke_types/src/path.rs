@@ -508,6 +508,29 @@ impl MPath {
         }
     }
 
+    /// Create a new path, removing `prefix`. Returns `None` if `prefix` is not a strict
+    /// prefix of this path - i.e. having removed `prefix`, there are no elements left.
+    /// For the intended use case of stripping a directory prefix from a file path,
+    /// this is the correct behaviour, since it should not be possible to have
+    /// `self == prefix`.
+    pub fn remove_prefix_component<'a, E: IntoIterator<Item = &'a MPathElement>>(
+        &self,
+        prefix: E,
+    ) -> Option<MPath> {
+        let mut self_iter = self.elements.iter();
+        for elem in prefix {
+            if Some(elem) != self_iter.next() {
+                return None;
+            }
+        }
+        let elements: Vec<_> = self_iter.cloned().collect();
+        if elements.is_empty() {
+            None
+        } else {
+            Some(Self { elements })
+        }
+    }
+
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
         out.write_all(&self.to_vec())
     }
@@ -1064,6 +1087,22 @@ mod test {
         foo_bar1
             .take_prefix_components(3)
             .expect_err("unexpected OK - too many components");
+    }
+
+    #[test]
+    fn remove_prefix_component() {
+        let foo = MPath::new("foo").unwrap();
+        let foo_bar1 = MPath::new("foo/bar1").unwrap();
+        let foo_bar12 = MPath::new("foo/bar1/2").unwrap();
+        let baz = MPath::new("baz").unwrap();
+        let bar1 = MPath::new("bar1").unwrap();
+        let bar12 = MPath::new("bar1/2").unwrap();
+        let two = MPath::new("2").unwrap();
+
+        assert_eq!(baz.remove_prefix_component(&foo), None);
+        assert_eq!(foo_bar1.remove_prefix_component(&foo), Some(bar1));
+        assert_eq!(foo_bar12.remove_prefix_component(&foo), Some(bar12));
+        assert_eq!(foo_bar12.remove_prefix_component(&foo_bar1), Some(two));
     }
 
     #[test]

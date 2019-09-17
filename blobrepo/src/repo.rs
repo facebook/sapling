@@ -860,9 +860,12 @@ impl BlobRepo {
         )
     }
 
-    // This is used by tests
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.blobstore.clone()
+    }
+
+    pub fn get_filestore_config(&self) -> FilestoreConfig {
+        self.filestore_config.clone()
     }
 
     pub fn get_repoid(&self) -> RepositoryId {

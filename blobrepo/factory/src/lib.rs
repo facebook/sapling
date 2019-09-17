@@ -188,10 +188,18 @@ fn do_open_blobrepo<T: SqlFactory>(
 
 /// Used by tests
 pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRepo> {
+    new_memblob_empty_with_id(blobstore, RepositoryId::new(0))
+}
+
+/// Used by cross-repo syncing tests
+pub fn new_memblob_empty_with_id(
+    blobstore: Option<Arc<dyn Blobstore>>,
+    repo_id: RepositoryId,
+) -> Result<BlobRepo> {
     let repo_blobstore_args = RepoBlobstoreArgs::new(
         blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
         None,
-        RepositoryId::new(0),
+        repo_id,
         ScubaSampleBuilder::with_discard(),
     );
 

@@ -12,7 +12,7 @@ use context::CoreContext;
 use failure::{format_err, Error};
 use filestore::{fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
 use futures::future::{err, ok, Future};
-use futures_ext::FutureExt;
+use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 
@@ -38,7 +38,7 @@ pub fn copy_content(
     dst_blobstore: RepoBlobstore,
     dst_filestore_config: FilestoreConfig,
     key: ContentId,
-) -> impl Future<Item = (), Error = Error> {
+) -> BoxFuture<(), Error> {
     let fetch_key = FetchKey::Canonical(key.clone());
     get_metadata(&src_blobstore, ctx.clone(), &fetch_key.clone())
         .and_then({
@@ -80,6 +80,7 @@ pub fn copy_content(
                 .map(|_| ())
             }
         })
+        .boxify()
 }
 
 #[cfg(test)]

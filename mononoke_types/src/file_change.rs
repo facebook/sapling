@@ -40,6 +40,10 @@ impl FileChange {
         }
     }
 
+    pub fn with_new_copy_from(self, copy_from: Option<(MPath, ChangesetId)>) -> Self {
+        Self::new(self.content_id, self.file_type, self.size, copy_from)
+    }
+
     pub(crate) fn from_thrift_opt(
         fc_opt: thrift::FileChangeOpt,
         mpath: &MPath,
