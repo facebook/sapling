@@ -18,6 +18,7 @@ pub mod errors;
 pub mod fastlog_batch;
 pub mod file_change;
 pub mod file_contents;
+pub mod fsnode;
 pub mod generation;
 pub mod hash;
 pub mod path;
@@ -41,7 +42,7 @@ pub use rawbundle2::RawBundle2;
 pub use repo::RepositoryId;
 pub use typed_hash::{
     ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FastlogBatchId, FileUnodeId,
-    ManifestUnodeId, MononokeId, RawBundle2Id,
+    FsnodeId, ManifestUnodeId, MononokeId, RawBundle2Id,
 };
 
 mod macros;

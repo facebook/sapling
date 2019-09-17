@@ -25,6 +25,7 @@ use crate::{
     errors::*,
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
+    fsnode::Fsnode,
     hash::{Blake2, Context},
     rawbundle2::RawBundle2,
     thrift,
@@ -81,9 +82,13 @@ pub struct RawBundle2Id(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct FileUnodeId(Blake2);
 
-/// An identifier for a file unode
+/// An identifier for a manifest unode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct ManifestUnodeId(Blake2);
+
+/// An identifier for an fsnode
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct FsnodeId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FastlogBatchId(Blake2);
@@ -347,6 +352,13 @@ impl_typed_hash! {
     context_key => "manifestunode",
 }
 
+impl_typed_hash! {
+    hash_type => FsnodeId,
+    value_type => Fsnode,
+    context_type => FsnodeIdContext,
+    context_key => "fsnode",
+}
+
 impl_typed_hash_no_context! {
     hash_type => ContentMetadataId,
     value_type => ContentMetadata,
@@ -429,6 +441,9 @@ mod test {
 
         let id = ManifestUnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{}", id));
+
+        let id = FsnodeId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
 
         let id = ContentMetadataId::from_byte_array([1; 32]);
         assert_eq!(

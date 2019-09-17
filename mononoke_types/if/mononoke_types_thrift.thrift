@@ -42,6 +42,7 @@ typedef IdType ContentChunkId (hs.newtype)
 typedef IdType RawBundle2Id (hs.newtype)
 typedef IdType FileUnodeId (hs.newtype)
 typedef IdType ManifestUnodeId (hs.newtype)
+typedef IdType FsnodeId (hs.newtype)
 typedef IdType MPathHash (hs.newtype)
 
 typedef IdType ContentMetadataId (hs.newtype)
@@ -221,6 +222,41 @@ struct ManifestUnode {
   1: list<ManifestUnodeId> parents,
   2: map<MPathElement, UnodeEntry> subentries,
   3: ChangesetId linknode,
+}
+
+struct FsnodeFile {
+  1: ContentId content_id,
+  2: FileType file_type,
+  // size is a u64 stored as an i64
+  3: i64 size,
+  4: Sha1 content_sha1,
+  5: Sha256 content_sha256,
+}
+
+struct FsnodeDirectory {
+  1: FsnodeId id,
+  2: FsnodeSummary summary,
+}
+
+struct FsnodeSummary {
+  1: Sha1 simple_format_sha1,
+  2: Sha256 simple_format_sha256,
+  // Counts and sizes are u64s stored as i64s
+  3: i64 child_files_count,
+  4: i64 child_files_total_size,
+  5: i64 child_dirs_count,
+  6: i64 descendant_files_count,
+  7: i64 descendant_files_total_size,
+}
+
+union FsnodeEntry {
+  1: FsnodeFile File,
+  2: FsnodeDirectory Directory,
+}
+
+struct Fsnode {
+  1: map<MPathElement, FsnodeEntry> subentries,
+  2: FsnodeSummary summary,
 }
 
 // Structure that holds a commit graph, usually a history of a file

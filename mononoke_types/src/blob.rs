@@ -13,7 +13,7 @@ use crate::{
     errors::*,
     typed_hash::{
         ChangesetId, ContentChunkId, ContentId, ContentMetadataId, FastlogBatchId, FileUnodeId,
-        ManifestUnodeId, RawBundle2Id,
+        FsnodeId, ManifestUnodeId, RawBundle2Id,
     },
 };
 
@@ -48,6 +48,7 @@ pub type ContentChunkBlob = Blob<ContentChunkId>;
 pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
+pub type FsnodeBlob = Blob<FsnodeId>;
 pub type ContentMetadataBlob = Blob<ContentMetadataId>;
 pub type FastlogBatchBlob = Blob<FastlogBatchId>;
 
