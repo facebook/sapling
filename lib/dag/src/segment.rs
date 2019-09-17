@@ -514,8 +514,16 @@ impl Dag {
     }
 }
 
-// Algorithms using SpanSet as output.
+// User-facing DAG-related algorithms.
 impl Dag {
+    /// Return a [`SpanSet`] that covers all ids stored in this [`Dag`].
+    pub fn all(&self) -> Fallible<SpanSet> {
+        match self.next_free_id(0)? {
+            0 => Ok(SpanSet::empty()),
+            n => Ok(SpanSet::from(0..=(n - 1))),
+        }
+    }
+
     /// Calculate all ancestors reachable from any id from the given set.
     ///
     /// ```plain,ignore
@@ -1248,5 +1256,14 @@ mod tests {
             dag.children(1000).unwrap().iter().collect::<Vec<Id>>(),
             vec![1001]
         );
+    }
+
+    #[test]
+    fn test_all() {
+        let dir = tempdir().unwrap();
+        let mut dag = Dag::open(dir.path()).unwrap();
+        assert!(dag.all().unwrap().is_empty());
+        dag.build_segments_volatile(1001, &get_parents).unwrap();
+        assert_eq!(dag.all().unwrap().count(), 1002);
     }
 }
