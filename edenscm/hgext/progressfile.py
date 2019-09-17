@@ -33,13 +33,15 @@ config example::
     statefile = /some/path/to/file
     # Append to the progress file, rather than replace
     statefileappend = true
+    # Set pid to a fixed value for testing purpose
+    fakedpid = 42
 """
 
 from __future__ import absolute_import
 
 import json
 
-from edenscm.mercurial import progress, registrar
+from edenscm.mercurial import progress, registrar, util
 
 
 testedwith = "ships-with-fb-hgext"
@@ -48,6 +50,8 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("progress", "statefile", default="")
+
+_pid = None
 
 
 def writeprogress(self, progressfile, filemode, bars):
@@ -70,6 +74,7 @@ def writeprogress(self, progressfile, filemode, bars):
             "speed_str": None,
             "estimate_sec": None,
             "estimate_str": None,
+            "pid": _pid,
         }
         if isactive:
             speed = progress.estimatespeed(bar)
@@ -95,6 +100,8 @@ def uisetup(ui):
     append = ui.configbool("progress", "statefileappend", False)
     filemode = "a+" if append else "w+"
     if progressfile:
+        global _pid
+        _pid = ui.configint("progress", "fakedpid") or util.getpid()
 
         class fileengine(progress._engine.__class__):
             def _show(self, now):
