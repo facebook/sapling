@@ -10,10 +10,7 @@ mod tracing_blobstore;
 mod utils;
 
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
-use blobrepo::{
-    compute_changed_files, BlobRepo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
-    UploadHgNodeHash,
-};
+use blobrepo::{compute_changed_files, BlobRepo};
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -25,8 +22,9 @@ use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
-    blobs::File, manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
-    HgParents, MPath, MPathElement, RepoPath,
+    blobs::{ContentBlobMeta, File, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash},
+    manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents,
+    MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;

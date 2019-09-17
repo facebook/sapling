@@ -28,3 +28,11 @@ pub use changeset::{
     serialize_cs, serialize_extras, ChangesetMetadata, Extra, HgBlobChangeset, HgChangesetContent,
     RevlogChangeset,
 };
+
+pub mod filenode_lookup;
+
+mod upload;
+pub use upload::{
+    ContentBlobInfo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+    UploadHgTreeEntry,
+};

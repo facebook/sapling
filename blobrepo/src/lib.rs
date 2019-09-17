@@ -15,16 +15,12 @@
 mod bonsai_generation;
 pub mod derive_hg_manifest;
 pub mod file_history;
-mod filenode_lookup;
 mod repo;
 mod repo_commit;
 mod utils;
 
 pub use crate::errors::*;
-pub use crate::repo::{
-    save_bonsai_changesets, BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset,
-    UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-};
+pub use crate::repo::{save_bonsai_changesets, BlobRepo, CreateChangeset};
 pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?

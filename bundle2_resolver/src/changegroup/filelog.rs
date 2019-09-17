@@ -18,13 +18,13 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{
-    BlobRepo, ContentBlobInfo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry,
-    UploadHgNodeHash,
-};
+use blobrepo::BlobRepo;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{
-    blobs::{File, HgBlobEntry},
+    blobs::{
+        ContentBlobInfo, ContentBlobMeta, File, HgBlobEntry, UploadHgFileContents,
+        UploadHgFileEntry, UploadHgNodeHash,
+    },
     delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
     RevFlags, NULL_HASH,
 };

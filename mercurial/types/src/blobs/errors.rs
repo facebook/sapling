@@ -6,7 +6,7 @@
 
 use crate::{HgFileNodeId, HgNodeHash, Type};
 use failure::Fail;
-use mononoke_types::ContentId;
+use mononoke_types::{ContentId, RepoPath};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -31,4 +31,9 @@ pub enum ErrorKind {
     ManifestDeserializeFailed(String),
     #[fail(display = "Incorrect LFS file content {}", _0)]
     IncorrectLfsFileContent(String),
+    #[fail(
+        display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}",
+        _0, _1, _2
+    )]
+    InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
 }

@@ -10,13 +10,14 @@
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use context::CoreContext;
+use failure::{err_msg, Error};
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
 use maplit::{btreemap, hashset};
 use mercurial_types::{
-    blobs::{File, LFSContent, META_MARKER, META_SZ},
+    blobs::{filenode_lookup::FileNodeIdPointer, File, LFSContent, META_MARKER, META_SZ},
     manifest::{Content, HgEmptyManifest},
     manifest_utils::{
         changed_entry_stream_with_pruner, diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
@@ -28,9 +29,10 @@ use mercurial_types::{
 };
 use mercurial_types_mocks::{
     manifest::{ContentFactory, MockEntry, MockManifest},
-    nodehash,
+    nodehash::{self, FOURS_FNID, ONES_FNID, THREES_FNID, TWOS_FNID},
 };
 use mononoke_types::hash::Sha256;
+use mononoke_types_mocks::contentid::{ONES_CTID, TWOS_CTID};
 use quickcheck::quickcheck;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -1209,4 +1211,59 @@ quickcheck! {
             _ => false,
         }
     }
+}
+
+#[test]
+fn test_hashes_are_unique() -> Result<(), Error> {
+    let mut h = HashSet::new();
+
+    for content_id in [ONES_CTID, TWOS_CTID].iter() {
+        for p1 in [Some(ONES_FNID), Some(TWOS_FNID), None].iter() {
+            for p2 in [Some(THREES_FNID), Some(FOURS_FNID), None].iter() {
+                let path1 = RepoPath::file("path")?
+                    .into_mpath()
+                    .ok_or(err_msg("path1"))?;
+
+                let path2 = RepoPath::file("path/2")?
+                    .into_mpath()
+                    .ok_or(err_msg("path2"))?;
+
+                let path3 = RepoPath::file("path2")?
+                    .into_mpath()
+                    .ok_or(err_msg("path3"))?;
+
+                for copy_path in [path1, path2, path3].iter() {
+                    for copy_parent in [ONES_FNID, TWOS_FNID, THREES_FNID].iter() {
+                        let copy_info = Some((copy_path.clone(), copy_parent.clone()));
+
+                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, p1, p2);
+                        assert!(!h.contains(&ptr), format!("Duplicate entry: {:?}", ptr));
+                        h.insert(ptr);
+
+                        if p1 == p2 {
+                            continue;
+                        }
+
+                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, p2, p1);
+                        assert!(!h.contains(&ptr), format!("Duplicate entry: {:?}", ptr));
+                        h.insert(ptr);
+                    }
+                }
+
+                let ptr = FileNodeIdPointer::new(&content_id, &None, p1, p2);
+                assert!(!h.contains(&ptr), format!("Duplicate entry: {:?}", ptr));
+                h.insert(ptr);
+
+                if p1 == p2 {
+                    continue;
+                }
+
+                let ptr = FileNodeIdPointer::new(&content_id, &None, p2, p1);
+                assert!(!h.contains(&ptr), format!("Duplicate entry: {:?}", ptr));
+                h.insert(ptr);
+            }
+        }
+    }
+
+    Ok(())
 }

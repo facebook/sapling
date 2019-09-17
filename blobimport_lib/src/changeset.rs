@@ -26,14 +26,14 @@ use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
-use blobrepo::{
-    BlobRepo, ChangesetHandle, ContentBlobMeta, CreateChangeset, UploadHgFileContents,
-    UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-};
+use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
-    blobs::{ChangesetMetadata, File, HgBlobChangeset, HgBlobEntry, LFSContent},
+    blobs::{
+        ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, HgBlobEntry, LFSContent,
+        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+    },
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
     NULL_HASH,
 };

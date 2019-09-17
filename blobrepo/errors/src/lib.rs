@@ -4,17 +4,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt;
+#![deny(warnings)]
 
 use ascii::AsciiString;
 use failure_ext::failure;
 use failure_ext::Fail;
-
 use mercurial_types::{
     blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
     HgParents, MPath, RepoPath, Type,
 };
-use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
+use mononoke_types::{hash::Sha256, ChangesetId};
+use std::fmt;
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -65,8 +65,6 @@ pub enum ErrorKind {
     )]
     FileContentsDeserializeFailed(String),
     #[fail(display = "Content blob missing for id: {}", _0)]
-    ContentBlobMissing(ContentId),
-    #[fail(display = "Content blob missing for id: {}", _0)]
     ContentBlobByAliasMissing(Sha256),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)]
     BadUploadBlob(HgBlob),
@@ -92,11 +90,6 @@ pub enum ErrorKind {
     MissingManifests,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
     NotAManifest(HgNodeHash, Type),
-    #[fail(
-        display = "Inconsistent node hash for entry: path {}, provided: {}, computed: {}",
-        _0, _1, _2
-    )]
-    InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
     #[fail(
         display = "Inconsistent node hash for changeset: provided: {}, \
                    computed: {} for blob: {:#?}",

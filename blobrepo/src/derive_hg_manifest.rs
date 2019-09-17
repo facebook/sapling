@@ -5,9 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::ErrorKind;
-use crate::repo::{
-    ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-};
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::Blobstore;
 use cloned::cloned;
@@ -17,7 +14,10 @@ use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
 use mercurial_types::{
-    blobs::{fetch_file_envelope, HgBlobEntry},
+    blobs::{
+        fetch_file_envelope, ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
+        UploadHgNodeHash, UploadHgTreeEntry,
+    },
     HgEntry, HgEntryId, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{FileType, MPath, RepoPath};
