@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import tempfile
 import types
 import typing
@@ -507,6 +508,16 @@ Do you want to run `eden mount %s` instead?"""
             hg_util.setup_hg_dir(checkout, commit_id)
 
         clone_success_path.touch()
+
+        if checkout.get_config().scm_type == "hg":
+            subprocess.check_call(
+                [
+                    os.environ.get("EDEN_HG_BINARY", "hg"),
+                    "debugedenrunpostupdatehook",
+                    "-R",
+                    checkout.path,
+                ]
+            )
 
     def mount(self, path: Union[Path, str]) -> int:
         # Load the config info for this client, to make sure we
