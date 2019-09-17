@@ -901,14 +901,37 @@ class GcCmd(Subcmd):
 class ChownCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", metavar="path", help="The Eden checkout to chown")
-        parser.add_argument("uid", metavar="uid", help="The uid to chown to", type=int)
-        parser.add_argument("gid", metavar="gid", help="The gid to chown to", type=int)
+        parser.add_argument(
+            "uid", metavar="uid", help="The uid or unix username to chown to"
+        )
+        parser.add_argument(
+            "gid", metavar="gid", help="The gid or unix group name to chown to"
+        )
+
+    def resolve_uid(self, uid_str) -> int:
+        try:
+            return int(uid_str)
+        except ValueError:
+            import pwd
+
+            return pwd.getpwnam(uid_str).pw_uid
+
+    def resolve_gid(self, gid_str) -> int:
+        try:
+            return int(gid_str)
+        except ValueError:
+            import grp
+
+            return grp.getgrnam(gid_str).gr_gid
 
     def run(self, args: argparse.Namespace) -> int:
+        uid = self.resolve_uid(args.uid)
+        gid = self.resolve_gid(args.gid)
+
         instance, checkout, _rel_path = require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
             print("Chowning Eden repository...", end="", flush=True)
-            client.chown(args.path, args.uid, args.gid)
+            client.chown(args.path, uid, gid)
             print("done")
 
         for redir in redirect_mod.get_effective_redirections(
@@ -916,9 +939,7 @@ class ChownCmd(Subcmd):
         ).values():
             target = redir.expand_target_abspath(checkout)
             print(f"Chowning bindmount: {redir.repo_path}...", end="", flush=True)
-            subprocess.run(
-                ["sudo", "chown", "-R", f"{args.uid}:{args.gid}", str(target)]
-            )
+            subprocess.run(["sudo", "chown", "-R", f"{uid}:{gid}", str(target)])
             print("done")
 
         return 0

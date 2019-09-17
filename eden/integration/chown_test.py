@@ -65,15 +65,17 @@ class ChownTest(testcase.EdenRepoTest):
             for f in files:
                 self.assert_path(os.path.join(root, f))
 
-    def run_chown(self, mount: str) -> None:
-        print(
-            self.eden.run_cmd(
+    def run_chown(self, mount: str, use_ids: bool = False) -> None:
+        if use_ids:
+            output = self.eden.run_cmd(
                 "chown", mount, str(self.nobody_uid), str(self.nobody_gid)
             )
-        )
+        else:
+            output = self.eden.run_cmd("chown", mount, "nobody", "nobody")
+        print(output)
 
     def test_chown(self) -> None:
-        self.run_chown(self.mount)
+        self.run_chown(self.mount, use_ids=True)
         self.assert_chown_worked(self.mount)
 
     def test_chown_with_overlay(self) -> None:
