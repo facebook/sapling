@@ -200,7 +200,7 @@ pub struct LogRangeIter<'a> {
 }
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct LogMetadata {
     /// Length of the primary log file.
     primary_len: u64,
@@ -387,6 +387,62 @@ impl Log {
         self.mem_buf.clear();
         self.update_indexes_for_on_disk_entries()?;
         Ok(())
+    }
+
+    /// Return a cloned [`Log`].
+    ///
+    /// If `copy_dirty` is true, then copy the in-memory portion.
+    /// Otherwise, do not copy the in-memory portion, which is
+    /// logically equivalent to calling `clear_dirty` immediately
+    /// on the result, but potentially cheaper.
+    pub fn clone(&self, copy_dirty: bool) -> Fallible<Self> {
+        self.maybe_return_index_error()?;
+
+        // Prepare cloned versions of things.
+        let mut indexes = self
+            .indexes
+            .iter()
+            .map(|i| i.clone(copy_dirty))
+            .collect::<Result<Vec<Index>, _>>()?;
+        let disk_buf = self.disk_buf.clone();
+        let mem_buf = if copy_dirty {
+            self.mem_buf.clone()
+        } else {
+            let mem_buf = Box::pin(Vec::new());
+            {
+                // Update external key buffer of indexes to point to the new mem_buf.
+                let mem_buf: &Vec<u8> = &mem_buf;
+                let mem_buf: *const Vec<u8> = mem_buf as *const Vec<u8>;
+                let index_key_buf = Arc::new(ExternalKeyBuffer {
+                    disk_buf: disk_buf.clone(),
+                    disk_len: self.meta.primary_len,
+                    mem_buf,
+                });
+                for index in indexes.iter_mut() {
+                    index.key_buf = index_key_buf.clone();
+                }
+            }
+            mem_buf
+        };
+
+        // Create the new Log.
+        let mut log = Log {
+            dir: self.dir.clone(),
+            disk_buf,
+            mem_buf,
+            meta: self.meta.clone(),
+            indexes,
+            index_corrupted: false,
+            open_options: self.open_options.clone(),
+        };
+
+        if !copy_dirty {
+            // The indexes can be lagging. Update them.
+            // This is similar to what clear_dirty does.
+            log.update_indexes_for_on_disk_entries()?;
+        }
+
+        Ok(log)
     }
 
     /// Load the latest data from disk. Write in-memory entries to disk.
@@ -2422,6 +2478,25 @@ mod tests {
                 vec![[b'a'; 10]],
             );
             assert_eq!(log.lookup_range(0, ..).unwrap().count(), 1);
+        }
+    }
+
+    #[test]
+    fn test_clone() {
+        for lag in vec![0, 1000] {
+            let dir = tempdir().unwrap();
+            let mut log = log_with_index(dir.path(), lag);
+            log.append([b'a'; 10]).unwrap();
+            log.sync().unwrap();
+            log.append([b'b'; 10]).unwrap();
+
+            let log2 = log.clone(true).unwrap();
+            assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 2);
+            assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 2);
+
+            let log2 = log.clone(false).unwrap();
+            assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 1);
+            assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 1);
         }
     }
 
