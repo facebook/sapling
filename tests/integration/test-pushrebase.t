@@ -460,3 +460,21 @@ Test non-fast-forward force pushrebase
   $ hgmn debugsh -c 'print(m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
   4899f9112d9b79c3ecbc343169db37fbe1efdd20
   $ cd ../repo2
+
+-- Check that a force pushrebase with mutation markers is a fail
+  $ echo SPARTACUS > sum_ego && hg ci -qAm 27
+  $ echo SPARTACUS! > sum_ego && hg amend --config mutation.record=true
+  $ hgmn push -r . -f --to newbook
+  pushing rev * to destination ssh://user@dummy/repo bookmark newbook (glob)
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     Forced push blocked because it contains mutation metadata.
+  remote:     You can remove the metadata from a commit with `hg amend --config mutation.record=false`.
+  remote:     For more help, please contact the Source Control team at https://fburl.com/27qnuyl2
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2",
+  remote:     }
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

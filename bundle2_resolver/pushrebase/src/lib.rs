@@ -67,6 +67,8 @@ use tracing::{trace_args, Traced};
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
+pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
+
 // TODO: (torozco) T44843329 Why does this duplicate scm/mononoke/bundle2_resolver/src/errors.rs?
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -825,7 +827,7 @@ fn rebase_changeset(
     }
 
     // Mutation information from the original commit must be stripped.
-    for key in &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"] {
+    for key in MUTATION_KEYS {
         bcs.extra.remove(*key);
     }
 

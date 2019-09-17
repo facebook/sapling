@@ -356,14 +356,28 @@ fn resolve_pushrebase(
             cloned!(ctx, resolver);
             move |(onto_params, cg_push, manifests, bundle2)| {
                 let changesets = cg_push.changesets.clone();
+                let will_rebase = onto_params.bookmark != *DONOTREBASEBOOKMARK;
+                // Mutation information must not be present in public commits
+                // See T54101162, S186586
+                if !will_rebase {
+                    for (_, hg_cs) in &changesets {
+                        for key in pushrebase::MUTATION_KEYS {
+                            if hg_cs.extra.as_ref().contains_key(key.as_bytes()) {
+                                return future::err(err_msg("Forced push blocked because it contains mutation metadata.\n\
+                                                        You can remove the metadata from a commit with `hg amend --config mutation.record=false`.\n\
+                                                        For more help, please contact the Source Control team at https://fburl.com/27qnuyl2")).left_future();
+                            }
+                        }
+                    }
+                }
                 resolver
                     .upload_changesets(
                         ctx,
                         cg_push,
                         manifests,
-                        onto_params.bookmark != *DONOTREBASEBOOKMARK,
+                        will_rebase,
                     )
-                    .map(move |()| (changesets, onto_params, bundle2))
+                    .map(move |()| (changesets, onto_params, bundle2)).right_future()
             }
         })
         .and_then({
