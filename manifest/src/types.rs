@@ -10,8 +10,9 @@ use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{
+    fsnode::{Fsnode, FsnodeEntry},
     unode::{ManifestUnode, UnodeEntry},
-    FileUnodeId, MPath, MPathElement, ManifestUnodeId,
+    ContentId, FileType, FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BTreeMap, iter::FromIterator};
@@ -45,6 +46,33 @@ fn convert_unode(unode_entry: &UnodeEntry) -> Entry<ManifestUnodeId, FileUnodeId
     match unode_entry {
         UnodeEntry::File(file_unode_id) => Entry::Leaf(file_unode_id.clone()),
         UnodeEntry::Directory(mf_unode_id) => Entry::Tree(mf_unode_id.clone()),
+    }
+}
+
+impl Manifest for Fsnode {
+    type TreeId = FsnodeId;
+    type LeafId = (ContentId, FileType);
+
+    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
+        self.lookup(name).map(convert_fsnode)
+    }
+
+    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+        let v: Vec<_> = self
+            .list()
+            .map(|(basename, entry)| (basename.clone(), convert_fsnode(entry)))
+            .collect();
+        Box::new(v.into_iter())
+    }
+}
+
+fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, (ContentId, FileType)> {
+    match fsnode_entry {
+        FsnodeEntry::File(fsnode_file) => Entry::Leaf((
+            fsnode_file.content_id().clone(),
+            fsnode_file.file_type().clone(),
+        )),
+        FsnodeEntry::Directory(fsnode_directory) => Entry::Tree(fsnode_directory.id().clone()),
     }
 }
 
