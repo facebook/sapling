@@ -57,12 +57,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     let changeset = matches.value_of("changeset").map_or(None, |cs| {
         Some(HgChangesetId::from_str(cs).expect("Invalid changesetid"))
     });
-    let mut excludes = matches.value_of("exclude").map_or(vec![], |excludes| {
-        excludes
-            .split(",")
-            .map(|cs| HgChangesetId::from_str(cs).expect("Invalid changeset"))
-            .collect::<Vec<_>>()
-    });
+
+    let mut excludes = matches
+        .values_of("exclude")
+        .map(|matches| {
+            matches
+                .map(|cs| HgChangesetId::from_str(cs).expect("Invalid changeset"))
+                .collect()
+        })
+        .unwrap_or(vec![]);
 
     if let Some(path) = matches.value_of("exclude_file") {
         let changesets = BufReader::new(File::open(path)?)
@@ -299,7 +302,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("exclude")
                 .long("exclude")
                 .short("e")
-                .help("a comma separated list of changesets to exclude")
+                .multiple(true)
+                .help("the changesets to exclude")
                 .takes_value(true),
         )
         .arg(
