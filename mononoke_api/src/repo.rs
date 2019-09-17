@@ -11,7 +11,6 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
-use derive_unode_manifest::derived_data_unodes::RootUnodeManifestMapping;
 use failure::Error;
 use fbinit::FacebookInit;
 use futures::stream::{self, Stream};
@@ -21,6 +20,7 @@ use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::RepositoryId;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 use slog::Logger;
+use unodes::RootUnodeManifestMapping;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;

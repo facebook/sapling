@@ -26,7 +26,6 @@ use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure_ext::{Error, Fail};
 use futures::{
@@ -41,6 +40,7 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use tracing::{trace_args, EventId, Traced};
+use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 mod fastlog_impl;
 mod thrift {

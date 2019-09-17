@@ -19,7 +19,6 @@ use cloned::cloned;
 use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
 use failure::{err_msg, format_err};
 use failure_ext::Error;
@@ -41,6 +40,7 @@ use std::{
     },
     time::Duration,
 };
+use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
 const ARG_OUT_FILENAME: &'static str = "out-filename";

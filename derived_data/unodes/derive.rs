@@ -8,7 +8,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{err_msg, Error, Fail};
+use failure_ext::{err_msg, Error};
 use futures::{
     future,
     sync::{mpsc, oneshot},
@@ -25,24 +25,13 @@ use mononoke_types::{
 use repo_blobstore::RepoBlobstore;
 use std::collections::BTreeMap;
 
-pub mod derived_data_unodes;
-pub use derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
-
-#[derive(Debug, Fail)]
-pub enum ErrorKind {
-    #[fail(display = "cannot fetch FileUnode: {}", _0)]
-    FailFetchFileUnode(FileUnodeId),
-    #[fail(display = "cannot fetch ManifestUnode: {}", _0)]
-    FailFetchManifestUnode(ManifestUnodeId),
-    #[fail(display = "Invalid bonsai changeset: {}", _0)]
-    InvalidBonsai(String),
-}
+use crate::ErrorKind;
 
 /// Derives unode manifests for bonsai changeset `cs_id` given parent unode manifests.
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to
 /// provide only functions to create a single unode file or single unode tree (
 /// `create_unode_manifest` and `create_unode_file`).
-pub fn derive_unode_manifest(
+pub(crate) fn derive_unode_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
@@ -301,11 +290,11 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mapping::get_file_changes;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Storable;
     use bytes::Bytes;
-    use derived_data_unodes::get_file_changes;
     use failure_ext::Result;
     use fbinit::FacebookInit;
     use fixtures::linear;

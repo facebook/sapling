@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::derive_unode_manifest;
+use crate::derive::derive_unode_manifest;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bytes::Bytes;

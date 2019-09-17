@@ -18,7 +18,6 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::BonsaiDerived;
 use failure::Error;
 use fastlog::{prefetch_history, RootFastlog, RootFastlogMapping};
@@ -36,6 +35,7 @@ use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use time_ext::DurationExt;
+use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 use mercurial_types::{
     blobs::HgBlobChangeset, manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,

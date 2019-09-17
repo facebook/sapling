@@ -11,7 +11,6 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use derive_unode_manifest::derived_data_unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::{BonsaiDerived, RegenerateMapping};
 use failure::{err_msg, Error};
 use fbinit::FacebookInit;
@@ -23,6 +22,7 @@ use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::Logger;
 use std::{collections::BTreeSet, sync::Arc};
+use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";

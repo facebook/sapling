@@ -14,7 +14,6 @@ use blobrepo::BlobRepo;
 use clap::{App, Arg};
 use cmdlib::args;
 use context::CoreContext;
-use derive_unode_manifest::{RootUnodeManifestId, RootUnodeManifestMapping};
 use derived_data::BonsaiDerived;
 use failure::{err_msg, format_err, Error};
 use failure_ext::Result;
@@ -27,6 +26,7 @@ use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
+use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 const HG_CHANGESET_TYPE: &'static str = "hg-changeset";
 
