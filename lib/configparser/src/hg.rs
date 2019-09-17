@@ -56,6 +56,31 @@ pub trait ConfigSetHgExt {
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
+
+    /// Get a config item. Convert to type `T`.
+    ///
+    /// If the config item is not set, calculate it using `default_func`.
+    fn get_or<T: FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+        default_func: impl Fn() -> T,
+    ) -> Fallible<T>;
+
+    /// Get a config item. Convert to type `T`.
+    ///
+    /// If the config item is not set, return `T::default()`.
+    fn get_or_default<T: Default + FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+    ) -> Fallible<T> {
+        self.get_or(section, name, || Default::default())
+    }
+}
+
+pub trait FromConfigValue: Sized {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self>;
 }
 
 /// Load system, user config files.
@@ -291,6 +316,50 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
         let opts = Options::new().source(source).process_hgplain();
         self.load_path(path, &opts)
+    }
+
+    fn get_or<T: FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+        default_func: impl Fn() -> T,
+    ) -> Fallible<T> {
+        match ConfigSet::get(self, section, name) {
+            None => Ok(default_func()),
+            Some(bytes) => Ok(T::try_from_bytes(&bytes)?),
+        }
+    }
+}
+
+impl FromConfigValue for bool {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.to_lowercase();
+        match value.as_ref() {
+            "1" | "yes" | "true" | "on" | "always" => Ok(true),
+            "0" | "no" | "false" | "off" | "never" => Ok(false),
+            _ => Err(Error::Convert(format!("invalid bool: {}", value)).into()),
+        }
+    }
+}
+
+impl FromConfigValue for i64 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for String {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        String::from_utf8(bytes.to_vec())
+            .map_err(|_| Error::Convert(format!("{:?} is not utf8 encoded", bytes)).into())
+    }
+}
+
+impl<T: FromConfigValue> FromConfigValue for Vec<T> {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let items = parse_list(bytes);
+        items.into_iter().map(|s| T::try_from_bytes(&s)).collect()
     }
 }
 
@@ -784,6 +853,44 @@ mod tests {
         assert_eq!(
             parse_list("a,\" c\" \" d"),
             vec![b("a"), b(" c"), b("\""), b("d")]
+        );
+    }
+
+    #[test]
+    fn test_get_or() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[foo]\n\
+             bool1 = yes\n\
+             bool2 = unknown\n\
+             bools = 1, TRUE, On, aLwAys, 0, false, oFF, never\n\
+             int1 = -33\n\
+             list1 = x y z\n\
+             list3 = 2, 3, 1",
+            &"test".into(),
+        );
+
+        assert_eq!(cfg.get_or("foo", "bar", || 3).unwrap(), 3);
+        assert_eq!(cfg.get_or("foo", "bool1", || false).unwrap(), true);
+        assert_eq!(
+            format!("{}", cfg.get_or("foo", "bool2", || true).unwrap_err()),
+            "invalid bool: unknown"
+        );
+        assert_eq!(cfg.get_or("foo", "int1", || 42).unwrap(), -33);
+        assert_eq!(
+            cfg.get_or("foo", "list1", || vec!["x".to_string()])
+                .unwrap(),
+            vec!["x", "y", "z"]
+        );
+        assert_eq!(
+            cfg.get_or("foo", "list3", || vec![0]).unwrap(),
+            vec![2, 3, 1]
+        );
+
+        assert_eq!(cfg.get_or_default::<bool>("foo", "bool1").unwrap(), true);
+        assert_eq!(
+            cfg.get_or_default::<Vec<bool>>("foo", "bools").unwrap(),
+            vec![true, true, true, true, false, false, false, false]
         );
     }
 }

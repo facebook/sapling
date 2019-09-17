@@ -12,6 +12,10 @@ use failure::Fail;
 /// The error type for parsing config files.
 #[derive(Fail, Debug)]
 pub enum Error {
+    /// Unable to convert to a type.
+    #[fail(display = "{}", _0)]
+    Convert(String),
+
     /// Unable to parse a file due to syntax.
     #[fail(display = "{:?}:\n{}", _0, _1)]
     Parse(PathBuf, String),
