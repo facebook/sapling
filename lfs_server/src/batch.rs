@@ -23,6 +23,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RequestContext, UriBuilder};
+use crate::middleware::ScubaMiddlewareState;
 use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     ResponseObject, Transfer,
@@ -323,6 +324,10 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let request_batch = serde_json::from_slice::<RequestBatch>(&body)
         .chain_err(ErrorKind::InvalidBatch)
         .map_err(HttpError::e400)?;
+
+    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
+        scuba.add("batch_object_count", request_batch.objects.len());
+    }
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,

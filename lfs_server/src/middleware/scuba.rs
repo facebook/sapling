@@ -4,18 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::{future, Future};
+use futures::Future;
 use gotham::handler::HandlerFuture;
 use gotham::middleware::Middleware;
 use gotham::state::{request_id, FromState, State};
-use gotham_derive::NewMiddleware;
+use gotham_derive::{NewMiddleware, StateData};
 use hyper::{
     header::{self, AsHeaderName, HeaderMap},
-    Method, Uri,
+    Method, StatusCode, Uri,
 };
 use json_encoded::get_identities;
 use percent_encoding::percent_decode;
-use scuba::ScubaSampleBuilder;
+use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use crate::lfs_server_context::LoggingContext;
@@ -48,11 +48,78 @@ fn add_header<T: AsHeaderName>(
     }
 }
 
+fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
+    let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
+
+    if let Some(log_ctx) = state.try_take::<LoggingContext>() {
+        scuba.add("repository", log_ctx.repository);
+
+        if let Some(err_msg) = log_ctx.error_msg {
+            scuba.add("error_msg", err_msg);
+        }
+
+        if let Some(response_size) = log_ctx.response_size {
+            scuba.add("response_size", response_size);
+        }
+
+        if let Some(duration) = log_ctx.duration {
+            scuba.add("duration_ms", duration.as_millis_unchecked());
+        }
+    }
+
+    if let Some(uri) = Uri::try_borrow_from(&state) {
+        scuba.add("http_path", uri.path());
+    }
+
+    if let Some(method) = Method::try_borrow_from(&state) {
+        scuba.add("http_method", method.to_string());
+    }
+
+    if let Some(headers) = HeaderMap::try_borrow_from(&state) {
+        add_header(&mut scuba, headers, "http_host", header::HOST);
+        add_header(&mut scuba, headers, "client_ip", CLIENT_IP);
+        add_header(&mut scuba, headers, "client_correlator", CLIENT_CORRELATOR);
+
+        // NOTE: We decode the identity here, but that's only indicative since we don't
+        // verify the TLS peer's identity, so we don't know if we can trust this header.
+        if let Some(encoded_client_identity) = headers.get(ENCODED_CLIENT_IDENTITY) {
+            let identities = percent_decode(encoded_client_identity.as_bytes())
+                .decode_utf8()
+                .map_err(|_| ())
+                .and_then(|decoded| get_identities(decoded.as_ref()).map_err(|_| ()));
+
+            if let Ok(identities) = identities {
+                let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
+                scuba.add("client_identities", identities);
+            }
+        }
+    }
+
+    scuba
+        .add("http_status", status_code.as_u16())
+        .add("request_id", request_id(&state))
+        .log();
+
+    Some(())
+}
+
+#[derive(StateData)]
+pub struct ScubaMiddlewareState(ScubaSampleBuilder);
+
+impl ScubaMiddlewareState {
+    pub fn add<K: Into<String>, V: Into<ScubaValue>>(&mut self, key: K, value: V) -> &mut Self {
+        self.0.add(key, value);
+        self
+    }
+}
+
 impl Middleware for ScubaMiddleware {
-    fn call<Chain>(mut self, state: State, chain: Chain) -> Box<HandlerFuture>
+    fn call<Chain>(self, mut state: State, chain: Chain) -> Box<HandlerFuture>
     where
         Chain: FnOnce(State) -> Box<HandlerFuture>,
     {
+        state.put(ScubaMiddlewareState(self.scuba.clone()));
+
         // Don't log health check requests.
         if let Some(uri) = Uri::try_borrow_from(&state) {
             if uri.path() == "/health_check" {
@@ -60,68 +127,16 @@ impl Middleware for ScubaMiddleware {
             }
         }
 
-        let f = chain(state).and_then(move |(mut state, response)| {
-            let log_ctx = state.try_take::<LoggingContext>();
-
-            if let Some(log_ctx) = log_ctx {
-                self.scuba.add("repository", log_ctx.repository);
-
-                if let Some(err_msg) = log_ctx.error_msg {
-                    self.scuba.add("error_msg", err_msg);
+        Box::new(chain(state).then(|mut res| {
+            match res {
+                Ok((ref mut state, ref response)) => {
+                    log_stats(state, &response.status());
                 }
-
-                if let Some(response_size) = log_ctx.response_size {
-                    self.scuba.add("response_size", response_size);
-                }
-
-                if let Some(duration) = log_ctx.duration {
-                    self.scuba
-                        .add("duration_ms", duration.as_millis_unchecked());
+                Err((ref mut state, _)) => {
+                    log_stats(state, &StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
-
-            if let Some(uri) = Uri::try_borrow_from(&state) {
-                self.scuba.add("http_path", uri.path());
-            }
-
-            if let Some(method) = Method::try_borrow_from(&state) {
-                self.scuba.add("http_method", method.to_string());
-            }
-
-            if let Some(headers) = HeaderMap::try_borrow_from(&state) {
-                add_header(&mut self.scuba, headers, "http_host", header::HOST);
-                add_header(&mut self.scuba, headers, "client_ip", CLIENT_IP);
-                add_header(
-                    &mut self.scuba,
-                    headers,
-                    "client_correlator",
-                    CLIENT_CORRELATOR,
-                );
-
-                // NOTE: We decode the identity here, but that's only indicative since we don't
-                // verify the TLS peer's identity, so we don't know if we can trust this header.
-                if let Some(encoded_client_identity) = headers.get(ENCODED_CLIENT_IDENTITY) {
-                    let identities = percent_decode(encoded_client_identity.as_bytes())
-                        .decode_utf8()
-                        .map_err(|_| ())
-                        .and_then(|decoded| get_identities(decoded.as_ref()).map_err(|_| ()));
-
-                    if let Ok(identities) = identities {
-                        let identities: Vec<_> =
-                            identities.into_iter().map(|i| i.to_string()).collect();
-                        self.scuba.add("client_identities", identities);
-                    }
-                }
-            }
-
-            self.scuba
-                .add("http_status", response.status().as_u16())
-                .add("request_id", request_id(&state));
-
-            self.scuba.log();
-            future::ok((state, response))
-        });
-
-        Box::new(f)
+            res
+        }))
     }
 }

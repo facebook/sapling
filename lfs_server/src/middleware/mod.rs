@@ -9,5 +9,5 @@ mod scuba;
 mod timer;
 
 pub use self::ods::OdsMiddleware;
-pub use self::scuba::ScubaMiddleware;
+pub use self::scuba::{ScubaMiddleware, ScubaMiddlewareState};
 pub use self::timer::TimerMiddleware;

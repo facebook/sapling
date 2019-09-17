@@ -28,6 +28,7 @@ use mononoke_types::hash::Sha256;
 use crate::errors::ErrorKind;
 use crate::http::{EmptyBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::RequestContext;
+use crate::middleware::ScubaMiddlewareState;
 use crate::protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
 };
@@ -145,6 +146,10 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
+
+    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
+        scuba.add("upload_size", size);
+    }
 
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
     let (upstream_send, upstream_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
