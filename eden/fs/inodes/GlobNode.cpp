@@ -379,14 +379,21 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
                       fileBlobsToPrefetch);
                 }));
   }
-  return folly::collect(futures).thenValue(
+
+  // Note: we use collectAll() rather than collect() here to make sure that
+  // we have really finished all computation before we return a result.
+  // Our caller may destroy us after we return, so we can't let errors propagate
+  // back to the caller early while some processing may still be occurring.
+  return folly::collectAll(futures).thenValue(
       [shadowResults = std::move(results)](
-          vector<vector<GlobNode::GlobResult>>&& matchVector) mutable {
+          vector<folly::Try<vector<GlobNode::GlobResult>>>&&
+              matchVector) mutable {
         for (auto& matches : matchVector) {
+          matches.throwIfFailed();
           shadowResults.insert(
               shadowResults.end(),
-              std::make_move_iterator(matches.begin()),
-              std::make_move_iterator(matches.end()));
+              std::make_move_iterator(matches->begin()),
+              std::make_move_iterator(matches->end()));
         }
         return shadowResults;
       });
@@ -512,14 +519,20 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
             }));
   }
 
-  return folly::collect(futures).thenValue(
+  // Note: we use collectAll() rather than collect() here to make sure that
+  // we have really finished all computation before we return a result.
+  // Our caller may destroy us after we return, so we can't let errors propagate
+  // back to the caller early while some processing may still be occurring.
+  return folly::collectAll(futures).thenValue(
       [shadowResults = std::move(results)](
-          vector<vector<GlobResult>>&& matchVector) mutable {
+          vector<folly::Try<vector<GlobResult>>>&& matchVector) mutable {
         for (auto& matches : matchVector) {
+          // Rethrow the exception if any of the results failed
+          matches.throwIfFailed();
           shadowResults.insert(
               shadowResults.end(),
-              std::make_move_iterator(matches.begin()),
-              std::make_move_iterator(matches.end()));
+              std::make_move_iterator(matches->begin()),
+              std::make_move_iterator(matches->end()));
         }
         return shadowResults;
       });

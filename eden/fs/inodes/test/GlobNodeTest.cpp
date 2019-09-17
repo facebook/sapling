@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 #include "eden/fs/inodes/GlobNode.h"
+
+#include <utility>
+
 #include <folly/Conv.h>
 #include <folly/Exception.h>
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GMock.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
-#include <utility>
+
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -285,5 +289,60 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
             GlobResult("dir/subdir"_relpath, dtype_t::Dir),
         }),
         matches);
+  }
+}
+
+TEST(GlobNodeTest, treeLoadError) {
+  auto mount = TestMount{};
+  auto builder = FakeTreeBuilder{};
+  builder.setFiles({
+      {"dir/a/foo.txt", "foo"},
+      {"dir/a/b/a.txt", "foo"},
+      {"dir/a/b/b.txt", "foo"},
+      {"dir/b/a/a.txt", "foo"},
+      {"dir/b/a/b.txt", "foo"},
+      {"dir/c/a/a.txt", "foo"},
+      {"dir/c/x.txt", "foo"},
+      {"dir/c/y.txt", "foo"},
+  });
+  mount.initialize(builder, /*startReady=*/false);
+  builder.setReady("dir");
+  builder.setReady("dir/a");
+
+  {
+    GlobNode globRoot(/*includeDotfiles=*/false);
+    globRoot.parse("dir/**/a.txt");
+
+    auto globFuture = evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr);
+    EXPECT_FALSE(globFuture.isReady())
+        << "glob should not finish when some subtrees are not read";
+
+    // Cause dir/a/b to fail to load
+    builder.triggerError("dir/a/b", std::runtime_error("cosmic radiation"));
+
+    // We still haven't allowed the rest of the trees to finish loading,
+    // so the glob shouldn't be finished yet.
+    //
+    // This test case is checking for a regression where the globFuture would
+    // complete early when an error occurred processing one TreeInode, even
+    // though work was still being done to process the glob on other subtrees.
+    // Completion of the globFuture signals the caller that they can destroy the
+    // GlobNode, but this isn't safe if there is still work in progress to
+    // evaluate it, even if that work will eventually get discarded due to the
+    // original error.
+    EXPECT_FALSE(globFuture.isReady())
+        << "glob should not finish early when still waiting on some trees";
+
+    // Mark all of the remaining trees ready, which should allow the glob
+    // evaluation to complete.
+    builder.setAllReady();
+    try {
+      auto result = std::move(globFuture).get(kSmallTimeout);
+      FAIL() << "glob should have succeeded";
+    } catch (const std::runtime_error& ex) {
+      EXPECT_THAT(ex.what(), testing::HasSubstr("cosmic radiation"));
+    } catch (const folly::FutureTimeout&) {
+      FAIL() << "glob did not finish";
+    }
   }
 }
