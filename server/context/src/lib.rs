@@ -281,10 +281,12 @@ impl PerfCounters {
             }
         }
 
-        if let Ok(extra) = serde_json::to_string(&extra) {
-            // Scuba does not support columns that are too long, we have to trim it
-            let limit = ::std::cmp::min(extra.len(), 1000);
-            builder.add("extra_context", &extra[..limit]);
+        if !extra.is_empty() {
+            if let Ok(extra) = serde_json::to_string(&extra) {
+                // Scuba does not support columns that are too long, we have to trim it
+                let limit = ::std::cmp::min(extra.len(), 1000);
+                builder.add("extra_context", &extra[..limit]);
+            }
         }
     }
 }
