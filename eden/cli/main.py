@@ -278,13 +278,22 @@ Legacy bind mount dirs listed above are unused and can be removed!
             buckd_usage = 0
             pyc_usage = 0
             for rel_path, _file_status in scm_status.entries.items():
-                st = os.lstat(os.path.join(bytes(checkout.path), rel_path))
-                if b".buckd" in rel_path:
-                    buckd_usage += st.st_size
-                elif rel_path.endswith(b".pyc"):
-                    pyc_usage += st.st_size
-                else:
-                    ignored_usage += st.st_size
+                try:
+                    st = os.lstat(os.path.join(bytes(checkout.path), rel_path))
+                    if b".buckd" in rel_path:
+                        buckd_usage += st.st_size
+                    elif rel_path.endswith(b".pyc"):
+                        pyc_usage += st.st_size
+                    else:
+                        ignored_usage += st.st_size
+                except FileNotFoundError:
+                    # Status can show files that were present in the overlay
+                    # before a redirection was mounted over the top of it,
+                    # which makes them inaccessible here.  Alternatively,
+                    # someone may have raced with us and removed the file
+                    # between the status call and our attempt to stat it.
+                    # Just absorb the error here and ignore it.
+                    pass
             print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}", end="")
             print(
                 f"  Ignored .buckd state: {format_size(buckd_usage)}    (see T37376291)"
