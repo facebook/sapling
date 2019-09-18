@@ -7,6 +7,8 @@
 
 use cpython::*;
 use cpython_ext::SimplePyBuf;
+use dag::spanset::{Id, SpanSet};
+use pydag::Spans;
 use std::cell::RefCell;
 
 // XXX: The revlogindex is a temporary solution before migrating to
@@ -33,6 +35,53 @@ py_class!(class revlogindex |py| {
             inserted: RefCell::new(Vec::new()),
         };
         Self::create_instance(py, changelogi)
+    }
+
+    /// Given public and draft head revision numbers, calculate the "phase sets".
+    /// Return (publicset, draftset).
+    def phasesets(&self, publicheads: Vec<u32>, draftheads: Vec<u32>) -> PyResult<(Spans, Spans)> {
+        let revlog = self.changelogi(py);
+        let mut draft_set = SpanSet::empty();
+        let mut public_set = SpanSet::empty();
+
+        // Used internally. Different from "phases.py".
+        #[repr(u8)]
+        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        enum Phase {
+            Unspecified,
+            Draft,
+            Public,
+        }
+        impl Phase {
+            fn max(self, other: Phase) -> Phase {
+                if self > other { self } else {other}
+            }
+        }
+
+        let mut phases = vec![Phase::Unspecified; revlog.len()];
+        for rev in draftheads {
+            phases[rev as usize] = Phase::Draft;
+        }
+        for rev in publicheads {
+            phases[rev as usize] = Phase::Public;
+        }
+
+        for rev in (0..revlog.len()).rev() {
+            let phase = phases[rev as usize];
+            match phase {
+                Phase::Public => public_set.push(rev as Id),
+                Phase::Draft => draft_set.push(rev as Id),
+                // Do not track "unknown" explicitly. This is future-proof,
+                // since tracking "unknown" explicitly is quite expensive
+                // with the new "dag" abstraction.
+                Phase::Unspecified => (),
+            }
+            for parent_rev in revlog.parents(rev as u32) {
+                // Propagate phases from this rev to its parents.
+                phases[parent_rev as usize] = phases[parent_rev as usize].max(phase);
+            }
+        }
+        Ok((Spans(public_set), Spans(draft_set)))
     }
 
     /// Get parent revisions.
