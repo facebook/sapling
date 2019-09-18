@@ -29,7 +29,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 /// Differences from the `py_class` version:
 /// - Auto converts from a wider range of Python types - smartset, any iterator.
 /// - No need to take the Python GIL to create a new instance of `Set`.
-pub(crate) struct Spans(pub SpanSet);
+pub struct Spans(pub SpanSet);
 
 impl Into<SpanSet> for Spans {
     fn into(self) -> SpanSet {
@@ -47,8 +47,12 @@ py_class!(pub class spans |py| {
         Ok(Spans::extract(py, &obj)?.to_py_object(py))
     }
 
-    def __contains__(&self, id: Id) -> PyResult<bool> {
-        Ok(self.inner(py).contains(id))
+    def __contains__(&self, id: i64) -> PyResult<bool> {
+        if id < 0 {
+            Ok(false)
+        } else {
+            Ok(self.inner(py).contains(id as Id))
+        }
     }
 
     def __len__(&self) -> PyResult<usize> {
@@ -59,6 +63,36 @@ py_class!(pub class spans |py| {
         let ids: Vec<Id> = self.inner(py).iter().collect();
         let list: PyList = ids.into_py_object(py);
         list.into_object().call_method(py, "__iter__", NoArgs, None)
+    }
+
+    def min(&self) -> PyResult<Option<Id>> {
+        Ok(self.inner(py).min())
+    }
+
+    def max(&self) -> PyResult<Option<Id>> {
+        Ok(self.inner(py).max())
+    }
+
+    def __repr__(&self) -> PyResult<String> {
+        Ok(format!("[{:?}]", self.inner(py)))
+    }
+
+    def __add__(lhs, rhs) -> PyResult<Spans> {
+        let lhs = Spans::extract(py, lhs)?;
+        let rhs = Spans::extract(py, rhs)?;
+        Ok(Spans(lhs.0.union(&rhs.0)))
+    }
+
+    def __and__(lhs, rhs) -> PyResult<Spans> {
+        let lhs = Spans::extract(py, lhs)?;
+        let rhs = Spans::extract(py, rhs)?;
+        Ok(Spans(lhs.0.intersection(&rhs.0)))
+    }
+
+    def __sub__(lhs, rhs) -> PyResult<Spans> {
+        let lhs = Spans::extract(py, lhs)?;
+        let rhs = Spans::extract(py, rhs)?;
+        Ok(Spans(lhs.0.difference(&rhs.0)))
     }
 });
 
