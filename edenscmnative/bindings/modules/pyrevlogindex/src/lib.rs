@@ -37,6 +37,50 @@ py_class!(class revlogindex |py| {
         Self::create_instance(py, changelogi)
     }
 
+    /// Calculate `heads(ancestors(revs))`.
+    def headsancestors(&self, revs: Vec<u32>) -> PyResult<Vec<u32>> {
+        if revs.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let revlog = self.changelogi(py);
+
+        #[repr(u8)]
+        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        enum State {
+            Unspecified,
+            PotentialHead,
+            NotHead,
+        }
+
+        let min_rev = *revs.iter().min().unwrap();
+        assert!(revlog.len() > min_rev as usize);
+
+        let mut states = vec![State::Unspecified; revlog.len() - min_rev as usize];
+        let mut result = Vec::with_capacity(revs.len());
+        for rev in revs {
+            states[(rev - min_rev) as usize] = State::PotentialHead;
+        }
+
+        for rev in (min_rev as usize..revlog.len()).rev() {
+            let state = states[rev - min_rev as usize];
+            match state {
+                State::Unspecified => (),
+                State::PotentialHead | State::NotHead => {
+                    if state == State::PotentialHead {
+                        result.push(rev as u32);
+                    }
+                    for parent_rev in revlog.parents(rev as u32) {
+                        if parent_rev >= min_rev {
+                            states[(parent_rev - min_rev) as usize] = State::NotHead;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(result)
+    }
+
     /// Given public and draft head revision numbers, calculate the "phase sets".
     /// Return (publicset, draftset).
     def phasesets(&self, publicheads: Vec<u32>, draftheads: Vec<u32>) -> PyResult<(Spans, Spans)> {
