@@ -248,8 +248,8 @@ PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
 TEST_F(PeriodicTaskTest, testSplayOn) {
   constexpr size_t kNumTasks = 64;
   constexpr size_t kRunsPerTask = 3;
-  constexpr auto kInterval = 200ms;
-  constexpr auto kTolerance = 20ms;
+  constexpr auto kInterval = 400ms;
+  constexpr auto kTolerance = 40ms;
   auto result =
       runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/true);
 
@@ -293,8 +293,8 @@ TEST_F(PeriodicTaskTest, testSplayOn) {
 TEST_F(PeriodicTaskTest, testSplayOff) {
   constexpr size_t kNumTasks = 20;
   constexpr size_t kRunsPerTask = 3;
-  constexpr auto kInterval = 200ms;
-  constexpr auto kTolerance = 20ms;
+  constexpr auto kInterval = 400ms;
+  constexpr auto kTolerance = 40ms;
   auto result =
       runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/false);
 
