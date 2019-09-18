@@ -15,7 +15,7 @@ use std::collections::BinaryHeap;
 use std::fmt::{self, Debug};
 use std::ops::{Bound, RangeBounds, RangeInclusive};
 
-type Id = u64;
+pub type Id = u64;
 
 /// Range `low..=high`. `low` must be <= `high`.
 #[derive(Copy, Clone, Debug, Eq)]

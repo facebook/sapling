@@ -37,6 +37,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
         "revisionstore",
         pyrevisionstore::init_module(py, &name)?,
     )?;
+    m.add(py, "revlogindex", pyrevlogindex::init_module(py, &name)?)?;
     m.add(py, "stackdesc", pystackdesc::init_module(py, &name)?)?;
     m.add(py, "treestate", pytreestate::init_module(py, &name)?)?;
     m.add(py, "vlq", pyvlq::init_module(py, &name)?)?;
