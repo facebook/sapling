@@ -1816,9 +1816,8 @@ fn fetch_treepack_part_input(
                 p1,
                 p2,
                 content,
-                name: entry.get_name().cloned(),
+                fullpath: MPath::join_element_opt(basepath.as_ref(), entry.get_name()),
                 linknode: linknode_opt.unwrap_or(NULL_CSID).into_nodehash(),
-                basepath,
             }
         })
         .boxify()

@@ -22,7 +22,7 @@ use futures::{Future, Stream};
 use futures_ext::BoxFuture;
 use futures_stats::Timed;
 use mercurial_types::{
-    Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath, NULL_HASH,
+    Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::DateTime;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -129,9 +129,8 @@ pub struct TreepackPartInput {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub content: Bytes,
-    pub name: Option<MPathElement>,
+    pub fullpath: Option<MPath>,
     pub linknode: HgNodeHash,
-    pub basepath: Option<MPath>,
 }
 
 pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
@@ -147,7 +146,7 @@ where
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {
-            let path = match MPath::join_element_opt(input.basepath.as_ref(), input.name.as_ref()) {
+            let path = match input.fullpath {
                 Some(path) => RepoPath::DirectoryPath(path),
                 None => RepoPath::RootPath,
             };
