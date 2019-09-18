@@ -674,23 +674,11 @@ pub fn read_storage_configs<'a>(
 
 pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
     let repo_id = get_repo_id(matches)?;
-
     let configs = read_configs(matches)?;
-    let mut repo_config: Vec<_> = configs
-        .repos
-        .into_iter()
-        .filter(|(_, config)| RepositoryId::new(config.repoid) == repo_id)
-        .collect();
-    if repo_config.is_empty() {
-        Err(err_msg(format!("unknown repoid {:?}", repo_id)))
-    } else if repo_config.len() > 1 {
-        Err(err_msg(format!(
-            "repoid {:?} defined multiple times",
-            repo_id
-        )))
-    } else {
-        Ok(repo_config.pop().unwrap())
-    }
+    configs
+        .get_repo_config(repo_id.id())
+        .ok_or_else(|| err_msg(format!("unknown repoid {:?}", repo_id)))
+        .map(|(name, config)| (name.clone(), config.clone()))
 }
 
 fn open_repo_internal<'a>(

@@ -9,7 +9,7 @@
 
 use serde_derive::Deserialize;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     fs,
     num::NonZeroUsize,
@@ -66,6 +66,7 @@ impl RepoConfigs {
             .into());
         }
         let mut repo_configs = HashMap::new();
+        let mut repoids = HashSet::new();
         for entry in repos_dir.read_dir()? {
             let entry = entry?;
             let dir_path = entry.path();
@@ -73,6 +74,9 @@ impl RepoConfigs {
                 let (name, config) =
                     RepoConfigs::read_single_repo_config(&dir_path, config_path)
                         .chain_err(format_err!("while opening config for {:?} repo", dir_path))?;
+                if !repoids.insert(config.repoid) {
+                    return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
+                }
                 repo_configs.insert(name, config);
             }
         }
@@ -712,6 +716,13 @@ impl RepoConfigs {
             commit_sync_config,
         })
     }
+
+    /// Get individual `RepoConfig`, given a repo_id
+    pub fn get_repo_config<'a>(&'a self, repo_id: i32) -> Option<(&'a String, &'a RepoConfig)> {
+        self.repos
+            .iter()
+            .find(|(_, repo_config)| repo_config.repoid == repo_id)
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1245,6 +1256,42 @@ mod test {
         let tmp_dir = write_files(&paths);
         let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
         assert!(commit_sync_config.is_err());
+    }
+
+    #[test]
+    fn test_duplicated_repo_ids() {
+        let www_content = r#"
+            repoid=1
+            scuba_table="scuba_table"
+            wireproto_scribe_category="category"
+            storage_config="files"
+
+            [storage.files]
+            db.local_db_path = "/tmp/www"
+            blobstore_type = "blob:files"
+            path = "/tmp/www"
+        "#;
+        let common_content = r#"
+            loadlimiter_category="test-category"
+
+            [[whitelist_entry]]
+            tier = "tier1"
+
+            [[whitelist_entry]]
+            identity_type = "username"
+            identity_data = "user"
+        "#;
+
+        let paths = btreemap! {
+            "common/common.toml" => common_content,
+            "common/commitsyncmap.toml" => "",
+            "repos/www1/server.toml" => www_content,
+            "repos/www2/server.toml" => www_content,
+        };
+
+        let tmp_dir = write_files(&paths);
+        let repo_config_res = RepoConfigs::read_configs(tmp_dir.path());
+        assert!(repo_config_res.is_err());
     }
 
     #[test]

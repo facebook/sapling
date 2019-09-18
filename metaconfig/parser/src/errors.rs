@@ -21,6 +21,9 @@ pub enum ErrorKind {
     /// Config is invalid
     #[fail(display = "invalid config options: {}", _0)]
     InvalidConfig(String),
+    /// Duplicated repo ids
+    #[fail(display = "repoid {} used more than once", _0)]
+    DuplicatedRepoId(i32),
     /// Missing path for hook
     #[fail(display = "missing path")]
     MissingPath(),
