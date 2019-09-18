@@ -114,13 +114,13 @@ class absentfilectx(object):
         return True
 
 
-def _findtool(ui, tool):
+def _findtool(ui, repo, tool):
     if tool in internals:
         return tool
-    return findexternaltool(ui, tool)
+    return _findexternaltoolwithreporoot(ui, repo, tool)
 
 
-def findexternaltool(ui, tool):
+def _findexternaltoolinternal(ui, tool):
     for kn in ("regkey", "regkeyalt"):
         k = _toolstr(ui, tool, kn)
         if not k:
@@ -130,7 +130,21 @@ def findexternaltool(ui, tool):
             p = util.findexe(p + _toolstr(ui, tool, "regappend", ""))
             if p:
                 return p
-    exe = _toolstr(ui, tool, "executable", tool)
+    return _toolstr(ui, tool, "executable", tool)
+
+
+def findexternaltool(ui, tool):
+    return util.findexe(util.expandpath(_findexternaltoolinternal(ui, tool)))
+
+
+def _findexternaltoolwithreporoot(ui, repo, tool):
+    """Like findexternaltool, but try checking inside the repo for the tool
+    before looking in the path."""
+    exe = _findexternaltoolinternal(ui, tool)
+    if not os.path.isabs(exe):
+        path = repo.wvfs.join(exe)
+        if os.path.isfile(path) and util.isexec(path):
+            return path
     return util.findexe(util.expandpath(exe))
 
 
@@ -142,7 +156,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
         tmsg = tool
         if pat:
             tmsg = _("%s (for pattern %s)") % (tool, pat)
-        if not _findtool(ui, tool):
+        if not _findtool(ui, repo, tool):
             if pat:  # explicitly requested tool deserves a warning
                 ui.warn(_("couldn't find merge tool %s\n") % tmsg)
             else:  # configured but non-existing tools are more silent
@@ -165,7 +179,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     # forcemerge comes from command line arguments, highest priority
     force = ui.config("ui", "forcemerge")
     if force:
-        toolpath = _findtool(ui, force)
+        toolpath = _findtool(ui, repo, force)
         if changedelete and not supportscd(toolpath):
             return ":prompt", None
         else:
@@ -187,7 +201,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     for pat, tool in ui.configitems("merge-patterns"):
         mf = match.match(repo.root, "", [pat])
         if mf(path) and check(tool, pat, symlink, False, changedelete):
-            toolpath = _findtool(ui, tool)
+            toolpath = _findtool(ui, repo, tool)
             return (tool, util.shellquote(toolpath))
 
     # then merge tools
@@ -211,7 +225,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     tools.append((None, "hgmerge"))  # the old default, if found
     for p, t in tools:
         if check(t, None, symlink, binary, changedelete):
-            toolpath = _findtool(ui, t)
+            toolpath = _findtool(ui, repo, t)
             return (t, util.shellquote(toolpath))
 
     # internal merge or prompt as last resort

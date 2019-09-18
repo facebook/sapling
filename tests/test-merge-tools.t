@@ -1138,6 +1138,31 @@ Merge with "echo mergeresult > $local":
   # hg resolve --list
   R f
 
+Relative path in merge tool executable searches for tool inside repo before looking outside
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ echo "echo hello, world!" > hello_world.sh
+  $ chmod +x hello_world.sh
+  $ hg stat
+  ? hello_world.sh
+  $ hg merge -r 2 --config merge-tools.true.executable='hello_world.sh' --config merge-tools.true.args='> f'
+  merging f
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ rm -f hello_world.sh
+  $ aftermerge
+  # cat f
+  hello, world!
+  # hg stat
+  M f
+  # hg resolve --list
+  R f
+
 Merge with "echo mergeresult > $output" - the variable is a bit magic:
 
   $ beforemerge
