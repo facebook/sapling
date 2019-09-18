@@ -1100,7 +1100,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
   if (!child) {
     return makeFuture<Unit>(
-        InodeError(InodePtrType::InodeType::WRONG_TYPE_ERRNO, child));
+        InodeError(InodePtrType::InodeType::WRONG_TYPE_ERRNO, childBasePtr));
   }
 
   // Verify that we can remove the child before we materialize ourself
