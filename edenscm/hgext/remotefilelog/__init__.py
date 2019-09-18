@@ -129,6 +129,10 @@ Configs:
 
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
+    ``remotefilelog.cacheprocess2`` name of the cache client.
+
+    ``remotefilelog.cachekey`` cache key prefix to use.
+
 Configs for Eden API (HTTP data fetching):
 
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
