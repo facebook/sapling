@@ -50,10 +50,11 @@ where
                 self.file_matches.push(Ok(candidate_path));
             }
         } else if filetype.is_dir() {
-            if self
-                .matcher
-                .matches_directory(candidate_path.as_repo_path())
-                != DirectoryMatch::Nothing
+            if filename.as_str() != ".hg"
+                && self
+                    .matcher
+                    .matches_directory(candidate_path.as_repo_path())
+                    != DirectoryMatch::Nothing
             {
                 self.dir_matches.push(candidate_path);
             }
