@@ -5,11 +5,13 @@ use std::path::{Path, PathBuf};
 use failure::{format_err, Fallible};
 
 use configparser::config::ConfigSet;
+use edenapi::EdenApi;
 use types::Key;
 use util::path::create_dir;
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
+    datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
+    edenapi::EdenApiRemoteStore,
     indexedlogdatastore::IndexedLogDataStore,
     localstore::LocalStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
@@ -23,6 +25,8 @@ use crate::{
 pub struct ContentStore {
     datastore: UnionDataStore<Box<dyn DataStore>>,
     local_mutabledatastore: Box<dyn MutableDeltaStore>,
+    shared_mutabledatastore: Box<dyn MutableDeltaStore>,
+    remote_store: Option<Box<dyn RemoteDataStore>>,
 }
 
 fn get_repo_name(config: &ConfigSet) -> Fallible<String> {
@@ -66,7 +70,11 @@ fn get_local_packs_path(path: impl AsRef<Path>) -> Fallible<PathBuf> {
 }
 
 impl ContentStore {
-    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Fallible<Self> {
+    pub fn new(
+        local_path: impl AsRef<Path>,
+        config: &ConfigSet,
+        edenapi: Option<Box<dyn EdenApi>>,
+    ) -> Fallible<Self> {
         let cache_packs_path = get_cache_packs_path(config)?;
         let local_pack_store = Box::new(MutableDataPackStore::new(
             get_local_packs_path(local_path)?,
@@ -83,14 +91,25 @@ impl ContentStore {
         let mut datastore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
 
         datastore.add(shared_indexedlogdatastore);
-        datastore.add(shared_pack_store);
+        datastore.add(shared_pack_store.clone());
         datastore.add(local_pack_store.clone());
 
+        let remote_store: Option<Box<dyn RemoteDataStore>> = if let Some(edenapi) = edenapi {
+            let store = Box::new(EdenApiRemoteStore::new(edenapi, shared_pack_store.clone()));
+            datastore.add(store.clone());
+            Some(store)
+        } else {
+            None
+        };
+
         let local_mutabledatastore: Box<dyn MutableDeltaStore> = local_pack_store;
+        let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
 
         Ok(Self {
             datastore,
             local_mutabledatastore,
+            shared_mutabledatastore,
+            remote_store,
         })
     }
 }
@@ -113,9 +132,33 @@ impl DataStore for ContentStore {
     }
 }
 
+impl RemoteDataStore for ContentStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        if let Some(remote_store) = self.remote_store.as_ref() {
+            let missing = self.get_missing(&keys)?;
+            if missing == vec![] {
+                Ok(())
+            } else {
+                remote_store.prefetch(missing)
+            }
+        } else {
+            // There is no remote store, let's pretend everything is fine.
+            Ok(())
+        }
+    }
+}
+
 impl LocalStore for ContentStore {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         self.datastore.get_missing(keys)
+    }
+}
+
+impl Drop for ContentStore {
+    /// The shared store is a cache, so let's flush all pending data when the `ContentStore` goes
+    /// out of scope.
+    fn drop(&mut self) {
+        let _ = self.shared_mutabledatastore.flush();
     }
 }
 
@@ -137,10 +180,14 @@ impl MutableDeltaStore for ContentStore {
 mod tests {
     use super::*;
 
+    use std::collections::HashMap;
+
     use bytes::Bytes;
     use tempfile::TempDir;
 
     use types::testutil::*;
+
+    use crate::testutil::fake_edenapi;
 
     fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
         let mut config = ConfigSet::new();
@@ -167,7 +214,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let _store = ContentStore::new(&localdir, &config)?;
+        let _store = ContentStore::new(&localdir, &config, None)?;
         Ok(())
     }
 
@@ -177,7 +224,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -196,7 +243,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -207,7 +254,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
         drop(store);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
         assert!(store.get_delta(&k1).is_err());
         Ok(())
     }
@@ -218,7 +265,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -238,7 +285,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -250,8 +297,92 @@ mod tests {
         store.flush()?;
         drop(store);
 
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = ContentStore::new(&localdir, &config, None)?;
         assert_eq!(store.get_delta(&k1)?, delta);
+        Ok(())
+    }
+
+    #[test]
+    fn test_remote_store() -> Fallible<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let k = key("a", "1");
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+        let mut map = HashMap::new();
+        map.insert(k.clone(), data.clone());
+
+        let edenapi = fake_edenapi(map);
+
+        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        let data_get = store.get(&k)?;
+
+        assert_eq!(data_get, data);
+        Ok(())
+    }
+
+    #[test]
+    fn test_remote_store_cached() -> Fallible<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let k = key("a", "1");
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+        let mut map = HashMap::new();
+        map.insert(k.clone(), data.clone());
+
+        let edenapi = fake_edenapi(map);
+
+        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        store.get(&k)?;
+        drop(store);
+
+        let store = ContentStore::new(&localdir, &config, None)?;
+        let data_get = store.get(&k)?;
+
+        assert_eq!(data_get, data);
+
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "KeyError")]
+    fn test_not_in_remote_store() {
+        let cachedir = TempDir::new().unwrap();
+        let localdir = TempDir::new().unwrap();
+        let config = make_config(&cachedir);
+
+        let map = HashMap::new();
+        let edenapi = fake_edenapi(map);
+
+        let store = ContentStore::new(&localdir, &config, Some(edenapi)).unwrap();
+
+        let k = key("a", "1");
+        store.get(&k).unwrap();
+    }
+
+    #[test]
+    fn test_fetch_location() -> Fallible<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let k = key("a", "1");
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+        let mut map = HashMap::new();
+        map.insert(k.clone(), data.clone());
+
+        let edenapi = fake_edenapi(map);
+
+        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        store.get(&k)?;
+        store.shared_mutabledatastore.get(&k)?;
+        assert!(store.local_mutabledatastore.get(&k).is_err());
         Ok(())
     }
 }
