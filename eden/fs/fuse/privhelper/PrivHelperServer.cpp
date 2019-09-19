@@ -111,7 +111,7 @@ std::pair<int, int> determineMacOsVersion() {
   auto version = getSysCtlByName("kern.osproductversion", 64);
 
   int major, minor, patch;
-  if (sscanf(version.c_str(), "%d.%d.%d", &major, &minor, &patch) != 3) {
+  if (sscanf(version.c_str(), "%d.%d.%d", &major, &minor, &patch) < 2) {
     folly::throwSystemErrorExplicit(
         EINVAL, "failed to parse kern.osproductversion string ", version);
   }
