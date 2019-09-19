@@ -51,22 +51,20 @@ blobimport
 
   $ export COMMIT_DATE="1985-04-12T23:20:50.52Z"
 move things in fbsource
-  $ megarepo_tool move 1 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ RUST_BACKTRACE=1 megarepo_tool move 1 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changset resolved as: * (glob)
-  * Requesting the hg changeset (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(2d1c2ac8acbc245768933d05d23bd248cf6a16bb))) (glob)
-  * Marking changeset as public (glob)
-  * Done marking as public (glob)
+  * Marked as public * (glob)
+  * Generating an HG equivalent of * (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(2d1c2ac8acbc245768933d05d23bd248cf6a16bb))) (glob)
 
 move things in ovrsource
   $ megarepo_tool move 2 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changset resolved as: * (glob)
-  * Requesting the hg changeset (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4))) (glob)
-  * Marking changeset as public (glob)
-  * Done marking as public (glob)
+  * Marked as public * (glob)
+  * Generating an HG equivalent of * (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4))) (glob)
 
 merge things in both repos
   $ megarepo_tool merge 2d1c2ac8acbc245768933d05d23bd248cf6a16bb 3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4 user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
@@ -76,8 +74,9 @@ merge things in both repos
   * Done checking path conflicts (glob)
   * Creating a merge bonsai changeset with parents: * (glob)
   * Marked as public * (glob)
-  * Created *. Generating an HG equivalent (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(0383059155f1a61cdba994a8bb686c15f378794b))) (glob)
+  * Generating an HG equivalent of * (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(0383059155f1a61cdba994a8bb686c15f378794b))) (glob)
+
   $ mononoke_admin bookmarks set master 0383059155f1a61cdba994a8bb686c15f378794b
   * using repo "repo" repoid RepositoryId(0) (glob)
 
