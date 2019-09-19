@@ -578,7 +578,10 @@ pub mod mocks {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use quickcheck::quickcheck;
+
+    use crate::testutil::{path_component, path_component_buf, repo_path, repo_path_buf};
 
     #[test]
     fn test_repo_path_initialization_with_invalid_utf8() {
@@ -647,43 +650,22 @@ mod tests {
     #[test]
     fn test_repo_path_buf_push() {
         let mut repo_path_buf = RepoPathBuf::new();
-        repo_path_buf.push(RepoPath::from_str("one").unwrap());
-        assert_eq!(
-            repo_path_buf.as_repo_path(),
-            RepoPath::from_str("one").unwrap()
-        );
-        repo_path_buf.push(RepoPath::from_str("two").unwrap());
-        assert_eq!(
-            repo_path_buf.as_repo_path(),
-            RepoPath::from_str("one/two").unwrap()
-        );
+        repo_path_buf.push(repo_path("one"));
+        assert_eq!(repo_path_buf.as_repo_path(), repo_path("one"));
+        repo_path_buf.push(repo_path("two"));
+        assert_eq!(repo_path_buf.as_repo_path(), repo_path("one/two"));
     }
 
     #[test]
     fn test_repo_path_buf_pop() {
-        let mut repo_path_buf = RepoPathBuf::from_string(String::from("one/two/three")).unwrap();
-        assert_eq!(
-            repo_path_buf.pop(),
-            Some(PathComponentBuf::from_string(String::from("three")).unwrap())
-        );
-        assert_eq!(
-            repo_path_buf,
-            RepoPathBuf::from_string(String::from("one/two")).unwrap()
-        );
-        assert_eq!(
-            repo_path_buf.pop(),
-            Some(PathComponentBuf::from_string(String::from("two")).unwrap())
-        );
-        assert_eq!(
-            repo_path_buf,
-            RepoPathBuf::from_string(String::from("one")).unwrap()
-        );
-        assert_eq!(
-            repo_path_buf.pop(),
-            Some(PathComponentBuf::from_string(String::from("one")).unwrap())
-        );
-        assert_eq!(repo_path_buf, RepoPathBuf::new());
-        assert_eq!(repo_path_buf.pop(), None);
+        let mut out = repo_path_buf("one/two/three");
+        assert_eq!(out.pop(), Some(path_component_buf("three")));
+        assert_eq!(out, repo_path_buf("one/two"));
+        assert_eq!(out.pop(), Some(path_component_buf("two")));
+        assert_eq!(out, repo_path_buf("one"));
+        assert_eq!(out.pop(), Some(path_component_buf("one")));
+        assert_eq!(out, RepoPathBuf::new());
+        assert_eq!(out.pop(), None);
     }
 
     #[test]
@@ -748,19 +730,10 @@ mod tests {
 
     #[test]
     fn test_path_components() {
-        let mut iter = RepoPath::from_str("foo/bar/baz.txt").unwrap().components();
-        assert_eq!(
-            iter.next().unwrap(),
-            PathComponent::from_str("foo").unwrap()
-        );
-        assert_eq!(
-            iter.next().unwrap(),
-            PathComponent::from_str("bar").unwrap()
-        );
-        assert_eq!(
-            iter.next().unwrap(),
-            PathComponent::from_str("baz.txt").unwrap()
-        );
+        let mut iter = repo_path("foo/bar/baz.txt").components();
+        assert_eq!(iter.next().unwrap(), path_component("foo"));
+        assert_eq!(iter.next().unwrap(), path_component("bar"));
+        assert_eq!(iter.next().unwrap(), path_component("baz.txt"));
         assert!(iter.next().is_none());
     }
 
@@ -813,13 +786,10 @@ mod tests {
     #[test]
     fn test_parent() {
         assert_eq!(RepoPath::empty().parent(), None);
+        assert_eq!(repo_path("foo").parent(), Some(RepoPath::empty()));
         assert_eq!(
-            RepoPath::from_str("foo").unwrap().parent(),
-            Some(RepoPath::empty())
-        );
-        assert_eq!(
-            RepoPath::from_str("foo/bar/baz").unwrap().parent(),
-            Some(RepoPath::from_str("foo/bar").unwrap())
+            repo_path("foo/bar/baz").parent(),
+            Some(repo_path("foo/bar"))
         );
     }
 
@@ -827,26 +797,23 @@ mod tests {
     fn test_last_component() {
         assert_eq!(RepoPath::empty().last_component(), None);
         assert_eq!(
-            RepoPath::from_str("foo").unwrap().last_component(),
-            Some(PathComponent::from_str("foo").unwrap())
+            repo_path("foo").last_component(),
+            Some(path_component("foo"))
         );
         assert_eq!(
-            RepoPath::from_str("foo/bar/baz").unwrap().last_component(),
-            Some(PathComponent::from_str("baz").unwrap())
+            repo_path("foo/bar/baz").last_component(),
+            Some(path_component("baz"))
         );
     }
 
     #[test]
     fn test_parents_on_regular_path() {
-        let path = RepoPath::from_str("foo/bar/baz/file.txt").unwrap();
+        let path = repo_path("foo/bar/baz/file.txt");
         let mut iter = path.parents();
         assert_eq!(iter.next(), Some(RepoPath::empty()));
-        assert_eq!(iter.next(), Some(RepoPath::from_str("foo").unwrap()));
-        assert_eq!(iter.next(), Some(RepoPath::from_str("foo/bar").unwrap()));
-        assert_eq!(
-            iter.next(),
-            Some(RepoPath::from_str("foo/bar/baz").unwrap())
-        );
+        assert_eq!(iter.next(), Some(repo_path("foo")));
+        assert_eq!(iter.next(), Some(repo_path("foo/bar")));
+        assert_eq!(iter.next(), Some(repo_path("foo/bar/baz")));
         assert_eq!(iter.next(), None)
     }
 
@@ -857,25 +824,16 @@ mod tests {
 
     #[test]
     fn test_parents_and_components_in_parallel() {
-        let path = RepoPath::from_str("foo/bar/baz").unwrap();
+        let path = repo_path("foo/bar/baz");
         let mut iter = path.parents().zip(path.components());
         assert_eq!(
             iter.next(),
-            Some((RepoPath::empty(), PathComponent::from_str("foo").unwrap()))
+            Some((RepoPath::empty(), path_component("foo")))
         );
+        assert_eq!(iter.next(), Some((repo_path("foo"), path_component("bar"))));
         assert_eq!(
             iter.next(),
-            Some((
-                RepoPath::from_str("foo").unwrap(),
-                PathComponent::from_str("bar").unwrap()
-            ))
-        );
-        assert_eq!(
-            iter.next(),
-            Some((
-                RepoPath::from_str("foo/bar").unwrap(),
-                PathComponent::from_str("baz").unwrap()
-            ))
+            Some((repo_path("foo/bar"), path_component("baz")))
         );
         assert_eq!(iter.next(), None);
     }
@@ -891,31 +849,20 @@ mod tests {
         assert_eq!(RepoPath::empty().split_last_component(), None);
 
         assert_eq!(
-            RepoPath::from_str("foo").unwrap().split_last_component(),
-            Some((RepoPath::empty(), PathComponent::from_str("foo").unwrap()))
+            repo_path("foo").split_last_component(),
+            Some((RepoPath::empty(), path_component("foo")))
         );
 
         assert_eq!(
-            RepoPath::from_str("foo/bar/baz")
-                .unwrap()
-                .split_last_component(),
-            Some((
-                RepoPath::from_str("foo/bar").unwrap(),
-                PathComponent::from_str("baz").unwrap()
-            ))
+            repo_path("foo/bar/baz").split_last_component(),
+            Some((repo_path("foo/bar"), path_component("baz")))
         );
     }
 
     #[test]
     fn test_to_owned() {
         assert_eq!(RepoPath::empty().to_owned(), RepoPathBuf::new());
-        assert_eq!(
-            RepoPath::from_str("foo/bar").unwrap().to_owned(),
-            RepoPathBuf::from_string(String::from("foo/bar")).unwrap()
-        );
-        assert_eq!(
-            PathComponent::from_str("foo").unwrap().to_owned(),
-            PathComponentBuf::from_string(String::from("foo")).unwrap()
-        );
+        assert_eq!(repo_path("foo/bar").to_owned(), repo_path_buf("foo/bar"));
+        assert_eq!(path_component("foo").to_owned(), path_component_buf("foo"));
     }
 }
