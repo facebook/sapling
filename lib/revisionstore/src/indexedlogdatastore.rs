@@ -34,6 +34,7 @@ struct IndexedLogDataStoreInner {
     log: RotateLog,
 }
 
+#[derive(Clone)]
 pub struct IndexedLogDataStore {
     inner: Arc<RwLock<IndexedLogDataStoreInner>>,
 }

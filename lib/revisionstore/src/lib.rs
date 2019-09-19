@@ -5,6 +5,7 @@
 mod ancestors;
 mod contentstore;
 mod dataindex;
+mod edenapi;
 mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
