@@ -760,13 +760,7 @@ pub fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usi
 
 #[inline]
 pub fn get_u64<'a>(matches: &ArgMatches<'a>, key: &str, default: u64) -> u64 {
-    matches
-        .value_of(key)
-        .map(|val| {
-            val.parse::<u64>()
-                .expect(&format!("{} must be integer", key))
-        })
-        .unwrap_or(default)
+    get_u64_opt(matches, key).unwrap_or(default)
 }
 
 #[inline]
@@ -778,14 +772,16 @@ pub fn get_u64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<u64> {
 }
 
 #[inline]
+pub fn get_i32_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i32> {
+    matches.value_of(key).map(|val| {
+        val.parse::<i32>()
+            .expect(&format!("{} must be integer", key))
+    })
+}
+
+#[inline]
 pub fn get_i32<'a>(matches: &ArgMatches<'a>, key: &str, default: i32) -> i32 {
-    matches
-        .value_of(key)
-        .map(|val| {
-            val.parse::<i32>()
-                .expect(&format!("{} must be integer", key))
-        })
-        .unwrap_or(default)
+    get_i32_opt(matches, key).unwrap_or(default)
 }
 
 #[inline]

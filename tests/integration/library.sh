@@ -369,6 +369,10 @@ db.local_db_path = "$TESTTMP/disabled_repo"
 CONFIG
 }
 
+function setup_commitsyncmap {
+  cp "$TEST_FIXTURES/commitsyncmap.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
+}
+
 function setup_mononoke_repo_config {
   cd "$TESTTMP/mononoke-config" || exit
   local reponame="$1"

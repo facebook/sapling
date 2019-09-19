@@ -4,6 +4,7 @@ setup configuration
 
   $ REPOTYPE="blob:files"
   $ setup_common_config $REPOTYPE
+  $ setup_commitsyncmap
 
   $ cd $TESTTMP
 
@@ -23,7 +24,7 @@ setup hg server repo
   $ hg ci -m "fbsource-like commit"
   $ hg book -r . fbsourcemaster
 
--- create soem semblance of ovrsource
+-- create some semblance of ovrsource
   $ hg up null -q
   $ createfile fbcode/fbcodfile_ovrsource
   $ createfile fbobjc/fbobjcfile_ovrsource
@@ -50,23 +51,23 @@ blobimport
 
   $ export COMMIT_DATE="1985-04-12T23:20:50.52Z"
 move things in fbsource
-  $ megarepo_tool move fbsource 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ megarepo_tool move 1 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Requesting the hg changeset (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(ed8feccfa30ef541a15a1616e4e4db66ee7f91e2))) (glob)
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(2d1c2ac8acbc245768933d05d23bd248cf6a16bb))) (glob)
   * Marking changeset as public (glob)
   * Done marking as public (glob)
 
 move things in ovrsource
-  $ megarepo_tool move ovrsource 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ megarepo_tool move 2 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Requesting the hg changeset (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(88783bf39cdb412fbc8762d45bad226470b381c6))) (glob)
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4))) (glob)
   * Marking changeset as public (glob)
   * Done marking as public (glob)
 
 merge things in both repos
-  $ megarepo_tool merge ed8feccfa30ef541a15a1616e4e4db66ee7f91e2 88783bf39cdb412fbc8762d45bad226470b381c6 user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ megarepo_tool merge 2d1c2ac8acbc245768933d05d23bd248cf6a16bb 3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4 user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Creating a merge commit (glob)
   * Checking if there are any path conflicts (glob)
@@ -74,8 +75,8 @@ merge things in both repos
   * Creating a merge bonsai changeset with parents: * (glob)
   * Marked as public * (glob)
   * Created *. Generating an HG equivalent (glob)
-  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(fa2c1aadd78fd99ca6e45a0e1d8b5a80182cf908))) (glob)
-  $ mononoke_admin bookmarks set master fa2c1aadd78fd99ca6e45a0e1d8b5a80182cf908
+  * Hg changeset: HgChangesetId(HgNodeHash(Sha1(0383059155f1a61cdba994a8bb686c15f378794b))) (glob)
+  $ mononoke_admin bookmarks set master 0383059155f1a61cdba994a8bb686c15f378794b
   * using repo "repo" repoid RepositoryId(0) (glob)
 
 start mononoke server
