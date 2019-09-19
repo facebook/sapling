@@ -124,7 +124,7 @@ Test unshelve
   rebasing shelved changes
   rebasing 4:19f7fec7f80b "shelve changes to: c3" (tip)
   other [source] changed b which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   (5cad84d1|UNSHELVE)
   $ cmd hg unshelve --config "extensions.shelve=" --abort

@@ -675,7 +675,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    a: prompt deleted/changed -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   other [merge rev] changed a which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
    b: both created -> m (premerge)
   picked tool '* ../merge' for b (binary False symlink False changedelete False) (glob)
   merging b

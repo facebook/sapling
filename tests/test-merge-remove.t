@@ -104,7 +104,7 @@ Those who use force will lose
 
   $ hg merge -f
   other [merge rev] changed bar which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging foo1 and foo to foo1
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon

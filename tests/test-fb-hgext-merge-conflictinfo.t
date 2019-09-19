@@ -306,7 +306,7 @@ Test case 2: Source changed, dest deleted
   $ hg rebase -d 2 -s 1
   rebasing 1:ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --tool=internal:dumpjson --all
@@ -382,7 +382,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
   $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
   rebasing 1:ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --tool=internal:dumpjson --all

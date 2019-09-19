@@ -452,3 +452,14 @@ class InMemoryMergeConflictsError(Exception):
 
 class AbortMergeToolError(Abort):
     """User specified :abort and there was a merge conflict; abort the merge."""
+
+
+class RetryFileMerge(Exception):
+    """Retry file merge with different fcd."""
+
+    def __init__(self, fcd):
+        self.fcd = fcd
+
+        super(RetryFileMerge, self).__init__(
+            "ProgrammingError: RetryFileMerge should be handled"
+        )

@@ -153,47 +153,47 @@ Merge with remote
   local [working copy] changed content1_missing_missing_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [merge rev] changed content1_content2_content1_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_content3-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content1_content4-tracked
   merging content1_content2_content2_content1-tracked
   merging content1_content2_content2_content4-tracked
@@ -701,55 +701,55 @@ Re-resolve and check status
   $ hg resolve --unmark --all
   $ hg resolve --all --tool internal:merge3
   other [merge rev] changed content1_content2_content1_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content1_content4-tracked
   other [merge rev] changed content1_content2_content1_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content1_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content2_content1-tracked
   other [merge rev] changed content1_content2_content2_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content2_content4-tracked
   other [merge rev] changed content1_content2_content2_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content2_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content3_content1-tracked
   other [merge rev] changed content1_content2_content3_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content3_content3-tracked
   other [merge rev] changed content1_content2_content3_content3-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_content3_content4-tracked
   other [merge rev] changed content1_content2_content3_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_content3_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_missing_content1-tracked
   other [merge rev] changed content1_content2_missing_content1-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_content2-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging content1_content2_missing_content4-tracked
   other [merge rev] changed content1_content2_missing_content4-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_missing-tracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   other [merge rev] changed content1_content2_missing_missing-untracked which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   local [working copy] changed content1_missing_content1_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local [working copy] changed content1_missing_content3_content3-tracked which other [merge rev] deleted

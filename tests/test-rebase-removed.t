@@ -20,7 +20,7 @@
   rebasing 2:c84328973e26 "B"
   rebasing 3:2f1af6263db7 "A1" (tip)
   other [source] changed A which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

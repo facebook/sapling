@@ -91,7 +91,7 @@ Test disabling copy tracing
   > EOF
   rebasing 2:add3f11052fa "other" (tip)
   other [source] changed a which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? c
 
   $ cat b
   1

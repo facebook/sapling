@@ -562,13 +562,37 @@ class mergestate(object):
                 f.close()
             else:
                 wctx[dfile].remove(ignoremissing=True)
-            complete, r, deleted = filemerge.premerge(
-                self._repo, wctx, self._local, lfile, fcd, fco, fca, labels=self._labels
-            )
+            while True:
+                try:
+                    complete, r, deleted = filemerge.premerge(
+                        self._repo,
+                        wctx,
+                        self._local,
+                        lfile,
+                        fcd,
+                        fco,
+                        fca,
+                        labels=self._labels,
+                    )
+                    break
+                except error.RetryFileMerge as ex:
+                    fcd = ex.fcd
         else:
-            complete, r, deleted = filemerge.filemerge(
-                self._repo, wctx, self._local, lfile, fcd, fco, fca, labels=self._labels
-            )
+            while True:
+                try:
+                    complete, r, deleted = filemerge.filemerge(
+                        self._repo,
+                        wctx,
+                        self._local,
+                        lfile,
+                        fcd,
+                        fco,
+                        fca,
+                        labels=self._labels,
+                    )
+                    break
+                except error.RetryFileMerge as ex:
+                    fcd = ex.fcd
         if r is None:
             # no real conflict
             del self._state[dfile]

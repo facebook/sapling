@@ -32,9 +32,8 @@ sh % "hg ci -m dest"
 sh % "hg rebase -s 1 -d ." == r"""
     rebasing 1:812796267395 "2"
     other [source] changed 1 which local [dest] deleted
-    hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
-    Source control team is working on fixing this problem.
-    use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+    hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
+    use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
     unresolved conflicts (see hg resolve, then hg rebase --continue)
     [1]"""
 sh % "hg rebase --abort" == "rebase aborted"

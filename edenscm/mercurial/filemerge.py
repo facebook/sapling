@@ -61,9 +61,9 @@ _localchangedotherdeletedmsg = _(
 
 _otherchangedlocaldeletedmsg = _(
     "other%(o)s changed %(fd)s which local%(l)s deleted\n"
-    "use (c)hanged version, leave (d)eleted, or "
-    "leave (u)nresolved?"
-    "$$ &Changed $$ &Deleted $$ &Unresolved"
+    "use (c)hanged version, leave (d)eleted, "
+    "leave (u)nresolved, or input (r)enamed path?"
+    "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
 )
 
 
@@ -285,8 +285,23 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             index = ui.promptchoice(_localchangedotherdeletedmsg % prompts, 2)
             choice = ["local", "other", "unresolved"][index]
         elif fcd.isabsent():
+            # Rebase example:
+            #
+            #   D (mynode)
+            #   |
+            #   B C (fco)      # B renames a file. C changes that file.
+            #   |/             # run 'rebase -s C -d D' without copytracing
+            #   A (fca)        # fcd: absent (working copy)
+            #
+            # Prompt looks like:
+            #
+            # other [source] changed <file-path> which local [dest] deleted
+            # use (c)hanged version, leave (d)eleted, ...
+            #
+            # Here, 'other [source]' is a local draft commit, 'local [dest]'
+            # is the rebase destination, a public commit.
             index = ui.promptchoice(_otherchangedlocaldeletedmsg % prompts, 2)
-            choice = ["other", "local", "unresolved"][index]
+            choice = ["other", "local", "unresolved", "rename"][index]
         else:
             index = ui.promptchoice(
                 _(
@@ -305,6 +320,28 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
         elif choice == "unresolved":
             return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
+        elif choice == "rename":
+            destctx = fcd.changectx()
+            # fcd most likely a working copy that does not have a commit hash.
+            # therefore 'mynode' is used for 'destnode', not fcd.node()
+            destpath = ui.prompt(
+                _(
+                    "path '%(fd)s' in commit %(srcnode)s was renamed to [what path] in commit %(destnode)s ?"
+                )
+                % {"fd": fd, "srcnode": short(fco.node()), "destnode": short(mynode)},
+                default="",
+            )
+            if not destpath or destpath not in destctx:
+                ui.warn(
+                    _(
+                        "path '%(fd)s' does not exist in commit %(destnode)s - leave unresolved\n"
+                    )
+                    % {"fd": destpath, "destnode": short(mynode)}
+                )
+                return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
+            else:
+                fcd = destctx[destpath]
+                raise error.RetryFileMerge(fcd=fcd)
     except error.ResponseExpected:
         ui.write("\n")
         return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)

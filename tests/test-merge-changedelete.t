@@ -58,7 +58,7 @@ Non-interactive merge:
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
@@ -125,7 +125,7 @@ Interactive merge:
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? d
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? d
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 2 files merged, 0 files removed, 1 files unresolved
@@ -199,10 +199,10 @@ Interactive merge with bad input:
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? baz
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? baz
   unrecognized response
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? c
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 1 files merged, 1 files removed, 1 files unresolved
@@ -266,7 +266,7 @@ Interactive merge with not enough input:
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 1 files removed, 2 files unresolved
@@ -477,7 +477,7 @@ Force prompts with no input (should be similar to :fail)
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -536,7 +536,7 @@ Force prompts
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? u
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -593,7 +593,7 @@ Choose to merge all files
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
@@ -683,7 +683,7 @@ invocations.)
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
@@ -711,7 +711,7 @@ invocations.)
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
@@ -729,7 +729,7 @@ invocations.)
   local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
@@ -755,7 +755,7 @@ Non-interactive linear update
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -931,7 +931,7 @@ Force prompts with no input
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -981,7 +981,7 @@ Choose to merge all files
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -1037,7 +1037,7 @@ Test transitions between different merge tools
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   --- diff of status ---
   (status identical)
   
@@ -1064,7 +1064,7 @@ Test transitions between different merge tools
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   --- diff of status ---
   (status identical)
   
@@ -1081,7 +1081,7 @@ Test transitions between different merge tools
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
+  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   --- diff of status ---
   (status identical)
   
