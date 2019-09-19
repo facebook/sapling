@@ -32,6 +32,7 @@
 
 use std::{
     borrow::{Borrow, ToOwned},
+    cmp::Ordering,
     convert::AsRef,
     fmt, mem,
     ops::Deref,
@@ -41,7 +42,7 @@ use failure::{bail, Fallible};
 use serde_derive::{Deserialize, Serialize};
 
 /// An owned version of a `RepoPath`.
-#[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 #[derive(Serialize, Deserialize)]
 pub struct RepoPathBuf(String);
 
@@ -61,7 +62,7 @@ pub struct RepoPathBuf(String);
 /// characters and reseved words.
 ///
 /// It should be noted that `RepoPathBuf` and `RepoPath` implement `AsRef<RepoPath>`.
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Eq, PartialEq, Hash, Serialize)]
 pub struct RepoPath(str);
 
 /// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
@@ -146,6 +147,18 @@ impl RepoPathBuf {
             self.0.push(SEPARATOR);
         }
         self.0.push_str(s);
+    }
+}
+
+impl Ord for RepoPathBuf {
+    fn cmp(&self, other: &RepoPathBuf) -> Ordering {
+        self.as_repo_path().cmp(other.as_repo_path())
+    }
+}
+
+impl PartialOrd for RepoPathBuf {
+    fn partial_cmp(&self, other: &RepoPathBuf) -> Option<Ordering> {
+        self.as_repo_path().partial_cmp(other.as_repo_path())
     }
 }
 
@@ -271,6 +284,18 @@ impl RepoPath {
     /// Returns an iterator over the components of the path.
     pub fn components<'a>(&'a self) -> Components<'a> {
         Components::new(self)
+    }
+}
+
+impl Ord for RepoPath {
+    fn cmp(&self, other: &RepoPath) -> Ordering {
+        self.components().cmp(other.components())
+    }
+}
+
+impl PartialOrd for RepoPath {
+    fn partial_cmp(&self, other: &RepoPath) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -864,5 +889,21 @@ mod tests {
         assert_eq!(RepoPath::empty().to_owned(), RepoPathBuf::new());
         assert_eq!(repo_path("foo/bar").to_owned(), repo_path_buf("foo/bar"));
         assert_eq!(path_component("foo").to_owned(), path_component_buf("foo"));
+    }
+
+    #[test]
+    fn test_sort_order() {
+        assert!(RepoPath::empty() == RepoPath::empty());
+        assert!(RepoPath::empty() < repo_path("foo"));
+        assert!(repo_path("foo").cmp(RepoPath::empty()) == Ordering::Greater);
+        assert!(repo_path("foo/bar") < repo_path("foo/baz"));
+        assert!(repo_path("foo/bar") < repo_path("foo-bar"));
+        assert!(repo_path("foo/bar") < repo_path("foobar"));
+        assert!(repo_path("foo/bar") < repo_path("fooBar"));
+        assert!(repo_path("foo/bar") < repo_path("fooo/bar"));
+        assert!(repo_path("foo/bar") < repo_path("txt"));
+        assert!(repo_path("foo/bar") == repo_path("foo/bar"));
+        assert!(repo_path("foo/bar") > repo_path("bar"));
+        assert!(repo_path("foo/bar") > repo_path("foo"));
     }
 }
