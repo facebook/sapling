@@ -53,6 +53,7 @@ blobimport
 move things in fbsource
   $ megarepo_tool move 1 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changset resolved as: * (glob)
   * Requesting the hg changeset (glob)
   * Hg changeset: HgChangesetId(HgNodeHash(Sha1(2d1c2ac8acbc245768933d05d23bd248cf6a16bb))) (glob)
   * Marking changeset as public (glob)
@@ -61,6 +62,7 @@ move things in fbsource
 move things in ovrsource
   $ megarepo_tool move 2 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changset resolved as: * (glob)
   * Requesting the hg changeset (glob)
   * Hg changeset: HgChangesetId(HgNodeHash(Sha1(3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4))) (glob)
   * Marking changeset as public (glob)
