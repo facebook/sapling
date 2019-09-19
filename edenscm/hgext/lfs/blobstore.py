@@ -142,6 +142,7 @@ class _gitlfsremote(object):
         Return decoded JSON object like {'objects': [{'oid': '', 'size': 1}]}
         See https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
         """
+        self.ui.log("lfs_url", lfs_url=self.baseurl)
         objects = [{"oid": p.oid(), "size": p.size()} for p in pointers]
         requestdata = json.dumps({"objects": objects, "operation": action})
         batchreq = util.urlreq.request(
