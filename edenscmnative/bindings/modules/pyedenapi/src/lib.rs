@@ -137,12 +137,12 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = get_deltastore(py, store)?;
+        let store = get_deltastore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
-            client.get_files(keys, &mut store, progress_fn)
+            client.get_files(keys, &store, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
@@ -159,12 +159,12 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = get_historystore(py, store)?;
+        let store = get_historystore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
-            client.get_history(keys, &mut store, depth, progress_fn)
+            client.get_history(keys, &store, depth, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
@@ -180,12 +180,12 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = get_deltastore(py, store)?;
+        let store = get_deltastore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
-            client.get_trees(keys, &mut store, progress_fn)
+            client.get_trees(keys, &store, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
@@ -210,12 +210,12 @@ py_class!(class client |py| {
             .map(|node| make_node_from_bytes(py, &node))
             .collect::<PyResult<Vec<_>>>()?;
 
-        let mut store = get_deltastore(py, store)?;
+        let store = get_deltastore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
-            client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, &mut store, progress_fn)
+            client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, &store, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)

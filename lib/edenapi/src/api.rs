@@ -24,7 +24,7 @@ pub trait EdenApi: Send + Sync {
     fn get_files(
         &self,
         keys: Vec<Key>,
-        store: &mut dyn MutableDeltaStore,
+        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 
@@ -36,7 +36,7 @@ pub trait EdenApi: Send + Sync {
     fn get_history(
         &self,
         keys: Vec<Key>,
-        store: &mut dyn MutableHistoryStore,
+        store: &dyn MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
@@ -49,7 +49,7 @@ pub trait EdenApi: Send + Sync {
     fn get_trees(
         &self,
         keys: Vec<Key>,
-        store: &mut dyn MutableDeltaStore,
+        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 
@@ -62,7 +62,7 @@ pub trait EdenApi: Send + Sync {
         mfnodes: Vec<Node>,
         basemfnodes: Vec<Node>,
         depth: Option<usize>,
-        store: &mut dyn MutableDeltaStore,
+        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 }
