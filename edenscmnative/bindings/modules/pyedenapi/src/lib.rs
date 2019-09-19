@@ -5,6 +5,7 @@
 
 use std::str;
 
+use bytes::Bytes;
 use cpython::*;
 
 use cpython_failure::ResultPyErrExt;
@@ -14,7 +15,7 @@ use edenapi::{
 };
 use encoding::local_bytes_to_path;
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
-use revisionstore::{MutableDeltaStore, MutableHistoryStore};
+use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 mod exceptions {
@@ -80,6 +81,30 @@ fn get_historystore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableHist
     }
 }
 
+fn add_data(
+    py: Python,
+    store: &dyn MutableDeltaStore,
+    entries: impl Iterator<Item = (Key, Bytes)>,
+) -> PyResult<()> {
+    for entry in entries {
+        let key = entry.0.clone();
+        let data = entry.1;
+        let metadata = Metadata {
+            size: Some(data.len() as u64),
+            flags: None,
+        };
+        let delta = Delta {
+            data,
+            base: None,
+            key,
+        };
+        store
+            .add(&delta, &metadata)
+            .map_err(|e| into_exception(py, e.context(ApiErrorKind::Store).into()))?;
+    }
+    Ok(())
+}
+
 py_class!(class client |py| {
     data inner: EdenApiCurlClient;
 
@@ -141,9 +166,11 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        let stats = py.allow_threads(move || {
-            client.get_files(keys, &store, progress_fn)
+        let (data_iter, stats) = py.allow_threads(move || {
+            client.get_files(keys, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
+
+        add_data(py, &store, data_iter)?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -163,9 +190,13 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        let stats = py.allow_threads(move || {
-            client.get_history(keys, &store, depth, progress_fn)
+        let (data_iter, stats) = py.allow_threads(move || {
+            client.get_history(keys, depth, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
+
+        for entry in data_iter {
+            store.add_entry(&entry).map_err(|e| into_exception(py, e.context(ApiErrorKind::Store).into()))?;
+        }
 
         downloadstats::create_instance(py, stats)
     }
@@ -184,9 +215,11 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        let stats = py.allow_threads(move || {
-            client.get_trees(keys, &store, progress_fn)
+        let (data_iter, stats) = py.allow_threads(move || {
+            client.get_trees(keys, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
+
+        add_data(py, &store, data_iter)?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -214,9 +247,11 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        let stats = py.allow_threads(move || {
-            client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, &store, progress_fn)
+        let (data_iter, stats) = py.allow_threads(move || {
+            client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, progress_fn)
         }).map_err(|e| into_exception(py, e))?;
+
+        add_data(py, &store, data_iter)?;
 
         downloadstats::create_instance(py, stats)
     }

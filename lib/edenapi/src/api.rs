@@ -1,7 +1,8 @@
 // Copyright Facebook, Inc. 2019
 
-use revisionstore::{MutableDeltaStore, MutableHistoryStore};
-use types::{Key, Node, RepoPathBuf};
+use bytes::Bytes;
+
+use types::{HistoryEntry, Key, Node, RepoPathBuf};
 
 use crate::errors::ApiResult;
 use crate::progress::ProgressFn;
@@ -24,9 +25,8 @@ pub trait EdenApi: Send + Sync {
     fn get_files(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats>;
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)>;
 
     /// Fetch the history of the specified files from the API server and write
     /// them to the store.  Optionally takes a callback to report progress.
@@ -36,10 +36,9 @@ pub trait EdenApi: Send + Sync {
     fn get_history(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats>;
+    ) -> ApiResult<(Box<dyn Iterator<Item = HistoryEntry>>, DownloadStats)>;
 
     /// Fetch the specified trees from the API server and write them to the store.
     /// Optionally takes a callback to report progress.
@@ -49,9 +48,8 @@ pub trait EdenApi: Send + Sync {
     fn get_trees(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats>;
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)>;
 
     /// Fetch trees from the server in a manner similar to Mercurial's
     /// "gettreepack" wire protocol command. Intended to be used by
@@ -62,9 +60,8 @@ pub trait EdenApi: Send + Sync {
         mfnodes: Vec<Node>,
         basemfnodes: Vec<Node>,
         depth: Option<usize>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats>;
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)>;
 }
 
 // Statically ensure that the EdenApi trait is object safe using

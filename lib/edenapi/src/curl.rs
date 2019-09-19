@@ -17,7 +17,6 @@ use url::Url;
 
 use driver::MultiDriver;
 use handler::Collector;
-use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, HistoryEntry, Key, Node, RepoPathBuf, WireHistoryEntry,
@@ -159,19 +158,17 @@ impl EdenApi for EdenApiCurlClient {
     fn get_files(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats> {
-        self.get_data(paths::DATA, keys, store, progress)
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
+        self.get_data(paths::DATA, keys, progress)
     }
 
     fn get_history(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats> {
+    ) -> ApiResult<(Box<dyn Iterator<Item = HistoryEntry>>, DownloadStats)> {
         log::debug!("Fetching {} files", keys.len());
 
         let mut url = self.repo_base_url()?.join(paths::HISTORY)?;
@@ -193,6 +190,7 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut multi = self.multi.lock();
 
+        let mut responses = Vec::new();
         let mut num_responses = 0;
         let mut num_entries = 0;
         let stats = if self.stream_history {
@@ -207,7 +205,7 @@ impl EdenApi for EdenApiCurlClient {
                     for (path, entry) in response {
                         num_entries += 1;
                         let entry = HistoryEntry::from_wire(entry, path);
-                        store.add_entry(&entry).context(ApiErrorKind::Store)?;
+                        responses.push(entry);
                     }
                     Ok(())
                 },
@@ -223,7 +221,7 @@ impl EdenApi for EdenApiCurlClient {
                     num_responses += 1;
                     for entry in response.into_iter().flatten() {
                         num_entries += 1;
-                        store.add_entry(&entry).context(ApiErrorKind::Store)?;
+                        responses.push(entry);
                     }
                     Ok(())
                 },
@@ -235,16 +233,15 @@ impl EdenApi for EdenApiCurlClient {
             num_responses,
             num_entries
         );
-        Ok(stats)
+        Ok((Box::new(responses.into_iter()), stats))
     }
 
     fn get_trees(
         &self,
         keys: Vec<Key>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats> {
-        self.get_data(paths::TREES, keys, store, progress)
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
+        self.get_data(paths::TREES, keys, progress)
     }
 
     fn prefetch_trees(
@@ -253,9 +250,8 @@ impl EdenApi for EdenApiCurlClient {
         mfnodes: Vec<Node>,
         basemfnodes: Vec<Node>,
         depth: Option<usize>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats> {
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
         let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
         if self.stream_trees {
             url.set_query(Some("stream=true"));
@@ -264,7 +260,8 @@ impl EdenApi for EdenApiCurlClient {
         let creds = self.creds.as_ref();
         let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
 
-        if self.stream_trees {
+        let mut responses = Vec::new();
+        let stats = if self.stream_trees {
             multi_request_threaded(
                 self.multi.clone(),
                 &url,
@@ -272,10 +269,10 @@ impl EdenApi for EdenApiCurlClient {
                 requests,
                 progress,
                 |entries| {
-                    let response = DataResponse::new(entries);
-                    add_data_response(store, response, self.validate)
+                    responses.push(entries);
+                    Ok(())
                 },
-            )
+            )?
         } else {
             multi_request_threaded(
                 self.multi.clone(),
@@ -283,14 +280,27 @@ impl EdenApi for EdenApiCurlClient {
                 creds,
                 requests,
                 progress,
-                |responses| {
-                    for response in responses {
-                        add_data_response(store, response, self.validate)?;
+                |multi_responses: Vec<DataResponse>| {
+                    for response in multi_responses {
+                        responses.push(response.into_iter().collect());
                     }
                     Ok(())
                 },
-            )
-        }
+            )?
+        };
+
+        let iter = responses
+            .into_iter()
+            .flatten()
+            .map(|entry| {
+                entry
+                    .data(self.validate)
+                    .context(ApiErrorKind::BadResponse)
+                    .map_err(|e| e.into())
+                    .map(|data| (entry.key().clone(), data))
+            })
+            .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;
+        Ok((Box::new(iter.into_iter()), stats))
     }
 }
 
@@ -304,9 +314,8 @@ impl EdenApiCurlClient {
         &self,
         path: &str,
         keys: Vec<Key>,
-        store: &dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> ApiResult<DownloadStats> {
+    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
         log::debug!("Fetching data for {} keys", keys.len());
 
         let mut url = self.repo_base_url()?.join(path)?;
@@ -326,6 +335,7 @@ impl EdenApiCurlClient {
             requests.push(DataRequest { keys });
         }
 
+        let mut responses = Vec::new();
         let mut num_responses = 0;
         let mut num_entries = 0;
         let stats = if self.stream_data {
@@ -338,8 +348,8 @@ impl EdenApiCurlClient {
                 |entries: Vec<DataEntry>| {
                     num_responses += 1;
                     num_entries += entries.len();
-                    let response = DataResponse::new(entries);
-                    add_data_response(store, response, self.validate)
+                    responses.push(entries);
+                    Ok(())
                 },
             )?
         } else {
@@ -349,11 +359,11 @@ impl EdenApiCurlClient {
                 self.creds.as_ref(),
                 requests,
                 progress,
-                |responses: Vec<DataResponse>| {
-                    for response in responses {
+                |multi_responses: Vec<DataResponse>| {
+                    for response in multi_responses {
                         num_responses += 1;
                         num_entries += response.entries.len();
-                        add_data_response(store, response, self.validate)?;
+                        responses.push(response.into_iter().collect());
                     }
                     Ok(())
                 },
@@ -365,7 +375,19 @@ impl EdenApiCurlClient {
             num_responses,
             num_entries
         );
-        Ok(stats)
+
+        let iter = responses
+            .into_iter()
+            .flatten()
+            .map(|entry| {
+                entry
+                    .data(self.validate)
+                    .context(ApiErrorKind::BadResponse)
+                    .map_err(|e| e.into())
+                    .map(|data| (entry.key().clone(), data))
+            })
+            .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;
+        Ok((Box::new(iter.into_iter()), stats))
     }
 }
 
@@ -525,31 +547,5 @@ fn prepare_cbor_post<H, R: Serialize>(
     headers.append("Content-Type: application/cbor")?;
     easy.http_headers(headers)?;
 
-    Ok(())
-}
-
-fn add_delta(store: &dyn MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<()> {
-    let metadata = Metadata {
-        size: Some(data.len() as u64),
-        flags: None,
-    };
-    let delta = Delta {
-        data,
-        base: None,
-        key,
-    };
-    store.add(&delta, &metadata).context(ApiErrorKind::Store)?;
-    Ok(())
-}
-
-fn add_data_response(
-    store: &dyn MutableDeltaStore,
-    response: DataResponse,
-    validate: bool,
-) -> ApiResult<()> {
-    for entry in response {
-        let data = entry.data(validate).context(ApiErrorKind::BadResponse)?;
-        add_delta(store, entry.key().clone(), data)?;
-    }
     Ok(())
 }
