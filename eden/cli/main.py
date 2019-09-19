@@ -59,18 +59,14 @@ subcmd = subcmd_mod.Decorator()
 # For a non-unix system (like Windows), we will define our own error codes.
 try:
     EX_OK = os.EX_OK
-except AttributeError:  # On a non-unix system
-    EX_OK = 0
-
-try:
+    EX_USAGE = os.EX_USAGE
+    EX_SOFTWARE = os.EX_SOFTWARE
     EX_OSFILE = os.EX_OSFILE
 except AttributeError:  # On a non-unix system
-    EX_OSFILE = 2
-
-try:
-    EX_SOFTWARE = os.EX_SOFTWARE
-except AttributeError:  # On a non-unix system
-    EX_SOFTWARE = 3
+    EX_OK = 0
+    EX_USAGE = 64
+    EX_SOFTWARE = 70
+    EX_OSFILE = 72
 
 
 def infer_client_from_cwd(instance: EdenInstance, clientname: str) -> str:
@@ -1203,6 +1199,11 @@ class StartCmd(Subcmd):
             help="Only start edenfs if there are Eden checkouts configured.",
         )
         parser.add_argument(
+            "--if-not-running",
+            action="store_true",
+            help="Exit successfully if EdenFS is already running.",
+        )
+        parser.add_argument(
             "--foreground",
             "-F",
             action="store_true",
@@ -1243,6 +1244,11 @@ class StartCmd(Subcmd):
         except ValueError:
             pass
 
+        if args.takeover and args.if_not_running:
+            raise config_mod.UsageError(
+                "the --takeover and --if-not-running flags cannot be combined"
+            )
+
         instance = get_eden_instance(args)
         if args.if_necessary and not instance.get_mount_paths():
             print("No Eden mount points configured.")
@@ -1252,8 +1258,11 @@ class StartCmd(Subcmd):
         if not args.takeover:
             health_info = instance.check_health()
             if health_info.is_healthy():
-                msg = "edenfs is already running (pid {})".format(health_info.pid)
-                raise EdenStartError(msg)
+                msg = f"EdenFS is already running (pid {health_info.pid})"
+                if args.if_not_running:
+                    print(msg)
+                    return 0
+                raise subcmd_mod.CmdError(msg)
 
         if instance.should_use_experimental_systemd_mode():
             if args.foreground or args.gdb:
@@ -1797,6 +1806,9 @@ def main() -> int:
     except subcmd_mod.CmdError as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_SOFTWARE
+    except config_mod.UsageError as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return EX_USAGE
     return return_code
 
 

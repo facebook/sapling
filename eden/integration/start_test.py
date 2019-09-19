@@ -79,6 +79,29 @@ class StartTest(testcase.EdenTestCase):
         # it needs to be shut down.
         self.eden.run_cmd("stop")
 
+    def test_start_if_not_running(self) -> None:
+        # EdenFS is already running when the test starts, so
+        # `eden start --if-not-running` should have nothing to do
+        output = self.eden.run_cmd("start", "--if-not-running", "--", "--allowRoot")
+        self.assertRegex(output, r"EdenFS is already running \(pid [0-9]+\)\n")
+        self.assertTrue(self.eden.is_healthy())
+
+        # `eden start` should fail without `--if-not-running`
+        proc = self.eden.run_unchecked(
+            "start", stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertRegex(
+            proc.stderr, r"error: EdenFS is already running \(pid [0-9]+\)\n"
+        )
+        self.assertEqual("", proc.stdout)
+
+        # If we stop eden, `eden start --if-not-running` should start it
+        self.eden.run_cmd("stop")
+        self.assertFalse(self.eden.is_healthy())
+        self.eden.run_cmd("start", "--if-not-running", "--", "--allowRoot")
+        self.assertTrue(self.eden.is_healthy())
+
 
 @testcase.eden_repo_test
 class StartWithRepoTest(
@@ -325,8 +348,8 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
     def test_eden_start_fails_if_edenfs_is_already_running(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
             start_process = self.spawn_start()
-            start_process.expect_exact(f"edenfs is already running (pid {daemon_pid})")
-            self.assert_process_fails(start_process, 1)
+            start_process.expect_exact(f"EdenFS is already running (pid {daemon_pid})")
+            self.assert_process_fails(start_process)
 
     def test_eden_start_fails_if_edenfs_fails_during_startup(self) -> None:
         start_process = self.spawn_start(extra_args=["--", "--failDuringStartup"])
