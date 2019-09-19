@@ -36,9 +36,18 @@ pub trait DataStore: LocalStore {
     fn get_delta(&self, key: &Key) -> Fallible<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
-    fn prefetch(&self, _keys: Vec<Key>) -> Fallible<()> {
-        Ok(())
-    }
+}
+
+/// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
+/// taken to avoid serially fetching data and instead data should be fetched in bulk via the
+/// `prefetch` API.
+pub trait RemoteDataStore {
+    /// Attempt to bring the data corresponding to the passed in keys to a local store.
+    ///
+    /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
+    /// everything that was asked. On a higher level store, such as the `ContentStore`, this will
+    /// avoid fetching data that is already present locally.
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()>;
 }
 
 pub trait MutableDeltaStore: DataStore {
@@ -60,6 +69,14 @@ impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
     }
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         T::get_meta(self, key)
+    }
+}
+
+/// Implement `RemoteDataStore` for all types that can be `Deref` into a `RemoteDataStore`. This
+/// includes all the smart pointers like `Box`, `Rc`, `Arc`.
+impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T>> RemoteDataStore for U {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        T::prefetch(self, keys)
     }
 }
 

@@ -18,7 +18,7 @@ use manifest::{self, DiffType, FileMetadata, FileType, FsNode, Manifest};
 use pathmatcher::{AlwaysMatcher, Matcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
-use revisionstore::DataStore;
+use revisionstore::{DataStore, RemoteDataStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 struct ManifestStore<T> {
@@ -31,7 +31,7 @@ impl<T> ManifestStore<T> {
     }
 }
 
-impl<T: DataStore> manifest::TreeStore for ManifestStore<T> {
+impl<T: DataStore + RemoteDataStore> manifest::TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
         let key = Key::new(path.to_owned(), node);
         self.underlying.get(&key).map(|data| Bytes::from(data))

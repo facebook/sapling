@@ -8,7 +8,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{DataStore, Delta, LocalStore, Metadata};
+use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};
 use types::Key;
 
 use crate::pyerror::pyerr_to_error;
@@ -103,7 +103,9 @@ impl DataStore for PythonDataStore {
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
         to_metadata(py, &py_dict).map_err(|e| pyerr_to_error(py, e))
     }
+}
 
+impl RemoteDataStore for PythonDataStore {
     fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
