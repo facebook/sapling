@@ -279,7 +279,7 @@ class EdenServer : private TakeoverHandler {
     return edenDir_.getPath();
   }
 
-  const std::shared_ptr<ServerState>& getServerState() {
+  const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
   }
 
