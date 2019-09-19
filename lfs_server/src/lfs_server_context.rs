@@ -50,15 +50,17 @@ pub struct LfsServerContext {
 #[derive(Clone, StateData)]
 pub struct LoggingContext {
     pub repository: String,
+    pub method: &'static str,
     pub error_msg: Option<String>,
     pub response_size: Option<u64>,
     pub duration: Option<Duration>,
 }
 
 impl LoggingContext {
-    pub fn new(repository: String) -> Self {
+    pub fn new(repository: String, method: &'static str) -> Self {
         Self {
             repository,
+            method,
             error_msg: None,
             response_size: None,
             duration: None,
@@ -131,8 +133,12 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub fn instantiate(state: &mut State, repository: String) -> Result<Self, Error> {
-        state.put(LoggingContext::new(repository.clone()));
+    pub fn instantiate(
+        state: &mut State,
+        repository: String,
+        method: &'static str,
+    ) -> Result<Self, Error> {
+        state.put(LoggingContext::new(repository.clone(), method));
         let ctx = LfsServerContext::borrow_from(&state);
         ctx.request(repository)
     }

@@ -7,9 +7,9 @@
 use futures::Future;
 use gotham::handler::HandlerFuture;
 use gotham::middleware::Middleware;
-use gotham::state::{FromState, State};
+use gotham::state::State;
 use gotham_derive::NewMiddleware;
-use hyper::{StatusCode, Uri};
+use hyper::StatusCode;
 use stats::{define_stats, DynamicHistogram, DynamicTimeseries};
 use time_ext::DurationExt;
 
@@ -34,14 +34,10 @@ impl OdsMiddleware {
 }
 
 fn log_stats(state: &State, status: &StatusCode) -> Option<()> {
-    let duration = state.try_borrow::<LoggingContext>()?.duration?;
+    let log_ctx = state.try_borrow::<LoggingContext>()?;
+    let duration = log_ctx.duration?;
 
-    let uri = Uri::try_borrow_from(&state)?;
-    let mut path_parts = uri.path().trim_start_matches("/").split("/");
-    let repo = path_parts.next()?;
-    let method = path_parts.next()?;
-
-    let repo_and_method = format!("{}.{}", repo, method);
+    let repo_and_method = format!("{}.{}", log_ctx.repository, log_ctx.method);
 
     STATS::duration.add_value(
         duration.as_millis_unchecked() as i64,

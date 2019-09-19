@@ -53,6 +53,7 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
 
     if let Some(log_ctx) = state.try_take::<LoggingContext>() {
         scuba.add("repository", log_ctx.repository);
+        scuba.add("method", log_ctx.method);
 
         if let Some(err_msg) = log_ctx.error_msg {
             scuba.add("error_msg", err_msg);

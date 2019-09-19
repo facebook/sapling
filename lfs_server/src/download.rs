@@ -18,6 +18,8 @@ use crate::errors::ErrorKind;
 use crate::http::{HttpError, StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RequestContext;
 
+const METHOD: &str = "download";
+
 define_stats! {
     prefix ="mononoke.lfs.download";
     size_bytes: histogram(1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
@@ -35,7 +37,8 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         content_id,
     } = state.take();
 
-    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
+    let ctx =
+        RequestContext::instantiate(state, repository.clone(), METHOD).map_err(HttpError::e400)?;
 
     let content_id = ContentId::from_str(&content_id)
         .chain_err(ErrorKind::InvalidContentId)

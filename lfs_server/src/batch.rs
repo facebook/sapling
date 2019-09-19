@@ -29,6 +29,8 @@ use crate::protocol::{
     ResponseObject, Transfer,
 };
 
+const METHOD: &str = "batch";
+
 define_stats! {
     prefix ="mononoke.lfs.batch";
     download_redirect_internal: timeseries(RATE, SUM),
@@ -311,7 +313,8 @@ async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<Res
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
 
-    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
+    let ctx =
+        RequestContext::instantiate(state, repository.clone(), METHOD).map_err(HttpError::e400)?;
 
     let body = Body::take_from(state)
         .compat()

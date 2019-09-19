@@ -44,6 +44,7 @@ define_stats! {
 
 // Small buffers for Filestore & Dewey
 const BUFFER_SIZE: usize = 5;
+const METHOD: &str = "upload";
 
 // NOTE: We don't deserialize things beyond a String form, in order to report errors in our
 // controller, not in routing.
@@ -142,7 +143,8 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         size,
     } = state.take();
 
-    let ctx = RequestContext::instantiate(state, repository.clone()).map_err(HttpError::e400)?;
+    let ctx =
+        RequestContext::instantiate(state, repository.clone(), METHOD).map_err(HttpError::e400)?;
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
