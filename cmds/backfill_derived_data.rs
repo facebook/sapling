@@ -16,7 +16,7 @@ use changesets::{
 };
 use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
+use cmdlib::{args, helpers, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, RegenerateMapping};
@@ -232,7 +232,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .to_string();
             args::open_repo(fb, &logger, &matches)
                 .and_then(move |repo| {
-                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_single(ctx, repo, csid, derived_data_type))
                 })
                 .boxify()

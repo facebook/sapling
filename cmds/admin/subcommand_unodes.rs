@@ -9,7 +9,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::{BonsaiDerived, RegenerateMapping};
 use failure::{err_msg, Error};
@@ -105,7 +105,7 @@ pub fn subcommand_unodes(
             (repo, path)
                 .into_future()
                 .and_then(move |(repo, path)| {
-                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_tree(ctx, repo, csid, path))
                 })
                 .from_err()
@@ -121,7 +121,7 @@ pub fn subcommand_unodes(
             cloned!(ctx);
             repo.into_future()
                 .and_then(move |repo| {
-                    args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_verify(ctx, repo, csid, limit))
                 })
                 .from_err()
@@ -133,7 +133,7 @@ pub fn subcommand_unodes(
                 .and_then({
                     cloned!(ctx);
                     move |repo| {
-                        args::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                        helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                             .map(move |csid| (ctx, repo, csid))
                     }
                 })

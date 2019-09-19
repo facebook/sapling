@@ -10,7 +10,7 @@ use ascii::AsciiString;
 use blobimport_lib;
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::{format_err, Result, SlogKVError};
 use fbinit::FacebookInit;
@@ -146,7 +146,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     ::std::process::exit(1);
                 }
             })
-            .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
+            .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))
         });
 
     let mut runtime = tokio::runtime::Runtime::new()?;

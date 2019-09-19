@@ -1340,7 +1340,7 @@ fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
         db_put_dist: Normal::new(0.002, 0.001),
         db_get_dist: Normal::new(0.002, 0.001),
     };
-    cmdlib::args::init_cachelib_from_settings(fb, Default::default())?;
+    cmdlib::helpers::init_cachelib_from_settings(fb, Default::default())?;
     let repo = new_benchmark_repo(fb, delay_settings)?;
 
     let mut rng = XorShiftRng::seed_from_u64(1);
