@@ -22,7 +22,7 @@ setup hg server repo
   $ createfile arvr/arvrfile_fbsource
   $ createfile third-party/thirdpartyfile_fbsource
   $ hg ci -m "fbsource-like commit"
-  $ hg book -r . fbsourcemaster
+  $ hg book -r . fbsource_master
 
 -- create some semblance of ovrsource
   $ hg up null -q
@@ -35,11 +35,11 @@ setup hg server repo
   $ createfile Software/softwarefile_ovrsource
   $ createfile Research/researchfile_ovrsource
   $ hg ci -m "ovrsource-like commit"
-  $ hg book -r . ovrsourcemaster
+  $ hg book -r . ovrsource_master
 
   $ hg log -T "{node} {bookmarks}\n" -r "all()"
-  4da689e6447cf99bbc121eaa7b05ea1504cf2f7c fbsourcemaster
-  4d79e7d65a781c6c80b3ee4faf63452e8beafa97 ovrsourcemaster
+  4da689e6447cf99bbc121eaa7b05ea1504cf2f7c fbsource_master
+  4d79e7d65a781c6c80b3ee4faf63452e8beafa97 ovrsource_master
 
   $ cd $TESTTMP
 
@@ -49,36 +49,41 @@ setup repo-pull
 blobimport
   $ blobimport repo-hg/.hg repo
 
-  $ export COMMIT_DATE="1985-04-12T23:20:50.52Z"
+  $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
 move things in fbsource
-  $ RUST_BACKTRACE=1 megarepo_tool move 1 4da689e6447cf99bbc121eaa7b05ea1504cf2f7c user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ RUST_BACKTRACE=1 megarepo_tool move 1 fbsource_master user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark fbsource_move
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changset resolved as: * (glob)
+  * changeset resolved as: * (glob)
   * Marked as public * (glob)
+  * Setting bookmark BookmarkName { bookmark: "fbsource_move" } to point to * (glob)
+  * Setting bookmark BookmarkName { bookmark: "fbsource_move" } finished (glob)
   * Generating an HG equivalent of * (glob)
-  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(2d1c2ac8acbc245768933d05d23bd248cf6a16bb))) (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
 
 move things in ovrsource
-  $ megarepo_tool move 2 4d79e7d65a781c6c80b3ee4faf63452e8beafa97 user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ megarepo_tool move 2 ovrsource_master user "ovrsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark ovrsource_move
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changset resolved as: * (glob)
+  * changeset resolved as: * (glob)
   * Marked as public * (glob)
+  * Setting bookmark BookmarkName { bookmark: "ovrsource_move" } to point to * (glob)
+  * Setting bookmark BookmarkName { bookmark: "ovrsource_move" } finished (glob)
   * Generating an HG equivalent of * (glob)
-  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4))) (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
 
 merge things in both repos
-  $ megarepo_tool merge 2d1c2ac8acbc245768933d05d23bd248cf6a16bb 3c5f72c6d1ed24bd0914ff5ecd96b98f216002b4 user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE"
+  $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: * (glob)
+  * changeset resolved as: * (glob)
   * Creating a merge commit (glob)
   * Checking if there are any path conflicts (glob)
   * Done checking path conflicts (glob)
   * Creating a merge bonsai changeset with parents: * (glob)
   * Marked as public * (glob)
+  * Setting bookmark BookmarkName { bookmark: "master" } to point to * (glob)
+  * Setting bookmark BookmarkName { bookmark: "master" } finished (glob)
   * Generating an HG equivalent of * (glob)
-  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(0383059155f1a61cdba994a8bb686c15f378794b))) (glob)
-
-  $ mononoke_admin bookmarks set master 0383059155f1a61cdba994a8bb686c15f378794b
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
 
 start mononoke server
   $ mononoke

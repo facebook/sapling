@@ -838,7 +838,7 @@ pub fn csid_resolve(
             move |_| ChangesetId::from_str(&hash_or_bookmark)
         })
         .inspect(move |csid| {
-            info!(ctx.logger(), "changset resolved as: {:?}", csid);
+            info!(ctx.logger(), "changeset resolved as: {:?}", csid);
         })
         .map_err(move |_| {
             format_err!(
