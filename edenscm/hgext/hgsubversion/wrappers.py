@@ -267,6 +267,9 @@ def push(repo, dest, force, revs):
                 # results in nonzero exit status, see hg's commands.py
                 return 0
 
+            if not current_ctx.files():
+                continue
+
             if ui.configbool("hgsubversion", "skippostpushpulls"):
                 # We use the revmap for the first commit.
                 # After that, we use what we received from svn.
