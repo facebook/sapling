@@ -1681,13 +1681,20 @@ impl OpenOptions {
 }
 
 impl Index {
-    /// Return a cloned [`Index`].
+    /// Return a cloned [`Index`] with pending in-memory changes.
+    pub fn try_clone(&self) -> Fallible<Self> {
+        self.try_clone_internal(true)
+    }
+
+    /// Return a cloned [`Index`] without pending in-memory changes.
     ///
-    /// If `copy_dirty` is true, then copy the in-memory portion.
-    /// Otherwise, do not copy the in-memory portion, which is
-    /// logically equivalent to calling `clear_dirty` immediately
-    /// on the result, but much cheaper.
-    pub fn clone(&self, copy_dirty: bool) -> Fallible<Index> {
+    /// This is logically equivalent to calling `clear_dirty` immediately
+    /// on the result after `try_clone`, but potentially cheaper.
+    pub fn try_clone_without_dirty(&self) -> Fallible<Self> {
+        self.try_clone_internal(false)
+    }
+
+    pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> Fallible<Index> {
         let (file, mmap) = match &self.file {
             Some(f) => (Some(f.duplicate()?), mmap_readonly(&f, Some(self.len))?.0),
             None => {
@@ -1696,7 +1703,7 @@ impl Index {
             }
         };
         let checksum = match self.checksum {
-            Some(ref table) => Some(table.clone()?),
+            Some(ref table) => Some(table.try_clone()?),
             None => None,
         };
 
@@ -3044,11 +3051,11 @@ mod tests {
 
         // Test clone empty index
         assert_eq!(
-            format!("{:?}", index.clone(true).unwrap()),
+            format!("{:?}", index.try_clone().unwrap()),
             format!("{:?}", index)
         );
         assert_eq!(
-            format!("{:?}", index.clone(false).unwrap()),
+            format!("{:?}", index.try_clone_without_dirty().unwrap()),
             format!("{:?}", index)
         );
 
@@ -3058,11 +3065,11 @@ mod tests {
         index.flush().expect("flush");
         index.insert(&[0x15], 99).expect("insert");
 
-        let mut index2 = index.clone(true).expect("clone");
+        let mut index2 = index.try_clone().expect("clone");
         assert_eq!(format!("{:?}", index), format!("{:?}", index2));
 
         // Test clone without in-memory part
-        let index2clean = index.clone(false).unwrap();
+        let index2clean = index.try_clone_without_dirty().unwrap();
         index2.clear_dirty();
         assert_eq!(format!("{:?}", index2), format!("{:?}", index2clean));
 
@@ -3071,11 +3078,11 @@ mod tests {
             .checksum_chunk_size(0)
             .create_in_memory()
             .unwrap();
-        let index4 = index3.clone(true).unwrap();
+        let index4 = index3.try_clone().unwrap();
         assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
 
         index3.insert(&[0x15], 99).expect("insert");
-        let index4 = index3.clone(true).unwrap();
+        let index4 = index3.try_clone().unwrap();
         assert_eq!(format!("{:?}", index3), format!("{:?}", index4));
     }
 

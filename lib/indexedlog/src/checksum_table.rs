@@ -222,7 +222,7 @@ impl ChecksumTable {
     }
 
     /// Clone the checksum table.
-    pub fn clone(&self) -> Fallible<Self> {
+    pub fn try_clone(&self) -> Fallible<Self> {
         let file = self.file.duplicate()?;
         // Special case: buf.len() == 1 might still mean an empty file.
         let mmap = if self.buf.len() == 1 && file.metadata()?.len() == 0 {

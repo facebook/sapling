@@ -389,20 +389,27 @@ impl Log {
         Ok(())
     }
 
-    /// Return a cloned [`Log`].
+    /// Return a cloned [`Log`] with pending in-memory changes.
+    pub fn try_clone(&self) -> Fallible<Self> {
+        self.try_clone_internal(true)
+    }
+
+    /// Return a cloned [`Log`] without pending in-memory changes.
     ///
-    /// If `copy_dirty` is true, then copy the in-memory portion.
-    /// Otherwise, do not copy the in-memory portion, which is
-    /// logically equivalent to calling `clear_dirty` immediately
-    /// on the result, but potentially cheaper.
-    pub fn clone(&self, copy_dirty: bool) -> Fallible<Self> {
+    /// This is logically equivalent to calling `clear_dirty` immediately
+    /// on the result after `try_clone`, but potentially cheaper.
+    pub fn try_clone_without_dirty(&self) -> Fallible<Self> {
+        self.try_clone_internal(false)
+    }
+
+    fn try_clone_internal(&self, copy_dirty: bool) -> Fallible<Self> {
         self.maybe_return_index_error()?;
 
         // Prepare cloned versions of things.
         let mut indexes = self
             .indexes
             .iter()
-            .map(|i| i.clone(copy_dirty))
+            .map(|i| i.try_clone_internal(copy_dirty))
             .collect::<Result<Vec<Index>, _>>()?;
         let disk_buf = self.disk_buf.clone();
         let mem_buf = if copy_dirty {
@@ -2490,11 +2497,11 @@ mod tests {
             log.sync().unwrap();
             log.append([b'b'; 10]).unwrap();
 
-            let log2 = log.clone(true).unwrap();
+            let log2 = log.try_clone().unwrap();
             assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 2);
             assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 2);
 
-            let log2 = log.clone(false).unwrap();
+            let log2 = log.try_clone_without_dirty().unwrap();
             assert_eq!(log2.iter().collect::<Result<Vec<_>, _>>().unwrap().len(), 1);
             assert_eq!(log2.lookup_range(0, ..).unwrap().count(), 1);
         }

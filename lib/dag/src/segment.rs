@@ -211,7 +211,7 @@ impl Dag {
         lock_file.lock_exclusive()?;
 
         // Clone. But drop in-memory data.
-        let mut log = self.log.clone(false)?;
+        let mut log = self.log.try_clone_without_dirty()?;
 
         // Read new entries from filesystem.
         log.sync()?;
