@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import atexit
 import errno
 import fnmatch
 import os
@@ -25,9 +26,15 @@ class LazyCommand(object):
         self._stdin = None
         self._stdoutpath = None
         self._stdoutappend = False
-        if _delayedexception:
-            exctype, excvalue, traceback = _delayedexception[0]
-            raise exctype, excvalue, traceback
+        # Raising from an "atexit" function might have weird behavior, for
+        # example:
+        #
+        #   Exception KeyError: KeyError(139797274294080,) in <module
+        #   'threading' from '/usr/lib64/python2.7/threading.pyc'> ignored
+        #
+        # So we try to check delayed exception if we got a chance and raise
+        # it early.
+        _checkdelayedexception()
 
     @property
     def output(self):
@@ -95,10 +102,10 @@ class LazyCommand(object):
                 out = self.output
                 # Output should be empty
                 autofix.eq(out, "", nested=1, fixfunc=_fixoutput)
-            except Exception:
+            except (SystemExit, Exception):
                 # Cannot raise in __del__. Put it in _delayedexception
-                _delayedexception.append(sys.exc_info())
-                raise
+                if not _delayedexception:
+                    _delayedexception.append(sys.exc_info())
 
     def __lshift__(self, heredoc):
         """<< str, use str as stdin content"""
@@ -182,6 +189,17 @@ class ShellSingleton(object):
 # Delayed exceptions. Exceptions cannot be raised in `__del__`.
 # Record them and raise later.
 _delayedexception = []
+
+
+@atexit.register
+def _checkdelayedexception(_delayedexception=_delayedexception):
+    if _delayedexception:
+        exctype, excvalue, traceback = _delayedexception[0]
+        # Only raise the first "delayed exception"
+        _delayedexception[:] = [(None, None, None)]
+        if excvalue is not None:
+            raise exctype, excvalue, traceback
+
 
 # Functions to normalize outputs (ex. replace "$TESTTMP")
 _normalizefuncs = []
