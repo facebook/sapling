@@ -9,7 +9,9 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2 or any later version.
  */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
