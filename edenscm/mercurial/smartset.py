@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+from edenscmnative import bindings
+
 from . import error, util
 
 
@@ -406,6 +408,177 @@ class baseset(abstractsmartset):
                 l = self._asclist
             s = repr(l)
         return "<%s%s %s>" % (type(self).__name__, d, s)
+
+
+class spansset(abstractsmartset):
+    """Wrapper around Rust's SpanSet that meets the smartset interface.
+
+    The Rust SpanSet does not keep order. This structure keeps orders.
+
+    >>> xs = spansset([1, 3, 2, 4, 11, 10])
+    >>> ys = spansset([2, 3, 4, 5, 20])
+
+    >>> xs
+    <spansset- [1..=4 10 11]>
+    >>> ys
+    <spansset- [2..=5 20]>
+
+    Iteration
+
+    >>> list(xs)
+    [11, 10, 4, 3, 2, 1]
+
+    >>> xs.reverse()
+    >>> list(xs)
+    [1, 2, 3, 4, 10, 11]
+
+    >>> ys.sort()
+    >>> list(ys)
+    [2, 3, 4, 5, 20]
+    >>> ys.first()
+    2
+    >>> ys.last()
+    20
+
+    >>> ys.sort(reverse=True)
+    >>> list(ys)
+    [20, 5, 4, 3, 2]
+    >>> ys.first()
+    20
+    >>> ys.last()
+    2
+
+    Length, contains, min, max
+
+    >>> len(xs)
+    6
+    >>> 1 in xs
+    True
+    >>> 5 in xs
+    False
+    >>> xs.min()
+    1
+    >>> xs.max()
+    11
+
+    Set operations
+
+    >>> xs & ys
+    <spansset+ [2 3 4]>
+    >>> xs - ys
+    <spansset+ [1 10 11]>
+    >>> xs + ys
+    <spansset+ [1..=5 10 11 20]>
+    """
+
+    def __init__(self, spans):
+        """data: a dag.spans object, or an iterable of revs"""
+        self._spans = bindings.dag.spans(spans)
+        self._ascending = False
+
+    def __iter__(self):
+        # PERF: This is currently O(N). Can be made better by having
+        # a dedicated iterator in Rust.
+        if self._ascending:
+            return self.fastasc()
+        else:
+            return self.fastdesc()
+
+    def _reversediter(self):
+        if self._ascending:
+            return self.fastasc()
+        else:
+            return self.fastdesc()
+
+    def fastasc(self):
+        return iter(reversed(list(self._spans)))
+
+    def fastdesc(self):
+        return iter(self._spans)
+
+    @util.propertycache
+    def __contains__(self):
+        return self._spans.__contains__
+
+    def __nonzero__(self):
+        return bool(len(self))
+
+    __bool__ = __nonzero__
+
+    def sort(self, reverse=False):
+        self._ascending = not bool(reverse)
+
+    def reverse(self):
+        self._ascending = not self._ascending
+
+    def __len__(self):
+        return len(self._spans)
+
+    def isascending(self):
+        """Returns True if the collection is ascending order, False if not.
+
+        This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
+        return self._ascending
+
+    def isdescending(self):
+        """Returns True if the collection is descending order, False if not.
+
+        This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
+        return not self._ascending
+
+    def istopo(self):
+        """Is the collection is in topographical order or not.
+
+        This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
+        return False
+
+    def min(self):
+        return self._spans.min()
+
+    def max(self):
+        return self._spans.max()
+
+    def first(self):
+        if self._ascending:
+            return self.min()
+        else:
+            return self.max()
+
+    def last(self):
+        if self._ascending:
+            return self.max()
+        else:
+            return self.min()
+
+    def _fastsetop(self, other, op):
+        # try to use native set operations as fast paths
+        if type(other) is spansset:
+            s = spansset(getattr(self._spans, op)(other._spans))
+            s._ascending = self._ascending
+        else:
+            s = getattr(super(spansset, self), op)(other)
+        return s
+
+    def __and__(self, other):
+        return self._fastsetop(other, "__and__")
+
+    def __sub__(self, other):
+        return self._fastsetop(other, "__sub__")
+
+    def __add__(self, other):
+        # XXX: This is an aggressive optimization. It does not respect orders
+        # if 'other' is also a spansset.
+        return self._fastsetop(other, "__add__")
+
+    def __repr__(self):
+        d = {False: "-", True: "+"}[self._ascending]
+        return "<%s%s %s>" % (type(self).__name__, d, self._spans)
 
 
 class filteredset(abstractsmartset):
