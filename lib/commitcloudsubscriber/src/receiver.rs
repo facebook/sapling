@@ -40,7 +40,7 @@ pub struct Command(pub (CommandName, CommandData));
 
 pub struct TcpReceiverService {
     port: u16,
-    actions: HashMap<CommandName, Box<Fn() + Send>>,
+    actions: HashMap<CommandName, Box<dyn Fn() + Send>>,
 }
 
 impl TcpReceiverService {
@@ -53,7 +53,7 @@ impl TcpReceiverService {
 
     pub fn with_actions(
         mut self,
-        actions: HashMap<CommandName, Box<Fn() + Send>>,
+        actions: HashMap<CommandName, Box<dyn Fn() + Send>>,
     ) -> TcpReceiverService {
         self.actions = self
             .actions

@@ -69,7 +69,7 @@ impl ThrottlingExecutor {
     }
     /// Run function if it is time, skip otherwise
     #[inline]
-    fn execute(&mut self, f: &Fn()) {
+    fn execute(&mut self, f: &dyn Fn()) {
         let now = SystemTime::now();
         if now
             .duration_since(self.last_time)
@@ -159,8 +159,8 @@ impl WorkspaceSubscriberService {
         })
     }
 
-    pub fn actions(&self) -> HashMap<CommandName, Box<Fn() + Send>> {
-        let mut actions: HashMap<CommandName, Box<Fn() + Send>> = HashMap::new();
+    pub fn actions(&self) -> HashMap<CommandName, Box<dyn Fn() + Send>> {
+        let mut actions: HashMap<CommandName, Box<dyn Fn() + Send>> = HashMap::new();
         actions.insert(CommitCloudRestartSubscriptions, {
             let sender = self.channel.0.clone();
             let interrupt = self.interrupt.clone();
