@@ -21,9 +21,5 @@ target_link_libraries(
     eden_config_thrift_cpp
     eden_model
     eden_utils
-)
-target_include_directories(
-  eden_config
-  PRIVATE
-    ${CPPTOML_INCLUDE_DIR}
+    cpptoml
 )

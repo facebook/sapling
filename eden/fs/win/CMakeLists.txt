@@ -24,11 +24,7 @@ target_link_libraries(
     eden_win_utils
     Folly::folly
     ProjectedFS
-)
-target_include_directories(
-  eden_win
-  PRIVATE
-    ${CPPTOML_INCLUDE_DIR}
+    cpptoml
 )
 
 add_subdirectory(utils)

@@ -73,6 +73,7 @@ target_link_libraries(
     eden_tracing
     ${YARPL_LIBRARIES}
     Folly::folly
+    cpptoml
 )
 
 if (WIN32)
@@ -108,9 +109,3 @@ if (APPLE)
     "-framework IOKit"
   )
 endif()
-
-target_include_directories(
-  eden_service
-  PUBLIC
-    ${CPPTOML_INCLUDE_DIR}
-)

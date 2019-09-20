@@ -66,8 +66,6 @@ set(EDEN_HAVE_ROCKSDB ${RocksDB_FOUND})
 find_package(Sqlite3 REQUIRED)
 set(EDEN_HAVE_SQLITE3 ${SQLITE3_FOUND})
 
-find_package(cpptoml REQUIRED)
-
 find_package(CURL)
 set(EDEN_HAVE_CURL ${CURL_FOUND})
 
