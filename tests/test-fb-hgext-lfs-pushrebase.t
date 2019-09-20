@@ -297,3 +297,64 @@ TODO: Make this test compatibile with obsstore enabled.
    BECOME-LFS-AGAIN
   +ADD-A-LINE
   
+  $ cd ..
+
+# Test pushing a file that shrunk from lfs to non-lfs
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > remotenames=
+  > [lfs]
+  > url=
+  > verify=none
+  > [pushrebase]
+  > rewritedates = False
+  > EOF
+
+  $ hg init master2
+  $ hg clone -q ssh://user@dummy/master2 client3
+  $ cd client3
+  $ cat >> .hg/hgrc <<EOF
+  > [lfs]
+  > url=file:$TESTTMP/dummy-remote/
+  > EOF
+  $ echo THIS-IS-LFS-FILE > x
+  $ hg commit -qAm x-lfs
+  $ hg push -q --create --to master -r .
+  $ hg pull -f -q
+  $ hg up master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg mv x y
+  $ hg commit -m y-lfs
+  $ hg push -q --to master -r .
+  $ hg up master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+# Cannot push a change that goes from lfs to not-lfs where the previous file
+# revision is a rename. This is because internally the server needs to compare
+# contents since the rename prevents it from comparing hashes.
+
+  $ echo NOT-LFS > y
+  $ hg commit -m y-not-lfs
+  $ hg push --to master -r .
+  pushing rev 026f7366f3d2 to destination ssh://user@dummy/master2 bookmark master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     026f7366f3d2  y-not-lfs
+  remote: lfs.url needs to be configured
+  abort: push failed on remote
+  [255]
+
+# Can push once server has lfs.url set
+
+  $ cat >> ../master2/.hg/hgrc <<EOF
+  > [lfs]
+  > url=file:$TESTTMP/dummy-remote/
+  > EOF
+  $ hg push --to master -r .
+  pushing rev 026f7366f3d2 to destination ssh://user@dummy/master2 bookmark master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     026f7366f3d2  y-not-lfs
+  updating bookmark master
