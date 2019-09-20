@@ -467,4 +467,29 @@ mod tests {
                 .is_none()
         );
     }
+
+    #[test]
+    fn test_diff_on_sort_order_edge() {
+        let store = Arc::new(TestStore::new());
+
+        let mut left = Tree::ephemeral(store.clone());
+        left.insert(repo_path_buf("foo/bar-test/a.txt"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("foo/bartest/b.txt"), make_meta("20"))
+            .unwrap();
+
+        let mut right = left.clone();
+        right
+            .insert(repo_path_buf("foo/bar/c.txt"), make_meta("30"))
+            .unwrap();
+        assert_eq!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec![DiffEntry::new(
+                repo_path_buf("foo/bar/c.txt"),
+                DiffType::RightOnly(make_meta("30"))
+            ),],
+        );
+    }
 }
