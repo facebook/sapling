@@ -16,7 +16,7 @@ use filenodes::FilenodeInfo;
 use futures::future::{join_all, Future};
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{HgFileNodeId, MPath};
+use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
 
@@ -25,6 +25,8 @@ use crate::error::SubcommandError;
 
 const COMMAND_REVISION: &str = "by-revision";
 const COMMAND_ID: &str = "by-id";
+
+const ARG_ENVELOPE: &str = "envelope";
 
 const ARG_REVISION: &str = "hg-changeset-or-bookmark";
 const ARG_PATHS: &str = "paths";
@@ -35,6 +37,13 @@ const ARG_PATH: &str = "path";
 pub fn build_subcommand(name: &str) -> App {
     SubCommand::with_name(name)
         .about("fetches hg filenodes information for a commit and one or more paths")
+        .arg(
+            Arg::with_name(ARG_ENVELOPE)
+                .long(ARG_ENVELOPE)
+                .required(false)
+                .takes_value(false)
+                .help("whether to show the envelope as well"),
+        )
         .subcommand(
             SubCommand::with_name(COMMAND_REVISION)
                 .arg(
@@ -72,7 +81,11 @@ fn extract_path(path: &str) -> Result<MPath, Error> {
     MPath::new(path).map_err(|err| format_err!("Could not parse path {}: {:?}", path, err))
 }
 
-fn log_filenode(logger: &Logger, filenode: &FilenodeInfo) {
+fn log_filenode(
+    logger: &Logger,
+    filenode: &FilenodeInfo,
+    envelope: Option<&HgFileEnvelope>,
+) -> Option<()> {
     let FilenodeInfo {
         path,
         filenode,
@@ -82,21 +95,16 @@ fn log_filenode(logger: &Logger, filenode: &FilenodeInfo) {
         linknode,
     } = filenode;
 
-    info!(
-        logger,
-        "Filenode {:?}:\n \
-         -- path: {:?}\n \
-         -- p1: {:?}\n \
-         -- p2: {:?}\n \
-         -- copyfrom: {:?}\n \
-         -- linknode: {:?}",
-        filenode,
-        path,
-        p1,
-        p2,
-        copyfrom,
-        linknode
-    );
+    info!(logger, "Filenode: {:?}", filenode);
+    info!(logger, "-- path: {:?}", path);
+    info!(logger, "-- p1: {:?}", p1);
+    info!(logger, "-- p2: {:?}", p2);
+    info!(logger, "-- copyfrom: {:?}", copyfrom);
+    info!(logger, "-- linknode: {:?}", linknode);
+    info!(logger, "-- content id: {:?}", envelope?.content_id());
+    info!(logger, "-- content size: {:?}", envelope?.content_size());
+
+    Some(())
 }
 
 fn handle_filenodes_at_revision(
@@ -104,6 +112,7 @@ fn handle_filenodes_at_revision(
     blobrepo: BlobRepo,
     revision: &str,
     paths: Vec<MPath>,
+    log_envelope: bool,
 ) -> impl Future<Item = (), Error = Error> {
     resolve_hg_rev(ctx.clone(), &blobrepo, revision)
         .map(|cs_id| (blobrepo, cs_id))
@@ -128,11 +137,22 @@ fn handle_filenodes_at_revision(
                     path_filenode_ids
                         .into_iter()
                         .map(move |(path, filenode_id)| {
-                            blobrepo.get_filenode(
+                            let filenode = blobrepo.get_filenode(
                                 ctx.clone(),
                                 &RepoPath::FilePath(path),
                                 filenode_id,
-                            )
+                            );
+
+                            let envelope = if log_envelope {
+                                blobrepo
+                                    .get_file_envelope(ctx.clone(), filenode_id)
+                                    .map(Some)
+                                    .left_future()
+                            } else {
+                                Ok(None).into_future().right_future()
+                            };
+
+                            (filenode, envelope)
                         }),
                 )
             }
@@ -140,9 +160,9 @@ fn handle_filenodes_at_revision(
         .map({
             cloned!(ctx);
             move |filenodes| {
-                filenodes
-                    .into_iter()
-                    .for_each(|filenode| log_filenode(ctx.logger(), &filenode))
+                filenodes.into_iter().for_each(|(filenode, envelope)| {
+                    log_filenode(ctx.logger(), &filenode, envelope.as_ref());
+                })
             }
         })
 }
@@ -157,6 +177,7 @@ pub fn subcommand_filenodes(
     args::init_cachelib(fb, &matches);
 
     let blobrepo = args::open_repo(fb, &ctx.logger(), &matches);
+    let log_envelope = sub_m.is_present(ARG_ENVELOPE);
 
     match sub_m.subcommand() {
         (COMMAND_REVISION, Some(matches)) => {
@@ -171,7 +192,7 @@ pub fn subcommand_filenodes(
             (blobrepo, Ok(rev).into_future(), paths)
                 .into_future()
                 .and_then(move |(blobrepo, rev, paths)| {
-                    handle_filenodes_at_revision(ctx, blobrepo, &rev, paths)
+                    handle_filenodes_at_revision(ctx, blobrepo, &rev, paths, log_envelope)
                 })
                 .from_err()
                 .boxify()
@@ -190,11 +211,28 @@ pub fn subcommand_filenodes(
                 .into_future()
                 .and_then({
                     cloned!(ctx);
-                    move |(blobrepo, path, id)| blobrepo.get_filenode(ctx.clone(), &path, id)
+                    move |(blobrepo, path, id)| {
+                        blobrepo
+                            .get_filenode(ctx.clone(), &path, id)
+                            .and_then(move |filenode| {
+                                let envelope = if log_envelope {
+                                    blobrepo
+                                        .get_file_envelope(ctx, filenode.filenode)
+                                        .map(Some)
+                                        .left_future()
+                                } else {
+                                    Ok(None).into_future().right_future()
+                                };
+
+                                (Ok(filenode), envelope)
+                            })
+                    }
                 })
                 .map({
                     cloned!(ctx);
-                    move |filenode| log_filenode(ctx.logger(), &filenode)
+                    move |(filenode, envelope)| {
+                        log_filenode(ctx.logger(), &filenode, envelope.as_ref());
+                    }
                 })
                 .from_err()
                 .boxify()
