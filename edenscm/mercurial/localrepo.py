@@ -785,7 +785,7 @@ class localrepository(object):
     def obsstore(self):
         return obsolete.makestore(self.ui, self)
 
-    @storecache("00changelog.i", "visibleheads")
+    @storecache("00changelog.i", "visibleheads", "remotenames")
     def changelog(self):
         return changelog.changelog(
             self.svfs,

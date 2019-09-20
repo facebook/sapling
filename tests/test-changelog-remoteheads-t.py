@@ -49,3 +49,11 @@ for node in draftnodes:
     public 112478962961147124edd43549aedd1a335e44bf
     public 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
     draft  dc0947a82db884575bb76ea10ac97b08536bfa03"""
+
+# Remove book/b. 'B' can disappear from heads, if narrow-heads is set.
+
+sh % "hg --cwd ../server bookmark --delete book/b"
+sh % "hg pull -q"
+
+sh % "hg log -r 'head()' -T '{desc}' --config experimental.narrow-heads=0" == "BC"
+sh % "hg log -r 'head()' -T '{desc}' --config experimental.narrow-heads=1" == "C"

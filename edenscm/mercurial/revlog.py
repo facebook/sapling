@@ -22,6 +22,8 @@ import os
 import struct
 import zlib
 
+from edenscmnative import bindings
+
 from . import ancestor, error, mdiff, policy, pycompat, templatefilters, util
 from .i18n import _
 
@@ -312,7 +314,13 @@ class revlog(object):
     """
 
     def __init__(
-        self, opener, indexfile, datafile=None, checkambig=False, mmaplargeindex=False
+        self,
+        opener,
+        indexfile,
+        datafile=None,
+        checkambig=False,
+        mmaplargeindex=False,
+        index2=False,
     ):
         """
         create a revlog object
@@ -432,6 +440,8 @@ class revlog(object):
         self.index, nodemap, self._chunkcache = d
         if nodemap is not None:
             self.nodemap = self._nodecache = nodemap
+        if index2:
+            self.index2 = bindings.revlogindex.revlogindex(indexdata)
         if not self._chunkcache:
             self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
@@ -2009,6 +2019,9 @@ class revlog(object):
 
         e = (offset_type(offset, flags), l, textlen, base, link, p1r, p2r, node)
         self.index.insert(-1, e)
+        index2 = getattr(self, "index2", None)
+        if index2 is not None:
+            index2.insert([p for p in (p1r, p2r) if p >= 0])
         self.nodemap[node] = curr
 
         entry = self._io.packentry(e, self.node, self.version, curr)
@@ -2180,7 +2193,8 @@ class revlog(object):
 
         heads = {}
         futurelargelinkrevs = set()
-        for head in self.headrevs():
+        # Bypass narrow-heads. This low-level operatoin requires "full" heads.
+        for head in self.index.headrevs():
             headlinkrev = self.linkrev(head)
             heads[head] = headlinkrev
             if headlinkrev >= minlink:

@@ -300,7 +300,9 @@ class changelog(revlog.revlog):
             datafile=datafile,
             checkambig=True,
             mmaplargeindex=True,
+            index2=True,
         )
+        assert self.index2 is not None
 
         if self._initempty:
             # changelogs don't benefit from generaldelta
@@ -371,6 +373,12 @@ class changelog(revlog.revlog):
         return self.index.reachableroots2(minroot, heads, roots, includepath)
 
     def headrevs(self):
+        if self._uiconfig.configbool("experimental", "narrow-heads"):
+            publicnodes, draftnodes = self._remotenodes()
+            nodes = self._visibleheads.heads + publicnodes + draftnodes
+            revs = map(super(changelog, self).rev, nodes)
+            return self.index2.headsancestors(revs)
+
         if self.filteredrevs:
             try:
                 return self.index.headrevsfiltered(self.filteredrevs)
