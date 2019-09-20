@@ -13,4 +13,5 @@ add_fb_python_executable(
     eden_overlay_thrift_py
     eden_service_thrift_py
     FBThrift::thrift_py_inspect
+    python-toml::python-toml
 )
