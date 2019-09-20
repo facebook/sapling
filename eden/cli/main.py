@@ -69,25 +69,6 @@ except AttributeError:  # On a non-unix system
     EX_OSFILE = 72
 
 
-def infer_client_from_cwd(instance: EdenInstance, clientname: str) -> str:
-    if clientname:
-        return clientname
-
-    all_clients = instance.get_all_client_config_info()
-    path = normalize_path_arg(os.getcwd())
-
-    # Keep going while we're not in the root, as dirname(/) is /
-    # and we can keep iterating forever.
-    while len(path) > 1:
-        for _, info in all_clients.items():
-            if info["mount"] == path:
-                return typing.cast(str, info["mount"])
-        path = os.path.dirname(path)
-
-    print_stderr("cwd is not an eden mount point, and no checkout name was specified.")
-    sys.exit(2)
-
-
 def do_version(args: argparse.Namespace) -> int:
     instance = get_eden_instance(args)
     print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
@@ -258,7 +239,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
         self.underlined(f"Mount: {mount}")
 
         instance, checkout, _rel_path = require_checkout(args, mount)
-        info = instance.get_client_info(infer_client_from_cwd(instance, mount))
+        info = instance.get_client_info_from_checkout(checkout)
 
         client_dir = info["client-dir"]
         overlay_dir = os.path.join(client_dir, "local")
