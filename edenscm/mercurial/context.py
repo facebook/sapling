@@ -51,6 +51,11 @@ propertycache = util.propertycache
 
 nonascii = re.compile(r"[^\x21-\x7f]").search
 
+slowstatuswarning = _(
+    "(status will still be slow next time; try to complete or abort other source control operations and then run 'hg status' again)\n"
+)
+
+
 try:
     xrange(0)
 except NameError:
@@ -1895,6 +1900,7 @@ class workingctx(committablectx):
         poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
         dirstate = self._repo.dirstate
+        ui = self._repo.ui
         if fixup or poststatusbefore or poststatusafter or dirstate._dirty:
             # prevent infinite loop because fsmonitor postfixup might call
             # wctx.status()
@@ -1906,7 +1912,20 @@ class workingctx(committablectx):
                 # so we don't wait on the lock
                 # wlock can invalidate the dirstate, so cache normal _after_
                 # taking the lock
-                with self._repo.wlock(False):
+
+                # If watchman reports fresh instance, still take the lock,
+                # since not updating watchman state leads to very painful
+                # performance.
+                freshinstance = False
+                try:
+                    freshinstance = self._repo.dirstate._fsmonitorstate._lastisfresh
+                except Exception:
+                    pass
+                if freshinstance:
+                    ui.debug(
+                        "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
+                    )
+                with self._repo.wlock(freshinstance):
                     if self._repo.dirstate.identity() == oldid:
                         if poststatusbefore:
                             for ps in poststatusbefore:
@@ -1930,6 +1949,13 @@ class workingctx(committablectx):
                             for ps in poststatusafter:
                                 ps(self, status)
                     else:
+                        if freshinstance:
+                            ui.write_err(
+                                _(
+                                    "warning: failed to update watchman state because dirstate has been changed by other processes\n"
+                                )
+                            )
+                            ui.write_err(slowstatuswarning)
                         # in this case, writing changes out breaks
                         # consistency, because .hg/dirstate was
                         # already changed simultaneously after last
@@ -1938,7 +1964,13 @@ class workingctx(committablectx):
                             "skip updating dirstate: " "identity mismatch\n"
                         )
             except error.LockError:
-                pass
+                if freshinstance:
+                    ui.write_err(
+                        _(
+                            "warning: failed to update watchman state because wlock cannot be obtained\n"
+                        )
+                    )
+                    ui.write_err(slowstatuswarning)
             finally:
                 # Even if the wlock couldn't be grabbed, clear out the list.
                 self._repo.clearpostdsstatus()

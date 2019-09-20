@@ -1,20 +1,6 @@
-#testcases v0 v1 v2
-
 Race detector will complain about this test.
 
   $ setconfig fsmonitor.detectrace=0
-
-#if v0
-  $ setconfig format.dirstate=0
-#endif
-
-#if v1
-  $ setconfig format.dirstate=1
-#endif
-
-#if v2
-  $ setconfig format.dirstate=2
-#endif
 
   $ hg init repo
   $ cd repo
@@ -163,11 +149,22 @@ treated differently in _checklookup() according to runtime platform.
 - "missing(!)" on POSIX, "pctx[f].cmp(self[f])" raises ENOENT
 - "modified(M)" on Windows, "self.flags(f) != pctx.flags(f)" is True
 
+#if fsmonitor
+  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
+  poststatusfixup decides to wait for wlock since watchman reported fresh instance
+  warning: failed to update watchman state because dirstate has been changed by other processes
+  (status will still be slow next time; try to complete or abort other source control operations and then run 'hg status' again)
+  skip updating dirstate: identity mismatch
+  M a
+  ! d
+  ! dir1/c
+#else
   $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
   skip updating dirstate: identity mismatch
   M a
   ! d
   ! dir1/c
+#endif
 
   $ hg parents -q
   0:* (glob)
