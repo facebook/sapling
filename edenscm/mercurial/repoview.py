@@ -213,6 +213,9 @@ class repoview(object):
         # some cache may be implemented later
         unfi = self._unfilteredrepo
         unfichangelog = unfi.changelog
+        # if narrow-heads is enabled, no need to filter anything
+        if unfi.ui.configbool("experimental", "narrow-heads"):
+            return unfichangelog
         # bypass call to changelog.method
         unfiindex = unfichangelog.index
         unfilen = len(unfiindex) - 1

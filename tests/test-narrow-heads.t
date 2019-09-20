@@ -57,71 +57,106 @@ Make some client-side commits based on A
 Revsets after the local edits
 
 head() should include one 'D' commit, and one 'B'
-(BUG: crash!)
+(BUG: 'B' should not be 'x')
 
   $ hg log -Gr 'head()' -T '{desc}'
-  FilteredIndexError: 1
-  [255]
+  o  D
+  |
+  ~
+  x  B
+  |
+  ~
 
 all() should not show C
 Commits under ::master should be public
-(BUG: 'B' is missing!)
+(BUG: 'B' should be public! 'C' should be hidden)
 
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  D draft
   |
   @  C2 draft
   |
+  | x  D draft
+  | |
+  | x  C draft
+  |/
+  | x  B draft remote/master
+  |/
   o  A draft remote/stable
   
 draft() should not show C
+(BUG: neither 'B' nor 'C' should be shown)
 
   $ hg log -Gr 'draft()' -T '{desc}'
   o  D
   |
   @  C2
   |
+  | x  D
+  | |
+  | x  C
+  |/
+  | x  B
+  |/
   o  A
   
 not public() should not show C
+(BUG: neither 'B' nor 'C' should be shown)
 
   $ hg log -Gr 'not public()' -T '{desc}'
   o  D
   |
   @  C2
   |
+  | x  D
+  | |
+  | x  C
+  |/
+  | x  B
+  |/
   o  A
   
 A:: should not show C
-(BUG: 'B' is missing!)
+(BUG: 'B' should be public! 'C' should be hidden)
 
   $ hg log -Gr "$A::" -T '{desc}'
   o  D
   |
   @  C2
   |
+  | x  D
+  | |
+  | x  C
+  |/
+  | x  B
+  |/
   o  A
   
 children(A) should not show C
-(BUG: 'B' is missing!)
+(BUG: 'B' should be public! 'C' should be hidden)
 
   $ hg log -Gr "children($A)" -T '{desc}'
   @  C2
   |
   ~
+  x  C
+  |
+  ~
+  x  B
+  |
+  ~
 
 predecessors(C2) should include C
-(BUG: 'C' is missing!)
 
   $ hg log -Gr "predecessors(desc('C2'))" -T '{desc}'
   @  C2
   |
   ~
+  x  C
+  |
+  ~
 
 Using commit hash to access C should be allowed
-(BUG: it is not allowed now)
 
   $ hg log -r $C -T '{desc}'
-  abort: hidden revision 'dc0947a82db884575bb76ea10ac97b08536bfa03'!
-  (use --hidden to access hidden revisions)
-  [255]
+  C (no-eol)
