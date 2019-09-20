@@ -36,7 +36,7 @@ include_directories(${FIZZ_INCLUDE_DIR})
 find_package(wangle CONFIG REQUIRED)
 include_directories(${WANGLE_INCLUDE_DIR})
 
-find_package(FBThrift CONFIG REQUIRED)
+find_package(FBThrift CONFIG REQUIRED COMPONENTS cpp2 py)
 include_directories(${FBTHRIFT_INCLUDE_DIR})
 
 find_package(yarpl CONFIG REQUIRED)
