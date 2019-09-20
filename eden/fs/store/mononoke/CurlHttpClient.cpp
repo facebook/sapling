@@ -45,13 +45,14 @@ std::string CurlHttpClient::buildAddress(folly::StringPiece path) {
           "failed to resolve Mononoke API Service address");
     }
 
-    address_.emplace(std::move(address->first));
+    address_ = std::move(address);
 
-    XLOG(DBG5) << "CurlHttpClient is using " << *address_;
+    XLOG(DBG5) << "CurlHttpClient is using " << address_->second << " aka "
+               << address_->first;
   }
 
   return folly::to<std::string>(
-      "https://", address_->getHostStr(), ":", address_->getPort(), path);
+      "https://", address_->second, ":", address_->first.getPort(), path);
 }
 
 /// Makes an HTTP GET request to the given path.

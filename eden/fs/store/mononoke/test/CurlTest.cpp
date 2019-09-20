@@ -261,7 +261,7 @@ class CurlTest : public ::testing::Test {
         certs_->path() / kClientCACertName);
 
     const auto address = server_->getAddresses()[0].address;
-    address_ = std::make_shared<ServiceAddress>("::1", address.getPort());
+    address_ = std::make_shared<ServiceAddress>("localhost", address.getPort());
   }
 
   static void TearDownTestCase() {

@@ -16,6 +16,7 @@
 #include <string>
 
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/ServiceAddress.h"
 
 namespace facebook {
 namespace eden {
@@ -49,7 +50,7 @@ class CurlHttpClient {
   std::string buildAddress(folly::StringPiece path);
 
   std::shared_ptr<ServiceAddress> service_;
-  std::optional<folly::SocketAddress> address_;
+  std::optional<SocketAddressWithHostname> address_;
   AbsolutePath certificate_;
 
   // cURL timeout for the request (see CURLOPT_TIMEOUT_MS for detail)
