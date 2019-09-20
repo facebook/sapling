@@ -116,8 +116,8 @@ class InfoCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        info = instance.get_client_info(infer_client_from_cwd(instance, args.client))
+        instance, checkout, _rel_path = require_checkout(args, args.client)
+        info = instance.get_client_info_from_checkout(checkout)
         json.dump(info, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0

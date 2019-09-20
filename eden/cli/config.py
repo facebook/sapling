@@ -334,16 +334,20 @@ class EdenInstance:
         path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
+        return self.get_client_info_from_checkout(checkout)
+
+    def get_client_info_from_checkout(
+        self, checkout: "EdenCheckout"
+    ) -> collections.OrderedDict:
         checkout_config = checkout.get_config()
         snapshot = checkout.get_snapshot()
-
         return collections.OrderedDict(
             [
                 ("bind-mounts", checkout_config.bind_mounts),
-                ("mount", str(path)),
+                ("mount", str(checkout.path)),
                 ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
-                ("client-dir", str(client_dir)),
+                ("client-dir", str(checkout.state_dir)),
             ]
         )
 
