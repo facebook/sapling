@@ -37,7 +37,6 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
-#include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -437,59 +436,6 @@ void HgImporter::stopHelperProcess() {
 #endif
 }
 
-Hash HgImporter::importFlatManifest(StringPiece revName) {
-  // Send the manifest request to the helper process
-  auto requestID = sendManifestRequest(revName);
-
-  auto writeBatch = store_->beginWrite(FLAGS_hgManifestImportBufferSize);
-  HgManifestImporter importer(store_, writeBatch.get());
-  size_t numPaths = 0;
-
-  auto start = std::chrono::steady_clock::now();
-  IOBuf chunkData;
-  while (true) {
-    // Read the chunk header
-    auto header = readChunkHeader(requestID, "CMD_MANIFEST");
-
-    // Allocate a larger chunk buffer if we need to,
-    // but prefer to re-use the old buffer if we can.
-    if (header.dataLength > chunkData.capacity()) {
-      chunkData = IOBuf(IOBuf::CREATE, header.dataLength);
-    } else {
-      chunkData.clear();
-    }
-
-    readFromHelper(
-        chunkData.writableTail(),
-        header.dataLength,
-        "CMD_MANIFEST response body");
-    chunkData.append(header.dataLength);
-
-    // Now process the entries in the chunk
-    Cursor cursor(&chunkData);
-    while (!cursor.isAtEnd()) {
-      readManifestEntry(importer, cursor, writeBatch.get());
-      ++numPaths;
-    }
-
-    if ((header.flags & FLAG_MORE_CHUNKS) == 0) {
-      break;
-    }
-  }
-
-  writeBatch->flush();
-
-  auto computeEnd = std::chrono::steady_clock::now();
-  XLOG(DBG2) << "computed trees for " << numPaths << " manifest paths in "
-             << durationStr(computeEnd - start);
-  auto rootHash = importer.finish();
-  auto recordEnd = std::chrono::steady_clock::now();
-  XLOG(DBG2) << "recorded trees for " << numPaths << " manifest paths in "
-             << durationStr(recordEnd - computeEnd);
-
-  return rootHash;
-}
-
 unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
@@ -604,53 +550,6 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
       buffer.size(),
       "CMD_MANIFEST_NODE_FOR_COMMIT response body");
   return Hash(buffer);
-}
-
-void HgImporter::readManifestEntry(
-    HgManifestImporter& importer,
-    folly::io::Cursor& cursor,
-    LocalStore::WriteBatch* writeBatch) {
-  Hash::Storage hashBuf;
-  cursor.pull(hashBuf.data(), hashBuf.size());
-  Hash fileRevHash(hashBuf);
-
-  auto sep = cursor.read<char>();
-  if (sep != '\t') {
-    throw std::runtime_error(folly::to<string>(
-        "unexpected separator char: ", static_cast<int>(sep)));
-  }
-  auto flag = cursor.read<char>();
-  if (flag == '\t') {
-    flag = ' ';
-  } else {
-    sep = cursor.read<char>();
-    if (sep != '\t') {
-      throw std::runtime_error(folly::to<string>(
-          "unexpected separator char: ", static_cast<int>(sep)));
-    }
-  }
-
-  auto pathStr = cursor.readTerminatedString();
-
-  TreeEntryType fileType;
-  if (flag == ' ') {
-    fileType = TreeEntryType::REGULAR_FILE;
-  } else if (flag == 'x') {
-    fileType = TreeEntryType::EXECUTABLE_FILE;
-  } else if (flag == 'l') {
-    fileType = TreeEntryType::SYMLINK;
-  } else {
-    throw std::runtime_error(folly::to<string>(
-        "unsupported file flags for ", pathStr, ": ", static_cast<int>(flag)));
-  }
-
-  RelativePathPiece path(pathStr);
-
-  // Generate a blob hash from the mercurial (path, fileRev) information
-  auto blobHash = HgProxyHash::store(path, fileRevHash, writeBatch);
-
-  auto entry = TreeEntry(blobHash, path.basename().value(), fileType);
-  importer.processEntry(path.dirname(), std::move(entry));
 }
 
 HgImporter::ChunkHeader HgImporter::readChunkHeader(
@@ -972,12 +871,6 @@ auto HgImporterManager::retryOnError(Fn&& fn) {
       retryableError(ex);
     }
   }
-}
-
-Hash HgImporterManager::importFlatManifest(StringPiece revName) {
-  return retryOnError([&](HgImporter* importer) {
-    return importer->importFlatManifest(revName);
-  });
 }
 
 Hash HgImporterManager::resolveManifestNode(StringPiece revName) {

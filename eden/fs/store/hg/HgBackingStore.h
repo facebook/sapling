@@ -31,7 +31,7 @@ class UnionDatapackStore;
 namespace facebook {
 namespace eden {
 
-class Importer;
+class HgImporter;
 struct ImporterOptions;
 class LocalStore;
 class MononokeHttpBackingStore;
@@ -66,7 +66,8 @@ class HgBackingStore : public BackingStore {
    * production Eden.
    */
   HgBackingStore(
-      Importer* importer,
+      AbsolutePathPiece repository,
+      HgImporter* importer,
       LocalStore* localStore,
       std::shared_ptr<EdenStats>);
 
@@ -92,9 +93,6 @@ class HgBackingStore : public BackingStore {
 
   /**
    * Initialize the unionStore_ needed for treemanifest import support.
-   *
-   * This leaves unionStore_ null if treemanifest import is not supported in
-   * this repository.
    */
   void initializeTreeManifestImport(
       const ImporterOptions& options,
@@ -182,8 +180,6 @@ class HgBackingStore : public BackingStore {
       LocalStore::WriteBatch* writeBatch);
 
   folly::Future<Hash> importManifest(Hash commitId);
-
-  folly::Future<Hash> importFlatManifest(Hash commitId);
 
   LocalStore* localStore_{nullptr};
   std::shared_ptr<EdenStats> stats_;

@@ -58,98 +58,19 @@ TEST_F(HgImportTest, importTest) {
   repo_.mkdir("foo");
   StringPiece barData = "this is a test file\n";
   repo_.writeFile("foo/bar.txt", barData);
-  StringPiece testData = "testing\n1234\ntesting\n";
-  repo_.writeFile("foo/test.txt", testData);
-  repo_.mkdir("src");
-  repo_.mkdir("src/eden");
-  StringPiece somelinkData = "this is the link contents";
-  repo_.symlink(somelinkData, "src/somelink"_relpath);
-  StringPiece mainData = "print('hello world\\n')\n";
-  repo_.writeFile("src/eden/main.py", mainData, 0755);
   repo_.hg("add");
   auto commit1 = repo_.commit("Initial commit");
 
   // Import the root tree
   HgImporter importer(repo_.path(), &localStore_, stats_);
-  auto rootTreeHash = importer.importFlatManifest(commit1.toString());
-  auto rootTree = localStore_.getTree(rootTreeHash).get(10s);
-  EXPECT_EQ(rootTreeHash, rootTree->getHash());
-  EXPECT_EQ(rootTreeHash, rootTree->getHash());
-  ASSERT_THAT(
-      rootTree->getEntryNames(),
-      ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
-
-  // Get the "foo" tree.
-  // When using flatmanifest, it should have already been imported
-  // by importFlatManifest().
-  auto fooEntry = rootTree->getEntryAt("foo"_pc);
-  ASSERT_EQ(TreeEntryType::TREE, fooEntry.getType());
-  auto fooTree = localStore_.getTree(fooEntry.getHash()).get(10s);
-  ASSERT_TRUE(fooTree);
-  ASSERT_THAT(
-      fooTree->getEntryNames(),
-      ElementsAre(PathComponent{"bar.txt"}, PathComponent{"test.txt"}));
-
-  auto barEntry = fooTree->getEntryAt("bar.txt"_pc);
-  ASSERT_EQ(TreeEntryType::REGULAR_FILE, barEntry.getType());
-  auto testEntry = fooTree->getEntryAt("test.txt"_pc);
-  ASSERT_EQ(TreeEntryType::REGULAR_FILE, testEntry.getType());
-
-  // The blobs should not have been imported yet, though
-  EXPECT_FALSE(localStore_.getBlob(barEntry.getHash()).get(0ms));
-  EXPECT_FALSE(localStore_.getBlob(testEntry.getHash()).get(0ms));
-
-  // Get the "src" tree from the LocalStore.
-  auto srcEntry = rootTree->getEntryAt("src"_pc);
-  ASSERT_EQ(TreeEntryType::TREE, srcEntry.getType());
-  auto srcTree = localStore_.getTree(srcEntry.getHash()).get(10ms);
-  ASSERT_TRUE(srcTree);
-  ASSERT_THAT(
-      srcTree->getEntryNames(),
-      ElementsAre(PathComponent{"eden"}, PathComponent{"somelink"}));
-
-  auto somelinkEntry = srcTree->getEntryAt("somelink"_pc);
-  ASSERT_EQ(TreeEntryType::SYMLINK, somelinkEntry.getType());
-
-  // Get the "src/eden" tree from the LocalStore
-  auto edenEntry = srcTree->getEntryAt("eden"_pc);
-  ASSERT_EQ(TreeEntryType::TREE, edenEntry.getType());
-  auto edenTree = localStore_.getTree(edenEntry.getHash()).get(10s);
-  ASSERT_TRUE(edenTree);
-  ASSERT_THAT(edenTree->getEntryNames(), ElementsAre(PathComponent{"main.py"}));
-
-  auto mainEntry = edenTree->getEntryAt("main.py"_pc);
-  ASSERT_EQ(TreeEntryType::EXECUTABLE_FILE, mainEntry.getType());
-
-  // Import and check the blobs
-  auto barBlob = importer.importFileContents(barEntry.getHash());
-  EXPECT_BLOB_EQ(barBlob, barData);
-
-  auto testBlob = importer.importFileContents(testEntry.getHash());
-  EXPECT_BLOB_EQ(testBlob, testData);
-
-  auto mainBlob = importer.importFileContents(mainEntry.getHash());
-  EXPECT_BLOB_EQ(mainBlob, mainData);
-
-  auto somelinkBlob = importer.importFileContents(somelinkEntry.getHash());
-  EXPECT_BLOB_EQ(somelinkBlob, somelinkData);
 
   // Test importing objects that do not exist
   Hash noSuchHash = makeTestHash("123");
-  EXPECT_THROW_RE(
-      importer.importFlatManifest(noSuchHash.toString()),
-      HgImportPyError,
-      "RepoLookupError: unknown revision");
   EXPECT_THROW_RE(
       importer.importFileContents(noSuchHash),
       std::exception,
       "value not present in store");
 
-  // Test trying to import manifests using blob hashes, and vice-versa
-  EXPECT_THROW_RE(
-      importer.importFlatManifest(barEntry.getHash().toString()),
-      HgImportPyError,
-      "RepoLookupError: unknown revision");
   EXPECT_THROW_RE(
       importer.importFileContents(commit1),
       std::exception,

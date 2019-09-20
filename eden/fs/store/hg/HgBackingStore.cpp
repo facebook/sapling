@@ -264,13 +264,18 @@ HgBackingStore::HgBackingStore(
  * production Eden.
  */
 HgBackingStore::HgBackingStore(
-    Importer* importer,
+    AbsolutePathPiece repository,
+    HgImporter* importer,
     LocalStore* localStore,
     std::shared_ptr<EdenStats> stats)
     : localStore_{localStore},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
-      serverThreadPool_{importThreadPool_.get()} {}
+      serverThreadPool_{importThreadPool_.get()} {
+  const auto& options = importer->getOptions();
+  initializeTreeManifestImport(options, repository);
+  repoName_ = options.repoName;
+}
 
 HgBackingStore::~HgBackingStore() {}
 
@@ -341,9 +346,8 @@ void HgBackingStore::initializeTreeManifestImport(
     const ImporterOptions& options,
     AbsolutePathPiece repoPath) {
   if (options.treeManifestPackPaths.empty()) {
-    XLOG(DBG2) << "treemanifest import not supported in repository "
-               << repoPath;
-    return;
+    throw std::runtime_error(folly::to<std::string>(
+        "treemanifest import not supported in repository ", repoPath));
   }
 
   std::vector<DataStore*> storePtrs;
@@ -872,21 +876,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
 }
 
 folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
-  if (unionStore_) {
-    auto hash = importTreeManifest(commitId);
-    return hash;
-  }
-  return importFlatManifest(commitId);
-}
-
-folly::Future<Hash> HgBackingStore::importFlatManifest(Hash commitId) {
-  return folly::via(
-             importThreadPool_.get(),
-             [commitId] {
-               return getThreadLocalImporter().importFlatManifest(
-                   commitId.toString());
-             })
-      .via(serverThreadPool_);
+  return importTreeManifest(commitId);
 }
 
 folly::Future<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(

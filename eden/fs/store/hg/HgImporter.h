@@ -72,13 +72,6 @@ class Importer {
   virtual ~Importer() {}
 
   /**
-   * Import the flat manifest for the specified revision.
-   *
-   * Returns a Hash identifying the root Tree for the imported revision.
-   */
-  virtual Hash importFlatManifest(folly::StringPiece revName) = 0;
-
-  /**
    * Resolve the manifest node for the specified revision.
    *
    * This is used to locate the mercurial tree manifest data for
@@ -145,7 +138,6 @@ class HgImporter : public Importer {
   folly::ProcessReturnCode debugStopHelperProcess();
 #endif
 
-  Hash importFlatManifest(folly::StringPiece revName) override;
   Hash resolveManifestNode(folly::StringPiece revName) override;
   std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
   void prefetchFiles(
@@ -220,18 +212,6 @@ class HgImporter : public Importer {
    */
   ImporterOptions waitForHelperStart();
 
-  /**
-   * Read a single manifest entry from a manifest response chunk,
-   * and give it to the HgManifestImporter for processing.
-   *
-   * The cursor argument points to the start of the manifest entry in the
-   * response chunk received from the helper process.  readManifestEntry() is
-   * responsible for updating the cursor to point to the next manifest entry.
-   */
-  static void readManifestEntry(
-      HgManifestImporter& importer,
-      folly::io::Cursor& cursor,
-      LocalStore::WriteBatch* writeBatch);
   /**
    * Read a response chunk header from the helper process
    *
@@ -340,7 +320,6 @@ class HgImporterManager : public Importer {
       std::shared_ptr<HgImporterThreadStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
-  Hash importFlatManifest(folly::StringPiece revName) override;
   Hash resolveManifestNode(folly::StringPiece revName) override;
 
   std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
