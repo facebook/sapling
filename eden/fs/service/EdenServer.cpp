@@ -32,6 +32,7 @@
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
+#include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FileHandle.h"
@@ -536,7 +537,13 @@ std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
     auto configRoot = getDefaultConfig();
     std::stringstream stream;
     stream << (*configRoot);
+
+#ifdef _WIN32
+    writeFileAtomic(configPath.c_str(), stream.str());
+#else
     folly::writeFileAtomic(string(configPath.c_str()), stream.str());
+#endif
+
     return configRoot;
   }
   return cpptoml::parser(inputFile).parse();
