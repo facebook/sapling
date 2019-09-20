@@ -5,13 +5,6 @@ edition = "2018"
 merge_derives = false
 reorder_imports = true
 reorder_modules = true
-# This must be set to match the version we are currently using
-# in fbsource/tools/third-party/rustfmt/rustfmt. When an external
-# version of rustfmt is used with rls, it serializes the entire
-# config to a temp file and passes the temp file as the value of
-# `--config-path` when running rustfmt. Because we are using a
-# newer version of rustfmt than rls, we must specify this here.
-required_version = "1.3.3"
 tab_spaces = 4
 use_field_init_shorthand = true
 use_try_shorthand = true
