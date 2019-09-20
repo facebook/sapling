@@ -1240,7 +1240,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('unbundle')
     fn unbundle(
         &self,
-        heads: Vec<String>,
+        _heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
         maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
@@ -1270,7 +1270,6 @@ impl HgCommands for RepoClient {
                     client.repo.pushrebase_params().clone(),
                     client.repo.bookmark_attrs(),
                     client.repo.infinitepush().clone(),
-                    heads,
                     stream,
                     hook_manager,
                     client.lca_hint.clone(),

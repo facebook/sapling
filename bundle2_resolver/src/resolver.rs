@@ -72,7 +72,6 @@ pub fn resolve(
     pushrebase: PushrebaseParams,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
-    _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
