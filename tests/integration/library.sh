@@ -562,7 +562,7 @@ function blobimport {
   output="$2"
   shift 2
   mkdir -p "$output"
-  $MONONOKE_BLOBIMPORT --repo_id 0 \
+  $MONONOKE_BLOBIMPORT --repo-id 0 \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      "$input" "${CACHING_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
@@ -574,12 +574,12 @@ function blobimport {
 }
 
 function bonsai_verify {
-  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo_id 0 \
+  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo-id 0 \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
 function lfs_import {
-  "$MONONOKE_LFS_IMPORT" --repo_id 0 \
+  "$MONONOKE_LFS_IMPORT" --repo-id 0 \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
@@ -874,7 +874,7 @@ EOF
 function aliasverify() {
   mode=$1
   shift 1
-  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo_id 0 \
+  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo-id 0 \
      "${CACHING_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
@@ -905,7 +905,7 @@ function pushrebase_replay() {
     --mononoke-address "[::1]:$MONONOKE_SOCKET" \
     --mononoke-server-common-name localhost \
     --db-indices "$DB_INDICES" \
-    --repoid 0 \
+    --repo-id 0 \
     --bundle-provider filesystem \
     --filesystem-bundles-storage-path "$TESTTMP" \
     --sqlite3-path "$TESTTMP/pushrebaserecording" \
