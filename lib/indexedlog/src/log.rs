@@ -482,12 +482,10 @@ impl Log {
                 // Indexes can be reused, since they do not have new in-memory
                 // entries, and the on-disk primary log is append-only (so data
                 // already present in the indexes is valid).
-                let mut indexes = Vec::new();
-                std::mem::swap(&mut self.indexes, &mut indexes);
                 *self = self
                     .open_options
                     .clone()
-                    .open_internal(self.dir.as_ref().unwrap(), Some(indexes))?;
+                    .open_internal(self.dir.as_ref().unwrap(), Some(&self.indexes))?;
             }
             return Ok(self.meta.primary_len);
         }
@@ -586,14 +584,13 @@ impl Log {
                 // Indexes can be reused, because they already contain all entries
                 // that were just written to disk and the on-disk files do not
                 // have new entries (tested by "self.meta != meta" in Step 1).
-                let mut indexes = Vec::new();
-                std::mem::swap(&mut self.indexes, &mut indexes);
+                //
                 // The indexes contain all entries, because they were previously
                 // "always-up-to-date", and the on-disk log does not have anything new.
                 // Update "meta" so "update_indexes_for_on_disk_entries" below won't
                 // re-index entries.
-                Self::set_index_log_len(indexes.iter_mut(), meta.primary_len);
-                Some(indexes)
+                Self::set_index_log_len(self.indexes.iter_mut(), meta.primary_len);
+                Some(&self.indexes)
             },
             self.open_options.fsync,
         )?;
@@ -1061,7 +1058,7 @@ impl Log {
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
         mem_buf: &Pin<Box<Vec<u8>>>,
-        reuse_indexes: Option<Vec<Index>>,
+        reuse_indexes: Option<&Vec<Index>>,
         fsync: bool,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_buf = match dir {
@@ -1098,22 +1095,25 @@ impl Log {
                 }
                 indexes
             }
-            Some(mut indexes) => {
+            Some(indexes) => {
                 assert_eq!(index_defs.len(), indexes.len());
+                let mut new_indexes = Vec::with_capacity(indexes.len());
                 // Avoid reloading the index from disk.
                 // Update their ExternalKeyBuffer so they have the updated meta.primary_len.
-                for (index, def) in indexes.iter_mut().zip(index_defs) {
+                for (index, def) in indexes.iter().zip(index_defs) {
                     let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
-                    if index_len > Self::get_index_log_len(index).unwrap_or(0) {
+                    let index = if index_len > Self::get_index_log_len(index).unwrap_or(0) {
                         // The on-disk index covers more entries. Loading it is probably
                         // better than reusing the existing in-memory index.
-                        *index =
-                            Self::load_index(dir, &def.name, index_len, key_buf.clone(), fsync)?;
+                        Self::load_index(dir, &def.name, index_len, key_buf.clone(), fsync)?
                     } else {
+                        let mut index = index.try_clone()?;
                         index.key_buf = key_buf.clone();
-                    }
+                        index
+                    };
+                    new_indexes.push(index);
                 }
-                indexes
+                new_indexes
             }
         };
         Ok((primary_buf, indexes))
@@ -1486,7 +1486,7 @@ impl OpenOptions {
     // "Back-door" version of "open" that allows reusing indexes.
     // Used by [`Log::sync`]. See [`Log::load_log_and_indexes`] for when indexes
     // can be reused.
-    fn open_internal(self, dir: &Path, reuse_indexes: Option<Vec<Index>>) -> Fallible<Log> {
+    fn open_internal(self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> Fallible<Log> {
         let create = self.create;
 
         let meta = Log::load_or_create_meta(dir, false).or_else(|_| {
