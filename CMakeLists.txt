@@ -3,7 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-cmake_minimum_required(VERSION 3.1.3 FATAL_ERROR)
+# The add_fbthrift_library() calls require CMake 3.8+
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 # We use the GoogleTest module if it is available (only in CMake 3.9+)
 # It requires CMP0054 and CMP0057 to be enabled.
 if (POLICY CMP0054)
