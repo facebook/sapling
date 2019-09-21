@@ -149,8 +149,8 @@ class snapshotmetadata(object):
         oid, size = _dostore(store, self.serialize())
         return oid, size
 
-    def getauxfileids(self):
-        auxfileids = set()
-        auxfileids.update(f.oid for f in self.unknown)
-        auxfileids.update(f.oid for f in self.localvfsfiles)
-        return auxfileids
+    def getauxfilesinfo(self):
+        auxfilesinfo = set()
+        auxfilesinfo.update(f.oid for f in self.unknown)
+        auxfilesinfo.update(f.oid for f in self.localvfsfiles)
+        return auxfilesinfo

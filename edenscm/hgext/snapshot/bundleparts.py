@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import struct
-
 from edenscm.mercurial import bundle2, error
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.utils import cborutil
 
 from . import metadata
 
@@ -29,7 +28,7 @@ def getmetadatafromrevs(repo, revs):
     for rev in revs:
         # TODO(alexeyqu): move this check into a function
         if rev not in unfi:
-            raise error.Abort(_("%s not found in repo\n") % rev)
+            raise error.Abort(_("%s not found in repo") % rev)
         ctx = unfi[rev]
         snapshotmetadataid = ctx.extra().get("snapshotmetadataid", None)
         if snapshotmetadataid:
@@ -43,74 +42,66 @@ def getmetadatafromrevs(repo, revs):
 def handlemetadata(op, inpart):
     """unpack metadata for snapshots
     """
-    binarydecode(op.repo, inpart)
-
-
-_versionentry = struct.Struct(">B")
-_binaryentry = struct.Struct(">64sI")
+    store = op.repo.svfs.snapshotstore
+    for oid, data in binarydecode(inpart):
+        store.write(oid, data)
 
 
 def binaryencode(repo, metadataids):
-    """encode snapshot metadata into a binary stream
+    """encode snapshot metadata into a binary CBOR stream
 
-    the binary format is:
-        <version-byte>[<chunk-id><chunk-length><chunk-content>]+
-
-    :version-byte: is a version byte
-    :chunk-id: is a string of 64 chars -- sha256 of the chunk
-    :chunk-length: is an unsigned int
-    :chunk-content: is the metadata contents (of length <chunk-length>)
+    format (CBOR-encoded):
+    {
+        "metadatafiles": {
+            <metadata oid>: <binary metadata content>,
+            . . .
+        },
+        "auxfiles": {
+            <file oid>: <binary file content>,
+            . . .
+        }
+    }
     """
 
-    def _encode(oid, data):
-        return [_binaryentry.pack(oid, len(data)), data]
-
-    metadataauxfileids = set()
-    binaryparts = []
-    # store the version info
-    binaryparts.append(_versionentry.pack(metadata.snapshotmetadata.VERSION))
+    metadataauxfilesinfo = set()
+    bundlepartdict = {"metadatafiles": {}, "auxfiles": {}}
+    store = repo.svfs.snapshotstore
     # store the metadata files
     for metadataid in metadataids:
-        snapmetadata = metadata.snapshotmetadata.getfromlocalstorage(repo, metadataid)
-        metadataauxfileids.update(snapmetadata.getauxfileids())
-        data = snapmetadata.serialize()
-        binaryparts += _encode(metadataid, data)
+        data = store.read(metadataid)
+        bundlepartdict["metadatafiles"][metadataid] = data
+        snapmetadata = metadata.snapshotmetadata.deserialize(data)
+        metadataauxfilesinfo.update(snapmetadata.getauxfilesinfo())
     # store files that are mentioned in metadata
-    for auxfileid in metadataauxfileids:
-        data = repo.svfs.snapshotstore.read(auxfileid)
-        binaryparts += _encode(auxfileid, data)
-    return "".join(binaryparts)
+    for fileid in metadataauxfilesinfo:
+        bundlepartdict["auxfiles"][fileid] = store.read(fileid)
+    return "".join(cborutil.streamencode(bundlepartdict))
 
 
-def binarydecode(repo, stream):
-    """decode a binary stream into individual blobs and store them
-    Returns a list of file ids.
+def binarydecode(stream):
+    """decode a binary CBOR stream into individual blobs and store them
+    Generates pairs of (oid, data).
 
-    the binary format is:
-        <version-byte>[<chunk-id><chunk-length><chunk-content>]+
-
-    :version-byte: is a version byte
-    :chunk-id: is a string of 64 chars -- sha256 of the chunk
-    :chunk-length: is an unsigned int
-    :chunk-content: is the metadata contents (of length <chunk-length>)
+    format (CBOR-encoded):
+    {
+        "metadatafiles": {
+            <metadata oid>: <binary metadata content>,
+            . . .
+        },
+        "auxfiles": {
+            <file oid>: <binary file content>,
+            . . .
+        }
+    }
     """
-    # check the version info
-    version = _versionentry.unpack(stream.read(_versionentry.size))[0]
-    if version != metadata.snapshotmetadata.VERSION:
-        raise error.Abort(_("invalid version number %d") % version)
-    entrysize = _binaryentry.size
-    fileids = []
-    while True:
-        entry = stream.read(entrysize)
-        if len(entry) < entrysize:
-            if entry:
-                raise error.Abort(_("bad snapshot metadata stream"))
-            break
-        oid, length = _binaryentry.unpack(entry)
-        data = stream.read(length)
-        if len(data) < length:
-            if data:
-                raise error.Abort(_("bad snapshot metadata stream"))
-        repo.svfs.snapshotstore.write(oid, data)
-        fileids.append(oid)
-    return fileids
+
+    try:
+        bundlepartdict = cborutil.decodeall(stream.read())[0]
+    except cborutil.CBORDecodeError:
+        raise error.Abort(_("invalid bundlepart stream"))
+    try:
+        for section in ("metadatafiles", "auxfiles"):
+            for oid, content in bundlepartdict[section].iteritems():
+                yield oid, content
+    except (KeyError, ValueError):
+        raise error.Abort(_("invalid bundlepart dict: %s") % (bundlepartdict,))
