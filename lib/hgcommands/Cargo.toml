@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 bindings = { path = "../../edenscmnative/bindings" }
+blackbox = { path = "../blackbox" }
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }

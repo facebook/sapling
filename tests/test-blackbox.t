@@ -25,6 +25,7 @@ alias expansion is logged
   $ rm -rf ./.hg/blackbox*
   $ hg confuse
   $ hg blackbox
+  [command] ["hg", "confuse"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] confuse
   [legacy][dirstate_info]
@@ -32,6 +33,7 @@ alias expansion is logged
   [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command_info]
+  [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]
@@ -41,6 +43,7 @@ recursive aliases work correctly
   $ rm -rf ./.hg/blackbox*
   $ hg so-confusing
   $ hg blackbox
+  [command] ["hg", "so-confusing"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] so-confusing
   [legacy][dirstate_info]
@@ -48,6 +51,7 @@ recursive aliases work correctly
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command_info]
+  [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]

@@ -324,10 +324,6 @@ pub enum Event {
         )]
         nice: i32,
 
-        // A subset of interesting environment variables.
-        #[serde(rename = "E", alias = "env")]
-        env: BTreeMap<String, String>,
-
         #[serde(rename = "A", alias = "args")]
         args: Vec<String>,
     },
@@ -621,7 +617,6 @@ impl fmt::Display for Event {
                 pid,
                 uid,
                 nice,
-                env: _,
                 args,
             } => {
                 write!(

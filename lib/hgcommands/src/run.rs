@@ -11,6 +11,18 @@ use std::env;
 ///
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
+    // This is intended to be "process start". "exec/hgmain" seems to be
+    // a better place for it. However, chg makes it tricky. Because if hgmain
+    // decides to use chg, then there is no way to figure out which `blackbox`
+    // to write to, because the repo initialization logic happened in another
+    // process (a forked chg server).
+    //
+    // Having "run_command" here will make it logged by the forked chg server,
+    // which is a bit more desiable. Since run_command is very close to process
+    // start, it should reflect the duration of the command relatively
+    // accurately, at least for non-chg cases.
+    log_start(args.clone());
+
     let cwd = env::current_dir().unwrap();
     let table = commands::table();
 
@@ -43,4 +55,36 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
             HgPython::new(args.clone()).run_hg(args, io)
         }
     }
+}
+
+fn log_start(args: Vec<String>) {
+    let (uid, pid, nice) = if is_inside_test() {
+        (0, 0, 0)
+    } else {
+        #[cfg(unix)]
+        unsafe {
+            (
+                libc::getuid() as u32,
+                libc::getpid() as u32,
+                libc::nice(0) as i32,
+            )
+        }
+
+        #[cfg(not(unix))]
+        unsafe {
+            // uid and nice are not aviailable on Windows.
+            (0, libc::getpid() as u32, 0)
+        }
+    };
+
+    blackbox::log(&blackbox::event::Event::Start {
+        pid,
+        uid,
+        nice,
+        args,
+    });
+}
+
+fn is_inside_test() -> bool {
+    std::env::var_os("TESTTMP").is_some()
 }
