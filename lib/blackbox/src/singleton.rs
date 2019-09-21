@@ -20,6 +20,8 @@ lazy_static! {
 
 /// Replace the global [`Blackbox`] instance.
 ///
+/// The session ID of the old blackbox will be reused.
+///
 /// If [`log`] was called, their side effects will be re-applied to the
 /// specified blackbox.
 pub fn init(mut blackbox: Blackbox) {
@@ -34,6 +36,7 @@ pub fn init(mut blackbox: Blackbox) {
             }
         }
     }
+    blackbox.session_id = old_blackbox.session_id;
 
     *singleton.deref_mut() = blackbox;
 }

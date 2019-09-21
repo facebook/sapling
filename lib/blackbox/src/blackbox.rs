@@ -26,7 +26,7 @@ pub struct Blackbox {
     opts: BlackboxOptions,
 
     // An ID that can be "grouped by" to figure everything about a session.
-    session_id: u64,
+    pub(crate) session_id: u64,
 
     // The on-disk files are considered bad (ex. no permissions, or no disk space)
     // and further write attempts will be ignored.
