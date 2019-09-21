@@ -165,55 +165,6 @@ def snapshotcheckout(ui, repo, *args, **opts):
     ui.status(_("checkout complete\n"))
 
 
-@subcmd("list", cmdutil.formatteropts)
-def snapshotlistcmd(ui, repo, *args, **opts):
-    """list the local snapshots
-    """
-    snapshotlist(repo).printsnapshots(ui, **opts)
-
-
-@command("debugcreatesnapshotmetadata", inferrepo=True)
-def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
-    """
-    Creates pseudo metadata for untracked files without committing them.
-    Loads untracked files and the created metadata into local blobstore.
-    Outputs the oid of the created metadata file.
-
-    Be careful, snapshot metadata internal structure may change.
-    """
-    snapmetadata = snapshotmetadata.createfromworkingcopy(repo)
-    if snapmetadata.empty:
-        ui.status(
-            _(
-                "Working copy is even with the last commit. "
-                "No need to create snapshot.\n"
-            )
-        )
-        return
-    oid, size = snapmetadata.storelocally(repo)
-    ui.status(_("metadata oid: %s\n") % oid)
-
-
-@command(
-    "debugcheckoutsnapshotmetadata",
-    [("f", "force", False, _("force checkout"))],
-    _("OID"),
-    inferrepo=True,
-)
-def debugcheckoutsnapshotmetadata(ui, repo, *args, **opts):
-    """
-    Checks out the working copy to the snapshot metadata state, given its metadata id.
-    Takes in an oid of the metadata.
-
-    This command does not validate contents of the snapshot metadata.
-    """
-    if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a metadata oid\n"))
-    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, args[0])
-    checkouttosnapshotmetadata(ui, repo, snapmetadata, force=opts.get("force"))
-    ui.status(_("snapshot checkout complete\n"))
-
-
 def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
     def checkaddfile(store, file, vfs, force):
         if not force and vfs.exists(file.path):
@@ -236,3 +187,10 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
     with repo.wlock():
         for file in snapmetadata.localvfsfiles:
             checkaddfile(repo.svfs.snapshotstore, file, repo.localvfs, force)
+
+
+@subcmd("list", cmdutil.formatteropts)
+def snapshotlistcmd(ui, repo, *args, **opts):
+    """list the local snapshots
+    """
+    snapshotlist(repo).printsnapshots(ui, **opts)
