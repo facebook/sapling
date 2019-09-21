@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscmnative import bindings
+import bindings
 
 from . import error, util
 

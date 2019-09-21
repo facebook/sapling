@@ -8,9 +8,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-# TODO: Make this test compatibile with obsstore enabled.
-sh % "setconfig 'experimental.evolution='"
-# Test a rebase that doesn't create a commit:
+sh % "setconfig treemanifest.flatcompat=0"
 
 sh % "enable amend rebase"
 sh % "setconfig 'rebase.singletransaction=True'"
@@ -42,8 +40,7 @@ sh % "cp -R . ../without_imm"
 sh % "hg rebase -r b -d a" == r"""
     rebasing in-memory!
     rebasing 2:811ec875201f "b" (b tip)
-    note: rebase of 2:811ec875201f created no changes to commit
-    saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/811ec875201f-889e3ef7-rebase.hg"""
+    note: rebase of 2:811ec875201f created no changes to commit"""
 
 # Without IMM, this behavior is semi-broken: the commit is not rebased out and the
 # created commit is empty. (D8676355)
@@ -51,8 +48,7 @@ sh % "cd ../without_imm"
 sh % "setconfig 'rebase.experimental.inmemory=0'"
 sh % "hg rebase -r b -d a" == r"""
     rebasing 2:811ec875201f "b" (b tip)
-    warning: can't find ancestor for 'file_new' copied from 'file'!
-    saved backup bundle to $TESTTMP/without_imm/.hg/strip-backup/811ec875201f-889e3ef7-rebase.hg"""
+    warning: can't find ancestor for 'file_new' copied from 'file'!"""
 sh % "hg export tip" == r"""
     # HG changeset patch
     # User test
