@@ -11,6 +11,7 @@ cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
 libc = "0.2"
 failure = "0.1"
+procinfo = { path = "../procinfo"}
 revisionstore = { path = "../revisionstore"}
 types = { path = "../types" }
 util = { path = "../util" }

@@ -33,6 +33,7 @@ alias expansion is logged
   [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command_info]
+  [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] blackbox
@@ -51,6 +52,7 @@ recursive aliases work correctly
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command_info]
+  [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [legacy][env_vars]
   [legacy][command] blackbox

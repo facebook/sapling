@@ -6,11 +6,14 @@
 use crate::{commands, HgPython};
 use clidispatch::{dispatch, errors};
 use std::env;
+use std::time::SystemTime;
 
 /// Run a Rust or Python command.
 ///
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
+    let now = SystemTime::now();
+
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
     // decides to use chg, then there is no way to figure out which `blackbox`
@@ -26,7 +29,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     let cwd = env::current_dir().unwrap();
     let table = commands::table();
 
-    match dispatch::dispatch(&table, args[1..].to_vec(), io) {
+    let exit_code = match dispatch::dispatch(&table, args[1..].to_vec(), io) {
         Ok(ret) => ret as i32,
         Err(err) => {
             let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
@@ -54,7 +57,11 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
             HgPython::new(args.clone()).run_hg(args, io)
         }
-    }
+    };
+
+    log_end(exit_code as u8, now);
+
+    exit_code
 }
 
 fn log_start(args: Vec<String>) {
@@ -82,6 +89,29 @@ fn log_start(args: Vec<String>) {
         uid,
         nice,
         args,
+    });
+}
+
+fn log_end(exit_code: u8, now: SystemTime) {
+    let inside_test = is_inside_test();
+    let duration_ms = if inside_test {
+        0
+    } else {
+        match now.elapsed() {
+            Ok(duration) => duration.as_millis() as u64,
+            Err(_) => 0,
+        }
+    };
+    let max_rss = if inside_test {
+        0
+    } else {
+        procinfo::max_rss_bytes()
+    };
+
+    blackbox::log(&blackbox::event::Event::Finish {
+        exit_code,
+        max_rss,
+        duration_ms,
     });
 }
 
