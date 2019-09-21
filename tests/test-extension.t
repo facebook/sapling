@@ -118,41 +118,6 @@ Check normal command's load order of extensions and registration of functions
   4) bar reposetup
   0:c24b9ac61126
 
-Check hgweb's load order of extensions and registration of functions
-
-  $ cat > hgweb.cgi <<EOF
-  > #!$PYTHON
-  > from edenscm.mercurial import demandimport; demandimport.enable()
-  > from edenscm.mercurial.hgweb import hgweb
-  > from edenscm.mercurial.hgweb import wsgicgi
-  > application = hgweb('.', 'test repo')
-  > wsgicgi.launch(application)
-  > EOF
-  $ . "$TESTDIR/cgienv"
-
-  $ PATH_INFO='/' SCRIPT_NAME='' $PYTHON hgweb.cgi \
-  >    | grep '^[0-9]) ' # ignores HTML output
-  1) foo imported
-  1) bar imported
-  2) foo uisetup
-  2) bar uisetup
-  3) foo extsetup
-  3) bar extsetup
-  4) foo reposetup
-  4) bar reposetup
-
-(check that revset predicate foo() and bar() are available)
-
-#if msys
-  $ PATH_INFO='//shortlog'
-#else
-  $ PATH_INFO='/shortlog'
-#endif
-  $ export PATH_INFO
-  $ SCRIPT_NAME='' QUERY_STRING='rev=foo() and bar()' $PYTHON hgweb.cgi \
-  >     | grep '<a href="/rev/[0-9a-z]*">'
-     <a href="/rev/c24b9ac61126">add file</a>
-
   $ echo 'foo = !' >> $HGRCPATH
   $ echo 'bar = !' >> $HGRCPATH
 

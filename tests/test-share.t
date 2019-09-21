@@ -105,20 +105,6 @@ check in shared clone
   $ cat b             # should exist with one "b"
   b
 
-hg serve shared clone
-
-  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ get-with-headers.py localhost:$HGPORT 'raw-file/'
-  200 Script output follows
-  
-  
-  -rw-r--r-- 4 a
-  -rw-r--r-- 2 b
-  
-  
-
 test unshare command
 
   $ hg unshare
