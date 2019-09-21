@@ -89,14 +89,14 @@ Combining esc with other markups - and handling lines ending with \r instead of 
 
 testing hghave
 
-  $ hghave true
-  $ hghave false
+  $ hg debugpython -- "$TESTDIR/hghave" true
+  $ hg debugpython -- "$TESTDIR/hghave" false
   skipped: missing feature: nail clipper
   [1]
-  $ hghave no-true
+  $ hg debugpython -- "$TESTDIR/hghave" no-true
   skipped: system supports yak shaving
   [1]
-  $ hghave no-false
+  $ hg debugpython -- "$TESTDIR/hghave" no-false
 
 Conditional sections based on hghave:
 

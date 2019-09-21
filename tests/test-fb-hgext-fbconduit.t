@@ -2,7 +2,7 @@
 
 Start up translation service.
 
-  $ $PYTHON "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
+  $ hg debugpython -- "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
   $ cat conduit.pid >> $DAEMON_PIDS
   $ CONDUIT_PORT=`cat conduit.port`
 

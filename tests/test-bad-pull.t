@@ -7,7 +7,7 @@
   $ test -d copy
   [1]
 
-  $ $PYTHON "$TESTDIR/dumbhttp.py" -p $HGPORT --pid dumb.pid
+  $ hg debugpython -- "$TESTDIR/dumbhttp.py" -p $HGPORT --pid dumb.pid
   $ cat dumb.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/foo copy2
   abort: HTTP Error 404: * (glob)

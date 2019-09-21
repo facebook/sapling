@@ -27,7 +27,7 @@ Prepare repo-a:
 
 Dumping revlog of file a to stdout:
 
-  $ $PYTHON "$CONTRIBDIR/dumprevlog" .hg/store/data/a.i
+  $ hg debugpython -- "$CONTRIBDIR/dumprevlog" .hg/store/data/a.i
   file: .hg/store/data/a.i
   node: 183d2312b35066fb6b3b449b84efc370d50993d0
   linkrev: 0
@@ -59,14 +59,14 @@ Dumping revlog of file a to stdout:
 
 Dump all revlogs to file repo.dump:
 
-  $ find .hg/store -name "*.i" | sort | xargs $PYTHON "$CONTRIBDIR/dumprevlog" > ../repo.dump
+  $ find .hg/store -name "*.i" | sort | xargs hg debugpython -- "$CONTRIBDIR/dumprevlog" > ../repo.dump
   $ cd ..
 
 Undumping into repo-b:
 
   $ hg init repo-b
   $ cd repo-b
-  $ $PYTHON "$CONTRIBDIR/undumprevlog" < ../repo.dump
+  $ hg debugpython -- "$CONTRIBDIR/undumprevlog" < ../repo.dump
   .hg/store/00changelog.i
   .hg/store/00manifest.i
   .hg/store/data/a.i
@@ -115,7 +115,7 @@ Test simplemerge command:
 
 changing local directly
 
-  $ $PYTHON simplemerge local base other && echo "merge succeeded"
+  $ hg debugpython -- simplemerge local base other && echo "merge succeeded"
   merge succeeded
   $ cat local
   local
@@ -125,7 +125,7 @@ changing local directly
 
 printing to stdout
 
-  $ $PYTHON simplemerge -p local base other
+  $ hg debugpython -- simplemerge -p local base other
   local
   base
   other
@@ -144,7 +144,7 @@ conflicts
   $ echo end >> conflict-local
   $ echo end >> conflict-other
 
-  $ $PYTHON simplemerge -p conflict-local base conflict-other
+  $ hg debugpython -- simplemerge -p conflict-local base conflict-other
   base
   <<<<<<< conflict-local
   not other
@@ -156,7 +156,7 @@ conflicts
 
 1 label
 
-  $ $PYTHON simplemerge -p -L foo conflict-local base conflict-other
+  $ hg debugpython -- simplemerge -p -L foo conflict-local base conflict-other
   base
   <<<<<<< foo
   not other
@@ -168,7 +168,7 @@ conflicts
 
 2 labels
 
-  $ $PYTHON simplemerge -p -L foo -L bar conflict-local base conflict-other
+  $ hg debugpython -- simplemerge -p -L foo -L bar conflict-local base conflict-other
   base
   <<<<<<< foo
   not other
@@ -180,7 +180,7 @@ conflicts
 
 3 labels
 
-  $ $PYTHON simplemerge -p -L foo -L bar -L base conflict-local base conflict-other
+  $ hg debugpython -- simplemerge -p -L foo -L bar -L base conflict-local base conflict-other
   base
   <<<<<<< foo
   not other
@@ -194,21 +194,21 @@ conflicts
 
 too many labels
 
-  $ $PYTHON simplemerge -p -L foo -L bar -L baz -L buz conflict-local base conflict-other
+  $ hg debugpython -- simplemerge -p -L foo -L bar -L baz -L buz conflict-local base conflict-other
   abort: can only specify three labels.
   [255]
 
 binary file
 
-  $ $PYTHON -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
+  $ hg debugpython -- -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
   $ cat orig >> binary-local
-  $ $PYTHON simplemerge -p binary-local base other
+  $ hg debugpython -- simplemerge -p binary-local base other
   warning: binary-local looks like a binary file.
   [1]
 
 binary file --text
 
-  $ $PYTHON simplemerge -a -p binary-local base other 2>&1
+  $ hg debugpython -- simplemerge -a -p binary-local base other 2>&1
   warning: binary-local looks like a binary file.
   \x00local (esc)
   base
@@ -216,7 +216,7 @@ binary file --text
 
 help
 
-  $ $PYTHON simplemerge --help
+  $ hg debugpython -- simplemerge --help
   simplemerge [OPTS] LOCAL BASE OTHER
   
       Simple three-way file merge utility with a minimal feature set.
@@ -235,7 +235,7 @@ help
 
 wrong number of arguments
 
-  $ $PYTHON simplemerge
+  $ hg debugpython -- simplemerge
   simplemerge: wrong number of arguments
   simplemerge [OPTS] LOCAL BASE OTHER
   
@@ -256,7 +256,7 @@ wrong number of arguments
 
 bad option
 
-  $ $PYTHON simplemerge --foo -p local base other
+  $ hg debugpython -- simplemerge --foo -p local base other
   simplemerge: option --foo not recognized
   simplemerge [OPTS] LOCAL BASE OTHER
   

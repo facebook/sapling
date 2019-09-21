@@ -139,7 +139,7 @@
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > ${PYTHON:-python} "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/master"
+  > hg debugpython -- "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/master"
   > EOF
 
   $ hg -R master --config hgsql.bypass=True debugstrip -r tip

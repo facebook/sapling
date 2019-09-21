@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Test the running system for features availability. Exit with zero
 if all features are there, non-zero otherwise. If a feature name is
 prefixed with "no-", the absence of feature is tested.

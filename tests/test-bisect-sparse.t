@@ -108,7 +108,6 @@ check --nosparseskip flag
 verify skipping works with --command flag
 
   $ cat > script.py <<EOF
-  > #!$PYTHON
   > from __future__ import absolute_import
   > import sys
   > from edenscm.mercurial import hg, ui as uimod
@@ -122,7 +121,7 @@ verify skipping works with --command flag
   $ hg bisect -g 0
   $ hg up 9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg bisect --command "\"$PYTHON\" script.py"
+  $ hg bisect --command "hg debugpython -- script.py"
   changeset 9:d910e57b873b: bad
   Skipping changeset 4:e116419d642b as there are no changes inside
   the sparse profile from the known good changeset 0:a75e20cc7b2a

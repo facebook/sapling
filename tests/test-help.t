@@ -1732,5 +1732,5 @@ Compression engines listed in `hg help bundlespec`
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
-  $ $PYTHON check-seclevel.py
+  $ hg debugpython -- check-seclevel.py
 #endif

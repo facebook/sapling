@@ -10,10 +10,10 @@
   > sh % "printf bar" == "baz"
   > EOF
 
-  $ python a.py 2>&1 | tail -1
+  $ hg debugpython -- a.py 2>&1 | tail -1
   a.py:3: 3 != 0
 
-  $ python a.py --fix
+  $ hg debugpython -- a.py --fix
   $ cat a.py
   from testutil.autofix import eq
   from testutil.dott import sh

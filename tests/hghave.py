@@ -744,13 +744,6 @@ def has_debhelper():
     return dpkg and dh and dh_py2 and debuild
 
 
-@check("debdeps", "debian build dependencies (run dpkg-checkbuilddeps in contrib/)")
-def has_debdeps():
-    # just check exit status (ignoring output)
-    path = "%s/../contrib/debian/control" % os.environ["TESTDIR"]
-    return matchoutput("dpkg-checkbuilddeps %s" % path, br"")
-
-
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
     # chg disables demandimport intentionally for performance wins.

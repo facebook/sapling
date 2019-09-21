@@ -459,7 +459,6 @@ assuming that the shell returns 127 if command not found ...
 test bisecting command
 
   $ cat > script.py <<EOF
-  > #!$PYTHON
   > from __future__ import absolute_import
   > import sys
   > from edenscm.mercurial import hg, ui as uimod
@@ -467,15 +466,14 @@ test bisecting command
   > if repo['.'].rev() < 6:
   >     sys.exit(1)
   > EOF
-  $ chmod +x script.py
   $ hg bisect -r
   $ hg up -qr tip
-  $ hg bisect --command "\"$PYTHON\" \"$TESTTMP/script.py\" and some parameters"
+  $ hg bisect --command "hg debugpython -- \"$TESTTMP/script.py\" and some parameters"
   changeset 31:58c80a7c8a40: good
   abort: cannot bisect (no known bad revisions)
   [255]
   $ hg up -qr 0
-  $ hg bisect --command "\"$PYTHON\" \"$TESTTMP/script.py\" and some parameters"
+  $ hg bisect --command "hg debugpython -- \"$TESTTMP/script.py\" and some parameters"
   changeset 0:b99c7b9c8e11: bad
   changeset 15:e7fa0811edb0: good
   changeset 7:03750880c6b5: good

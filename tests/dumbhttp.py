@@ -98,5 +98,5 @@ if __name__ == "__main__":
         initfn=service.init,
         runfn=service.run,
         logfile=options.logfile,
-        runargs=[sys.executable, __file__] + sys.argv[1:],
+        runargs=["hg", "debugpython", "--", __file__] + sys.argv[1:],
     )

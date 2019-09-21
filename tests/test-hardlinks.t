@@ -13,7 +13,7 @@
 
   $ nlinksdir()
   > {
-  >     find "$@" -type f | $PYTHON $TESTTMP/nlinks.py | grep -v blackbox
+  >     find "$@" -type f | hg debugpython -- $TESTTMP/nlinks.py | grep -v blackbox
   > }
 
 Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
@@ -27,7 +27,7 @@ Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
 
   $ linkcp()
   > {
-  >     $PYTHON $TESTTMP/linkcp.py $1 $2
+  >     hg debugpython -- $TESTTMP/linkcp.py $1 $2
   > }
 
 Prepare repo r1:

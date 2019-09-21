@@ -54,7 +54,7 @@ We approximate that by reducing the read buffer to 1 byte.
   > for r in cl:
   >     print short(cl.node(r))
   > EOF
-  $ $PYTHON test.py
+  $ hg debugpython -- test.py
   2 revisions:
   7c31755bf9b5
   26333235a41c
@@ -67,7 +67,7 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
 
   $ cd a
 
-  $ $PYTHON <<EOF
+  $ hg debugpython -- <<EOF
   > from edenscm.mercurial import changelog, uiconfig, vfs
   > cl = changelog.changelog(vfs.vfs('.hg/store'), uiconfig.uiconfig())
   > print 'good heads:'

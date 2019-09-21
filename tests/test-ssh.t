@@ -364,7 +364,7 @@ parameters:
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > "$PYTHON" "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
+  > hg debugpython -- "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
   > EOF
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
@@ -392,7 +392,7 @@ Test hg-ssh in read-only mode:
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > "$PYTHON" "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/remote"
+  > hg debugpython -- "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/remote"
   > EOF
 
   $ hg clone --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/remote" read-only-local
@@ -440,7 +440,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   > [paths]
   > default-push = ssh://user@dummy/remote
   > [ui]
-  > ssh = "$PYTHON" "$TESTDIR/dummyssh"
+  > ssh = hg debugpython -- "$TESTDIR/dummyssh"
   > [extensions]
   > localwrite = localwrite.py
   > EOF
