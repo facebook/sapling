@@ -1020,6 +1020,7 @@ Test list of internal help commands
                  (no help text available)
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
+   debugpython   run python interpreter
    debugrebuilddirstate
                  rebuild the dirstate as it would look like for the given
                  revision

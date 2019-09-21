@@ -37,9 +37,10 @@ macro_rules! _define_flags_impl {
 
         impl $crate::parser::StructFlags for $name {
             fn flags() -> Vec<$crate::parser::Flag> {
-                vec![
+                let flags: Vec<(char, String, String, $crate::parser::Value)> = vec![
                     $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default)), )*
-                ].into_iter().map(Into::into).collect()
+                ];
+                flags.into_iter().map(Into::into).collect()
             }
         }
 

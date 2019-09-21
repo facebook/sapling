@@ -127,6 +127,7 @@ Show debug commands if there are no other candidates
   debugprogress
   debugpushkey
   debugpvec
+  debugpython
   debugrebuilddirstate
   debugrebuildfncache
   debugrename
@@ -333,6 +334,7 @@ Show all commands + options
   debugprogress: spinner, nototal, bytes, sleep, nested, with-output
   debugpushkey: 
   debugpvec: 
+  debugpython: 
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugrename: rev

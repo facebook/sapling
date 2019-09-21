@@ -40,7 +40,7 @@ fn main() {
     }
 
     #[cfg(feature = "with_chg")]
-    maybe_call_chg();
+    maybe_call_chg(&full_args);
 
     #[cfg(windows)]
     disable_standard_handle_inheritability().unwrap();

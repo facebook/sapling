@@ -40,7 +40,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
             // code.
             let _ = env::set_current_dir(cwd);
 
-            HgPython::new(args.clone()).run(args, io)
+            HgPython::new(args.clone()).run_hg(args, io)
         }
     }
 }

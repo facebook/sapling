@@ -65,13 +65,20 @@ fn file_decision(path: Option<impl AsRef<Path>>) -> Option<bool> {
 /// TODO: implement command-based filtering logic
 ///       which would provide us with command names
 ///       to always skip
-fn should_call_chg() -> bool {
+fn should_call_chg(args: &Vec<String>) -> bool {
     if cfg!(target_os = "windows") {
         return false;
     }
     // This means we're already inside the chg call chain
     if std::env::var_os("CHGINTERNALMARK").is_some() {
         return false;
+    }
+
+    if let Some(arg) = args.get(1) {
+        if arg == "debugpython" {
+            // debugpython is incompatible with chg.
+            return false;
+        }
     }
 
     // CHGDISABLE=1 means that we want to disable it
@@ -95,8 +102,8 @@ fn should_call_chg() -> bool {
 /// Perform needed checks and maybe pass control to chg
 /// Note that this function terminates the process
 /// if it decides to pass control to chg
-pub fn maybe_call_chg() {
-    if !should_call_chg() {
+pub fn maybe_call_chg(args: &Vec<String>) {
+    if !should_call_chg(args) {
         return;
     }
     let rc = chg_main_wrapper(args_to_local_cstrings(), env_to_local_cstrings());

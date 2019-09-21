@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2018
 use crate::commands;
 use crate::python::{
-    py_finalize, py_init_threads, py_initialize, py_is_initialized, py_set_argv,
+    py_finalize, py_init_threads, py_initialize, py_is_initialized, py_main, py_set_argv,
     py_set_program_name,
 };
 use cpython::{
@@ -59,7 +59,7 @@ impl HgPython {
             .collect()
     }
 
-    fn run_py(
+    fn run_hg_py(
         &self,
         py: Python<'_>,
         args: Vec<String>,
@@ -95,10 +95,11 @@ impl HgPython {
         Ok(())
     }
 
-    pub fn run(&self, args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
+    /// Run an hg command defined in Python.
+    pub fn run_hg(&self, args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_py(py, args, io) {
+        match self.run_hg_py(py, args, io) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an
@@ -124,6 +125,25 @@ impl HgPython {
                 }
             }
             Ok(()) => 0,
+        }
+    }
+
+    /// Run the Python interpreter.
+    pub fn run_python(&mut self, args: Vec<String>, io: &mut clidispatch::io::IO) -> u8 {
+        let args = Self::args_to_local_cstrings(args);
+        if self.py_initialized_by_us {
+            // Py_Main will call Py_Finalize. Therefore skip Py_Finalize here.
+            self.py_initialized_by_us = false;
+            py_main(args)
+        } else {
+            // If Python is not initialized by us, it's expected that this
+            // function does not call Py_Finalize.
+            //
+            // If we call Py_Main, users like the Python testutil, or the Python
+            // chgserver will crash because Py_Main calls Py_Finalize.
+            // Avoid that by just returning an error code.
+            let _ = io.write_err("error: Py_Main cannot be used in this context\n");
+            1
         }
     }
 }
