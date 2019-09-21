@@ -168,12 +168,12 @@
 # Create the snapshot
   $ OID="$(hg snapshot create -m another | cut -f2 -d' ')"
   $ echo "$OID"
-  2d687a20538b5d43835a795ed1f6311643d6a028
+  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
 
 # Clean everything and checkout back
   $ hg update -q --clean . && rm mergefile.orig
   $ hg snapshot checkout "$OID"
-  will checkout on 2d687a20538b5d43835a795ed1f6311643d6a028
+  will checkout on 6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
   checkout complete
 
 # hg status/diff are unchanged
@@ -246,7 +246,7 @@
 # Create the snapshot
   $ OID="$(hg snapshot create | cut -f2 -d' ')"
   $ echo "$OID"
-  aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -255,24 +255,24 @@
 # Check the metadata id and its contents
   $ METADATAID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
   $ echo "$METADATAID"
-  6b32f5f5726caf1b66d313cdd847ad5b4266f14a3480b2acf64a0a173ac14548
-  $ cat .hg/store/snapshots/objects/"${METADATAID:0:2}"/"${METADATAID:2}"
-  {"files": {"deleted": {"foofile": null}, "localvfsfiles": {"merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "merge/state": {"oid": "fdfea51dfeeae94bd846473c7bef891823af465d33f48e92ed2556bde6b346cb", "size": "166"}, "merge/state2": {"oid": "0e421047ebcf7d0cada48ddd801304725de33da3c4048ccb258041946cd0e81d", "size": "361"}}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"} (no-eol)
+  7eb6f96f1f02eb9ab7102f4f2a9936e07bded02cd20ec6faad01285168b920c7
+  $ find .hg/store/snapshots/objects/"${METADATAID:0:2}"/"${METADATAID:2}"
+  .hg/store/snapshots/objects/7e/b6f96f1f02eb9ab7102f4f2a9936e07bded02cd20ec6faad01285168b920c7
 
 
 # 3.3) List the snapshots
 # Check the list of snapshots directly
   $ cat .hg/store/snapshotlist
   v1
-  2d687a20538b5d43835a795ed1f6311643d6a028
-  aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
   bd8d77aecb3d474ec545981fe5b7aa9cd40f5df2
+  f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # Use the list cmd
   $ hg snapshot list --verbose
-  2d687a20538b   6b2dfae60699 another
-  aaa7692160b6   6b32f5f5726c snapshot
+  6d8aaa4ab672   18a588cc0809 another
   bd8d77aecb3d           None first snapshot
+  f890179e6e66   7eb6f96f1f02 snapshot
 
 # Move back to BASEREV
   $ hg update -q --clean "$BASEREV" && rm bazfile
@@ -283,7 +283,7 @@
 # Check out on the snapshot -- negative tests
 # Regular checkout
   $ hg checkout --hidden "$OID"
-  abort: aaa7692160b6 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
+  abort: f890179e6e66 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
   
   [255]
 # Non-empty WC state
@@ -305,7 +305,7 @@
   [255]
 # Check out on the snapshot -- positive tests
   $ hg snapshot checkout "$OID"
-  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -319,13 +319,13 @@
   .hg/merge/state
   .hg/merge/state2
   $ hg snapshot create --clean
-  snapshot aaa7692160b6c5c0e4c13787d9343cf89fc2311a created
+  snapshot f890179e6e66eeb2a5a676efb96f150133a437c9 created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
   $ hg snapshot checkout "$OID"
-  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
   checkout complete
 
 
@@ -340,7 +340,7 @@
   
   [255]
   $ hg snapshot checkout --force "$OID"
-  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 
@@ -374,17 +374,16 @@
 # Delete all the related files from the local store
   $ find .hg/store/snapshots/objects/ -mindepth 1 ! -name "${BROKENMETADATAID:2}" -type f -delete
   $ hg snapshot checkout $BROKENSNAPSHOTID
-  will checkout on 06f851b33f41c80be342a09677f43a70ecc4a0f0
+  will checkout on e0a2594adfc174e553568d3ec5e665993e8dd061
   abort: file mergefile.orig with oid 0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f not found in local blobstorage
   
   [255]
   $ hg status --verbose
 # Break the metadata itself
-  $ echo "break the metadata json" >> .hg/store/snapshots/objects/"${BROKENMETADATAID:0:2}"/"${BROKENMETADATAID:2}"
+  $ echo "break the metadata" >> .hg/store/snapshots/objects/"${BROKENMETADATAID:0:2}"/"${BROKENMETADATAID:2}"
   $ hg snapshot checkout $BROKENSNAPSHOTID
-  will checkout on 06f851b33f41c80be342a09677f43a70ecc4a0f0
-  abort: invalid metadata json: {"files": {"deleted": {}, "localvfsfiles": {}, "unknown": {"mergefile.orig": {"oid": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f", "size": "2"}, "untrackedfile": {"oid": "b05b74c474c1706953bed876a19f146b371ddf51a36474fe0c094922385cc479", "size": "5"}}}, "version": "1"}break the metadata json
-  
+  will checkout on e0a2594adfc174e553568d3ec5e665993e8dd061
+  abort: invalid metadata stream
   
   [255]
   $ hg status --verbose

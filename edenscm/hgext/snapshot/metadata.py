@@ -7,8 +7,9 @@
 
 import hashlib
 
-from edenscm.mercurial import error, extensions, json, pathutil
+from edenscm.mercurial import error, pathutil
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.utils import cborutil
 
 
 class filewrapper(object):
@@ -57,7 +58,7 @@ class snapshotmetadata(object):
         return {"files": files, "version": str(snapshotmetadata.VERSION)}
 
     def serialize(self):
-        return json.dumps(self.todict())
+        return "".join(cborutil.streamencode(self.todict()))
 
     @classmethod
     def fromdict(cls, metadatadict):
@@ -86,11 +87,11 @@ class snapshotmetadata(object):
             raise error.Abort("invalid metadata: %s\n" % (metadatadict,))
 
     @classmethod
-    def deserialize(cls, json_data):
+    def deserialize(cls, cbor_data):
         try:
-            metadatadict = json.loads(json_data)
-        except ValueError:
-            raise error.Abort("invalid metadata json: %s\n" % (json_data,))
+            metadatadict = cborutil.decodeall(cbor_data)[0]
+        except cborutil.CBORDecodeError:
+            raise error.Abort("invalid metadata stream\n")
         return cls.fromdict(metadatadict)
 
     @classmethod

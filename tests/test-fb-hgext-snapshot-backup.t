@@ -110,7 +110,7 @@
 # Make a snapshot
   $ OID="$(hg snapshot create | cut -f2 -d' ')"
   $ echo "$OID"
-  aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # Back it up
   $ hg cloud backup --hidden -r "$OID"
@@ -118,12 +118,12 @@
   remote: pushing 3 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
-  remote:     aaa7692160b6  snapshot
+  remote:     f890179e6e66  snapshot
   backing up stack rooted at 6eb2552aed20
   remote: pushing 3 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
-  remote:     aaa7692160b6  snapshot
+  remote:     f890179e6e66  snapshot
   commitcloud: backed up 3 commits
 
 # Restore it on another client
@@ -138,9 +138,9 @@
   adding manifests
   adding file changes
   added 3 changesets with 4 changes to 2 files
-  new changesets 3490593cf53c:aaa7692160b6
+  new changesets 3490593cf53c:f890179e6e66
   $ hg snapshot checkout "$OID"
-  will checkout on aaa7692160b6c5c0e4c13787d9343cf89fc2311a
+  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 # hg status/diff are unchanged
