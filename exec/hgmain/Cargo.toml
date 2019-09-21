@@ -27,3 +27,5 @@ with_chg = ["dirs"]
 
 [profile.release]
 debug = true
+incremental = true
+lto = false
