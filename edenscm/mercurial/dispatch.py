@@ -496,7 +496,7 @@ def dispatch(req):
                     if len(splitoutput) > 200:
                         readableoutput = "\n".join(
                             splitoutput[:200]
-                            + ["Perftrace trunkated at 200 lines, see {}".format(key)]
+                            + ["Perftrace truncated at 200 lines, see {}".format(key)]
                         )
                     else:
                         readableoutput = output
