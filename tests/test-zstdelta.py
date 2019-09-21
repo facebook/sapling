@@ -4,7 +4,7 @@ import os
 import unittest
 
 import silenttestrunner
-from edenscmnative.bindings import zstd
+from bindings import zstd
 
 
 class testzstd(unittest.TestCase):

@@ -81,6 +81,7 @@ from __future__ import absolute_import
 
 import struct
 
+from bindings import nodemap as nodemapmod
 from edenscm.mercurial import (
     error,
     extensions,
@@ -94,7 +95,6 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
-from edenscmnative.bindings import nodemap as nodemapmod
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked

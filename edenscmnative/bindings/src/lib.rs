@@ -5,11 +5,13 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::py_module_initializer;
+use cpython::{PyModule, PyObject, PyResult, Python};
 
-py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
+/// Populate an existing empty module so it contains utilities.
+pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> {
     env_logger::init();
 
+    let m = module;
     let name = m.get(py, "__name__")?.extract::<String>(py)?;
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;
     m.add(py, "blackbox", pyblackbox::init_module(py, &name)?)?;
@@ -19,7 +21,6 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
         pybookmarkstore::init_module(py, &name)?,
     )?;
     m.add(py, "cliparser", pycliparser::init_module(py, &name)?)?;
-    m.add(py, "commands", pycommands::init_module(py, &name)?)?;
     m.add(py, "configparser", pyconfigparser::init_module(py, &name)?)?;
     m.add(py, "dag", pydag::init_module(py, &name)?)?;
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
@@ -42,5 +43,5 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "treestate", pytreestate::init_module(py, &name)?)?;
     m.add(py, "vlq", pyvlq::init_module(py, &name)?)?;
     m.add(py, "zstd", pyzstd::init_module(py, &name)?)?;
-    Ok(())
-});
+    Ok(py.None())
+}

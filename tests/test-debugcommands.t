@@ -172,36 +172,6 @@ Test cache warming command
 
   $ cd ..
 
-#if normal-layout
-Test internal debugstacktrace command
-
-  $ cat > debugstacktrace.py << EOF
-  > from __future__ import absolute_import
-  > import sys
-  > from edenscm.mercurial import util
-  > def f():
-  >     util.debugstacktrace(f=sys.stdout)
-  >     g()
-  > def g():
-  >     util.dst('hello from g\\n', skip=1)
-  >     h()
-  > def h():
-  >     util.dst('hi ...\\nfrom h hidden in g', 1, depth=2)
-  > f()
-  > EOF
-  $ $PYTHON debugstacktrace.py 2>&1 | egrep '(stacktrace|hello from|from h|hi \.\.)'
-  stacktrace at:
-   debugstacktrace.py:12*in * (glob)
-   debugstacktrace.py:5*in f (glob)
-  hello from g at:
-   debugstacktrace.py:12*in * (glob)
-   debugstacktrace.py:6*in f (glob)
-  hi ...
-  from h hidden in g at:
-   debugstacktrace.py:6*in f (glob)
-   debugstacktrace.py:9*in g (glob)
-#endif
-
 Test debugcapabilities command:
 
   $ hg debugcapabilities ./debugrevlog/

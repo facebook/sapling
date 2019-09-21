@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 
-from edenscmnative.bindings import mutationstore
+from bindings import mutationstore
 
 from . import error, node as nodemod, perftrace, phases, repoview, util
 from .i18n import _

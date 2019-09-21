@@ -22,7 +22,7 @@ import os
 import struct
 import zlib
 
-from edenscmnative import bindings
+import bindings
 
 from . import ancestor, error, mdiff, policy, pycompat, templatefilters, util
 from .i18n import _

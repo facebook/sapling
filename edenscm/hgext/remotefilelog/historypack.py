@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import hashlib
 import struct
 
+from bindings import revisionstore
 from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
-from edenscmnative.bindings import revisionstore
 
 from . import basepack, constants, shallowutil
 

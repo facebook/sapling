@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import contextlib
 import os
 
-from edenscmnative.bindings import configparser
+from bindings import configparser
 
 from . import configitems, error, pycompat, util
 from .i18n import _

@@ -47,7 +47,7 @@ import traceback
 import warnings
 import zlib
 
-from edenscmnative import bindings
+import bindings
 
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
 
@@ -4084,7 +4084,7 @@ class _zstdengine(compressionengine):
         # Not all installs have the zstd module available. So defer importing
         # until first access.
         try:
-            from edenscmnative.bindings import zstd
+            from bindings import zstd
 
             # Force delayed import.
             zstd.decode_all

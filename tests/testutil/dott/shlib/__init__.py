@@ -68,7 +68,7 @@ else:
 
 try:
     from edenscm.mercurial import dispatch, encoding, ui as uimod, util
-    from edenscmnative import bindings
+    import bindings
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
 

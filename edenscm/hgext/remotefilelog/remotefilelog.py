@@ -10,10 +10,10 @@ from __future__ import absolute_import
 import collections
 import os
 
+from bindings import revisionstore
 from edenscm.mercurial import ancestor, error, filelog, mdiff, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
-from edenscmnative.bindings import revisionstore
 
 from . import constants, fileserverclient, mutablestores, shallowutil
 from .contentstore import (

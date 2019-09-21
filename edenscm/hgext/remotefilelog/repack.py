@@ -11,6 +11,7 @@ import time
 import traceback
 from contextlib import contextmanager
 
+from bindings import revisionstore
 from edenscm.mercurial import (
     encoding,
     error,
@@ -24,7 +25,6 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
-from edenscmnative.bindings import revisionstore
 
 from ..extutil import flock, runshellcommand
 from . import (

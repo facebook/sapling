@@ -11,7 +11,7 @@ import copy
 import os
 import re
 
-from edenscmnative.bindings import pathmatcher
+from bindings import pathmatcher
 
 from . import error, pathutil, util
 from .i18n import _

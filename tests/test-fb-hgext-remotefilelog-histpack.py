@@ -11,9 +11,9 @@ import tempfile
 import unittest
 
 import silenttestrunner
+from bindings import revisionstore
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
-from edenscmnative.bindings import revisionstore
 
 
 SMALLFANOUTCUTOFF = 2 ** 16 / 8

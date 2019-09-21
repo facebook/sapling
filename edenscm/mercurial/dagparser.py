@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import re
 import string
 
-from edenscmnative.bindings import vlq
+from bindings import vlq
 
 from . import error, pycompat, util
 from .i18n import _

@@ -10,11 +10,11 @@ import hashlib
 import os
 import sys
 
+from bindings import revisionstore
 from edenscm.hgext import extutil
 from edenscm.mercurial import error, filelog, progress, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscmnative.bindings import revisionstore
 
 from . import (
     constants,

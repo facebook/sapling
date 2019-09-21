@@ -2055,11 +2055,6 @@ if havefb:
 
 rustextmodules = [
     RustExtension(
-        "bindings",
-        package="edenscmnative",
-        manifest="edenscmnative/bindings/Cargo.toml",
-    ),
-    RustExtension(
         "indexes",
         package="edenscmnative",
         manifest="edenscm/hgext/extlib/indexes/Cargo.toml",

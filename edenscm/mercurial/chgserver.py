@@ -48,7 +48,7 @@ import socket
 import struct
 import time
 
-from edenscmnative.bindings import commands
+from bindings import commands
 
 from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util
 from .i18n import _

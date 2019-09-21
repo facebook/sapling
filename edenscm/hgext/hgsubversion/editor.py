@@ -8,9 +8,9 @@ import shutil
 import sys
 import tempfile
 
+from bindings import manifest as rustmanifest
 from edenscm.mercurial import match as matchmod, node, revlog, util as hgutil
 from edenscmnative import cstore
-from edenscmnative.bindings import manifest as rustmanifest
 
 from . import svnexternals, svnwrap, util
 

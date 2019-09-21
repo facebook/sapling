@@ -5,7 +5,6 @@ edition = "2018"
 
 [lib]
 name = "bindings"
-crate-type = ["cdylib"]
 
 [profile.release]
 debug = true
@@ -13,12 +12,11 @@ incremental = true
 lto = false
 
 [dependencies]
-cpython = { version = "0.3", features = ["python27-sys", "extension-module-2-7"], default-features = false }
+cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
 env_logger = "0.5"
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }
-pycommands = { path = "modules/pycommands" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
 pyedenapi = { path = "modules/pyedenapi" }

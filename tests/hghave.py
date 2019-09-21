@@ -805,7 +805,7 @@ def unzip_understands_symlinks():
 @check("zstd", "zstd Python module available")
 def has_zstd():
     try:
-        from edenscmnative.bindings import zstd
+        from bindings import zstd
 
         zstd.apply
         return True

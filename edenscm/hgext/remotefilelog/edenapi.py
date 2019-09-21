@@ -7,9 +7,9 @@ from __future__ import absolute_import
 
 import traceback
 
+from bindings import edenapi
 from edenscm.mercurial import error, httpconnection
 from edenscm.mercurial.i18n import _
-from edenscmnative.bindings import edenapi
 
 
 try:

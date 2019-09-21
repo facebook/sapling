@@ -10,6 +10,7 @@ import compat
 import git2hg
 import hg2git
 import util
+from bindings import nodemap
 from dulwich import client, config as dul_config, diff_tree
 from dulwich.errors import GitProtocolError, HangupException
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
@@ -29,7 +30,6 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscmnative.bindings import nodemap
 from overlay import overlayrepo
 
 

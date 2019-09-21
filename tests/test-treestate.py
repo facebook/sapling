@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscmnative.bindings import treestate
+from bindings import treestate
 
 
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")

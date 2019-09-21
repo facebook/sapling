@@ -9,9 +9,9 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
+from bindings import revisionstore
 from edenscm.mercurial import mdiff
 from edenscm.mercurial.node import nullid
-from edenscmnative.bindings import revisionstore
 from edenscmnative.cstore import datapackstore, uniondatapackstore
 
 

@@ -7,8 +7,8 @@ import tempfile
 import unittest
 
 import silenttestrunner
+from bindings import bookmarkstore
 from edenscm.mercurial import node
-from edenscmnative.bindings import bookmarkstore
 
 
 class bookmarkstoretests(unittest.TestCase):

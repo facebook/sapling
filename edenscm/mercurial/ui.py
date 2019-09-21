@@ -22,7 +22,7 @@ import tempfile
 import time
 import traceback
 
-from edenscmnative.bindings import configparser
+from bindings import configparser
 
 from . import (
     blackbox,

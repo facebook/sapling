@@ -11,6 +11,7 @@ clidispatch = { path = "../../lib/clidispatch" }
 cliparser = { path = "../../lib/cliparser" }
 configparser = { path = "../../lib/configparser" }
 hgcommands = { path = "../../lib/hgcommands" }
+pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
 [target.'cfg(windows)'.dependencies]
 winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}

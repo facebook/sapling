@@ -4,10 +4,9 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_is_initialized, py_main, py_set_argv,
     py_set_program_name,
 };
-use cpython::{
-    exc, ObjectProtocol, PyClone, PyDict, PyObject, PyResult, Python, PythonObject, ToPyObject,
-};
-use cpython_ext::{Bytes, WrappedIO};
+use clidispatch::io::IO;
+use cpython::*;
+use cpython_ext::{wrap_pyio, Bytes, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
@@ -35,6 +34,12 @@ impl HgPython {
         py_initialize();
         py_set_argv(args);
         py_init_threads();
+
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        // If this fails, it's a fatal error.
+        prepare_builtin_modules(py).unwrap();
     }
 
     fn args_to_local_cstrings(args: Vec<String>) -> Vec<CString> {
@@ -179,4 +184,64 @@ fn write_to_py_object(py: Python, writer: &Box<dyn clidispatch::io::Write>) -> P
     } else {
         unimplemented!("converting non-stdio Write from Rust to Python is not implemented")
     }
+}
+
+fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
+    fn run_py(
+        _py: Python,
+        args: Vec<String>,
+        fin: PyObject,
+        fout: PyObject,
+        ferr: Option<PyObject>,
+    ) -> PyResult<i32> {
+        let fin = wrap_pyio(fin);
+        let fout = wrap_pyio(fout);
+        let ferr = ferr.map(wrap_pyio);
+
+        let mut io = IO::new(fin, fout, ferr);
+        Ok(crate::run_command(args, &mut io))
+    }
+
+    let name = [package, "commands"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add(
+        py,
+        "run",
+        py_fn!(
+            py,
+            run_py(
+                args: Vec<String>,
+                fin: PyObject,
+                fout: PyObject,
+                ferr: Option<PyObject> = None
+            )
+        ),
+    )?;
+    Ok(m)
+}
+
+/// Prepare builtin modules. Namely, `bindings`.
+///
+/// This makes sure the bindings use the same dependencies as the main
+/// executable. For example, the global instance in `blackbox` is the
+/// same, so if the Rust code logs to blackbox, the Python code can read
+/// them out via bindings.
+///
+/// This is more difficult if the bindings project is compiled as a separate
+/// Python extension, because `blackbox` will be compiled separately, and
+/// the global instance might be different.
+fn prepare_builtin_modules(py: Python<'_>) -> PyResult<()> {
+    let name = "bindings";
+    let bindings_module = PyModule::new(py, &name)?;
+
+    // Prepare `bindings.command`. This cannot be done in the bindings
+    // crate because it forms a circular dependency.
+    bindings_module.add(py, "commands", init_bindings_commands(py, name)?)?;
+    bindings::populate_module(py, &bindings_module)?;
+
+    // Putting the module in sys.modules makes it importable.
+    let sys = py.import("sys")?;
+    let sys_modules = PyDict::extract(py, &sys.get(py, "modules")?)?;
+    sys_modules.set_item(py, name, bindings_module)?;
+    Ok(())
 }

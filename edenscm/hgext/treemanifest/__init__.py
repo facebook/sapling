@@ -164,6 +164,7 @@ import shutil
 import struct
 import time
 
+from bindings import manifest as rustmanifest, revisionstore
 from edenscm.mercurial import (
     bundle2,
     bundlerepo,
@@ -197,7 +198,6 @@ from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscmnative import cstore
-from edenscmnative.bindings import manifest as rustmanifest, revisionstore
 
 from ..extutil import flock
 from ..remotefilelog import (

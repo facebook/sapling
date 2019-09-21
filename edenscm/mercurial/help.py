@@ -11,7 +11,7 @@ import itertools
 import os
 import textwrap
 
-from edenscmnative.bindings import cliparser
+from bindings import cliparser
 
 from . import (
     cmdutil,

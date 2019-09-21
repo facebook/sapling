@@ -12,6 +12,7 @@ import code
 import os
 import sys
 
+import bindings
 import edenscm
 import edenscmnative
 from edenscm import hgext, mercurial
@@ -29,7 +30,7 @@ def _assignobjects(objects, repo):
             "m": mercurial,
             "e": edenscm,
             "n": edenscmnative,
-            "b": edenscmnative.bindings,
+            "b": bindings,
             "x": hgext,
             "mercurial": mercurial,
         }
@@ -70,7 +71,7 @@ def debugshell(ui, repo, **opts):
         " n:  edenscmnative\n"
         " m:  edenscm.mercurial\n"
         " x:  edenscm.hgext\n"
-        " b:  edenscmnative.bindings\n"
+        " b:  bindings\n"
         " ui: the ui object"
     )
     if repo:

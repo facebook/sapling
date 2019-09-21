@@ -473,7 +473,7 @@ def perfdatapack(ui, repo, packpath, **opts):
 
 def _packtestfn(ui, packpath, opts, func):
     from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
-    from edenscmnative.bindings import revisionstore
+    from bindings import revisionstore
 
     kinds = [
         ("Python", datapack),

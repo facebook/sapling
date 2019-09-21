@@ -30,6 +30,7 @@ import hgrepo
 import overlay
 import util
 import verify
+from bindings import nodemap as nodemapmod
 from edenscm.mercurial import (
     bundlerepo,
     cmdutil,
@@ -51,7 +52,6 @@ from edenscm.mercurial import (
 from edenscm.mercurial.error import LookupError
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
-from edenscmnative.bindings import nodemap as nodemapmod
 from git_handler import GitHandler
 
 

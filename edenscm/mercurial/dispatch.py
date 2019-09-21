@@ -19,7 +19,7 @@ import sys
 import time
 import traceback
 
-from edenscmnative import bindings
+import bindings
 
 from . import (
     blackbox,
