@@ -63,10 +63,8 @@ define_flags! {
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     let path = if opts.shared {
         repo.shared_path()
-            .map(|p| p.to_owned())
-            .unwrap_or(repo.path().to_owned())
     } else {
-        repo.path().to_owned()
+        repo.path()
     };
 
     io.write(format!(

@@ -13,7 +13,7 @@ pub struct Repo {
     path: PathBuf,
     config: ConfigSet,
     bundle_path: Option<PathBuf>,
-    shared_path: Option<PathBuf>,
+    shared_path: PathBuf,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -106,11 +106,10 @@ impl Repo {
         }
     }
 
-    pub fn shared_path(&self) -> Option<&Path> {
-        match &self.shared_path {
-            Some(path) => Some(path),
-            None => None,
-        }
+    /// Return the shared repo root. If the repo is not shared, return the
+    /// repo root.
+    pub fn shared_path(&self) -> &Path {
+        &self.shared_path
     }
 
     pub fn path(&self) -> &Path {
@@ -133,7 +132,7 @@ fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
     }
 }
 
-fn read_sharedpath(path: &Path) -> Fallible<Option<PathBuf>> {
+fn read_sharedpath(path: &Path) -> Fallible<PathBuf> {
     let mut sharedpath = fs::read_to_string(path.join(".hg/sharedpath"))
         .ok()
         .map(|s| PathBuf::from(s))
@@ -158,5 +157,5 @@ fn read_sharedpath(path: &Path) -> Fallible<Option<PathBuf>> {
             sharedpath = Some(new_possible)
         }
     }
-    Ok(sharedpath)
+    Ok(sharedpath.unwrap_or_else(|| path.to_path_buf()))
 }
