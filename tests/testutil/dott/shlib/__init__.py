@@ -46,7 +46,16 @@ def editsyspath(modname, relpaths):
 #
 # "../../.." works when:
 # - `fb/packaging/build_nupkg.py --test` copies `tests/` to `build/embedded`
-editsyspath("edenscm", ["..", "../../.."])
+#
+# But do not mess up sys.path if the modules are already importable.
+# This is important in the buck test case.
+# Soon, the only way to run this script is to via "hg debugpython" and
+# all sys.path mess can be removed.
+try:
+    from edenscmnative import diffhelpers
+    from edenscm import mercurial
+except (AttributeError, ImportError):
+    editsyspath("edenscm", ["..", "../../.."])
 
 
 for candidate in sys.path:

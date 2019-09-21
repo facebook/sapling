@@ -1669,8 +1669,7 @@ class PythonTest(Test):
         return processed
 
     def _run(self, env):
-        py3kswitch = self._py3kwarnings and b" -3" or b""
-        cmd = b'%s%s "%s"' % (PYTHON, py3kswitch, self.path)
+        cmd = b'%s debugpython -- "%s"' % (self._hgcommand, self.path)
         if self._options.interactive and self._isdotttest():
             # --fix is picked up by testutil.autofix, which will autofix the test.
             cmd += " --fix"
@@ -1794,7 +1793,8 @@ class TTest(Test):
         runtestdir = os.path.abspath(os.path.dirname(_bytespath(__file__)))
         tdir = runtestdir.replace(b"\\", b"/")
         proc = Popen4(
-            b'%s -c "%s/hghave %s"' % (self._shell, tdir, b" ".join(reqs)),
+            b'%s debugpython -- "%s/hghave" %s'
+            % (self._hgcommand, tdir, b" ".join(reqs)),
             self._testtmp,
             0,
             self._getenv(),
@@ -1916,14 +1916,16 @@ class TTest(Test):
                         script.append(
                             b"%s %s <<EOF\n"
                             % (
-                                PYTHON,
+                                "hg debugpython --",
                                 self._stringescape(
                                     os.path.join(self._testdir, "heredoctest.py")
                                 ),
                             )
                         )
                     else:
-                        script.append(b"%s -m heredoctest <<EOF\n" % PYTHON)
+                        script.append(
+                            b"%s -m heredoctest <<EOF\n" % "hg debugpython --"
+                        )
                 addsalt(n, True)
                 script.append(l[2:])
             elif l.startswith(b"  ... "):  # python inlines
