@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.10"
+blackbox = { path = "../blackbox" }
 configparser = { path = "../configparser" }
 cliparser = { path = "../cliparser" }
 failure = "0.1.3"

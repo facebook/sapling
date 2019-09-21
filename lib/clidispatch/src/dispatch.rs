@@ -11,7 +11,7 @@ use bytes::Bytes;
 use cliparser::alias::{expand_aliases, expand_prefix};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
-use configparser::hg::parse_list;
+use configparser::hg::{parse_list, ConfigSetHgExt};
 use failure::Fallible;
 use std::convert::TryInto;
 use std::{collections::BTreeMap, env, path::Path};
@@ -163,6 +163,27 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
         .parse_args(args)
 }
 
+fn initialize_blackbox(optional_repo: &OptionalRepo) -> Fallible<()> {
+    if let OptionalRepo::Some(repo) = optional_repo {
+        let config = repo.config();
+        let max_size = config
+            .get_or("blackbox", "maxsize", || {
+                configparser::hg::ByteCount::from(1u64 << 12)
+            })?
+            .value();
+        let max_files = config.get_or("blackbox", "maxfiles", || 3)?;
+        let path = repo.shared_path().join(".hg/blackbox/v1");
+        if let Ok(blackbox) = ::blackbox::BlackboxOptions::new()
+            .max_bytes_per_log(max_size)
+            .max_log_count(max_files as u8)
+            .open(path)
+        {
+            ::blackbox::init(blackbox);
+        }
+    }
+    Ok(())
+}
+
 pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO) -> Fallible<u8> {
     let early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
@@ -249,8 +270,9 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
     let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
     last_chance_to_abort(&global_opts)?;
 
-    let handler = def.func();
+    initialize_blackbox(&optional_repo)?;
 
+    let handler = def.func();
     match handler {
         CommandFunc::Repo(f) => {
             match optional_repo {
