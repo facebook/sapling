@@ -279,6 +279,9 @@ pub enum Event {
     ProcessTree {
         #[serde(rename = "N", alias = "names")]
         names: Vec<String>,
+
+        #[serde(rename = "P", alias = "pids")]
+        pids: Vec<u32>,
     },
 
     #[serde(rename = "P", alias = "profile")]
@@ -626,7 +629,13 @@ impl fmt::Display for Event {
                 )?;
             }
             PerfTrace { msg } => write!(f, "[perftrace] {}", msg)?,
-            ProcessTree { names } => write!(f, "[process_tree] {}", names.join(" -> "))?,
+            ProcessTree { names, pids } => {
+                write!(f, "[process_tree]")?;
+                for (name, pid) in names.iter().rev().zip(pids.iter().rev()) {
+                    write!(f, " {} ({}) ->", name, pid)?;
+                }
+                write!(f, " (this process)")?;
+            }
             Profile { msg } => write!(f, "[profile] {}", msg)?,
             Watchman {
                 args,
@@ -694,8 +703,8 @@ mod tests {
         );
 
         assert_eq!(
-            f(r#"{"process_tree":{"names":["systemd","bash","node"]}}"#),
-            "[process_tree] systemd -> bash -> node"
+            f(r#"{"process_tree":{"names":["systemd","bash","node"],"pids":[1,2,3]}}"#),
+            "[process_tree] node (3) -> bash (2) -> systemd (1) -> (this process)"
         );
 
         assert_eq!(

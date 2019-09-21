@@ -26,6 +26,7 @@ alias expansion is logged
   $ hg confuse
   $ hg blackbox
   [command] ["hg", "confuse"] started by uid 0 as pid 0 with nice 0
+  [process_tree] (this process)
   [legacy][env_vars]
   [legacy][command] confuse
   [legacy][dirstate_info]
@@ -35,6 +36,7 @@ alias expansion is logged
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
+  [process_tree] (this process)
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]
@@ -45,6 +47,7 @@ recursive aliases work correctly
   $ hg so-confusing
   $ hg blackbox
   [command] ["hg", "so-confusing"] started by uid 0 as pid 0 with nice 0
+  [process_tree] (this process)
   [legacy][env_vars]
   [legacy][command] so-confusing
   [legacy][dirstate_info]
@@ -54,6 +57,7 @@ recursive aliases work correctly
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
+  [process_tree] (this process)
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]

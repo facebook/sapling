@@ -65,7 +65,8 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 }
 
 fn log_start(args: Vec<String>) {
-    let (uid, pid, nice) = if is_inside_test() {
+    let inside_test = is_inside_test();
+    let (uid, pid, nice) = if inside_test {
         (0, 0, 0)
     } else {
         #[cfg(unix)]
@@ -89,6 +90,22 @@ fn log_start(args: Vec<String>) {
         uid,
         nice,
         args,
+    });
+
+    let mut parent_names = Vec::new();
+    let mut parent_pids = Vec::new();
+    if !inside_test {
+        let mut ppid = procinfo::parent_pid(0);
+        while ppid != 0 {
+            let name = procinfo::exe_name(ppid);
+            parent_names.push(name);
+            parent_pids.push(ppid);
+            ppid = procinfo::parent_pid(ppid);
+        }
+    }
+    blackbox::log(&blackbox::event::Event::ProcessTree {
+        names: parent_names,
+        pids: parent_pids,
     });
 }
 
