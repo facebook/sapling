@@ -356,6 +356,60 @@ impl FromConfigValue for String {
     }
 }
 
+/// Byte count specified with a unit. For example: `1.5 MB`.
+#[derive(Copy, Clone, Default)]
+pub struct ByteCount(u64);
+
+impl ByteCount {
+    /// Get the value of bytes. For example, `1K` has a value of `1024`.
+    pub fn value(self) -> u64 {
+        self.0
+    }
+}
+
+impl From<u64> for ByteCount {
+    fn from(value: u64) -> ByteCount {
+        ByteCount(value)
+    }
+}
+
+impl FromConfigValue for ByteCount {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        // This implementation matches mercurial/util.py:sizetoint
+        let sizeunits = [
+            ("kb", 1u64 << 10),
+            ("mb", 1 << 20),
+            ("gb", 1 << 30),
+            ("tb", 1 << 40),
+            ("k", 1 << 10),
+            ("m", 1 << 20),
+            ("g", 1 << 30),
+            ("t", 1 << 40),
+            ("b", 1),
+            ("", 1),
+        ];
+
+        let value = std::str::from_utf8(bytes)?.to_lowercase();
+        for (suffix, unit) in sizeunits.iter() {
+            if value.ends_with(suffix) {
+                let number_str: &str = value[..value.len() - suffix.len()].trim();
+                let number: f64 = number_str.parse()?;
+                if number < 0.0 {
+                    return Err(Error::Convert(format!(
+                        "byte size '{:?}' cannot be negative",
+                        value
+                    ))
+                    .into());
+                }
+                let unit = *unit as f64;
+                return Ok(ByteCount((number * unit) as u64));
+            }
+        }
+
+        Err(Error::Convert(format!("'{:?}' cannot be parsed as a byte size", value)).into())
+    }
+}
+
 impl<T: FromConfigValue> FromConfigValue for Vec<T> {
     fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
         let items = parse_list(bytes);
@@ -866,7 +920,11 @@ mod tests {
              bools = 1, TRUE, On, aLwAys, 0, false, oFF, never\n\
              int1 = -33\n\
              list1 = x y z\n\
-             list3 = 2, 3, 1",
+             list3 = 2, 3, 1\n\
+             byte1 = 1.5 KB\n\
+             byte2 = 500\n\
+             byte3 = 0.125M\n\
+             ",
             &"test".into(),
         );
 
@@ -891,6 +949,31 @@ mod tests {
         assert_eq!(
             cfg.get_or_default::<Vec<bool>>("foo", "bools").unwrap(),
             vec![true, true, true, true, false, false, false, false]
+        );
+
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte1")
+                .unwrap()
+                .value(),
+            1536
+        );
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte2")
+                .unwrap()
+                .value(),
+            500
+        );
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte3")
+                .unwrap()
+                .value(),
+            131072
+        );
+        assert_eq!(
+            cfg.get_or("foo", "missing", || ByteCount::from(3))
+                .unwrap()
+                .value(),
+            3
         );
     }
 }
