@@ -102,7 +102,7 @@ def createsnapshotcommit(ui, repo, opts):
     emptymetadata = snapmetadata.empty
     oid = ""  # this is better than None because of extra serialization rules
     if not emptymetadata:
-        oid, size = snapmetadata.localstore()
+        oid, size = snapmetadata.storelocally(repo)
     extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
     # TODO(alexeyqu): deal with unfinished merge state case
@@ -190,7 +190,7 @@ def debugcreatesnapshotmetadata(ui, repo, *args, **opts):
             )
         )
         return
-    oid, size = snapmetadata.localstore()
+    oid, size = snapmetadata.storelocally(repo)
     ui.status(_("metadata oid: %s\n") % oid)
 
 

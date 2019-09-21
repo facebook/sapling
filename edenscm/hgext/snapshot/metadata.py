@@ -11,13 +11,6 @@ from edenscm.mercurial import error, extensions, json, pathutil
 from edenscm.mercurial.i18n import _
 
 
-def checkfileisstored(repo, oid, path):
-    if not repo.svfs.snapshotstore.has(oid):
-        raise error.Abort(
-            _("file %s with oid %s not found in local blobstorage\n") % (path, oid)
-        )
-
-
 class filewrapper(object):
     """
     Helper class that links files to oids in the blob storage.
@@ -26,20 +19,18 @@ class filewrapper(object):
 
     def __init__(self, path, oid=None, size=None):
         self.path = path
+        # TODO(alexeyqu): add possible file content here
         self.oid = oid
         self.size = size
 
-    def serialize(self):
-        if not self.oid and not self.size:
+    def todict(self):
+        if self.oid is None and self.size is None:
             return None
         return {"oid": self.oid, "size": self.size}
 
     @classmethod
-    def deserialize(cls, path, data):
-        try:
-            return cls(path, data["oid"], data["size"])
-        except ValueError:
-            raise error.Abort(_("invalid file description: %s\n") % data)
+    def fromdict(cls, path, data):
+        return cls(path, oid=data.get("oid"), size=data.get("size"))
 
 
 class snapshotmetadata(object):
@@ -49,106 +40,116 @@ class snapshotmetadata(object):
 
     VERSION = 1
 
-    def __init__(self, repo, oid=None):
-        self.repo = repo
-        self.oid = oid
-        self.deleted = []
-        self.unknown = []
-        self.localvfsfiles = []
+    def __init__(self, deleted=[], unknown=[], localvfsfiles=[]):
+        self.deleted = deleted
+        self.unknown = unknown
+        self.localvfsfiles = localvfsfiles
 
     @property
     def empty(self):
         return not (self.deleted or self.unknown or self.localvfsfiles)
 
-    def serialize(self):
+    def todict(self):
         files = {}
-        files["deleted"] = {d.path: d.serialize() for d in self.deleted}
-        files["unknown"] = {u.path: u.serialize() for u in self.unknown}
-        files["localvfsfiles"] = {f.path: f.serialize() for f in self.localvfsfiles}
-        metadata = {"files": files, "version": str(snapshotmetadata.VERSION)}
-        return json.dumps(metadata)
+        files["deleted"] = {d.path: d.todict() for d in self.deleted}
+        files["unknown"] = {u.path: u.todict() for u in self.unknown}
+        files["localvfsfiles"] = {f.path: f.todict() for f in self.localvfsfiles}
+        return {"files": files, "version": str(snapshotmetadata.VERSION)}
 
-    def deserialize(self, json_string):
+    def serialize(self):
+        return json.dumps(self.todict())
+
+    @classmethod
+    def fromdict(cls, metadatadict):
+        # check version of metadata
         try:
-            metadata = json.loads(json_string)
-            # check version of metadata
-            try:
-                version = int(metadata["version"])
-            except ValueError:
-                raise error.Abort(
-                    _("invalid metadata version: %s\n") % metadata["version"]
-                )
-            if version != snapshotmetadata.VERSION:
-                raise error.Abort(_("invalid version number %d") % version)
-            files = metadata["files"]
-            self.deleted = [
-                filewrapper(path) for path in sorted(files["deleted"].keys())
-            ]
-            self.unknown = [
-                filewrapper.deserialize(path, data)
+            version = int(metadatadict.get("version"))
+        except ValueError:
+            raise error.Abort(
+                "invalid metadata version: %s\n" % (metadatadict.get("version"),)
+            )
+        if version != snapshotmetadata.VERSION:
+            raise error.Abort("invalid version number %d" % (version,))
+        try:
+            files = metadatadict["files"]
+            deleted = [filewrapper(path) for path in sorted(files["deleted"].keys())]
+            unknown = [
+                filewrapper.fromdict(path, data)
                 for path, data in sorted(files["unknown"].items())
             ]
-            self.localvfsfiles = [
-                filewrapper.deserialize(path, data)
+            localvfsfiles = [
+                filewrapper.fromdict(path, data)
                 for path, data in sorted(files["localvfsfiles"].items())
             ]
+            return cls(deleted=deleted, unknown=unknown, localvfsfiles=localvfsfiles)
         except ValueError:
-            raise error.Abort(_("invalid metadata json: %s\n") % json_string)
+            raise error.Abort("invalid metadata: %s\n" % (metadatadict,))
 
-    def getauxfileids(self):
-        auxfileids = set()
-        auxfileids.update(f.oid for f in self.unknown)
-        auxfileids.update(f.oid for f in self.localvfsfiles)
-        return auxfileids
+    @classmethod
+    def deserialize(cls, json_data):
+        try:
+            metadatadict = json.loads(json_data)
+        except ValueError:
+            raise error.Abort("invalid metadata json: %s\n" % (json_data,))
+        return cls.fromdict(metadatadict)
 
     @classmethod
     def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
-        metadata = cls(repo)
         # populate the metadata
         status = status or repo.status(unknown=include_untracked)
-        metadata.deleted = [filewrapper(path) for path in status.deleted]
-        metadata.unknown = [filewrapper(path) for path in status.unknown]
+        deleted = [filewrapper(path) for path in status.deleted]
+        unknown = [filewrapper(path) for path in status.unknown]
         # check merge and rebase info
+        localvfsfiles = []
         ismergestate = len(repo[None].parents()) > 1
         isrebasestate = repo.localvfs.exists("rebasestate")
         if ismergestate or isrebasestate:
             for root, dirs, files in repo.localvfs.walk(path="merge"):
-                metadata.localvfsfiles += [
-                    filewrapper(pathutil.join(root, f)) for f in files
-                ]
+                localvfsfiles += [filewrapper(pathutil.join(root, f)) for f in files]
         if isrebasestate:
-            metadata.localvfsfiles.append(filewrapper("rebasestate"))
-        return metadata
+            localvfsfiles.append(filewrapper("rebasestate"))
+        return cls(deleted=deleted, unknown=unknown, localvfsfiles=localvfsfiles)
 
     @classmethod
     def getfromlocalstorage(cls, repo, oid):
-        metadata = cls(repo, oid)
-        checkfileisstored(repo, oid, "metadata")
-        metadata.deserialize(repo.svfs.snapshotstore.read(oid))
+        def checkfileisstored(store, oid, path):
+            if oid is not None and not store.has(oid):
+                raise error.Abort(
+                    "file %s with oid %s not found in local blobstorage\n" % (path, oid)
+                )
+
+        store = repo.svfs.snapshotstore
+        checkfileisstored(store, oid, "metadata")
+        metadata = cls.deserialize(store.read(oid))
         # validate related files
         for file in metadata.unknown:
-            checkfileisstored(repo, file.oid, file.path)
+            checkfileisstored(store, file.oid, file.path)
         for file in metadata.localvfsfiles:
-            checkfileisstored(repo, file.oid, file.path)
+            checkfileisstored(store, file.oid, file.path)
         return metadata
 
-    def localstore(self):
-        def store(repo, data):
+    def storelocally(self, repo):
+        def _dostore(store, data):
             """
             Util function which uploads data to the local blob storage.
             Returns oid and size of data.
             """
             # TODO(alexeyqu): do we care about metadata?
             oid = hashlib.sha256(data).hexdigest()
-            repo.svfs.snapshotstore.write(oid, data)
+            store.write(oid, data)
             return oid, str(len(data))
 
-        wctx = self.repo[None]
+        wctx = repo[None]
+        store = repo.svfs.snapshotstore
         for f in self.unknown:
-            f.oid, f.size = store(self.repo, wctx[f.path].data())
+            f.oid, f.size = _dostore(store, wctx[f.path].data())
         for f in self.localvfsfiles:
-            f.oid, f.size = store(
-                self.repo, self.repo.localvfs.open(path=f.path).read()
-            )
-        oid, size = store(self.repo, self.serialize())
+            f.oid, f.size = _dostore(store, repo.localvfs.open(path=f.path).read())
+        oid, size = _dostore(store, self.serialize())
         return oid, size
+
+    def getauxfileids(self):
+        auxfileids = set()
+        auxfileids.update(f.oid for f in self.unknown)
+        auxfileids.update(f.oid for f in self.localvfsfiles)
+        return auxfileids
