@@ -25,6 +25,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("sampling", "filepath", default="")
+configitem("sampling", "debug", default=False)
 
 
 def _parentfolderexists(f):
@@ -107,6 +108,7 @@ def uisetup(ui):
             ref = self.samplingfilters[event]
             script = _getcandidatelocation(ui)
             if script:
+                debug = self.configbool("sampling", "debug")
                 try:
                     opts["metrics_type"] = event
                     if msg and event != "metrics":
@@ -126,6 +128,10 @@ def uisetup(ui):
                     with open(script, "a") as outfile:
                         outfile.write(json.dumps({"data": opts, "category": ref}))
                         outfile.write("\0")
+                    if debug:
+                        ui.write_err(
+                            "%s\n" % json.dumps({"data": opts, "category": ref})
+                        )
                 except EnvironmentError:
                     pass
             return super(logtofile, self).log(event, *msg, **opts)
