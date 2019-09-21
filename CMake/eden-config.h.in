@@ -9,10 +9,11 @@
 #define EDEN_VERSION "${PACKAGE_VERSION}"
 #define EDEN_ETC_EDEN_DIR "${ETC_EDEN_DIR}"
 
+#cmakedefine EDEN_HAVE_CURL
+#cmakedefine EDEN_HAVE_GIT
 #cmakedefine EDEN_HAVE_ROCKSDB
 #cmakedefine EDEN_HAVE_SELINUX
 #cmakedefine EDEN_HAVE_SQLITE3
 #cmakedefine EDEN_HAVE_SYSTEMD
-#cmakedefine EDEN_HAVE_CURL
 #cmakedefine EDEN_HAVE_MONONOKE
 #cmakedefine EDEN_HAVE_RUST_DATAPACK

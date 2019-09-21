@@ -41,9 +41,11 @@ if (NOT WIN32)
 endif()
 
 add_subdirectory(hg)
+if("${EDEN_HAVE_GIT}")
+  add_subdirectory(git)
+endif()
 
 if (NOT WIN32)
-  add_subdirectory(git)
   add_subdirectory(mononoke)
   add_subdirectory(test)
 endif()

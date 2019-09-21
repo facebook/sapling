@@ -57,6 +57,11 @@ if (WIN32)
   )
 endif()
 
+list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_hg)
+if(EDEN_HAVE_GIT)
+  list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_git)
+endif()
+
 add_library(
   eden_service STATIC
   ${SERVICE_SRCS}
@@ -69,8 +74,9 @@ target_link_libraries(
     eden_config
     eden_inodes
     eden_model
-    eden_store_hg
+    eden_store
     eden_tracing
+    ${EDEN_STORE_IMPLEMENTATIONS}
     ${YARPL_LIBRARIES}
     Folly::folly
     cpptoml
@@ -88,7 +94,6 @@ else()
     eden_service
     PUBLIC
       eden_fuse
-      eden_store_git
       eden_takeover
   )
 endif()

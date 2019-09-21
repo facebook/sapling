@@ -45,6 +45,10 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Configuration options
+set(ENABLE_GIT AUTO CACHE STRING "Enable support for Git repositories")
+set_property(CACHE ENABLE_GIT PROPERTY STRINGS AUTO ON OFF)
+
 if (NOT WIN32)
   include(CompilerSettingsUnix)
 endif()

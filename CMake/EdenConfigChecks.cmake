@@ -52,8 +52,15 @@ find_package(OpenSSL MODULE REQUIRED)
 find_package(SELinux)
 set(EDEN_HAVE_SELINUX ${SELINUX_FOUND})
 
-find_package(LibGit2 REQUIRED)
-include_directories(${LIBGIT2_INCLUDE_DIRS})
+if("${ENABLE_GIT}" STREQUAL "AUTO")
+  find_package(LibGit2 MODULE)
+  set(EDEN_HAVE_GIT "${LibGit2_FOUND}")
+elseif(ENABLE_GIT)
+  find_package(LibGit2 MODULE REQUIRED)
+  set(EDEN_HAVE_GIT "${LibGit2_FOUND}")
+else()
+  set(EDEN_HAVE_GIT OFF)
+endif()
 
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)

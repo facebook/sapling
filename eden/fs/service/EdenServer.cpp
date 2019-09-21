@@ -1173,9 +1173,10 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());
-#else
-    // TODO: Compile libgit2 on Windows and add the git backing store back
-#endif
+#else // EDEN_HAVE_GIT
+    throw std::domain_error(
+        "support for Git was not enabled in this EdenFS build");
+#endif // EDEN_HAVE_GIT
   }
   throw std::domain_error(
       folly::to<string>("unsupported backing store type: ", type));
