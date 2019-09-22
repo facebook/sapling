@@ -16,7 +16,7 @@ use futures::{
     Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, FutureExt};
-use slog::{debug, info, Logger};
+use slog::{debug, info, o, Logger};
 
 use metaconfig_parser::RepoConfigs;
 
@@ -62,7 +62,7 @@ impl Mononoke {
                                 info!(logger, "Initializing repo: {}", &name);
                                 MononokeRepo::new(
                                     fb,
-                                    logger.clone(),
+                                    logger.new(o!("repo" => name.clone())),
                                     config,
                                     common_config,
                                     myrouter_port,

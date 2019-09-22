@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching};
-use blobstore::Blobstore;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use failure::Error;
@@ -18,7 +17,7 @@ use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::RepositoryId;
-use skiplist::{deserialize_skiplist_index, SkiplistIndex};
+use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::Logger;
 use unodes::RootUnodeManifestMapping;
 
@@ -66,29 +65,21 @@ impl Repo {
         .compat()
         .await?;
 
-        let skiplist_index = match skiplist_index_blobstore_key.clone() {
-            Some(skiplist_index_blobstore_key) => {
-                let ctx = CoreContext::new_with_logger(fb, logger.clone());
-                let bytes = blob_repo
-                    .get_blobstore()
-                    .get(ctx, skiplist_index_blobstore_key)
-                    .compat()
-                    .await;
-                if let Ok(Some(bytes)) = bytes {
-                    let bytes = bytes.into_bytes();
-                    deserialize_skiplist_index(logger, bytes)?
-                } else {
-                    SkiplistIndex::new()
-                }
-            }
-            None => SkiplistIndex::new(),
-        };
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let skiplist_index = fetch_skiplist_index(
+            ctx,
+            skiplist_index_blobstore_key,
+            blob_repo.get_blobstore().boxed(),
+        )
+        .compat()
+        .await?;
+
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
 
         Ok(Self {
             blob_repo,
-            skiplist_index: Arc::new(skiplist_index),
+            skiplist_index,
             _unodes_derived_mapping: unodes_derived_mapping,
         })
     }

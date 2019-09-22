@@ -14,7 +14,7 @@ use std::{
 
 use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobrepo_factory::{open_blobrepo, Caching};
-use blobstore::{Blobstore, Loadable};
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
@@ -53,7 +53,7 @@ use mononoke_types::{
     RepositoryId,
 };
 use reachabilityindex::ReachabilityIndex;
-use skiplist::{deserialize_skiplist_index, SkiplistIndex};
+use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
@@ -133,28 +133,12 @@ impl MononokeRepo {
                 if !with_skiplist {
                     ok(Arc::new(SkiplistIndex::new())).right_future()
                 } else {
-                    match skiplist_index_blobstore_key.clone() {
-                        Some(skiplist_index_blobstore_key) => repo
-                            .get_blobstore()
-                            .get(ctx.clone(), skiplist_index_blobstore_key)
-                            .and_then({
-                                cloned!(logger);
-                                |maybebytes| {
-                                    let sli = match maybebytes {
-                                        Some(bytes) => {
-                                            let bytes = bytes.into_bytes();
-                                            try_boxfuture!(deserialize_skiplist_index(
-                                                logger, bytes
-                                            ))
-                                        }
-                                        None => SkiplistIndex::new(),
-                                    };
-                                    ok(Arc::new(sli)).boxify()
-                                }
-                            })
-                            .left_future(),
-                        None => ok(Arc::new(SkiplistIndex::new())).right_future(),
-                    }
+                    fetch_skiplist_index(
+                        ctx.clone(),
+                        skiplist_index_blobstore_key,
+                        repo.get_blobstore().boxed(),
+                    )
+                    .left_future()
                 }
             };
 

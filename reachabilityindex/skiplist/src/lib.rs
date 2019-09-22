@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use blobstore::Blobstore;
 use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
@@ -14,7 +15,7 @@ use context::{CoreContext, PerfCounterType};
 use failure_ext::{Error, Result};
 use futures::future::{join_all, loop_fn, ok, Future, Loop};
 use futures::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
 
@@ -118,6 +119,40 @@ impl SkiplistNodeType {
     pub fn serialize(&self) -> Bytes {
         let thrift_skiplist_node_type = self.to_thrift();
         compact_protocol::serialize(&thrift_skiplist_node_type)
+    }
+}
+
+pub fn fetch_skiplist_index(
+    ctx: CoreContext,
+    maybe_skiplist_blobstore_key: Option<String>,
+    blobstore: Arc<dyn Blobstore>,
+) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+    match maybe_skiplist_blobstore_key {
+        Some(skiplist_index_blobstore_key) => {
+            info!(ctx.logger(), "Fetching and initializing skiplist");
+            blobstore
+                .get(ctx.clone(), skiplist_index_blobstore_key)
+                .and_then(move |maybebytes| {
+                    let slg = match maybebytes {
+                        Some(bytes) => {
+                            let bytes = bytes.into_bytes();
+                            let skiplist = try_boxfuture!(deserialize_skiplist_index(
+                                ctx.logger().clone(),
+                                bytes
+                            ));
+                            info!(ctx.logger(), "Built skiplist");
+                            skiplist
+                        }
+                        None => {
+                            info!(ctx.logger(), "Skiplist is empty!");
+                            SkiplistIndex::new()
+                        }
+                    };
+                    ok(Arc::new(slg)).boxify()
+                })
+                .boxify()
+        }
+        None => ok(Arc::new(SkiplistIndex::new())).boxify(),
     }
 }
 

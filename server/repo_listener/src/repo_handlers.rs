@@ -9,15 +9,11 @@ use std::sync::Arc;
 
 use cloned::cloned;
 use failure_ext::prelude::*;
-use futures::{
-    future::{self, ok},
-    Future, IntoFuture,
-};
+use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, o, Logger};
 
 use blobrepo_factory::{open_blobrepo, Caching};
-use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -32,7 +28,7 @@ use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use skiplist::{deserialize_skiplist_index, SkiplistIndex};
+use skiplist::fetch_skiplist_index;
 use sql_ext::SqlConstructors;
 
 #[derive(Clone)]
@@ -87,12 +83,12 @@ pub fn repo_handlers(
                 root_log,
                 "Start warming for repo {}, type {:?}", reponame, config.storage_config.blobstore
             );
-            let ctx = CoreContext::new_with_logger(fb, root_log.clone());
+            let root_log = root_log.clone();
+            let logger = root_log.new(o!("repo" => reponame.clone()));
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
             let ready_handle = ready.create_handle(reponame.clone());
 
-            let root_log = root_log.clone();
-            let logger = root_log.new(o!("repo" => reponame.clone()));
             let repoid = RepositoryId::new(config.repoid);
             let disabled_hooks = disabled_hooks.clone();
 
@@ -206,36 +202,11 @@ pub fn repo_handlers(
                             let preserve_raw_bundle2 = bundle2_replay_params.preserve_raw_bundle2;
                             let pure_push_allowed = push.pure_push_allowed;
 
-                            let skip_index = match config.skiplist_index_blobstore_key.clone() {
-                                Some(skiplist_index_blobstore_key) => {
-                                    let blobstore = repo.blobrepo().get_blobstore();
-                                    cloned!(logger);
-                                    info!(logger, "Fetching and initializing skiplist");
-                                    blobstore
-                                        .get(ctx.clone(), skiplist_index_blobstore_key)
-                                        .and_then(move |maybebytes| {
-                                            let slg = match maybebytes {
-                                                Some(bytes) => {
-                                                    let bytes = bytes.into_bytes();
-                                                    let skiplist =
-                                                        try_boxfuture!(deserialize_skiplist_index(
-                                                            logger.clone(),
-                                                            bytes
-                                                        ));
-                                                    info!(logger, "Built skiplist");
-                                                    skiplist
-                                                }
-                                                None => {
-                                                    info!(logger, "Skiplist is empty!");
-                                                    SkiplistIndex::new()
-                                                }
-                                            };
-                                            ok(Arc::new(slg)).boxify()
-                                        })
-                                        .left_future()
-                                }
-                                None => ok(Arc::new(SkiplistIndex::new())).right_future(),
-                            };
+                            let skip_index = fetch_skiplist_index(
+                                ctx.clone(),
+                                config.skiplist_index_blobstore_key,
+                                repo.blobrepo().get_blobstore().boxed(),
+                            );
 
                             let initial_warmup = cache_warmup(
                                 ctx.clone(),
