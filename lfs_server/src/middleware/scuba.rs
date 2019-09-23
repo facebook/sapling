@@ -4,11 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::Future;
-use gotham::handler::HandlerFuture;
-use gotham::middleware::Middleware;
 use gotham::state::{request_id, FromState, State};
-use gotham_derive::{NewMiddleware, StateData};
+use gotham_derive::StateData;
 use hyper::{
     header::{self, AsHeaderName, HeaderMap},
     Method, StatusCode, Uri,
@@ -18,13 +15,13 @@ use percent_encoding::percent_decode;
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use crate::lfs_server_context::LoggingContext;
+use super::{Callback, Middleware, RequestContext};
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_CORRELATOR: &str = "x-client-correlator";
 
-#[derive(Clone, NewMiddleware)]
+#[derive(Clone)]
 pub struct ScubaMiddleware {
     scuba: ScubaSampleBuilder,
 }
@@ -51,12 +48,17 @@ fn add_header<T: AsHeaderName>(
 fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
-    if let Some(log_ctx) = state.try_take::<LoggingContext>() {
-        scuba.add("repository", log_ctx.repository);
-        scuba.add("method", log_ctx.method);
+    if let Some(log_ctx) = state.try_borrow::<RequestContext>() {
+        if let Some(ref repository) = log_ctx.repository {
+            scuba.add("repository", repository.as_ref());
+        }
 
-        if let Some(err_msg) = log_ctx.error_msg {
-            scuba.add("error_msg", err_msg);
+        if let Some(method) = log_ctx.method {
+            scuba.add("method", method);
+        }
+
+        if let Some(ref err_msg) = log_ctx.error_msg {
+            scuba.add("error_msg", err_msg.as_ref());
         }
 
         if let Some(response_size) = log_ctx.response_size {
@@ -115,29 +117,17 @@ impl ScubaMiddlewareState {
 }
 
 impl Middleware for ScubaMiddleware {
-    fn call<Chain>(self, mut state: State, chain: Chain) -> Box<HandlerFuture>
-    where
-        Chain: FnOnce(State) -> Box<HandlerFuture>,
-    {
+    fn handle(&self, state: &mut State) -> Callback {
         state.put(ScubaMiddlewareState(self.scuba.clone()));
 
-        // Don't log health check requests.
-        if let Some(uri) = Uri::try_borrow_from(&state) {
-            if uri.path() == "/health_check" {
-                return chain(state);
+        Box::new(|state, response| {
+            if let Some(uri) = Uri::try_borrow_from(&state) {
+                if uri.path() == "/health_check" {
+                    return;
+                }
             }
-        }
 
-        Box::new(chain(state).then(|mut res| {
-            match res {
-                Ok((ref mut state, ref response)) => {
-                    log_stats(state, &response.status());
-                }
-                Err((ref mut state, _)) => {
-                    log_stats(state, &StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            }
-            res
-        }))
+            log_stats(state, &response.status());
+        })
     }
 }

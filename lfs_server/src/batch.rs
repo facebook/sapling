@@ -22,7 +22,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
-use crate::lfs_server_context::{RequestContext, UriBuilder};
+use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
 use crate::middleware::ScubaMiddlewareState;
 use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -77,7 +77,7 @@ impl UpstreamObjects {
 
 // TODO: Unit tests for this. We could use a client that lets us do stub things.
 async fn upstream_objects(
-    ctx: &RequestContext,
+    ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
 ) -> Result<UpstreamObjects, Error> {
     let objects = objects.iter().map(|o| *o).collect();
@@ -131,7 +131,7 @@ async fn upstream_objects(
 }
 
 async fn resolve_internal_object(
-    ctx: &RequestContext,
+    ctx: &RepositoryRequestContext,
     oid: Sha256,
 ) -> Result<Option<ContentId>, Error> {
     let blobstore = ctx.repo.get_blobstore();
@@ -165,7 +165,7 @@ async fn resolve_internal_object(
 }
 
 async fn internal_objects(
-    ctx: &RequestContext,
+    ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
 ) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
     let futs = objects
@@ -233,7 +233,10 @@ fn batch_upload_response_objects(
     Ok(objects)
 }
 
-async fn batch_upload(ctx: &RequestContext, batch: RequestBatch) -> Result<ResponseBatch, Error> {
+async fn batch_upload(
+    ctx: &RepositoryRequestContext,
+    batch: RequestBatch,
+) -> Result<ResponseBatch, Error> {
     let (upstream, internal) = try_join!(
         upstream_objects(ctx, &batch.objects),
         internal_objects(ctx, &batch.objects),
@@ -294,7 +297,10 @@ fn batch_download_response_objects(
         .collect()
 }
 
-async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<ResponseBatch, Error> {
+async fn batch_download(
+    ctx: &RepositoryRequestContext,
+    batch: RequestBatch,
+) -> Result<ResponseBatch, Error> {
     // TODO: Optimize: if internal has everything, we don't need to wait for upstream here.
     let (upstream, internal) = try_join!(
         upstream_objects(ctx, &batch.objects),
@@ -313,8 +319,8 @@ async fn batch_download(ctx: &RequestContext, batch: RequestBatch) -> Result<Res
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
 
-    let ctx =
-        RequestContext::instantiate(state, repository.clone(), METHOD).map_err(HttpError::e400)?;
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), METHOD)
+        .map_err(HttpError::e400)?;
 
     let body = Body::take_from(state)
         .compat()

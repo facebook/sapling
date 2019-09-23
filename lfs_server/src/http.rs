@@ -18,7 +18,7 @@ use hyper::{
 use lazy_static::lazy_static;
 use mime::Mime;
 
-use crate::lfs_server_context::LoggingContext;
+use crate::middleware::RequestContext;
 
 // Provide an easy way to map from Error -> Http code
 pub struct HttpError {
@@ -63,8 +63,8 @@ pub trait TryIntoResponse {
 
 impl TryIntoResponse for EmptyBody {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
-            log_ctx.set_response_size(0);
+        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+            ctx.set_response_size(0);
         }
 
         Response::builder()
@@ -83,8 +83,8 @@ where
         let bytes = self.bytes.into();
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
 
-        if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
-            log_ctx.set_response_size(bytes.len() as u64);
+        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+            ctx.set_response_size(bytes.len() as u64);
         }
 
         Response::builder()
@@ -103,8 +103,8 @@ where
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
 
-        if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
-            log_ctx.set_response_size(self.size);
+        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+            ctx.set_response_size(self.size);
         }
 
         Response::builder()

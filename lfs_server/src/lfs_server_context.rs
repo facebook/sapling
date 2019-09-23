@@ -7,7 +7,6 @@
 use std::collections::HashMap;
 use std::fmt::{Arguments, Write};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use bytes::Bytes;
 use failure::Error;
@@ -30,6 +29,7 @@ use hyper_openssl::HttpsConnector;
 use mononoke_types::ContentId;
 
 use crate::errors::ErrorKind;
+use crate::middleware::RequestContext;
 use crate::protocol::{RequestBatch, RequestObject, ResponseBatch};
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
@@ -45,39 +45,6 @@ struct LfsServerContextInner {
 pub struct LfsServerContext {
     fb: FacebookInit,
     inner: Arc<Mutex<LfsServerContextInner>>,
-}
-
-#[derive(Clone, StateData)]
-pub struct LoggingContext {
-    pub repository: String,
-    pub method: &'static str,
-    pub error_msg: Option<String>,
-    pub response_size: Option<u64>,
-    pub duration: Option<Duration>,
-}
-
-impl LoggingContext {
-    pub fn new(repository: String, method: &'static str) -> Self {
-        Self {
-            repository,
-            method,
-            error_msg: None,
-            response_size: None,
-            duration: None,
-        }
-    }
-
-    pub fn set_error_msg(&mut self, error_msg: String) {
-        self.error_msg = Some(error_msg);
-    }
-
-    pub fn set_response_size(&mut self, size: u64) {
-        self.response_size = Some(size);
-    }
-
-    pub fn set_duration(&mut self, duration: Duration) {
-        self.duration = Some(duration);
-    }
 }
 
 impl LfsServerContext {
@@ -106,11 +73,11 @@ impl LfsServerContext {
         })
     }
 
-    pub fn request(&self, repository: String) -> Result<RequestContext, Error> {
+    pub fn request(&self, repository: String) -> Result<RepositoryRequestContext, Error> {
         let inner = self.inner.lock().expect("poisoned lock");
 
         match inner.repositories.get(&repository) {
-            Some(repo) => Ok(RequestContext {
+            Some(repo) => Ok(RepositoryRequestContext {
                 ctx: CoreContext::new_with_logger(self.fb, inner.logger.clone()),
                 repo: repo.clone(),
                 uri_builder: UriBuilder {
@@ -125,22 +92,25 @@ impl LfsServerContext {
 }
 
 #[derive(Clone)]
-pub struct RequestContext {
+pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: BlobRepo,
     pub uri_builder: UriBuilder,
     client: Arc<HttpsHyperClient>,
 }
 
-impl RequestContext {
+impl RepositoryRequestContext {
     pub fn instantiate(
         state: &mut State,
         repository: String,
         method: &'static str,
     ) -> Result<Self, Error> {
-        state.put(LoggingContext::new(repository.clone(), method));
-        let ctx = LfsServerContext::borrow_from(&state);
-        ctx.request(repository)
+        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+            ctx.set_request(repository.clone(), method);
+        }
+
+        let lfs_ctx = LfsServerContext::borrow_from(&state);
+        lfs_ctx.request(repository)
     }
 
     pub async fn dispatch(&self, request: Request<Body>) -> Result<Body, Error> {

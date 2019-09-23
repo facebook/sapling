@@ -27,7 +27,7 @@ use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
 use crate::http::{EmptyBody, HttpError, TryIntoResponse};
-use crate::lfs_server_context::RequestContext;
+use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::ScubaMiddlewareState;
 use crate::protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
@@ -63,7 +63,7 @@ where
 }
 
 async fn upstream_upload<S>(
-    ctx: &RequestContext,
+    ctx: &RepositoryRequestContext,
     oid: Sha256,
     size: u64,
     data: S,
@@ -143,8 +143,8 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         size,
     } = state.take();
 
-    let ctx =
-        RequestContext::instantiate(state, repository.clone(), METHOD).map_err(HttpError::e400)?;
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), METHOD)
+        .map_err(HttpError::e400)?;
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;

@@ -6,15 +6,11 @@
 
 use std::time::Instant;
 
-use futures::{future, Future};
-use gotham::handler::HandlerFuture;
-use gotham::middleware::Middleware;
 use gotham::state::State;
-use gotham_derive::NewMiddleware;
 
-use crate::lfs_server_context::LoggingContext;
+use super::{Callback, Middleware, RequestContext};
 
-#[derive(Clone, NewMiddleware)]
+#[derive(Clone)]
 pub struct TimerMiddleware {}
 
 impl TimerMiddleware {
@@ -24,19 +20,13 @@ impl TimerMiddleware {
 }
 
 impl Middleware for TimerMiddleware {
-    fn call<Chain>(self, state: State, chain: Chain) -> Box<HandlerFuture>
-    where
-        Chain: FnOnce(State) -> Box<HandlerFuture>,
-    {
+    fn handle(&self, _state: &mut State) -> Callback {
         let start_time = Instant::now();
 
-        let f = chain(state).and_then(move |(mut state, response)| {
-            if let Some(log_ctx) = state.try_borrow_mut::<LoggingContext>() {
-                log_ctx.set_duration(start_time.elapsed());
+        Box::new(move |state, _response| {
+            if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+                ctx.set_duration(start_time.elapsed());
             }
-            future::ok((state, response))
-        });
-
-        Box::new(f)
+        })
     }
 }

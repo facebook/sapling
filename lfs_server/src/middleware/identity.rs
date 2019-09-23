@@ -5,18 +5,15 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Error;
-use futures::{future, Future};
-use gotham::handler::HandlerFuture;
 use gotham::helpers::http::header::X_REQUEST_ID;
-use gotham::middleware::Middleware;
 use gotham::state::{request_id, State};
-use gotham_derive::NewMiddleware;
 use hyper::header::HeaderValue;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 
-#[derive(Clone, NewMiddleware)]
+use super::{Callback, Middleware};
+
 pub struct IdentityMiddleware {
     headers: Arc<HashMap<&'static str, HeaderValue>>,
 }
@@ -68,23 +65,19 @@ impl IdentityMiddleware {
 }
 
 impl Middleware for IdentityMiddleware {
-    fn call<Chain>(self, state: State, chain: Chain) -> Box<HandlerFuture>
-    where
-        Chain: FnOnce(State) -> Box<HandlerFuture>,
-    {
-        let f = chain(state).and_then(move |(state, mut response)| {
+    fn handle(&self, _state: &mut State) -> Callback {
+        let headers_to_add = self.headers.clone();
+
+        Box::new(move |state, response| {
             let headers = response.headers_mut();
-            for (header, value) in self.headers.iter() {
+
+            for (header, value) in headers_to_add.iter() {
                 headers.insert(*header, value.clone());
             }
 
             if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
                 headers.insert(X_REQUEST_ID, id);
             }
-
-            future::ok((state, response))
-        });
-
-        Box::new(f)
+        })
     }
 }

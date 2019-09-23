@@ -4,16 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::Future;
-use gotham::handler::HandlerFuture;
-use gotham::middleware::Middleware;
 use gotham::state::State;
-use gotham_derive::NewMiddleware;
 use hyper::StatusCode;
 use stats::{define_stats, DynamicHistogram, DynamicTimeseries};
 use time_ext::DurationExt;
 
-use crate::lfs_server_context::LoggingContext;
+use super::{Callback, Middleware, RequestContext};
 
 define_stats! {
     prefix = "mononoke.lfs.request";
@@ -24,20 +20,10 @@ define_stats! {
     duration: dynamic_histogram("{}_ms", (repo_and_method: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
-#[derive(Clone, NewMiddleware)]
-pub struct OdsMiddleware {}
-
-impl OdsMiddleware {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
 fn log_stats(state: &State, status: &StatusCode) -> Option<()> {
-    let log_ctx = state.try_borrow::<LoggingContext>()?;
-    let duration = log_ctx.duration?;
-
-    let repo_and_method = format!("{}.{}", log_ctx.repository, log_ctx.method);
+    let ctx = state.try_borrow::<RequestContext>()?;
+    let duration = ctx.duration?;
+    let repo_and_method = format!("{}.{}", ctx.repository.as_ref()?, ctx.method?);
 
     STATS::duration.add_value(
         duration.as_millis_unchecked() as i64,
@@ -57,22 +43,18 @@ fn log_stats(state: &State, status: &StatusCode) -> Option<()> {
     Some(())
 }
 
-impl Middleware for OdsMiddleware {
-    fn call<Chain>(self, state: State, chain: Chain) -> Box<HandlerFuture>
-    where
-        Chain: FnOnce(State) -> Box<HandlerFuture>,
-    {
-        Box::new(chain(state).then(|res| {
-            match res {
-                Ok((ref state, ref response)) => {
-                    log_stats(state, &response.status());
-                }
-                Err((ref state, _)) => {
-                    log_stats(state, &StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            }
+pub struct OdsMiddleware {}
 
-            res
-        }))
+impl OdsMiddleware {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Middleware for OdsMiddleware {
+    fn handle(&self, _state: &mut State) -> Callback {
+        Box::new(|state, response| {
+            log_stats(state, &response.status());
+        })
     }
 }
