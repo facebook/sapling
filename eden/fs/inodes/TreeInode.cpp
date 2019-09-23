@@ -24,7 +24,6 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -36,6 +35,7 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/tracing/Tracing.h"
 #include "eden/fs/utils/Bug.h"
@@ -2080,7 +2080,7 @@ Future<Unit> TreeInode::computeDiff(
       } else {
         if (!entryIgnored) {
           XLOG(DBG8) << "diff: untracked file: " << entryPath;
-          context->callback->untrackedFile(entryPath);
+          context->callback->addedFile(entryPath);
         } else if (context->listIgnored) {
           XLOG(DBG9) << "diff: ignored file: " << entryPath;
           context->callback->ignoredFile(entryPath);
@@ -2181,7 +2181,7 @@ Future<Unit> TreeInode::computeDiff(
           }
         } else {
           XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
-          context->callback->untrackedFile(entryPath);
+          context->callback->addedFile(entryPath);
         }
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
             context, entryPath, scmEntry));

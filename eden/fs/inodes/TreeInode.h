@@ -21,7 +21,7 @@ class DiffContext;
 class DirList;
 class EdenMount;
 class GitIgnoreStack;
-class InodeDiffCallback;
+class DiffCallback;
 class InodeMap;
 class ObjectStore;
 class Overlay;
@@ -200,7 +200,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     according to source control ignore rules.
    *
    * @return Returns a Future that will be fulfilled when the diff operation
-   *     completes.  The caller must ensure that the InodeDiffCallback parameter
+   *     completes.  The caller must ensure that the DiffCallback parameter
    *     remains valid until this Future completes.
    */
   folly::Future<folly::Unit> diff(

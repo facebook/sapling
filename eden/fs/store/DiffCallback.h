@@ -24,13 +24,13 @@ class TreeEntry;
  * simultaneously, and the callback is responsible for implementing
  * synchronization properly.
  */
-class InodeDiffCallback {
+class DiffCallback {
  public:
-  InodeDiffCallback() {}
-  virtual ~InodeDiffCallback() {}
+  DiffCallback() {}
+  virtual ~DiffCallback() {}
 
   virtual void ignoredFile(RelativePathPiece path) = 0;
-  virtual void untrackedFile(RelativePathPiece path) = 0;
+  virtual void addedFile(RelativePathPiece path) = 0;
   virtual void removedFile(RelativePathPiece path) = 0;
   virtual void modifiedFile(RelativePathPiece path) = 0;
 

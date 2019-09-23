@@ -51,7 +51,7 @@ class DiffContext;
 class EdenDispatcher;
 class FuseChannel;
 class FuseDeviceUnmountedDuringInitialization;
-class InodeDiffCallback;
+class DiffCallback;
 class InodeMap;
 class MountPoint;
 struct InodeMetadata;
@@ -391,7 +391,7 @@ class EdenMount {
 
   /**
    * This version of diff is primarily intended for testing.
-   * Use diff(InodeDiffCallback* callback, bool listIgnored) instead.
+   * Use diff(DiffCallback* callback, bool listIgnored) instead.
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
@@ -414,10 +414,16 @@ class EdenMount {
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
-      InodeDiffCallback* callback,
+  FOLLY_NODISCARD folly::Future<folly::Unit>
+  diff(DiffCallback* callback, Hash commitHash, bool listIgnored = false) const;
+
+  /**
+   * Executes diff against commitHash and returns the ScmStatus for the diff
+   * operation.
+   */
+  folly::Future<std::unique_ptr<ScmStatus>> diff(
       Hash commitHash,
-      bool listIgnored = false) const;
+      bool listIgnored);
 
   /**
    * Reset the state to point to the specified parent commit(s), without
@@ -628,7 +634,7 @@ class EdenMount {
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
   std::unique_ptr<DiffContext> createDiffContext(
-      InodeDiffCallback* callback,
+      DiffCallback* callback,
       bool listIgnored) const;
 
   /**

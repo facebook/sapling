@@ -12,6 +12,7 @@
 
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -56,8 +57,10 @@ class DiffTest : public ::testing::Test {
         localStore_, backingStore_, std::make_shared<EdenStats>());
   }
 
-  Future<ScmStatus> diffCommits(StringPiece commit1, StringPiece commit2) {
-    return facebook::eden::diffCommits(
+  Future<std::unique_ptr<ScmStatus>> diffCommits(
+      StringPiece commit1,
+      StringPiece commit2) {
+    return diffCommitsForStatus(
         store_.get(), makeTestHash(commit1), makeTestHash(commit2));
   }
 
@@ -80,8 +83,8 @@ TEST_F(DiffTest, sameCommit) {
   backingStore_->putCommit("1", builder)->setReady();
 
   auto result = diffCommits("1", "1").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
-  EXPECT_THAT(result.entries, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
+  EXPECT_THAT(result->entries, UnorderedElementsAre());
 }
 
 TEST_F(DiffTest, basicDiff) {
@@ -106,9 +109,9 @@ TEST_F(DiffTest, basicDiff) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -134,17 +137,17 @@ TEST_F(DiffTest, directoryOrdering) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::ADDED),
           Pair("src/foo/zzz.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(result2.errors, UnorderedElementsAre());
+  EXPECT_THAT(result2->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result2.entries,
+      result2->entries,
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/zzz.txt", ScmFileStatus::REMOVED)));
@@ -164,15 +167,15 @@ TEST_F(DiffTest, modeChange) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(result2.errors, UnorderedElementsAre());
+  EXPECT_THAT(result2->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result2.entries,
+      result2->entries,
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 }
 
@@ -195,7 +198,7 @@ TEST_F(DiffTest, newDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   auto expectedResults = UnorderedElementsAre(
       Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
       Pair("src/foo/a/b/d.txt", ScmFileStatus::ADDED),
@@ -203,12 +206,12 @@ TEST_F(DiffTest, newDirectory) {
       Pair("src/foo/a/b/f/g.txt", ScmFileStatus::ADDED),
       Pair("src/foo/z/y/x.txt", ScmFileStatus::ADDED),
       Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED));
-  EXPECT_THAT(result.entries, expectedResults);
+  EXPECT_THAT(result->entries, expectedResults);
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(result2.errors, UnorderedElementsAre());
+  EXPECT_THAT(result2->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result2.entries,
+      result2->entries,
       UnorderedElementsAre(
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/d.txt", ScmFileStatus::REMOVED),
@@ -218,19 +221,34 @@ TEST_F(DiffTest, newDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::REMOVED)));
 
   // Test calling diffTrees() with hashes
+  auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto callbackPtr = callback.get();
+
   auto treeResult = diffTrees(
                         store_.get(),
+                        callbackPtr,
                         builder.getRoot()->get().getHash(),
                         builder2.getRoot()->get().getHash())
+                        .thenValue([callback = std::move(callback)](auto&&) {
+                          return callback->extractStatus();
+                        })
                         .get(100ms);
   EXPECT_THAT(treeResult.errors, UnorderedElementsAre());
   EXPECT_THAT(treeResult.entries, expectedResults);
 
   // Test calling diffTrees() with Tree objects
-  auto treeResult2 =
-      diffTrees(
-          store_.get(), builder.getRoot()->get(), builder2.getRoot()->get())
-          .get(100ms);
+  auto callback2 = std::make_unique<ScmStatusDiffCallback>();
+  auto callbackPtr2 = callback2.get();
+
+  auto treeResult2 = diffTrees(
+                         store_.get(),
+                         callbackPtr2,
+                         builder.getRoot()->get(),
+                         builder2.getRoot()->get())
+                         .thenValue([callback2 = std::move(callback2)](auto&&) {
+                           return callback2->extractStatus();
+                         })
+                         .get(100ms);
   EXPECT_THAT(treeResult2.errors, UnorderedElementsAre());
   EXPECT_THAT(treeResult2.entries, expectedResults);
 }
@@ -256,9 +274,9 @@ TEST_F(DiffTest, fileToDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
@@ -269,9 +287,9 @@ TEST_F(DiffTest, fileToDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(result2.errors, UnorderedElementsAre());
+  EXPECT_THAT(result2->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result2.entries,
+      result2->entries,
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::ADDED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
@@ -356,9 +374,9 @@ TEST_F(DiffTest, blockedFutures) {
   ASSERT_TRUE(resultFuture.isReady());
 
   auto result = std::move(resultFuture).get();
-  EXPECT_THAT(result.errors, UnorderedElementsAre());
+  EXPECT_THAT(result->errors, UnorderedElementsAre());
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -414,11 +432,11 @@ TEST_F(DiffTest, loadTreeError) {
 
   auto result = std::move(resultFuture).get();
   EXPECT_THAT(
-      result.errors,
+      result->errors,
       UnorderedElementsAre(Pair(
           "x/y/z",
           folly::exceptionStr(std::runtime_error("oh noes")).c_str())));
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(Pair("a/b/3.txt", ScmFileStatus::MODIFIED)));
 }

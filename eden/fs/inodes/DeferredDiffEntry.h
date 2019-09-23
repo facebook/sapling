@@ -25,7 +25,7 @@ class Hash;
 class ObjectStore;
 class TreeEntry;
 class TreeInode;
-class InodeDiffCallback;
+class DiffCallback;
 
 /**
  * A helper class for use in TreeInode::diff()

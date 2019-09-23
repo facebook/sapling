@@ -27,7 +27,6 @@
 #include "eden/fs/win/utils/stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/Differ.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -38,6 +37,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
 
@@ -962,7 +962,7 @@ EdenServiceHandler::future_getScmStatus(
 
   auto mount = server_->getMount(*mountPoint);
   auto hash = hashFromThrift(*commitHash);
-  return helper.wrapFuture(diffMountForStatus(*mount, hash, listIgnored));
+  return helper.wrapFuture(mount->diff(hash, listIgnored));
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -982,11 +982,8 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto id1 = hashFromThrift(*oldHash);
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
-  return helper.wrapFuture(diffCommits(mount->getObjectStore(), id1, id2)
-                               .thenValue([](ScmStatus&& result) {
-                                 return make_unique<ScmStatus>(
-                                     std::move(result));
-                               }));
+  return helper.wrapFuture(
+      diffCommitsForStatus(mount->getObjectStore(), id1, id2));
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

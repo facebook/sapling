@@ -4,11 +4,10 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-#include "eden/fs/inodes/Differ.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -16,33 +15,33 @@
 
 namespace facebook {
 namespace eden {
-void ThriftStatusCallback::ignoredFile(RelativePathPiece path) {
+void ScmStatusDiffCallback::ignoredFile(RelativePathPiece path) {
   data_.wlock()->entries.emplace(
       path.stringPiece().str(), ScmFileStatus::IGNORED);
 }
 
-void ThriftStatusCallback::untrackedFile(RelativePathPiece path) {
+void ScmStatusDiffCallback::addedFile(RelativePathPiece path) {
   data_.wlock()->entries.emplace(
       path.stringPiece().str(), ScmFileStatus::ADDED);
 }
 
-void ThriftStatusCallback::removedFile(RelativePathPiece path) {
+void ScmStatusDiffCallback::removedFile(RelativePathPiece path) {
   data_.wlock()->entries.emplace(
       path.stringPiece().str(), ScmFileStatus::REMOVED);
 }
 
-void ThriftStatusCallback::modifiedFile(RelativePathPiece path) {
+void ScmStatusDiffCallback::modifiedFile(RelativePathPiece path) {
   data_.wlock()->entries.emplace(
       path.stringPiece().str(), ScmFileStatus::MODIFIED);
 }
 
-void ThriftStatusCallback::diffError(
+void ScmStatusDiffCallback::diffError(
     RelativePathPiece path,
     const folly::exception_wrapper& ew) {
   XLOG(WARNING) << "error computing status data for " << path << ": "
                 << folly::exceptionStr(ew);
   data_.wlock()->errors.emplace(
-      path.stringPiece().str(), folly::exceptionStr(ew));
+      path.stringPiece().str(), folly::exceptionStr(ew).toStdString());
 }
 
 /**
@@ -52,7 +51,7 @@ void ThriftStatusCallback::diffError(
  * moves the results out of the callback.  It should only be invoked after
  * the diff operation has completed.
  */
-ScmStatus ThriftStatusCallback::extractStatus() {
+ScmStatus ScmStatusDiffCallback::extractStatus() {
   auto data = data_.wlock();
   return std::move(*data);
 }
@@ -80,16 +79,6 @@ std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {
   }
   os << "}";
   return os;
-}
-
-folly::Future<std::unique_ptr<ScmStatus>>
-diffMountForStatus(const EdenMount& mount, Hash commitHash, bool listIgnored) {
-  auto callback = std::make_unique<ThriftStatusCallback>();
-  auto callbackPtr = callback.get();
-  return mount.diff(callbackPtr, commitHash, listIgnored)
-      .thenValue([callback = std::move(callback)](auto&&) {
-        return std::make_unique<ScmStatus>(callback->extractStatus());
-      });
 }
 
 } // namespace eden

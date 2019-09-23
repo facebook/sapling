@@ -45,7 +45,7 @@ class Clock;
 class DiffContext;
 class EdenDispatcher;
 class FuseChannel;
-class InodeDiffCallback;
+class DiffCallback;
 class InodeMap;
 class MountPoint;
 struct InodeMetadata;
@@ -180,7 +180,7 @@ class EdenMount {
 
   /**
    * This version of diff is primarily intended for testing.
-   * Use diff(InodeDiffCallback* callback, bool listIgnored) instead.
+   * Use diff(DiffCallback* callback, bool listIgnored) instead.
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
@@ -203,10 +203,8 @@ class EdenMount {
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
-      InodeDiffCallback* callback,
-      Hash commitHash,
-      bool listIgnored = false) const;
+  FOLLY_NODISCARD folly::Future<folly::Unit>
+  diff(DiffCallback* callback, Hash commitHash, bool listIgnored = false) const;
 
   /**
    * Reset the state to point to the specified parent commit(s), without
@@ -370,7 +368,7 @@ class EdenMount {
   shutdownImpl(bool doTakeover);
 
   std::unique_ptr<DiffContext> createDiffContext(
-      InodeDiffCallback* callback,
+      DiffCallback* callback,
       bool listIgnored) const;
 
   /**

@@ -11,10 +11,10 @@
 #include <gtest/gtest.h>
 
 #include "eden/fs/inodes/DiffContext.h"
-#include "eden/fs/inodes/Differ.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
@@ -79,7 +79,7 @@ class DiffTest {
       bool listIgnored = false,
       folly::StringPiece systemWideIgnoreFileContents = "",
       folly::StringPiece userIgnoreFileContents = "") {
-    ThriftStatusCallback callback;
+    ScmStatusDiffCallback callback;
     DiffContext diffContext{
         &callback,
         listIgnored,
@@ -92,7 +92,7 @@ class DiffTest {
     return callback.extractStatus();
   }
   folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
-    auto callback = std::make_unique<ThriftStatusCallback>();
+    auto callback = std::make_unique<ScmStatusDiffCallback>();
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture =
         mount_.getEdenMount()->diff(callback.get(), commitHash, listIgnored);
@@ -963,7 +963,7 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  ThriftStatusCallback callback;
+  ScmStatusDiffCallback callback;
   auto diffFuture = mount.getEdenMount()->diff(&callback, commitHash2);
 
   // The diff should not be ready yet

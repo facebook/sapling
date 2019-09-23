@@ -9,9 +9,9 @@
 
 #include <folly/Synchronized.h>
 
-#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -22,12 +22,10 @@ class Future;
 namespace facebook {
 namespace eden {
 
-class EdenMount;
-
-class ThriftStatusCallback : public InodeDiffCallback {
+class ScmStatusDiffCallback : public DiffCallback {
  public:
   void ignoredFile(RelativePathPiece path) override;
-  void untrackedFile(RelativePathPiece path) override;
+  void addedFile(RelativePathPiece path) override;
   void removedFile(RelativePathPiece path) override;
   void modifiedFile(RelativePathPiece path) override;
 
@@ -54,9 +52,5 @@ class ThriftStatusCallback : public InodeDiffCallback {
 char scmStatusCodeChar(ScmFileStatus code);
 
 std::ostream& operator<<(std::ostream& os, const ScmStatus& status);
-
-folly::Future<std::unique_ptr<ScmStatus>>
-diffMountForStatus(const EdenMount& mount, Hash commitHash, bool listIgnored);
-
 } // namespace eden
 } // namespace facebook

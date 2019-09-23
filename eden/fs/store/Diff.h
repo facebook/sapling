@@ -19,6 +19,7 @@ namespace eden {
 class Hash;
 class ObjectStore;
 class Tree;
+class DiffCallback;
 
 /**
  * Compute the diff between two commits.
@@ -26,8 +27,8 @@ class Tree;
  * The caller is responsible for ensuring that the ObjectStore remains valid
  * until the returned Future completes.
  */
-folly::Future<ScmStatus>
-diffCommits(ObjectStore* store, Hash commit1, Hash commit2);
+folly::Future<std::unique_ptr<ScmStatus>>
+diffCommitsForStatus(ObjectStore* store, Hash hash1, Hash hash2);
 
 /**
  * Compute the diff between two commits.
@@ -35,9 +36,12 @@ diffCommits(ObjectStore* store, Hash commit1, Hash commit2);
  * The caller is responsible for ensuring that the ObjectStore remains valid
  * until the returned Future completes.
  */
-folly::Future<ScmStatus> diffTrees(ObjectStore* store, Hash tree1, Hash tree2);
-folly::Future<ScmStatus>
-diffTrees(ObjectStore* store, const Tree& tree1, const Tree& tree2);
-
+folly::Future<folly::Unit>
+diffTrees(ObjectStore* store, DiffCallback* callback, Hash tree1, Hash tree2);
+folly::Future<folly::Unit> diffTrees(
+    ObjectStore* store,
+    DiffCallback* callback,
+    const Tree& tree1,
+    const Tree& tree2);
 } // namespace eden
 } // namespace facebook

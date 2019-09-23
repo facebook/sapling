@@ -15,7 +15,9 @@
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using folly::Future;
@@ -36,14 +38,14 @@ namespace {
  */
 class TreeDiffer {
  public:
-  explicit TreeDiffer(ObjectStore* store) : store_(store) {}
+  explicit TreeDiffer(ObjectStore* store, DiffCallback* callback)
+      : store_(store), callback_(callback) {}
 
   /**
    * Diff two commits.
    *
-   * The differences will be added to the internal ScmStatus object,
-   * which can then be extracted by calling extractResult() once the returned
-   * Future completes.
+   * The differences will be recorded using a callback inside of DiffState and
+   * will be extracted and returned to the caller.
    */
   FOLLY_NODISCARD Future<Unit> diffCommits(Hash hash1, Hash hash2);
 
@@ -53,21 +55,12 @@ class TreeDiffer {
    * The path argument specifies the path to these trees, and will be prefixed
    * to all differences recorded in the results.
    *
-   * The differences will be added to the internal ScmStatus object,
-   * which can then be extracted by calling extractResult() once the returned
-   * Future completes.
+   * The differences will be recorded using a callback provided by the caller.
    */
   FOLLY_NODISCARD Future<Unit>
   diffTrees(RelativePathPiece path, Hash hash1, Hash hash2);
   FOLLY_NODISCARD Future<Unit>
   diffTrees(RelativePathPiece path, const Tree& tree1, const Tree& tree2);
-
-  /**
-   * Extract the computed ScmStatus
-   */
-  ScmStatus extractResult() {
-    return std::move(*result_.wlock());
-  }
 
  private:
   struct ChildFutures {
@@ -80,30 +73,34 @@ class TreeDiffer {
     vector<Future<Unit>> futures;
   };
 
-  Future<Unit>
-  diffOneTree(RelativePathPiece path, Hash hash, ScmFileStatus status);
-  FOLLY_NODISCARD Future<Unit>
-  diffOneTree(RelativePathPiece path, const Tree& tree, ScmFileStatus status);
+  Future<Unit> diffAddedTree(RelativePathPiece path, Hash hash);
+  Future<Unit> diffRemovedTree(RelativePathPiece path, Hash hash);
 
-  void processOneSideOnly(
+  FOLLY_NODISCARD Future<Unit> diffAddedTree(
+      RelativePathPiece path,
+      const Tree& tree);
+  FOLLY_NODISCARD Future<Unit> diffRemovedTree(
+      RelativePathPiece path,
+      const Tree& tree);
+
+  void processAddedSide(
       ChildFutures& futures,
       RelativePathPiece parentPath,
-      const TreeEntry& entry,
-      ScmFileStatus status);
+      const TreeEntry& entry);
+  void processRemovedSide(
+      ChildFutures& futures,
+      RelativePathPiece parentPath,
+      const TreeEntry& entry);
   void processBothPresent(
       ChildFutures& futures,
       RelativePathPiece parentPath,
       const TreeEntry& entry1,
       const TreeEntry& entry2);
 
-  void addEntry(RelativePathPiece path, ScmFileStatus status) {
-    result_.wlock()->entries.emplace(path.value().str(), status);
-  }
-
   Future<Unit> waitOnResults(ChildFutures&& childFutures);
 
   ObjectStore* store_;
-  Synchronized<ScmStatus> result_;
+  DiffCallback* callback_;
 };
 
 Future<Unit> TreeDiffer::diffCommits(Hash hash1, Hash hash2) {
@@ -162,21 +159,17 @@ Future<Unit> TreeDiffer::diffTrees(
       }
 
       // This entry is present in tree2 but not tree1
-      processOneSideOnly(
-          childFutures, path, entries2[idx2], ScmFileStatus::ADDED);
+      processAddedSide(childFutures, path, entries2[idx2]);
       ++idx2;
     } else if (idx2 >= entries2.size()) {
       // This entry is present in tree1 but not tree2
-      processOneSideOnly(
-          childFutures, path, entries1[idx1], ScmFileStatus::REMOVED);
+      processRemovedSide(childFutures, path, entries1[idx1]);
       ++idx1;
     } else if (entries1[idx1].getName() < entries2[idx2].getName()) {
-      processOneSideOnly(
-          childFutures, path, entries1[idx1], ScmFileStatus::REMOVED);
+      processRemovedSide(childFutures, path, entries1[idx1]);
       ++idx1;
     } else if (entries1[idx1].getName() > entries2[idx2].getName()) {
-      processOneSideOnly(
-          childFutures, path, entries2[idx2], ScmFileStatus::ADDED);
+      processAddedSide(childFutures, path, entries2[idx2]);
       ++idx2;
     } else {
       processBothPresent(childFutures, path, entries1[idx1], entries2[idx2]);
@@ -188,33 +181,53 @@ Future<Unit> TreeDiffer::diffTrees(
   return waitOnResults(std::move(childFutures));
 }
 
-Future<Unit> TreeDiffer::diffOneTree(
-    RelativePathPiece path,
-    Hash hash,
-    ScmFileStatus status) {
+Future<Unit> TreeDiffer::diffAddedTree(RelativePathPiece path, Hash hash) {
   auto future = store_->getTree(hash);
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (future.isReady()) {
-    return diffOneTree(path, *std::move(future).get(), status);
+    return diffAddedTree(path, *std::move(future).get());
   }
 
   return std::move(future).thenValue(
-      [this, status, path = path.copy()](std::shared_ptr<const Tree>&& tree) {
-        return diffOneTree(path, *tree, status);
+      [this, path = path.copy()](std::shared_ptr<const Tree>&& tree) {
+        return diffAddedTree(path, *tree);
+      });
+}
+
+Future<Unit> TreeDiffer::diffRemovedTree(RelativePathPiece path, Hash hash) {
+  auto future = store_->getTree(hash);
+  // Optimization for the case when the tree object is immediately ready.
+  // We can avoid copying the input path in this case.
+  if (future.isReady()) {
+    return diffRemovedTree(path, *std::move(future).get());
+  }
+
+  return std::move(future).thenValue(
+      [this, path = path.copy()](std::shared_ptr<const Tree>&& tree) {
+        return diffRemovedTree(path, *tree);
       });
 }
 
 /**
  * Process a Tree that is present only on one side of the diff.
  */
-Future<Unit> TreeDiffer::diffOneTree(
+Future<Unit> TreeDiffer::diffAddedTree(
     RelativePathPiece path,
-    const Tree& tree,
-    ScmFileStatus status) {
+    const Tree& tree) {
   ChildFutures childFutures;
   for (const auto& childEntry : tree.getTreeEntries()) {
-    processOneSideOnly(childFutures, path, childEntry, status);
+    processAddedSide(childFutures, path, childEntry);
+  }
+  return waitOnResults(std::move(childFutures));
+}
+
+Future<Unit> TreeDiffer::diffRemovedTree(
+    RelativePathPiece path,
+    const Tree& tree) {
+  ChildFutures childFutures;
+  for (const auto& childEntry : tree.getTreeEntries()) {
+    processRemovedSide(childFutures, path, childEntry);
   }
   return waitOnResults(std::move(childFutures));
 }
@@ -226,18 +239,36 @@ Future<Unit> TreeDiffer::diffOneTree(
  * If we could not compute a result immediately we will add an entry to
  * childFutures.
  */
-void TreeDiffer::processOneSideOnly(
+void TreeDiffer::processRemovedSide(
     ChildFutures& childFutures,
     RelativePathPiece parentPath,
-    const TreeEntry& entry,
-    ScmFileStatus status) {
+    const TreeEntry& entry) {
   if (!entry.isTree()) {
-    addEntry(parentPath + entry.getName(), status);
+    callback_->removedFile(parentPath + entry.getName());
     return;
   }
-
   auto childPath = parentPath + entry.getName();
-  auto childFuture = diffOneTree(childPath, entry.getHash(), status);
+  auto childFuture = diffRemovedTree(childPath, entry.getHash());
+  childFutures.add(std::move(childPath), std::move(childFuture));
+}
+
+/**
+ * Process a TreeEntry that is present only on one side of the diff.
+ * We don't know yet if this TreeEntry refers to a Tree or a Blob.
+ *
+ * If we could not compute a result immediately we will add an entry to
+ * childFutures.
+ */
+void TreeDiffer::processAddedSide(
+    ChildFutures& childFutures,
+    RelativePathPiece parentPath,
+    const TreeEntry& entry) {
+  if (!entry.isTree()) {
+    callback_->addedFile(parentPath + entry.getName());
+    return;
+  }
+  auto childPath = parentPath + entry.getName();
+  auto childFuture = diffAddedTree(childPath, entry.getHash());
   childFutures.add(std::move(childPath), std::move(childFuture));
 }
 
@@ -266,26 +297,25 @@ void TreeDiffer::processBothPresent(
     } else {
       // tree-to-file
       // Record an ADDED entry for this path
-      addEntry(parentPath + entry1.getName(), ScmFileStatus::ADDED);
+      callback_->addedFile(parentPath + entry1.getName());
       // Report everything in tree1 as REMOVED
-      processOneSideOnly(
-          childFutures, parentPath, entry1, ScmFileStatus::REMOVED);
+      processRemovedSide(childFutures, parentPath, entry1);
     }
   } else {
     if (isTree2) {
       // file-to-tree
       // Add a REMOVED entry for this path
-      addEntry(parentPath + entry1.getName(), ScmFileStatus::REMOVED);
+      callback_->removedFile(parentPath + entry1.getName());
+
       // Report everything in tree2 as ADDED
-      processOneSideOnly(
-          childFutures, parentPath, entry2, ScmFileStatus::ADDED);
+      processAddedSide(childFutures, parentPath, entry2);
     } else {
       // file-to-file diff
       // We currently do not load the blob contents, and assume that blobs with
       // different hashes have different contents.
       if (entry1.getType() != entry2.getType() ||
           entry1.getHash() != entry2.getHash()) {
-        addEntry(parentPath + entry1.getName(), ScmFileStatus::MODIFIED);
+        callback_->modifiedFile(parentPath + entry1.getName());
       }
     }
   }
@@ -308,46 +338,54 @@ Future<Unit> TreeDiffer::waitOnResults(ChildFutures&& childFutures) {
             continue;
           }
           XLOG(ERR) << "error computing SCM diff for " << paths.at(idx);
-          result_.wlock()->errors.emplace(
-              paths.at(idx).value(), result.exception().what().toStdString());
+          callback_->diffError(paths.at(idx), result.exception());
         }
       });
 }
 
+struct DiffState {
+  explicit DiffState(ObjectStore* store)
+      : callback(), differ(store, &callback) {}
+
+  ScmStatusDiffCallback callback;
+  TreeDiffer differ;
+};
 } // namespace
 
-folly::Future<ScmStatus>
-diffCommits(ObjectStore* store, Hash commit1, Hash commit2) {
+Future<std::unique_ptr<ScmStatus>>
+diffCommitsForStatus(ObjectStore* store, Hash hash1, Hash hash2) {
   return folly::makeFutureWith([&] {
-    auto differ = make_unique<TreeDiffer>(store);
-    auto* differRawPtr = differ.get();
-    return differRawPtr->diffCommits(commit1, commit2)
-        .thenValue([differ = std::move(differ)](auto&&) {
-          return differ->extractResult();
+    auto state = std::make_unique<DiffState>(store);
+    auto statePtr = state.get();
+    return statePtr->differ.diffCommits(hash1, hash2)
+        .thenValue([state = std::move(state)](auto&&) {
+          return std::make_unique<ScmStatus>(state->callback.extractStatus());
         });
   });
 }
 
-folly::Future<ScmStatus> diffTrees(ObjectStore* store, Hash tree1, Hash tree2) {
+Future<Unit>
+diffTrees(ObjectStore* store, DiffCallback* callback, Hash tree1, Hash tree2) {
   return folly::makeFutureWith([&] {
-    auto differ = make_unique<TreeDiffer>(store);
+    auto differ = make_unique<TreeDiffer>(store, callback);
     auto* differRawPtr = differ.get();
     return differRawPtr->diffTrees(RelativePathPiece{}, tree1, tree2)
-        .thenValue([differ = std::move(differ)](auto&&) {
-          return differ->extractResult();
-        });
+        .thenValue(
+            [differ = std::move(differ)](auto&&) { return makeFuture(); });
   });
 }
 
-folly::Future<ScmStatus>
-diffTrees(ObjectStore* store, const Tree& tree1, const Tree& tree2) {
+Future<Unit> diffTrees(
+    ObjectStore* store,
+    DiffCallback* callback,
+    const Tree& tree1,
+    const Tree& tree2) {
   return folly::makeFutureWith([&] {
-    auto differ = make_unique<TreeDiffer>(store);
+    auto differ = make_unique<TreeDiffer>(store, callback);
     auto* differRawPtr = differ.get();
     return differRawPtr->diffTrees(RelativePathPiece{}, tree1, tree2)
-        .thenValue([differ = std::move(differ)](auto&&) {
-          return differ->extractResult();
-        });
+        .thenValue(
+            [differ = std::move(differ)](auto&&) { return makeFuture(); });
   });
 }
 

@@ -12,7 +12,7 @@ namespace facebook {
 namespace eden {
 
 DiffContext::DiffContext(
-    InodeDiffCallback* cb,
+    DiffCallback* cb,
     bool listIgnored,
     const ObjectStore* os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores)

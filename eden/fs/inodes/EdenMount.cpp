@@ -27,7 +27,6 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMountError.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -40,7 +39,9 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/store/BlobAccess.h"
+#include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -79,18 +80,18 @@ const PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
 /**
  * Helper for computing unclean paths when changing parents
  *
- * This InodeDiffCallback instance is used to compute the set
+ * This DiffCallback instance is used to compute the set
  * of unclean files before and after actions that change the
  * current commit hash of the mount point.
  */
-class EdenMount::JournalDiffCallback : public InodeDiffCallback {
+class EdenMount::JournalDiffCallback : public DiffCallback {
  public:
   explicit JournalDiffCallback()
       : data_{folly::in_place, std::unordered_set<RelativePath>()} {}
 
   void ignoredFile(RelativePathPiece) override {}
 
-  void untrackedFile(RelativePathPiece) override {}
+  void addedFile(RelativePathPiece) override {}
 
   void removedFile(RelativePathPiece path) override {
     data_.wlock()->uncleanPaths.insert(path.copy());
@@ -895,7 +896,7 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 }
 
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
-    InodeDiffCallback* callback,
+    DiffCallback* callback,
     bool listIgnored) const {
   return make_unique<DiffContext>(
       callback,
@@ -919,7 +920,7 @@ Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
 }
 
 Future<Unit> EdenMount::diff(
-    InodeDiffCallback* callback,
+    DiffCallback* callback,
     Hash commitHash,
     bool listIgnored) const {
   // Create a DiffContext object for this diff operation.
@@ -931,6 +932,17 @@ Future<Unit> EdenMount::diff(
   auto stateHolder = [ctx = std::move(context)]() {};
 
   return diff(ctxPtr, commitHash).ensure(std::move(stateHolder));
+}
+
+folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
+    Hash commitHash,
+    bool listIgnored) {
+  auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto callbackPtr = callback.get();
+  return this->diff(callbackPtr, commitHash, listIgnored)
+      .thenValue([callback = std::move(callback)](auto&&) {
+        return std::make_unique<ScmStatus>(callback->extractStatus());
+      });
 }
 
 void EdenMount::resetParents(const ParentCommits& parents) {

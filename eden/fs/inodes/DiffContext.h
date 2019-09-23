@@ -11,7 +11,7 @@
 namespace facebook {
 namespace eden {
 
-class InodeDiffCallback;
+class DiffCallback;
 class GitIgnoreStack;
 class ObjectStore;
 class UserInfo;
@@ -26,7 +26,7 @@ class TopLevelIgnores;
 class DiffContext {
  public:
   DiffContext(
-      InodeDiffCallback* cb,
+      DiffCallback* cb,
       bool listIgnored,
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores);
@@ -37,7 +37,7 @@ class DiffContext {
   DiffContext& operator=(DiffContext&&) = delete;
   ~DiffContext();
 
-  InodeDiffCallback* const callback;
+  DiffCallback* const callback;
   const ObjectStore* const store;
   /**
    * If listIgnored is true information about ignored files will be reported.
