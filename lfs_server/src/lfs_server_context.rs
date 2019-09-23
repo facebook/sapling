@@ -15,11 +15,11 @@ use futures_util::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStreamExt,
 };
-use gotham::state::{FromState, State};
+use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
-use slog::Logger;
+use slog::{o, Logger};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -73,19 +73,27 @@ impl LfsServerContext {
         })
     }
 
-    pub fn request(&self, repository: String) -> Result<RepositoryRequestContext, Error> {
+    pub fn request(
+        &self,
+        repository: String,
+        request_id: &str,
+    ) -> Result<RepositoryRequestContext, Error> {
         let inner = self.inner.lock().expect("poisoned lock");
 
         match inner.repositories.get(&repository) {
-            Some(repo) => Ok(RepositoryRequestContext {
-                ctx: CoreContext::new_with_logger(self.fb, inner.logger.clone()),
-                repo: repo.clone(),
-                uri_builder: UriBuilder {
-                    repository,
-                    server: inner.server.clone(),
-                },
-                client: inner.client.clone(),
-            }),
+            Some(repo) => {
+                let logger = inner.logger.new(o!("request_id" => request_id.to_string()));
+
+                Ok(RepositoryRequestContext {
+                    ctx: CoreContext::new_with_logger(self.fb, logger),
+                    repo: repo.clone(),
+                    uri_builder: UriBuilder {
+                        repository,
+                        server: inner.server.clone(),
+                    },
+                    client: inner.client.clone(),
+                })
+            }
             None => Err(ErrorKind::RepositoryDoesNotExist(repository).into()),
         }
     }
@@ -110,7 +118,7 @@ impl RepositoryRequestContext {
         }
 
         let lfs_ctx = LfsServerContext::borrow_from(&state);
-        lfs_ctx.request(repository)
+        lfs_ctx.request(repository, request_id(&state))
     }
 
     pub async fn dispatch(&self, request: Request<Body>) -> Result<Body, Error> {
