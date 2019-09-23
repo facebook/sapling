@@ -22,8 +22,7 @@ newrepo() {
 newserver() {
   local reponame="$1"
   if [ -n "$USE_MONONOKE" ] ; then
-    setup_mononoke_config
-    setup_mononoke_repo_config "$reponame"
+    REPONAME=$reponame setup_mononoke_config
     mononoke
     wait_for_mononoke "$TESTTMP/$reponame"
   else
