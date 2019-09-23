@@ -17,7 +17,6 @@ use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::{
     bind_server,
     handler::{HandlerError, HandlerFuture, IntoHandlerError},
-    helpers::http::header::X_REQUEST_ID,
     helpers::http::response::create_response,
     middleware::{logger::RequestLogger, state::StateMiddleware},
     pipeline::{new_pipeline, single::single_pipeline},
@@ -27,7 +26,7 @@ use gotham::{
     },
     state::{request_id, State},
 };
-use hyper::{header::HeaderValue, Body, Response};
+use hyper::{Body, Response};
 use itertools::Itertools;
 use scuba::ScubaSampleBuilder;
 use slog::warn;
@@ -47,7 +46,7 @@ use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use lfs_server_context::{LfsServerContext, LoggingContext, ServerUris};
-use middleware::{OdsMiddleware, ScubaMiddleware, TimerMiddleware};
+use middleware::{IdentityMiddleware, OdsMiddleware, ScubaMiddleware, TimerMiddleware};
 use protocol::ResponseError;
 
 mod batch;
@@ -86,7 +85,7 @@ where
             .map_err(HttpError::e500)
     });
 
-    let mut res: Response<Body> = match res {
+    let res: Response<Body> = match res {
         Ok(resp) => resp,
         Err(error) => {
             let HttpError { error, status_code } = error;
@@ -112,12 +111,6 @@ where
             }
         }
     };
-
-    let headers = res.headers_mut();
-    headers.insert("Server", HeaderValue::from_static("mononoke-lfs"));
-    if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
-        headers.insert(X_REQUEST_ID, id);
-    }
 
     Ok((state, res))
 }
@@ -164,6 +157,7 @@ fn health_handler(state: State) -> (State, &'static str) {
 fn router(lfs_ctx: LfsServerContext, scuba_logger: ScubaSampleBuilder) -> Router {
     let pipeline = new_pipeline()
         .add(RequestLogger::new(::log::Level::Info))
+        .add(IdentityMiddleware::new())
         .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
