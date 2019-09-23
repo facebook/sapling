@@ -125,6 +125,13 @@ def sync(
         )
         return 0
 
+    backupsnapshots = False
+    try:
+        extensions.find("snapshot")
+        backupsnapshots = True
+    except KeyError:
+        pass
+
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
 
@@ -132,7 +139,9 @@ def sync(
     # Load the backup state under the repo lock to ensure a consistent view.
     with repo.lock():
         state = backupstate.BackupState(repo, remotepath)
-    backedup, failed = backup.backup(repo, state, remotepath, getconnection)
+    backedup, failed = backup.backup(
+        repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
+    )
 
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.

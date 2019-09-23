@@ -12,7 +12,9 @@ from . import backuplock, dependencies
 
 
 @perftrace.tracefunc("Backup Draft Commits to Commit Cloud")
-def backup(repo, backupstate, remotepath, getconnection, revs=None):
+def backup(
+    repo, backupstate, remotepath, getconnection, revs=None, backupsnapshots=False
+):
     """backs up the given revisions to commit cloud
 
     Returns (backedup, failed), where "backedup" is a revset of the commits that
@@ -23,10 +25,12 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
 
     if revs is None:
         # No revs specified.  Back up all visible commits that are not already
-        # backed up.
-        heads = unfi.revs(
-            "heads(not public() - hidden() - (not public() & ::%ln))", backupstate.heads
+        # backed up. Also back up all the snapshots if needed.
+        snapshotcond = " + snapshot()" if backupsnapshots else ""
+        revset = (
+            "heads(not public() - hidden()%s - (not public() & ::%%ln))" % snapshotcond
         )
+        heads = unfi.revs(revset, backupstate.heads)
     else:
         # Some revs were specified.  Back up all of those commits that are not
         # already backed up.
@@ -40,7 +44,7 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
         return smartset.baseset(), smartset.baseset()
 
     # Check if any of the heads are already available on the server.
-    headnodes = list(repo.nodes("%ld", heads))
+    headnodes = list(unfi.nodes("%ld", heads))
     remoteheadnodes = {
         head
         for head, backedup in zip(

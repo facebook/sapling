@@ -113,7 +113,7 @@
   f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # Back it up
-  $ hg cloud backup --hidden -r "$OID"
+  $ hg cloud backup
   backing up stack rooted at f473d4d5a1c0
   remote: pushing 3 commits:
   remote:     f473d4d5a1c0  merge #1

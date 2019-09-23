@@ -375,6 +375,13 @@ def cloudbackup(ui, repo, *revs, **opts):
         background.backgroundbackup(repo, dest=dest)
         return 0
 
+    backupsnapshots = False
+    try:
+        extensions.find("snapshot")
+        backupsnapshots = True
+    except KeyError:
+        pass
+
     remotepath = ccutil.getremotepath(repo, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
 
@@ -382,7 +389,14 @@ def cloudbackup(ui, repo, *revs, **opts):
         # Load the backup state under the repo lock to ensure a consistent view.
         with repo.lock():
             state = backupstate.BackupState(repo, remotepath)
-        backedup, failed = backup.backup(repo, state, remotepath, getconnection, revs)
+        backedup, failed = backup.backup(
+            repo,
+            state,
+            remotepath,
+            getconnection,
+            revs,
+            backupsnapshots=backupsnapshots,
+        )
 
         if revs is None:
             # For a full backup, also update the backup bookmarks.

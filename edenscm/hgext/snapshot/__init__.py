@@ -31,7 +31,7 @@ Configs::
 from edenscm.mercurial import error, extensions, hg, registrar
 from edenscm.mercurial.i18n import _
 
-from . import blobstore, bundleparts, cmds as snapshotcommands, metadata
+from . import blobstore, bundleparts, cmds as snapshotcommands, snapshotlist
 
 
 cmdtable = snapshotcommands.cmdtable
@@ -73,3 +73,15 @@ def _updaterepo(orig, repo, node, overwrite, **opts):
                 % ctx
             )
     return orig(repo, node, overwrite, **opts)
+
+
+revsetpredicate = registrar.revsetpredicate()
+
+
+@revsetpredicate("snapshot")
+def snapshot(repo, subset, x):
+    """Snapshot changesets"""
+    unfi = repo.unfiltered()
+    # get all the binary nodes of snapshots from the file
+    nodes = snapshotlist.snapshotlist(repo).snapshots
+    return subset & unfi.revs("%ln", nodes)
