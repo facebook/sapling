@@ -39,13 +39,10 @@ impl Handler for MononokeLfsHandler {
     fn handle(self, mut state: State) -> Box<HandlerFuture> {
         // On request, middleware is called in order, then called the other way around on response.
         // This is what regular Router middleware in Gotham would do.
-        let mut callbacks: Vec<_> = self
-            .middleware
-            .iter()
-            .map(|m| m.handle(&mut state))
-            .collect();
-
-        callbacks.reverse();
+        let middleware = self.middleware.clone();
+        for m in middleware.iter() {
+            m.inbound(&mut state);
+        }
 
         // NOTE: It's a bit unfortunate that we have to return a HandlerFuture here when really
         // we'd rather be working with just (State, HttpResponse<Body>) everywhere, but that's how
@@ -56,8 +53,8 @@ impl Handler for MononokeLfsHandler {
                 (state, response)
             });
 
-            for callback in callbacks.into_iter() {
-                callback(&mut state, &mut response);
+            for m in middleware.iter().rev() {
+                m.outbound(&mut state, &mut response);
             }
 
             Ok((state, response))

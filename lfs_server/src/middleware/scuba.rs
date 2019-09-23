@@ -10,12 +10,13 @@ use hyper::{
     header::{self, AsHeaderName, HeaderMap},
     Method, StatusCode, Uri,
 };
+use hyper::{Body, Response};
 use json_encoded::get_identities;
 use percent_encoding::percent_decode;
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{Callback, Middleware, RequestContext};
+use super::{Middleware, RequestContext};
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
@@ -125,17 +126,17 @@ impl ScubaMiddlewareState {
 }
 
 impl Middleware for ScubaMiddleware {
-    fn handle(&self, state: &mut State) -> Callback {
+    fn inbound(&self, state: &mut State) {
         state.put(ScubaMiddlewareState(self.scuba.clone()));
+    }
 
-        Box::new(|state, response| {
-            if let Some(uri) = Uri::try_borrow_from(&state) {
-                if uri.path() == "/health_check" {
-                    return;
-                }
+    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+        if let Some(uri) = Uri::try_borrow_from(&state) {
+            if uri.path() == "/health_check" {
+                return;
             }
+        }
 
-            log_stats(state, &response.status());
-        })
+        log_stats(state, &response.status());
     }
 }

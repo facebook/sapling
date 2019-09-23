@@ -5,23 +5,21 @@
 // GNU General Public License version 2 or any later version.
 
 use gotham::state::{client_addr, request_id, FromState, State};
+use hyper::{Body, Response};
 use hyper::{Method, StatusCode, Uri, Version};
 use slog::{info, Logger};
-use std::sync::Arc;
 use time_ext::DurationExt;
 
-use super::{Callback, Middleware, RequestContext};
+use super::{Middleware, RequestContext};
 
 #[derive(Clone)]
 pub struct LogMiddleware {
-    logger: Arc<Logger>,
+    logger: Logger,
 }
 
 impl LogMiddleware {
     pub fn new(logger: Logger) -> Self {
-        Self {
-            logger: Arc::new(logger),
-        }
+        Self { logger }
     }
 }
 
@@ -59,10 +57,7 @@ fn log_request(logger: &Logger, state: &State, status: &StatusCode) -> Option<()
 }
 
 impl Middleware for LogMiddleware {
-    fn handle(&self, _state: &mut State) -> Callback {
-        let logger = self.logger.clone();
-        Box::new(move |state, response| {
-            log_request(&logger, &state, &response.status());
-        })
+    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+        log_request(&self.logger, &state, &response.status());
     }
 }

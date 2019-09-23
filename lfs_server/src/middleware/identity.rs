@@ -8,14 +8,14 @@ use failure::Error;
 use gotham::helpers::http::header::X_REQUEST_ID;
 use gotham::state::{request_id, State};
 use hyper::header::HeaderValue;
+use hyper::{Body, Response};
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 
-use super::{Callback, Middleware};
+use super::Middleware;
 
 pub struct IdentityMiddleware {
-    headers: Arc<HashMap<&'static str, HeaderValue>>,
+    headers: HashMap<&'static str, HeaderValue>,
 }
 
 impl IdentityMiddleware {
@@ -30,9 +30,7 @@ impl IdentityMiddleware {
         let _ = Self::add_tw_task_version(&mut headers);
         let _ = Self::add_tw_canary_id(&mut headers);
 
-        Self {
-            headers: Arc::new(headers),
-        }
+        Self { headers }
     }
 
     fn add_tw_task(headers: &mut HashMap<&'static str, HeaderValue>) -> Result<(), Error> {
@@ -65,19 +63,15 @@ impl IdentityMiddleware {
 }
 
 impl Middleware for IdentityMiddleware {
-    fn handle(&self, _state: &mut State) -> Callback {
-        let headers_to_add = self.headers.clone();
+    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+        let headers = response.headers_mut();
 
-        Box::new(move |state, response| {
-            let headers = response.headers_mut();
+        for (header, value) in self.headers.iter() {
+            headers.insert(*header, value.clone());
+        }
 
-            for (header, value) in headers_to_add.iter() {
-                headers.insert(*header, value.clone());
-            }
-
-            if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
-                headers.insert(X_REQUEST_ID, id);
-            }
-        })
+        if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
+            headers.insert(X_REQUEST_ID, id);
+        }
     }
 }

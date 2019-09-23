@@ -6,10 +6,11 @@
 
 use gotham::state::State;
 use hyper::StatusCode;
+use hyper::{Body, Response};
 use stats::{define_stats, DynamicHistogram, DynamicTimeseries};
 use time_ext::DurationExt;
 
-use super::{Callback, Middleware, RequestContext};
+use super::{Middleware, RequestContext};
 
 define_stats! {
     prefix = "mononoke.lfs.request";
@@ -53,9 +54,7 @@ impl OdsMiddleware {
 }
 
 impl Middleware for OdsMiddleware {
-    fn handle(&self, _state: &mut State) -> Callback {
-        Box::new(|state, response| {
-            log_stats(state, response.status());
-        })
+    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+        log_stats(state, response.status());
     }
 }

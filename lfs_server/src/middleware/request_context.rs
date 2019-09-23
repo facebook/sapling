@@ -7,13 +7,14 @@
 use futures::{Future, IntoFuture};
 use gotham::state::State;
 use gotham_derive::StateData;
+use hyper::{Body, Response};
 use std::time::{Duration, Instant};
 use tokio::{
     self,
     sync::oneshot::{channel, Receiver, Sender},
 };
 
-use super::{Callback, Middleware};
+use super::Middleware;
 
 type PostRequestCallback = Box<dyn FnOnce(&Duration) + Sync + Send + 'static>;
 
@@ -116,13 +117,13 @@ impl RequestContextMiddleware {
 }
 
 impl Middleware for RequestContextMiddleware {
-    fn handle(&self, state: &mut State) -> Callback {
+    fn inbound(&self, state: &mut State) {
         state.put(RequestContext::new());
+    }
 
-        Box::new(|state, _response| {
-            if let Some(ctx) = state.try_take::<RequestContext>() {
-                ctx.dispatch_post_request();
-            }
-        })
+    fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+        if let Some(ctx) = state.try_take::<RequestContext>() {
+            ctx.dispatch_post_request();
+        }
     }
 }

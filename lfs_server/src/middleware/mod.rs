@@ -22,8 +22,14 @@ pub use self::request_context::{RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaMiddleware, ScubaMiddlewareState};
 pub use self::timer::TimerMiddleware;
 
-pub type Callback = Box<dyn FnOnce(&mut State, &mut Response<Body>) + 'static + Send + Sync>;
-
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
-    fn handle(&self, state: &mut State) -> Callback;
+    fn inbound(&self, _state: &mut State) {
+        // Implement inbound to perform pre-request actions, such as putting something in the
+        // state.
+    }
+
+    fn outbound(&self, _state: &mut State, _response: &mut Response<Body>) {
+        // Implement outbound to perform post-request actions, such as logging the response status
+        // code.
+    }
 }
