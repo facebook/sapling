@@ -10,7 +10,7 @@ use hyper::{Body, Response};
 use stats::{define_stats, DynamicHistogram, DynamicTimeseries};
 use time_ext::DurationExt;
 
-use super::{Middleware, RequestContext};
+use super::{LfsMethod, Middleware, RequestContext};
 
 define_stats! {
     prefix = "mononoke.lfs.request";
@@ -18,18 +18,25 @@ define_stats! {
     success: dynamic_timeseries("{}.success", (repo_and_method: String); RATE, SUM),
     failure_4xx: dynamic_timeseries("{}.failure_4xx", (repo_and_method: String); RATE, SUM),
     failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); RATE, SUM),
-    duration: dynamic_histogram("{}_ms", (repo_and_method: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    upload_duration: dynamic_histogram("{}.upload_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    download_duration: dynamic_histogram("{}.download_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    batch_duration: dynamic_histogram("{}.batch_ms", (repo: String); 10, 0, 500, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let ctx = state.try_borrow_mut::<RequestContext>()?;
-    let repo_and_method = format!("{}.{}", ctx.repository.as_ref()?, ctx.method?);
+    let method = ctx.method?;
+    let repo_and_method = format!("{}.{}", ctx.repository.as_ref()?, method.to_string());
 
     ctx.add_post_request(move |duration| {
-        STATS::duration.add_value(
-            duration.as_millis_unchecked() as i64,
-            (repo_and_method.clone(),),
-        );
+        match method {
+            LfsMethod::Upload => STATS::upload_duration
+                .add_value(duration.as_millis_unchecked() as i64, (method.to_string(),)),
+            LfsMethod::Download => STATS::download_duration
+                .add_value(duration.as_millis_unchecked() as i64, (method.to_string(),)),
+            LfsMethod::Batch => STATS::batch_duration
+                .add_value(duration.as_millis_unchecked() as i64, (method.to_string(),)),
+        }
 
         STATS::requests.add_value(1, (repo_and_method.clone(),));
 

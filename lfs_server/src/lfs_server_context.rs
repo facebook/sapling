@@ -30,7 +30,7 @@ use hyper_openssl::HttpsConnector;
 use mononoke_types::ContentId;
 
 use crate::errors::ErrorKind;
-use crate::middleware::RequestContext;
+use crate::middleware::{LfsMethod, RequestContext};
 use crate::protocol::{RequestBatch, RequestObject, ResponseBatch};
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
@@ -112,7 +112,7 @@ impl RepositoryRequestContext {
     pub fn instantiate(
         state: &mut State,
         repository: String,
-        method: &'static str,
+        method: LfsMethod,
     ) -> Result<Self, Error> {
         if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
             ctx.set_request(repository.clone(), method);

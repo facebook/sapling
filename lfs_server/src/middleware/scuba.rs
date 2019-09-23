@@ -88,7 +88,7 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
     }
 
     if let Some(method) = ctx.method {
-        scuba.add("method", method);
+        scuba.add("method", method.to_string());
     }
 
     if let Some(err_msg) = &ctx.error_msg {

@@ -17,8 +17,7 @@ use stats::{define_stats, Histogram};
 use crate::errors::ErrorKind;
 use crate::http::{HttpError, StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
-
-const METHOD: &str = "download";
+use crate::middleware::LfsMethod;
 
 define_stats! {
     prefix ="mononoke.lfs.download";
@@ -37,7 +36,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         content_id,
     } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), METHOD)
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)
         .map_err(HttpError::e400)?;
 
     let content_id = ContentId::from_str(&content_id)

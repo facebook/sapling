@@ -24,13 +24,11 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::ScubaMiddlewareState;
+use crate::middleware::{LfsMethod, ScubaMiddlewareState};
 use crate::protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     ResponseObject, Transfer,
 };
-
-const METHOD: &str = "batch";
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
@@ -369,7 +367,7 @@ async fn batch_download(
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), METHOD)
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch)
         .map_err(HttpError::e400)?;
 
     let body = Body::take_from(state)

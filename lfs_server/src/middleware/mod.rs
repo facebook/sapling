@@ -18,7 +18,7 @@ mod timer;
 pub use self::identity::IdentityMiddleware;
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
-pub use self::request_context::{RequestContext, RequestContextMiddleware};
+pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaMiddleware, ScubaMiddlewareState};
 pub use self::timer::TimerMiddleware;
 

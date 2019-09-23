@@ -28,7 +28,7 @@ use mononoke_types::hash::Sha256;
 use crate::errors::ErrorKind;
 use crate::http::{EmptyBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
-use crate::middleware::ScubaMiddlewareState;
+use crate::middleware::{LfsMethod, ScubaMiddlewareState};
 use crate::protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
 };
@@ -44,7 +44,6 @@ define_stats! {
 
 // Small buffers for Filestore & Dewey
 const BUFFER_SIZE: usize = 5;
-const METHOD: &str = "upload";
 
 // NOTE: We don't deserialize things beyond a String form, in order to report errors in our
 // controller, not in routing.
@@ -143,7 +142,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         size,
     } = state.take();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), METHOD)
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Upload)
         .map_err(HttpError::e400)?;
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;

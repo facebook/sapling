@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
+
 use futures::{Future, IntoFuture};
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -18,10 +20,28 @@ use super::Middleware;
 
 type PostRequestCallback = Box<dyn FnOnce(&Duration) + Sync + Send + 'static>;
 
+#[derive(Copy, Clone)]
+pub enum LfsMethod {
+    Upload,
+    Download,
+    Batch,
+}
+
+impl fmt::Display for LfsMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::Upload => "upload",
+            Self::Download => "download",
+            Self::Batch => "batch",
+        };
+        write!(f, "{}", name)
+    }
+}
+
 #[derive(StateData)]
 pub struct RequestContext {
     pub repository: Option<String>,
-    pub method: Option<&'static str>,
+    pub method: Option<LfsMethod>,
     pub error_msg: Option<String>,
     pub response_size: Option<u64>,
     pub headers_duration: Option<Duration>,
@@ -45,7 +65,7 @@ impl RequestContext {
         }
     }
 
-    pub fn set_request(&mut self, repository: String, method: &'static str) {
+    pub fn set_request(&mut self, repository: String, method: LfsMethod) {
         self.repository = Some(repository);
         self.method = Some(method);
     }
