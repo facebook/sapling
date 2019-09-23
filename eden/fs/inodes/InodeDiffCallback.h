@@ -31,12 +31,8 @@ class InodeDiffCallback {
 
   virtual void ignoredFile(RelativePathPiece path) = 0;
   virtual void untrackedFile(RelativePathPiece path) = 0;
-  virtual void removedFile(
-      RelativePathPiece path,
-      const TreeEntry& sourceControlEntry) = 0;
-  virtual void modifiedFile(
-      RelativePathPiece path,
-      const TreeEntry& sourceControlEntry) = 0;
+  virtual void removedFile(RelativePathPiece path) = 0;
+  virtual void modifiedFile(RelativePathPiece path) = 0;
 
   virtual void diffError(
       RelativePathPiece path,

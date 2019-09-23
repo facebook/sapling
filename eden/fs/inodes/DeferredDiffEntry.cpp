@@ -137,7 +137,7 @@ folly::Future<folly::Unit> diffRemovedTree(
     } else {
       XLOG(DBG5) << "diff: file in removed directory: "
                  << currentPath + entry.getName();
-      context->callback->removedFile(currentPath + entry.getName(), entry);
+      context->callback->removedFile(currentPath + entry.getName());
     }
   }
 
@@ -280,7 +280,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // Report this file as removed, and everything in the source control
       // tree as untracked/ignored.
       XLOG(DBG5) << "removed file: " << getPath();
-      context_->callback->removedFile(getPath(), scmEntry_);
+      context_->callback->removedFile(getPath());
       auto treeInode = inode_.asTreePtr();
       if (isIgnored_ && !context_->listIgnored) {
         return makeFuture();
@@ -292,7 +292,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         .thenValue([this](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();
-            context_->callback->modifiedFile(getPath(), scmEntry_);
+            context_->callback->modifiedFile(getPath());
           }
         });
   }
@@ -323,7 +323,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         [this](const std::tuple<Hash, Hash>& info) {
           if (std::get<0>(info) != std::get<1>(info)) {
             XLOG(DBG5) << "modified file: " << getPath();
-            context_->callback->modifiedFile(getPath(), scmEntry_);
+            context_->callback->modifiedFile(getPath());
           }
         });
   }

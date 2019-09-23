@@ -9,7 +9,6 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -17,59 +16,48 @@
 
 namespace facebook {
 namespace eden {
-namespace {
-class ThriftStatusCallback : public InodeDiffCallback {
- public:
-  void ignoredFile(RelativePathPiece path) override {
-    data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::IGNORED);
+void ThriftStatusCallback::ignoredFile(RelativePathPiece path) {
+  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::IGNORED);
+}
+
+void ThriftStatusCallback::untrackedFile(RelativePathPiece path) {
+  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::ADDED);
+}
+
+void ThriftStatusCallback::removedFile(RelativePathPiece path) {
+  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::REMOVED);
+}
+
+void ThriftStatusCallback::modifiedFile(RelativePathPiece path) {
+  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::MODIFIED);
+}
+
+void ThriftStatusCallback::diffError(
+    RelativePathPiece path,
+    const folly::exception_wrapper& ew) {
+  // TODO: It would be nice to have a mechanism to return error info as part
+  // of the thrift result.
+  XLOG(WARNING) << "error computing status data for " << path << ": "
+                << folly::exceptionStr(ew);
+}
+
+/**
+ * Extract the ScmStatus object from this callback.
+ *
+ * This method should be called no more than once, as this destructively
+ * moves the results out of the callback.  It should only be invoked after
+ * the diff operation has completed.
+ */
+ScmStatus ThriftStatusCallback::extractStatus() {
+  ScmStatus status;
+
+  {
+    auto data = data_.wlock();
+    status.entries.swap(*data);
   }
 
-  void untrackedFile(RelativePathPiece path) override {
-    data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::ADDED);
-  }
-
-  void removedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
-    data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::REMOVED);
-  }
-
-  void modifiedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
-    data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::MODIFIED);
-  }
-
-  void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
-      override {
-    // TODO: It would be nice to have a mechanism to return error info as part
-    // of the thrift result.
-    XLOG(WARNING) << "error computing status data for " << path << ": "
-                  << folly::exceptionStr(ew);
-  }
-
-  /**
-   * Extract the ScmStatus object from this callback.
-   *
-   * This method should be called no more than once, as this destructively
-   * moves the results out of the callback.  It should only be invoked after
-   * the diff operation has completed.
-   */
-  ScmStatus extractStatus() {
-    ScmStatus status;
-
-    {
-      auto data = data_.wlock();
-      status.entries.swap(*data);
-    }
-
-    return status;
-  }
-
- private:
-  folly::Synchronized<std::map<std::string, ScmFileStatus>> data_;
-};
-} // unnamed namespace
+  return status;
+}
 
 char scmStatusCodeChar(ScmFileStatus code) {
   switch (code) {

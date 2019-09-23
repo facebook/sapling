@@ -2098,8 +2098,7 @@ Future<Unit> TreeInode::computeDiff(
       } else {
         XLOG(DBG5) << "diff: removed file: "
                    << currentPath + scmEntry.getName();
-        context->callback->removedFile(
-            currentPath + scmEntry.getName(), scmEntry);
+        context->callback->removedFile(currentPath + scmEntry.getName());
       }
     };
 
@@ -2204,7 +2203,7 @@ Future<Unit> TreeInode::computeDiff(
             scmEntry.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
-          context->callback->modifiedFile(entryPath, scmEntry);
+          context->callback->modifiedFile(entryPath);
         } else {
           // TODO: Hopefully at some point we will track file sizes in the
           // parent TreeInode::Entry and the TreeEntry.  Once we have file

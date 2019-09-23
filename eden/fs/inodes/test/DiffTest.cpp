@@ -11,8 +11,8 @@
 #include <gtest/gtest.h>
 
 #include "eden/fs/inodes/DiffContext.h"
+#include "eden/fs/inodes/Differ.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -27,90 +27,7 @@ using folly::StringPiece;
 using namespace std::chrono_literals;
 using std::string;
 using ::testing::UnorderedElementsAre;
-
-class DiffResults {
- public:
-  std::vector<RelativePath>& getUntracked() {
-    return untracked_;
-  }
-  const std::vector<RelativePath>& getUntracked() const {
-    return untracked_;
-  }
-
-  std::vector<RelativePath>& getIgnored() {
-    return ignored_;
-  }
-  const std::vector<RelativePath>& getIgnored() const {
-    return ignored_;
-  }
-
-  std::vector<RelativePath>& getRemoved() {
-    return removed_;
-  }
-  const std::vector<RelativePath>& getRemoved() const {
-    return removed_;
-  }
-
-  std::vector<RelativePath>& getModified() {
-    return modified_;
-  }
-  const std::vector<RelativePath>& getModified() const {
-    return modified_;
-  }
-
-  std::vector<std::pair<RelativePath, std::string>>& getErrors() {
-    return errors_;
-  }
-  const std::vector<std::pair<RelativePath, std::string>>& getErrors() const {
-    return errors_;
-  }
-
- private:
-  std::vector<RelativePath> untracked_;
-  std::vector<RelativePath> ignored_;
-  std::vector<RelativePath> removed_;
-  std::vector<RelativePath> modified_;
-  std::vector<std::pair<RelativePath, std::string>> errors_;
-};
-
-class DiffResultsCallback : public InodeDiffCallback {
- public:
-  void ignoredFile(RelativePathPiece path) override {
-    results_.wlock()->getIgnored().emplace_back(path);
-  }
-  void untrackedFile(RelativePathPiece path) override {
-    results_.wlock()->getUntracked().emplace_back(path);
-  }
-  void removedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
-    results_.wlock()->getRemoved().emplace_back(path);
-  }
-  void modifiedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
-    results_.wlock()->getModified().emplace_back(path);
-  }
-  void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
-      override {
-    results_.wlock()->getErrors().emplace_back(
-        RelativePath{path}, folly::exceptionStr(ew).toStdString());
-  }
-
-  /**
-   * Extract the DiffResults object from this callback.
-   *
-   * This method should be called no more than once, as this destructively
-   * moves the results out of the callback.  It should only be invoked after
-   * the diff operation has completed.
-   */
-  DiffResults extractResults() {
-    return std::move(*results_.wlock());
-  }
-
- private:
-  folly::Synchronized<DiffResults> results_;
-};
+using ::testing::UnorderedElementsAreArray;
 
 template <typename T>
 T getFutureResult(folly::Future<T>& future, const char* filename, int line) {
@@ -158,11 +75,11 @@ class DiffTest {
     mount_.initialize(builder_);
   }
 
-  DiffResults diff(
+  ScmStatus diff(
       bool listIgnored = false,
       folly::StringPiece systemWideIgnoreFileContents = "",
       folly::StringPiece userIgnoreFileContents = "") {
-    DiffResultsCallback callback;
+    ThriftStatusCallback callback;
     DiffContext diffContext{
         &callback,
         listIgnored,
@@ -172,28 +89,24 @@ class DiffTest {
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
     EXPECT_FUTURE_RESULT(diffFuture);
-    return callback.extractResults();
+    return callback.extractStatus();
   }
-  folly::Future<DiffResults> diffFuture(bool listIgnored = false) {
-    auto callback = std::make_unique<DiffResultsCallback>();
+  folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
+    auto callback = std::make_unique<ThriftStatusCallback>();
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture =
         mount_.getEdenMount()->diff(callback.get(), commitHash, listIgnored);
     return std::move(diffFuture)
         .thenValue([callback = std::move(callback)](auto&&) {
-          return callback->extractResults();
+          return callback->extractStatus();
         });
   }
 
-  DiffResults resetCommitAndDiff(FakeTreeBuilder& builder, bool loadInodes);
+  ScmStatus resetCommitAndDiff(FakeTreeBuilder& builder, bool loadInodes);
 
   void checkNoChanges() {
     auto result = diff();
-    EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-    EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-    EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-    EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-    EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+    EXPECT_THAT(result.entries, UnorderedElementsAre());
   }
 
   void testResetFileModified(bool loadInodes);
@@ -221,7 +134,7 @@ class DiffTest {
  * - Calls EdenMount::diff(), waits for it to complete, and returns the
  *   results.
  */
-DiffResults DiffTest::resetCommitAndDiff(
+ScmStatus DiffTest::resetCommitAndDiff(
     FakeTreeBuilder& builder,
     bool loadInodes) {
   if (loadInodes) {
@@ -252,12 +165,10 @@ TEST(DiffTest, fileModified) {
   test.getMount().overwriteFile("src/1.txt", "This file has been updated.\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
 TEST(DiffTest, fileModeChanged) {
@@ -265,12 +176,10 @@ TEST(DiffTest, fileModeChanged) {
   test.getMount().chmod("src/2.txt", 0755);
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"src/2.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/2.txt", ScmFileStatus::MODIFIED)));
 }
 
 TEST(DiffTest, fileRemoved) {
@@ -278,12 +187,10 @@ TEST(DiffTest, fileRemoved) {
   test.getMount().deleteFile("src/1.txt");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getRemoved(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, fileAdded) {
@@ -291,12 +198,10 @@ TEST(DiffTest, fileAdded) {
   test.getMount().addFile("src/new.txt", "extra stuff");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/new.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/new.txt", ScmFileStatus::ADDED)));
 }
 
 TEST(DiffTest, directoryRemoved) {
@@ -308,15 +213,11 @@ TEST(DiffTest, directoryRemoved) {
   mount.rmdir("src/a/b");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getRemoved(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/a/b/3.txt"}, RelativePath{"src/a/b/c/4.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, directoryAdded) {
@@ -329,16 +230,12 @@ TEST(DiffTest, directoryAdded) {
   mount.addFile("src/new/subdir/bar.txt", "more extra stuff");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/new/file.txt"},
-          RelativePath{"src/new/subdir/foo.txt"},
-          RelativePath{"src/new/subdir/bar.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/new/file.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/new/subdir/foo.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/new/subdir/bar.txt", ScmFileStatus::ADDED)));
 }
 
 TEST(DiffTest, dirReplacedWithFile) {
@@ -351,16 +248,12 @@ TEST(DiffTest, dirReplacedWithFile) {
   mount.addFile("src/a/b", "this is now a file");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/a/b"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getRemoved(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/a/b/3.txt"}, RelativePath{"src/a/b/c/4.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/a/b", ScmFileStatus::ADDED),
+          std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, fileReplacedWithDir) {
@@ -374,17 +267,13 @@ TEST(DiffTest, fileReplacedWithDir) {
   mount.addFile("src/2.txt/subdir/bar.txt", "more extra stuff");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/2.txt/file.txt"},
-          RelativePath{"src/2.txt/subdir/foo.txt"},
-          RelativePath{"src/2.txt/subdir/bar.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getRemoved(), UnorderedElementsAre(RelativePath{"src/2.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/2.txt/file.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/2.txt/subdir/foo.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/2.txt/subdir/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/2.txt", ScmFileStatus::REMOVED)));
 }
 
 // Test file adds/removes/modifications with various orderings of names between
@@ -431,26 +320,18 @@ TEST(DiffTest, pathOrdering) {
 
   // Perform the diff
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"one/aaa.txt"},
-          RelativePath{"one/mmm.txt"},
-          RelativePath{"one/zzz.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getRemoved(),
-      UnorderedElementsAre(
-          RelativePath{"two/aaa.txt"},
-          RelativePath{"two/mmm.txt"},
-          RelativePath{"two/zzz.txt"}));
-  EXPECT_THAT(
-      result.getModified(),
-      UnorderedElementsAre(
-          RelativePath{"three/aaa.txt"},
-          RelativePath{"three/mmm.txt"},
-          RelativePath{"three/zzz.txt"}));
+          std::make_pair("one/aaa.txt", ScmFileStatus::ADDED),
+          std::make_pair("one/mmm.txt", ScmFileStatus::ADDED),
+          std::make_pair("one/zzz.txt", ScmFileStatus::ADDED),
+          std::make_pair("two/aaa.txt", ScmFileStatus::REMOVED),
+          std::make_pair("two/mmm.txt", ScmFileStatus::REMOVED),
+          std::make_pair("two/zzz.txt", ScmFileStatus::REMOVED),
+          std::make_pair("three/aaa.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("three/mmm.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("three/zzz.txt", ScmFileStatus::MODIFIED)));
 }
 
 /*
@@ -469,12 +350,10 @@ void testResetFileModified(bool loadInodes) {
   b2.replaceFile("src/1.txt", "This file has been updated.\n");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
 TEST(DiffTest, resetFileModified) {
@@ -490,12 +369,10 @@ void testResetFileModeChanged(bool loadInodes) {
   b2.replaceFile("src/1.txt", "This is src/1.txt.\n", true);
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
 TEST(DiffTest, resetFileModeChanged) {
@@ -514,13 +391,10 @@ void testResetFileRemoved(bool loadInodes) {
   b2.setFile("src/notpresent.txt", "never present in the working directory");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getRemoved(),
-      UnorderedElementsAre(RelativePath{"src/notpresent.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/notpresent.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, resetFileRemoved) {
@@ -539,12 +413,9 @@ void testResetFileAdded(bool loadInodes) {
   b2.removeFile("src/1.txt");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(std::make_pair("src/1.txt", ScmFileStatus::ADDED)));
 }
 
 TEST(DiffTest, resetFileAdded) {
@@ -567,18 +438,15 @@ void testResetDirectoryRemoved(bool loadInodes) {
   b2.setFile("src/extradir/a/b/c/d/e.txt", "test");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getRemoved(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/extradir/foo.txt"},
-          RelativePath{"src/extradir/bar.txt"},
-          RelativePath{"src/extradir/sub/1.txt"},
-          RelativePath{"src/extradir/sub/xyz.txt"},
-          RelativePath{"src/extradir/a/b/c/d/e.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/extradir/foo.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/extradir/bar.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/extradir/sub/1.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/extradir/sub/xyz.txt", ScmFileStatus::REMOVED),
+          std::make_pair(
+              "src/extradir/a/b/c/d/e.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, resetDirectoryRemoved) {
@@ -598,14 +466,11 @@ void testResetDirectoryAdded(bool loadInodes) {
   b2.removeFile("src/a/b/c/4.txt");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/a/b/3.txt"}, RelativePath{"src/a/b/c/4.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/a/b/3.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED)));
 }
 
 TEST(DiffTest, resetDirectoryAdded) {
@@ -629,19 +494,15 @@ void testResetReplaceDirWithFile(bool loadInodes) {
   b2.setFile("src/2.txt/a/b/c/d/e.txt", "test");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/2.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getRemoved(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/2.txt/foo.txt"},
-          RelativePath{"src/2.txt/bar.txt"},
-          RelativePath{"src/2.txt/sub/1.txt"},
-          RelativePath{"src/2.txt/sub/xyz.txt"},
-          RelativePath{"src/2.txt/a/b/c/d/e.txt"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/2.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/2.txt/foo.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/2.txt/bar.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/2.txt/sub/1.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/2.txt/sub/xyz.txt", ScmFileStatus::REMOVED),
+          std::make_pair("src/2.txt/a/b/c/d/e.txt", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, resetReplaceDirWithFile) {
@@ -662,14 +523,12 @@ void testResetReplaceFileWithDir(bool loadInodes) {
   b2.setFile("src/a", "a is now a file");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/a/b/3.txt"}, RelativePath{"src/a/b/c/4.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre(RelativePath{"src/a"}));
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/a/b/3.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/a", ScmFileStatus::REMOVED)));
 }
 
 TEST(DiffTest, resetReplaceFileWithDir) {
@@ -703,28 +562,22 @@ TEST(DiffTest, ignoreToplevelOnly) {
   test.getMount().addFile("junk/important.txt", "new\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(std::make_pair("src/1.txt", ScmFileStatus::ADDED)));
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
-  EXPECT_THAT(
-      result.getIgnored(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"1.txt"},
-          RelativePath{"ignore.txt"},
-          RelativePath{"junk/stuff.txt"},
-          RelativePath{"junk/important.txt"},
-          RelativePath{"src/foo/ignore.txt"},
-          RelativePath{"src/foo/abc/xyz/ignore.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("src/1.txt", ScmFileStatus::ADDED),
+          std::make_pair("1.txt", ScmFileStatus::IGNORED),
+          std::make_pair("ignore.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/stuff.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/important.txt", ScmFileStatus::IGNORED),
+          std::make_pair("src/foo/ignore.txt", ScmFileStatus::IGNORED),
+          std::make_pair(
+              "src/foo/abc/xyz/ignore.txt", ScmFileStatus::IGNORED)));
 }
 
 // Test with a .gitignore file in the top-level directory
@@ -746,29 +599,35 @@ TEST(DiffTest, ignoreSystemLevelAndUser) {
 
   auto result =
       test.diff(true /* listIgnored */, "skip_global.txt\n", "skip_user.txt\n");
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getIgnored(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"skip_global.txt"}, RelativePath{"skip_user.txt"}));
+          std::make_pair("skip_global.txt", ScmFileStatus::IGNORED),
+          std::make_pair("skip_user.txt", ScmFileStatus::IGNORED)));
 
   result = test.diff(true /* listIgnored */, "", "skip_user.txt\n");
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getIgnored(), UnorderedElementsAre(RelativePath{"skip_user.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
+          std::make_pair("skip_user.txt", ScmFileStatus::IGNORED)));
 
   result = test.diff(true /* listIgnored */, "skip_global.txt\n", "");
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getIgnored(),
-      UnorderedElementsAre(RelativePath{"skip_global.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("skip_global.txt", ScmFileStatus::IGNORED),
+          std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
 
   result = test.diff(true /* listIgnored */, "", "");
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
+          std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
 }
 
-// test gitignore file which is a symlink
+// Test gitignore file which is a symlink
 TEST(DiffTest, ignoreSymlink) {
   DiffTest test({
       {"actual", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
@@ -789,15 +648,26 @@ TEST(DiffTest, ignoreSymlink) {
   test.getMount().addSymlink("src/.gitignore", "broken/link/to/nowhere");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair(".gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/second", ScmFileStatus::ADDED),
+          std::make_pair("b/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("src/.gitignore", ScmFileStatus::ADDED)));
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getIgnored(),
-      UnorderedElementsAre(RelativePath{"1.txt"}, RelativePath{"ignore.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair(".gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/second", ScmFileStatus::ADDED),
+          std::make_pair("b/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("src/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("1.txt", ScmFileStatus::IGNORED),
+          std::make_pair("ignore.txt", ScmFileStatus::IGNORED)));
 }
 
 // Test with a .gitignore file in the top-level directory
@@ -835,52 +705,42 @@ TEST(DiffTest, ignoreInSubdirectories) {
   test.getMount().addFile("b/c/d.txt", "test\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"abc/test.log"},
-          RelativePath{"abc/def/test"},
-          RelativePath{"b/c/d.txt"},
+          std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+          std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+          std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
           // Matches exlude rule in top-level .gitignore, but explicitly
           // included by "!bar.txt" rule in foo/foo/.gitignore
-          RelativePath{"foo/foo/bar.txt"},
-          RelativePath{"other/bar.txt"},
-          RelativePath{"test"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("test", ScmFileStatus::ADDED)));
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
-      UnorderedElementsAre(
-          RelativePath{"abc/test.log"},
-          RelativePath{"abc/def/test"},
-          RelativePath{"b/c/d.txt"},
-          RelativePath{"foo/foo/bar.txt"},
-          RelativePath{"other/bar.txt"},
-          RelativePath{"test"}));
-  EXPECT_THAT(
-      result.getIgnored(),
-      UnorderedElementsAre(
-          RelativePath{"a/b/c/d.txt"},
-          // Ignored by "*.log" rule in abc/def/.gitignore
-          RelativePath{"abc/def/test.log"},
-          RelativePath{"abc/def/another.log"},
-          // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
-          RelativePath{"abc/foo/bar.txt"},
-          // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
-          RelativePath{"foo/bar.txt"},
-          // Ignored by "test" rule in foo/.gitignore
-          RelativePath{"foo/test/1.txt"},
-          RelativePath{"foo/test/2.txt"},
-          RelativePath{"foo/test/3/4.txt"},
-          // Also ignored by "test" rule in foo/.gitignore
-          RelativePath{"foo/foo/test"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAreArray(
+          {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
+           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("test", ScmFileStatus::ADDED),
+           std::make_pair("a/b/c/d.txt", ScmFileStatus::IGNORED),
+           // Ignored by "*.log" rule in abc/def/.gitignore
+           std::make_pair("abc/def/test.log", ScmFileStatus::IGNORED),
+           std::make_pair("abc/def/another.log", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("abc/foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/test/1.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/2.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/3/4.txt", ScmFileStatus::IGNORED),
+           // Also ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/foo/test", ScmFileStatus::IGNORED)}));
 }
 
 // Test when files already tracked in source control match ignore patterns
@@ -903,34 +763,24 @@ TEST(DiffTest, explicitlyTracked) {
   test.getMount().deleteFile("junk/x/foo.txt");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"other.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getRemoved(),
-      UnorderedElementsAre(RelativePath{"junk/x/foo.txt"}));
-  EXPECT_THAT(
-      result.getModified(),
-      UnorderedElementsAre(RelativePath{"junk/a/b/c.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("other.txt", ScmFileStatus::ADDED),
+          std::make_pair("junk/x/foo.txt", ScmFileStatus::REMOVED),
+          std::make_pair("junk/a/b/c.txt", ScmFileStatus::MODIFIED)));
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(), UnorderedElementsAre(RelativePath{"other.txt"}));
-  EXPECT_THAT(
-      result.getIgnored(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"docs/1.txt"},
-          RelativePath{"junk/foo.txt"},
-          RelativePath{"junk/test.txt"},
-          RelativePath{"junk/a/b/xyz.txt"}));
-  EXPECT_THAT(
-      result.getRemoved(),
-      UnorderedElementsAre(RelativePath{"junk/x/foo.txt"}));
-  EXPECT_THAT(
-      result.getModified(),
-      UnorderedElementsAre(RelativePath{"junk/a/b/c.txt"}));
+          std::make_pair("other.txt", ScmFileStatus::ADDED),
+          std::make_pair("docs/1.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/foo.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/test.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/a/b/xyz.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/x/foo.txt", ScmFileStatus::REMOVED),
+          std::make_pair("junk/a/b/c.txt", ScmFileStatus::MODIFIED)));
 }
 
 // Test making modifications to the .gitignore file
@@ -944,47 +794,37 @@ TEST(DiffTest, ignoreFileModified) {
   test.getMount().addFile("a/test.txt", "test\n");
 
   auto result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"a/bar.txt"}, RelativePath{"a/test.txt"}));
-  EXPECT_THAT(
-      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/foo.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+          std::make_pair("a/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/test.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/foo.txt", ScmFileStatus::IGNORED)));
 
   // Changes to the gitignore file should take effect immediately
   test.getMount().overwriteFile("a/.gitignore", "bar.txt\n");
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"a/foo.txt"}, RelativePath{"a/test.txt"}));
-  EXPECT_THAT(
-      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/bar.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"a/.gitignore"}));
+          std::make_pair("a/test.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/foo.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/bar.txt", ScmFileStatus::IGNORED),
+          std::make_pair("a/.gitignore", ScmFileStatus::MODIFIED)));
 
   // Newly added gitignore files should also take effect immediately
   test.getMount().addFile(".gitignore", "test.txt\n");
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{".gitignore"}, RelativePath{"a/foo.txt"}));
-  EXPECT_THAT(
-      result.getIgnored(),
-      UnorderedElementsAre(
-          RelativePath{"a/bar.txt"}, RelativePath{"a/test.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"a/.gitignore"}));
+          std::make_pair(".gitignore", ScmFileStatus::ADDED),
+          std::make_pair("a/foo.txt", ScmFileStatus::ADDED),
+          std::make_pair("a/bar.txt", ScmFileStatus::IGNORED),
+          std::make_pair("a/test.txt", ScmFileStatus::IGNORED),
+          std::make_pair("a/.gitignore", ScmFileStatus::MODIFIED)));
 }
 
 // Make sure the code ignores .gitignore directories
@@ -999,19 +839,13 @@ TEST(DiffTest, ignoreFileIsDirectory) {
   test.getMount().addFile("a/b/1.txt", "new\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+  EXPECT_THAT(result.entries, UnorderedElementsAre());
 
   result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/b/1.txt"}));
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/b/1.txt", ScmFileStatus::IGNORED)));
 }
 
 TEST(DiffTest, emptyIgnoreFile) {
@@ -1024,13 +858,10 @@ TEST(DiffTest, emptyIgnoreFile) {
   test.getMount().addFile("src/subdir/new.txt", "new\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getUntracked(),
-      UnorderedElementsAre(RelativePath{"src/subdir/new.txt"}));
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/subdir/new.txt", ScmFileStatus::ADDED)));
 }
 
 // Files under the .hg directory should never be reported in diff results
@@ -1053,12 +884,10 @@ TEST(DiffTest, ignoreHidden) {
   test.getMount().overwriteFile("a/c/1.txt", "updated contents\n");
 
   auto result = test.diff(true);
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"a/c/1.txt"}));
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("a/c/1.txt", ScmFileStatus::MODIFIED)));
 }
 
 TEST(DiffTest, fileNotReady) {
@@ -1134,7 +963,7 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  DiffResultsCallback callback;
+  ThriftStatusCallback callback;
   auto diffFuture = mount.getEdenMount()->diff(&callback, commitHash2);
 
   // The diff should not be ready yet
@@ -1209,22 +1038,16 @@ TEST(DiffTest, fileNotReady) {
   // The diff should be complete now.
   ASSERT_TRUE(diffFuture.isReady());
   std::move(diffFuture).get(10ms);
-  auto result = callback.extractResults();
-
-  // Check the results
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  auto result = callback.extractStatus();
   EXPECT_THAT(
-      result.getModified(),
+      result.entries,
       UnorderedElementsAre(
-          RelativePath{"src/r.txt"},
-          RelativePath{"src/s.txt"},
-          RelativePath{"src/t.txt"},
-          RelativePath{"src/u.txt"},
-          RelativePath{"doc/a.txt"},
-          RelativePath{"doc/b.txt"},
-          RelativePath{"doc/c.txt"},
-          RelativePath{"doc/d.txt"}));
+          std::make_pair("src/r.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("src/s.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("src/t.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("src/u.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("doc/a.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("doc/b.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("doc/c.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("doc/d.txt", ScmFileStatus::MODIFIED)));
 }

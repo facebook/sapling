@@ -92,15 +92,11 @@ class EdenMount::JournalDiffCallback : public InodeDiffCallback {
 
   void untrackedFile(RelativePathPiece) override {}
 
-  void removedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
+  void removedFile(RelativePathPiece path) override {
     data_.wlock()->uncleanPaths.insert(path.copy());
   }
 
-  void modifiedFile(
-      RelativePathPiece path,
-      const TreeEntry& /* sourceControlEntry */) override {
+  void modifiedFile(RelativePathPiece path) override {
     data_.wlock()->uncleanPaths.insert(path.copy());
   }
 
@@ -116,7 +112,7 @@ class EdenMount::JournalDiffCallback : public InodeDiffCallback {
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::shared_ptr<const Tree> rootTree) {
-    auto diffContext = mount->createDiffContext(this, /* listIgnored */ false);
+    auto diffContext = mount->createDiffContext(this, /*listIgnored=*/false);
     auto rawContext = diffContext.get();
 
     return rootInode
@@ -126,7 +122,7 @@ class EdenMount::JournalDiffCallback : public InodeDiffCallback {
             std::move(rootTree),
             rawContext->getToplevelIgnore(),
             false)
-        .ensure([diffContext = std::move(diffContext)]() {});
+        .ensure([diffContext = std::move(diffContext), rootInode]() {});
   }
 
   /** moves the Unclean Path information out of this diff callback instance,
