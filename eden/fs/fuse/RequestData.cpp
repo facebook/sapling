@@ -131,7 +131,8 @@ void RequestData::genericErrorHandler(const std::exception& err) {
 }
 
 void RequestData::timeoutErrorHandler(const folly::FutureTimeout& err) {
-  XLOG(DBG5) << folly::exceptionStr(err);
+  XLOG_EVERY_MS(WARN, 1000)
+      << "FUSE request timed out: " << folly::exceptionStr(err);
   RequestData::get().replyError(ETIMEDOUT);
 }
 
