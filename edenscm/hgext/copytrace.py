@@ -59,6 +59,14 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 
+try:
+    import gdbm
+
+    hasgdbm = True
+except ImportError:
+    hasgdbm = False
+
+
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -157,6 +165,28 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
 
+def opendbm(repo, flag):
+    """Open the dbm of choice.
+
+    On some platforms, anydbm is available, on others it's not,
+    but gdbm is unfortunately not available everywhere, like on Windows.
+    """
+    dbms = [(anydbm.open, "amendcopytrace", anydbm.error)]
+    if hasgdbm:
+        dbms.append((gdbm.open, "amendcopytrace.gdbm", gdbm.error))
+
+    for opener, fname, error in dbms:
+        path = repo.localvfs.join(fname)
+        try:
+            return (opener(path, flag), error)
+        except error:
+            continue
+        except ImportError:
+            continue
+
+    return None, None
+
+
 def _amend(orig, ui, repo, old, extra, pats, opts):
     """Wraps amend to collect copytrace data on amend
 
@@ -199,11 +229,8 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
     # Store the amend-copies against the amended context.
     if amend_copies:
-        path = repo.localvfs.join("amendcopytrace")
-        try:
-            # Open the database, creating it if it doesn't already exist.
-            db = anydbm.open(path, "c")
-        except anydbm.error as e:
+        db, error = opendbm(repo, "c")
+        if db is None:
             # Database locked, can't record these amend-copies.
             ui.log("copytrace", "Failed to open amendcopytrace db: %s" % e)
             return node
@@ -213,7 +240,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
             orig_data = db[old.node()]
         except KeyError:
             orig_data = "{}"
-        except anydbm.error as e:
+        except error as e:
             ui.log(
                 "copytrace",
                 "Failed to read key %s from amendcopytrace db: %s" % (old.hex(), e),
@@ -260,10 +287,8 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
 
 def _getamendcopies(repo, dest, ancestor):
-    path = repo.localvfs.join("amendcopytrace")
-    try:
-        db = anydbm.open(path, "r")
-    except anydbm.error:
+    db, error = opendbm(repo, "r")
+    if db is None:
         return {}
     try:
         ctx = dest
@@ -291,7 +316,7 @@ def _getamendcopies(repo, dest, ancestor):
     finally:
         try:
             db.close()
-        except anydbm.error:
+        except error:
             pass
 
 
