@@ -17,28 +17,32 @@
 namespace facebook {
 namespace eden {
 void ThriftStatusCallback::ignoredFile(RelativePathPiece path) {
-  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::IGNORED);
+  data_.wlock()->entries.emplace(
+      path.stringPiece().str(), ScmFileStatus::IGNORED);
 }
 
 void ThriftStatusCallback::untrackedFile(RelativePathPiece path) {
-  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::ADDED);
+  data_.wlock()->entries.emplace(
+      path.stringPiece().str(), ScmFileStatus::ADDED);
 }
 
 void ThriftStatusCallback::removedFile(RelativePathPiece path) {
-  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::REMOVED);
+  data_.wlock()->entries.emplace(
+      path.stringPiece().str(), ScmFileStatus::REMOVED);
 }
 
 void ThriftStatusCallback::modifiedFile(RelativePathPiece path) {
-  data_.wlock()->emplace(path.stringPiece().str(), ScmFileStatus::MODIFIED);
+  data_.wlock()->entries.emplace(
+      path.stringPiece().str(), ScmFileStatus::MODIFIED);
 }
 
 void ThriftStatusCallback::diffError(
     RelativePathPiece path,
     const folly::exception_wrapper& ew) {
-  // TODO: It would be nice to have a mechanism to return error info as part
-  // of the thrift result.
   XLOG(WARNING) << "error computing status data for " << path << ": "
                 << folly::exceptionStr(ew);
+  data_.wlock()->errors.emplace(
+      path.stringPiece().str(), folly::exceptionStr(ew));
 }
 
 /**
@@ -49,14 +53,8 @@ void ThriftStatusCallback::diffError(
  * the diff operation has completed.
  */
 ScmStatus ThriftStatusCallback::extractStatus() {
-  ScmStatus status;
-
-  {
-    auto data = data_.wlock();
-    status.entries.swap(*data);
-  }
-
-  return status;
+  auto data = data_.wlock();
+  return std::move(*data);
 }
 
 char scmStatusCodeChar(ScmFileStatus code) {

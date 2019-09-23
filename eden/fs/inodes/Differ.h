@@ -44,7 +44,7 @@ class ThriftStatusCallback : public InodeDiffCallback {
   ScmStatus extractStatus();
 
  private:
-  folly::Synchronized<std::map<std::string, ScmFileStatus>> data_;
+  folly::Synchronized<ScmStatus> data_;
 };
 
 /**
