@@ -16,24 +16,15 @@ else
   function db_config() {
     local reponame
     reponame="$1"
-    echo "db.local_db_path=\"$TESTTMP/$reponame\""
+    echo "db.local_db_path=\"$TESTTMP/monsql\""
   }
   MONONOKE_DEFAULT_START_TIMEOUT=15
 fi
 
+REPOID=0
+REPONAME=repo
 CACHING_ARGS=(--skip-caching)
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
-
-function next_repo_id {
-    if [[ -e "$TESTTMP/mononoke-config/last_id" ]] ; then
-        LAST_ID=$(< "$TESTTMP/mononoke-config/last_id")
-    else
-        LAST_ID=-1
-    fi
-    NEW_ID=$(( LAST_ID + 1 ))
-    printf $NEW_ID
-    printf $NEW_ID > "$TESTTMP/mononoke-config/last_id"
-}
 
 function get_free_socket {
 
@@ -87,7 +78,7 @@ function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
@@ -96,7 +87,7 @@ function mononoke_hg_sync {
 function megarepo_tool {
   $MEGAREPO_TOOL \
     "${CACHING_ARGS[@]}" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     "$@"
 }
@@ -104,7 +95,7 @@ function megarepo_tool {
 function mononoke_rechunker {
     "$MONONOKE_RECHUNKER" \
     "${CACHING_ARGS[@]}" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config \
     "$@"
 }
@@ -113,7 +104,7 @@ function mononoke_hg_sync_with_retry {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --base-retry-delay-ms 1 \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
@@ -125,7 +116,7 @@ function mononoke_hg_sync_with_failure_handler {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
     --lock-on-failure \
@@ -165,7 +156,7 @@ function mononoke_bookmarks_filler {
 
   "$MONONOKE_BOOKMARKS_FILLER" \
     "${CACHING_ARGS[@]}" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     "$@" "$sql_source" "$sql_name"
 }
@@ -179,11 +170,11 @@ function create_mutable_counters_sqlite3_db {
     PRIMARY KEY (repo_id, name)
   );
 SQL
-  sqlite3 "$TESTTMP/repo/mutable_counters" < "$TESTTMP"/mutable_counters.sql
+  sqlite3 "$TESTTMP/monsql/mutable_counters" < "$TESTTMP"/mutable_counters.sql
 }
 
 function init_mutable_counters_sqlite3_db {
-  sqlite3 "$TESTTMP/repo/mutable_counters" \
+  sqlite3 "$TESTTMP/monsql/mutable_counters" \
   "insert into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 0)";
 }
 
@@ -200,7 +191,7 @@ function create_books_sqlite3_db {
 );
 SQL
 
-  sqlite3 "$TESTTMP/repo/bookmarks" < "$TESTTMP"/bookmarks.sql
+  sqlite3 "$TESTTMP/monsql/bookmarks" < "$TESTTMP"/bookmarks.sql
 }
 
 function mononoke_hg_sync_loop {
@@ -212,7 +203,7 @@ function mononoke_hg_sync_loop {
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
@@ -220,14 +211,14 @@ function mononoke_hg_sync_loop {
 function mononoke_admin {
   "$MONONOKE_ADMIN" \
     "${CACHING_ARGS[@]}" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
 function write_stub_log_entry {
   "$WRITE_STUB_LOG_ENTRY" \
     "${CACHING_ARGS[@]}" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
@@ -318,17 +309,17 @@ function init_pushrebaserecording_sqlite3_db {
 }
 
 function init_bookmark_log_sqlite3_db {
-  sqlite3 "$TESTTMP/repo/bookmarks" \
+  sqlite3 "$TESTTMP/monsql/bookmarks" \
   "insert into bookmarks_update_log \
   (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp) \
   values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
 
-  sqlite3 "$TESTTMP/repo/bookmarks" "select * from bookmarks_update_log";
+  sqlite3 "$TESTTMP/monsql/bookmarks" "select * from bookmarks_update_log";
 }
 
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
-  mkdir mononoke-config
+  mkdir -p mononoke-config
   REPOTYPE="blob:rocks"
   if [[ $# -gt 0 ]]; then
     REPOTYPE="$1"
@@ -354,19 +345,7 @@ identity_type = "USER"
 identity_data = "$ALLOWED_USERNAME"
 CONFIG
 
-  setup_mononoke_repo_config repo
-
-  mkdir -p repos/disabled_repo
-  cat > repos/disabled_repo/server.toml <<CONFIG
-repoid=$(next_repo_id)
-enabled=false
-storage_config = "blobstore"
-
-[storage.blobstore]
-blobstore_type = "$REPOTYPE"
-path = "$TESTTMP/disabled_repo"
-db.local_db_path = "$TESTTMP/disabled_repo"
-CONFIG
+  setup_mononoke_repo_config "$REPONAME"
 }
 
 function setup_commitsyncmap {
@@ -377,11 +356,12 @@ function setup_mononoke_repo_config {
   cd "$TESTTMP/mononoke-config" || exit
   local reponame="$1"
   mkdir -p "repos/$reponame"
+  mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame"
   mkdir -p "$TESTTMP/$reponame/blobs"
   cat > "repos/$reponame/server.toml" <<CONFIG
-repoid=$(next_repo_id)
-enabled=true
+repoid=$REPOID
+enabled=${ENABLED:-true}
 hash_validation_percentage=100
 bookmarks_cache_ttl=2000
 storage_config = "blobstore"
@@ -408,7 +388,7 @@ CONFIG
 fi
 
 if [[ -v LIST_KEYS_PATTERNS_MAX ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
+  cat >> "repos/$reponame/server.toml" <<CONFIG
 list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
 CONFIG
 fi
@@ -525,7 +505,7 @@ if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; 
     namespace="namespace=\"$INFINITEPUSH_NAMESPACE_REGEX\""
   fi
 
-  cat >> repos/repo/server.toml <<CONFIG
+  cat >> "repos/$reponame/server.toml" <<CONFIG
 [infinitepush]
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 ${namespace}
@@ -554,7 +534,7 @@ path="$path"
 hook_type="$hook_type"
 CONFIG
     [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
-  ) >> repos/repo/server.toml
+  ) >> "repos/$REPONAME/server.toml"
 }
 
 function blobimport {
@@ -562,7 +542,7 @@ function blobimport {
   output="$2"
   shift 2
   mkdir -p "$output"
-  $MONONOKE_BLOBIMPORT --repo-id 0 \
+  $MONONOKE_BLOBIMPORT --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      "$input" "${CACHING_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
@@ -574,12 +554,12 @@ function blobimport {
 }
 
 function bonsai_verify {
-  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo-id 0 \
+  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo-id $REPOID \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
 function lfs_import {
-  "$MONONOKE_LFS_IMPORT" --repo-id 0 \
+  "$MONONOKE_LFS_IMPORT" --repo-id $REPOID \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
@@ -800,7 +780,7 @@ function hook_test_setup() {
   cd "$TESTTMP/mononoke-config" || exit 1
 
   HOOKBOOKMARK="${HOOKBOOKMARK:-master_bookmark}"
-  cat >> repos/repo/server.toml <<CONFIG
+  cat >> "repos/$REPONAME/server.toml" <<CONFIG
 [[bookmarks]]
 name="$HOOKBOOKMARK"
 CONFIG
@@ -874,7 +854,7 @@ EOF
 function aliasverify() {
   mode=$1
   shift 1
-  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo-id 0 \
+  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo-id $REPOID \
      "${CACHING_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
@@ -905,7 +885,7 @@ function pushrebase_replay() {
     --mononoke-address "[::1]:$MONONOKE_SOCKET" \
     --mononoke-server-common-name localhost \
     --db-indices "$DB_INDICES" \
-    --repo-id 0 \
+    --repo-id $REPOID \
     --bundle-provider filesystem \
     --filesystem-bundles-storage-path "$TESTTMP" \
     --sqlite3-path "$TESTTMP/pushrebaserecording" \

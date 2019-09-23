@@ -25,7 +25,7 @@ setup stub data
   $ write_stub_log_entry update "$FIVE" "$SIX"
   $ write_stub_log_entry --blobimport update "$SIX" "$SEVEN"
   $ write_stub_log_entry --blobimport update "$SEVEN" "$EIGHT"
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
+  $ sqlite3 "$TESTTMP/monsql/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
   3|0|1111111111111111111111111111111111111111111111111111111111111111|blobimport
@@ -115,7 +115,7 @@ Skipping ahead from the middle of a series of blobimports should succeed
 Skipping ahead with no valid candidate should fail
   $ write_stub_log_entry --blobimport update "$EIGHT" "$NINE"
   $ write_stub_log_entry --blobimport update "$NINE" "$AS"
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
+  $ sqlite3 "$TESTTMP/monsql/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
   3|0|1111111111111111111111111111111111111111111111111111111111111111|blobimport
@@ -138,7 +138,7 @@ Skipping ahead with no valid candidate should fail
   * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
   [1]
 It ignores unrelated repos when locating the first non-blobimport
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id > 4;"
+  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id > 4;"
   $ mononoke_admin hg-sync-bundle last-processed --set 2
   * Counter for RepositoryId(0) set to 2 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run
@@ -150,8 +150,8 @@ It ignores unrelated repos when locating the first non-blobimport
   * ErrorMessage { msg: "no valid counter position to skip ahead to" } (glob)
   [1]
 It ignores unrelated repos when locating the last blobimport
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 0;"
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id = 4;"
+  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 0;"
+  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id = 4;"
   $ mononoke_admin hg-sync-bundle last-processed --set 2
   * Counter for RepositoryId(0) set to 2 (glob)
   $ mononoke_admin hg-sync-bundle last-processed --skip-blobimport --dry-run

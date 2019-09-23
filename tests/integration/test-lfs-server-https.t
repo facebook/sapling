@@ -2,7 +2,7 @@
 
 # Create a repository
   $ setup_mononoke_config
-  $ FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
+  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
 
 # Start a LFS server for this repository (no upstream)
   $ lfs_uri="$(lfs_server --tls)/health_check"

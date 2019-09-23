@@ -64,5 +64,5 @@ Push
   updating bookmark master_bookmark
 
 Count number of entries the blobstore sync queue
-  $ NUM="$(sqlite3 "$TESTTMP/repo/blobstore_sync_queue" "select count(*) from blobstore_sync_queue")"
+  $ NUM="$(sqlite3 "$TESTTMP/monsql/blobstore_sync_queue" "select count(*) from blobstore_sync_queue")"
   $ [ "$NUM" -gt "0" ]

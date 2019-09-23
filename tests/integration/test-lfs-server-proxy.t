@@ -2,8 +2,8 @@
 
 # Create two repositories
   $ setup_mononoke_config blob:files
-  $ FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_proxy
-  $ FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_upstream
+  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_proxy
+  $ REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_upstream
 
 # Start a LFS server (lfs_upstream is an upstream of lfs_proxy)
   $ log_proxy="$TESTTMP/lfs_proxy.log"

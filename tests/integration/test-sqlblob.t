@@ -2,6 +2,7 @@
 
 setup configuration
   $ setup_mononoke_config "blob:sqlite"
+  $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 
 setup common configuration
