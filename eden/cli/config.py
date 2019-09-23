@@ -25,7 +25,13 @@ import facebook.eden.ttypes as eden_ttypes
 import toml
 
 from . import configinterpolator, configutil, util
-from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
+from .util import (
+    EdenStartError,
+    HealthStatus,
+    print_stderr,
+    readlink_retry_estale,
+    write_file_atomically,
+)
 
 
 # On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
@@ -792,10 +798,8 @@ Do you want to run `eden mount %s` instead?"""
 
     def _write_directory_map(self, config_data: Dict[Path, str]) -> None:
         json_data = {str(path): name for path, name in config_data.items()}
-        directory_map = self._config_dir / CONFIG_JSON
-        with directory_map.open("w") as f:
-            json.dump(json_data, f, indent=2, sort_keys=True)
-            f.write("\n")
+        contents = json.dumps(json_data, indent=2, sort_keys=True) + "\n"
+        write_file_atomically(self._config_dir / CONFIG_JSON, contents.encode())
 
     def _get_client_dir_for_mount_point(self, path: Path) -> Path:
         # The caller is responsible for making sure the path is already

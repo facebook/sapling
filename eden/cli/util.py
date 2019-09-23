@@ -534,3 +534,24 @@ def split_inodes_by_operation_type(
     read_files = [(o.path, o.file_size) for o in loaded_node_info if not o.is_write]
     written_files = [(o.path, o.file_size) for o in loaded_node_info if o.is_write]
     return read_files, written_files
+
+
+def fdatasync(fd: int) -> None:
+    getattr(os, "fdatasync", os.fsync)(fd)
+
+
+def write_file_atomically(path: Path, contents: bytes):
+    "Atomically writes or replaces a file at path with the given contents."
+    tmp = path.with_suffix(".tmp" + hex(random.getrandbits(64))[2:])
+    try:
+        with tmp.open("xb") as f:
+            f.write(contents)
+            f.flush()
+            fdatasync(f.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise

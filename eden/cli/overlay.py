@@ -21,6 +21,8 @@ from typing import BinaryIO, Iterator, Optional, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir, OverlayEntry
 
+from .util import fdatasync
+
 
 class InvalidOverlayFile(Exception):
     pass
@@ -436,10 +438,7 @@ class Overlay:
         )
         try:
             os.write(fd, contents)
-            if getattr(os, "fdatasync", None):
-                os.fdatasync(fd)
-            else:
-                os.fsync(fd)
+            fdatasync(fd)
             os.fchmod(fd, 0o644)
             os.rename(tmp_path, file_path)
         except Exception:
