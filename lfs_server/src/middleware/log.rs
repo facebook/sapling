@@ -31,9 +31,9 @@ fn log_request(logger: &Logger, state: &State, status: &StatusCode) -> Option<()
         return None;
     }
 
-    let log_ctx = state.try_borrow::<RequestContext>()?;
-    let duration = log_ctx.duration?;
-    let response_size = log_ctx.response_size?;
+    let ctx = state.try_borrow::<RequestContext>()?;
+    let headers_duration = ctx.headers_duration?;
+    let response_size = ctx.response_size?;
 
     let request_id = request_id(state);
     let ip = client_addr(&state)?.ip();
@@ -51,7 +51,7 @@ fn log_request(logger: &Logger, state: &State, status: &StatusCode) -> Option<()
         version,
         status,
         response_size,
-        duration.as_millis_unchecked();
+        headers_duration.as_millis_unchecked();
         "request_id" => request_id,
     );
 

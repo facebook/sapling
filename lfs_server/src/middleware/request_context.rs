@@ -4,22 +4,46 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use futures::{Future, IntoFuture};
 use gotham::state::State;
 use gotham_derive::StateData;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use tokio::{
+    self,
+    sync::oneshot::{channel, Receiver, Sender},
+};
 
 use super::{Callback, Middleware};
 
-#[derive(Clone, StateData, Default)]
+type PostRequestCallback = Box<dyn FnOnce(&Duration) + Sync + Send + 'static>;
+
+#[derive(StateData)]
 pub struct RequestContext {
     pub repository: Option<String>,
     pub method: Option<&'static str>,
     pub error_msg: Option<String>,
     pub response_size: Option<u64>,
-    pub duration: Option<Duration>,
+    pub headers_duration: Option<Duration>,
+
+    checkpoint: Option<Receiver<()>>,
+    start_time: Instant,
+    post_request_callbacks: Vec<PostRequestCallback>,
 }
 
 impl RequestContext {
+    fn new() -> Self {
+        Self {
+            repository: None,
+            method: None,
+            error_msg: None,
+            response_size: None,
+            headers_duration: None,
+            start_time: Instant::now(),
+            checkpoint: None,
+            post_request_callbacks: vec![],
+        }
+    }
+
     pub fn set_request(&mut self, repository: String, method: &'static str) {
         self.repository = Some(repository);
         self.method = Some(method);
@@ -33,8 +57,52 @@ impl RequestContext {
         self.response_size = Some(size);
     }
 
-    pub fn set_duration(&mut self, duration: Duration) {
-        self.duration = Some(duration);
+    pub fn headers_ready(&mut self) {
+        self.headers_duration = Some(self.start_time.elapsed());
+    }
+
+    pub fn add_post_request<T>(&mut self, callback: T)
+    where
+        T: FnOnce(&Duration) + Sync + Send + 'static,
+    {
+        self.post_request_callbacks.push(Box::new(callback));
+    }
+
+    pub fn delay_post_request(&mut self) -> Sender<()> {
+        // NOTE: If this is called twice ... then the first one will be ignored
+        let (sender, receiver) = channel();
+        self.checkpoint = Some(receiver);
+        sender
+    }
+
+    fn dispatch_post_request(self) {
+        let Self {
+            start_time,
+            post_request_callbacks,
+            checkpoint,
+            ..
+        } = self;
+
+        let run_callbacks = move || {
+            let elapsed = start_time.elapsed();
+            for callback in post_request_callbacks.into_iter() {
+                callback(&elapsed)
+            }
+        };
+
+        if let Some(checkpoint) = checkpoint {
+            // NOTE: We use then() here: if the receiver was dropped, we still want to run our
+            // callbacks! In fact, right now, for reasons unknown but probably having to do with
+            // content length our data streams never get polled to completion.
+            let fut = checkpoint.into_future().then(move |_| {
+                run_callbacks();
+                Ok(())
+            });
+
+            tokio::spawn(fut);
+        } else {
+            run_callbacks();
+        }
     }
 }
 
@@ -49,7 +117,12 @@ impl RequestContextMiddleware {
 
 impl Middleware for RequestContextMiddleware {
     fn handle(&self, state: &mut State) -> Callback {
-        state.put(RequestContext::default());
-        Box::new(|_state, _response| {})
+        state.put(RequestContext::new());
+
+        Box::new(|state, _response| {
+            if let Some(ctx) = state.try_take::<RequestContext>() {
+                ctx.dispatch_post_request();
+            }
+        })
     }
 }

@@ -9,7 +9,8 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use failure::Error;
-use futures::stream::Stream;
+use futures::{try_ready, Async, Poll, Stream};
+use futures_ext::StreamExt;
 use gotham::state::State;
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
@@ -17,6 +18,7 @@ use hyper::{
 };
 use lazy_static::lazy_static;
 use mime::Mime;
+use tokio::sync::oneshot::Sender;
 
 use crate::middleware::RequestContext;
 
@@ -101,17 +103,23 @@ where
     S::Error: Into<Box<dyn StdError + Send + Sync>>,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let mime_header: HeaderValue = self.mime.as_ref().parse()?;
+        let Self { stream, size, mime } = self;
 
-        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
+        let mime_header: HeaderValue = mime.as_ref().parse()?;
+
+        let stream = if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
             ctx.set_response_size(self.size);
-        }
+            let sender = ctx.delay_post_request();
+            SignalStream::new(stream, sender).left_stream()
+        } else {
+            stream.right_stream()
+        };
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
-            .header(CONTENT_LENGTH, self.size)
+            .header(CONTENT_LENGTH, size)
             .status(StatusCode::OK)
-            .body(Body::wrap_stream(self.stream))
+            .body(Body::wrap_stream(stream))
             .map_err(Error::from)
     }
 }
@@ -153,4 +161,36 @@ lazy_static! {
 
 pub fn git_lfs_mime() -> mime::Mime {
     GIT_LFS_MIME.clone()
+}
+
+struct SignalStream<S> {
+    stream: S,
+    sender: Option<Sender<()>>,
+}
+
+impl<S> SignalStream<S> {
+    fn new(stream: S, sender: Sender<()>) -> Self {
+        Self {
+            stream,
+            sender: Some(sender),
+        }
+    }
+}
+
+impl<S: Stream> Stream for SignalStream<S> {
+    type Item = S::Item;
+    type Error = S::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if self.sender.is_none() {
+            return Ok(Async::Ready(None));
+        }
+
+        let poll = try_ready!(self.stream.poll());
+        if poll.is_none() {
+            let _ = self.sender.take().expect("presence checked above").send(());
+        }
+
+        Ok(Async::Ready(poll))
+    }
 }

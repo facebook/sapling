@@ -48,27 +48,7 @@ fn add_header<T: AsHeaderName>(
 fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
-    if let Some(log_ctx) = state.try_borrow::<RequestContext>() {
-        if let Some(ref repository) = log_ctx.repository {
-            scuba.add("repository", repository.as_ref());
-        }
-
-        if let Some(method) = log_ctx.method {
-            scuba.add("method", method);
-        }
-
-        if let Some(ref err_msg) = log_ctx.error_msg {
-            scuba.add("error_msg", err_msg.as_ref());
-        }
-
-        if let Some(response_size) = log_ctx.response_size {
-            scuba.add("response_size", response_size);
-        }
-
-        if let Some(duration) = log_ctx.duration {
-            scuba.add("duration_ms", duration.as_millis_unchecked());
-        }
-    }
+    scuba.add("http_status", status_code.as_u16());
 
     if let Some(uri) = Uri::try_borrow_from(&state) {
         scuba.add("http_path", uri.path());
@@ -98,10 +78,38 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
         }
     }
 
-    scuba
-        .add("http_status", status_code.as_u16())
-        .add("request_id", request_id(&state))
-        .log();
+    scuba.add("request_id", request_id(&state));
+
+    let ctx = state.try_borrow_mut::<RequestContext>()?;
+
+    if let Some(repository) = &ctx.repository {
+        scuba.add("repository", repository.as_ref());
+    }
+
+    if let Some(method) = ctx.method {
+        scuba.add("method", method);
+    }
+
+    if let Some(err_msg) = &ctx.error_msg {
+        scuba.add("error_msg", err_msg.as_ref());
+    }
+
+    if let Some(response_size) = ctx.response_size {
+        scuba.add("response_size", response_size);
+    }
+
+    if let Some(headers_duration) = ctx.headers_duration {
+        scuba.add(
+            "headers_duration_ms",
+            headers_duration.as_millis_unchecked(),
+        );
+    }
+
+    ctx.add_post_request(move |duration| {
+        scuba
+            .add("duration_ms", duration.as_millis_unchecked())
+            .log();
+    });
 
     Some(())
 }
