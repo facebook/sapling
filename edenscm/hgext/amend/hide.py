@@ -76,7 +76,7 @@ def hide(ui, repo, *revs, **opts):
     elif opts.get("cleanup"):
         # hides all the draft, obsolete commits that
         # don't have non-obsolete descendants
-        revs = ["draft() & ::(head() & obsolete()) - ::(not obsolete())"]
+        revs = ["obsolete() - (draft() & ::(draft() & not obsolete()))"]
     else:
         revs = list(revs) + opts.pop("rev", [])
 
