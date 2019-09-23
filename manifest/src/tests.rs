@@ -5,7 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{
-    derive_manifest, Diff, Entry, Manifest, ManifestOps, PathOrPrefix, PathTree, TreeInfo,
+    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps, PathOrPrefix,
+    PathTree, TreeInfo,
 };
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
@@ -710,6 +711,112 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
         ])?
     );
     assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
+
+    Ok(())
+}
+
+#[fbinit::test]
+fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
+    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let ctx = CoreContext::test_mock(fb);
+
+    // derive manifest
+    let derive = |parents, changes| -> Result<TestManifestId, Error> {
+        let manifest_id = runtime
+            .with(|runtime| {
+                runtime.block_on(derive_test_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    parents,
+                    changes,
+                ))
+            })?
+            .expect("expect non empty manifest");
+        Ok(manifest_id)
+    };
+
+    let mf0 = derive(
+        vec![],
+        btreemap! {
+            "same_dir/1" => Some("1"),
+            "dir/same_dir/2" => Some("2"),
+            "dir/removed_dir/3" => Some("3"),
+            "dir/changed_file" => Some("before"),
+            "dir/removed_file" => Some("removed_file"),
+            "same_file" => Some("4"),
+            "dir_file_conflict/5" => Some("5"),
+        },
+    )?;
+
+    let mf1 = derive(
+        vec![],
+        btreemap! {
+            "same_dir/1" => Some("1"),
+            "dir/same_dir/2" => Some("2"),
+            "dir/added_dir/3" => Some("3"),
+            "dir/changed_file" => Some("after"),
+            "added_file" => Some("added_file"),
+            "same_file" => Some("4"),
+            "dir_file_conflict" => Some("5"),
+        },
+    )?;
+
+    let mf2 = derive(
+        vec![],
+        btreemap! {
+            "added_file" => Some("added_file"),
+            "same_file" => Some("4"),
+            "dir_file_conflict" => Some("5"),
+        },
+    )?;
+
+    let intersection = runtime.with(|rt| {
+        rt.block_on(
+            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf0, vec![mf0]).collect(),
+        )
+    })?;
+
+    assert_eq!(intersection, vec![]);
+
+    let intersection = runtime.with(|rt| {
+        rt.block_on(
+            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf1, vec![mf0]).collect(),
+        )
+    })?;
+
+    let intersection: BTreeSet<_> = intersection.into_iter().map(|(path, _)| path).collect();
+
+    assert_eq!(
+        intersection,
+        make_paths(&[
+            "/",
+            "added_file",
+            "dir",
+            "dir/added_dir",
+            "dir/added_dir/3",
+            "dir/changed_file",
+            "dir_file_conflict"
+        ])?,
+    );
+
+    // Diff against two manifests
+    let intersection = runtime.with(|rt| {
+        rt.block_on(find_intersection_of_diffs(ctx, blobstore, mf1, vec![mf0, mf2]).collect())
+    })?;
+
+    let intersection: BTreeSet<_> = intersection.into_iter().map(|(path, _)| path).collect();
+
+    assert_eq!(
+        intersection,
+        make_paths(&[
+            "/",
+            "dir",
+            "dir/added_dir",
+            "dir/added_dir/3",
+            "dir/changed_file",
+        ])?,
+    );
 
     Ok(())
 }

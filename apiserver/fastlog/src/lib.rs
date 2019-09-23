@@ -28,18 +28,13 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use failure_ext::{Error, Fail};
-use futures::{
-    future,
-    stream::{self, FuturesUnordered},
-    Future, Stream,
-};
+use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
-use manifest::{Diff, Entry, ManifestOps};
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
+use manifest::{find_intersection_of_diffs, Entry};
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
-use tracing::{trace_args, EventId, Traced};
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 mod fastlog_impl;
@@ -116,110 +111,39 @@ impl BonsaiDerived for RootFastlog {
                 let blobstore = repo.get_blobstore().boxed();
                 let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
 
-                let event_id = EventId::new();
-                find_new_unodes(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    unode_mf_id,
-                    parents,
-                    Some(event_id),
-                )
-                .map(move |(_, entry)| {
-                    let f = fetch_unode_parents(ctx.clone(), blobstore.clone(), entry).and_then({
-                        cloned!(ctx, blobstore);
-                        move |parents| {
-                            create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
-                                .and_then({
-                                    cloned!(ctx, blobstore);
-                                    move |fastlog_batch| {
-                                        save_fastlog_batch_by_unode_id(
-                                            ctx,
-                                            blobstore,
-                                            entry,
-                                            fastlog_batch,
-                                        )
-                                    }
-                                })
-                        }
-                    });
+                find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
+                    .map(move |(_, entry)| {
+                        let f = fetch_unode_parents(ctx.clone(), blobstore.clone(), entry)
+                            .and_then({
+                                cloned!(ctx, blobstore);
+                                move |parents| {
+                                    create_new_batch(
+                                        ctx.clone(),
+                                        blobstore.clone(),
+                                        parents,
+                                        bcs_id,
+                                    )
+                                    .and_then({
+                                        cloned!(ctx, blobstore);
+                                        move |fastlog_batch| {
+                                            save_fastlog_batch_by_unode_id(
+                                                ctx,
+                                                blobstore,
+                                                entry,
+                                                fastlog_batch,
+                                            )
+                                        }
+                                    })
+                                }
+                            });
 
-                    spawn_future(f)
-                })
-                .buffered(100)
-                .for_each(|_| Ok(()))
-                .map(move |_| RootFastlog(bcs_id))
+                        spawn_future(f)
+                    })
+                    .buffered(100)
+                    .for_each(|_| Ok(()))
+                    .map(move |_| RootFastlog(bcs_id))
             })
             .boxify()
-    }
-}
-
-fn find_new_unodes(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
-    unode_mf_id: ManifestUnodeId,
-    parent_unodes: Vec<ManifestUnodeId>,
-    event_id: Option<EventId>,
-) -> impl Stream<Item = (Option<MPath>, Entry<ManifestUnodeId, FileUnodeId>), Error = Error> {
-    match parent_unodes.get(0) {
-        Some(parent) => (*parent)
-            .diff(ctx.clone(), blobstore.clone(), unode_mf_id)
-            .filter_map(|diff_entry| match diff_entry {
-                Diff::Added(path, entry) => Some((path, entry)),
-                Diff::Removed(..) => None,
-                Diff::Changed(path, _, entry) => Some((path, entry)),
-            })
-            .collect()
-            .and_then({
-                cloned!(ctx);
-                move |new_unodes| {
-                    let paths: Vec<_> = new_unodes
-                        .clone()
-                        .into_iter()
-                        .map(|(path, _)| path)
-                        .collect();
-
-                    let futs: Vec<_> = parent_unodes
-                        .into_iter()
-                        .skip(1)
-                        .map(|p| {
-                            p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
-                                .collect_to::<HashMap<_, _>>()
-                        })
-                        .collect();
-
-                    future::join_all(futs).map(move |entries_in_parents| {
-                        let mut res = vec![];
-
-                        for (path, unode) in new_unodes {
-                            let mut new_entry = true;
-                            for p in &entries_in_parents {
-                                if p.get(&path) == Some(&unode) {
-                                    new_entry = false;
-                                    break;
-                                }
-                            }
-
-                            if new_entry {
-                                res.push((path, unode));
-                            }
-                        }
-
-                        res
-                    })
-                }
-            })
-            .traced_with_id(
-                &ctx.trace(),
-                "derive_fastlog::find_new_unodes",
-                trace_args! {},
-                event_id.unwrap_or_else(|| EventId::new()),
-            )
-            .map(|entries| stream::iter_ok(entries.into_iter()))
-            .flatten_stream()
-            .boxify(),
-        None => unode_mf_id
-            .list_all_entries(ctx.clone(), blobstore.clone())
-            .boxify(),
     }
 }
 
@@ -317,6 +241,7 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
+    use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::fastlog_batch::{
@@ -512,7 +437,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn test_find_new_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
+    fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
         let repo = linear::getrepo(fb);
         let ctx = CoreContext::test_mock(fb);
@@ -536,12 +461,11 @@ mod tests {
         )?;
 
         let mut entries = rt.block_on(
-            find_new_unodes(
+            find_intersection_of_diffs(
                 ctx,
                 Arc::new(repo.get_blobstore()),
                 child_root_unode,
                 vec![parent_root_unode],
-                None,
             )
             .map(|(path, _)| match path {
                 Some(path) => String::from_utf8(path.to_vec()).unwrap(),
@@ -559,7 +483,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn test_find_new_unodes_merge(fb: FacebookInit) -> Result<(), Error> {
+    fn test_find_intersection_of_diffs_merge(fb: FacebookInit) -> Result<(), Error> {
         fn test_single_find_unodes_merge(
             fb: FacebookInit,
             parent_files: Vec<BTreeMap<&str, Option<&str>>>,
@@ -615,12 +539,11 @@ mod tests {
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
             let mut entries = rt.block_on(
-                find_new_unodes(
+                find_intersection_of_diffs(
                     ctx,
                     Arc::new(repo.get_blobstore()),
                     merge_unode,
                     parent_unodes,
-                    None,
                 )
                 .map(|(path, _)| match path {
                     Some(path) => String::from_utf8(path.to_vec()).unwrap(),

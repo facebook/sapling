@@ -7,7 +7,7 @@
 #![deny(warnings)]
 
 pub use crate::derive::{derive_manifest, LeafInfo, TreeInfo};
-pub use crate::ops::{Diff, ManifestOps, PathOrPrefix};
+pub use crate::ops::{find_intersection_of_diffs, Diff, ManifestOps, PathOrPrefix};
 pub use crate::types::{Entry, Manifest, PathTree};
 
 mod derive;

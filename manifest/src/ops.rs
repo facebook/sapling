@@ -6,13 +6,16 @@
 
 use crate::{Entry, Manifest, PathTree};
 use blobstore::{Blobstore, Loadable};
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
-use futures::{stream, Future, Stream};
+use futures::{future, stream, Future, Stream};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, BoxFuture, BoxStream, FutureExt, StreamExt,
 };
 use mononoke_types::MPath;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -311,6 +314,76 @@ where
         .map(|output| stream::iter_ok(output))
         .flatten()
         .boxify()
+    }
+}
+
+/// Finds subentries in mf_id manifest that are different from entries with the same name in
+/// every manifest in `diff_against`. Note that removed entries ARE NOT INCLUDED!
+/// F. e. if file 'A' hash HASH_1 in mf_if, HASH_2 and HASH_3 in diff_against, then it will
+/// be returned. But if file 'A' has HASH_2 then it wont' be returned because it matches
+/// HASH_2 in diff_against.
+/// This implementation is more efficient for merges.
+pub fn find_intersection_of_diffs<TreeId, LeafId>(
+    ctx: CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    mf_id: TreeId,
+    diff_against: Vec<TreeId>,
+) -> impl Stream<Item = (Option<MPath>, Entry<TreeId, LeafId>), Error = Error>
+where
+    TreeId: Loadable + Copy + Send + Eq,
+    <TreeId as Loadable>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
+    LeafId: Copy + Send + Eq + 'static,
+{
+    match diff_against.get(0) {
+        Some(parent) => (*parent)
+            .diff(ctx.clone(), blobstore.clone(), mf_id)
+            .filter_map(|diff_entry| match diff_entry {
+                Diff::Added(path, entry) => Some((path, entry)),
+                Diff::Removed(..) => None,
+                Diff::Changed(path, _, entry) => Some((path, entry)),
+            })
+            .collect()
+            .and_then({
+                cloned!(ctx);
+                move |new_entries| {
+                    let paths: Vec<_> = new_entries
+                        .clone()
+                        .into_iter()
+                        .map(|(path, _)| path)
+                        .collect();
+
+                    let futs = diff_against.into_iter().skip(1).map(move |p| {
+                        p.find_entries(ctx.clone(), blobstore.clone(), paths.clone())
+                            .collect_to::<HashMap<_, _>>()
+                    });
+
+                    future::join_all(futs).map(move |entries_in_parents| {
+                        let mut res = vec![];
+
+                        for (path, unode) in new_entries {
+                            let mut new_entry = true;
+                            for p in &entries_in_parents {
+                                if p.get(&path) == Some(&unode) {
+                                    new_entry = false;
+                                    break;
+                                }
+                            }
+
+                            if new_entry {
+                                res.push((path, unode));
+                            }
+                        }
+
+                        res
+                    })
+                }
+            })
+            .map(|entries| stream::iter_ok(entries))
+            .flatten_stream()
+            .left_stream(),
+        None => mf_id
+            .list_all_entries(ctx.clone(), blobstore.clone())
+            .right_stream(),
     }
 }
 
