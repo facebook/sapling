@@ -22,6 +22,7 @@ use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
+use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
 use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
@@ -54,7 +55,7 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
     mapping: &M,
-    rewrite_path: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync,
+    rewrite_path: Mover,
 ) -> Result<Option<(BonsaiChangesetMut, Vec<ChangesetId>)>, Error> {
     let mut changesets: Vec<ChangesetId> = Vec::new();
     // Empty commits should always sync as-is; there is no path rewriting involved here.
@@ -67,7 +68,7 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
             // Just rewrite copy_from information, when we have it
             fn rewrite_copy_from(
                 copy_from: &(MPath, ChangesetId),
-                rewrite_path: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync,
+                rewrite_path: Mover,
             ) -> Result<Option<(MPath, ChangesetId)>, Error> {
                 let (path, cs) = copy_from;
                 let new_path = rewrite_path(&path)?;
@@ -77,7 +78,7 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
             // Extract any copy_from information, and use rewrite_copy_from on it
             fn rewrite_file_change(
                 change: FileChange,
-                rewrite_path: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync,
+                rewrite_path: Mover,
             ) -> Result<(FileChange, Option<(MPath, ChangesetId)>), Error> {
                 let new_copy_from = change
                     .copy_from()
@@ -90,16 +91,16 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
             fn do_rewrite(
                 path: MPath,
                 change: Option<FileChange>,
-                rewrite_path: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync,
+                rewrite_path: Mover,
             ) -> Result<Option<(MPath, Option<(FileChange, Option<(MPath, ChangesetId)>)>)>, Error>
             {
                 let new_path = rewrite_path(&path)?;
                 let change = change
-                    .map(|change| rewrite_file_change(change, &rewrite_path))
+                    .map(|change| rewrite_file_change(change, rewrite_path.clone()))
                     .transpose()?;
                 Ok(new_path.map(|new_path| (new_path, change)))
             }
-            do_rewrite(path, change, &rewrite_path).transpose()
+            do_rewrite(path, change, rewrite_path.clone()).transpose()
         });
 
         for rewritten_change in path_rewritten_changes {
@@ -194,7 +195,7 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
     repos: CommitSyncRepos,
     bookmark: BookmarkName,
     mapping: M,
-    rewrite_paths: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync + 'static,
+    rewrite_paths: Mover,
 ) -> Result<Option<ChangesetId>, Error> {
     let hash = cs.get_changeset_id();
     let (source_repo, target_repo, source_is_large) = match repos {
@@ -334,7 +335,7 @@ pub fn sync_commit_compat<M: SyncedCommitMapping + Clone + 'static>(
     repos: CommitSyncRepos,
     bookmark: BookmarkName,
     mapping: M,
-    rewrite_paths: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync + 'static,
+    rewrite_paths: Mover,
 ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
     sync_commit(ctx, cs, repos, bookmark, mapping, rewrite_paths)
         .boxed()

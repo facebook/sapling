@@ -14,6 +14,7 @@ use fbinit::FacebookInit;
 use futures::Future;
 use maplit::btreemap;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
@@ -27,6 +28,7 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
+use movers::Mover;
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 
 use cross_repo_sync::{sync_commit_compat, CommitSyncRepos};
@@ -123,7 +125,7 @@ fn sync_to_master(
     repos: CommitSyncRepos,
     source_bcs_id: ChangesetId,
     mapping: impl SyncedCommitMapping + Clone + 'static,
-    rewrite_paths: impl Fn(&MPath) -> Result<Option<MPath>, Error> + Send + Sync + 'static,
+    rewrite_paths: Mover,
 ) -> Result<Option<ChangesetId>, Error> {
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source = get_source_repo(&repos);
@@ -212,7 +214,7 @@ fn sync_parentage(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let linear_remap = move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)));
+    let linear_remap = Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path))));
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -289,7 +291,7 @@ fn sync_removes_commit(fb: FacebookInit) {
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-    let linear_remap = move |_path: &MPath| Ok(None);
+    let linear_remap = Arc::new(move |_path: &MPath| Ok(None));
 
     // Create a commit with one file called "master" in the blobrepo, and set the bookmark
     create_initial_commit(ctx.clone(), &megarepo);
@@ -383,10 +385,11 @@ fn sync_causes_conflict(fb: FacebookInit) {
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let linear_remap = move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)));
+    let linear_remap = Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path))));
 
     let master_file_path_in_megarepo = MPath::new("master_file").unwrap();
-    let master_file_remap = move |path: &MPath| Ok(Some(master_file_path_in_megarepo.join(path)));
+    let master_file_remap =
+        Arc::new(move |path: &MPath| Ok(Some(master_file_path_in_megarepo.join(path))));
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -458,10 +461,10 @@ fn sync_empty_commit(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let linear_remap = move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)));
+    let linear_remap = Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path))));
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
     let megarepo_remap =
-        move |path: &MPath| Ok(path.remove_prefix_component(&linear_path_in_megarepo));
+        Arc::new(move |path: &MPath| Ok(path.remove_prefix_component(&linear_path_in_megarepo)));
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -581,10 +584,10 @@ fn sync_copyinfo(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let linear_remap = move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)));
+    let linear_remap = Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path))));
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
     let megarepo_remap =
-        move |path: &MPath| Ok(path.remove_prefix_component(&linear_path_in_megarepo));
+        Arc::new(move |path: &MPath| Ok(path.remove_prefix_component(&linear_path_in_megarepo)));
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -672,13 +675,16 @@ fn sync_remap_failure(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let linear_remap = move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path)));
+    let linear_remap = Arc::new(move |path: &MPath| Ok(Some(linear_path_in_megarepo.join(path))));
     let linear_path_in_megarepo = MPath::new("linear").unwrap();
-    let fail_remap = move |_path: &MPath| Err(err_msg("This always fails"));
-    let copyfrom_fail_remap = move |path: &MPath| match path.basename().to_bytes().as_ref() {
-        b"1" => Err(err_msg("This only fails if the file is named '1'")),
-        _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
-    };
+    let fail_remap = Arc::new(move |_path: &MPath| Err(err_msg("This always fails")));
+    let copyfrom_fail_remap =
+        Arc::new(
+            move |path: &MPath| match path.basename().to_bytes().as_ref() {
+                b"1" => Err(err_msg("This only fails if the file is named '1'")),
+                _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
+            },
+        );
 
     create_initial_commit(ctx.clone(), &megarepo);
 
