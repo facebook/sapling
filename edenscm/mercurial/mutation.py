@@ -13,6 +13,7 @@ from bindings import mutationstore
 
 from . import error, node as nodemod, perftrace, phases, repoview, util
 from .i18n import _
+from .node import nullid
 
 
 ORIGIN_COMMIT = mutationstore.ORIGIN_COMMIT
@@ -342,7 +343,7 @@ class obsoletecache(object):
                         if pred not in obsolete and pred not in seen:
                             candidates.add(pred)
                             seen.add(pred)
-                            if clhasnode(pred):
+                            if clhasnode(pred) and pred != nullid:
                                 obsolete.add(pred)
             self.obsolete[repo.filtername] = frozenset(obsolete)
             self.complete[repo.filtername] = True
