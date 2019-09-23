@@ -477,26 +477,35 @@ _ignoreopts = ("no-merges", "graph")
 def journal(ui, repo, *args, **opts):
     """show history of the checked out commit or a bookmark
 
-    The journal is used to see the previous commits that bookmarks and the
-    working copy pointed to. By default the previous locations for the working
-    copy.  Passing a bookmark name will show all the previous positions of
-    that bookmark. Use the --all switch to show previous locations for all
-    bookmarks and the working copy; each line will then include the bookmark
-    name, or '.' for the working copy, as well.
+    Show the history of all the commits that were once the current commit. In
+    other words, shows a list of your previously checked out commits.
+    :hg:`journal` can be used to find older versions of commits (for example,
+    when you want to revert to a previous state). It can also be used to
+    discover commits that were previously hidden.
 
-    If `name` starts with `re:`, the remainder of the name is treated as
-    a regular expression. To match a name that actually starts with `re:`,
-    use the prefix `literal:`.
+    By default, :hg:`journal` displays the history of the current commit. To
+    display a list of commits pointed to by a bookmark, specify a bookmark
+    name.
 
-    By default hg journal only shows the commit hash and the command that was
-    running at that time. -v/--verbose will show the prior hash, the user, and
-    the time at which it happened.
+    Specify --all to show the history of both the current commit and all
+    bookmarks. In the output for --all, bookmarks are listed by name, and '.'
+    indicates the current commit.
 
-    Use -c/--commits to output log information on each commit hash; at this
-    point you can use the usual `--patch`, `--git`, `--stat` and `--template`
-    switches to alter the log output for these.
+    Specify -Tjson to produce machine-readable output.
 
-    `hg journal -T json` can be used to produce machine readable output.
+    .. container:: verbose
+
+       By default, :hg:`journal` only shows the commit hash and the
+       corresponding command. Specify --verbose to also include the previous
+       commit hash, user, and timestamp.
+
+       Use -c/--commits to output log information about each commit hash. To
+       customize the log output, you can also specify switches like '--patch',
+       '--git', '--stat', and '--template'.
+
+       If a bookmark name starts with 're:', the remainder of the name is
+       treated as a regular expression. To match a name that actually starts
+       with 're:', use the prefix 'literal:'.
 
     """
     opts = pycompat.byteskwargs(opts)
