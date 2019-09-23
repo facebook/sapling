@@ -6,12 +6,13 @@
 
 use failure::Error;
 use futures_preview::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
-use futures_util::{try_future::try_join_all, try_join};
+use futures_util::{pin_mut, select, try_future::try_join_all, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
 use serde::Deserialize;
+use slog::debug;
 use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
 
@@ -297,17 +298,66 @@ fn batch_download_response_objects(
         .collect()
 }
 
+/// Try to prepare a batch response with only internal objects. Returns None if any are missing.
+fn batch_download_internal_only_response_objects(
+    objects: &[RequestObject],
+    internal: &HashMap<RequestObject, ObjectAction>,
+) -> Option<Vec<ResponseObject>> {
+    let res = objects
+        .iter()
+        .map(|object| {
+            let action = internal.get(object)?.clone();
+
+            let status = ObjectStatus::Ok {
+                authenticated: false,
+                actions: hashmap! { Operation::Download => action },
+            };
+
+            Some(ResponseObject {
+                object: *object,
+                status,
+            })
+        })
+        .collect::<Option<Vec<_>>>()?;
+
+    // Record stats only if all have succeeded.
+    STATS::download_redirect_internal.add_value(res.len() as i64);
+
+    Some(res)
+}
+
 async fn batch_download(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
 ) -> Result<ResponseBatch, Error> {
-    // TODO: Optimize: if internal has everything, we don't need to wait for upstream here.
-    let (upstream, internal) = try_join!(
-        upstream_objects(ctx, &batch.objects),
-        internal_objects(ctx, &batch.objects),
-    )?;
+    let upstream = upstream_objects(ctx, &batch.objects).fuse();
+    let internal = internal_objects(ctx, &batch.objects).fuse();
+    pin_mut!(upstream, internal);
 
-    let objects = batch_download_response_objects(&batch.objects, &upstream, &internal);
+    let objects = select! {
+        upstream_objects = upstream => {
+            let upstream_objects = upstream_objects?;
+            debug!(ctx.logger(), "batch: upstream ready");
+            let internal_objects = internal.await?;
+            debug!(ctx.logger(), "batch: internal ready");
+            batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects)
+        }
+        internal_objects = internal => {
+            debug!(ctx.logger(), "batch: internal ready");
+            let internal_objects = internal_objects?;
+            let objects = batch_download_internal_only_response_objects(&batch.objects, &internal_objects);
+            if let Some(objects) = objects {
+                // We were able to return with just internal, don't wait for upstream.
+                debug!(ctx.logger(), "batch: skip upstream");
+                objects
+            } else {
+                // We don't have all the objects: wait for upstream.
+                let upstream_objects = upstream.await?;
+                debug!(ctx.logger(), "batch: upstream ready");
+                batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects)
+            }
+        }
+    };
 
     Ok(ResponseBatch {
         transfer: Transfer::Basic,

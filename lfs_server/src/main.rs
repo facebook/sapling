@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![recursion_limit = "256"]
 #![feature(async_await)]
 #![feature(async_closure)]
 #![deny(warnings)]

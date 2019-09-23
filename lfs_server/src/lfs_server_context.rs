@@ -11,15 +11,16 @@ use std::sync::{Arc, Mutex};
 use bytes::Bytes;
 use failure::Error;
 use fbinit::FacebookInit;
-use futures_util::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    TryStreamExt,
-};
+use futures::Future as Future01;
+use futures_channel::oneshot;
+use futures_preview::Future;
+use futures_util::{compat::Stream01CompatExt, TryStreamExt};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::{o, Logger};
+use tokio::spawn;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -121,27 +122,45 @@ impl RepositoryRequestContext {
         lfs_ctx.request(repository, request_id(&state))
     }
 
-    pub async fn dispatch(&self, request: Request<Body>) -> Result<Body, Error> {
-        let res = self
-            .client
-            .request(request)
-            .compat()
-            .await
-            .chain_err(ErrorKind::UpstreamDidNotRespond)?;
+    pub fn logger(&self) -> &Logger {
+        self.ctx.logger()
+    }
 
-        let (head, body) = res.into_parts();
+    pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Body, Error>> {
+        let (sender, receiver) = oneshot::channel();
 
-        if !head.status.is_success() {
-            let body = body.compat().try_concat().await?;
+        // NOTE: We spawn the request on an executor because we'd like to read the response even if
+        // we drop the future returned here. The reason for that is that if we don't read a
+        // response, Hyper will not reuse the conneciton for its pool (which makes sense for the
+        // general case: if your server is sending you 5GB of data and you drop the future, you
+        // don't want to read all that later just to reuse a connection).
+        let fut = self.client.request(request).then(move |r| {
+            let _ = sender.send(r);
+            Ok(())
+        });
 
-            return Err(ErrorKind::UpstreamError(
-                head.status,
-                String::from_utf8_lossy(&body).to_string(),
-            )
-            .into());
+        spawn(fut);
+
+        async move {
+            let res = receiver
+                .await
+                .expect("spawned future cannot be dropped")
+                .chain_err(ErrorKind::UpstreamDidNotRespond)?;
+
+            let (head, body) = res.into_parts();
+
+            if !head.status.is_success() {
+                let body = body.compat().try_concat().await?;
+
+                return Err(ErrorKind::UpstreamError(
+                    head.status,
+                    String::from_utf8_lossy(&body).to_string(),
+                )
+                .into());
+            }
+
+            Ok(body)
         }
-
-        Ok(body)
     }
 
     pub async fn upstream_batch(
