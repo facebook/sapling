@@ -9,7 +9,9 @@ use std::cell::RefCell;
 
 use cpython::*;
 
-use ::nodemap::nodemap::NodeMap;
+use ::nodemap::{NodeMap, NodeSet};
+use cpython_ext::Bytes;
+use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use types::node::Node;
 
@@ -17,6 +19,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "nodemap"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<nodemap>(py)?;
+    m.add_class::<nodeset>(py)?;
     Ok(m)
 }
 
@@ -80,5 +83,42 @@ py_class!(class nodemap |py| {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
         Ok(keys)
+    }
+});
+
+py_class!(class nodeset |py| {
+    data set: RefCell<NodeSet>;
+
+    def __new__(_cls, path: &PyBytes) -> PyResult<Self> {
+        let path = local_bytes_to_path(path.data(py)).map_pyerr::<exc::ValueError>(py)?;
+        let nodeset = NodeSet::open(path).map_pyerr::<exc::IOError>(py)?;
+        Self::create_instance(py, RefCell::new(nodeset))
+    }
+
+    def add(&self, node: &PyBytes) -> PyResult<PyObject> {
+        let node = Node::from_slice(node.data(py)).map_pyerr::<exc::ValueError>(py)?;
+        let set = self.set(py);
+        let mut set = set.borrow_mut();
+        set.add(&node).map_pyerr::<exc::IOError>(py)?;
+        Ok(py.None())
+    }
+
+    def flush(&self) -> PyResult<PyObject> {
+        self.set(py).borrow_mut().flush().map_pyerr::<exc::IOError>(py)?;
+        Ok(py.None())
+    }
+
+    def __contains__(&self, node: &PyBytes) -> PyResult<bool> {
+        let node = Node::from_slice(node.data(py)).map_pyerr::<exc::ValueError>(py)?;
+        Ok(self.set(py).borrow().contains(&node).map_pyerr::<exc::IOError>(py)?)
+    }
+
+    def items(&self) -> PyResult<Vec<Bytes>> {
+        let set = self.set(py).borrow();
+        let nodes = set.iter()
+            .map(|node| node.map(|node| Bytes::from(node.as_ref().to_vec())))
+            .collect::<Result<Vec<Bytes>, _>>()
+            .map_pyerr::<exc::IOError>(py)?;
+        Ok(nodes)
     }
 });
