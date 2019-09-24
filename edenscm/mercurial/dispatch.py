@@ -567,6 +567,12 @@ def _runcatch(req):
             )
 
         if realcmd == "serve" and "--stdio" in cmdargs:
+            # Uncontionally turn off narrow-heads. The hg servers use
+            # full, revlog-based repos. Keep them using old revlog-based
+            # algorithms and do not risk switching to new algorithms.
+            if "SSH_CLIENT" in encoding.environ:
+                req.ui.setconfig("experimental", "narrow-heads", "false", "serve")
+
             # We want to constrain 'hg serve --stdio' instances pretty
             # closely, as many shared-ssh access tools want to grant
             # access to run *only* 'hg -R $repo serve --stdio'. We
