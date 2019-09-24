@@ -20,6 +20,7 @@
       - GNU Arch [gnuarch]
       - Bazaar [bzr]
       - Perforce [p4]
+      - Google Repo [repo]
   
       Accepted destination formats [identifiers]:
   
@@ -416,6 +417,7 @@ override $PATH to ensure p4 not visible
   emptydir does not look like a GNU Arch repository
   emptydir does not look like a Bazaar repository
   cannot find required "p4" tool
+  emptydir does not look like a repo repository
   abort: emptydir: missing or unsupported repository
   [255]
 #endif

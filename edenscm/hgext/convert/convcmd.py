@@ -13,7 +13,18 @@ import shutil
 from edenscm.mercurial import encoding, error, hg, progress, scmutil, util
 from edenscm.mercurial.i18n import _
 
-from . import bzr, common, darcs, filemap, git, gnuarch, hg as hgconvert, p4, subversion
+from . import (
+    bzr,
+    common,
+    darcs,
+    filemap,
+    git,
+    gnuarch,
+    hg as hgconvert,
+    p4,
+    repo,
+    subversion,
+)
 
 
 mapfile = common.mapfile
@@ -28,6 +39,7 @@ gnuarch_source = gnuarch.gnuarch_source
 mercurial_sink = hgconvert.mercurial_sink
 mercurial_source = hgconvert.mercurial_source
 p4_source = p4.p4_source
+repo_source = repo.repo_source
 svn_sink = subversion.svn_sink
 svn_source = subversion.svn_source
 
@@ -83,6 +95,7 @@ source_converters = [
     ("gnuarch", gnuarch_source, "branchsort"),
     ("bzr", bzr_source, "branchsort"),
     ("p4", p4_source, "branchsort"),
+    ("repo", repo_source, "branchsort"),
 ]
 
 sink_converters = [("hg", mercurial_sink), ("svn", svn_sink)]

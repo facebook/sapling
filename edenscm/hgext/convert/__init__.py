@@ -64,6 +64,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     - GNU Arch [gnuarch]
     - Bazaar [bzr]
     - Perforce [p4]
+    - Google Repo [repo]
 
     Accepted destination formats [identifiers]:
 
