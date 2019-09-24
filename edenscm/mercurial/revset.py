@@ -769,13 +769,23 @@ def _children(repo, subset, parentset):
     pr = repo.changelog.parentrevs
     minrev = parentset.min()
     nullrev = node.nullrev
+    if repo.ui.configbool("experimental", "narrow-heads"):
+
+        def isvisible(rev, getphase=repo._phasecache.phase):
+            return getphase(repo, rev) != phases.secret
+
+    else:
+
+        def isvisible(rev):
+            return True
+
     for r in subset:
         if r <= minrev:
             continue
         p1, p2 = pr(r)
-        if p1 in parentset:
+        if p1 in parentset and isvisible(r):
             cs.add(r)
-        if p2 != nullrev and p2 in parentset:
+        if p2 != nullrev and p2 in parentset and isvisible(r):
             cs.add(r)
     return baseset(cs)
 

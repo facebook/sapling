@@ -111,13 +111,9 @@ A:: should not show C
   o  A
   
 children(A) should not show C
-(BUG: 'C' should be hidden)
 
   $ hg log -Gr "children($A)" -T '{desc}'
   @  C2
-  |
-  ~
-  x  C
   |
   ~
   o  B
