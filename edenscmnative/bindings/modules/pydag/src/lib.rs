@@ -10,7 +10,7 @@ use cpython_failure::{FallibleExt, ResultPyErrExt};
 use dag::{
     idmap::{Id, IdMap},
     segment::Dag,
-    spanset::SpanSet,
+    spanset::{SpanSet, SpanSetIter},
 };
 use encoding::local_bytes_to_path;
 use failure::Fallible;
@@ -59,10 +59,18 @@ py_class!(pub class spans |py| {
         Ok(self.inner(py).count() as usize)
     }
 
-    def __iter__(&self) -> PyResult<PyObject> {
-        let ids: Vec<Id> = self.inner(py).iter().collect();
-        let list: PyList = ids.into_py_object(py);
-        list.into_object().call_method(py, "__iter__", NoArgs, None)
+    def __iter__(&self) -> PyResult<spansiter> {
+        self.iterdesc(py)
+    }
+
+    def iterasc(&self) -> PyResult<spansiter> {
+        let iter = RefCell::new( self.inner(py).clone().into_iter());
+        spansiter::create_instance(py, iter, true)
+    }
+
+    def iterdesc(&self) -> PyResult<spansiter> {
+        let iter = RefCell::new(self.inner(py).clone().into_iter());
+        spansiter::create_instance(py, iter, false)
     }
 
     def min(&self) -> PyResult<Option<Id>> {
@@ -93,6 +101,27 @@ py_class!(pub class spans |py| {
         let lhs = Spans::extract(py, lhs)?;
         let rhs = Spans::extract(py, rhs)?;
         Ok(Spans(lhs.0.difference(&rhs.0)))
+    }
+});
+
+// A wrapper to [`SpanSetIter`].
+py_class!(pub class spansiter |py| {
+    data iter: RefCell<SpanSetIter<SpanSet>>;
+    data ascending: bool;
+
+    def __next__(&self) -> PyResult<Option<Id>> {
+        let mut iter = self.iter(py).borrow_mut();
+        let next = if *self.ascending(py) {
+            iter.next_back()
+        } else {
+            iter.next()
+        };
+        Ok(next)
+    }
+
+    // Makes code like `list(spans.iterasc())` work.
+    def __iter__(&self) -> PyResult<spansiter> {
+        Ok(self.clone_ref(py))
     }
 });
 

@@ -66,6 +66,18 @@ impl Span {
         self.high - self.low + 1
     }
 
+    /// Get the n-th [`Id`] in this [`Span`].
+    ///
+    /// Similar to [`SpanSet`], ids are sorted in descending order.
+    /// The 0-th Id is `high`.
+    pub fn nth(self, n: u64) -> Option<Id> {
+        if n >= self.count() {
+            None
+        } else {
+            Some(self.high - n)
+        }
+    }
+
     fn contains(self, value: Id) -> bool {
         self.low <= value && value <= self.high
     }
@@ -344,7 +356,7 @@ impl SpanSet {
 
     /// Get an iterator for integers in this [`SpanSet`].
     /// By default, the iteration is in descending order.
-    pub fn iter(&self) -> SpanSetIter {
+    pub fn iter(&self) -> SpanSetIter<&SpanSet> {
         SpanSetIter {
             span_set: self,
             front: (0, 0),
@@ -386,8 +398,8 @@ impl SpanSet {
         }
     }
 
-    /// Internal use only. Iterate through the spans.
-    pub(crate) fn as_spans(&self) -> &Vec<Span> {
+    /// Get a reference to the spans.
+    pub fn as_spans(&self) -> &Vec<Span> {
         &self.spans
     }
 
@@ -454,14 +466,14 @@ impl Debug for SpanSet {
 }
 
 /// Iterator of integers in a [`SpanSet`].
-pub struct SpanSetIter<'a> {
-    span_set: &'a SpanSet,
+pub struct SpanSetIter<T> {
+    span_set: T,
     // (index of span_set.spans, index of span_set.spans[i])
     front: (isize, Id),
     back: (isize, Id),
 }
 
-impl<'a> Iterator for SpanSetIter<'a> {
+impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
     type Item = Id;
 
     fn next(&mut self) -> Option<Id> {
@@ -469,7 +481,7 @@ impl<'a> Iterator for SpanSetIter<'a> {
             None
         } else {
             let (vec_id, span_id) = self.front;
-            let span = &self.span_set.spans[vec_id as usize];
+            let span = &self.span_set.as_ref().spans[vec_id as usize];
             self.front = if span_id == span.high - span.low {
                 (vec_id + 1, 0)
             } else {
@@ -480,16 +492,16 @@ impl<'a> Iterator for SpanSetIter<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for SpanSetIter<'a> {
+impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
     fn next_back(&mut self) -> Option<Id> {
         if self.front > self.back {
             None
         } else {
             let (vec_id, span_id) = self.back;
-            let span = &self.span_set.spans[vec_id as usize];
+            let span = &self.span_set.as_ref().spans[vec_id as usize];
             self.back = if span_id == 0 {
                 let span_len = if vec_id > 0 {
-                    let span = self.span_set.spans[(vec_id - 1) as usize];
+                    let span = self.span_set.as_ref().spans[(vec_id - 1) as usize];
                     span.high - span.low
                 } else {
                     0
@@ -500,6 +512,33 @@ impl<'a> DoubleEndedIterator for SpanSetIter<'a> {
             };
             Some(span.high - span_id)
         }
+    }
+}
+
+impl IntoIterator for SpanSet {
+    type Item = Id;
+    type IntoIter = SpanSetIter<SpanSet>;
+
+    /// Get an iterator for integers in this [`SpanSet`].
+    fn into_iter(self) -> SpanSetIter<SpanSet> {
+        let back = (
+            self.spans.len() as isize - 1,
+            self.spans
+                .last()
+                .map(|span| span.high - span.low)
+                .unwrap_or(0),
+        );
+        SpanSetIter {
+            span_set: self,
+            front: (0, 0),
+            back,
+        }
+    }
+}
+
+impl AsRef<SpanSet> for SpanSet {
+    fn as_ref(&self) -> &SpanSet {
+        self
     }
 }
 
@@ -683,6 +722,15 @@ mod tests {
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
+
+        assert_eq!(
+            set.clone().into_iter().collect::<Vec<Id>>(),
+            vec![8, 7, 5, 4, 3]
+        );
+        assert_eq!(
+            set.clone().into_iter().rev().collect::<Vec<Id>>(),
+            vec![3, 4, 5, 7, 8]
+        );
     }
 
     #[test]

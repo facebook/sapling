@@ -477,8 +477,6 @@ class spansset(abstractsmartset):
         self._ascending = False
 
     def __iter__(self):
-        # PERF: This is currently O(N). Can be made better by having
-        # a dedicated iterator in Rust.
         if self._ascending:
             return self.fastasc()
         else:
@@ -491,10 +489,10 @@ class spansset(abstractsmartset):
             return self.fastdesc()
 
     def fastasc(self):
-        return iter(reversed(list(self._spans)))
+        return self._spans.iterasc()
 
     def fastdesc(self):
-        return iter(self._spans)
+        return self._spans.iterdesc()
 
     @util.propertycache
     def __contains__(self):
