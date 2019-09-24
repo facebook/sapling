@@ -1486,6 +1486,7 @@ packages = [
     "edenscm.mercurial.thirdparty",
     "edenscm.mercurial.thirdparty.attr",
     "edenscm.mercurial.thirdparty.pyre2",
+    "edenscm.mercurial.utils",
     "edenscmnative",
 ]
 
