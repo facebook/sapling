@@ -40,6 +40,7 @@ struct LfsServerContextInner {
     repositories: HashMap<String, BlobRepo>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
+    always_wait_for_upstream: bool,
 }
 
 #[derive(Clone, StateData)]
@@ -54,6 +55,7 @@ impl LfsServerContext {
         logger: Logger,
         repositories: HashMap<String, BlobRepo>,
         server: ServerUris,
+        always_wait_for_upstream: bool,
     ) -> Result<Self, Error> {
         // TODO: Configure threads?
         let connector = HttpsConnector::new(4)
@@ -66,6 +68,7 @@ impl LfsServerContext {
             repositories,
             server: Arc::new(server),
             client: Arc::new(client),
+            always_wait_for_upstream,
         };
 
         Ok(LfsServerContext {
@@ -84,6 +87,7 @@ impl LfsServerContext {
         match inner.repositories.get(&repository) {
             Some(repo) => {
                 let logger = inner.logger.new(o!("request_id" => request_id.to_string()));
+                let always_wait_for_upstream = inner.always_wait_for_upstream;
 
                 Ok(RepositoryRequestContext {
                     ctx: CoreContext::new_with_logger(self.fb, logger),
@@ -93,6 +97,7 @@ impl LfsServerContext {
                         server: inner.server.clone(),
                     },
                     client: inner.client.clone(),
+                    always_wait_for_upstream,
                 })
             }
             None => Err(ErrorKind::RepositoryDoesNotExist(repository).into()),
@@ -105,6 +110,7 @@ pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: BlobRepo,
     pub uri_builder: UriBuilder,
+    always_wait_for_upstream: bool,
     client: Arc<HttpsHyperClient>,
 }
 
@@ -124,6 +130,10 @@ impl RepositoryRequestContext {
 
     pub fn logger(&self) -> &Logger {
         self.ctx.logger()
+    }
+
+    pub fn always_wait_for_upstream(&self) -> bool {
+        self.always_wait_for_upstream
     }
 
     pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Body, Error>> {
@@ -235,7 +245,9 @@ impl UriBuilder {
 }
 
 fn parse_and_check_uri(src: &str) -> Result<BaseUri, Error> {
-    let uri = src.parse::<Uri>().map_err(Error::from)?;
+    let uri = src
+        .parse::<Uri>()
+        .chain_err(ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
 
     let Parts {
         scheme,

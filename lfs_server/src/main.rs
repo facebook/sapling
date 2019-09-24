@@ -60,6 +60,7 @@ const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
+const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -119,6 +120,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .long(ARG_SCUBA_DATASET)
             .takes_value(true)
             .help("The name of the scuba dataset to log to"),
+    )
+    .arg(
+        Arg::with_name(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
+            .long(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
+            .takes_value(false)
+            .help("Whether to always wait for an upstream response (primarily useful in testing)"),
     );
 
     let app = args::add_fb303_args(app);
@@ -185,7 +192,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .into_iter()
         .collect();
 
-    let router = build_router(LfsServerContext::new(fb, logger.clone(), repos, server)?);
+    let ctx = LfsServerContext::new(
+        fb,
+        logger.clone(),
+        repos,
+        server,
+        matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
+    )?;
+
+    let router = build_router(ctx);
 
     let root = MononokeLfsHandler::builder()
         .add(RequestContextMiddleware::new())

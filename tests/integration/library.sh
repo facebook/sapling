@@ -564,7 +564,7 @@ function bonsai_verify {
 }
 
 function lfs_import {
-  "$MONONOKE_LFS_IMPORT" --repo-id $REPOID \
+  "$MONONOKE_LFS_IMPORT" --repo-id "$REPOID" \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
@@ -649,6 +649,9 @@ function lfs_server {
         --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds"
       )
       shift
+    elif [[ "$1" = "--always-wait-for-upstream" ]]; then
+      opts=("${opts[@]}" "$1")
+      shift
     elif [[ "$1" = "--log" ]]; then
       shift
       log="$1"
@@ -666,6 +669,7 @@ function lfs_server {
 
   for _ in $(seq 1 200); do
     if "$poll" "$uri" >/dev/null 2>&1; then
+      truncate -s 0 "$log"
       return 0
     fi
 

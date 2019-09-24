@@ -343,7 +343,13 @@ async fn batch_download(
         internal_objects = internal => {
             debug!(ctx.logger(), "batch: internal ready");
             let internal_objects = internal_objects?;
-            let objects = batch_download_internal_only_response_objects(&batch.objects, &internal_objects);
+
+            let objects = if ctx.always_wait_for_upstream() {
+                None
+            } else {
+                batch_download_internal_only_response_objects(&batch.objects, &internal_objects)
+            };
+
             if let Some(objects) = objects {
                 // We were able to return with just internal, don't wait for upstream.
                 debug!(ctx.logger(), "batch: skip upstream");
