@@ -59,6 +59,9 @@ from . import schemes
 from .convert import hg as converthg
 
 
+cmdtable = {}
+command = registrar.command(cmdtable)
+
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -2042,6 +2045,19 @@ def precachedistance(repo):
 
     finally:
         wlock.release()
+
+
+@command("debugremotebookmark")
+def debugremotebookmark(ui, repo, name, rev):
+    """Change a remote bookmark under the 'debugremote' namespace."""
+    data = {}  # {'remote': {'master': '<commit hash>'}}
+    for hexnode, _nametype, remote, rname in readremotenames(repo):
+        data.setdefault(remote, {})[rname] = hexnode
+
+    hexnode = scmutil.revsingle(repo, rev).hex()
+    data.setdefault("debugremote", {})[name] = hexnode
+
+    saveremotenames(repo, data)
 
 
 #########
