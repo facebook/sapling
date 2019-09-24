@@ -62,6 +62,7 @@ from edenscm.mercurial.i18n import _
 try:
     import gdbm
 
+    gdbm.open
     hasgdbm = True
 except ImportError:
     hasgdbm = False
@@ -232,7 +233,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
         db, error = opendbm(repo, "c")
         if db is None:
             # Database locked, can't record these amend-copies.
-            ui.log("copytrace", "Failed to open amendcopytrace db: %s" % e)
+            ui.log("copytrace", "Failed to open amendcopytrace db: %s" % error)
             return node
 
         # Merge in any existing amend copies from any previous amends.
