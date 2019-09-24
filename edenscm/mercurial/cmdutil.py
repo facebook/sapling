@@ -2837,7 +2837,7 @@ def _logrevs(repo, opts):
     elif follow:
         revs = repo.revs("reverse(:.)")
     else:
-        revs = smartset.spanset(repo)
+        revs = repo.revs("all()")
         revs.reverse()
     return revs
 
