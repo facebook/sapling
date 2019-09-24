@@ -128,6 +128,7 @@ Show debug commands if there are no other candidates
   debugpushkey
   debugpvec
   debugpython
+  debugreadauthforuri
   debugrebuilddirstate
   debugrebuildfncache
   debugrename
@@ -335,6 +336,7 @@ Show all commands + options
   debugpushkey: 
   debugpvec: 
   debugpython: 
+  debugreadauthforuri: user
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugrename: rev

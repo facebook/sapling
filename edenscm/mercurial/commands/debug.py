@@ -42,6 +42,7 @@ from .. import (
     formatter,
     graphmod,
     hg,
+    httpconnection,
     json,
     localrepo,
     lock as lockmod,
@@ -3408,3 +3409,18 @@ def debugtreestate(ui, repo, cmd="status", **opts):
             )
     else:
         raise error.Abort("unrecognised command: %s" % cmd)
+
+
+@command(
+    "debugreadauthforuri",
+    [("u", "user", "", _("Use a given user"), _("USER"))],
+    _("uri"),
+)
+def debugreadauthforuri(ui, _repo, uri, user=None):
+    auth = httpconnection.readauthforuri(ui, uri, user)
+    if auth is not None:
+        auth, items = auth
+        for k, v in sorted(items.iteritems()):
+            ui.write(("auth.%s.%s=%s\n") % (auth, k, v))
+    else:
+        ui.warn(_("no match found\n"))

@@ -1021,6 +1021,8 @@ Test list of internal help commands
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
    debugpython   run python interpreter
+   debugreadauthforuri
+                 (no help text available)
    debugrebuilddirstate
                  rebuild the dirstate as it would look like for the given
                  revision

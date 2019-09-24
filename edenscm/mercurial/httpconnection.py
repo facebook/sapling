@@ -76,12 +76,27 @@ def readauthforuri(ui, uri, user):
             val = util.expandpath(val)
         gdict[setting] = val
 
+    filtered = {}
+    for group, auth in sorted(groups.iteritems()):
+        ok = True
+        for key in ("cert", "key"):
+            val = auth.get(key)
+            if val is not None and not os.path.exists(val):
+                ui.warn(
+                    _("ignoring [auth] key '%s': %s does not exist at %s\n")
+                    % (group, key, val)
+                )
+                ok = False
+        if ok:
+            filtered[group] = auth
+
     # Find the best match
     scheme, hostpath = uri.split("://", 1)
     bestuser = None
     bestlen = 0
+    bestpriority = 0
     bestauth = None
-    for group, auth in groups.iteritems():
+    for group, auth in filtered.iteritems():
         if user and user != auth.get("username", user):
             # If a username was set in the URI, the entry username
             # must either match it or be unset
@@ -94,15 +109,27 @@ def readauthforuri(ui, uri, user):
             schemes, prefix = [p[0]], p[1]
         else:
             schemes = (auth.get("schemes") or "https").split()
+        priority = auth.get("priority", 0)
         if (
             (prefix == "*" or hostpath.startswith(prefix))
             and (
+                # Longer prefix wins.
                 len(prefix) > bestlen
-                or (len(prefix) == bestlen and not bestuser and "username" in auth)
+                # If the prefixes are the same, highest priority wins.
+                or (len(prefix) == bestlen and priority > bestpriority)
+                # If the prefixes and priorities are the same, entry with a user
+                # wins.
+                or (
+                    len(prefix) == bestlen
+                    and priority == bestpriority
+                    and not bestuser
+                    and "username" in auth
+                )
             )
             and scheme in schemes
         ):
             bestlen = len(prefix)
+            bestpriority = priority
             bestauth = group, auth
             bestuser = auth.get("username")
             if user and not bestuser:
