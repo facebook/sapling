@@ -340,24 +340,27 @@ impl Tree {
                 }
                 Ok(executor)
             }
-            fn active_parent_tree_nodes(
-                &mut self,
-                active_parents: &[usize],
-            ) -> Fallible<Vec<Node>> {
+            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Fallible<Vec<Node>> {
                 let mut parent_nodes = Vec::with_capacity(active_parents.len());
                 for id in active_parents {
-                    let cursor = &mut self.parent_trees[*id];
+                    let cursor = &self.parent_trees[*id];
                     let node = match cursor.link() {
                         Leaf(_) | Ephemeral(_) => unreachable!(),
                         Durable(entry) => entry.node,
                     };
                     parent_nodes.push(node);
+                }
+                Ok(parent_nodes)
+            }
+            fn advance_parents(&mut self, active_parents: &[usize]) -> Fallible<()> {
+                for id in active_parents {
+                    let cursor = &mut self.parent_trees[*id];
                     match cursor.step() {
                         Step::Success | Step::End => (),
                         Step::Err(err) => return Err(err),
                     }
                 }
-                Ok(parent_nodes)
+                Ok(())
             }
             fn parent_trees_for_subdirectory(
                 &mut self,
@@ -391,16 +394,17 @@ impl Tree {
                 active_parents: Vec<usize>,
             ) -> Fallible<(Node, store::Flag)> {
                 let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
+                if let Durable(entry) = link {
+                    if parent_tree_nodes.contains(&entry.node) {
+                        return Ok((entry.node, store::Flag::Directory));
+                    }
+                }
+                self.advance_parents(&active_parents)?;
                 if let Leaf(file_metadata) = link {
                     return Ok((
                         file_metadata.node,
                         store::Flag::File(file_metadata.file_type.clone()),
                     ));
-                }
-                if let Durable(entry) = link {
-                    if parent_tree_nodes.contains(&entry.node) {
-                        return Ok((entry.node, store::Flag::Directory));
-                    }
                 }
                 // TODO: This code is also used on durable nodes for the purpose of generating
                 // a list of entries to insert in the local store. For those cases we don't
