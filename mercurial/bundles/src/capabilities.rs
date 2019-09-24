@@ -9,7 +9,8 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
+use mercurial_types::utils::percent_encode;
 use percent_encoding::percent_decode;
 use tokio_io::codec::Decoder;
 
@@ -18,6 +19,12 @@ use crate::errors::*;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Capabilities {
     caps: HashMap<String, Vec<String>>,
+}
+
+impl Capabilities {
+    pub fn new(caps: HashMap<String, Vec<String>>) -> Self {
+        Self { caps }
+    }
 }
 
 /// This is a tokio_io Decoder for capabilities used f.e. in "replycaps" part of bundle2
@@ -66,5 +73,40 @@ impl Decoder for CapabilitiesUnpacker {
         buf.clear(); // all buf was consumed
 
         Ok(Some(Capabilities { caps }))
+    }
+}
+
+pub fn encode_capabilities(caps: Capabilities) -> Bytes {
+    let mut res = vec![];
+    for (key, values) in caps.caps {
+        let key = percent_encode(&key);
+        let values = itertools::join(values.into_iter().map(|v| percent_encode(&v)), ",");
+        res.push(format!("{}={}", key, values));
+    }
+    Bytes::from(itertools::join(res, "\n").as_str())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use maplit::hashmap;
+
+    #[test]
+    fn caps_roundtrip() {
+        let caps = hashmap! {
+            "key1".to_string() => vec!["value11".to_string(), "value12".to_string()],
+            "key_empty".to_string() => vec![],
+            "key2".to_string() => vec!["value22".to_string()],
+            "weirdkey,=,=".to_string() => vec!["weirdvalue,==,".to_string(), "value".to_string()],
+        };
+
+        let encoded = encode_capabilities(Capabilities::new(caps.clone()));
+        let mut unpacker = CapabilitiesUnpacker;
+
+        let decoded = unpacker
+            .decode_eof(&mut BytesMut::from(encoded))
+            .unwrap()
+            .unwrap();
+        assert_eq!(decoded.caps, caps);
     }
 }

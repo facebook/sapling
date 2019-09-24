@@ -8,7 +8,7 @@
 
 pub mod bundle2;
 pub mod bundle2_encode;
-mod capabilities;
+pub mod capabilities;
 pub mod changegroup;
 mod chunk;
 mod delta;

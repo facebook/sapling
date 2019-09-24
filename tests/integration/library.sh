@@ -75,13 +75,18 @@ function mononoke {
 }
 
 function mononoke_hg_sync {
+  HG_REPO="$1"
+  shift
+  START_ID="$1"
+  shift
+
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
-     ssh://user@dummy/"$1" sync-once --start-id "$2"
+     ssh://user@dummy/"$HG_REPO" "$@" sync-once --start-id "$START_ID"
 }
 
 function megarepo_tool {

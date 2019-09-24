@@ -70,6 +70,7 @@ pub mod utils;
 pub use self::manifest::{HgEntry, HgManifest, Type};
 pub use blob::HgBlob;
 pub use blobnode::{calculate_hg_node_id, calculate_hg_node_id_stream, HgBlobNode, HgParents};
+pub use blobs::fetch_raw_revlog_metadata;
 pub use changeset::Changeset;
 pub use delta::Delta;
 pub use envelope::{

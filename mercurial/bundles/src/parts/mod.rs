@@ -6,6 +6,7 @@
 
 use super::changegroup::packer::CgPacker;
 use super::changegroup::{CgDeltaChunk, Part, Section};
+use super::chunk::Chunk;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
 use super::obsmarkers::MetadataEntry;
 use super::wirepack;
@@ -22,7 +23,7 @@ use futures::{Future, Stream};
 use futures_ext::BoxFuture;
 use futures_stats::Timed;
 use mercurial_types::{
-    Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH,
+    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::DateTime;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -88,7 +89,55 @@ where
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam("version", "02")?;
 
-    let changelogentries = changelogentries.map(|(node, blobnode)| {
+    let changelogentries = convert_changeset_stream(changelogentries)
+        .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
+        // One more SectionEnd entry is necessary because hg client excepts filelog section
+        // even if it's empty. Add a fake SectionEnd part (the choice of
+        // Manifest is just for convenience).
+        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
+        .chain(once(Ok(Part::End)));
+
+    let cgdata = CgPacker::new(changelogentries);
+    builder.set_data_generated(cgdata);
+
+    Ok(builder)
+}
+
+pub fn pushrebase_changegroup_part<CS, FS>(
+    changelogentries: CS,
+    filenodeentries: FS,
+    onto_bookmark: impl AsRef<str>,
+) -> Result<PartEncodeBuilder>
+where
+    CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
+    FS: Stream<Item = (MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error = Error>
+        + Send
+        + 'static,
+{
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xRebase)?;
+    builder.add_mparam("onto", onto_bookmark.as_ref())?;
+    builder.add_aparam("cgversion", "02")?;
+
+    let changelogentries = convert_changeset_stream(changelogentries)
+        .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
+        // One more SectionEnd entry is necessary because hg client excepts filelog section
+        // even if it's empty. Add a fake SectionEnd part (the choice of
+        // Manifest is just for convenience).
+        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
+        .chain(convert_file_stream(filenodeentries))
+        .chain(once(Ok(Part::End)));
+
+    let cgdata = CgPacker::new(changelogentries);
+    builder.set_data_generated(cgdata);
+
+    Ok(builder)
+}
+
+fn convert_changeset_stream<S>(changelogentries: S) -> impl Stream<Item = Part, Error = Error>
+where
+    S: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
+{
+    changelogentries.map(|(node, blobnode)| {
         let parents = blobnode.parents().get_nodes();
         let p1 = parents.0.unwrap_or(NULL_HASH);
         let p2 = parents.1.unwrap_or(NULL_HASH);
@@ -108,18 +157,62 @@ where
             flags: None,
         };
         Part::CgChunk(Section::Changeset, deltachunk)
-    });
+    })
+}
 
-    let changelogentries = changelogentries
-        .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
-        // One more SectionEnd entry is necessary because hg client excepts filelog section
-        // even if it's empty. Add a fake SectionEnd part (the choice of
-        // Manifest is just for convenience).
-        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
-        .chain(once(Ok(Part::End)));
+fn convert_file_stream<FS>(filenodeentries: FS) -> impl Stream<Item = Part, Error = Error>
+where
+    FS: Stream<Item = (MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error = Error>
+        + Send
+        + 'static,
+{
+    filenodeentries
+        .map(|(path, nodes)| {
+            let mut items = vec![];
+            for (node, hg_cs_id, blobnode) in nodes {
+                let parents = blobnode.parents().get_nodes();
+                let p1 = parents.0.unwrap_or(NULL_HASH);
+                let p2 = parents.1.unwrap_or(NULL_HASH);
+                let base = NULL_HASH;
+                // Linknode is the same as node
+                let linknode = hg_cs_id.into_nodehash();
+                let text = blobnode.as_blob().as_inner().clone();
+                let delta = Delta::new_fulltext(text.to_vec());
 
-    let cgdata = CgPacker::new(changelogentries);
-    builder.set_data_generated(cgdata);
+                let deltachunk = CgDeltaChunk {
+                    node: node.into_nodehash(),
+                    p1,
+                    p2,
+                    base,
+                    linknode,
+                    delta,
+                    // TODO(stash) - need flags for lfs
+                    flags: None,
+                };
+                items.push(Part::CgChunk(Section::Filelog(path.clone()), deltachunk));
+            }
+
+            items.push(Part::SectionEnd(Section::Filelog(path)));
+            iter_ok(items)
+        })
+        .flatten()
+}
+
+pub fn replycaps_part(caps: Bytes) -> Result<PartEncodeBuilder> {
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Replycaps)?;
+    builder.set_data_fixed(Chunk::new(caps)?);
+
+    Ok(builder)
+}
+
+pub fn common_heads_part(heads: Vec<HgChangesetId>) -> Result<PartEncodeBuilder> {
+    let mut w = Vec::new();
+    for h in heads {
+        w.extend(h.as_bytes());
+    }
+
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xCommonHeads)?;
+    builder.set_data_fixed(Chunk::new(w)?);
 
     Ok(builder)
 }
@@ -137,7 +230,21 @@ pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
 {
-    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xTreegroup2)?;
+    treepack_part_impl(entries, PartHeaderType::B2xTreegroup2)
+}
+
+pub fn pushrebase_treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
+where
+    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
+{
+    treepack_part_impl(entries, PartHeaderType::B2xRebasePack)
+}
+
+fn treepack_part_impl<S>(entries: S, header_type: PartHeaderType) -> Result<PartEncodeBuilder>
+where
+    S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
+{
+    let mut builder = PartEncodeBuilder::mandatory(header_type)?;
     builder.add_mparam("version", "1")?;
     builder.add_mparam("cache", "True")?;
     builder.add_mparam("category", "manifests")?;
@@ -235,6 +342,16 @@ pub fn replychangegroup_part(
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::ReplyChangegroup)?;
     builder.add_mparam("return", format!("{}", res))?;
     builder.add_mparam("in-reply-to", format!("{}", in_reply_to))?;
+
+    Ok(builder)
+}
+
+pub fn bookmark_pushkey_part(key: String, old: String, new: String) -> Result<PartEncodeBuilder> {
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Pushkey)?;
+    builder.add_mparam("namespace", "bookmarks")?;
+    builder.add_mparam("key", key)?;
+    builder.add_mparam("old", old)?;
+    builder.add_mparam("new", new)?;
 
     Ok(builder)
 }
