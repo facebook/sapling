@@ -17,10 +17,10 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use stats::{define_stats, Timeseries};
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryInto,
     sync::Arc,
     time::Duration,
 };
-use try_from::TryInto;
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries

@@ -29,9 +29,9 @@ pub use sql_ext::SqlConstructors;
 use stats::{define_stats, Timeseries};
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryFrom,
     fmt,
 };
-use try_from::TryFrom;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
@@ -58,9 +58,9 @@ impl fmt::Display for Phase {
 }
 
 impl TryFrom<iobuf::IOBuf> for Phase {
-    type Err = ErrorKind;
+    type Error = ErrorKind;
 
-    fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Err> {
+    fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Error> {
         let v: Vec<u8> = buf.into();
         match std::str::from_utf8(&v) {
             Ok("Draft") => Ok(Phase::Draft),
