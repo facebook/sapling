@@ -100,17 +100,12 @@ not public() should not show C
   |
   ~
 A:: should not show C
-(BUG: 'C' should be hidden)
 
   $ hg log -Gr "$A::" -T '{desc}'
   o  D
   |
   @  C2
   |
-  | x  D
-  | |
-  | x  C
-  |/
   | o  B
   |/
   o  A

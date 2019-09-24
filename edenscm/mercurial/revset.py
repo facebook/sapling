@@ -880,7 +880,13 @@ def _descendants(repo, subset, x, followfirst=False, startdepth=None, stopdepth=
     roots = getset(repo, fullreposet(repo), x)
     if not roots:
         return baseset()
-    s = dagop.revdescendants(repo, roots, followfirst, startdepth, stopdepth)
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        if startdepth is not None or stopdepth is not None:
+            raise error.Abort(_("depth is not supported in the current setup"))
+        # Translate to `dagrange` query roots::head().
+        s = dagop.reachableroots(repo, roots, repo.revs("head()"), includepath=True)
+    else:
+        s = dagop.revdescendants(repo, roots, followfirst, startdepth, stopdepth)
     return subset & s
 
 
