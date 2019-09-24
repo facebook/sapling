@@ -230,11 +230,10 @@ Changelog missing entry
   3 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: 00changelog.i@c5ddb05ab828: no node!
+  [255]
   $ hg verify -q -r 1
-  warning: ignoring unknown working parent c5ddb05ab828!
-  abort: unknown revision '1'!
-  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
+  abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store
 
@@ -283,11 +282,10 @@ Changelog and manifest log missing entry
   2 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: 00changelog.i@c5ddb05ab828: no node!
+  [255]
   $ hg verify -q -r 1
-  warning: ignoring unknown working parent c5ddb05ab828!
-  abort: unknown revision '1'!
-  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
+  abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store
 
@@ -302,11 +300,10 @@ Changelog and filelog missing entry
   3 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
-  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: 00changelog.i@c5ddb05ab828: no node!
+  [255]
   $ hg verify -q -r 1
-  warning: ignoring unknown working parent c5ddb05ab828!
-  abort: unknown revision '1'!
-  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
+  abort: 00changelog.i@c5ddb05ab828: no node!
   [255]
   $ cp -R .hg/store-full/. .hg/store
 

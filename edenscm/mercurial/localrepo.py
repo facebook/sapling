@@ -837,16 +837,8 @@ class localrepository(object):
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
 
     def _dirstatevalidate(self, node):
-        try:
-            self.changelog.rev(node)
-            return node
-        except errormod.LookupError:
-            if not self._dirstatevalidatewarned:
-                self._dirstatevalidatewarned = True
-                self.ui.warn(
-                    _("warning: ignoring unknown" " working parent %s!\n") % short(node)
-                )
-            return nullid
+        self.changelog.rev(node)
+        return node
 
     def __getitem__(self, changeid):
         if changeid is None:
