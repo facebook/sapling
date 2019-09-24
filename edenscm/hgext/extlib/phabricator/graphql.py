@@ -200,6 +200,9 @@ class Client(object):
                 differential_diffs: phabricator_versions {
                   count
                 }
+                signal_summary {
+                  signals_status
+                }
               }
             }
           }
@@ -234,6 +237,17 @@ class Client(object):
                 info["created"] = node["created_time"]
                 info["updated"] = node["updated_time"]
                 info["is_landing"] = node["is_landing"]
+
+                info["signal_status"] = None
+                if (
+                    "signal_summary" in node
+                    and "signals_status" in node["signal_summary"]
+                ):
+                    info["signal_status"] = (
+                        node["signal_summary"]["signals_status"]
+                        .title()
+                        .replace("_", " ")
+                    )
 
                 active_diff = None
                 if (

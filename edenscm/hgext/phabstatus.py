@@ -165,6 +165,20 @@ def showphabstatus(repo, ctx, templ, **args):
         return "Error"
 
 
+@templatekeyword("phabsignalstatus")
+def showphabsignalstatus(repo, ctx, templ, **args):
+    """String. Return the diff Signal status for a given hg rev
+    """
+    diffnum = getdiffnum(repo, ctx)
+    if diffnum is None:
+        return None
+    populateresponseforphab(repo, diffnum)
+
+    result = getdiffstatus(repo, diffnum)[0]
+    if isinstance(result, dict):
+        return result.get("signal_status")
+
+
 """
 in order to determine whether the local changeset is in sync with the
 remote one we compare the hash of the current changeset with the one we
