@@ -1222,6 +1222,9 @@ def followlines(repo, subset, x):
 def getall(repo, subset, x):
     """All changesets, the same as ``0:tip``.
     """
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        revs = repo.revs("::head()")
+        return subset & revs
     # i18n: "all" is a keyword
     getargs(x, 0, 0, _("all takes no arguments"))
     return subset & spanset(repo)  # drop "null" if any

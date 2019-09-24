@@ -68,17 +68,12 @@ head() should include one 'D' commit, and one 'B'
 
 all() should not show C
 Commits under ::master should be public
-(BUG: 'C' should be hidden)
 
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  D draft
   |
   @  C2 draft
   |
-  | x  D secret
-  | |
-  | x  C secret
-  |/
   | o  B public remote/master
   |/
   o  A public remote/stable
