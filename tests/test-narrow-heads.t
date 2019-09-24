@@ -57,67 +57,50 @@ Make some client-side commits based on A
 Revsets after the local edits
 
 head() should include one 'D' commit, and one 'B'
-(BUG: 'B' should not be 'x')
 
   $ hg log -Gr 'head()' -T '{desc}'
   o  D
   |
   ~
-  x  B
+  o  B
   |
   ~
 
 all() should not show C
 Commits under ::master should be public
-(BUG: 'B' should be public! 'C' should be hidden)
+(BUG: 'C' should be hidden)
 
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  D draft
   |
   @  C2 draft
   |
-  | x  D draft
+  | x  D secret
   | |
-  | x  C draft
+  | x  C secret
   |/
-  | x  B draft remote/master
+  | o  B public remote/master
   |/
-  o  A draft remote/stable
+  o  A public remote/stable
   
 draft() should not show C
-(BUG: neither 'B' nor 'C' should be shown)
 
   $ hg log -Gr 'draft()' -T '{desc}'
   o  D
   |
   @  C2
   |
-  | x  D
-  | |
-  | x  C
-  |/
-  | x  B
-  |/
-  o  A
-  
+  ~
 not public() should not show C
-(BUG: neither 'B' nor 'C' should be shown)
 
   $ hg log -Gr 'not public()' -T '{desc}'
   o  D
   |
   @  C2
   |
-  | x  D
-  | |
-  | x  C
-  |/
-  | x  B
-  |/
-  o  A
-  
+  ~
 A:: should not show C
-(BUG: 'B' should be public! 'C' should be hidden)
+(BUG: 'C' should be hidden)
 
   $ hg log -Gr "$A::" -T '{desc}'
   o  D
@@ -128,12 +111,12 @@ A:: should not show C
   | |
   | x  C
   |/
-  | x  B
+  | o  B
   |/
   o  A
   
 children(A) should not show C
-(BUG: 'B' should be public! 'C' should be hidden)
+(BUG: 'C' should be hidden)
 
   $ hg log -Gr "children($A)" -T '{desc}'
   @  C2
@@ -142,7 +125,7 @@ children(A) should not show C
   x  C
   |
   ~
-  x  B
+  o  B
   |
   ~
 

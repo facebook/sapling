@@ -149,7 +149,10 @@ def findcommonoutgoing(
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing
-    mayexclude = repo._phasecache.phaseroots[phases.secret] or repo.obsstore
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        mayexclude = None
+    else:
+        mayexclude = repo._phasecache.phaseroots[phases.secret] or repo.obsstore
     if not mayexclude:
         og.missingheads = onlyheads or repo.heads()
     elif onlyheads is None:

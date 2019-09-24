@@ -103,6 +103,8 @@ from __future__ import absolute_import
 import errno
 import struct
 
+import bindings
+
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, short
@@ -199,17 +201,36 @@ def _trackphasechange(data, rev, old, new):
 
 class phasecache(object):
     def __init__(self, repo, phasedefaults, _load=True):
-        if _load:
-            # Cheap trick to allow shallow-copy without copy module
-            self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-            self._loadedrevslen = 0
-            self._phasesets = None
-            self.filterunknown(repo)
-            self.opener = repo.svfs
+        self._headbased = repo and repo.ui.configbool("experimental", "narrow-heads")
+        if self._headbased:
+            self._draftrevs = None
+            self._publicrevs = None
+            if _load:
+                self.loadphaserevs(repo)  # ensure phase's sets are loaded
+        else:
+            if _load:
+                # Cheap trick to allow shallow-copy without copy module
+                self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
+                self._loadedrevslen = 0
+                self._phasesets = None
+                self.filterunknown(repo)
+                self.opener = repo.svfs
 
     def getrevset(self, repo, phases, subset=None):
         """return a smartset for the given phases"""
         self.loadphaserevs(repo)  # ensure phase's sets are loaded
+        if self._headbased:
+            revs = bindings.dag.spans([])
+            if public in phases:
+                revs += self._publicrevs
+            if draft in phases:
+                revs += self._draftrevs
+            # XXX: 'secret' is treated as an ampty set.
+            revs = smartset.spansset(revs)
+            if subset is not None:
+                revs = subset & revs
+            return revs
+
         phases = set(phases)
         if public not in phases:
             # fast path: _phasesets contains the interesting sets,
@@ -241,6 +262,8 @@ class phasecache(object):
             return subset.filter(lambda r: r not in revs)
 
     def copy(self):
+        if self._headbased:
+            return self
         # Shallow copy meant to ensure isolation in
         # advance/retractboundary(), nothing more.
         ph = self.__class__(None, None, _load=False)
@@ -253,10 +276,13 @@ class phasecache(object):
 
     def replace(self, phcache):
         """replace all values in 'self' with content of phcache"""
+        if self._headbased:
+            return
         for a in ("phaseroots", "dirty", "opener", "_loadedrevslen", "_phasesets"):
             setattr(self, a, getattr(phcache, a))
 
     def _getphaserevsnative(self, repo):
+        assert not self._headbased
         repo = repo.unfiltered()
         nativeroots = []
         for phase in trackedphases:
@@ -264,6 +290,7 @@ class phasecache(object):
         return repo.changelog.computephases(nativeroots)
 
     def _computephaserevspure(self, repo):
+        assert not self._headbased
         repo = repo.unfiltered()
         cl = repo.changelog
         self._phasesets = [set() for phase in allphases]
@@ -284,6 +311,20 @@ class phasecache(object):
 
     def loadphaserevs(self, repo):
         """ensure phase information is loaded in the object"""
+        if self._headbased:
+            if self._draftrevs is None:
+                cl = repo.changelog
+
+                def torevs(nodes):
+                    return list(repo.revs("%ln", nodes))
+
+                remotepublicrevs, remotedraftrevs = map(torevs, cl._remotenodes())
+                localdrafrevs = torevs(cl._visibleheads.heads)
+                self._publicrevs, self._draftrevs = cl.index2.phasesets(
+                    remotepublicrevs, remotedraftrevs + localdrafrevs
+                )
+            return
+
         if self._phasesets is None:
             try:
                 res = self._getphaserevsnative(repo)
@@ -292,6 +333,10 @@ class phasecache(object):
                 self._computephaserevspure(repo)
 
     def invalidate(self):
+        if self._headbased:
+            self._draftrevs = None
+            self._publicrevs = None
+            return
         self._loadedrevslen = 0
         self._phasesets = None
 
@@ -305,6 +350,14 @@ class phasecache(object):
             return public
         if rev < nullrev:
             raise ValueError(_("cannot lookup negative revision"))
+        if self._headbased:
+            if rev in self._draftrevs:
+                return draft
+            if rev in self._publicrevs:
+                return public
+            else:
+                # 'secret' is repurposed as 'normally invisible' commits.
+                return secret
         if rev >= self._loadedrevslen:
             self.invalidate()
             self.loadphaserevs(repo)
@@ -314,6 +367,9 @@ class phasecache(object):
         return public
 
     def write(self):
+        if self._headbased:
+            # head-based phases are tracked by visible heads, and remotenames
+            return
         if not self.dirty:
             return
         f = self.opener("phaseroots", "w", atomictemp=True, checkambig=True)
@@ -323,12 +379,14 @@ class phasecache(object):
             f.close()
 
     def _write(self, fp):
+        assert not self._headbased
         for phase, roots in enumerate(self.phaseroots):
             for h in roots:
                 fp.write("%i %s\n" % (phase, hex(h)))
         self.dirty = False
 
     def _updateroots(self, phase, newroots, tr):
+        assert not self._headbased
         self.phaseroots[phase] = newroots
         self.invalidate()
         self.dirty = True
@@ -337,6 +395,10 @@ class phasecache(object):
         tr.hookargs["phases_moved"] = "1"
 
     def registernew(self, repo, tr, targetphase, nodes):
+        if self._headbased:
+            # head-based phases do not need to track phase of new commits
+            # explcitly. visible heads and remotenames track them implicitly.
+            return
         repo = repo.unfiltered()
         self._retractboundary(repo, tr, targetphase, nodes)
         if tr is not None and "phases" in tr.changes:
@@ -354,6 +416,9 @@ class phasecache(object):
 
         Nodes with a phase lower than 'targetphase' are not affected.
         """
+        if self._headbased:
+            # head-based phases do not support editing phases directly
+            return
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
         if tr is None:
@@ -393,6 +458,9 @@ class phasecache(object):
         repo.invalidatevolatilesets()
 
     def retractboundary(self, repo, tr, targetphase, nodes):
+        if self._headbased:
+            # head-based phases do not support editing phases directly
+            return
         oldroots = self.phaseroots[: targetphase + 1]
         if tr is None:
             phasetracking = None
@@ -425,9 +493,9 @@ class phasecache(object):
         repo.invalidatevolatilesets()
 
     def _retractboundary(self, repo, tr, targetphase, nodes):
+        assert not self._headbased
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
-
         repo = repo.unfiltered()
         currentroots = self.phaseroots[targetphase]
         finalroots = oldroots = set(currentroots)
@@ -457,6 +525,8 @@ class phasecache(object):
 
         Nothing is lost as unknown nodes only hold data for their descendants.
         """
+        if self._headbased:
+            return
         filtered = False
         nodemap = repo.changelog.nodemap  # to filter unknown nodes
         for phase, nodes in enumerate(self.phaseroots):
@@ -686,6 +756,8 @@ def newcommitphase(ui):
 
 def hassecret(repo):
     """utility function that check if a repo have any secret changeset."""
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        return False
     return bool(repo._phasecache.phaseroots[2])
 
 
