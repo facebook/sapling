@@ -47,6 +47,28 @@ Push to Mononoke
 
   $ mkcommit pushcommit
   $ hgmn push -r . --to newbook --create -q
+  $ BOOK_LOC=$(hg log -r newbook -T '{node}')
+
+Force push
+  $ hg up -q 0
+  $ mkcommit forcepush
+  $ hgmn push -r . --to newbook --create -q
+
+Bookmark move
+  $ hgmn push -r "$BOOK_LOC" --to newbook --pushvar NON_FAST_FORWARD=true
+  pushing rev 1e43292ffbb3 to destination ssh://user@dummy/repo bookmark newbook
+  searching for changes
+  no changes found
+  updating bookmark newbook
+  [1]
+
+Delete a bookmark
+  $ hgmn push --delete newbook
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  no changes found
+  deleting remote bookmark newbook
+  [1]
 
 Sync it to another client
   $ cd $TESTTMP
@@ -56,25 +78,29 @@ Sync it to another client
   > EOF
 
 Sync a creation of a bookmark
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  running * 'hg -R repo-hg serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: * (glob)
+  $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [2] (glob)
+
+  $ cd $TESTTMP/repo-hg
+  $ hg log -r newbook -T '{desc}'
+  pushcommit (no-eol)
+  $ cd -
+  $TESTTMP
+
+Sync force push
+  $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [3] (glob)
+
+Sync bookmark move
+  $ mononoke_hg_sync repo-hg 3 --generate-bundles 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [4] (glob)
+
+Sync deletion of a bookmark
+  $ mononoke_hg_sync repo-hg 4 --generate-bundles 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [5] (glob)
+
+  $ cd $TESTTMP/repo-hg
+  $ hg log -r newbook
+  abort: unknown revision 'newbook'!
+  (if newbook is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
