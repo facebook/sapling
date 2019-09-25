@@ -4,7 +4,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    fs::remove_dir_all,
     io::{Cursor, Write},
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
@@ -27,6 +26,7 @@ use crate::{
     ancestors::{AncestorIterator, AncestorTraversal},
     error::KeyError,
     historystore::{Ancestors, HistoryStore, MutableHistoryStore},
+    indexedlogutil,
     localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
@@ -200,8 +200,11 @@ impl IndexedLogHistoryStore {
 
         let log = match open_options.clone().open(&path) {
             Ok(log) => log,
-            Err(_) => {
-                remove_dir_all(&path)?;
+            Err(err) => {
+                // XXX: This removes or renames path, which can break various
+                // "append-only" assumption made by indexedlog. Other processes
+                // might break during "sync()".
+                indexedlogutil::debug_backup_error(path.as_ref(), err)?;
                 open_options.open(&path)?
             }
         };
