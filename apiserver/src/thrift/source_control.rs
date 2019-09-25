@@ -14,8 +14,8 @@ use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke,
-    MononokeError, RepoContext,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileType, HgChangesetId,
+    Mononoke, MononokeError, PathEntry, RepoContext,
 };
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -52,6 +52,18 @@ impl ScubaInfoProvider for thrift::CommitSpecifier {
     }
     fn scuba_commit(&self) -> Option<String> {
         Some(self.id.to_string())
+    }
+}
+
+impl ScubaInfoProvider for thrift::CommitPathSpecifier {
+    fn scuba_reponame(&self) -> Option<String> {
+        self.commit.scuba_reponame()
+    }
+    fn scuba_commit(&self) -> Option<String> {
+        self.commit.scuba_commit()
+    }
+    fn scuba_path(&self) -> Option<String> {
+        Some(self.path.clone())
     }
 }
 
@@ -233,6 +245,16 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
 
 trait IntoResponse<T> {
     fn into_response(self) -> T;
+}
+
+impl IntoResponse<thrift::EntryType> for FileType {
+    fn into_response(self) -> thrift::EntryType {
+        match self {
+            FileType::Regular => thrift::EntryType::FILE,
+            FileType::Executable => thrift::EntryType::EXEC,
+            FileType::Symlink => thrift::EntryType::LINK,
+        }
+    }
 }
 
 mod errors {
@@ -460,5 +482,65 @@ impl SourceControlService for SourceControlServiceImpl {
             .ok_or_else(|| errors::commit_not_found(&other_changeset_specifier))?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset_id).await?;
         Ok(is_ancestor_of)
+    }
+
+    /// Returns information about the file or directory at a path in a commit.
+    async fn commit_path_info(
+        &self,
+        commit_path: thrift::CommitPathSpecifier,
+        _params: thrift::CommitPathInfoParams,
+    ) -> Result<thrift::CommitPathInfoResponse, service::CommitPathInfoExn> {
+        let ctx = self.create_ctx(Some(&commit_path));
+        let repo = self
+            .mononoke
+            .repo(ctx, &commit_path.commit.repo.name)?
+            .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
+        let changeset_specifier = ChangesetSpecifier::from_request(&commit_path.commit.id)?;
+        let changeset = repo
+            .changeset(changeset_specifier)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
+        let path = changeset.path(&commit_path.path)?;
+
+        let response = match path.entry().await? {
+            PathEntry::NotPresent => thrift::CommitPathInfoResponse {
+                exists: false,
+                type_: None,
+                info: None,
+            },
+            PathEntry::Tree(tree) => {
+                let summary = tree.summary().await?;
+                let tree_info = thrift::TreeInfo {
+                    id: tree.id().as_ref().to_vec(),
+                    simple_format_sha1: summary.simple_format_sha1.as_ref().to_vec(),
+                    simple_format_sha256: summary.simple_format_sha256.as_ref().to_vec(),
+                    child_files_count: summary.child_files_count as i64,
+                    child_files_total_size: summary.child_files_total_size as i64,
+                    child_dirs_count: summary.child_dirs_count as i64,
+                    descendant_files_count: summary.descendant_files_count as i64,
+                    descendant_files_total_size: summary.descendant_files_total_size as i64,
+                };
+                thrift::CommitPathInfoResponse {
+                    exists: true,
+                    type_: Some(thrift::EntryType::TREE),
+                    info: Some(thrift::EntryInfo::tree(tree_info)),
+                }
+            }
+            PathEntry::File(file, file_type) => {
+                let metadata = file.metadata().await?;
+                let file_info = thrift::FileInfo {
+                    id: metadata.content_id.as_ref().to_vec(),
+                    file_size: metadata.total_size as i64,
+                    content_sha1: metadata.sha1.as_ref().to_vec(),
+                    content_sha256: metadata.sha256.as_ref().to_vec(),
+                };
+                thrift::CommitPathInfoResponse {
+                    exists: true,
+                    type_: Some(file_type.into_response()),
+                    info: Some(thrift::EntryInfo::file(file_info)),
+                }
+            }
+        };
+        Ok(response)
     }
 }
