@@ -83,3 +83,4 @@ impl_into_thrift_error!(service::CommitIsAncestorOfExn);
 impl_into_thrift_error!(service::CommitPathInfoExn);
 impl_into_thrift_error!(service::TreeListExn);
 impl_into_thrift_error!(service::FileExistsExn);
+impl_into_thrift_error!(service::FileInfoExn);

@@ -14,8 +14,9 @@ use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, FileType,
-    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, TreeContext, TreeEntry, TreeId,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId,
+    FileMetadata, FileType, HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext,
+    TreeContext, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -542,6 +543,17 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
     }
 }
 
+impl IntoResponse<thrift::FileInfo> for FileMetadata {
+    fn into_response(self) -> thrift::FileInfo {
+        thrift::FileInfo {
+            id: self.content_id.as_ref().to_vec(),
+            file_size: self.total_size as i64,
+            content_sha1: self.sha1.as_ref().to_vec(),
+            content_sha256: self.sha256.as_ref().to_vec(),
+        }
+    }
+}
+
 mod errors {
     use super::{service, thrift};
     use mononoke_api::MononokeError;
@@ -584,6 +596,7 @@ mod errors {
     impl_into_thrift_error!(service::CommitPathInfoExn);
     impl_into_thrift_error!(service::TreeListExn);
     impl_into_thrift_error!(service::FileExistsExn);
+    impl_into_thrift_error!(service::FileInfoExn);
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
@@ -895,5 +908,18 @@ impl SourceControlService for SourceControlServiceImpl {
         let ctx = self.create_ctx(Some(&file));
         let (_repo, file) = self.repo_file(ctx, &file).await?;
         Ok(file.is_some())
+    }
+
+    /// Get file info.
+    async fn file_info(
+        &self,
+        file: thrift::FileSpecifier,
+        _params: thrift::FileInfoParams,
+    ) -> Result<thrift::FileInfo, service::FileInfoExn> {
+        let ctx = self.create_ctx(Some(&file));
+        match self.repo_file(ctx, &file).await? {
+            (_repo, Some(file)) => Ok(file.metadata().await?.into_response()),
+            (_repo, None) => Err(errors::file_not_found(file.description()).into()),
+        }
     }
 }
