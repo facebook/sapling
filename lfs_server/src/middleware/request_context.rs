@@ -6,19 +6,23 @@
 
 use std::fmt;
 
+use dns_lookup::lookup_addr;
+use failure::Error;
 use futures::{Future, IntoFuture};
-use gotham::state::State;
+use futures_ext::{asynchronize, FutureExt};
+use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
+use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::{
     self,
     sync::oneshot::{channel, Receiver, Sender},
 };
 
-use super::Middleware;
+use super::{ClientIdentity, Middleware};
 
-type PostRequestCallback = Box<dyn FnOnce(&Duration) + Sync + Send + 'static>;
+type PostRequestCallback = Box<dyn FnOnce(&Duration, &Option<String>) + Sync + Send + 'static>;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {
@@ -84,7 +88,7 @@ impl RequestContext {
 
     pub fn add_post_request<T>(&mut self, callback: T)
     where
-        T: FnOnce(&Duration) + Sync + Send + 'static,
+        T: FnOnce(&Duration, &Option<String>) + Sync + Send + 'static,
     {
         self.post_request_callbacks.push(Box::new(callback));
     }
@@ -96,7 +100,7 @@ impl RequestContext {
         sender
     }
 
-    fn dispatch_post_request(self) {
+    fn dispatch_post_request(self, client_address: Option<IpAddr>) {
         let Self {
             start_time,
             post_request_callbacks,
@@ -104,26 +108,50 @@ impl RequestContext {
             ..
         } = self;
 
-        let run_callbacks = move || {
-            let elapsed = start_time.elapsed();
+        let run_callbacks = move |elapsed, client_hostname| {
             for callback in post_request_callbacks.into_iter() {
-                callback(&elapsed)
+                callback(&elapsed, &client_hostname)
             }
         };
 
-        if let Some(checkpoint) = checkpoint {
+        // We get the client hostname in post request, because that might be a little slow.
+        let client_hostname = asynchronize(move || -> Result<_, Error> {
+            let hostname = client_address
+                .as_ref()
+                .map(lookup_addr)
+                .transpose()
+                .ok()
+                .flatten();
+
+            Ok(hostname)
+        })
+        .or_else(|_| -> Result<_, !> { Ok(None) });
+
+        let fut = if let Some(checkpoint) = checkpoint {
             // NOTE: We use then() here: if the receiver was dropped, we still want to run our
             // callbacks! In fact, right now, for reasons unknown but probably having to do with
             // content length our data streams never get polled to completion.
-            let fut = checkpoint.into_future().then(move |_| {
-                run_callbacks();
-                Ok(())
-            });
+            let request_complete = checkpoint
+                .into_future()
+                .then(move |_| -> Result<_, !> { Ok(start_time.elapsed()) });
 
-            tokio::spawn(fut);
+            (request_complete, client_hostname)
+                .into_future()
+                .map(move |(elapsed, client_hostname)| {
+                    run_callbacks(elapsed, client_hostname);
+                })
+                .left_future()
         } else {
-            run_callbacks();
-        }
+            let elapsed = start_time.elapsed();
+
+            client_hostname
+                .map(move |client_hostname| {
+                    run_callbacks(elapsed, client_hostname);
+                })
+                .right_future()
+        };
+
+        tokio::spawn(fut.discard());
     }
 }
 
@@ -142,8 +170,12 @@ impl Middleware for RequestContextMiddleware {
     }
 
     fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+        let client_address = ClientIdentity::try_borrow_from(&state)
+            .map(|client_identity| *client_identity.address())
+            .flatten();
+
         if let Some(ctx) = state.try_take::<RequestContext>() {
-            ctx.dispatch_post_request();
+            ctx.dispatch_post_request(client_address);
         }
     }
 }

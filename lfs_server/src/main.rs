@@ -5,8 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![recursion_limit = "256"]
-#![feature(async_await)]
-#![feature(async_closure)]
+#![feature(async_await, async_closure, option_flattening, never_type)]
 #![deny(warnings)]
 
 use clap::Arg;
@@ -33,8 +32,8 @@ use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
-    IdentityMiddleware, LogMiddleware, OdsMiddleware, RequestContextMiddleware, ScubaMiddleware,
-    TimerMiddleware,
+    ClientIdentityMiddleware, LogMiddleware, OdsMiddleware, RequestContextMiddleware,
+    ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
 };
 use crate::router::build_router;
 
@@ -203,9 +202,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let router = build_router(ctx);
 
     let root = MononokeLfsHandler::builder()
+        .add(ClientIdentityMiddleware::new())
         .add(RequestContextMiddleware::new())
         .add(LogMiddleware::new(logger.clone()))
-        .add(IdentityMiddleware::new())
+        .add(ServerIdentityMiddleware::new())
         .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())

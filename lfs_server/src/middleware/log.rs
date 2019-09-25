@@ -4,13 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use gotham::state::{client_addr, request_id, FromState, State};
+use gotham::state::{request_id, FromState, State};
 use hyper::{Body, Response};
 use hyper::{Method, StatusCode, Uri, Version};
-use slog::{info, Logger};
+use slog::{info, o, Logger};
 use time_ext::DurationExt;
 
-use super::{Middleware, RequestContext};
+use super::{ClientIdentity, Middleware, RequestContext};
 
 #[derive(Clone)]
 pub struct LogMiddleware {
@@ -23,44 +23,46 @@ impl LogMiddleware {
     }
 }
 
-fn log_request(logger: &Logger, state: &State, status: &StatusCode) -> Option<()> {
+fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option<()> {
     let uri = Uri::try_borrow_from(&state)?;
     if uri.path() == "/health_check" {
         return None;
     }
+    let uri = uri.to_string();
 
-    let ctx = state.try_borrow::<RequestContext>()?;
-    let headers_duration = ctx
-        .headers_duration
-        .map(|d| d.as_millis_unchecked())
-        .unwrap_or(0);
+    let method = Method::borrow_from(&state).clone();
+    let version = *Version::borrow_from(&state);
+    let request_id = request_id(state).to_string();
+    let address = ClientIdentity::try_borrow_from(&state)
+        .map(|client_identity| *client_identity.address())
+        .flatten()
+        .map(|addr| addr.to_string());
+
+    let ctx = state.try_borrow_mut::<RequestContext>()?;
     let response_size = ctx.response_size.unwrap_or(0);
 
-    let request_id = request_id(state);
-    let ip = client_addr(&state)?.ip();
+    let logger = logger.new(o!("request_id" => request_id));
 
-    let method = Method::borrow_from(&state);
-    let version = Version::borrow_from(&state);
-
-    // log out
-    info!(
-        logger,
-        "{} - \"{} {} {:?}\" {} {} - {}ms",
-        ip,
-        method,
-        uri,
-        version,
-        status,
-        response_size,
-        headers_duration;
-        "request_id" => request_id,
-    );
+    ctx.add_post_request(move |duration, client_hostname| {
+        info!(
+            &logger,
+            "{} {} \"{} {} {:?}\" {} {} - {}ms",
+            address.as_ref().map(String::as_ref).unwrap_or("-"),
+            client_hostname.as_ref().map(String::as_ref).unwrap_or("-"),
+            method,
+            uri,
+            version,
+            status.as_u16(),
+            response_size,
+            duration.as_millis_unchecked()
+        );
+    });
 
     None
 }
 
 impl Middleware for LogMiddleware {
     fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
-        log_request(&self.logger, &state, &response.status());
+        log_request(&self.logger, state, response.status());
     }
 }

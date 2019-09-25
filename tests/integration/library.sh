@@ -668,8 +668,7 @@ function lfs_server {
   RUST_LOG=gotham=info "$LFS_SERVER" "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
 
   for _ in $(seq 1 200); do
-    if "$poll" "$uri" >/dev/null 2>&1; then
-      truncate -s 0 "$log"
+    if "$poll" "${uri}/health_check" >/dev/null 2>&1; then
       return 0
     fi
 

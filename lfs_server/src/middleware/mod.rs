@@ -8,18 +8,20 @@ use gotham::state::State;
 use hyper::{Body, Response};
 use std::panic::RefUnwindSafe;
 
-mod identity;
+mod client_identity;
 mod log;
 mod ods;
 mod request_context;
 mod scuba;
+mod server_identity;
 mod timer;
 
-pub use self::identity::IdentityMiddleware;
+pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaMiddleware, ScubaMiddlewareState};
+pub use self::server_identity::ServerIdentityMiddleware;
 pub use self::timer::TimerMiddleware;
 
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {

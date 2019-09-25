@@ -11,16 +11,10 @@ use hyper::{
     Method, StatusCode, Uri,
 };
 use hyper::{Body, Response};
-use json_encoded::get_identities;
-use percent_encoding::percent_decode;
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{Middleware, RequestContext};
-
-const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
-const CLIENT_IP: &str = "tfb-orig-client-ip";
-const CLIENT_CORRELATOR: &str = "x-client-correlator";
+use super::{ClientIdentity, Middleware, RequestContext};
 
 #[derive(Clone)]
 pub struct ScubaMiddleware {
@@ -33,17 +27,20 @@ impl ScubaMiddleware {
     }
 }
 
-fn add_header<T: AsHeaderName>(
+fn add_header<'a, T: AsHeaderName>(
     scuba: &mut ScubaSampleBuilder,
-    headers: &HeaderMap,
+    headers: &'a HeaderMap,
     scuba_key: &str,
     header: T,
-) {
+) -> Option<&'a str> {
     if let Some(header_val) = headers.get(header) {
         if let Ok(header_val) = header_val.to_str() {
             scuba.add(scuba_key, header_val.to_string());
+            return Some(header_val);
         }
     }
+
+    None
 }
 
 fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
@@ -61,21 +58,20 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
 
     if let Some(headers) = HeaderMap::try_borrow_from(&state) {
         add_header(&mut scuba, headers, "http_host", header::HOST);
-        add_header(&mut scuba, headers, "client_ip", CLIENT_IP);
-        add_header(&mut scuba, headers, "client_correlator", CLIENT_CORRELATOR);
+    }
 
-        // NOTE: We decode the identity here, but that's only indicative since we don't
-        // verify the TLS peer's identity, so we don't know if we can trust this header.
-        if let Some(encoded_client_identity) = headers.get(ENCODED_CLIENT_IDENTITY) {
-            let identities = percent_decode(encoded_client_identity.as_bytes())
-                .decode_utf8()
-                .map_err(|_| ())
-                .and_then(|decoded| get_identities(decoded.as_ref()).map_err(|_| ()));
+    if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
+        if let Some(ref address) = identity.address() {
+            scuba.add("client_ip", address.to_string());
+        }
 
-            if let Ok(identities) = identities {
-                let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
-                scuba.add("client_identities", identities);
-            }
+        if let Some(ref client_correlator) = identity.client_correlator() {
+            scuba.add("client_correlator", client_correlator.to_string());
+        }
+
+        if let Some(ref identities) = identity.identities() {
+            let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
+            scuba.add("client_identities", identities);
         }
     }
 
@@ -106,10 +102,12 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
         );
     }
 
-    ctx.add_post_request(move |duration| {
-        scuba
-            .add("duration_ms", duration.as_millis_unchecked())
-            .log();
+    ctx.add_post_request(move |duration, client_hostname| {
+        scuba.add("duration_ms", duration.as_millis_unchecked());
+        if let Some(client_hostname) = client_hostname {
+            scuba.add("client_hostname", client_hostname.to_string());
+        }
+        scuba.log();
     });
 
     Some(())

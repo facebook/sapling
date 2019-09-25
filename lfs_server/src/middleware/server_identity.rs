@@ -14,11 +14,11 @@ use std::env;
 
 use super::Middleware;
 
-pub struct IdentityMiddleware {
+pub struct ServerIdentityMiddleware {
     headers: HashMap<&'static str, HeaderValue>,
 }
 
-impl IdentityMiddleware {
+impl ServerIdentityMiddleware {
     pub fn new() -> Self {
         let mut headers = HashMap::new();
 
@@ -62,7 +62,7 @@ impl IdentityMiddleware {
     }
 }
 
-impl Middleware for IdentityMiddleware {
+impl Middleware for ServerIdentityMiddleware {
     fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         let headers = response.headers_mut();
 

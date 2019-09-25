@@ -28,7 +28,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let method = ctx.method?;
     let repo_and_method = format!("{}.{}", ctx.repository.as_ref()?, method.to_string());
 
-    ctx.add_post_request(move |duration| {
+    ctx.add_post_request(move |duration, _| {
         match method {
             LfsMethod::Upload => STATS::upload_duration
                 .add_value(duration.as_millis_unchecked() as i64, (method.to_string(),)),
