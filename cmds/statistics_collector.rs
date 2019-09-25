@@ -23,9 +23,13 @@ use futures_ext::FutureExt;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::FileType;
+//use scuba::{ScubaClient, ScubaSample};
+use scuba_ext::ScubaSampleBuilder;
 use std::ops::{Add, Sub};
 use std::sync::Arc;
 use std::time::Duration;
+
+const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
@@ -39,6 +43,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("bookmark from which we get statistics"),
+        )
+        .arg(
+            Arg::with_name("log-to-scuba")
+                .long("log-to-scuba")
+                .takes_value(false)
+                .required(false)
+                .help("if set then statistics are logged to scuba"),
         )
 }
 
@@ -203,10 +214,22 @@ pub fn update_statistics(
 
 pub fn print_statistics(changeset: HgChangesetId, statistics: RepoStatistics) {
     println!(
-        "Changeset: {:?}. Number of files: {}, total file size: {},
-    number of lines: {}",
+        "Changeset: {:?}. Number of files: {}, total file size: {}, number of lines: {}",
         changeset, statistics.num_files, statistics.total_file_size, statistics.num_lines
-    )
+    );
+}
+
+pub fn log_statistics(
+    mut scuba_logger: ScubaSampleBuilder,
+    repo_name: String,
+    statistics: RepoStatistics,
+) {
+    scuba_logger
+        .add("repo_name", repo_name)
+        .add("num_files", statistics.num_files)
+        .add("total_file_size", statistics.total_file_size)
+        .add("num_lines", statistics.num_lines)
+        .log();
 }
 
 enum Pass {
@@ -232,6 +255,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None => String::from("master"),
     };
     let bookmark = BookmarkName::new(bookmark.clone())?;
+    let repo_name = args::get_repo_name(&matches)?;
+    let scuba_logger = if matches.is_present("log-to-scuba") {
+        ScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
+    } else {
+        ScubaSampleBuilder::with_discard()
+    };
 
     let run = args::open_repo(fb, &logger, &matches).and_then(move |repo| {
         let blobstore = Arc::new(repo.get_blobstore());
@@ -249,9 +278,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 blobstore.clone(),
                                 changeset.clone(),
                             )
-                            .and_then(move |statistics| {
-                                print_statistics(changeset, statistics);
-                                future::ok((changeset, statistics))
+                            .and_then({
+                                cloned!(repo_name, scuba_logger);
+                                move |statistics| {
+                                    print_statistics(changeset, statistics);
+                                    log_statistics(scuba_logger, repo_name, statistics);
+                                    future::ok((changeset, statistics))
+                                }
                             })
                             .boxify(),
                             Pass::NextPass(prev_changeset, cur_changeset) => {
@@ -272,7 +305,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                         cur_changeset.clone(),
                                     ))
                                     .and_then({
-                                        cloned!(ctx, repo);
+                                        cloned!(ctx, repo, repo_name, scuba_logger);
                                         move |(prev_manifest_id, cur_manifest_id)| {
                                             update_statistics(
                                                 ctx.clone(),
@@ -287,6 +320,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                             .map(
                                                 move |statistics| {
                                                     print_statistics(cur_changeset, statistics);
+                                                    log_statistics(
+                                                        scuba_logger,
+                                                        repo_name,
+                                                        statistics,
+                                                    );
                                                     (cur_changeset, statistics)
                                                 },
                                             )
