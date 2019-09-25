@@ -166,9 +166,12 @@ pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
     logger
 }
 
-pub fn get_repo_id_and_name<'a>(matches: &ArgMatches<'a>) -> Result<(RepositoryId, String)> {
-    let configs = read_configs(matches)?;
-    match (matches.value_of("repo-name"), matches.value_of("repo-id")) {
+pub fn get_repo_id_and_name_from_values(
+    repo_name: Option<&str>,
+    repo_id: Option<&str>,
+    configs: RepoConfigs,
+) -> Result<(RepositoryId, String)> {
+    match (repo_name, repo_id) {
         (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
         (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
         (None, Some(repo_id)) => {
@@ -193,7 +196,6 @@ pub fn get_repo_id_and_name<'a>(matches: &ArgMatches<'a>) -> Result<(RepositoryI
             }
         }
         (Some(repo_name), None) => {
-            let configs = read_configs(matches)?;
             let mut repo_config: Vec<_> = configs
                 .repos
                 .into_iter()
@@ -215,12 +217,18 @@ pub fn get_repo_id_and_name<'a>(matches: &ArgMatches<'a>) -> Result<(RepositoryI
 }
 
 pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name(matches)?;
+    let repo_name = matches.value_of("repo-name");
+    let repo_id = matches.value_of("repo-id");
+    let configs = read_configs(matches)?;
+    let (repo_id, _) = get_repo_id_and_name_from_values(repo_name, repo_id, configs)?;
     Ok(repo_id)
 }
 
 pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
-    let (_, repo_name) = get_repo_id_and_name(matches)?;
+    let repo_name = matches.value_of("repo-name");
+    let repo_id = matches.value_of("repo-id");
+    let configs = read_configs(matches)?;
+    let (_, repo_name) = get_repo_id_and_name_from_values(repo_name, repo_id, configs)?;
     Ok(repo_name)
 }
 

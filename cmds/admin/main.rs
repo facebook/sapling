@@ -22,13 +22,14 @@ use slog::error;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, FETCH_PHASE,
-    FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE,
-    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
-    HG_SYNC_VERIFY, LIST_PUBLIC, PHASES, REDACTION, REDACTION_ADD, REDACTION_LIST,
-    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ, UNODES,
+    ADD_PUBLIC_PHASES, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO_MAP,
+    FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_CHANGESET_DIFF,
+    HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED,
+    HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC, PHASES, REDACTION, REDACTION_ADD,
+    REDACTION_LIST, REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ, UNODES,
 };
 use crate::content_fetch::subcommand_content_fetch;
+use crate::crossrepo_mapping::subcommand_crossrepo_map;
 use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
@@ -43,6 +44,7 @@ mod bookmarks_manager;
 mod cmdargs;
 mod common;
 mod content_fetch;
+mod crossrepo_mapping;
 mod error;
 mod filenodes;
 mod filestore;
@@ -365,6 +367,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(phases)
         .subcommand(filestore::build_subcommand(FILESTORE))
         .subcommand(subcommand_unodes::subcommand_unodes_build(UNODES))
+        .subcommand(crossrepo_mapping::build_subcommand(CROSSREPO_MAP))
 }
 
 #[fbinit::main]
@@ -395,6 +398,7 @@ fn main(fb: FacebookInit) -> ExitCode {
         (FILESTORE, Some(sub_m)) => filestore::execute_command(fb, logger, &matches, sub_m),
         (PHASES, Some(sub_m)) => phases::subcommand_phases(fb, logger, &matches, sub_m),
         (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m),
+        (CROSSREPO_MAP, Some(sub_m)) => subcommand_crossrepo_map(fb, logger, &matches, sub_m),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     };
 
