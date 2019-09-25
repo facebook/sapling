@@ -7,19 +7,19 @@
 #![deny(warnings)]
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
 use failure::Error;
 use fbinit::FacebookInit;
+use filestore::StoreRequest;
 use futures::future::{join_all, Future};
+use futures::stream;
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
-    FileContents, FileType,
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType,
 };
 use std::collections::BTreeMap;
 use std::str::FromStr;
@@ -35,15 +35,12 @@ pub fn store_files(
         let path = MPath::new(path).unwrap();
         match content {
             Some(content) => {
-                let size = content.len();
-                let content = FileContents::new_bytes(Bytes::from(content));
-                let content_id = content
-                    .into_blob()
-                    .store(ctx.clone(), &repo.get_blobstore())
-                    .wait()
-                    .unwrap();
-
-                let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
+                let size = content.len() as u64;
+                let req = StoreRequest::new(size);
+                let data = stream::once(Ok(Bytes::from(content)));
+                let metadata = repo.upload_file(ctx.clone(), &req, data).wait().unwrap();
+                let file_change =
+                    FileChange::new(metadata.content_id, FileType::Regular, size, None);
                 res.insert(path, Some(file_change));
             }
             None => {
