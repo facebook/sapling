@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::Arc;
 
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
@@ -19,7 +20,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use manifest::{derive_manifest, Entry, LeafInfo, TreeInfo};
 use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
 use mononoke_types::hash::{Sha1, Sha256};
-use mononoke_types::{BlobstoreValue, ContentId, FileType, FsnodeId, MononokeId};
+use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId};
 use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
 
@@ -39,41 +40,84 @@ pub(crate) fn derive_fsnode(
     future::lazy(move || {
         let blobstore = repo.get_blobstore();
         let (sender, receiver) = mpsc::unbounded();
+        let content_ids = changes
+            .iter()
+            .filter_map(|(_mpath, content_id_and_file_type)| {
+                content_id_and_file_type.map(|(content_id, _file_type)| content_id)
+            })
+            .collect();
+        prefetch_content_metadata(ctx.clone(), blobstore.clone(), content_ids)
+            .map(Arc::new)
+            .and_then(move |prefetched_content_metadata| {
+                derive_manifest(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    parents.clone(),
+                    changes,
+                    {
+                        cloned!(blobstore, ctx, sender, prefetched_content_metadata);
+                        move |tree_info| {
+                            create_fsnode(
+                                ctx.clone(),
+                                blobstore.clone(),
+                                sender.clone(),
+                                prefetched_content_metadata.clone(),
+                                tree_info,
+                            )
+                        }
+                    },
+                    check_fsnode_leaf,
+                )
+                .and_then(move |maybe_tree_id| match maybe_tree_id {
+                    Some(tree_id) => future::ok(tree_id).left_future(),
+                    None => {
+                        // All files have been deleted, generate empty fsnode
+                        let tree_info = TreeInfo {
+                            path: None,
+                            parents,
+                            subentries: Default::default(),
+                        };
+                        create_fsnode(
+                            ctx,
+                            blobstore,
+                            sender,
+                            prefetched_content_metadata,
+                            tree_info,
+                        )
+                        .map(|(_, tree_id)| tree_id)
+                        .right_future()
+                    }
+                })
+            })
+            .join(
+                receiver
+                    .map_err(|()| err_msg("receiver failed"))
+                    .buffered(1024)
+                    .for_each(|_| Ok(())),
+            )
+            .map(|(result, ())| result)
+    })
+}
 
-        derive_manifest(
-            ctx.clone(),
-            repo.get_blobstore(),
-            parents.clone(),
-            changes,
-            {
-                cloned!(blobstore, ctx, sender);
-                move |tree_info| {
-                    create_fsnode(ctx.clone(), blobstore.clone(), sender.clone(), tree_info)
-                }
-            },
-            check_fsnode_leaf,
-        )
-        .and_then(move |maybe_tree_id| match maybe_tree_id {
-            Some(tree_id) => future::ok(tree_id).left_future(),
-            None => {
-                // All files have been deleted, generate empty fsnode
-                let tree_info = TreeInfo {
-                    path: None,
-                    parents,
-                    subentries: Default::default(),
-                };
-                create_fsnode(ctx, blobstore, sender, tree_info)
-                    .map(|(_, tree_id)| tree_id)
-                    .right_future()
-            }
-        })
-        .join(
-            receiver
-                .map_err(|()| err_msg("receiver failed"))
-                .buffered(1024)
-                .for_each(|_| Ok(())),
-        )
-        .map(|(result, ())| result)
+// Prefetch metadata for all content IDs introduced by a changeset.
+fn prefetch_content_metadata(
+    ctx: CoreContext,
+    blobstore: RepoBlobstore,
+    content_ids: HashSet<ContentId>,
+) -> impl Future<Item = HashMap<ContentId, ContentMetadata>, Error = Error> {
+    stream::futures_unordered(content_ids.into_iter().map({
+        cloned!(blobstore, ctx);
+        move |content_id| {
+            get_metadata(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+                .map(move |metadata| (content_id, metadata))
+        }
+    }))
+    .collect()
+    .map(|metadata| {
+        metadata
+            .into_iter()
+            .filter_map(|(content_id, metadata)| metadata.map(|metadata| (content_id, metadata)))
+            .collect::<HashMap<_, _>>()
     })
 }
 
@@ -82,6 +126,7 @@ pub(crate) fn derive_fsnode(
 fn collect_fsnode_subentries(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
+    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     parents: Vec<FsnodeId>,
     subentries: BTreeMap<
         MPathElement,
@@ -174,31 +219,21 @@ fn collect_fsnode_subentries(
                             // the cached entry.
                             future::ok((elem.clone(), FsnodeEntry::File(entry.clone()))).boxify()
                         } else {
-                            // Some other file is being used. Fetch its
-                            // metadata from the file store.
+                            // Some other file is being used. Use the
+                            // metadata we prefetched to create a new entry.
                             let (content_id, file_type) = content_id_and_file_type.clone();
-                            get_metadata(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
-                                .from_err()
-                                .and_then({
-                                    cloned!(elem);
-                                    move |metadata| {
-                                        if let Some(metadata) = metadata {
-                                            let entry = FsnodeEntry::File(FsnodeFile::new(
-                                                content_id,
-                                                file_type,
-                                                metadata.total_size,
-                                                metadata.sha1,
-                                                metadata.sha256,
-                                            ));
-                                            future::ok((elem.clone(), entry))
-                                        } else {
-                                            future::err(
-                                                ErrorKind::MissingContent(content_id).into(),
-                                            )
-                                        }
-                                    }
-                                })
-                                .boxify()
+                            if let Some(metadata) = prefetched_content_metadata.get(&content_id) {
+                                let entry = FsnodeEntry::File(FsnodeFile::new(
+                                    content_id,
+                                    file_type,
+                                    metadata.total_size,
+                                    metadata.sha1,
+                                    metadata.sha256,
+                                ));
+                                future::ok((elem.clone(), entry)).boxify()
+                            } else {
+                                future::err(ErrorKind::MissingContent(content_id).into()).boxify()
+                            }
                         }
                     }
                 }
@@ -213,11 +248,13 @@ fn create_fsnode(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> impl Future<Item = (Option<FsnodeSummary>, FsnodeId), Error = Error> {
     collect_fsnode_subentries(
         ctx.clone(),
         blobstore.clone(),
+        prefetched_content_metadata,
         tree_info.parents,
         tree_info.subentries,
     )
