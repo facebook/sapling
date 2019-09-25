@@ -77,6 +77,10 @@ impl Fsnode {
         self.subentries.iter()
     }
 
+    pub fn into_subentries(self) -> BTreeMap<MPathElement, FsnodeEntry> {
+        self.subentries
+    }
+
     pub fn summary(&self) -> &FsnodeSummary {
         &self.summary
     }

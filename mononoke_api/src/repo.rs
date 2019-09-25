@@ -12,6 +12,7 @@ use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use failure::Error;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeMapping;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
@@ -24,11 +25,13 @@ use unodes::RootUnodeManifestMapping;
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
+use crate::tree::{TreeContext, TreeId};
 
 pub(crate) struct Repo {
     pub(crate) blob_repo: BlobRepo,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
-    pub(crate) _unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    pub(crate) fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
+    pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
 }
 
 #[derive(Clone)]
@@ -76,11 +79,13 @@ impl Repo {
 
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
+        let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
 
         Ok(Self {
             blob_repo,
             skiplist_index,
-            _unodes_derived_mapping: unodes_derived_mapping,
+            unodes_derived_mapping,
+            fsnodes_derived_mapping,
         })
     }
 
@@ -88,12 +93,14 @@ impl Repo {
     pub(crate) fn new_from_parts(
         blob_repo: BlobRepo,
         skiplist_index: Arc<SkiplistIndex>,
+        fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
         unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
     ) -> Self {
         Self {
             blob_repo,
             skiplist_index,
-            _unodes_derived_mapping: unodes_derived_mapping,
+            fsnodes_derived_mapping,
+            unodes_derived_mapping,
         }
     }
 
@@ -102,10 +109,12 @@ impl Repo {
     pub(crate) fn new_test(blob_repo: BlobRepo) -> Self {
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
+        let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
         Self {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
-            _unodes_derived_mapping: unodes_derived_mapping,
+            unodes_derived_mapping,
+            fsnodes_derived_mapping,
         }
     }
 }
@@ -129,6 +138,16 @@ impl RepoContext {
     /// The skiplist index for the referenced repository.
     pub(crate) fn skiplist_index(&self) -> &SkiplistIndex {
         &self.repo.skiplist_index
+    }
+
+    /// The fsnodes mapping for the referenced repository.
+    pub(crate) fn fsnodes_derived_mapping(&self) -> &Arc<RootFsnodeMapping> {
+        &self.repo.fsnodes_derived_mapping
+    }
+
+    /// The unodes mapping for the referenced repository.
+    pub(crate) fn unodes_derived_mapping(&self) -> &Arc<RootUnodeManifestMapping> {
+        &self.repo.unodes_derived_mapping
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
@@ -267,5 +286,10 @@ impl RepoContext {
                 .map_err(MononokeError::from)
                 .boxify()
         }
+    }
+
+    /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
+    pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext>, MononokeError> {
+        TreeContext::new_check_exists(self.clone(), tree_id).await
     }
 }

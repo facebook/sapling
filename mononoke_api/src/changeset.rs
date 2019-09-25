@@ -4,17 +4,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::convert::TryFrom;
 use std::future::Future;
 use std::pin::Pin;
 
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use fsnodes::RootFsnodeId;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
-use mononoke_types::BonsaiChangeset;
+use mononoke_types::{BonsaiChangeset, MPath};
 use reachabilityindex::ReachabilityIndex;
+use unodes::RootUnodeManifestId;
 
+use crate::changeset_path::ChangesetPathContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 use crate::specifiers::{ChangesetId, HgChangesetId};
@@ -25,6 +30,10 @@ pub struct ChangesetContext {
     id: ChangesetId,
     bonsai_changeset:
         Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
+    root_fsnode_id:
+        Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
+    root_unode_manifest_id:
+        Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
 }
 
 /// A context object representing a query to a particular commit in a repo.
@@ -43,10 +52,42 @@ impl ChangesetContext {
             }
         };
         let bonsai_changeset = bonsai_changeset.boxed().shared();
+        let root_fsnode_id = {
+            cloned!(repo);
+            async move {
+                RootFsnodeId::derive(
+                    repo.ctx().clone(),
+                    repo.blob_repo().clone(),
+                    repo.fsnodes_derived_mapping().clone(),
+                    id,
+                )
+                .compat()
+                .await
+                .map_err(MononokeError::from)
+            }
+        };
+        let root_fsnode_id = root_fsnode_id.boxed().shared();
+        let root_unode_manifest_id = {
+            cloned!(repo);
+            async move {
+                RootUnodeManifestId::derive(
+                    repo.ctx().clone(),
+                    repo.blob_repo().clone(),
+                    repo.unodes_derived_mapping().clone(),
+                    id,
+                )
+                .compat()
+                .await
+                .map_err(MononokeError::from)
+            }
+        };
+        let root_unode_manifest_id = root_unode_manifest_id.boxed().shared();
         Self {
             repo,
             id,
             bonsai_changeset,
+            root_fsnode_id,
+            root_unode_manifest_id,
         }
     }
 
@@ -74,6 +115,33 @@ impl ChangesetContext {
             .compat()
             .await?;
         Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
+    }
+
+    pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
+        self.root_fsnode_id.clone().await
+    }
+
+    pub(crate) async fn root_unode_manifest_id(
+        &self,
+    ) -> Result<RootUnodeManifestId, MononokeError> {
+        self.root_unode_manifest_id.clone().await
+    }
+
+    /// Query the root directory in the repository at this changeset revision.
+    pub fn root(&self) -> ChangesetPathContext {
+        ChangesetPathContext::new(self.clone(), None)
+    }
+
+    /// Query a path within the respository. This could be a file or a
+    /// directory.
+    pub fn path(&self, path: impl AsRef<str>) -> Result<ChangesetPathContext, MononokeError> {
+        let path = path.as_ref();
+        let mpath = if path.is_empty() {
+            None
+        } else {
+            Some(MPath::try_from(path)?)
+        };
+        Ok(ChangesetPathContext::new(self.clone(), mpath))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.

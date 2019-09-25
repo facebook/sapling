@@ -15,6 +15,7 @@ use blobrepo_factory::Caching;
 use cloned::cloned;
 use failure::Error;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeMapping;
 use futures_preview::future;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
@@ -25,10 +26,12 @@ use metaconfig_parser::RepoConfigs;
 use crate::repo::Repo;
 
 pub mod changeset;
+pub mod changeset_path;
 pub mod errors;
 pub mod legacy;
 pub mod repo;
 pub mod specifiers;
+pub mod tree;
 
 #[cfg(test)]
 mod test;
@@ -39,6 +42,7 @@ pub use crate::changeset::ChangesetContext;
 pub use crate::errors::MononokeError;
 pub use crate::repo::RepoContext;
 pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
+pub use crate::tree::{TreeEntry, TreeId, TreeSummary};
 
 // Re-export types that are useful for clients.
 pub type CoreContext = context::CoreContext;
@@ -115,11 +119,14 @@ impl Mononoke {
                 .into_iter()
                 .map(
                     |(name, blob_repo, skiplist_index, unodes_derived_mapping)| {
+                        let fsnodes_derived_mapping =
+                            Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
                         (
                             name,
                             Arc::new(Repo::new_from_parts(
                                 blob_repo,
                                 skiplist_index,
+                                fsnodes_derived_mapping,
                                 unodes_derived_mapping,
                             )),
                         )
