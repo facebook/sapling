@@ -14,9 +14,10 @@ use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileType, HgChangesetId,
-    Mononoke, MononokeError, PathEntry, RepoContext, TreeEntry, TreeId,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileType,
+    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, TreeEntry, TreeId,
 };
+use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use source_control::server::SourceControlService;
@@ -87,6 +88,36 @@ impl ScubaInfoProvider for thrift::TreeSpecifier {
             thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
             thrift::TreeSpecifier::by_id(_tree_id) => None,
             thrift::TreeSpecifier::UnknownField(_) => None,
+        }
+    }
+}
+
+impl ScubaInfoProvider for thrift::FileSpecifier {
+    fn scuba_reponame(&self) -> Option<String> {
+        match self {
+            thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.scuba_reponame(),
+            thrift::FileSpecifier::by_id(file_id) => file_id.repo.scuba_reponame(),
+            thrift::FileSpecifier::by_sha1_content_hash(hash) => hash.repo.scuba_reponame(),
+            thrift::FileSpecifier::by_sha256_content_hash(hash) => hash.repo.scuba_reponame(),
+            thrift::FileSpecifier::UnknownField(_) => None,
+        }
+    }
+    fn scuba_commit(&self) -> Option<String> {
+        match self {
+            thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.scuba_commit(),
+            thrift::FileSpecifier::by_id(_file_id) => None,
+            thrift::FileSpecifier::by_sha1_content_hash(_hash) => None,
+            thrift::FileSpecifier::by_sha256_content_hash(_hash) => None,
+            thrift::FileSpecifier::UnknownField(_) => None,
+        }
+    }
+    fn scuba_path(&self) -> Option<String> {
+        match self {
+            thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
+            thrift::FileSpecifier::by_id(_file_id) => None,
+            thrift::FileSpecifier::by_sha1_content_hash(_hash) => None,
+            thrift::FileSpecifier::by_sha256_content_hash(_hash) => None,
+            thrift::FileSpecifier::UnknownField(_) => None,
         }
     }
 }
@@ -267,17 +298,26 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
     }
 }
 
-impl FromRequest<Vec<u8>> for TreeId {
-    fn from_request(tree_id: &Vec<u8>) -> Result<Self, thrift::RequestError> {
-        TreeId::from_bytes(tree_id).map_err(|e| {
-            errors::invalid_request(format!(
-                "invalid tree id ({}): {}",
-                hex_string(&tree_id).expect("hex_string should never fail"),
-                e.to_string()
-            ))
-        })
+macro_rules! impl_from_request_binary_id(
+    ($t:ty, $name:expr) => {
+        impl FromRequest<Vec<u8>> for $t {
+            fn from_request(id: &Vec<u8>) -> Result<Self, thrift::RequestError> {
+                <$t>::from_bytes(id).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid {} ({}): {}",
+                        $name,
+                        hex_string(&id).expect("hex_string should never fail"),
+                        e.to_string(),
+                    ))})
+            }
+        }
     }
-}
+);
+
+impl_from_request_binary_id!(TreeId, "tree id");
+impl_from_request_binary_id!(FileId, "file id");
+impl_from_request_binary_id!(Sha1, "sha-1");
+impl_from_request_binary_id!(Sha256, "sha-256");
 
 trait IntoResponse<T> {
     fn into_response(self) -> T;
@@ -684,5 +724,61 @@ impl SourceControlService for SourceControlServiceImpl {
                 count: 0,
             })
         }
+    }
+
+    /// Test whether a file exists.
+    async fn file_exists(
+        &self,
+        file: thrift::FileSpecifier,
+        _params: thrift::FileExistsParams,
+    ) -> Result<bool, service::FileExistsExn> {
+        let ctx = self.create_ctx(Some(&file));
+        let file = match file {
+            thrift::FileSpecifier::by_commit_path(commit_path) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &commit_path.commit.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
+                let changeset_specifier = FromRequest::from_request(&commit_path.commit.id)?;
+                let changeset = repo
+                    .changeset(changeset_specifier)
+                    .await?
+                    .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
+                let path = changeset.path(&commit_path.path)?;
+                path.file().await?
+            }
+            thrift::FileSpecifier::by_id(file_id) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &file_id.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&file_id.repo.name))?;
+                let file_id = FileId::from_request(&file_id.id)?;
+                repo.file(file_id).await?
+            }
+            thrift::FileSpecifier::by_sha1_content_hash(hash) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &hash.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&hash.repo.name))?;
+                let file_sha1 = Sha1::from_request(&hash.content_hash)?;
+                repo.file_by_content_sha1(file_sha1).await?
+            }
+            thrift::FileSpecifier::by_sha256_content_hash(hash) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &hash.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&hash.repo.name))?;
+                let file_sha256 = Sha256::from_request(&hash.content_hash)?;
+                repo.file_by_content_sha256(file_sha256).await?
+            }
+            thrift::FileSpecifier::UnknownField(id) => {
+                return Err(errors::invalid_request(format!(
+                    "file specifier type not supported: {}",
+                    id
+                ))
+                .into());
+            }
+        };
+        Ok(file.is_some())
     }
 }
