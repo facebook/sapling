@@ -12,6 +12,7 @@ use crate::utils::{atomic_write, open_dir};
 use bytes::Bytes;
 use failure::Fallible;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
@@ -130,13 +131,50 @@ impl OpenOptions {
                     let mut lock_file = open_dir(dir)?;
                     let _lock = ScopedFileLock::new(&mut lock_file, true)?;
 
-                    let latest_and_log = read_latest_and_logs(dir, &self);
-
-                    // two creates raced and the other one has created basic files.
-                    if let Ok((latest, logs)) = latest_and_log {
-                        (latest, logs)
-                    } else {
-                        (0, vec![create_empty_log(Some(dir), &self, 0)?])
+                    match read_latest_raw(dir) {
+                        Ok(latest) => {
+                            match read_logs(dir, &self, latest) {
+                                Ok(logs) => {
+                                    // Both latest and logs are read properly.
+                                    (latest, logs)
+                                }
+                                Err(err) => {
+                                    // latest is fine, but logs cannot be read.
+                                    // Try auto recover by creating an empty log.
+                                    let latest = latest.wrapping_add(1);
+                                    let new_log = create_empty_log(Some(dir), &self, latest);
+                                    if let Ok(new_log) = new_log {
+                                        if let Ok(logs) = read_logs(dir, &self, latest) {
+                                            (latest, logs)
+                                        } else {
+                                            (latest, vec![new_log])
+                                        }
+                                    } else {
+                                        return Err(err
+                                            .context(errors::path_data_error(
+                                                dir,
+                                                format!("cannot create new log {}", latest),
+                                            ))
+                                            .into());
+                                    }
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::NotFound {
+                                // latest does not exist.
+                                // Most likely, it is a new empty directory.
+                                // Create an empty log and update latest.
+                                let latest = 0;
+                                let log = create_empty_log(Some(dir), &self, latest)?;
+                                (latest, vec![log])
+                            } else {
+                                // latest cannot be read for other reasons.
+                                return Err(failure::Error::from(err)
+                                    .context(format!("cannot read 'latest' in {:?}", dir))
+                                    .into());
+                            }
+                        }
                     }
                 }
             }
@@ -440,16 +478,25 @@ fn create_empty_log(dir: Option<&Path>, open_options: &OpenOptions, latest: u8) 
 }
 
 fn read_latest(dir: &Path) -> Fallible<u8> {
+    read_latest_raw(dir).map_err(|e| {
+        failure::Error::from(e)
+            .context(errors::path_data_error(dir, "cannot read 'latest'"))
+            .into()
+    })
+}
+
+// Unlike read_latest, this function returns io::Result.
+fn read_latest_raw(dir: &Path) -> io::Result<u8> {
     let latest_path = dir.join(LATEST_FILE);
-    let content: String = fs::read_to_string(&latest_path).map_err(|e| {
-        errors::path_data_error(&latest_path, "failed to read").context(failure::Error::from(e))
-    })?;
-    let id: u8 = content.parse().map_err(|e| {
-        errors::path_data_error(
-            &latest_path,
-            format!("failed to parse as u8 integer: {:?}", content),
+    let content: String = fs::read_to_string(&latest_path)?;
+    let id: u8 = content.parse().map_err(|_e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "{:?}: failed to parse {:?} as u8 integer",
+                latest_path, content
+            ),
         )
-        .context(failure::Error::from(e))
     })?;
     Ok(id)
 }
@@ -801,11 +848,12 @@ mod tests {
     }
 
     #[test]
-    fn recover_from_partially_created() -> Fallible<()> {
+    fn test_recover_from_empty_logs() -> Fallible<()> {
         let dir = tempdir().unwrap();
         let rotate = OpenOptions::new().create(true).open(&dir)?;
         drop(rotate);
 
+        // Delete all logs, but keep "latest".
         for dirent in fs::read_dir(&dir)? {
             let dirent = dirent?;
             let path = dirent.path();
