@@ -15,7 +15,7 @@ use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileType, HgChangesetId,
-    Mononoke, MononokeError, PathEntry, RepoContext,
+    Mononoke, MononokeError, PathEntry, RepoContext, TreeEntry, TreeId,
 };
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -64,6 +64,30 @@ impl ScubaInfoProvider for thrift::CommitPathSpecifier {
     }
     fn scuba_path(&self) -> Option<String> {
         Some(self.path.clone())
+    }
+}
+
+impl ScubaInfoProvider for thrift::TreeSpecifier {
+    fn scuba_reponame(&self) -> Option<String> {
+        match self {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_reponame(),
+            thrift::TreeSpecifier::by_id(tree_id) => tree_id.repo.scuba_reponame(),
+            thrift::TreeSpecifier::UnknownField(_) => None,
+        }
+    }
+    fn scuba_commit(&self) -> Option<String> {
+        match self {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_commit(),
+            thrift::TreeSpecifier::by_id(_tree_id) => None,
+            thrift::TreeSpecifier::UnknownField(_) => None,
+        }
+    }
+    fn scuba_path(&self) -> Option<String> {
+        match self {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
+            thrift::TreeSpecifier::by_id(_tree_id) => None,
+            thrift::TreeSpecifier::UnknownField(_) => None,
+        }
     }
 }
 
@@ -243,6 +267,18 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
     }
 }
 
+impl FromRequest<Vec<u8>> for TreeId {
+    fn from_request(tree_id: &Vec<u8>) -> Result<Self, thrift::RequestError> {
+        TreeId::from_bytes(tree_id).map_err(|e| {
+            errors::invalid_request(format!(
+                "invalid tree id ({}): {}",
+                hex_string(&tree_id).expect("hex_string should never fail"),
+                e.to_string()
+            ))
+        })
+    }
+}
+
 trait IntoResponse<T> {
     fn into_response(self) -> T;
 }
@@ -257,9 +293,44 @@ impl IntoResponse<thrift::EntryType> for FileType {
     }
 }
 
+impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
+    fn into_response(self) -> thrift::TreeEntry {
+        let (name, entry) = self;
+        let (type_, info) = match entry {
+            TreeEntry::Directory(dir) => {
+                let summary = dir.summary();
+                let info = thrift::TreeInfo {
+                    id: dir.id().as_ref().to_vec(),
+                    simple_format_sha1: summary.simple_format_sha1.as_ref().to_vec(),
+                    simple_format_sha256: summary.simple_format_sha256.as_ref().to_vec(),
+                    child_files_count: summary.child_files_count as i64,
+                    child_files_total_size: summary.child_files_total_size as i64,
+                    child_dirs_count: summary.child_dirs_count as i64,
+                    descendant_files_count: summary.descendant_files_count as i64,
+                    descendant_files_total_size: summary.descendant_files_total_size as i64,
+                };
+                (thrift::EntryType::TREE, thrift::EntryInfo::tree(info))
+            }
+            TreeEntry::File(file) => {
+                let info = thrift::FileInfo {
+                    id: file.content_id().as_ref().to_vec(),
+                    file_size: file.size() as i64,
+                    content_sha1: file.content_sha1().as_ref().to_vec(),
+                    content_sha256: file.content_sha256().as_ref().to_vec(),
+                };
+                (
+                    file.file_type().into_response(),
+                    thrift::EntryInfo::file(info),
+                )
+            }
+        };
+        thrift::TreeEntry { name, type_, info }
+    }
+}
+
 mod errors {
     use super::thrift;
-    use mononoke_api::ChangesetSpecifier;
+    use mononoke_api::{ChangesetSpecifier, TreeId};
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
@@ -279,6 +350,13 @@ mod errors {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
             reason: format!("commit not found ({})", commit),
+        }
+    }
+
+    pub(super) fn tree_not_found(tree: &TreeId) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
+            reason: format!("tree not found ({})", tree),
         }
     }
 }
@@ -542,5 +620,69 @@ impl SourceControlService for SourceControlServiceImpl {
             }
         };
         Ok(response)
+    }
+
+    /// List the contents of a directory.
+    async fn tree_list(
+        &self,
+        tree: thrift::TreeSpecifier,
+        params: thrift::TreeListParams,
+    ) -> Result<thrift::TreeListResponse, service::TreeListExn> {
+        let ctx = self.create_ctx(Some(&tree));
+        let tree = match tree {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &commit_path.commit.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
+                let changeset_specifier = FromRequest::from_request(&commit_path.commit.id)?;
+                let changeset = repo
+                    .changeset(changeset_specifier)
+                    .await?
+                    .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
+                let path = changeset.path(&commit_path.path)?;
+                path.tree().await?
+            }
+            thrift::TreeSpecifier::by_id(tree_id) => {
+                let repo = self
+                    .mononoke
+                    .repo(ctx, &tree_id.repo.name)?
+                    .ok_or_else(|| errors::repo_not_found(&tree_id.repo.name))?;
+                let tree_id = TreeId::from_request(&tree_id.id)?;
+                let tree = repo
+                    .tree(tree_id)
+                    .await?
+                    .ok_or_else(|| errors::tree_not_found(&tree_id))?;
+                Some(tree)
+            }
+            thrift::TreeSpecifier::UnknownField(id) => {
+                return Err(errors::invalid_request(format!(
+                    "tree specifier type not supported: {}",
+                    id
+                ))
+                .into());
+            }
+        };
+        if let Some(tree) = tree {
+            let summary = tree.summary().await?;
+            let entries = tree
+                .list()
+                .await?
+                .skip(params.offset as usize)
+                .take(params.limit as usize)
+                .map(IntoResponse::into_response)
+                .collect();
+            let response = thrift::TreeListResponse {
+                entries,
+                count: (summary.child_files_count + summary.child_dirs_count) as i64,
+            };
+            Ok(response)
+        } else {
+            // Listing a path that is not a directory just returns an empty list.
+            Ok(thrift::TreeListResponse {
+                entries: Vec::new(),
+                count: 0,
+            })
+        }
     }
 }
