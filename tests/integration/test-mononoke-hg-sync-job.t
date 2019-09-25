@@ -79,39 +79,13 @@ Try to sync blobimport bookmark move, which should fail
   $ init_repo_lock_sqlite3_db
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
-  $ mononoke_hg_sync_with_failure_handler repo-hg 0
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #1 ... (glob)
-  * queue size after processing: 3 (glob)
-  * locking repo... (glob)
-  * repo is locked now (glob)
-  * sync failed for ids [1] (glob)
+  $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'caused by'
   * caused by: unexpected bookmark move: blobimport (glob)
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync repo-hg 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 2 (glob)
+  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -123,27 +97,7 @@ Sync a pushrebase bookmark move
   summary:     pushcommit
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 2
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #3 ... (glob)
-  * successful prepare of entry #3 (glob)
-  * syncing log entries [3] ... (glob)
-  running * 'hg -R repo-hg serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     6cc06ef82eeb  anothercommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 1 (glob)
+  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -161,25 +115,7 @@ Sync a pushrebase bookmark move
   summary:     pushcommit
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 3
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #4 ... (glob)
-  * successful prepare of entry #4 (glob)
-  * syncing log entries [4] ... (glob)
-  running * 'hg -R repo-hg serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 0 (glob)
+  $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -255,105 +191,11 @@ Use the same code here as in the actual opsfiles hook
   
   $ cd $TESTTMP
   $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
-  $ mononoke_hg_sync_with_retry repo-hg-2 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
+  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'replay failed'
   replay failed: error:pushkey
-  unbundle replay batch item #0 failed
-  * sync failed. Invalidating process (glob)
-  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
-  connected to * (glob)
-  creating a peer took: * (glob)
-  running lookup took: * (glob)
-  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
-  * retrying attempt 2 of 3... (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
   replay failed: error:pushkey
-  unbundle replay batch item #0 failed
-  * sync failed. Invalidating process (glob)
-  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
-  connected to * (glob)
-  creating a peer took: * (glob)
-  running lookup took: * (glob)
-  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
-  * retrying attempt 3 of 3... (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
   replay failed: error:pushkey
-  unbundle replay batch item #0 failed
-  * sync failed. Invalidating process (glob)
-  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
-  connected to * (glob)
-  creating a peer took: * (glob)
-  running lookup took: * (glob)
-  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
-  * queue size after processing: 2 (glob)
-  * sync failed for ids [2] (glob)
-  * caused by: sync failed: hg logs follow: (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
   replay failed: error:pushkey
-  
 Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
   > [facebook]
@@ -361,49 +203,9 @@ Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   > CONFIG
 
 Now bookmark is not blocked
-  $ mononoke_hg_sync repo-hg-2 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] Expected: (master_bookmark, 1e43292ffbb38fa183e7f21fb8e8a8450e61c890). Actual: (master_bookmark, acc06228d802cbe9e2a6740c0abacf017f3be65c)
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
+  $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'replay failed'
   replay failed: error:pushkey
-  unbundle replay batch item #0 failed
-  * sync failed. Invalidating process (glob)
-  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
-  connected to * (glob)
-  creating a peer took: * (glob)
-  running lookup took: * (glob)
-  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
-  * queue size after processing: 2 (glob)
-  * sync failed for ids [2] (glob)
-  * caused by: sync failed: hg logs follow: (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  remote: [ReplayVerification] Expected: (master_bookmark, 1e43292ffbb38fa183e7f21fb8e8a8450e61c890). Actual: (master_bookmark, acc06228d802cbe9e2a6740c0abacf017f3be65c)
-  remote: pushkey-abort: prepushkey hook failed
-  remote: transaction abort!
-  remote: rollback completed
   replay failed: error:pushkey
-  
 
 Set the correct timestamp back
   $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
@@ -419,51 +221,11 @@ Set the correct timestamp back
   
 Replay in a loop
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 0
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #1 ... (glob)
-  * queue size after processing: 3 (glob)
-  * sync failed for ids [1] (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 0 2>&1 | grep 'unexpected bookmark'
   * unexpected bookmark move: blobimport (glob)
-  $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 2 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
-  * preparing log entry #3 ... (glob)
-  * successful prepare of entry #3 (glob)
-  * syncing log entries [3] ... (glob)
-  single wireproto command took: * (glob)
-  sending unbundlereplay command
-  remote: * (glob)
-  remote: * (glob)
-  unbundle replay batch item #1 successfully sent
-  * queue size after processing: 1 (glob)
   * successful sync of entries [3] (glob)
-  * preparing log entry #4 ... (glob)
-  * successful prepare of entry #4 (glob)
-  * syncing log entries [4] ... (glob)
-  single wireproto command took: * (glob)
-  sending unbundlereplay command
-  unbundle replay batch item #2 successfully sent
-  * queue size after processing: 0 (glob)
   * successful sync of entries [4] (glob)
   $ sqlite3 "$TESTTMP/monsql/mutable_counters" "select * from mutable_counters";
   0|latest-replayed-request|4
@@ -476,27 +238,7 @@ Make one more push from the client
 
 Continue replay
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #5 ... (glob)
-  * successful prepare of entry #5 (glob)
-  * syncing log entries [5] ... (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     67d5c96d65a7  onemorecommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 0 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 1 2>&1 | grep 'successful sync'
   * successful sync of entries [5] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r tip
@@ -543,37 +285,8 @@ Continue replay
   > CONFIG
 
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 5
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #6 ... (glob)
-  * successful prepare of entry #6 (glob)
-  * syncing log entries [6] ... (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     15776eb106e6  exec mode
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 1 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 5 2>&1 | grep 'successful sync'
   * successful sync of entries [6] (glob)
-  * preparing log entry #7 ... (glob)
-  * successful prepare of entry #7 (glob)
-  * syncing log entries [7] ... (glob)
-  single wireproto command took: * (glob)
-  sending unbundlereplay command
-  remote: * (glob)
-  remote:     6f060fabc8e7  symlink
-  unbundle replay batch item #1 successfully sent
-  * queue size after processing: 0 (glob)
   * successful sync of entries [7] (glob)
   $ cd repo-hg-3
   $ hg log -r master_bookmark^
@@ -628,59 +341,14 @@ Test hook bypass using REPLAY_BYPASS file
 
 Test failing to sync, but already having the correct bookmark location
   $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"add0c792bfce89610d277fd5b1e32f5287994d1d\":10000000000}' where bookmark_update_log_id = 2"
-  $ mononoke_hg_sync_with_retry repo-hg-2 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     1e43292ffbb3  pushcommit
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 5 (glob)
+  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
 
 Test further sync
   $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
-  $ mononoke_hg_sync_with_retry repo-hg-2 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #2 ... (glob)
-  * successful prepare of entry #2 (glob)
-  * syncing log entries [2] ... (glob)
-  running * 'hg -R repo-hg-2 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  replay failed: error:abort
-  part message: conflicting changes in:
-      pushcommit
-  unbundle replay batch item #0 failed
+  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep -E '(sync failed|successful sync)'
   * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
-  connected to * (glob)
-  creating a peer took: * (glob)
-  running lookup took: * (glob)
-  hg server has expected bookmark location. book: master_bookmark, hash: 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
-  * queue size after processing: 5 (glob)
   * successful sync of entries [2] (glob)
 
 Test bookmark deletion sync
@@ -704,25 +372,7 @@ Test bookmark deletion sync
   summary:     symlink
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 7
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #8 ... (glob)
-  * successful prepare of entry #8 (glob)
-  * syncing log entries [8] ... (glob)
-  running * serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 0 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 7 2>&1 | grep 'successful sync'
   * successful sync of entries [8] (glob)
   $ cd $TESTTMP/client-push
   $ hgmn push --delete book_to_delete
@@ -741,25 +391,7 @@ Test bookmark deletion sync
   summary:     symlink
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #9 ... (glob)
-  * successful prepare of entry #9 (glob)
-  * syncing log entries [9] ... (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 0 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 8 2>&1 | grep 'successful sync'
   * successful sync of entries [9] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r master_bookmark
@@ -799,27 +431,7 @@ Test force pushrebase sync
   
 -- let us now see if we can replay it
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * preparing log entry #10 ... (glob)
-  * successful prepare of entry #10 (glob)
-  * syncing log entries [10] ... (glob)
-  * 'user@dummy' 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  connected to * (glob)
-  creating a peer took: * (glob)
-  single wireproto command took: * (glob)
-  using * as a reports file (glob)
-  sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     cc83c88b72d3  commit_to_force_pushmaster
-  unbundle replay batch item #0 successfully sent
-  * queue size after processing: 0 (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 8 2>&1 | grep 'successful sync'
   * successful sync of entries [10] (glob)
 -- and if the replay result is good (e.g. master_bookmark points to the same commit as in client-push)
   $ cd $TESTTMP/repo-hg-3
@@ -840,6 +452,5 @@ Test the job exits when the exit file is set
   $ hgmn push -r . --to master_bookmark -q
   $ touch $TESTTMP/exit-file
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8 --exit-file $TESTTMP/exit-file
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 8 --exit-file $TESTTMP/exit-file 2>&1 | grep 'exists'
   * path "$TESTTMP/exit-file" exists: exiting ... (glob)

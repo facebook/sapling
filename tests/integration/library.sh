@@ -213,6 +213,20 @@ function mononoke_hg_sync_loop {
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
+function mononoke_hg_sync_loop_regenerate {
+  local repo="$1"
+  local start_id="$2"
+  shift
+  shift
+
+  $MONONOKE_HG_SYNC \
+    "${CACHING_ARGS[@]}" \
+    --retry-num 1 \
+    --repo-id 0 \
+    --mononoke-config-path mononoke-config \
+    ssh://user@dummy/"$repo" --generate-bundles sync-loop --start-id "$start_id" "$@"
+}
+
 function mononoke_admin {
   "$MONONOKE_ADMIN" \
     "${CACHING_ARGS[@]}" \

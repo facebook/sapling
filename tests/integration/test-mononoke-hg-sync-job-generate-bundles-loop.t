@@ -48,30 +48,6 @@ Push to Mononoke
   > EOF
   $ hg up -q tip
 
-  $ mkcommit pushcommit
-  $ hgmn push -r . --to master_bookmark -q
-  $ hg up -q master_bookmark
-  $ mkcommit pushcommit2
-  $ mkcommit pushcommit3
-  $ hgmn push -r . --to master_bookmark -q
-
-Modify same file
-  $ hg up -q master_bookmark
-  $ echo 1 >> 1 && hg addremove && hg ci -m 'modify 1'
-  adding 1
-  $ echo 1 >> 1 && hg addremove && hg ci -m 'modify 1'
-  $ hgmn push -r . --to master_bookmark -q
-
-Empty commits
-  $ hg up -q 0
-  $ echo 1 > 1 && hg -q addremove && hg ci -m empty
-  $ hg revert -r ".^" 1 && hg commit --amend
-
-  $ echo 1 > 1 && hg -q addremove && hg ci -m empty
-  $ hg revert -r ".^" 1 && hg commit --amend
-
-  $ hgmn push -r . --to master_bookmark -q
-
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_first
@@ -89,18 +65,6 @@ Sync it to another client
   > EOF
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop_regenerate repo-hg 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [2] (glob)
-
-  $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'successful sync'
   * successful sync of entries [3] (glob)
-
-  $ mononoke_hg_sync repo-hg 3 --generate-bundles 2>&1 | grep 'successful sync'
-  * successful sync of entries [4] (glob)
-
-  $ mononoke_hg_sync repo-hg 4 --generate-bundles 2>&1 | grep 'successful sync'
-  * successful sync of entries [5] (glob)
-
-  $ mononoke_hg_sync_loop_regenerate repo-hg 5  2>&1 | grep 'successful sync'
-  * successful sync of entries [6] (glob)
-  * successful sync of entries [7] (glob)
