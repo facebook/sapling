@@ -73,12 +73,7 @@ pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
         use std::fs;
         let mut path = path.to_path_buf();
         path.push("lock");
-        File::open(&path).or_else(|_| {
-            fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&path)
-        })
+        fs::OpenOptions::new().write(true).create(true).open(&path)
     }
 }
 
