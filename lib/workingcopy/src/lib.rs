@@ -14,18 +14,18 @@ use types::{RepoPath, RepoPathBuf};
 
 /// Walker traverses the working copy, starting at the root of the repo,
 /// finding files matched by matcher
-pub struct Walker<'a, M> {
+pub struct Walker<M> {
     root: PathBuf,
     dir_matches: Vec<RepoPathBuf>,
     file_matches: Vec<Fallible<RepoPathBuf>>,
-    matcher: &'a M,
+    matcher: M,
 }
 
-impl<'a, M> Walker<'a, M>
+impl<M> Walker<M>
 where
     M: Matcher,
 {
-    pub fn new(root: PathBuf, matcher: &'a M) -> Self {
+    pub fn new(root: PathBuf, matcher: M) -> Self {
         let mut dir_matches = vec![];
         if matcher.matches_directory(&RepoPathBuf::new()) != DirectoryMatch::Nothing {
             dir_matches.push(RepoPathBuf::new());
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<'a, M> Iterator for Walker<'a, M>
+impl<M> Iterator for Walker<M>
 where
     M: Matcher,
 {
@@ -124,8 +124,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let matcher = AlwaysMatcher::new();
-        let walker = Walker::new(root_path, &matcher);
+        let walker = Walker::new(root_path, AlwaysMatcher::new());
         let walked_files: Result<Vec<_>, _> = walker.collect();
         let walked_files = walked_files?;
         assert_eq!(walked_files.len(), 3);
@@ -141,8 +140,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let matcher = NeverMatcher::new();
-        let walker = Walker::new(root_path, &matcher);
+        let walker = Walker::new(root_path, NeverMatcher::new());
         let walked_files: Vec<_> = walker.collect();
         assert!(walked_files.is_empty());
         Ok(())
