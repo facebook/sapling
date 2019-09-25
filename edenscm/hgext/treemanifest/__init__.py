@@ -2655,6 +2655,7 @@ def serverrepack(repo, incremental=False, options=None):
     fulldatapackstore = makedatapackstore(repo.ui, packpath)
     if incremental:
         datastores = _topacks(
+            repo.ui,
             packpath,
             _computeincrementaldatapack(repo.ui, files),
             revisionstore.datapack,
@@ -2667,6 +2668,7 @@ def serverrepack(repo, incremental=False, options=None):
     # History store
     if incremental:
         historystores = _topacks(
+            repo.ui,
             packpath,
             _computeincrementalhistorypack(repo.ui, files),
             revisionstore.historypack,

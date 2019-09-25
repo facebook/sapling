@@ -305,9 +305,17 @@ def _getmanifeststores(repo):
     )
 
 
-def _topacks(packpath, files, constructor):
+def _topacks(ui, packpath, files, constructor):
     paths = list(os.path.join(packpath, p) for p in files)
-    packs = list(constructor(p) for p in paths)
+
+    packs = []
+    for p in paths:
+        try:
+            pack = constructor(p)
+            packs.append(pack)
+        except Exception:
+            ui.warn(_("detected corrupt pack '%s' - ignoring it\n") % p)
+
     return packs
 
 
@@ -361,7 +369,10 @@ def _incrementalrepack(
     if shared:
         files = _deletebigpacks(repo, packpath, files)
     datapacks = _topacks(
-        packpath, _computeincrementaldatapack(repo.ui, files), revisionstore.datapack
+        repo.ui,
+        packpath,
+        _computeincrementaldatapack(repo.ui, files),
+        revisionstore.datapack,
     )
     datapacks.extend(
         s
@@ -373,6 +384,7 @@ def _incrementalrepack(
     )
 
     historypacks = _topacks(
+        repo.ui,
         packpath,
         _computeincrementalhistorypack(repo.ui, files),
         revisionstore.historypack,
@@ -393,7 +405,10 @@ def _incrementalrepack(
         files, historypack.PACKSUFFIX, historypack.INDEXSUFFIX
     )
     allhistorypacks = _topacks(
-        packpath, (f for f, mode, stat in allhistoryfiles), revisionstore.historypack
+        repo.ui,
+        packpath,
+        (f for f, mode, stat in allhistoryfiles),
+        revisionstore.historypack,
     )
     allhistorypacks.extend(
         s for s in historystore if not isinstance(s, historypack.historypackstore)
