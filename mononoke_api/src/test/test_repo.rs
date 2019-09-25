@@ -14,8 +14,10 @@ use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures_preview::future::{FutureExt, TryFutureExt};
 
 use crate::{
-    ChangesetId, ChangesetSpecifier, CoreContext, HgChangesetId, Mononoke, TreeEntry, TreeId,
+    ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
+    Mononoke, TreeEntry, TreeId,
 };
+use mononoke_types::hash::{GitSha1, Sha1, Sha256};
 
 #[fbinit::test]
 fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
@@ -234,6 +236,11 @@ fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(dir1_path.is_dir().await?, true);
             assert_eq!(dir1_path.file_type().await?, None);
 
+            let file1_path = cs.path("dir1/file_1_in_dir1")?;
+            assert_eq!(file1_path.exists().await?, true);
+            assert_eq!(file1_path.is_dir().await?, false);
+            assert_eq!(file1_path.file_type().await?, Some(FileType::Regular));
+
             let nonexistent_path = cs.path("nonexistent")?;
             assert_eq!(nonexistent_path.exists().await?, false);
             assert_eq!(nonexistent_path.is_dir().await?, false);
@@ -367,6 +374,80 @@ fn tree_list(fb: FacebookInit) -> Result<(), Error> {
                 let path = cs.path("nonexistent")?;
                 assert!(path.tree().await?.is_none());
             }
+
+            Ok(())
+        }
+            .boxed()
+            .compat(),
+    )
+}
+
+#[fbinit::test]
+fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let mononoke =
+                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
+            let ctx = CoreContext::test_mock(fb);
+            let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+
+            let expected_metadata = FileMetadata {
+                content_id: FileId::from_str(
+                    "9d9cf646b38852094ec48ab401eea6f4481cc89a80589331845dc08f75a652d2",
+                )?,
+                total_size: 9,
+                sha1: Sha1::from_str("b29930dda02406077d96a7b7a08ce282b3de6961")?,
+                sha256: Sha256::from_str(
+                    "47d741b6059c6d7e99be25ce46fb9ba099cfd6515de1ef7681f93479d25996a4",
+                )?,
+                git_sha1: GitSha1::from_sha1(
+                    Sha1::from_str("ac3e272b72bbf89def8657766b855d0656630ed4")?,
+                    "blob",
+                    9,
+                ),
+            };
+
+            // Get file by changeset path.
+            let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
+            let cs_id = ChangesetId::from_str(hash)?;
+            let cs = repo
+                .changeset(ChangesetSpecifier::Bonsai(cs_id))
+                .await?
+                .expect("changeset exists");
+
+            let path = cs.path("dir1/file_1_in_dir1")?;
+            let file = path.file().await?.unwrap();
+            let metadata = file.metadata().await?;
+            assert_eq!(metadata, expected_metadata);
+
+            // Get file by content id.
+            let file = repo
+                .file(FileId::from_str(
+                    "9d9cf646b38852094ec48ab401eea6f4481cc89a80589331845dc08f75a652d2",
+                )?)
+                .await?
+                .expect("file exists");
+            let metadata = file.metadata().await?;
+            assert_eq!(metadata, expected_metadata);
+
+            // Get file by content sha1.
+            let file = repo
+                .file_by_content_sha1(Sha1::from_str("b29930dda02406077d96a7b7a08ce282b3de6961")?)
+                .await?
+                .expect("file exists");
+            let metadata = file.metadata().await?;
+            assert_eq!(metadata, expected_metadata);
+
+            // Get file by content sha256.
+            let file = repo
+                .file_by_content_sha256(Sha256::from_str(
+                    "47d741b6059c6d7e99be25ce46fb9ba099cfd6515de1ef7681f93479d25996a4",
+                )?)
+                .await?
+                .expect("file exists");
+            let metadata = file.metadata().await?;
+            assert_eq!(metadata, expected_metadata);
 
             Ok(())
         }

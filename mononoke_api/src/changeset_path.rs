@@ -8,6 +8,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use cloned::cloned;
+use filestore::FetchKey;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
 use manifest::{Entry, ManifestOps};
@@ -17,12 +18,19 @@ use mononoke_types::{
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
+use crate::file::FileContext;
 use crate::repo::RepoContext;
 use crate::tree::TreeContext;
 
 pub struct HistoryEntry {
     pub name: String,
     pub changeset_id: ChangesetId,
+}
+
+pub enum PathEntry {
+    NotPresent,
+    Tree(TreeContext),
+    File(FileContext, FileType),
 }
 
 type FsnodeResult = Result<Option<Entry<FsnodeId, (ContentId, FileType)>>, MononokeError>;
@@ -136,5 +144,35 @@ impl ChangesetPathContext {
             _ => None,
         };
         Ok(tree)
+    }
+
+    /// Returns a `FileContext` for the file at this path.  Returns `None` if the path
+    /// is not a file in this commit.
+    pub async fn file(&self) -> Result<Option<FileContext>, MononokeError> {
+        let file = match self.fsnode_id().await? {
+            Some(Entry::Leaf((content_id, _file_type))) => Some(FileContext::new(
+                self.repo().clone(),
+                FetchKey::Canonical(content_id),
+            )),
+            _ => None,
+        };
+        Ok(file)
+    }
+
+    /// Returns a `TreeContext` or `FileContext` and `FileType` for the tree
+    /// or file at this path. Returns `NotPresent` if the path is not a file
+    /// or directory in this commit.
+    pub async fn entry(&self) -> Result<PathEntry, MononokeError> {
+        let entry = match self.fsnode_id().await? {
+            Some(Entry::Tree(fsnode_id)) => {
+                PathEntry::Tree(TreeContext::new(self.repo().clone(), fsnode_id))
+            }
+            Some(Entry::Leaf((content_id, file_type))) => PathEntry::File(
+                FileContext::new(self.repo().clone(), FetchKey::Canonical(content_id)),
+                file_type,
+            ),
+            _ => PathEntry::NotPresent,
+        };
+        Ok(entry)
     }
 }

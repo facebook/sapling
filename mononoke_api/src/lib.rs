@@ -28,6 +28,7 @@ use crate::repo::Repo;
 pub mod changeset;
 pub mod changeset_path;
 pub mod errors;
+pub mod file;
 pub mod legacy;
 pub mod repo;
 pub mod specifiers;
@@ -39,7 +40,9 @@ mod test;
 pub use crate::legacy::get_content_by_path;
 
 pub use crate::changeset::ChangesetContext;
+pub use crate::changeset_path::PathEntry;
 pub use crate::errors::MononokeError;
+pub use crate::file::{FileId, FileMetadata, FileType};
 pub use crate::repo::RepoContext;
 pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 pub use crate::tree::{TreeEntry, TreeId, TreeSummary};

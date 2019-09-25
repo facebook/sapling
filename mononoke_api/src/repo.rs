@@ -12,11 +12,13 @@ use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use failure::Error;
 use fbinit::FacebookInit;
+use filestore::{Alias, FetchKey};
 use fsnodes::RootFsnodeMapping;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use metaconfig_types::{CommonConfig, RepoConfig};
+use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::RepositoryId;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::Logger;
@@ -24,6 +26,7 @@ use unodes::RootUnodeManifestMapping;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
+use crate::file::{FileContext, FileId};
 use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
 use crate::tree::{TreeContext, TreeId};
 
@@ -291,5 +294,26 @@ impl RepoContext {
     /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
     pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext>, MononokeError> {
         TreeContext::new_check_exists(self.clone(), tree_id).await
+    }
+
+    /// Get a File by id.  Returns `None` if the file doesn't exist.
+    pub async fn file(&self, file_id: FileId) -> Result<Option<FileContext>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Canonical(file_id)).await
+    }
+
+    /// Get a File by content sha-1.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_sha1(
+        &self,
+        hash: Sha1,
+    ) -> Result<Option<FileContext>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha1(hash))).await
+    }
+
+    /// Get a File by content sha-256.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_sha256(
+        &self,
+        hash: Sha256,
+    ) -> Result<Option<FileContext>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
     }
 }
