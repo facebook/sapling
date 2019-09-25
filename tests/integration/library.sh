@@ -683,6 +683,7 @@ function lfs_server {
 
   for _ in $(seq 1 200); do
     if "$poll" "${uri}/health_check" >/dev/null 2>&1; then
+      truncate -s 0 "$log"
       return 0
     fi
 

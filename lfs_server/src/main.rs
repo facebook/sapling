@@ -16,7 +16,7 @@ use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::bind_server;
 use scuba::ScubaSampleBuilder;
-use slog::warn;
+use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use tokio::net::TcpListener;
@@ -220,6 +220,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(err_msg("Invalid Socket Address"))?;
 
     let listener = TcpListener::bind(&addr).chain_err(err_msg("Could not start TCP listener"))?;
+    info!(&logger, "Listening on {:?}", addr);
 
     match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
