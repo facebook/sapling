@@ -2304,7 +2304,7 @@ class localrepository(object):
                 if added or drop:
                     mn = mctx.write(
                         trp, linkrev, p1.manifestnode(), p2.manifestnode(), added, drop
-                    )
+                    ) or p1.manifestnode()
                 else:
                     mn = p1.manifestnode()
                 files = changed + removed
