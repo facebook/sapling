@@ -24,6 +24,7 @@ use failure::{err_msg, format_err};
 use failure_ext::Error;
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
+use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -61,6 +62,7 @@ const POSSIBLE_TYPES: &[&str] = &[
     RootUnodeManifestId::NAME,
     RootFastlog::NAME,
     MappedHgChangesetId::NAME,
+    RootFsnodeId::NAME,
 ];
 
 #[fbinit::main]
@@ -336,7 +338,11 @@ fn derived_data_utils(
             let mapping = HgChangesetIdMapping::new(&repo);
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
-        name => Err(format_err!("Unsuppoerted derived data type: {}", name)),
+        RootFsnodeId::NAME => {
+            let mapping = RootFsnodeMapping::new(repo.get_blobstore());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
 }
 
