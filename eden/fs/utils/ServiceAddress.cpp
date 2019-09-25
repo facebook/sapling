@@ -45,13 +45,13 @@ std::optional<SocketAddressWithHostname> ServiceAddress::addressFromSMCTier(
 #ifdef EDEN_HAVE_SERVICEROUTER
   auto selection = selector->getSelection(std::get<std::string>(name_));
 
-  if (selection.hosts.empty()) {
+  if (selection.hosts->empty()) {
     return std::nullopt;
   }
 
   // TODO(zeyi, t42568801): better host selection algorithm
-  auto selected = folly::Random::rand32(selection.hosts.size());
-  const auto& host = selection.hosts[selected];
+  auto selected = folly::Random::rand32(selection.hosts->size());
+  const auto& host = selection.hosts->at(selected);
   auto location = host->location();
 
   return std::make_pair(

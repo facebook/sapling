@@ -50,8 +50,9 @@ class MockServiceCacheIf : public ServiceCacheIf {
       auto location = std::make_shared<HostInfoLocation>("::1", 1234);
       location->setHostname("some-hostname");
 
-      selection.hosts.push_back(std::make_shared<HostInfo>(
-          std::make_unique<HostInfoProperties>(), std::move(location)));
+      const_cast<ServiceHosts*>(selection.hosts.get())
+          ->push_back(std::make_shared<HostInfo>(
+              std::make_unique<HostInfoProperties>(), std::move(location)));
     }
 
     return selection;
