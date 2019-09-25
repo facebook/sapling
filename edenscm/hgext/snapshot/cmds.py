@@ -19,7 +19,6 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from .metadata import snapshotmetadata
-from .snapshotlist import snapshotlist
 
 
 cmdtable = {}
@@ -82,7 +81,7 @@ def snapshotcreate(ui, repo, *args, **opts):
             ui.status(_("nothing changed\n"))
             return
         with repo.transaction("update-snapshot-list") as tr:
-            snapshotlist(repo).add([node], tr)
+            repo.snapshotlist.add([node], tr)
         ui.status(_("snapshot %s created\n") % (repo[node].hex()))
         if visibility.enabled(repo):
             visibility.remove(repo, [node])
@@ -193,4 +192,4 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
 def snapshotlistcmd(ui, repo, *args, **opts):
     """list the local snapshots
     """
-    snapshotlist(repo).printsnapshots(ui, **opts)
+    repo.snapshotlist.printsnapshots(ui, repo, **opts)

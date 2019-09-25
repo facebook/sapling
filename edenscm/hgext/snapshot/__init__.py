@@ -53,6 +53,7 @@ def reposetup(ui, repo):
         return
 
     repo.svfs.snapshotstore = blobstore.local(repo)
+    snapshotlist.reposetup(ui, repo)
 
 
 def extsetup(ui):
@@ -83,5 +84,5 @@ def snapshot(repo, subset, x):
     """Snapshot changesets"""
     unfi = repo.unfiltered()
     # get all the binary nodes of snapshots from the file
-    nodes = snapshotlist.snapshotlist(repo).snapshots
+    nodes = repo.snapshotlist.snapshots
     return subset & unfi.revs("%ln", nodes)

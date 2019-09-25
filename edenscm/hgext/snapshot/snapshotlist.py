@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import errno
 
-from edenscm.mercurial import error, node, pycompat
+from edenscm.mercurial import error, localrepo, node, pycompat, txnutil
 from edenscm.mercurial.i18n import _
 
 
@@ -20,14 +20,28 @@ from edenscm.mercurial.i18n import _
 FORMAT_VERSION = "v1"
 
 
+def reposetup(ui, repo):
+    class snapshotrepo(repo.__class__):
+        @localrepo.storecache("snapshotlist")
+        def snapshotlist(self):
+            return snapshotlist(self)
+
+    repo.__class__ = snapshotrepo
+
+
+def _getsnapshotlistfile(repo):
+    fp, pending = txnutil.trypending(repo.root, repo.svfs, "snapshotlist")
+    return fp
+
+
 class snapshotlist(object):
     """list of local snapshots
     """
 
     def __init__(self, repo, check=True):
-        self.repo = repo
         try:
-            lines = self.repo.svfs("snapshotlist").readlines()
+            with _getsnapshotlistfile(repo) as snaplistfile:
+                lines = snaplistfile.readlines()
             if not lines or lines[0].strip() != FORMAT_VERSION:
                 raise error.Abort("invalid snapshots file format")
             self.snapshots = {node.bin(snapshot.strip()) for snapshot in lines[1:]}
@@ -36,10 +50,10 @@ class snapshotlist(object):
                 raise
             self.snapshots = set()
         if check:
-            self._check()
+            self._check(repo)
 
-    def _check(self):
-        unfi = self.repo.unfiltered()
+    def _check(self, repo):
+        unfi = repo.unfiltered()
         toremove = set()
         for snapshotnode in self.snapshots:
             if snapshotnode not in unfi:
@@ -59,12 +73,12 @@ class snapshotlist(object):
             self.snapshots = newnodes
             tr.addfilegenerator("snapshots", ("snapshotlist",), self._write)
 
-    def printsnapshots(self, ui, **opts):
+    def printsnapshots(self, ui, repo, **opts):
         opts = pycompat.byteskwargs(opts)
         fm = ui.formatter("snapshots", opts)
         if len(self.snapshots) == 0:
             ui.status(_("no snapshots created\n"))
-        unfi = self.repo.unfiltered()
+        unfi = repo.unfiltered()
         for snapshotnode in sorted(self.snapshots):
             ctx = unfi[snapshotnode]
             message = ctx.description().split("\n")[0]
