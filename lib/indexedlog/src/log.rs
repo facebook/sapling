@@ -37,7 +37,7 @@ use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuf
 use crate::lock::ScopedFileLock;
 use crate::utils::{atomic_write, mmap_empty, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use failure::{self, Fallible};
+use failure::{self, Fallible, ResultExt};
 use memmap::Mmap;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -991,7 +991,9 @@ impl Log {
         // The index meta is used to store the next offset the index should be built.
         let mut offset = Self::get_index_log_len(index)?;
         // PERF: might be worthwhile to cache xxhash verification result.
-        while let Some(entry_result) = Self::read_entry_from_buf(&path, disk_buf, offset)? {
+        while let Some(entry_result) = Self::read_entry_from_buf(&path, disk_buf, offset)
+            .with_context(|_| "while updating indexes for on-disk entries")?
+        {
             let data = entry_result.data;
             for index_output in (def.func)(data) {
                 match index_output {
@@ -1180,7 +1182,7 @@ impl Log {
         if offset == buf.len() as u64 {
             return Ok(None);
         } else if offset > buf.len() as u64 {
-            let msg = format!("invalid read offset {}", offset);
+            let msg = format!("read offset {} exceeds buffer size {}", offset, buf.len());
             return Err(data_error(msg));
         }
 
@@ -1561,7 +1563,11 @@ impl<'a> Iterator for LogLookupIter<'a> {
                 self.errored = true;
                 Some(Err(err))
             }
-            Some(Ok(offset)) => match self.log.read_entry(offset) {
+            Some(Ok(offset)) => match self
+                .log
+                .read_entry(offset)
+                .with_context(|_| "in LogLookupIter::next")
+            {
                 Ok(Some(entry)) => Some(Ok(entry.data)),
                 Ok(None) => None,
                 Err(err) => {
@@ -1572,7 +1578,7 @@ impl<'a> Iterator for LogLookupIter<'a> {
                     // The index iterator is finite if integrity check is turned
                     // on. So trust it and don't worry about infinite iteration
                     // here.
-                    Some(Err(err))
+                    Some(Err(err.into()))
                 }
             },
         }
@@ -1593,10 +1599,14 @@ impl<'a> Iterator for LogIter<'a> {
         if self.errored {
             return None;
         }
-        match self.log.read_entry(self.next_offset) {
+        match self
+            .log
+            .read_entry(self.next_offset)
+            .with_context(|_| "in LogIter::next")
+        {
             Err(e) => {
                 self.errored = true;
-                Some(Err(e))
+                Some(Err(e.into()))
             }
             Ok(Some(entry_result)) => {
                 assert!(entry_result.next_offset > self.next_offset);
