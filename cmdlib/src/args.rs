@@ -166,7 +166,8 @@ pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
     logger
 }
 
-pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+pub fn get_repo_id_and_name<'a>(matches: &ArgMatches<'a>) -> Result<(RepositoryId, String)> {
+    let configs = read_configs(matches)?;
     match (matches.value_of("repo-name"), matches.value_of("repo-id")) {
         (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
         (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
@@ -174,7 +175,22 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
             let repo_id = repo_id
                 .parse::<u32>()
                 .map_err(|_| err_msg("Couldn't parse repo-id as u32"))?;
-            Ok(RepositoryId::new(repo_id as i32))
+            let mut repo_config: Vec<_> = configs
+                .repos
+                .into_iter()
+                .filter(|(_, repo_config)| repo_config.repoid == repo_id as i32)
+                .collect();
+            if repo_config.is_empty() {
+                Err(err_msg(format!("unknown config for repo-id {:?}", repo_id)))
+            } else if repo_config.len() > 1 {
+                Err(err_msg(format!(
+                    "multiple configs defined for repo-id {:?}",
+                    repo_id
+                )))
+            } else {
+                let (repo_name, repo_config) = repo_config.pop().unwrap();
+                Ok((RepositoryId::new(repo_config.repoid), repo_name))
+            }
         }
         (Some(repo_name), None) => {
             let configs = read_configs(matches)?;
@@ -187,15 +203,25 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
                 Err(err_msg(format!("unknown repo-name {:?}", repo_name)))
             } else if repo_config.len() > 1 {
                 Err(err_msg(format!(
-                    "repo-name {:?} defined multiple times",
+                    "multiple configs defined for repo-name {:?}",
                     repo_name
                 )))
             } else {
-                let (_, repo_config) = repo_config.pop().unwrap();
-                Ok(RepositoryId::new(repo_config.repoid))
+                let (repo_name, repo_config) = repo_config.pop().unwrap();
+                Ok((RepositoryId::new(repo_config.repoid), repo_name))
             }
         }
     }
+}
+
+pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name(matches)?;
+    Ok(repo_id)
+}
+
+pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
+    let (_, repo_name) = get_repo_id_and_name(matches)?;
+    Ok(repo_name)
 }
 
 pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
