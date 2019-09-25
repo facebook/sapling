@@ -51,7 +51,7 @@ impl ScubaInfoProvider for thrift::CommitSpecifier {
         self.repo.scuba_reponame()
     }
     fn scuba_commit(&self) -> Option<String> {
-        Some(commit_id_to_string(&self.id))
+        Some(self.id.to_string())
     }
 }
 
@@ -160,64 +160,79 @@ async fn map_commit_identities(
     Ok(result)
 }
 
-/// Returns the commit identity scheme of a commit ID.
-fn commit_id_scheme(id: &thrift::CommitId) -> thrift::CommitIdentityScheme {
-    match id {
-        thrift::CommitId::bonsai(_) => thrift::CommitIdentityScheme::BONSAI,
-        thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
-        thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
-        thrift::CommitId::global_rev(_) => thrift::CommitIdentityScheme::GLOBAL_REV,
-        thrift::CommitId::UnknownField(t) => (*t).into(),
+/// Trait to extend CommitId with useful functions.
+trait CommitIdExt {
+    fn scheme(&self) -> thrift::CommitIdentityScheme;
+    fn to_string(&self) -> String;
+}
+
+impl CommitIdExt for thrift::CommitId {
+    /// Returns the commit identity scheme of a commit ID.
+    fn scheme(&self) -> thrift::CommitIdentityScheme {
+        match self {
+            thrift::CommitId::bonsai(_) => thrift::CommitIdentityScheme::BONSAI,
+            thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
+            thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
+            thrift::CommitId::global_rev(_) => thrift::CommitIdentityScheme::GLOBAL_REV,
+            thrift::CommitId::UnknownField(t) => (*t).into(),
+        }
+    }
+
+    /// Convert a `thrift::CommitId` to a string for display. This would normally
+    /// be implemented as `Display for thrift::CommitId`, but it is defined in
+    /// the generated crate.
+    fn to_string(&self) -> String {
+        match self {
+            thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::global_rev(rev) => rev.to_string(),
+            thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
+        }
     }
 }
 
-/// Convert a `thrift::CommitId` to a string for display. This would normally
-/// be implemented as `Display for thrift::CommitId`, but it is defined in
-/// the generated crate.
-fn commit_id_to_string(id: &thrift::CommitId) -> String {
-    match id {
-        thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
-        thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
-        thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
-        thrift::CommitId::global_rev(rev) => rev.to_string(),
-        thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
+trait FromRequest<T> {
+    fn from_request(t: &T) -> Result<Self, thrift::RequestError>
+    where
+        Self: Sized;
+}
+
+impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
+    fn from_request(commit: &thrift::CommitId) -> Result<Self, thrift::RequestError> {
+        match commit {
+            thrift::CommitId::bonsai(id) => {
+                let cs_id = ChangesetId::from_bytes(&id).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id (scheme={} {}): {}",
+                        commit.scheme(),
+                        commit.to_string(),
+                        e.to_string()
+                    ))
+                })?;
+                Ok(ChangesetSpecifier::Bonsai(cs_id))
+            }
+            thrift::CommitId::hg(id) => {
+                let hg_cs_id = HgChangesetId::from_bytes(&id).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id (scheme={} {}): {}",
+                        commit.scheme(),
+                        commit.to_string(),
+                        e.to_string()
+                    ))
+                })?;
+                Ok(ChangesetSpecifier::Hg(hg_cs_id))
+            }
+            _ => Err(errors::invalid_request(format!(
+                "unsupported commit identity scheme ({})",
+                commit.scheme()
+            ))),
+        }
     }
 }
 
-/// Convert a `thrift::CommitId` into a `mononoke_api::ChangesetSpecifier`.  This would
-/// normally be implemented as `From<thrift::CommitId> for ChangesetSpecifier`, but it is
-/// defined in the generated crate.
-fn commit_id_to_changeset_specifier(
-    commit: &thrift::CommitId,
-) -> Result<ChangesetSpecifier, thrift::RequestError> {
-    match commit {
-        thrift::CommitId::bonsai(id) => {
-            let cs_id = ChangesetId::from_bytes(&id).map_err(|e| {
-                errors::invalid_request(format!(
-                    "invalid commit id (scheme={} {}): {}",
-                    commit_id_scheme(commit),
-                    commit_id_to_string(commit),
-                    e.to_string()
-                ))
-            })?;
-            Ok(ChangesetSpecifier::Bonsai(cs_id))
-        }
-        thrift::CommitId::hg(id) => {
-            let hg_cs_id = HgChangesetId::from_bytes(&id).map_err(|e| {
-                errors::invalid_request(format!(
-                    "invalid commit id (scheme={} {}): {}",
-                    commit_id_scheme(commit),
-                    commit_id_to_string(commit),
-                    e.to_string()
-                ))
-            })?;
-            Ok(ChangesetSpecifier::Hg(hg_cs_id))
-        }
-        _ => Err(errors::invalid_request(format!(
-            "unsupported commit identity scheme ({})",
-            commit_id_scheme(commit)
-        ))),
-    }
+trait IntoResponse<T> {
+    fn into_response(self) -> T;
 }
 
 mod errors {
@@ -348,7 +363,7 @@ impl SourceControlService for SourceControlServiceImpl {
             .repo(ctx, &commit.repo.name)?
             .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
         match repo
-            .changeset(commit_id_to_changeset_specifier(&commit.id)?)
+            .changeset(ChangesetSpecifier::from_request(&commit.id)?)
             .await?
         {
             Some(cs) => {
@@ -377,7 +392,7 @@ impl SourceControlService for SourceControlServiceImpl {
             .repo(ctx, &commit.repo.name)?
             .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
 
-        let changeset_specifier = commit_id_to_changeset_specifier(&commit.id)?;
+        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         match repo.changeset(changeset_specifier).await? {
             Some(changeset) => {
                 async fn map_parent_identities(
@@ -434,8 +449,8 @@ impl SourceControlService for SourceControlServiceImpl {
             .mononoke
             .repo(ctx, &commit.repo.name)?
             .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
-        let changeset_specifier = commit_id_to_changeset_specifier(&commit.id)?;
-        let other_changeset_specifier = commit_id_to_changeset_specifier(&params.other_commit_id)?;
+        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
         let (changeset, other_changeset_id) = try_join!(
             repo.changeset(changeset_specifier),
             repo.resolve_specifier(other_changeset_specifier),
