@@ -42,10 +42,10 @@ pub use crate::legacy::get_content_by_path;
 pub use crate::changeset::ChangesetContext;
 pub use crate::changeset_path::PathEntry;
 pub use crate::errors::MononokeError;
-pub use crate::file::{FileId, FileMetadata, FileType};
+pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::repo::RepoContext;
 pub use crate::specifiers::{ChangesetId, ChangesetSpecifier, HgChangesetId};
-pub use crate::tree::{TreeEntry, TreeId, TreeSummary};
+pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 
 // Re-export types that are useful for clients.
 pub type CoreContext = context::CoreContext;

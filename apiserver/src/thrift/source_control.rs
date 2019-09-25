@@ -14,8 +14,8 @@ use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::try_join;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileId, FileType,
-    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, TreeEntry, TreeId,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, FileType,
+    HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext, TreeContext, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -29,34 +29,56 @@ use uuid::Uuid;
 
 const MAX_LIMIT: i64 = 1000;
 
-trait ScubaInfoProvider {
+trait SpecifierExt {
+    fn description(&self) -> String;
+
     fn scuba_reponame(&self) -> Option<String> {
         None
     }
+
     fn scuba_commit(&self) -> Option<String> {
         None
     }
+
     fn scuba_path(&self) -> Option<String> {
         None
     }
 }
 
-impl ScubaInfoProvider for thrift::RepoSpecifier {
+impl SpecifierExt for thrift::RepoSpecifier {
+    fn description(&self) -> String {
+        format!("repo={}", self.name)
+    }
+
     fn scuba_reponame(&self) -> Option<String> {
         Some(self.name.clone())
     }
 }
 
-impl ScubaInfoProvider for thrift::CommitSpecifier {
+impl SpecifierExt for thrift::CommitSpecifier {
+    fn description(&self) -> String {
+        format!("repo={} commit={}", self.repo.name, self.id.to_string())
+    }
+
     fn scuba_reponame(&self) -> Option<String> {
         self.repo.scuba_reponame()
     }
+
     fn scuba_commit(&self) -> Option<String> {
         Some(self.id.to_string())
     }
 }
 
-impl ScubaInfoProvider for thrift::CommitPathSpecifier {
+impl SpecifierExt for thrift::CommitPathSpecifier {
+    fn description(&self) -> String {
+        format!(
+            "repo={} commit={} path={}",
+            self.commit.repo.name,
+            self.commit.id.to_string(),
+            self.path
+        )
+    }
+
     fn scuba_reponame(&self) -> Option<String> {
         self.commit.scuba_reponame()
     }
@@ -68,7 +90,19 @@ impl ScubaInfoProvider for thrift::CommitPathSpecifier {
     }
 }
 
-impl ScubaInfoProvider for thrift::TreeSpecifier {
+impl SpecifierExt for thrift::TreeSpecifier {
+    fn description(&self) -> String {
+        match self {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.description(),
+            thrift::TreeSpecifier::by_id(tree_id) => format!(
+                "repo={} tree={}",
+                tree_id.repo.name,
+                hex_string(&tree_id.id).expect("hex_string should never fail")
+            ),
+            thrift::TreeSpecifier::UnknownField(n) => format!("unknown tree specifier type {}", n),
+        }
+    }
+
     fn scuba_reponame(&self) -> Option<String> {
         match self {
             thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_reponame(),
@@ -76,6 +110,7 @@ impl ScubaInfoProvider for thrift::TreeSpecifier {
             thrift::TreeSpecifier::UnknownField(_) => None,
         }
     }
+
     fn scuba_commit(&self) -> Option<String> {
         match self {
             thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_commit(),
@@ -83,6 +118,7 @@ impl ScubaInfoProvider for thrift::TreeSpecifier {
             thrift::TreeSpecifier::UnknownField(_) => None,
         }
     }
+
     fn scuba_path(&self) -> Option<String> {
         match self {
             thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
@@ -92,7 +128,29 @@ impl ScubaInfoProvider for thrift::TreeSpecifier {
     }
 }
 
-impl ScubaInfoProvider for thrift::FileSpecifier {
+impl SpecifierExt for thrift::FileSpecifier {
+    fn description(&self) -> String {
+        match self {
+            thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.description(),
+            thrift::FileSpecifier::by_id(file_id) => format!(
+                "repo={} file={}",
+                file_id.repo.name,
+                hex_string(&file_id.id).expect("hex_string should never fail"),
+            ),
+            thrift::FileSpecifier::by_sha1_content_hash(hash) => format!(
+                "repo={} file_sha1={}",
+                hash.repo.name,
+                hex_string(&hash.content_hash).expect("hex_string should never fail"),
+            ),
+            thrift::FileSpecifier::by_sha256_content_hash(hash) => format!(
+                "repo={} file_sha256={}",
+                hash.repo.name,
+                hex_string(&hash.content_hash).expect("hex_string should never fail"),
+            ),
+            thrift::FileSpecifier::UnknownField(n) => format!("unknown file specifier type {}", n),
+        }
+    }
+
     fn scuba_reponame(&self) -> Option<String> {
         match self {
             thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.scuba_reponame(),
@@ -145,17 +203,17 @@ impl SourceControlServiceImpl {
         }
     }
 
-    fn create_ctx(&self, scuba_info_provider: Option<&dyn ScubaInfoProvider>) -> CoreContext {
+    fn create_ctx(&self, specifier: Option<&dyn SpecifierExt>) -> CoreContext {
         let mut scuba = self.scuba_builder.clone();
         scuba.add_common_server_data().add("type", "thrift");
-        if let Some(scuba_info_provider) = scuba_info_provider {
-            if let Some(reponame) = scuba_info_provider.scuba_reponame() {
+        if let Some(specifier) = specifier {
+            if let Some(reponame) = specifier.scuba_reponame() {
                 scuba.add("reponame", reponame);
             }
-            if let Some(commit) = scuba_info_provider.scuba_commit() {
+            if let Some(commit) = specifier.scuba_commit() {
                 scuba.add("commit", commit);
             }
-            if let Some(path) = scuba_info_provider.scuba_path() {
+            if let Some(path) = specifier.scuba_path() {
                 scuba.add("path", path);
             }
         }
@@ -172,6 +230,122 @@ impl SourceControlServiceImpl {
             SshEnvVars::default(),
             None,
         )
+    }
+
+    /// Get the repo specified by a `thrift::RepoSpecifier`.
+    fn repo(
+        &self,
+        ctx: CoreContext,
+        repo: &thrift::RepoSpecifier,
+    ) -> Result<RepoContext, errors::ServiceError> {
+        let repo = self
+            .mononoke
+            .repo(ctx, &repo.name)?
+            .ok_or_else(|| errors::repo_not_found(repo.description()))?;
+        Ok(repo)
+    }
+
+    /// Get the repo and changeset specified by a `thrift::CommitSpecifier`.
+    async fn repo_changeset(
+        &self,
+        ctx: CoreContext,
+        commit: &thrift::CommitSpecifier,
+    ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
+        let repo = self.repo(ctx, &commit.repo)?;
+        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let changeset = repo
+            .changeset(changeset_specifier)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(commit.description()))?;
+        Ok((repo, changeset))
+    }
+
+    /// Get the repo and tree specified by a `thrift::TreeSpecifier`.
+    ///
+    /// Returns `None` if the tree is specified by commit path and that path
+    /// is not a directory in that commit.
+    async fn repo_tree(
+        &self,
+        ctx: CoreContext,
+        tree: &thrift::TreeSpecifier,
+    ) -> Result<(RepoContext, Option<TreeContext>), errors::ServiceError> {
+        let (repo, tree) = match tree {
+            thrift::TreeSpecifier::by_commit_path(commit_path) => {
+                let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+                let path = changeset.path(&commit_path.path)?;
+                (repo, path.tree().await?)
+            }
+            thrift::TreeSpecifier::by_id(tree_id) => {
+                let repo = self.repo(ctx, &tree_id.repo)?;
+                let tree_id = TreeId::from_request(&tree_id.id)?;
+                let tree = repo
+                    .tree(tree_id)
+                    .await?
+                    .ok_or_else(|| errors::tree_not_found(tree.description()))?;
+                (repo, Some(tree))
+            }
+            thrift::TreeSpecifier::UnknownField(id) => {
+                return Err(errors::invalid_request(format!(
+                    "tree specifier type not supported: {}",
+                    id
+                ))
+                .into());
+            }
+        };
+        Ok((repo, tree))
+    }
+
+    /// Get the repo and file specified by a `thrift::FileSpecifier`.
+    ///
+    /// Returns `None` if the file is specified by commit path, and that path
+    /// is not a file in that commit.
+    async fn repo_file(
+        &self,
+        ctx: CoreContext,
+        file: &thrift::FileSpecifier,
+    ) -> Result<(RepoContext, Option<FileContext>), errors::ServiceError> {
+        let (repo, file) = match file {
+            thrift::FileSpecifier::by_commit_path(commit_path) => {
+                let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+                let path = changeset.path(&commit_path.path)?;
+                (repo, path.file().await?)
+            }
+            thrift::FileSpecifier::by_id(file_id) => {
+                let repo = self.repo(ctx, &file_id.repo)?;
+                let file_id = FileId::from_request(&file_id.id)?;
+                let file = repo
+                    .file(file_id)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                (repo, Some(file))
+            }
+            thrift::FileSpecifier::by_sha1_content_hash(hash) => {
+                let repo = self.repo(ctx, &hash.repo)?;
+                let file_sha1 = Sha1::from_request(&hash.content_hash)?;
+                let file = repo
+                    .file_by_content_sha1(file_sha1)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                (repo, Some(file))
+            }
+            thrift::FileSpecifier::by_sha256_content_hash(hash) => {
+                let repo = self.repo(ctx, &hash.repo)?;
+                let file_sha256 = Sha256::from_request(&hash.content_hash)?;
+                let file = repo
+                    .file_by_content_sha256(file_sha256)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                (repo, Some(file))
+            }
+            thrift::FileSpecifier::UnknownField(id) => {
+                return Err(errors::invalid_request(format!(
+                    "file specifier type not supported: {}",
+                    id
+                ))
+                .into());
+            }
+        };
+        Ok((repo, file))
     }
 }
 
@@ -369,8 +543,47 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
 }
 
 mod errors {
-    use super::thrift;
-    use mononoke_api::{ChangesetSpecifier, TreeId};
+    use super::{service, thrift};
+    use mononoke_api::MononokeError;
+
+    pub(super) enum ServiceError {
+        Request(thrift::RequestError),
+        Mononoke(MononokeError),
+    }
+
+    impl From<thrift::RequestError> for ServiceError {
+        fn from(e: thrift::RequestError) -> Self {
+            Self::Request(e)
+        }
+    }
+
+    impl From<MononokeError> for ServiceError {
+        fn from(e: MononokeError) -> Self {
+            Self::Mononoke(e)
+        }
+    }
+
+    macro_rules! impl_into_thrift_error(
+        ($t:ty) => {
+            impl From<ServiceError> for $t {
+                fn from(e: ServiceError) -> Self {
+                    match e {
+                        ServiceError::Request(e) => e.into(),
+                        ServiceError::Mononoke(e) => e.into(),
+                    }
+                }
+            }
+        }
+    );
+
+    impl_into_thrift_error!(service::RepoResolveBookmarkExn);
+    impl_into_thrift_error!(service::RepoListBookmarksExn);
+    impl_into_thrift_error!(service::CommitLookupExn);
+    impl_into_thrift_error!(service::CommitInfoExn);
+    impl_into_thrift_error!(service::CommitIsAncestorOfExn);
+    impl_into_thrift_error!(service::CommitPathInfoExn);
+    impl_into_thrift_error!(service::TreeListExn);
+    impl_into_thrift_error!(service::FileExistsExn);
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
@@ -379,21 +592,28 @@ mod errors {
         }
     }
 
-    pub(super) fn repo_not_found(reponame: impl AsRef<str>) -> thrift::RequestError {
+    pub(super) fn repo_not_found(repo: String) -> thrift::RequestError {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
-            reason: format!("repo not found ({})", reponame.as_ref()),
+            reason: format!("repo not found ({})", repo),
         }
     }
 
-    pub(super) fn commit_not_found(commit: &ChangesetSpecifier) -> thrift::RequestError {
+    pub(super) fn commit_not_found(commit: String) -> thrift::RequestError {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
             reason: format!("commit not found ({})", commit),
         }
     }
 
-    pub(super) fn tree_not_found(tree: &TreeId) -> thrift::RequestError {
+    pub(super) fn file_not_found(file: String) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::FILE_NOT_FOUND,
+            reason: format!("file not found ({})", file),
+        }
+    }
+
+    pub(super) fn tree_not_found(tree: String) -> thrift::RequestError {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
             reason: format!("tree not found ({})", tree),
@@ -428,10 +648,7 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::RepoResolveBookmarkParams,
     ) -> Result<thrift::RepoResolveBookmarkResponse, service::RepoResolveBookmarkExn> {
         let ctx = self.create_ctx(Some(&repo));
-        let repo = self
-            .mononoke
-            .repo(ctx, &repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&repo.name))?;
+        let repo = self.repo(ctx, &repo)?;
         match repo.resolve_bookmark(params.bookmark_name).await? {
             Some(cs) => {
                 let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
@@ -470,10 +687,7 @@ impl SourceControlService for SourceControlServiceImpl {
         } else {
             None
         };
-        let repo = self
-            .mononoke
-            .repo(ctx, &repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&repo.name))?;
+        let repo = self.repo(ctx, &repo)?;
         let bookmarks = repo
             .list_bookmarks(params.include_scratch, prefix, limit)
             .collect()
@@ -498,10 +712,7 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::CommitLookupParams,
     ) -> Result<thrift::CommitLookupResponse, service::CommitLookupExn> {
         let ctx = self.create_ctx(Some(&commit));
-        let repo = self
-            .mononoke
-            .repo(ctx, &commit.repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+        let repo = self.repo(ctx, &commit.repo)?;
         match repo
             .changeset(ChangesetSpecifier::from_request(&commit.id)?)
             .await?
@@ -527,55 +738,44 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::CommitInfoParams,
     ) -> Result<thrift::CommitInfo, service::CommitInfoExn> {
         let ctx = self.create_ctx(Some(&commit));
-        let repo = self
-            .mononoke
-            .repo(ctx, &commit.repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
 
-        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
-        match repo.changeset(changeset_specifier).await? {
-            Some(changeset) => {
-                async fn map_parent_identities(
-                    repo: &RepoContext,
-                    changeset: &ChangesetContext,
-                    identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-                ) -> Result<
-                    Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
-                    MononokeError,
-                > {
-                    let parents = changeset.parents().await?;
-                    let parent_id_mapping =
-                        map_commit_identities(&repo, parents.clone(), identity_schemes).await?;
-                    Ok(parents
-                        .iter()
-                        .map(|parent_id| {
-                            parent_id_mapping
-                                .get(parent_id)
-                                .map(Clone::clone)
-                                .unwrap_or_else(BTreeMap::new)
-                        })
-                        .collect())
-                }
-
-                let (ids, message, date, author, parents, extra) = try_join!(
-                    map_commit_identity(&changeset, &params.identity_schemes),
-                    changeset.message(),
-                    changeset.author_date(),
-                    changeset.author(),
-                    map_parent_identities(&repo, &changeset, &params.identity_schemes),
-                    changeset.extras(),
-                )?;
-                Ok(thrift::CommitInfo {
-                    ids,
-                    message,
-                    date: date.timestamp(),
-                    author,
-                    parents,
-                    extra: extra.into_iter().collect(),
+        async fn map_parent_identities(
+            repo: &RepoContext,
+            changeset: &ChangesetContext,
+            identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
+        ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, MononokeError>
+        {
+            let parents = changeset.parents().await?;
+            let parent_id_mapping =
+                map_commit_identities(&repo, parents.clone(), identity_schemes).await?;
+            Ok(parents
+                .iter()
+                .map(|parent_id| {
+                    parent_id_mapping
+                        .get(parent_id)
+                        .map(Clone::clone)
+                        .unwrap_or_else(BTreeMap::new)
                 })
-            }
-            None => Err(errors::commit_not_found(&changeset_specifier).into()),
+                .collect())
         }
+
+        let (ids, message, date, author, parents, extra) = try_join!(
+            map_commit_identity(&changeset, &params.identity_schemes),
+            changeset.message(),
+            changeset.author_date(),
+            changeset.author(),
+            map_parent_identities(&repo, &changeset, &params.identity_schemes),
+            changeset.extras(),
+        )?;
+        Ok(thrift::CommitInfo {
+            ids,
+            message,
+            date: date.timestamp(),
+            author,
+            parents,
+            extra: extra.into_iter().collect(),
+        })
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.
@@ -585,19 +785,21 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::CommitIsAncestorOfParams,
     ) -> Result<bool, service::CommitIsAncestorOfExn> {
         let ctx = self.create_ctx(Some(&commit));
-        let repo = self
-            .mononoke
-            .repo(ctx, &commit.repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&commit.repo.name))?;
+        let repo = self.repo(ctx, &commit.repo)?;
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
         let (changeset, other_changeset_id) = try_join!(
             repo.changeset(changeset_specifier),
             repo.resolve_specifier(other_changeset_specifier),
         )?;
-        let changeset = changeset.ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
-        let other_changeset_id = other_changeset_id
-            .ok_or_else(|| errors::commit_not_found(&other_changeset_specifier))?;
+        let changeset = changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
+        let other_changeset_id = other_changeset_id.ok_or_else(|| {
+            errors::commit_not_found(format!(
+                "repo={} commit={}",
+                commit.repo.name,
+                params.other_commit_id.to_string()
+            ))
+        })?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset_id).await?;
         Ok(is_ancestor_of)
     }
@@ -609,17 +811,8 @@ impl SourceControlService for SourceControlServiceImpl {
         _params: thrift::CommitPathInfoParams,
     ) -> Result<thrift::CommitPathInfoResponse, service::CommitPathInfoExn> {
         let ctx = self.create_ctx(Some(&commit_path));
-        let repo = self
-            .mononoke
-            .repo(ctx, &commit_path.commit.repo.name)?
-            .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
-        let changeset_specifier = ChangesetSpecifier::from_request(&commit_path.commit.id)?;
-        let changeset = repo
-            .changeset(changeset_specifier)
-            .await?
-            .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
-
         let response = match path.entry().await? {
             PathEntry::NotPresent => thrift::CommitPathInfoResponse {
                 exists: false,
@@ -669,40 +862,7 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::TreeListParams,
     ) -> Result<thrift::TreeListResponse, service::TreeListExn> {
         let ctx = self.create_ctx(Some(&tree));
-        let tree = match tree {
-            thrift::TreeSpecifier::by_commit_path(commit_path) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &commit_path.commit.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
-                let changeset_specifier = FromRequest::from_request(&commit_path.commit.id)?;
-                let changeset = repo
-                    .changeset(changeset_specifier)
-                    .await?
-                    .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
-                let path = changeset.path(&commit_path.path)?;
-                path.tree().await?
-            }
-            thrift::TreeSpecifier::by_id(tree_id) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &tree_id.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&tree_id.repo.name))?;
-                let tree_id = TreeId::from_request(&tree_id.id)?;
-                let tree = repo
-                    .tree(tree_id)
-                    .await?
-                    .ok_or_else(|| errors::tree_not_found(&tree_id))?;
-                Some(tree)
-            }
-            thrift::TreeSpecifier::UnknownField(id) => {
-                return Err(errors::invalid_request(format!(
-                    "tree specifier type not supported: {}",
-                    id
-                ))
-                .into());
-            }
-        };
+        let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
         if let Some(tree) = tree {
             let summary = tree.summary().await?;
             let entries = tree
@@ -733,52 +893,7 @@ impl SourceControlService for SourceControlServiceImpl {
         _params: thrift::FileExistsParams,
     ) -> Result<bool, service::FileExistsExn> {
         let ctx = self.create_ctx(Some(&file));
-        let file = match file {
-            thrift::FileSpecifier::by_commit_path(commit_path) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &commit_path.commit.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&commit_path.commit.repo.name))?;
-                let changeset_specifier = FromRequest::from_request(&commit_path.commit.id)?;
-                let changeset = repo
-                    .changeset(changeset_specifier)
-                    .await?
-                    .ok_or_else(|| errors::commit_not_found(&changeset_specifier))?;
-                let path = changeset.path(&commit_path.path)?;
-                path.file().await?
-            }
-            thrift::FileSpecifier::by_id(file_id) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &file_id.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&file_id.repo.name))?;
-                let file_id = FileId::from_request(&file_id.id)?;
-                repo.file(file_id).await?
-            }
-            thrift::FileSpecifier::by_sha1_content_hash(hash) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &hash.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&hash.repo.name))?;
-                let file_sha1 = Sha1::from_request(&hash.content_hash)?;
-                repo.file_by_content_sha1(file_sha1).await?
-            }
-            thrift::FileSpecifier::by_sha256_content_hash(hash) => {
-                let repo = self
-                    .mononoke
-                    .repo(ctx, &hash.repo.name)?
-                    .ok_or_else(|| errors::repo_not_found(&hash.repo.name))?;
-                let file_sha256 = Sha256::from_request(&hash.content_hash)?;
-                repo.file_by_content_sha256(file_sha256).await?
-            }
-            thrift::FileSpecifier::UnknownField(id) => {
-                return Err(errors::invalid_request(format!(
-                    "file specifier type not supported: {}",
-                    id
-                ))
-                .into());
-            }
-        };
+        let (_repo, file) = self.repo_file(ctx, &file).await?;
         Ok(file.is_some())
     }
 }
