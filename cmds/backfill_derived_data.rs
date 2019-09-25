@@ -28,6 +28,7 @@ use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
 use lock_ext::LockExt;
+use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{ChangesetId, MononokeId, RepositoryId};
 use phases::SqlPhases;
 use slog::info;
@@ -56,7 +57,11 @@ const SUBCOMMAND_SINGLE: &'static str = "single";
 
 const CHUNK_SIZE: usize = 4096;
 
-const POSSIBLE_TYPES: &[&str] = &[RootUnodeManifestId::NAME, RootFastlog::NAME];
+const POSSIBLE_TYPES: &[&str] = &[
+    RootUnodeManifestId::NAME,
+    RootFastlog::NAME,
+    MappedHgChangesetId::NAME,
+];
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -325,6 +330,10 @@ fn derived_data_utils(
         }
         RootFastlog::NAME => {
             let mapping = RootFastlogMapping::new(repo.get_blobstore().boxed());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        MappedHgChangesetId::NAME => {
+            let mapping = HgChangesetIdMapping::new(&repo);
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsuppoerted derived data type: {}", name)),

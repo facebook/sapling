@@ -876,6 +876,10 @@ impl BlobRepo {
         self.filenodes.clone()
     }
 
+    pub fn get_bonsai_hg_mapping(&self) -> Arc<dyn BonsaiHgMapping> {
+        self.bonsai_hg_mapping.clone()
+    }
+
     fn store_file_change(
         &self,
         ctx: CoreContext,
