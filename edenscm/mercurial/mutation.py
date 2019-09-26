@@ -287,7 +287,7 @@ class obsoletecache(object):
         if self.complete[repo.filtername] or node in self.notobsolete[repo.filtername]:
             return False
         unfi = repo.unfiltered()
-        clhasnode = unfi.changelog.hasnode
+        clhasnode = getisvisiblefunc(repo)
         clrev = unfi.changelog.rev
         hiddenrevs = repoview.filterrevs(repo, "visible")
 
@@ -320,7 +320,7 @@ class obsoletecache(object):
             #   obsolete.
             # Note that "visible" here means "visible in a normal filtered repo",
             # even if the filter for this repo includes other commits.
-            clhasnode = repo.changelog.hasnode
+            clhasnode = getisvisiblefunc(repo)
             clrev = repo.changelog.rev
             obsolete = self.obsolete[repo.filtername]
             hiddenrevs = repoview.filterrevs(repo, "visible")
@@ -535,7 +535,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
         ]
         return succsets or [[node]]
 
-    clhasnode = repo.changelog.hasnode
+    clhasnode = getisvisiblefunc(repo)
 
     succsets = [[startnode]]
     nextsuccsets = getsets(startnode)
@@ -837,3 +837,31 @@ def automigrate(repo):
         )
         repo.ui.status(msg)
         convertfromobsmarkers(repo)
+
+
+def getisvisiblefunc(repo):
+    """get a (node) -> bool function to test visibility
+
+    If narrow-heads is set, visible commits are defined as "::head()".
+
+    visibility here is used to test where a "successor" exists or not.
+    """
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        # Use phase to test.
+        # secret phase means "not reachable from public or draft heads", aka. "hidden"
+        nodemap = repo.changelog.nodemap
+        getphase = repo._phasecache.phase
+
+        def isvisible(
+            node, nodemap=nodemap, getphase=getphase, repo=repo, secret=phases.secret
+        ):
+            try:
+                rev = nodemap[node]
+            except error.RevlogError:
+                return False
+            return getphase(repo, rev) != secret
+
+        return isvisible
+    else:
+        # Use cl.hasnode to test
+        return repo.changelog.hasnode
