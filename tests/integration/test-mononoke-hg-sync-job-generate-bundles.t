@@ -82,11 +82,13 @@ Two pushes synced one after another
   $ hgmn push -r . --to master_bookmark -q
 
 Sync it to another client
-  $ cd $TESTTMP
-  $ cat >> repo-hg/.hg/hgrc <<EOF
+  $ cd $TESTTMP/repo-hg
+  $ enable_replay_verification_hook
+  $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > treeonly=True
   > EOF
+  $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync'

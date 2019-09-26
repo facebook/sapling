@@ -58,13 +58,31 @@ Two pushes synced one after another
   $ hgmn push -r . --to master_bookmark -q
 
 Sync it to another client
-  $ cd $TESTTMP
-  $ cat >> repo-hg/.hg/hgrc <<EOF
+  $ cd $TESTTMP/repo-hg
+  $ enable_replay_verification_hook
+  $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > treeonly=True
   > EOF
+  $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [2] (glob)
   * successful sync of entries [3] (glob)
+
+New bookmark is created
+  $ cd $TESTTMP/client-push
+  $ hg up -q 0
+  $ mkcommit newbook_commit_first
+  $ hgmn push -r . --to newbook -q --create
+
+  $ hg up -q newbook
+  $ mkcommit newbook_commit_second
+  $ hgmn push -r . --to newbook -q
+
+Sync a pushrebase bookmark move
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop_regenerate repo-hg 3 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [4] (glob)
+  * successful sync of entries [5] (glob)
