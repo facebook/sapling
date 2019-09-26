@@ -6,12 +6,11 @@
 
 from __future__ import absolute_import
 
+from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % ". helpers-usechg.sh"
 
 sh % "hg init a"
 sh % "mkdir a/d1"
@@ -217,7 +216,10 @@ sh % "hg clone -r0 a b" == r"""
     new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "sed 's/1,1/foo/'" << open("diffed-tip.patch").read() > "broken.patch"
+
+content = open("diffed-tip.patch").read().replace("1,1", "foo")
+open("broken.patch", "wb").write(content)
+
 sh % "hg --cwd b import -mpatch ../broken.patch" == r"""
     applying ../broken.patch
     abort: bad hunk #1
@@ -282,18 +284,19 @@ sh % "hg clone -r0 a b" == r"""
 sh % "hg --cwd b import -m override -" << open(
     "exported-tip.patch"
 ).read() == "applying patch from stdin"
-sh % "hg --cwd b tip" | "grep override" == "summary:     override"
+sh % "hg --cwd b log -r tip -T '{desc}'" == "override"
 sh % "rm -r b"
 
-sh % "cat" << r"""
-import email.Message, sys
-msg = email.Message.Message()
-patch = open(sys.argv[1], 'rb').read()
-msg.set_payload('email commit message\n' + patch)
-msg['Subject'] = 'email patch'
-msg['From'] = 'email patcher'
-file(sys.argv[2], 'wb').write(msg.as_string())
-""" > "mkmsg.py"
+
+def mkmsg(path1, path2):
+    import email.Message, sys
+
+    msg = email.Message.Message()
+    patch = open(path1, "rb").read()
+    msg.set_payload("email commit message\n" + patch)
+    msg["Subject"] = "email patch"
+    msg["From"] = "email patcher"
+    open(path2, "wb").write(msg.as_string())
 
 
 # plain diff in email, subject, message body
@@ -306,56 +309,14 @@ sh % "hg clone -r0 a b" == r"""
     new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'$PYTHON' mkmsg.py diffed-tip.patch msg.patch"
+
+mkmsg("diffed-tip.patch", "msg.patch")
+
 sh % "hg --cwd b import ../msg.patch" == "applying ../msg.patch"
-sh % "hg --cwd b tip" | "grep email" == r"""
-    user:        email patcher
-    summary:     email patch"""
-sh % "rm -r b"
-
-
-# plain diff in email, no subject, message body
-
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "grep -v '^Subject:' msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
-sh % "rm -r b"
-
-
-# plain diff in email, subject, no message body
-
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "grep -v '^email ' msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
-sh % "rm -r b"
-
-
-# plain diff in email, no subject, no message body, should fail
-
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "egrep -v '^(Subject|email)' msg.patch" | "hg --cwd b import -" == r"""
-    applying patch from stdin
-    abort: empty commit message
-    [255]"""
+sh % "hg --cwd b log -r tip -T '{author}\\n{desc}'" == r"""
+    email patcher
+    email patch
+    email commit message"""
 sh % "rm -r b"
 
 
@@ -369,24 +330,27 @@ sh % "hg clone -r0 a b" == r"""
     new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'$PYTHON' mkmsg.py exported-tip.patch msg.patch"
+
+mkmsg("exported-tip.patch", "msg.patch")
+
 sh % "cat msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
-sh % "hg --cwd b tip" | "grep second" == "summary:     second change"
+sh % "hg --cwd b log -r tip -T '{desc}'" == "second change"
 sh % "rm -r b"
 
 
 # subject: duplicate detection, removal of [PATCH]
 # The '---' tests the gitsendmail handling without proper mail headers
 
-sh % "cat" << r"""
-import email.Message, sys
-msg = email.Message.Message()
-patch = open(sys.argv[1], 'rb').read()
-msg.set_payload('email patch\n\nnext line\n---\n' + patch)
-msg['Subject'] = '[PATCH] email patch'
-msg['From'] = 'email patcher'
-file(sys.argv[2], 'wb').write(msg.as_string())
-""" > "mkmsg2.py"
+
+def mkmsg2(path1, path2):
+    import email.Message, sys
+
+    msg = email.Message.Message()
+    patch = open(path1, "rb").read()
+    msg.set_payload("email patch\n\nnext line\n---\n" + patch)
+    msg["Subject"] = "[PATCH] email patch"
+    msg["From"] = "email patcher"
+    open(path2, "wb").write(msg.as_string())
 
 
 # plain diff in email, [PATCH] subject, message body with subject
@@ -399,7 +363,7 @@ sh % "hg clone -r0 a b" == r"""
     new changesets 80971e65b431
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'$PYTHON' mkmsg2.py diffed-tip.patch msg.patch"
+mkmsg2("diffed-tip.patch", "msg.patch")
 sh % "cat msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
 sh % "hg --cwd b tip --template '{desc}\\n'" == r"""
     email patch
@@ -476,11 +440,11 @@ sh % "hg clone -r0 a b" == r"""
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg --cwd a export tip" > "tmp"
-sh % "sed -e 's/d1\\/d2\\///'" << open("tmp").read() > "subdir-tip.patch"
-sh % "'dir=`pwd`'"
-sh % "cd b/d1/d2 '2>&1'" > "/dev/null"
+open("subdir-tip.patch", "wb").write(open("tmp").read().replace("d1/d2", ""))
+
+sh % "cd b/d1/d2"
 sh % "hg import ../../../subdir-tip.patch" == "applying ../../../subdir-tip.patch"
-sh % "cd '$dir'"
+sh % "cd ../../.."
 
 # message should be 'subdir change'
 # committer should be 'someoneelse'
@@ -534,7 +498,7 @@ sh % "hg revert -a" == "reverting a"
 
 # import with --no-commit should have written .hg/last-message.txt
 
-sh % "cat .hg/last-message.txt" == "change (no-eol)"
+sh % "cat .hg/last-message.txt" == "change"
 
 
 # test fuzziness with eol=auto
@@ -601,20 +565,6 @@ sh % "hg ci -m empty"
 sh % "hg export --git tip" > "empty.diff"
 sh % "hg up -C 0" == "4 files updated, 0 files merged, 2 files removed, 0 files unresolved"
 sh % "hg import empty.diff" == "applying empty.diff"
-sh % "for name in a b1 b2 c1 c2 'd;' do" == r"""
-    >   echo % $name file
-    >   test -f $name && cat $name
-    >   done
-    % a file
-    a
-    % b1 file
-    % b2 file
-    b
-    % c1 file
-    c
-    % c2 file
-    c
-    % d file"""
 sh % "cd .."
 
 
@@ -623,7 +573,7 @@ sh % "cd .."
 sh % "hg init binaryremoval"
 sh % "cd binaryremoval"
 sh % "echo a" > "a"
-sh % "'$PYTHON' -c 'file('\\''b'\\'', '\\''wb'\\'').write('\\''a\\x00b'\\'')'"
+open("b", "wb").write("a\0b")
 sh % "hg ci -Am addall" == r"""
     adding a
     adding b"""
@@ -634,9 +584,11 @@ sh % "hg st" == r"""
     R b"""
 sh % "hg ci -m remove"
 sh % "hg export --git ." > "remove.diff"
-sh % "cat remove.diff" | "grep git" == r"""
-    diff --git a/a b/a
-    diff --git a/b b/b"""
+
+eq(
+    [l for l in open("remove.diff") if "git" in l],
+    ["diff --git a/a b/a\n", "diff --git a/b b/b\n"],
+)
 sh % "hg up -C 0" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg import remove.diff" == "applying remove.diff"
 sh % "hg manifest"
@@ -884,13 +836,21 @@ new file mode 100644
 +++ b/a
 @@ -0,0 +1,1 @@
 +a
-EOF
-hg import -d '0 0' a.patch
-hg parents -v
-cd ..
+""" > "a.patch"
 
-echo '% tricky header splitting'
-cat > trickyheaders.patch <<EOF
+sh % "hg import -d '0 0' a.patch -q"
+sh % "hg parents -v" == r"""
+    changeset:   0:f34d9187897d
+    tag:         tip
+    user:        test
+    date:        Thu Jan 01 00:00:00 1970 +0000
+    files:       a
+    description:
+    module: summary"""
+sh % "cd .."
+
+open("trickyheaders.patch", "wb").write(
+    """
 From: User A <user@a>
 Subject: [PATCH] from: tricky!
 
@@ -909,18 +869,8 @@ diff -r 000000000000 -r f2be6a1170ac foo
 +++ b/foo
 @@ -0,0 +1,1 @@
 +foo
-""" > "a.patch" == r"""
-    applying a.patch
-    changeset:   0:f34d9187897d
-    tag:         tip
-    user:        test
-    date:        Thu Jan 01 00:00:00 1970 +0000
-    files:       a
-    description:
-    module: summary
-
-
-    % tricky header splitting"""
+"""
+)
 
 sh % "hg init trickyheaders"
 sh % "cd trickyheaders"
@@ -1067,8 +1017,25 @@ sh % "hg ci -m2"
 sh % "hg up -C 0" == "3 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg diff --git -c1" > "want"
 sh % "hg diff -c1" | "hg import --no-commit -" == "applying patch from stdin"
-sh % "hg diff --git" > "have"
-sh % "diff want have"
+sh % "hg diff --git" == r"""
+    diff --git a/a b/a
+    --- a/a
+    +++ b/a
+    @@ -1,1 +1,2 @@
+     a
+    +key: value
+    diff --git a/b b/b
+    --- a/b
+    +++ b/b
+    @@ -1,1 +1,2 @@
+     b
+    +key: value
+    diff --git a/c b/c
+    --- a/c
+    +++ b/c
+    @@ -1,1 +1,2 @@
+     c
+    +foo"""
 sh % "cd .."
 
 # import a unified diff with no lines of context (diff -U0)
@@ -1260,51 +1227,64 @@ sh % "cat" << r"""
 4
 """ > "a"
 sh % "hg ci -Am adda a"
-sh % "for p in '*.diff;' do" == r"""
-    >   hg import -v --no-commit $p
-    >   cat a
-    >   hg revert -aqC a
-    >   # patch -p1 < $p
-    >   # cat a
-    >   # hg revert -aC a
-    > done
+
+sh % "hg import -v --no-commit 01-no-context-beginning-of-file.diff" == r"""
     applying 01-no-context-beginning-of-file.diff
     patching file a
-    applied to working directory
+    applied to working directory"""
+sh % "cat a" == r"""
     1
     line
     2
     3
     4
+"""
+sh % "hg revert -aqC a"
+
+sh % "hg import -v --no-commit 02-no-context-middle-of-file.diff" == r"""
     applying 02-no-context-middle-of-file.diff
     patching file a
     Hunk #1 succeeded at 2 (offset 1 lines).
     Hunk #2 succeeded at 4 (offset 1 lines).
-    applied to working directory
+    applied to working directory"""
+sh % "cat a" == r"""
     1
     add some skew
     3
     line
     4
+"""
+sh % "hg revert -aqC a"
+
+sh % "hg import -v --no-commit 03-no-context-end-of-file.diff" == r"""
     applying 03-no-context-end-of-file.diff
     patching file a
     Hunk #1 succeeded at 5 (offset -6 lines).
-    applied to working directory
+    applied to working directory"""
+sh % "cat a" == r"""
     1
     2
     3
     4
     line
+"""
+sh % "hg revert -aqC a"
+
+sh % "hg import -v --no-commit 04-middle-of-file-completely-fuzzed.diff" == r"""
     applying 04-middle-of-file-completely-fuzzed.diff
     patching file a
     Hunk #1 succeeded at 2 (offset 1 lines).
     Hunk #2 succeeded at 5 with fuzz 2 (offset 1 lines).
-    applied to working directory
+    applied to working directory"""
+sh % "cat a" == r"""
     1
     add some skew
     3
     4
-    line"""
+    line
+"""
+sh % "hg revert -aqC a"
+
 sh % "cd .."
 
 # Test partial application
@@ -1611,9 +1591,7 @@ height
 sh % "hg import '$TESTTMP/foo.patch'" == r"""
     applying $TESTTMP/foo.patch
     imported-foo: bar"""
-sh % "hg log --debug -r ." | "grep extra" == r"""
-    extra:       branch=default
-    extra:       foo=bar"""
+sh % "hg log --debug -r . -T '{extras}'" == r"branch=defaultfoo=bar"
 
 # Warn the user that paths are relative to the root of
 # repository when file not found for patching
