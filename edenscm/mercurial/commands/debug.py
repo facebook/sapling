@@ -1919,17 +1919,13 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
 
     def parsenodeid(s):
         try:
-            # We do not use revsingle/revrange functions here to accept
-            # arbitrary node identifiers, possibly not present in the
-            # local repository.
             n = bin(s)
             if len(n) != len(nullid):
                 raise TypeError()
             return n
         except TypeError:
-            raise error.Abort(
-                "changeset references must be full hexadecimal " "node identifiers"
-            )
+            # Fallback to revsingle.
+            return scmutil.revsingle(repo, s).node()
 
     if opts.get("delete"):
         indices = []

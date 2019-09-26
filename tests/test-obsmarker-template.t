@@ -385,7 +385,7 @@ Test templates with splitted commit
   $ echo 43 >> b
   $ hg commit -A -m "A0"
   adding b
-  $ hg debugobsolete `getid "1"` `getid "2"` `getid "3"`
+  $ hg debugobsolete 1 2 3
   obsoleted 1 changesets
 
   $ hg log --hidden -G
@@ -588,9 +588,9 @@ Simulate a fold
   $ hg commit -A -m "C0"
   adding A0
   adding B0
-  $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
+  $ hg debugobsolete "desc(A0)" "desc(C0)"
   obsoleted 1 changesets
-  $ hg debugobsolete `getid "desc(B0)"` `getid "desc(C0)"`
+  $ hg debugobsolete "desc(B0)" "desc(C0)"
   obsoleted 1 changesets
 
   $ hg log --hidden -G
@@ -1104,9 +1104,9 @@ Test setup
   $ hg commit -A -m "C0"
   adding A0
   adding B0
-  $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
+  $ hg debugobsolete "desc(A0)" "desc(C0)"
   obsoleted 1 changesets
-  $ hg debugobsolete `getid "desc(B1)"` `getid "desc(C0)"`
+  $ hg debugobsolete "desc(B1)" "desc(C0)"
   obsoleted 1 changesets
 
   $ hg log --hidden -G
@@ -1569,7 +1569,7 @@ Test setup
   $ cd $TESTTMP/templates-local-prune
   $ mkcommit ROOT
   $ mkcommit A0
-  $ hg debugobsolete --record-parent `getid "."`
+  $ hg debugobsolete --record-parent "."
   obsoleted 1 changesets
 
 Check output
@@ -1598,13 +1598,13 @@ Test setup
   $ mkcommit ROOT
   $ mkcommit A0
   $ hg commit --amend -m "A1"
-  $ hg debugobsolete --record-parent `getid "."`
+  $ hg debugobsolete --record-parent "."
   obsoleted 1 changesets
 
   $ hg up -r "desc(A0)" --hidden
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg commit --amend -m "A2"
-  $ hg debugobsolete --record-parent `getid "."`
+  $ hg debugobsolete --record-parent "."
   obsoleted 1 changesets
 
 Check output
@@ -1727,11 +1727,11 @@ Test templates with splitted and pruned commit
   $ echo 43 >> b
   $ hg commit -A -m "A2"
   adding b
-  $ hg debugobsolete `getid "1"` `getid "2"` `getid "3"`
+  $ hg debugobsolete "1" "2" "3"
   obsoleted 1 changesets
 
 # Simulate prune
-  $ hg debugobsolete --record-parent `getid "."`
+  $ hg debugobsolete --record-parent "."
   obsoleted 1 changesets
 
   $ hg log --hidden -G
