@@ -483,13 +483,23 @@ Test non-ASCII characters
 #if jq
 Test use globalrev instead of svnrev
 
-  $ echo y > Y
-  $ hg commit --config "extensions.commitextras=" -Aqm "commit with globalrev and svnrev" --extra convert_revision="svn:2c7ba8d8-a2f7-0310-a573-de162e16dcc7/tfb/trunk/www@1234567" --extra global_rev="100098765"
+  $ echo >> Y
+  $ hg commit -Aqm "commit with no globalrev"
   $ hg phase -pfr '.'
-  $ echo z > Z
+  $ echo >> Z
   $ hg commit -Aqm "local commit"
-  $ hg debugcrdump --config 'extensions.hgsubversion=' --config 'extensions.globalrevs=' -r . | jq '.commits[].public_base.svnrev'
-  "1234567"
-  $ hg debugcrdump --config 'extensions.hgsubversion=' --config 'extensions.globalrevs=' --config "hgsubversion.useglobalrevindebugcrdump=True" -r . | jq '.commits[].public_base.svnrev'
+  $ hg debugcrdump -r '.' | jq -e '.commits[].public_base.svnrev' > /dev/null
+  [1]
+  $ hg -q update '.^'
+  $ echo >> Y
+  $ hg commit --config "extensions.commitextras=" \
+  > -Aqm "commit with globalrev" --extra global_rev="100098765"
+  $ hg phase -pfr '.'
+  $ echo >> Z
+  $ hg commit -Aqm "local commit"
+  $ hg debugcrdump -r '.' | jq -e '.commits[].public_base.svnrev' > /dev/null
+  [1]
+  $ hg debugcrdump --config "extensions.globalrevs=" -r '.' \
+  > | jq '.commits[].public_base.svnrev'
   "100098765"
 #endif
