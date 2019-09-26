@@ -98,8 +98,9 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_bcs_ids: &[ChangesetId],
     ) -> BoxFuture<Vec<Option<ChangesetId>>, Error>;
 
-    /// Find the first among `changesets` in `source_repo_id`, which has
-    /// an equivalent in `target_repo_id` and return that equivalent
+    /// Find the first among `changesets` in `source_repo_id`, which has an equivalent in `target_repo_id`
+    /// and return that equivalent. Note that "first" in this context refers to the oder
+    /// in the `changesets`, not to any changeset date/time property.
     fn find_first_synced_in_list(
         &self,
         ctx: CoreContext,

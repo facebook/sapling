@@ -577,8 +577,8 @@ fn move_skippable_nodes(
 }
 
 // Returns a frontier "C" that satisfy the following condition:
-/// - Max generation number in "C" is <= gen
-/// - Any ancestor of "node_frontier" with generation <= gen is also an ancestor of "C"
+/// - Max generation number in "C" is <= "max_gen"
+/// - Any ancestor of "node_frontier" with generation <= "max_gen" is also an ancestor of "C"
 fn process_frontier(
     ctx: CoreContext,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,

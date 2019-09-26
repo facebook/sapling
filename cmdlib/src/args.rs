@@ -23,12 +23,13 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{
-    BlobConfig, CommonConfig, MetadataDBConfig, Redaction, RepoConfig, StorageConfig,
-};
+use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 
-use crate::helpers::{init_cachelib_from_settings, setup_repo_dir, CachelibSettings};
+use crate::helpers::{
+    init_cachelib_from_settings, open_sql_with_config_and_myrouter_port, setup_repo_dir,
+    CachelibSettings,
+};
 use crate::log;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -236,23 +237,9 @@ pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
 {
-    let name = T::LABEL;
-
     let (_, config) = try_boxfuture!(get_config(matches));
-
-    match config.storage_config.dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
-            T::with_sqlite_path(path.join(name)).into_future().boxify()
-        }
-        MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(db_address, parse_myrouter_port(matches))
-        }
-        MetadataDBConfig::Mysql { .. } => Err(err_msg(
-            "Use SqlFilenodes::with_sharded_myrouter for filenodes",
-        ))
-        .into_future()
-        .boxify(),
-    }
+    let maybe_myrouter_port = parse_myrouter_port(matches);
+    open_sql_with_config_and_myrouter_port(config, maybe_myrouter_port)
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
@@ -391,7 +378,7 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .args(&cache_args)
 }
 
-fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
+pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     if matches.is_present("skip-caching") {
         Caching::Disabled
     } else if matches.is_present("cachelib-only-blobstore") {

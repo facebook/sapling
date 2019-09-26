@@ -10,14 +10,16 @@ use cloned::cloned;
 use failure_ext::{bail_msg, err_msg, format_err, Error, Result, ResultExt};
 use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
-use futures_ext::FutureExt;
+use futures_ext::{BoxFuture, FutureExt};
 use slog::{debug, info};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use changesets::SqlConstructors;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::{MetadataDBConfig, RepoConfig};
 use mononoke_types::ChangesetId;
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
@@ -262,4 +264,27 @@ pub fn csid_resolve(
                 hash_or_bookmark
             )
         })
+}
+
+pub fn open_sql_with_config_and_myrouter_port<T>(
+    config: RepoConfig,
+    maybe_myrouter_port: Option<u16>,
+) -> BoxFuture<T, Error>
+where
+    T: SqlConstructors,
+{
+    let name = T::LABEL;
+    match config.storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => {
+            T::with_sqlite_path(path.join(name)).into_future().boxify()
+        }
+        MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
+            T::with_xdb(db_address, maybe_myrouter_port)
+        }
+        MetadataDBConfig::Mysql { .. } => Err(err_msg(
+            "Use SqlFilenodes::with_sharded_myrouter for filenodes",
+        ))
+        .into_future()
+        .boxify(),
+    }
 }

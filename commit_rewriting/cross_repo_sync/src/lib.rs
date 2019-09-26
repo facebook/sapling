@@ -187,6 +187,34 @@ pub enum CommitSyncRepos {
     },
 }
 
+impl CommitSyncRepos {
+    pub fn get_source_repo_id(&self) -> RepositoryId {
+        match self {
+            CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo: _,
+            } => large_repo.get_repoid(),
+            CommitSyncRepos::SmallToLarge {
+                large_repo: _,
+                small_repo,
+            } => small_repo.get_repoid(),
+        }
+    }
+
+    pub fn get_target_repo_id(&self) -> RepositoryId {
+        match self {
+            CommitSyncRepos::LargeToSmall {
+                large_repo: _,
+                small_repo,
+            } => small_repo.get_repoid(),
+            CommitSyncRepos::SmallToLarge {
+                large_repo,
+                small_repo: _,
+            } => large_repo.get_repoid(),
+        }
+    }
+}
+
 /// Syncs `cs` from `source_repo` to `target_repo`, using `mapping` to rewrite commit hashes, and `rewrite_paths` to rewrite paths in the commit
 /// Returns the ID of the resulting synced commit
 pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(

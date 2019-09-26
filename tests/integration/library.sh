@@ -97,6 +97,23 @@ function megarepo_tool {
     "$@"
 }
 
+function mononoke_x_repo_sync_once() {
+  source_repo_id=$1
+  target_repo_id=$2
+  target_bookmark=$3
+  shift
+  shift
+  shift
+  $MONONOKE_X_REPO_SYNC \
+    "${CACHING_ARGS[@]}" \
+    --source-tier-config "$TESTTMP/mononoke-config" \
+    --target-tier-config "$TESTTMP/mononoke-config" \
+    --source-repo-id "$source_repo_id" \
+    --target-repo-id "$target_repo_id" \
+    --target-bookmark "$target_bookmark" \
+    "$@"
+}
+
 function mononoke_rechunker {
     "$MONONOKE_RECHUNKER" \
     "${CACHING_ARGS[@]}" \
@@ -703,7 +720,7 @@ function extract_json_error {
 
 # Run an hg binary configured with the settings required to talk to Mononoke.
 function hgmn {
-  hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/repo --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
+  hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/$REPONAME --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
 }
 
 function hgmn_show {
@@ -1014,4 +1031,16 @@ EOF
       VALUES (CAST('$repo' AS BLOB), '$bookmark', '$node', '$bookmark');
 EOF
 fi
+}
+
+function add_synced_commit_mapping_entry() {
+  local small_repo_id large_repo_id small_bcs_id large_bcs_id
+  small_repo_id="$1"
+  small_bcs_id="$2"
+  large_repo_id="$3"
+  large_bcs_id="$4"
+  sqlite3 "$TESTTMP/monsql/synced_commit_mapping" <<EOF
+    INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
+    VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id');
+EOF
 }
