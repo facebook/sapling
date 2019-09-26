@@ -44,11 +44,11 @@ class snapshotlist(object):
                 lines = snaplistfile.readlines()
             if not lines or lines[0].strip() != FORMAT_VERSION:
                 raise error.Abort("invalid snapshots file format")
-            self.snapshots = {snapshot.strip() for snapshot in lines[1:]}
+            self.snapshots = [snapshot.strip() for snapshot in lines[1:]]
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            self.snapshots = set()
+            self.snapshots = []
         if check:
             self._check(repo)
 
@@ -61,17 +61,18 @@ class snapshotlist(object):
                 raise error.Abort("invalid snapshot node: %s" % snapshotnode)
             if "snapshotmetadataid" not in unfi[binsnapshotnode].extra():
                 toremove.add(snapshotnode)
-        self.snapshots -= toremove
+        if len(toremove) != 0:
+            self.snapshots = [s for s in self.snapshots if s not in toremove]
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)
-        for s in sorted(self.snapshots):
+        for s in self.snapshots:
             fp.write("%s\n" % (s,))
 
     def add(self, newnodes, tr):
-        newnodes = self.snapshots.union(newnodes)
-        if self.snapshots != newnodes:
-            self.snapshots = newnodes
+        toadd = set(newnodes) - set(self.snapshots)
+        if len(toadd) != 0:
+            self.snapshots += list(sorted(newnodes))
             tr.addfilegenerator("snapshots", ("snapshotlist",), self._write)
 
     def printsnapshots(self, ui, repo, **opts):
@@ -80,7 +81,7 @@ class snapshotlist(object):
         if len(self.snapshots) == 0:
             ui.status(_("no snapshots created\n"))
         unfi = repo.unfiltered()
-        for snapshotnode in sorted(self.snapshots):
+        for snapshotnode in self.snapshots:
             ctx = unfi[snapshotnode]
             message = ctx.description().split("\n")[0]
             metadataid = ctx.extra()["snapshotmetadataid"]

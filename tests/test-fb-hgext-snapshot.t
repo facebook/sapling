@@ -264,14 +264,14 @@
 # Check the list of snapshots directly
   $ cat .hg/store/snapshotlist
   v1
-  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
   bd8d77aecb3d474ec545981fe5b7aa9cd40f5df2
+  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
   f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # Use the list cmd
   $ hg snapshot list --verbose
-  6d8aaa4ab672   18a588cc0809 another
   bd8d77aecb3d           None first snapshot
+  6d8aaa4ab672   18a588cc0809 another
   f890179e6e66   7eb6f96f1f02 snapshot
 
 # Move back to BASEREV
