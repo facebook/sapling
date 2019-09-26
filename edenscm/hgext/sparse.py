@@ -494,7 +494,10 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
                     exclude=exclude,
                     enableprofile=enableprofile,
                 )
-            return orig(self, node, overwrite, *args, **kwargs)
+            ret = orig(self, node, overwrite, *args, **kwargs)
+            if enableprofile:
+                _checknonexistingprofiles(ui, self, pat)
+            return ret
 
         extensions.wrapfunction(hg, "updaterepo", clone_sparse)
     return orig(ui, repo, *args, **opts)
@@ -1499,6 +1502,8 @@ def sparse(ui, repo, *pats, **opts):
             disableprofile=disableprofile,
             force=force,
         )
+        if enableprofile:
+            _checknonexistingprofiles(ui, repo, pats)
 
     if importrules:
         _import(ui, repo, pats, opts, force=force)
@@ -1962,6 +1967,7 @@ def disableprofilesubcmd(ui, repo, *pats, **opts):
 def enableprofilesubcmd(ui, repo, *pats, **opts):
     """enable a sparse profile"""
     _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
+    _checknonexistingprofiles(ui, repo, pats)
 
 
 @subcmd("switch|switchprofile", _common_config_opts, "[PROFILE]...")
@@ -2169,6 +2175,27 @@ def _config(
             raise
     finally:
         wlock.release()
+
+
+def _checknonexistingprofiles(ui, repo, profiles):
+    # don't do the check if sparse.missingwarning is set to true
+    # otherwise warnings will be shown twice for the same profile
+    if ui.configbool("sparse", "missingwarning"):
+        return
+
+    for p in profiles:
+        try:
+            repo.filectx(p, changeid=".").data()
+        except error.ManifestLookupError:
+            ui.warn(
+                _(
+                    "the profile '%s' does not exist in the "
+                    "current commit, it will only take effect "
+                    "when you check out a commit containing a "
+                    "profile with that name\n"
+                )
+                % p
+            )
 
 
 def _import(ui, repo, files, opts, force=False):

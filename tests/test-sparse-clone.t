@@ -68,3 +68,18 @@ Verify sparse clone profile over ssh works
   $ ls
   index.html
   $ cd ..
+
+Verify sparse clone with a non-existing sparse profile warns
+
+  $ hg clone --enable-profile nonexisting.sparse myrepo clone5
+  updating to branch default
+  the profile 'nonexisting.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd clone5
+  $ ls
+  backend.sparse
+  data.py
+  index.html
+  readme.txt
+  webpage.sparse
+  $ cd ..

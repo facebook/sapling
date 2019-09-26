@@ -575,6 +575,7 @@ The .hg/sparse file could list non-existing profiles, these should be ignored
 when listing:
 
   $ hg sparse enableprofile nonesuch
+  the profile 'nonesuch' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
   $ hg sparse list
   Available Profiles:
   
