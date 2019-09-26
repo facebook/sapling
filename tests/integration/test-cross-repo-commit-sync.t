@@ -134,7 +134,7 @@ run the sync again, from fbsource first
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
   * Done preparing * (glob)
-  * synced as * (glob)
+  * synced as * in *ms (glob)
 
 check that the changes are synced
   $ cd $TESTTMP/meg-hg-cnt
@@ -150,7 +150,7 @@ run the sync from ovrsource now
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 2->0 (glob)
   * Done preparing * (glob)
-  * synced as * (glob)
+  * synced as * in *ms (glob)
 
 this is after we also synced the ovrsource commit
   $ cd $TESTTMP/meg-hg-cnt
@@ -206,7 +206,8 @@ let us test the auto-detection of last processed changeset
   * Checking if * is already synced 1->0 (glob)
   * stopping tailing (glob)
   * Done preparing * (glob)
-  * synced as * (glob)
+  * synced as * in *ms (glob)
+
 
 let us test that auto-detection works on a caught-up repo
   $ mononoke_x_repo_sync_once 1 0 megarepo_master tail fbsource_master_newest --catch-up-once
