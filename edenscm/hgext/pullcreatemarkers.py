@@ -92,6 +92,9 @@ def getlandeddiffs(repo, start, stop, onlypublic=True):
     landeddiffs = {}
 
     for rev in range(start, stop):
+        if rev not in repo:
+            # it may be hidden (e.g. a snapshot rev)
+            continue
         rev = repo[rev]
         if not onlypublic or rev.phase() == phases.public:
             diff = getdiff(rev)

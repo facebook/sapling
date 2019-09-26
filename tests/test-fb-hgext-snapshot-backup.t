@@ -146,3 +146,8 @@
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
+# The snapshot commit is hidden
+  $ hg show "$OID"
+  abort: hidden revision 'f890179e6e66eeb2a5a676efb96f150133a437c9'!
+  (use --hidden to access hidden revisions)
+  [255]

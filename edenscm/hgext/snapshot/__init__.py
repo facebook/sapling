@@ -28,7 +28,7 @@ Configs::
     usercache = /path/to/global/cache
 """
 
-from edenscm.mercurial import error, extensions, hg, registrar
+from edenscm.mercurial import error, extensions, hg, registrar, visibility
 from edenscm.mercurial.i18n import _
 
 from . import blobstore, bundleparts, cmds as snapshotcommands, snapshotlist
@@ -58,6 +58,7 @@ def reposetup(ui, repo):
 
 def extsetup(ui):
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
+    extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
@@ -74,6 +75,21 @@ def _updaterepo(orig, repo, node, overwrite, **opts):
                 % ctx
             )
     return orig(repo, node, overwrite, **opts)
+
+
+def _updateheads(orig, self, repo, newheads, tr):
+    unfi = repo.unfiltered()
+    heads = []
+    for h in newheads:
+        if h not in unfi:
+            continue
+        ctx = unfi[h]
+        # this way we mostly preserve the correct order
+        if "snapshotmetadataid" in ctx.extra():
+            heads += [p.node() for p in ctx.parents()]
+        else:
+            heads.append(h)
+    return orig(self, repo, heads, tr)
 
 
 revsetpredicate = registrar.revsetpredicate()

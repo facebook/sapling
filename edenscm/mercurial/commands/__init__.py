@@ -4757,7 +4757,7 @@ def pull(ui, repo, source="default", **opts):
         # destination of the update
         brev = None
 
-        if checkout:
+        if checkout and checkout in repo:
             checkout = str(repo.changelog.rev(checkout))
 
             # order below depends on implementation of

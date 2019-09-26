@@ -14,7 +14,6 @@ from edenscm.mercurial import (
     registrar,
     scmutil,
     util,
-    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -82,9 +81,7 @@ def snapshotcreate(ui, repo, *args, **opts):
             return
         with repo.transaction("update-snapshot-list") as tr:
             repo.snapshotlist.add([node], tr)
-        ui.status(_("snapshot %s created\n") % (repo[node].hex()))
-        if visibility.enabled(repo):
-            visibility.remove(repo, [node])
+        ui.status(_("snapshot %s created\n") % (repo.unfiltered()[node].hex()))
         if opts.get("clean"):
             try:
                 # We want to bring the working copy to the p1 state

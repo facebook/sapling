@@ -1345,7 +1345,7 @@ def registersummarycallback(repo, otr, txnname=""):
             if not revs:
                 # Got only obsoletes.
                 return
-            minrev, maxrev = repo[revs.min()], repo[revs.max()]
+            minrev, maxrev = unfi[revs.min()], unfi[revs.max()]
 
             if minrev == maxrev:
                 revrange = minrev
