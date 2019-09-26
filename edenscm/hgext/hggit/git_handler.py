@@ -3,7 +3,6 @@ import itertools
 import os
 import re
 import shutil
-import StringIO
 
 import _ssh
 import compat
@@ -1293,7 +1292,7 @@ class GitHandler(object):
         try:
             with progress.bar(self.ui, "") as prog:
                 gitprogress = GitProgress(self.ui, prog)
-                f = StringIO.StringIO()
+                f = pycompat.stringio()
 
                 # monkey patch dulwich's read_pkt_refs so that we can determine
                 # on clone which bookmark to activate
@@ -1686,7 +1685,7 @@ class GitHandler(object):
         except KeyError:
             return rv
         gitmodules_content = self.git[gitmodules_sha].data
-        fo = StringIO.StringIO(gitmodules_content)
+        fo = pycompat.stringio(gitmodules_content)
         tt = dul_config.ConfigFile.from_file(fo)
         for section in tt.keys():
             section_kind, section_name = section

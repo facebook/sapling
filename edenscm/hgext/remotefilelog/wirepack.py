@@ -8,9 +8,8 @@ from __future__ import absolute_import
 
 import struct
 from collections import defaultdict
-from StringIO import StringIO
 
-from edenscm.mercurial import perftrace, progress
+from edenscm.mercurial import perftrace, progress, pycompat
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 from edenscm.mercurial.pycompat import range
@@ -141,7 +140,7 @@ class wirepackstore(object):
     def __init__(self, wirepack, version=1):
         self._data = {}
         self._history = {}
-        fh = StringIO(wirepack)
+        fh = pycompat.stringio(wirepack)
         self._load(fh, version)
 
     def __iter__(self):

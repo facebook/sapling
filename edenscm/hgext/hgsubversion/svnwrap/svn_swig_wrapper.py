@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 
 import collections
-import cStringIO
 import errno
 import os
 import shutil
@@ -11,6 +10,8 @@ import sys
 import tempfile
 import urllib
 import warnings
+
+from edenscm.mercurial import pycompat
 
 from . import common
 
@@ -85,7 +86,7 @@ Editor = delta.Editor
 
 
 def apply_txdelta(base, target):
-    handler, baton = delta.svn_txdelta_apply(cStringIO.StringIO(base), target, None)
+    handler, baton = delta.svn_txdelta_apply(pycompat.stringio(base), target, None)
     return lambda window: handler(window, baton)
 
 
@@ -507,9 +508,7 @@ class SubversionRepo(object):
                 handler, wh_baton = editor.apply_textdelta(baton, None, self.pool)
 
                 txdelta_stream = delta.svn_txdelta(
-                    cStringIO.StringIO(base_text),
-                    cStringIO.StringIO(new_text),
-                    self.pool,
+                    pycompat.stringio(base_text), pycompat.stringio(new_text), self.pool
                 )
                 delta.svn_txdelta_send_txstream(txdelta_stream, handler, wh_baton, pool)
 

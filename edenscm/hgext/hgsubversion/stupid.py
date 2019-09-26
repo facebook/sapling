@@ -1,10 +1,9 @@
 # no-check-code -- see T24862348
 
-import cStringIO
 import errno
 import re
 
-from edenscm.mercurial import context, node, patch, revlog, util as hgutil
+from edenscm.mercurial import context, node, patch, pycompat, revlog, util as hgutil
 from edenscm.mercurial.pycompat import range
 
 from . import compathacks, svnexternals, svnwrap, util
@@ -154,7 +153,7 @@ def mempatchproxy(parentctx, files):
             data = fctx.data()
             if "l" in fctx.flags():
                 data = "link " + data
-            return cStringIO.StringIO(data).readlines()
+            return pycompat.stringio(data).readlines()
 
         def writelines(self, fname, lines):
             files[fname] = "".join(lines)
@@ -281,7 +280,7 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     touched_files = set(f.name for f in changed)
     d2 = "\n".join(f.diff for f in changed if f.diff)
     if changed:
-        files_data = patchrepo(ui, meta, parentctx, cStringIO.StringIO(d2))
+        files_data = patchrepo(ui, meta, parentctx, pycompat.stringio(d2))
         for x in files_data.iterkeys():
             ui.note("M  %s\n" % x)
     else:

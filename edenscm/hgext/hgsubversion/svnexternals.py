@@ -2,14 +2,13 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import os
 import re
 import shutil
 import stat
 import subprocess
 
-from edenscm.mercurial import util as hgutil
+from edenscm.mercurial import pycompat, util as hgutil
 from edenscm.mercurial.i18n import _
 
 from . import util
@@ -47,7 +46,7 @@ class externalsfile(dict):
             super(externalsfile, self).__setitem__(key, value)
 
     def write(self):
-        fp = cStringIO.StringIO()
+        fp = pycompat.stringio()
         for target in sorted(self):
             lines = self[target]
             if not lines:
@@ -62,7 +61,7 @@ class externalsfile(dict):
 
     def read(self, data):
         self.clear()
-        fp = cStringIO.StringIO(data)
+        fp = pycompat.stringio(data)
         target = None
         for line in fp.readlines():
             if not line.strip():

@@ -3,12 +3,12 @@
 from __future__ import absolute_import
 
 import collections
-import cStringIO
 import errno
 import os
 import urllib
 import warnings
 
+from edenscm.mercurial import pycompat
 from edenscm.mercurial.pycompat import range
 
 from . import common
@@ -520,7 +520,7 @@ class SubversionRepo(object):
                                 fileeditor.change_prop(p, v)
 
                         handler = fileeditor.apply_textdelta()
-                        delta.send_stream(cStringIO.StringIO(new_text), handler)
+                        delta.send_stream(pycompat.stringio(new_text), handler)
                         fileeditor.close()
 
                 # if visiting a directory

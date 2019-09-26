@@ -54,13 +54,6 @@ from . import _readers
 
 
 try:
-    import cStringIO as io
-
-    io.StringIO
-except ImportError:
-    import io
-
-try:
     import httplib
 
     httplib.HTTPException
