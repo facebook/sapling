@@ -90,6 +90,76 @@ fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(result, None);
 }
 
+fn get_multiple<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
+    let entry12 =
+        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::ONES_CSID, REPO_ONE, bonsai::TWOS_CSID);
+    let entry34 =
+        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::THREES_CSID, REPO_ONE, bonsai::FOURS_CSID);
+    mapping
+        .add(ctx.clone(), entry12.clone())
+        .wait()
+        .expect("Adding new entry failed");
+    mapping
+        .add(ctx.clone(), entry34.clone())
+        .wait()
+        .expect("Adding new entry failed");
+
+    let query = vec![bonsai::ONES_CSID, bonsai::TWOS_CSID, bonsai::FIVES_CSID];
+
+    let result = mapping
+        .get_multiple(ctx.clone(), REPO_ZERO, REPO_ONE, &query[..])
+        .wait()
+        .expect("get_multiple failed");
+    assert_eq!(result, vec![Some(bonsai::TWOS_CSID), None, None]);
+    let result = mapping
+        .get_multiple(ctx.clone(), REPO_ONE, REPO_ZERO, &query[..])
+        .wait()
+        .expect("get_multiple failed");
+    assert_eq!(result, vec![None, Some(bonsai::ONES_CSID), None]);
+}
+
+fn find_first_synced_in_list<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
+    let entry12 =
+        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::ONES_CSID, REPO_ONE, bonsai::TWOS_CSID);
+    let entry34 =
+        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::THREES_CSID, REPO_ONE, bonsai::FOURS_CSID);
+    mapping
+        .add(ctx.clone(), entry12.clone())
+        .wait()
+        .expect("Adding new entry failed");
+    mapping
+        .add(ctx.clone(), entry34.clone())
+        .wait()
+        .expect("Adding new entry failed");
+
+    let query = vec![bonsai::ONES_CSID, bonsai::TWOS_CSID, bonsai::FOURS_CSID];
+    let result = mapping
+        .find_first_synced_in_list(ctx.clone(), REPO_ZERO, REPO_ONE, &query[..])
+        .wait()
+        .expect("find_first_synced_in_list failed");
+    assert_eq!(result, Some((bonsai::ONES_CSID, bonsai::TWOS_CSID)));
+    let result = mapping
+        .find_first_synced_in_list(ctx.clone(), REPO_ONE, REPO_ZERO, &query[..])
+        .wait()
+        .expect("find_first_synced_in_list failed");
+    assert_eq!(result, Some((bonsai::TWOS_CSID, bonsai::ONES_CSID)));
+
+    let query = vec![bonsai::SIXES_CSID, bonsai::FIVES_CSID, bonsai::THREES_CSID];
+    let result = mapping
+        .find_first_synced_in_list(ctx.clone(), REPO_ZERO, REPO_ONE, &query[..])
+        .wait()
+        .expect("find_first_synced_in_list failed");
+    assert_eq!(result, Some((bonsai::THREES_CSID, bonsai::FOURS_CSID)));
+
+    let result = mapping
+        .find_first_synced_in_list(ctx.clone(), REPO_ONE, REPO_ZERO, &query[..])
+        .wait()
+        .expect("find_first_synced_in_list failed");
+    assert_eq!(result, None);
+}
+
 #[fbinit::test]
 fn test_add_and_get(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
@@ -109,4 +179,18 @@ fn test_get_all(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         get_all(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
     });
+}
+
+#[fbinit::test]
+fn test_get_multiple(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        get_multiple(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
+    })
+}
+
+#[fbinit::test]
+fn test_find_first_synced_in_list(fb: FacebookInit) {
+    async_unit::tokio_unit_test(move || {
+        find_first_synced_in_list(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap())
+    })
 }
