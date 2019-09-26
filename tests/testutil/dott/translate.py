@@ -201,7 +201,7 @@ def _scanheredoc(content):
     return "".join(heredoc[:-1]), "".join(lines[len(heredoc) :])
 
 
-def translatepath(path, black=False, verify=False):
+def translatepath(path, black=False, verify=False, hgmv=False):
     header = "# Copyright (c) Facebook, Inc. and its affiliates.\n"
     if not _iscreatedbyfb(path):
         header += "# Copyright (c) Mercurial Contributors.\n"
@@ -224,7 +224,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
         # Run the test. Skip it if it fails.
         # Store error message in .err.
         errpath = newpath + ".err"
-        if os.system("python %r &> %s" % (newpath, errpath)) != 0:
+        if os.system("./run-tests.py %r &> %s" % (newpath, errpath)) != 0:
             skipcode = "feature.require('false')  # test not passing\n"
             with open(newpath, "w") as f:
                 f.write(header + skipcode + body)
@@ -232,6 +232,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
             os.unlink(errpath)
     if black:
         os.system("black %r > %s" % (newpath, os.devnull))
+    if hgmv:
+        os.system("hg mv --after %s %s" % (path, newpath))
 
 
 def translatebody(code):
@@ -280,10 +282,11 @@ def _iscreatedbyfb(path):
 def main(argv):
     verify = "--verify" in argv
     black = "--black" in argv
+    hgmv = "--hgmv" in argv
     for path in argv:
         if path.endswith(".t"):
             print("Translating %s" % path)
-            translatepath(path, verify=verify, black=black)
+            translatepath(path, verify=verify, black=black, hgmv=hgmv)
 
 
 if __name__ == "__main__":
