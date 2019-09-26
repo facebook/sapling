@@ -1,6 +1,7 @@
   $ setconfig extensions.treemanifest=!
-  $ enable amend rebase histedit fbhistedit
+  $ enable amend rebase histedit fbhistedit remotenames
   $ setconfig experimental.evolution=
+  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
@@ -15,7 +16,7 @@
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
   $ mkcommit initialcommit
-  $ hg push -q -r . --create
+  $ hg push -q -r . --create --to foo
   $ mkcommit scratchcommit
 
 Make a scratch branch with an initial commit.
@@ -48,7 +49,7 @@ Pull the branch back into the original repo.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files (+1 heads)
+  added 1 changesets with 0 changes to 1 files
   new changesets f1f3b31bcda8
   $ hg up -q tip
 
