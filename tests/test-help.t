@@ -1,4 +1,3 @@
-  $ setconfig extensions.treemanifest=!
 #require no-fsmonitor
 
 Short help:
@@ -271,6 +270,7 @@ Test extension help:
        rebase        command to move sets of revisions to a different ancestor
        eden          accelerated hg functionality in Eden checkouts (eden !)
        sampling      (no help text available)
+       treemanifest
   
       Disabled extensions:
   
@@ -382,7 +382,6 @@ Test extension help:
        stablerev     provide a way to expose the "stable" commit via a revset
        stat          (no help text available)
        traceprof     (no help text available)
-       treemanifest
        tweakdefaults
                      user friendly defaults
        undo          (no help text available)
@@ -985,6 +984,8 @@ Test list of internal help commands
    debugfileset  parse and apply a fileset specification
    debugformat   display format information about the current repository
    debugfsinfo   show information detected about current filesystem
+   debuggentrees
+                 (no help text available)
    debuggetbundle
                  retrieves a bundle from a repo
    debugignore   display the combined ignore pattern and information about
