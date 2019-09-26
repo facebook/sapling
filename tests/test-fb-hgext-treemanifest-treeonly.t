@@ -307,6 +307,7 @@ Test peer-to-peer push/pull of tree only commits
   $ ls_l .hg/store
   -rw-r--r--     149 00changelog.d
   -rw-r--r--     128 00changelog.i
+  drwxr-xr-x         allheads
   drwxr-xr-x         data
   -rw-r--r--       0 requires
   -rw-r--r--       0 undo

@@ -37,8 +37,12 @@ sh % "ls .hg" == r"""
     treestate"""
 
 # Should be empty:
+# It's not really empty, though.
 
-sh % "ls .hg/store" == "requires"
+sh % "ls .hg/store" == r"""
+    allheads
+    requires
+"""
 
 # Poke at a clone:
 
@@ -62,7 +66,10 @@ sh % "ls .hg" == r"""
     treestate"""
 
 # Should be empty:
+# It's not really empty, though.
 
-sh % "ls .hg/store"
+sh % "ls .hg/store" == r"""
+    allheads
+"""
 
 sh % "cd .."

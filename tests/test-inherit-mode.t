@@ -79,6 +79,10 @@ new directories are setgid
   00660 ./.hg/store/00changelog.d
   00660 ./.hg/store/00changelog.i
   00660 ./.hg/store/00manifest.i
+  00700 ./.hg/store/allheads/
+  00600 ./.hg/store/allheads/index-node
+  00600 ./.hg/store/allheads/log
+  00664 ./.hg/store/allheads/meta
   00770 ./.hg/store/data/
   00770 ./.hg/store/data/dir/
   00660 ./.hg/store/data/dir/bar.i
@@ -118,6 +122,7 @@ group can write everything
 
 after push
 group can still write everything
+XXX: treestate and allheads do not really respect this rule
 
   $ $PYTHON ../printmodes.py ../push
   00770 ../push/.hg/
@@ -128,6 +133,10 @@ group can still write everything
   00660 ../push/.hg/store/00changelog.d
   00660 ../push/.hg/store/00changelog.i
   00660 ../push/.hg/store/00manifest.i
+  00700 ../push/.hg/store/allheads/
+  00600 ../push/.hg/store/allheads/index-node
+  00600 ../push/.hg/store/allheads/log
+  00664 ../push/.hg/store/allheads/meta
   00770 ../push/.hg/store/data/
   00770 ../push/.hg/store/data/dir/
   00660 ../push/.hg/store/data/dir/bar.i

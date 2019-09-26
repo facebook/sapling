@@ -214,6 +214,7 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   -rw-r--r--     200 00changelog.d
   -rw-r--r--     192 00changelog.i
   -rw-r--r--     108 00manifesttree.i
+  drwxr-xr-x         allheads
   drwxr-xr-x         data
   drwxrwxr-x         packs
   -rw-r--r--      43 phaseroots

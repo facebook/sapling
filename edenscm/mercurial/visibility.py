@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import errno
 
+import bindings
 from edenscm.mercurial import error, node, util
 from edenscm.mercurial.i18n import _
 
@@ -76,6 +77,12 @@ class visibleheads(object):
                 raise
             self.heads = []
             self.dirty = True
+        self._allheads = bindings.nodemap.nodeset(vfs.join("allheads"))
+        if self.heads:
+            # Populate allheads with heads
+            add = self._allheads.add
+            for head in self.heads:
+                add(head)
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)
@@ -126,9 +133,13 @@ class visibleheads(object):
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
+            add = self._allheads.add
+            for head in newheads:
+                add(head)
             repo.invalidatevolatilesets()
         if self.dirty:
             tr.addfilegenerator("visibility", ("visibleheads",), self._write)
+            tr.addpostclose("allheads", lambda _tr: self._allheads.flush())
 
     def setvisibleheads(self, repo, newheads, tr):
         self._updateheads(repo, newheads, tr)
@@ -168,6 +179,13 @@ class visibleheads(object):
             else:
                 newheads.add(n)
         self._updateheads(repo, newheads, tr)
+
+    def allheads(self):
+        """get all heads ever tracked as "visibleheads".
+
+        Extra filtering is needed to make sure they are actually heads.
+        """
+        return self._allheads.items()
 
     def phaseadjust(self, repo, tr, newdraft=None, newpublic=None):
         """update visibility following a phase adjustment.

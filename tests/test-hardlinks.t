@@ -50,6 +50,9 @@ Prepare repo r1:
   1 r1/.hg/store/00changelog.d
   1 r1/.hg/store/00changelog.i
   1 r1/.hg/store/00manifest.i
+  1 r1/.hg/store/allheads/index-node
+  1 r1/.hg/store/allheads/log
+  1 r1/.hg/store/allheads/meta
   1 r1/.hg/store/data/d1/f2.i
   1 r1/.hg/store/data/f1.i
   1 r1/.hg/store/fncache
@@ -94,6 +97,9 @@ Repos r1 and r2 should now contain hardlinked files:
   2 r1/.hg/store/00changelog.d
   2 r1/.hg/store/00changelog.i
   2 r1/.hg/store/00manifest.i
+  1 r1/.hg/store/allheads/index-node
+  1 r1/.hg/store/allheads/log
+  1 r1/.hg/store/allheads/meta
   2 r1/.hg/store/data/d1/f2.i
   2 r1/.hg/store/data/f1.i
   2 r1/.hg/store/fncache
@@ -118,6 +124,9 @@ Repo r3 should not be hardlinked:
   1 r3/.hg/store/00changelog.d
   1 r3/.hg/store/00changelog.i
   1 r3/.hg/store/00manifest.i
+  1 r3/.hg/store/allheads/index-node
+  1 r3/.hg/store/allheads/log
+  1 r3/.hg/store/allheads/meta
   1 r3/.hg/store/data/d1/f2.i
   1 r3/.hg/store/data/f1.i
   1 r3/.hg/store/fncache
@@ -145,6 +154,9 @@ Create a non-inlined filelog in r3:
   1 r3/.hg/store/00changelog.d
   1 r3/.hg/store/00changelog.i
   1 r3/.hg/store/00manifest.i
+  1 r3/.hg/store/allheads/index-node
+  1 r3/.hg/store/allheads/log
+  1 r3/.hg/store/allheads/meta
   1 r3/.hg/store/data/d1/f2.d
   1 r3/.hg/store/data/d1/f2.i
   1 r3/.hg/store/data/f1.i
@@ -181,6 +193,9 @@ Push to repo r1 should break up most hardlinks in r2:
   1 r2/.hg/store/00changelog.d
   1 r2/.hg/store/00changelog.i
   1 r2/.hg/store/00manifest.i
+  1 r2/.hg/store/allheads/index-node
+  1 r2/.hg/store/allheads/log
+  1 r2/.hg/store/allheads/meta
   1 r2/.hg/store/data/d1/f2.i
   2 r2/.hg/store/data/f1.i
   [12] r2/\.hg/store/fncache (re)
@@ -212,6 +227,9 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   1 r2/.hg/store/00changelog.d
   1 r2/.hg/store/00changelog.i
   1 r2/.hg/store/00manifest.i
+  1 r2/.hg/store/allheads/index-node
+  1 r2/.hg/store/allheads/log
+  1 r2/.hg/store/allheads/meta
   1 r2/.hg/store/data/d1/f2.i
   1 r2/.hg/store/data/f1.i
   [12] r2/\.hg/store/fncache (re)
@@ -258,6 +276,9 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/00changelog.d
   2 r4/.hg/store/00changelog.i
   2 r4/.hg/store/00manifest.i
+  2 r4/.hg/store/allheads/index-node
+  2 r4/.hg/store/allheads/log
+  2 r4/.hg/store/allheads/meta
   2 r4/.hg/store/data/d1/f2.d
   2 r4/.hg/store/data/d1/f2.i
   2 r4/.hg/store/data/f1.i
@@ -304,6 +325,9 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/.hg/store/00changelog.d
   2 r4/.hg/store/00changelog.i
   2 r4/.hg/store/00manifest.i
+  2 r4/.hg/store/allheads/index-node
+  2 r4/.hg/store/allheads/log
+  2 r4/.hg/store/allheads/meta
   2 r4/.hg/store/data/d1/f2.d
   2 r4/.hg/store/data/d1/f2.i
   2 r4/.hg/store/data/f1.i
