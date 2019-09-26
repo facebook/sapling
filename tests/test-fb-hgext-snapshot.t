@@ -274,6 +274,7 @@
   6d8aaa4ab672   18a588cc0809 another
   f890179e6e66   7eb6f96f1f02 snapshot
 
+
 # Move back to BASEREV
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ rm mergefile.orig

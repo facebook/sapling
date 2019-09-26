@@ -5,13 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 from edenscm.mercurial import (
     cmdutil,
     context,
     error,
+    extensions,
     hg,
+    match as matchmod,
+    mdiff,
     merge as mergemod,
     node as nodemod,
+    patch,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -112,6 +119,107 @@ def createsnapshotcommit(ui, repo, opts):
         return None
     with repo.transaction("snapshot"):
         return repo.commitctx(cctx, error=True)
+
+
+@subcmd("show", cmdutil.logopts, _("REV"), cmdtype=registrar.command.readonly)
+def snapshotshow(ui, repo, *args, **opts):
+    """show the snapshot contents, given its revision id
+    """
+    opts = pycompat.byteskwargs(opts)
+    if not args or len(args) != 1:
+        raise error.Abort(_("you must specify a snapshot revision id\n"))
+    node = args[0]
+    try:
+        cctx = repo.unfiltered()[node]
+    except error.RepoLookupError:
+        ui.status(_("%s is not a valid revision id\n") % node)
+        raise
+    if "snapshotmetadataid" not in cctx.extra():
+        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    rev = cctx.hex()
+    opts["rev"] = [rev]
+    opts["patch"] = True
+    revs, expr, filematcher = cmdutil.getlogrevs(repo.unfiltered(), [], opts)
+    revmatchfn = filematcher(rev) if filematcher else None
+    ui.pager("snapshotshow")
+    displayer = cmdutil.show_changeset(ui, repo.unfiltered(), opts, buffered=True)
+    with extensions.wrappedfunction(patch, "diff", _diff), extensions.wrappedfunction(
+        cmdutil.changeset_printer, "_show", _show
+    ):
+        displayer.show(cctx, matchfn=revmatchfn)
+        displayer.flush(cctx)
+    displayer.close()
+
+
+def _diff(orig, repo, *args, **kwargs):
+    def snapshotdiff(data1, data2, path):
+        uheaders, hunks = mdiff.unidiff(
+            data1,
+            date1,
+            data2,
+            date2,
+            path,
+            path,
+            opts=kwargs.get("opts"),
+            check_binary=False,
+        )
+        return "".join(sum((list(hlines) for hrange, hlines in hunks), []))
+
+    for text in orig(repo, *args, **kwargs):
+        yield text
+    node2 = kwargs.get("node2") or args[1]
+    if node2 is None:
+        # this should be the snapshot node
+        raise StopIteration
+    ctx2 = repo.unfiltered()[node2]
+    date2 = util.datestr(ctx2.date())
+    node1 = kwargs.get("node1") or args[0]
+    if node1 is not None:
+        ctx1 = repo[node1]
+    else:
+        # is that possible?
+        ctx1 = ctx2.p1()
+    date1 = util.datestr(ctx1.date())
+    metadataid = ctx2.extra().get("snapshotmetadataid", "")
+    if not metadataid:
+        # node2 is not a snapshot
+        raise StopIteration
+    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, metadataid)
+    store = repo.svfs.snapshotstore
+    # print unknown files from snapshot
+    # diff("", content)
+    yield "\n===\nUntracked changes:\n===\n"
+    for f in snapmetadata.unknown:
+        yield "? %s\n" % f.path
+        yield snapshotdiff("", store.read(f.oid), f.path)
+    # print deleted files from snapshot
+    # diff(prevcontent, "")
+    for f in snapmetadata.deleted:
+        yield "! %s\n" % f.path
+        fctx1 = ctx1.filectx(f.path)
+        yield snapshotdiff(fctx1.data(), "", f.path)
+
+
+def _getsnapshotrepostate(ctx):
+    # TODO(alexeyqu): check this via snapshotlist
+    metadataid = ctx.extra().get("snapshotmetadataid", "")
+    if not metadataid:
+        return None
+    repo = ctx.repo()
+    snapmetadata = snapshotmetadata.getfromlocalstorage(repo, metadataid)
+    if "rebasestate" in snapmetadata.localvfsfiles:
+        return "rebase"
+    if len(ctx.parents()) > 1:
+        return "merge"
+    return None
+
+
+def _show(orig, self, ctx, *args):
+    orig(self, ctx, *args)
+    state = _getsnapshotrepostate(ctx)
+    if state:
+        # TODO(alexeyqu): add more information about the state here
+        self.ui.write(_("The snapshot is in an unfinished *%s* state.\n") % state)
 
 
 @subcmd(

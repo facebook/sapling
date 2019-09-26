@@ -44,7 +44,7 @@
 
 # Snapshot show test plan:
 # 1) Create a couple of snapshots (with public and with hidden parents);
-# 2) TODO(alexeyqu): Show these snapshots;
+# 2) Show these snapshots;
 # 3) Show them in ssl.
 
 
@@ -88,6 +88,95 @@
   $ hg checkout "$BASEREV"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
+
+# 2) Show these snapshots;
+  $ hg snapshot show "$BASEREV"
+  abort: fa948fa73a59 is not a valid snapshot id
+  
+  [255]
+  $ hg snapshot show "$OID"
+  changeset:   9:b6124cfe90c6
+  parent:      8:fdf2c0326bba
+  parent:      7:9d3ebf4630d3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     snapshot
+  
+  diff -r fdf2c0326bba -r b6124cfe90c6 bar/file
+  --- a/bar/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -bar
+  diff -r fdf2c0326bba -r b6124cfe90c6 bazfile
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/bazfile	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +another
+  diff -r fdf2c0326bba -r b6124cfe90c6 draft1
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/draft1	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +draft1
+  diff -r fdf2c0326bba -r b6124cfe90c6 draft2
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/draft2	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +draft2
+  diff -r fdf2c0326bba -r b6124cfe90c6 mergefile
+  --- a/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,5 @@
+  +<<<<<<< working copy: fdf2c0326bba - test: merge #2
+   b
+  +=======
+  +a
+  +>>>>>>> merge rev:    9d3ebf4630d3 - test: merge #1
+  
+  ===
+  Untracked changes:
+  ===
+  ? mergefile.orig
+  @@ -0,0 +1,1 @@
+  +b
+  ? untrackedfile
+  @@ -0,0 +1,1 @@
+  +fizz
+  ! foofile
+  @@ -1,1 +0,0 @@
+  -foo
+  
+  The snapshot is in an unfinished *merge* state.
+
+  $ hg snapshot show "$HOID"
+  changeset:   10:3d1b299b75fb
+  tag:         tip
+  parent:      3:ffb8db6e9ac3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  instability: orphan
+  summary:     snapshot
+  
+  
+  ===
+  Untracked changes:
+  ===
+  ? a
+  @@ -0,0 +1,1 @@
+  +a
+  
+
+  $ hg show --hidden "$HOID"
+  changeset:   10:3d1b299b75fb
+  tag:         tip
+  parent:      3:ffb8db6e9ac3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  instability: orphan
+  description:
+  snapshot
+  
+  
+  
 
 # 3) Show them in ssl
   $ hg smartlog -T default

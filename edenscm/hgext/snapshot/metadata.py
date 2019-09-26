@@ -154,3 +154,11 @@ class snapshotmetadata(object):
         auxfilesinfo.update(f.oid for f in self.unknown)
         auxfilesinfo.update(f.oid for f in self.localvfsfiles)
         return auxfilesinfo
+
+    def files(self, showlocalvfs=False):
+        filelist = []
+        filelist += [("?", f.path) for f in self.unknown]
+        filelist += [("!", f.path) for f in self.deleted]
+        if showlocalvfs:
+            filelist += [("?", f.path) for f in self.localvfsfiles]
+        return filelist
