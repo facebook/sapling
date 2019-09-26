@@ -1057,14 +1057,23 @@ def makestream(
     repo = repo.unfiltered()
     commonrevs = outgoing.common
     csets = outgoing.missing
-    heads = outgoing.missingheads
-    # We go through the fast path if we get told to, or if all (unfiltered
-    # heads have been requested (since we then know there all linkrevs will
-    # be pulled by the client).
-    heads.sort()
-    fastpathlinkrev = fastpath or (
-        repo.filtername is None and heads == sorted(repo.heads())
-    )
+
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        # repo.heads() can no longer provide accurate hints about whether
+        # 'fastpathlinkrev' should be used or not.
+        # If 'fastpathlinkrev' gets accidentally set to True, tests like
+        # like test-visibility-cloudsync.t will fail due to missing files
+        # in bundles.
+        fastpathlinkrev = False
+    else:
+        heads = outgoing.missingheads
+        # We go through the fast path if we get told to, or if all (unfiltered
+        # heads have been requested (since we then know there all linkrevs will
+        # be pulled by the client).
+        heads.sort()
+        fastpathlinkrev = fastpath or (
+            repo.filtername is None and heads == sorted(repo.heads())
+        )
 
     repo.hook("preoutgoing", throw=True, source=source)
     _changegroupinfo(repo, csets, source)

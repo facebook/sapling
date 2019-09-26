@@ -4,13 +4,17 @@
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true
+  $ setconfig experimental.evolution=
+  $ setconfig experimental.narrow-heads=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.user=test mutation.date="0 0"
   $ setconfig remotefilelog.reponame=server
+  $ setconfig hint.ack='*'
 
   $ newrepo server
   $ setconfig infinitepush.server=yes infinitepush.indextype=disk infinitepush.storetype=disk infinitepush.reponame=testrepo
   $ echo base > base
   $ hg commit -Aqm base
+  $ hg bookmark master
 
 Create a client with some initial commits and sync them to the cloud workspace.
 
@@ -81,7 +85,7 @@ Create another client and use it to modify the commits and create some new ones.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
+  added 1 changesets with 1 changes to 2 files
   new changesets dae3b312bb78:c70a9bd6bfd1
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -163,11 +167,11 @@ Now cloud sync.  The sets of commits should be merged.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files (+1 heads)
+  added 1 changesets with 0 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
+  added 1 changesets with 1 changes to 2 files
   new changesets d8fc5ae9b7ef:dd114d9b2f9e
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -198,11 +202,11 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files (+1 heads)
+  added 1 changesets with 1 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 2 files (+1 heads)
+  added 1 changesets with 0 changes to 2 files
   new changesets ba83c5428cb2:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -223,7 +227,7 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   
 It should also have mutations made on both sides visible.
 
-  $ tglogm --hidden
+  $ tglogm -r 'predecessors(all())'
   o  8: 6caded0e9807 'D'
   |
   | o  7: ba83c5428cb2 'F'
@@ -243,6 +247,7 @@ It should also have mutations made on both sides visible.
   o  0: d20a80d4def3 'base'
   
 Introduce a third client that is still using obsmarker-based mutation and visibility
+(This is incompatible with narrow-heads)
 
   $ cd $TESTTMP
   $ hg clone ssh://user@dummy/server client3 -q --config visibility.enabled=false
@@ -251,6 +256,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ setconfig commitcloud.user_token_path=$TESTTMP
   $ setconfig mutation.enabled=false
   $ setconfig visibility.enabled=false
+  $ setconfig experimental.narrow-heads=false
   $ hg cloud auth -t xxxxxx
   updating authentication token
   authentication successful
@@ -312,10 +318,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   finished in * sec (glob)
   $ hg undo
   undone to *, before amend -m F-amended-again (glob)
-  hint[undo-uncommit-unamend]: undoing amends discards their changes.
-  to restore the changes to the working copy, run 'hg revert -r b5ea82a7973c --all'
-  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
-  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
@@ -325,6 +327,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   remote:     1ef69cfd595b  F-amended
   commitcloud: commits synchronized
   finished in * sec (glob)
+  commitcloud: current revision 1ef69cfd595b has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)
 
   $ cd ../client3
   $ hg cloud sync
@@ -336,7 +340,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 3 files (+1 heads)
-  obsoleted 1 changesets
   new changesets 1ef69cfd595b
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -346,6 +349,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * sec (glob)
+  commitcloud: current revision 1ef69cfd595b has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)
 
   $ cd ../client3
   $ hg cloud sync
@@ -357,6 +362,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   |
   | o  6: 6caded0e9807 'D'
   | |
+  +---o  5: ba83c5428cb2 'F'
+  | |
   | | o  4: dd114d9b2f9e 'X'
   | |/
   +---o  3: d8fc5ae9b7ef 'D'
@@ -367,7 +374,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   |
   @  0: d20a80d4def3 'base'
   
-  $ tglogm --hidden --config mutation.enabled=true
+  $ tglogm -r 'predecessors(all())' --config mutation.enabled=true
   o  7: 1ef69cfd595b 'F-amended'
   |
   | o  6: 6caded0e9807 'D'
