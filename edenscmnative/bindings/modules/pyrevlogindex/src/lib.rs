@@ -70,7 +70,7 @@ py_class!(class revlogindex |py| {
                     if state == State::PotentialHead {
                         result.push(rev as u32);
                     }
-                    for parent_rev in revlog.parents(rev as u32) {
+                    for &parent_rev in revlog.parents(rev as u32).as_revs() {
                         if parent_rev >= min_rev {
                             states[(parent_rev - min_rev) as usize] = State::NotHead;
                         }
@@ -120,7 +120,7 @@ py_class!(class revlogindex |py| {
                 // with the new "dag" abstraction.
                 Phase::Unspecified => (),
             }
-            for parent_rev in revlog.parents(rev as u32) {
+            for &parent_rev in revlog.parents(rev as u32).as_revs() {
                 // Propagate phases from this rev to its parents.
                 phases[parent_rev as usize] = phases[parent_rev as usize].max(phase);
             }
@@ -131,7 +131,7 @@ py_class!(class revlogindex |py| {
     /// Get parent revisions.
     def parentrevs(&self, rev: u32) -> PyResult<Vec<u32>> {
         let revlog = self.changelogi(py);
-        Ok(revlog.parents(rev))
+        Ok(revlog.parents(rev).as_revs().to_vec())
     }
 
     /// Insert a new revision that hasn't been written to disk.
@@ -154,7 +154,29 @@ struct RevlogIndex {
     data: SimplePyBuf<RevlogEntry>,
 
     // Inserted entries that are not flushed to disk.
-    inserted: RefCell<Vec<Vec<u32>>>,
+    inserted: RefCell<Vec<ParentRevs>>,
+}
+
+/// "smallvec" optimization
+#[derive(Clone, Copy)]
+struct ParentRevs([i32; 2]);
+
+impl ParentRevs {
+    fn from_p1p2(p1: i32, p2: i32) -> Self {
+        Self([p1, p2])
+    }
+
+    fn as_revs(&self) -> &[u32] {
+        let slice: &[i32] = if self.0[0] == -1 {
+            &self.0[0..0]
+        } else if self.0[1] == -1 {
+            &self.0[0..1]
+        } else {
+            &self.0[..]
+        };
+        let ptr = (slice as *const [i32]) as *const [u32];
+        unsafe { &*ptr }
+    }
 }
 
 /// Revlog entry. See "# index ng" in revlog.py.
@@ -185,7 +207,7 @@ impl RevlogIndex {
     }
 
     /// Get parent revisions.
-    fn parents(&self, rev: u32) -> Vec<u32> {
+    fn parents(&self, rev: u32) -> ParentRevs {
         let data_len = self.data_len();
         if rev >= data_len as u32 {
             let inserted = self.inserted.borrow();
@@ -195,24 +217,14 @@ impl RevlogIndex {
         let data = self.data.as_ref();
         let p1 = i32::from_be(data[rev as usize].p1);
         let p2 = i32::from_be(data[rev as usize].p2);
-        if p1 == -1 {
-            // p1 == -1 but p2 != -1 is illegal for changelog (but possible
-            // for filelog with copy information).
-            assert!(p2 == -1);
-            Vec::new()
-        } else if p2 == -1 {
-            assert!((p1 as u32) < rev);
-            vec![p1 as u32]
-        } else {
-            assert!((p1 as u32) < rev);
-            assert!((p2 as u32) < rev);
-            vec![p1 as u32, p2 as u32]
-        }
+        ParentRevs::from_p1p2(p1, p2)
     }
 
     /// Insert a new revision with given parents at the end.
     fn insert(&self, parents: Vec<u32>) {
         let mut inserted = self.inserted.borrow_mut();
-        inserted.push(parents);
+        let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
+        let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
+        inserted.push(ParentRevs::from_p1p2(p1, p2));
     }
 }
