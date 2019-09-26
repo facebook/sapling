@@ -1,5 +1,6 @@
-  $ enable amend rebase
+  $ enable amend rebase remotenames
   $ setconfig experimental.evolution=
+  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
@@ -71,11 +72,11 @@ Logging the heads still works.
   $ hg log -r "head()" -T '{node} {desc}\n'
   696cbb89a420ebe8fafeb74ea2da0597a5ae2efa J
 
-Looking at the hidden commits still works.
+Looking at the 'hidden' commits via commit hashes still works.
 
-  $ hg log -R $TESTTMP/bundle.hg -r "head()" -T '{node} {desc}\n' --hidden
+  $ hg log -R $TESTTMP/bundle.hg -r "head()+$K" -T '{node} {desc}\n'
   696cbb89a420ebe8fafeb74ea2da0597a5ae2efa J
-  200d7f7cf08dd0246ad02cac6df356705cf0adab K
   bd15fabcb8083473489d54a8edc58126c1facc53 G
   9bc730a19041f9ec7cb33c626e811aa233efb18c E
   e5dcb50d5e3c977ce2bce38e15cabb0a8761c8f0 I
+  200d7f7cf08dd0246ad02cac6df356705cf0adab K
