@@ -473,9 +473,22 @@ impl Log {
             return Ok(0);
         }
 
+        fn check_append_only(this: &Log, new_meta: &LogMetadata) -> Fallible<()> {
+            let old_meta = &this.meta;
+            if old_meta.primary_len > new_meta.primary_len {
+                Err(this.data_error(format!(
+                    "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
+                    new_meta.primary_len, old_meta.primary_len
+                )))
+            } else {
+                Ok(())
+            }
+        }
+
         // Read-only fast path - no need to take directory lock.
         if self.mem_buf.is_empty() {
             let meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
+            check_append_only(self, &meta)?;
             let changed = self.meta != meta;
             // No need to reload anything if metadata hasn't changed.
             if changed {
@@ -498,6 +511,7 @@ impl Log {
         // Step 1: Reload metadata to get the latest view of the files.
         let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
         let changed = self.meta != meta;
+        check_append_only(self, &meta)?;
 
         if changed && self.open_options.flush_filter.is_some() {
             let filter = self.open_options.flush_filter.unwrap();

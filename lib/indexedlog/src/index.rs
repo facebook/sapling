@@ -1830,6 +1830,7 @@ impl Index {
             return Ok(0);
         }
 
+        let old_len = self.len;
         let mut new_len = self.len;
         if !self.dirty_root.radix_offset.is_dirty() {
             // Nothing changed
@@ -1842,6 +1843,15 @@ impl Index {
             let estimated_dirty_bytes = self.dirty_links.len() * 50;
             let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)?;
             let len = lock.as_mut().seek(SeekFrom::End(0))?;
+            if len < old_len {
+                let path = &self.path;
+                let message = format!(
+                    "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
+                    len, old_len
+                );
+                return Err(path_data_error(path, message));
+            }
+
             let mut buf = Vec::with_capacity(estimated_dirty_bytes);
 
             // Write in the following order:
