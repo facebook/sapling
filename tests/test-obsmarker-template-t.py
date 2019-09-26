@@ -6,19 +6,16 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % ". helpers-usechg.sh"
 
 # This test file test the various templates related to obsmarkers.
 
 # Global setup
 # ============
 
-sh % ". '$TESTDIR/testlib/obsmarker-common.sh'"
 sh % "cat" << r"""
 [ui]
 interactive = true
@@ -40,6 +37,14 @@ fatelogjson = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsan
 fatelogkw = log -G -T '{node|short}\n{if(obsfate, "{obsfate % "  Obsfate: {fate}\n"}")}'
 fatelogcount = log -G -T '{node|short} {succsandmarkers}'
 """ >> "$HGRCPATH"
+
+
+def mkcommit(name):
+    open(name, "wb").write("%s\n" % name)
+    sh.hg("commit", "-m%s" % name, "-A", name)
+
+
+shlib.mkcommit = mkcommit
 
 # Test templates on amended commit
 # ================================
