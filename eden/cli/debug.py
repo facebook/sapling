@@ -42,6 +42,9 @@ from facebook.eden.ttypes import (
     TimeSpec,
     TreeInodeDebugInfo,
 )
+from fb303_core import BaseService
+from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
+from thrift.util import Serializer
 
 from . import cmd_util, stats_print, subcmd as subcmd_mod, ui as ui_mod
 from .config import EdenCheckout, EdenInstance
@@ -940,6 +943,9 @@ class DebugThriftCmd(Subcmd):
             help="Always pass all arguments through eval(), even for plain strings.",
         )
         parser.add_argument(
+            "--json", action="store_true", help="Attempt to encode the result as JSON."
+        )
+        parser.add_argument(
             "function_name", nargs="?", help="The thrift function to call."
         )
         parser.add_argument(
@@ -985,11 +991,50 @@ class DebugThriftCmd(Subcmd):
             args.args, fn_info, eval_strings=args.eval_all_args
         )
 
+        def lookup_module_member(modules, name):
+            for module in modules:
+                try:
+                    return getattr(module, name)
+                except AttributeError:
+                    continue
+            raise AttributeError(f"Failed to find {name} in {modules}")
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
             fn = getattr(client, args.function_name)
             result = fn(**python_args)
-            print(result)
+            if args.json:
+                # The following back-and-forth is required to reliably
+                # convert a Python Thrift client result into its JSON
+                # form. The Python Thrift client returns native Python
+                # lists and dicts for lists and maps, but they cannot
+                # be passed directly to TSimpleJSONProtocol. Instead,
+                # map the result back into a Thrift message, and then
+                # serialize that as JSON. Finally, strip the message
+                # container.
+                #
+                # NOTE: Stripping the root object means the output may
+                # not have a root dict or array, which is required by
+                # most JSON specs. But Python's json module and jq are
+                # both fine with this deviation.
+                result_type = lookup_module_member(
+                    [EdenService, BaseService], args.function_name + "_result"
+                )
+                json_data = Serializer.serialize(
+                    TSimpleJSONProtocolFactory(), result_type(result)
+                )
+                json.dump(
+                    # If the method returns void, json_data will not
+                    # have a "success" field. Print `null` in that
+                    # case.
+                    json.loads(json_data).get("success"),
+                    sys.stdout,
+                    sort_keys=True,
+                    indent=2,
+                )
+                sys.stdout.write("\n")
+            else:
+                print(result)
 
         return 0
 
