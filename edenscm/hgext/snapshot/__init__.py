@@ -28,7 +28,15 @@ Configs::
     usercache = /path/to/global/cache
 """
 
-from edenscm.mercurial import error, extensions, hg, registrar, visibility
+from edenscm.mercurial import (
+    error,
+    extensions,
+    hg,
+    registrar,
+    revsetlang,
+    templatekw,
+    visibility,
+)
 from edenscm.mercurial.i18n import _
 
 from . import blobstore, bundleparts, cmds as snapshotcommands, snapshotlist
@@ -59,6 +67,12 @@ def reposetup(ui, repo):
 def extsetup(ui):
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
     extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
+    extensions.wrapfunction(templatekw, "showgraphnode", _showgraphnode)
+    try:
+        smartlog = extensions.find("smartlog")
+        extensions.wrapfunction(smartlog, "getrevs", _getrevssl)
+    except KeyError:
+        pass
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
@@ -90,6 +104,20 @@ def _updateheads(orig, self, repo, newheads, tr):
         else:
             heads.append(h)
     return orig(self, repo, heads, tr)
+
+
+def _showgraphnode(orig, repo, ctx, **args):
+    if "snapshotmetadataid" in ctx.extra():
+        return "s"
+    return orig(repo, ctx, **args)
+
+
+def _getrevssl(orig, ui, repo, masterstring, **opts):
+    revs = orig(ui, repo, masterstring, **opts)
+    snapshotstring = revsetlang.formatspec(
+        "smartlog(heads=snapshot(), master=%r)", masterstring
+    )
+    return revs.union(repo.unfiltered().anyrevs([snapshotstring], user=True))
 
 
 revsetpredicate = registrar.revsetpredicate()

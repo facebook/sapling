@@ -322,6 +322,9 @@ def getdag(ui, repo, revs, master):
         def files(self):
             return []
 
+        def extra(self):
+            return {}
+
         def closesbranch(self):
             return False
 
@@ -610,19 +613,7 @@ Excludes:
     return _smartlog(ui, repo, *pats, **opts)
 
 
-def _smartlog(ui, repo, *pats, **opts):
-    if opts.get("rev"):
-        masterfallback = "null"
-    else:
-        masterfallback = "interestingmaster()"
-
-    masterstring = (
-        opts.get("master") or ui.config("smartlog", "master") or masterfallback
-    )
-    masterrev = repo.anyrevs([masterstring], user=True).first()
-
-    revs = set()
-
+def getrevs(ui, repo, masterstring, **opts):
     global hiddenchanges
     hiddenchanges = 0
 
@@ -655,7 +646,21 @@ def _smartlog(ui, repo, *pats, **opts):
         "smartlog(heads=%r, master=%r)", headspec, masterstring
     )
 
-    revs = set(repo.anyrevs([revstring], user=True))
+    return set(repo.anyrevs([revstring], user=True))
+
+
+def _smartlog(ui, repo, *pats, **opts):
+    if opts.get("rev"):
+        masterfallback = "null"
+    else:
+        masterfallback = "interestingmaster()"
+
+    masterstring = (
+        opts.get("master") or ui.config("smartlog", "master") or masterfallback
+    )
+
+    masterrev = repo.anyrevs([masterstring], user=True).first()
+    revs = getrevs(ui, repo, masterstring, **opts)
 
     if -1 in revs:
         revs.remove(-1)
@@ -668,7 +673,7 @@ def _smartlog(ui, repo, *pats, **opts):
     if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
         overrides[("experimental", "graphstyle.grandparent")] = "2."
     with ui.configoverride(overrides, "smartlog"):
-        revdag = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
+        revdag = getdag(ui, repo.unfiltered(), sorted(revs, reverse=True), masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         ui.pager("smartlog")
         cmdutil.displaygraph(
@@ -686,6 +691,7 @@ def _smartlog(ui, repo, *pats, **opts):
         # No write access. No big deal.
         pass
 
+    global hiddenchanges
     if hiddenchanges:
         ui.warn(
             _("hiding %s old heads without bookmarks\n") % hiddenchanges,
