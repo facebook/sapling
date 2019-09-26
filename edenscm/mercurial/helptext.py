@@ -938,6 +938,9 @@ for related options for the annotate command.
 ``unified``
     Number of lines of context to show.
 
+``hashbinary``
+    Show a SHA-1 hash of changed binaries in diff output.
+
 
 ``discovery``
 --------

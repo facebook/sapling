@@ -2414,6 +2414,7 @@ def difffeatureopts(
             finally:
                 buildopts["index"] = hlen
 
+    buildopts["hashbinary"] = ui.configbool("diff", "hashbinary")
     if whitespace:
         buildopts["ignorews"] = get("ignore_all_space", "ignorews")
         buildopts["ignorewsamount"] = get("ignore_space_change", "ignorewsamount")
@@ -3008,7 +3009,7 @@ def trydiff(
             if fctx2 is not None:
                 content2 = fctx2.data()
 
-        if binary and opts.git and not opts.nobinary:
+        if binary and opts.git and not opts.nobinary and not opts.hashbinary:
             text = mdiff.b85diff(content1, content2)
             if text:
                 header.append("index %s..%s" % (gitindex(content1), gitindex(content2)))

@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import re
 import struct
 import zlib
+from hashlib import sha1
 
 from edenscmnative import xdiff
 
@@ -81,6 +82,7 @@ class diffopts(object):
         "upgrade": False,
         "showsimilarity": False,
         "worddiff": False,
+        "hashbinary": False,
     }
 
     def __init__(self, **opts):
@@ -293,7 +295,11 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
-        hunks = ((None, ["Binary file %s has changed\n" % fn1]),)
+        if opts.hashbinary:
+            message = "Binary file %s has changed to %s\n" % (fn1, sha1(b).hexdigest())
+        else:
+            message = "Binary file %s has changed\n" % fn1
+        hunks = ((None, [message]),)
     elif not a:
         without_newline = b[-1] != "\n"
         b = splitnewlines(b)
