@@ -318,10 +318,10 @@ class phasecache(object):
                 def torevs(nodes):
                     return list(repo.revs("%ln", nodes))
 
-                remotepublicrevs, remotedraftrevs = map(torevs, cl._remotenodes())
-                localdrafrevs = torevs(cl._visibleheads.heads)
+                publicheadrevs = cl.headrevs(includepublic=True, includedraft=False)
+                draftheadrevs = cl.headrevs(includepublic=False, includedraft=True)
                 self._publicrevs, self._draftrevs = cl.index2.phasesets(
-                    remotepublicrevs, remotedraftrevs + localdrafrevs
+                    publicheadrevs, draftheadrevs
                 )
             return
 

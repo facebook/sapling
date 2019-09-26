@@ -372,12 +372,22 @@ class changelog(revlog.revlog):
     def reachableroots(self, minroot, heads, roots, includepath=False):
         return self.index.reachableroots2(minroot, heads, roots, includepath)
 
-    def headrevs(self):
+    def headrevs(self, includepublic=True, includedraft=True):
         if self._uiconfig.configbool("experimental", "narrow-heads"):
             publicnodes, draftnodes = self._remotenodes()
-            nodes = self._visibleheads.heads + publicnodes + draftnodes
-            revs = map(super(changelog, self).rev, nodes)
-            return self.index2.headsancestors(revs)
+            torev = self.nodemap.__getitem__
+            nodes = []
+            if includepublic:
+                nodes += publicnodes
+            if includedraft:
+                if self._uiconfig.configbool("visibility", "all-heads"):
+                    visibleheads = self._visibleheads.allheads()
+                else:
+                    visibleheads = self._visibleheads.heads
+                nodes += visibleheads + draftnodes
+            revs = map(torev, nodes)
+            r = self.index2.headsancestors(revs)
+            return r
 
         if self.filteredrevs:
             try:
