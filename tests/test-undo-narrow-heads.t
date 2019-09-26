@@ -1,6 +1,3 @@
-WIP to make this test pass.
-#require false
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > undo=
@@ -17,6 +14,9 @@ WIP to make this test pass.
   > [ui]
   > interactive = true
   > EOF
+
+Use chg if possible to speed up the test
+  $ unset CHGDISABLE
 
 Build up a repo
 
@@ -64,17 +64,16 @@ Test data store
   0000000000000000000000000000000000000000 (no-eol)
   $ hg debugdata .hg/undolog/workingparent.i 1
   df4fd610a3d6ca792281e7576587fa18f940d37a (no-eol)
-  $ hg debugdata .hg/undolog/draftheads.i 1
+  $ hg debugdata .hg/undolog/visibleheads.i 1
   df4fd610a3d6ca792281e7576587fa18f940d37a (no-eol)
-  $ hg debugdata .hg/undolog/draftheads.i 2
+  $ hg debugdata .hg/undolog/visibleheads.i 2
   b68836a6e2cac33ba33a20249b85a486eec78186 (no-eol)
   $ hg debugdata .hg/undolog/index.i 1
   bookmarks 8153d44860d076e9c328951c8f36cf8daebe695a
   command bae41a9d0ae9614fc3aa843a0f5cbdf47bc98c43
   date * (glob)
-  draftheads b80de5d138758541c5f05265ad144ab9fa86d1db
-  draftobsolete b80de5d138758541c5f05265ad144ab9fa86d1db
   unfinished False
+  visibleheads b80de5d138758541c5f05265ad144ab9fa86d1db
   workingparent fcb754f6a51eaf982f66d0637b39f3d2e6b520d5 (no-eol)
   $ touch a3 && hg add a3
   $ hg commit --amend
@@ -108,13 +107,11 @@ Test debugundohistory
   	master 0a3dd3e15e65b90836f492112d816f3ee073d897
   date:
   	* (glob)
-  draftheads:
+  visibleheads:
   	ADDED:
   		0a3dd3e15e65b90836f492112d816f3ee073d897
   	REMOVED:
   	
-  draftobsolete:
-  
   unfinished:	False
 
 Test gap in data (extension dis and enabled)
@@ -149,13 +146,11 @@ Test gap in data (extension dis and enabled)
   	master 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
   date:
   	* (glob)
-  draftheads:
+  visibleheads:
   	ADDED:
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
   	REMOVED:
   		0a3dd3e15e65b90836f492112d816f3ee073d897
-  draftobsolete:
-  
   unfinished:	False
 
 Index out of bound error
@@ -174,13 +169,11 @@ Revset tests
   	master aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   date:
   	* (glob)
-  draftheads:
+  visibleheads:
   	ADDED:
   		aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   	REMOVED:
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
-  draftobsolete:
-  
   unfinished:	False
 
 Test 'olddraft([NUM])' revset
@@ -224,7 +217,7 @@ hg undo command tests
   undone to *, before ci -ma5 (glob)
   undologlock: lock acquired
   $ hg log -G -T compact -l2
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   |
   o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
@@ -238,7 +231,7 @@ hg undo command tests
   $ hg undo
   undone to *, before update 0a3dd3e15e65 --config extralog.events=undologlock (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ touch c11 && hg add c11
@@ -254,7 +247,7 @@ hg undo command tests
   in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
   hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg log -G -T compact -l4
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   |
   o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
@@ -278,7 +271,7 @@ hg undo command tests
   $ hg undo
   undone to *, before graft 296fda51a303 (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg book test
@@ -293,13 +286,13 @@ hg undo with negative step
   $ hg undo -n -1
   undone to *, before undo (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo
   undone to *, before book test (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo -n 5
@@ -307,7 +300,7 @@ hg undo with negative step
   $ hg undo -n -5
   undone to *, before book test (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo -n -100
@@ -326,13 +319,13 @@ hg undo --absolute tests
   $ hg undo -n 5
   undone to *, before undo (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo -a
   undone to *, before undo -n 5 (glob)
   $ hg log -G -T compact -l1
-  @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  @  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
 
@@ -385,32 +378,43 @@ checking split/divergence.
   to restore the changes to the working copy, run 'hg revert -r c9476255bc2a --all'
   in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
   hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
-  $ hg phase -r . --public
-  $ hg sl --all --hidden -T "{node|short} {if(undosuccessors, label('sl.undo', '(Undone as {join(undosuccessors% \'{shortest(undosuccessor, 6)}\', ', ')})'))}"
-  x  f007a7cf4c3d
+
+# Make '.' public
+  $ hg debugremotebookmark foo .
+
+(With visible head-based undo, 'undone to' template is not shown)
+(UX: Consider using 'x' for secret phase commits, instead of using 'obsolete()')
+
+  $ hg log -Gr 'predecessors(all()+f007a7cf4c3d+aa430c8afedf+c9476255bc2a+2dca609174c2+db92053d5c83)' -T "{node|short} {phase}"
+  o  c9476255bc2a secret
   |
-  | x  aa430c8afedf
+  | o  f007a7cf4c3d secret
+  | |
+  +---o  2dca609174c2 secret
+  | |
+  | | o  aa430c8afedf secret
+  | |/
+  | @  1dafc0b43612 public
   |/
-  @  1dafc0b43612
+  o  0a3dd3e15e65 public
   |
-  | x  c9476255bc2a (Undone as 1dafc0, 1dafc0)
+  | o  296fda51a303 draft
   |/
-  | x  2dca609174c2 (Undone as 1dafc0)
+  | o  db92053d5c83 secret
   |/
-  o  0a3dd3e15e65
+  o  38d85b506754 public
   |
-  | o  296fda51a303
-  |/
-  | x  db92053d5c83
-  |/
-  o  38d85b506754
-  :
-  : o  49cdb4091aca
-  :/
-  o  b68836a6e2ca
+  o  ec7553f7b382 public
   |
-  ~
-  $ hg phase -r 'all()' --draft -f
+  | o  49cdb4091aca draft
+  |/
+  o  b68836a6e2ca public
+  |
+  o  df4fd610a3d6 public
+  
+# Make everything draft
+  $ hg debugremotebookmark foo null
+
   $ echo "a" >> newa && echo "b" >> newb && hg add newa newb && hg ci -m "newfiles"
   $ hg split --quiet << EOF
   > y
@@ -431,22 +435,10 @@ checking split/divergence.
   examine changes to 'newb'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  $ hg debugobsolete | tail -5
-  c9476255bc2a68672c844021397838ff4eeefcda 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa 0 (Thu Jan 01 00:00:04 1970 +0000) {'operation': 'undo', 'user': 'test'}
-  c9476255bc2a68672c844021397838ff4eeefcda c9476255bc2a68672c844021397838ff4eeefcda 0 (Thu Jan 01 00:00:04 1970 +0000) {'operation': 'commit', 'user': 'test'}
-  1dafc0b436123cab96f82a8e9e8d1d42c0301aaa c9476255bc2a68672c844021397838ff4eeefcda 0 (Thu Jan 01 00:00:05 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  c9476255bc2a68672c844021397838ff4eeefcda 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa 0 (Thu Jan 01 00:00:06 1970 +0000) {'operation': 'undo', 'user': 'test'}
-  f86734247df6db66a810e549cc938a72cd5c6d1a d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
   $ hg undo
   undone to *, before split --quiet (glob)
   $ hg undo -n -1
   undone to *, before undo (glob)
-  $ hg debugobsolete | tail -5
-  d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea f86734247df6db66a810e549cc938a72cd5c6d1a 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
-  75f63379f12bf02d40fe7444587ad67be9ae81b8 0 {d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
-  f86734247df6db66a810e549cc938a72cd5c6d1a 0 {1dafc0b436123cab96f82a8e9e8d1d42c0301aaa} (Thu Jan 01 00:00:02 1970 +0000) {'operation': 'undo', 'user': 'test'}
-  d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
-  75f63379f12bf02d40fe7444587ad67be9ae81b8 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend=!
@@ -461,262 +453,6 @@ File corruption handling
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugundohistory -l
   0:  -- gap in log -- 
-
-_localbranch revset tests
-  $ hg log -r '_localbranch(75f63379f12b)'
-  changeset:   0:df4fd610a3d6
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a1
-  
-  changeset:   1:b68836a6e2ca
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a2
-  
-  changeset:   2:49cdb4091aca
-  bookmark:    feature1
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     b
-  
-  changeset:   3:ec7553f7b382
-  parent:      1:b68836a6e2ca
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c1
-  
-  changeset:   4:38d85b506754
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c2
-  
-  changeset:   6:296fda51a303
-  bookmark:    feature2
-  parent:      4:38d85b506754
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     d
-  
-  changeset:   7:0a3dd3e15e65
-  parent:      4:38d85b506754
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     words
-  
-  changeset:   8:1dafc0b43612
-  bookmark:    master
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     cmiss
-  
-  changeset:   14:d0fdb9510dbf
-  parent:      8:1dafc0b43612
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  changeset:   15:75f63379f12b
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-Test with public commit
-  $ hg phase -r 0a3dd3e15e65 -p
-  $ hg log -r '_localbranch(75f63379f12b)'
-  changeset:   8:1dafc0b43612
-  bookmark:    master
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     cmiss
-  
-  changeset:   14:d0fdb9510dbf
-  parent:      8:1dafc0b43612
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  changeset:   15:75f63379f12b
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  $ hg log -r '_localbranch(0a3dd3e15e65)'
-  changeset:   8:1dafc0b43612
-  bookmark:    master
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     cmiss
-  
-  changeset:   14:d0fdb9510dbf
-  parent:      8:1dafc0b43612
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  changeset:   15:75f63379f12b
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-
-localbranch undos
-Make changes on two branches (old and new)
-Undo only changes in one branch (old)
-Includes commit and book changes
-  $ hg book "oldbook"
-  $ touch oldbranch
-  $ hg add oldbranch && hg ci -moldbranch
-  $ hg update null
-  0 files updated, 0 files merged, 8 files removed, 0 files unresolved
-  (leaving bookmark oldbook)
-  $ touch newbranch
-  $ hg add newbranch && hg ci -mnewbranch
-  $ hg book "newbook"
-  $ hg log -l 2
-  changeset:   17:805791ba4bcd
-  bookmark:    newbook
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-  changeset:   16:7b0ef4f2a1ae
-  bookmark:    oldbook
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     oldbranch
-  
-  $ hg up 75f63379f12b
-  7 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (leaving bookmark newbook)
-3 changes within local scope: commit, book, update
-  $ hg undo -b 75f63379f12b
-  undone to *, before update null (glob)
-  $ hg undo -b 75f63379f12b
-  undone to *, before ci -moldbranch (glob)
-  $ hg undo -b 75f63379f12b
-  undone to *, before book oldbook (glob)
-  $ hg log -l 2
-  changeset:   17:805791ba4bcd
-  bookmark:    newbook
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-  changeset:   15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-Check rebase local undos of rebases
-Make sure bookmarks and commits are not lost
-and commits are not duplicated
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase =
-  > EOF
-  $ hg rebase -s 8057 -d 75f6
-  rebasing 17:805791ba4bcd "newbranch" (newbook tip)
-  $ hg log -l 2
-  changeset:   18:35324a911c0d
-  bookmark:    newbook
-  tag:         tip
-  parent:      15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-  changeset:   15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  $ hg undo -b 3532
-  undone to *, before rebase -s 8057 -d 75f6 (glob)
-  $ hg log -l 2
-  changeset:   17:805791ba4bcd
-  bookmark:    newbook
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-  changeset:   15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase = !
-  > EOF
-
-Check local undo works forward
-  $ hg undo -n -1 -b 3532
-  undone to *, before undo -b 3532 (glob)
-  $ hg log -l 2
-  changeset:   18:35324a911c0d
-  bookmark:    newbook
-  tag:         tip
-  parent:      15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-  changeset:   15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newfiles
-  
-  $ touch a9 && hg add a9 && hg ci -m a9
-  $ hg log -r . -T {node}
-  3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
-  $ hg undo -b 3532
-  undone to *, before ci -m a9 (glob)
-  $ hg undo -b 3532
-  undone to *, before undo -n -1 -b 3532 (glob)
-  $ hg undo -n -1 -b 75f6
-  undone to *, before ci -m a9 (glob)
-  $ hg undo -n -1 -b 75f6
-  undone to *, before undo -b 3532 (glob)
-  $ hg log -l 2
-  changeset:   19:3ee6a6880888
-  tag:         tip
-  parent:      15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a9
-  
-  changeset:   18:35324a911c0d
-  bookmark:    newbook
-  parent:      15:75f63379f12b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     newbranch
-  
-Check local undo with prune
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > EOF
-  $ hg prune 3ee6
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  working directory now at 75f63379f12b
-  1 changesets pruned
-  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
-  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
-  $ hg undo -b 3532
-  undone to *, before prune 3ee6 (glob)
-  $ hg log -r . -T {node}
-  3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
 
 hg undo --preview test
   $ touch prev1 && hg add prev1 && hg ci -m prev1
@@ -734,602 +470,56 @@ hg undo --preview test
   o
   |
   o
-  :
+  |
   o
   |
-  ~
+  o
+  |
+  o
+  |
+  o
+  
   undo to *, before ci -m prev1 (glob)
-  $ hg undo -p -n 2
-  @  Undone
-  |
-  o  Undone
-  |
-  o
-  |
-  o
-  |
-  o
-  :
-  o
-  |
-  ~
-  undo to *, before undo -b 3532 (glob)
+
 
 hg redo tests
-  $ hg log -G -T compact
-  @  20[tip]   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  |
-  o  19:15   3ee6a6880888   1970-01-01 00:00 +0000   test
-  |    a9
-  |
-  | o  18[newbook]:15   35324a911c0d   1970-01-01 00:00 +0000   test
-  |/     newbranch
-  |
-  o  15   75f63379f12b   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  14:8   d0fdb9510dbf   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
-  |    cmiss
-  |
-  o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
-  |    words
-  |
-  | o  6[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
-  |/     d
-  |
-  o  4   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
-  |
-  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
-       a1
-  
-  $ hg log -r . -T {node}
-  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
-  $ hg undo -n 2
-  undone to *, before undo -b 3532 (glob)
+
+  $ newrepo
+  $ setconfig ui.allowemptycommit=1 hint.ack='*'
+  $ hg commit -m A
+  $ hg commit -m B
+  $ hg commit -m C
+  $ hg log -T '{desc}'
+  CBA (no-eol)
+
+  $ hg undo -q
+  $ hg log -T '{desc}'
+  BA (no-eol)
+
+  $ hg undo -q
+  $ hg log -T '{desc}'
+  A (no-eol)
+
   $ hg redo
-  undone to *, before undo -n 2 (glob)
-  $ hg log -r . -T {node}
-  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
-  $ hg undo
-  undone to *, before ci -m prev1 (glob)
-  $ hg undo
-  undone to *, before undo -b 3532 (glob)
-  $ hg log -r . -T {node}
-  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
-  $ hg undo -n 1
-  undone to *, before prune 3ee6 (glob)
-  $ hg redo
-  undone to *, before undo -n 1 (glob)
-  $ hg log -r . -T {node}
-  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
-  $ hg undo -n 1
-  undone to *, before prune 3ee6 (glob)
-  $ hg redo
-  undone to *, before undo -n 1 (glob)
-  $ hg redo
-  undone to *, before undo (glob)
-  $ hg redo
-  undone to *, before undo (glob)
-  $ hg log -r . -T {node}
-  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
-  $ hg undo -fn 3
-  undone to *, before prune 3ee6 (glob)
-  $ hg undo --force --step -1
-  undone to *, before undo -b 3532 (glob)
+  undone to *, before undo -q (glob)
+  $ hg log -T '{desc}'
+  BA (no-eol)
+
+  $ hg undo -q
+  $ hg log -T '{desc}'
+  A (no-eol)
+
+  $ hg redo -q
+  $ hg log -T '{desc}'
+  BA (no-eol)
+
+  $ hg redo -q
+  $ hg log -T '{desc}'
+  CBA (no-eol)
+
   $ hg debugundohistory -l
-  0: undo --force --step -1
-  1: undo -fn 3
-  2: redo
+  0: redo -q
+  1: redo -q
+  2: undo -q
   3: redo
-  4: redo
-  $ hg redo
-  undone to *, before undo --force --step -1 (glob)
-  $ hg undo
-  undone to *, before undo -n -1 -b 75f6 (glob)
-  $ hg log -r . -T {node}
-  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
-  $ hg redo
-  undone to *, before undo (glob)
-  $ hg redo
-  undone to *, before undo -fn 3 (glob)
-  $ hg log -r . -T {node}
-  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
-  $ hg undo --traceback
-  undone to *, before ci -m prev1 (glob)
-  $ hg undo -an1
-  undone to *, before undo --traceback (glob)
-  $ hg redo
-  undone to *, before undo -an1 (glob)
-  $ hg redo
-  abort: can't redo past absolute undo
-  [255]
-  $ hg undo -n -1
-  undone to *, before redo (glob)
-  $ hg log -G -T compact
-  @  20[tip]   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  |
-  o  19:15   3ee6a6880888   1970-01-01 00:00 +0000   test
-  |    a9
-  |
-  | o  18[newbook]:15   35324a911c0d   1970-01-01 00:00 +0000   test
-  |/     newbranch
-  |
-  o  15   75f63379f12b   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  14:8   d0fdb9510dbf   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
-  |    cmiss
-  |
-  o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
-  |    words
-  |
-  | o  6[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
-  |/     d
-  |
-  o  4   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
-  |
-  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
-       a1
-  
-'Refined branch testing
-Specific edge case testing
-  $ hg up null
-  0 files updated, 0 files merged, 9 files removed, 0 files unresolved
-  $ touch b1 && hg add b1 && hg ci -m b1
-  $ touch b2 && hg add b2 && hg ci -m b2
-  $ touch b3 && hg add b3 && hg ci -m b3
-  $ hg up null
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  $ touch c1 && hg add c1 && hg ci -m c1
-  $ touch c2 && hg add c2 && hg ci -m c2
-  $ touch c3 && hg add c3 && hg ci -m c3
-  $ hg log -G -T compact
-  @  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  o  23   f57edd138754   1970-01-01 00:00 +0000   test
-  |    b3
-  |
-  o  22   0cb4447a10a7   1970-01-01 00:00 +0000   test
-  |    b2
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  |
-  o  19:15   3ee6a6880888   1970-01-01 00:00 +0000   test
-  |    a9
-  |
-  | o  18[newbook]:15   35324a911c0d   1970-01-01 00:00 +0000   test
-  |/     newbranch
-  |
-  o  15   75f63379f12b   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  14:8   d0fdb9510dbf   1970-01-01 00:00 +0000   test
-  |    newfiles
-  |
-  o  8[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
-  |    cmiss
-  |
-  o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
-  |    words
-  |
-  | o  6[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
-  |/     d
-  |
-  o  4   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
-  |
-  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
-       a1
-  
-  $ hg undo -b f57e
-  undone to *, before ci -m b3 (glob)
-  $ hg undo -b f57e
-  undone to *, before ci -m b2 (glob)
-  $ hg log -G -T compact -l5
-  o  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  @  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ hg redo
-  undone to *, before undo -b f57e (glob)
-  $ hg log -G -T compact -l6
-  o  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  @  22   0cb4447a10a7   1970-01-01 00:00 +0000   test
-  |    b2
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ hg undo -b 0963
-  undone to *, before ci -m c3 (glob)
-  $ hg log -G -T compact -l5
-  @  25[tip]   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  o  22   0cb4447a10a7   1970-01-01 00:00 +0000   test
-  |    b2
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ hg undo
-  undone to *, before undo -b 0963 (glob)
-  $ hg log -G -T compact -l6
-  o  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  @  22   0cb4447a10a7   1970-01-01 00:00 +0000   test
-  |    b2
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ hg redo
-  undone to *, before undo (glob)
-  $ hg redo
-  undone to *, before undo -b 0963 (glob)
-  $ hg log -G -T compact -l6
-  o  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  @  22   0cb4447a10a7   1970-01-01 00:00 +0000   test
-  |    b2
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ hg undo -b f57e
-  undone to *, before redo (glob)
-  $ hg log -G -T compact -l5
-  o  26[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-       c1
-  
-  @  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-
-Interupted commands
-Commands like hg rebase, unshelve and histedit may interupt in order for the
-user to solve merge conflicts etc.  Since for example hg rebase --abort may
-permanently delete a commit, we do not want to undo to this state.
-  $ touch afile
-  $ echo "afile" > afile
-  $ hg add afile && hg ci -m afile
-  $ hg up 0963b9e31e70
-  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ touch afile
-  $ echo "bfile" > afile
-  $ hg add afile && hg ci -m bfile
-  $ hg log -G -T compact -l6
-  @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | |    afile
-  | |
-  o |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase =
-  > EOF
-  $ hg rebase -r 00617 -d 28dfc
-  rebasing 28:00617a57f780 "bfile" (tip)
-  merging afile
-  warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
-  $ hg log -G -T compact -l6
-  @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  | @  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | |    afile
-  | |
-  o |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ hg resolve -m afile
-  (no more unresolved files)
-  continue: hg rebase --continue
-  $ hg rebase --continue
-  rebasing 28:00617a57f780 "bfile" (tip)
-  $ hg log -G -T compact -l6
-  @  29[tip]:27   e642892c5cb0   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  |    afile
-  |
-  | o  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  | o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  | o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-  |      c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ hg undo
-  undone to *, before rebase -r 00617 -d 28dfc (glob)
-  $ hg log -G -T compact -l6
-  @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | |    afile
-  | |
-  o |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ hg redo
-  undone to *, before undo (glob)
-  $ hg log -G -T compact -l6
-  @  29[tip]:27   e642892c5cb0   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  |    afile
-  |
-  | o  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  | o  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  | o  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-  |      c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ hg undo
-  undone to *, before rebase -r 00617 -d 28dfc (glob)
-  $ hg rebase -r 00617 -d 28dfc
-  rebasing 28:00617a57f780 "bfile"
-  merging afile
-  warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
-  $ hg rebase --abort
-  rebase aborted
-  $ hg undo
-  undone to *, before rebase -r 00617 -d 28dfc (glob)
-  $ hg log -G -T compact -l6
-  @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | |    afile
-  | |
-  o |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > rebase =!
-  > EOF
-
-Obsmarkers for instack amend
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > EOF
-  $ hg update 0963
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ touch c5 && hg add c5 && hg amend c5
-  hint[amend-restack]: descendants of 0963b9e31e70 are left behind - use 'hg restack' to rebase them
-  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg log -G -T compact -l7
-  @  30[tip]:25   e1c5a2a441f5   1970-01-01 00:00 +0000   test
-  |    c3
-  |
-  | o  28:26   00617a57f780   1970-01-01 00:00 +0000   test
-  | |    bfile
-  | |
-  | | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | | |    afile
-  | | |
-  | x |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  |/ /     c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  $ hg undo && hg update 00617a
-  undone to *, before amend c5 (glob)
-  hint[undo-uncommit-unamend]: undoing amends discards their changes.
-  to restore the changes to the working copy, run 'hg revert -r e1c5a2a441f5 --all'
-  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
-  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg log -G -T compact -l7
-  @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
-  |    bfile
-  |
-  | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
-  | |    afile
-  | |
-  o |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
-  | |    c3
-  | |
-  o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
-  | |    c2
-  | |
-  o |  24:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
-   /     c1
-  |
-  o  21:-1   90af9088326b   1970-01-01 00:00 +0000   test
-       b1
-  
-  o  20   a0b72b3048d6   1970-01-01 00:00 +0000   test
-  |    prev1
-  ~
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > famend =!
-  > EOF
-
-test hint for undoing commits and its suggested remediation
-  $ touch hint1 && hg add hint1
-  $ hg commit -qm "hint1"
-  $ hg undo
-  undone to * before commit -qm hint1 (glob)
-  hint[undo-uncommit-unamend]: undoing commits discards their changes.
-  to restore the changes to the working copy, run 'hg revert -r 1ce7a4a09a37 --all'
-  in the future, you can use 'hg uncommit' instead of 'hg undo' to keep changes
-  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
-need to use --hidden because we don't have directaccess in the tests
-  $ hg revert -r 1ce7a4a09a37 --all --hidden
-  adding hint1
-  $ hg st --added
-  A hint1
+  4: undo -q

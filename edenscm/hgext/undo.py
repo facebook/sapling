@@ -215,10 +215,20 @@ def log(repo, command, tr):
     """
     newnodes = {
         "bookmarks": _logbookmarks(repo, tr),
-        "draftheads": _logdraftheads(repo, tr),
         "workingparent": _logworkingparent(repo, tr),
-        "draftobsolete": _logdraftobsolete(repo, tr),
     }
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        # Assuming mutation and visibility are used. only log visibility heads.
+        newnodes.update({"visibleheads": _logvisibleheads(repo, tr)})
+    else:
+        # Legacy mode: log draftheads and draftobsolete.
+        newnodes.update(
+            {
+                "draftheads": _logdraftheads(repo, tr),
+                "draftobsolete": _logdraftobsolete(repo, tr),
+            }
+        )
+
     try:
         existingnodes = _readindex(repo, 0)
     except IndexError:
@@ -261,6 +271,12 @@ def writelog(repo, tr, name, revstring):
 def _logdate(repo, tr):
     revstring = " ".join(str(x) for x in util.makedate())
     return writelog(repo, tr, "date.i", revstring)
+
+
+def _logvisibleheads(repo, tr):
+    hexnodes = sorted(hex(node) for node in repo.changelog._visibleheads.heads)
+    revstring = "\n".join(sorted(hexnodes))
+    return writelog(repo, tr, "visibleheads.i", revstring)
 
 
 def _logdraftheads(repo, tr):
@@ -445,16 +461,20 @@ def _debugundoindex(ui, repo, reverseindex):
         "date.i",
         "draftheads.i",
         "draftobsolete.i",
+        "visibleheads.i",
         "workingparent.i",
     )
     for filename in cabinet:
-        header = filename[:-2] + ":\n"
-        rawcontent = _readnode(repo, filename, nodedict[filename[:-2]])
+        name = filename[:-2]
+        header = name + ":\n"
+        if name not in nodedict:
+            continue
+        rawcontent = _readnode(repo, filename, nodedict[name])
         if "date.i" == filename:
             splitdate = rawcontent.split(" ")
             datetuple = (float(splitdate[0]), int(splitdate[1]))
             content = util.datestr(datetuple)
-        elif "draftheads.i" == filename:
+        elif filename in {"draftheads.i", "visibleheads.i"}:
             try:
                 oldnodes = _readindex(repo, reverseindex + 1)
                 oldheads = _readnode(repo, filename, oldnodes[filename[:-2]])
@@ -488,24 +508,32 @@ def _getolddrafts(repo, reverseindex):
     # this makes cacheing guaranteed correct
     # bc immutable history
     nodedict = _readindex(repo, reverseindex)
-    return _cachedgetolddrafts(repo, nodedict["draftheads"], nodedict["draftobsolete"])
+    return _cachedgetolddrafts(repo, nodedict)
 
 
-def _cachedgetolddrafts(repo, draftnode, obsnode):
+def _cachedgetolddrafts(repo, nodedict):
     if not util.safehasattr(repo, "_undoolddraftcache"):
         repo._undoolddraftcache = {}
     cache = repo._undoolddraftcache
-    key = draftnode + obsnode
-    if key not in cache:
-        olddraftheads = _readnode(repo, "draftheads.i", draftnode)
-        oldheadslist = olddraftheads.split("\n")
-        oldobs = _readnode(repo, "draftobsolete.i", obsnode)
-        oldobslist = filter(None, oldobs.split("\n"))
-        oldlogrevstring = revsetlang.formatspec(
-            "(draft() & ancestors(%ls)) - %ls", oldheadslist, oldobslist
-        )
-        urepo = repo.unfiltered()
-        cache[key] = smartset.baseset(urepo.revs(oldlogrevstring))
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        headnode = key = nodedict["visibleheads"]
+        if key not in cache:
+            oldheads = _readnode(repo, "visibleheads.i", headnode).split("\n")
+            cache[key] = repo.revs("(not public()) & ::%ls", oldheads)
+    else:
+        draftnode = nodedict["draftheads"]
+        obsnode = nodedict["draftobsolete"]
+        key = draftnode + obsnode
+        if key not in cache:
+            olddraftheads = _readnode(repo, "draftheads.i", draftnode)
+            oldheadslist = olddraftheads.split("\n")
+            oldobs = _readnode(repo, "draftobsolete.i", obsnode)
+            oldobslist = filter(None, oldobs.split("\n"))
+            oldlogrevstring = revsetlang.formatspec(
+                "(draft() & ancestors(%ls)) - %ls", oldheadslist, oldobslist
+            )
+            urepo = repo.unfiltered()
+            cache[key] = smartset.baseset(urepo.revs(oldlogrevstring))
     return cache[key]
 
 
@@ -963,6 +991,12 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
     # branch is a changectx hash (potentially short form)
     # which identifies its branch via localbranch revset
+
+    if branch and repo.ui.configbool("experimental", "narrow-heads"):
+        raise error.Abort(
+            _("'undo --branch' is no longer supported in the current setup")
+        )
+
     if repo != repo.unfiltered():
         raise error.ProgrammingError(_("_undoto expects unfilterd repo"))
     try:
@@ -1029,8 +1063,14 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     addedrevs = revsetlang.formatspec("olddraft(0) - olddraft(%d)", reverseindex)
     removedrevs = revsetlang.formatspec("olddraft(%d) - olddraft(0)", reverseindex)
     if not branch:
-        smarthide(repo, addedrevs, removedrevs)
-        revealcommits(repo, removedrevs)
+        if repo.ui.configbool("experimental", "narrow-heads"):
+            # Assuming mutation and visibility are used. Restore visibility heads
+            # directly.
+            _restoreheads(repo, reverseindex)
+        else:
+            # Legacy path.
+            smarthide(repo, addedrevs, removedrevs)
+            revealcommits(repo, removedrevs)
     else:
         localadds = revsetlang.formatspec(
             "(olddraft(0) - olddraft(%d)) and" " _localbranch(%s)", reverseindex, branch
@@ -1059,6 +1099,15 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         shorthash = short(bin(oldcommithash))
         hintutil.trigger("undo-uncommit-unamend", command, shorthash)
     repo.ui.status((uimessage))
+
+
+def _restoreheads(repo, reverseindex):
+    """Revert visibility heads to a previous state"""
+    nodedict = _readindex(repo, reverseindex)
+    headnode = nodedict["visibleheads"]
+    oldheads = map(bin, _readnode(repo, "visibleheads.i", headnode).split("\n"))
+    tr = repo.currenttransaction()
+    repo.changelog._visibleheads.setvisibleheads(repo, oldheads, tr)
 
 
 def _computerelative(repo, reverseindex, absolute=False, branch=""):
