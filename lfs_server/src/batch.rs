@@ -327,13 +327,23 @@ fn batch_download_internal_only_response_objects(
 async fn batch_download(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
+    mut scuba: Option<&mut ScubaMiddlewareState>,
 ) -> Result<ResponseBatch, Error> {
     let upstream = upstream_objects(ctx, &batch.objects).fuse();
     let internal = internal_objects(ctx, &batch.objects).fuse();
     pin_mut!(upstream, internal);
 
+    let mut update_batch_order = move |status| {
+        if let Some(ref mut scuba) = scuba {
+            scuba.add("batch_order", status);
+        }
+    };
+
+    update_batch_order("error");
+
     let objects = select! {
         upstream_objects = upstream => {
+            update_batch_order("upstream");
             let upstream_objects = upstream_objects?;
             debug!(ctx.logger(), "batch: upstream ready");
             let internal_objects = internal.await?;
@@ -352,10 +362,12 @@ async fn batch_download(
 
             if let Some(objects) = objects {
                 // We were able to return with just internal, don't wait for upstream.
+                update_batch_order("internal");
                 debug!(ctx.logger(), "batch: skip upstream");
                 objects
             } else {
                 // We don't have all the objects: wait for upstream.
+                update_batch_order("both");
                 let upstream_objects = upstream.await?;
                 debug!(ctx.logger(), "batch: upstream ready");
                 batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects)
@@ -388,13 +400,14 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .chain_err(ErrorKind::InvalidBatch)
         .map_err(HttpError::e400)?;
 
-    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
+    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+    if let Some(ref mut scuba) = scuba {
         scuba.add("batch_object_count", request_batch.objects.len());
     }
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,
-        Operation::Download => batch_download(&ctx, request_batch).await,
+        Operation::Download => batch_download(&ctx, request_batch, scuba).await,
     };
 
     let res = res.map_err(HttpError::e502)?;
