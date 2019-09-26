@@ -19,12 +19,14 @@ from edenscm.mercurial import (
     mdiff,
     policy,
     progress,
+    pycompat,
     scmutil,
     util,
     vfs,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
+from edenscm.mercurial.pycompat import range
 
 from ..extutil import flock, runshellcommand
 from . import (
@@ -36,12 +38,6 @@ from . import (
     mutablestores,
     shallowutil,
 )
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class RepackAlreadyRunning(error.Abort):
@@ -501,7 +497,7 @@ def _computeincrementalpack(files, opts):
 
     # Group the packs by generation (i.e. by size)
     generations = []
-    for i in xrange(len(limits)):
+    for i in range(len(limits)):
         generations.append([])
 
     sizes = {}

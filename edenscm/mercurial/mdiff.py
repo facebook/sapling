@@ -16,6 +16,7 @@ from edenscmnative import xdiff
 
 from . import error, policy, pycompat, util
 from .i18n import _
+from .pycompat import range
 
 
 _missing_newline_marker = "\\ No newline at end of file\n"
@@ -29,10 +30,6 @@ patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
 
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 # called by dispatch.py
 def init(ui):
@@ -385,7 +382,7 @@ def _unidiff(t1, t2, opts=defaultopts):
             # walk backwards from the start of the context up to the start of
             # the previous hunk context until we find a line starting with an
             # alphanumeric char.
-            for i in xrange(astart - 1, lastpos - 1, -1):
+            for i in range(astart - 1, lastpos - 1, -1):
                 if l1[i][0].isalnum():
                     func = " " + l1[i].rstrip()[:40]
                     lastfunc[1] = func
@@ -405,7 +402,7 @@ def _unidiff(t1, t2, opts=defaultopts):
         hunklines = (
             ["@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
             + delta
-            + [" " + l1[x] for x in xrange(a2, aend)]
+            + [" " + l1[x] for x in range(a2, aend)]
         )
         # If either file ends without a newline and the last line of
         # that file is part of a hunk, a marker is printed. If the
@@ -414,7 +411,7 @@ def _unidiff(t1, t2, opts=defaultopts):
         # which the hunk can end in a shared line without a newline.
         skip = False
         if t1[-1] != "\n" and astart + alen == len(l1) + 1:
-            for i in xrange(len(hunklines) - 1, -1, -1):
+            for i in range(len(hunklines) - 1, -1, -1):
                 if hunklines[i][0] in ("-", " "):
                     if hunklines[i][0] == " ":
                         skip = True
@@ -422,7 +419,7 @@ def _unidiff(t1, t2, opts=defaultopts):
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
         if not skip and t2[-1] != "\n" and bstart + blen == len(l2) + 1:
-            for i in xrange(len(hunklines) - 1, -1, -1):
+            for i in range(len(hunklines) - 1, -1, -1):
                 if hunklines[i][0] == "+":
                     hunklines[i] += "\n"
                     hunklines.insert(i + 1, _missing_newline_marker)

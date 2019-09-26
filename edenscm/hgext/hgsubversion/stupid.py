@@ -5,6 +5,7 @@ import errno
 import re
 
 from edenscm.mercurial import context, node, patch, revlog, util as hgutil
+from edenscm.mercurial.pycompat import range
 
 from . import compathacks, svnexternals, svnwrap, util
 
@@ -25,11 +26,6 @@ from . import compathacks, svnexternals, svnwrap, util
 # Added: svn:executable
 # ## -0,0 +1 ##
 # +*
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class ParseError(Exception):
@@ -105,7 +101,7 @@ def parsediff(diff):
         # headers should be a sequence of (index file, property file, data)
         raise ParseError("unexpected diff format")
     files = []
-    for i in xrange(len(headers) / 3):
+    for i in range(len(headers) / 3):
         iname, pname, data = headers[3 * i : 3 * i + 3]
         fname = iname or pname
         if fname not in changes:

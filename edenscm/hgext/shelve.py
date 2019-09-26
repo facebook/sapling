@@ -72,9 +72,9 @@ shelvefileextensions = ["hg", "patch", "oshelve"]
 patchextension = "patch"
 
 try:
-    xrange
+    range
 except NameError:
-    xrange = range
+    range = range
 
 
 class shelvedfile(object):
@@ -909,7 +909,7 @@ def _rebaserestoredcommit(
         tr.close()
 
         nodestoremove = [
-            repo.changelog.node(rev) for rev in xrange(oldtiprev, len(repo))
+            repo.changelog.node(rev) for rev in range(oldtiprev, len(repo))
         ]
         shelvedstate.save(
             repo,

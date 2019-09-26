@@ -10,14 +10,9 @@ import threading
 
 from edenscm.mercurial import manifest, mdiff, revlog, util
 from edenscm.mercurial.node import hex, nullid
+from edenscm.mercurial.pycompat import range
 
 from . import basestore, constants, shallowutil
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class ChainIndicies(object):
@@ -379,7 +374,7 @@ class manifestrevlogstore(object):
         rl = revlog.revlog(self.repo.svfs, "00manifesttree.i")
         startlinkrev = self._repackstartlinkrev
         endlinkrev = self._repackendlinkrev
-        for rev in xrange(len(rl) - 1, -1, -1):
+        for rev in range(len(rl) - 1, -1, -1):
             linkrev = rl.linkrev(rev)
             if linkrev < startlinkrev:
                 break
@@ -396,7 +391,7 @@ class manifestrevlogstore(object):
             treename = path[5 : -len("/00manifest.i")]
 
             rl = revlog.revlog(self.repo.svfs, path)
-            for rev in xrange(len(rl) - 1, -1, -1):
+            for rev in range(len(rl) - 1, -1, -1):
                 linkrev = rl.linkrev(rev)
                 if linkrev < startlinkrev:
                     break

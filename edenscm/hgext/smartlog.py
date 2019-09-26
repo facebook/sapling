@@ -49,6 +49,7 @@ from edenscm.mercurial import (
     node as nodemod,
     obsutil,
     phases,
+    pycompat,
     registrar,
     revlog,
     revset,
@@ -60,6 +61,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 
 
 cmdtable = {}
@@ -72,11 +74,6 @@ hiddenchanges = 0
 
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _drawendinglines(orig, lines, extra, edgemap, seen):
@@ -417,7 +414,7 @@ def getdag(ui, repo, revs, master):
             # find a public parent and add a fake node, so the non-public nodes
             # will be shown in the non-first column
             prev = None
-            for i in xrange(1, len(results)):
+            for i in range(1, len(results)):
                 pctx = results[i][2]
                 if pctx.phase() == phases.public:
                     prev = results[i][0]

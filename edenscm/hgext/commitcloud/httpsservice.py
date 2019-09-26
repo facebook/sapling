@@ -22,9 +22,9 @@ from . import baseservice, error as ccerror
 httplib = util.httplib
 
 try:
-    xrange
+    range
 except NameError:
-    xrange = range
+    range = range
 
 # clean up helper (to use with json.dumps)
 # filter out the fields with None and empty arrays / maps
@@ -157,7 +157,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 )
             return ccerror.TLSAccessError(self.ui, str(e), details)
 
-        for attempt in xrange(MAX_CONNECT_RETRIES):
+        for attempt in range(MAX_CONNECT_RETRIES):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
                 resp = self.connection.getresponse()

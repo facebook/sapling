@@ -13,12 +13,7 @@ import weakref
 
 from . import obsolete, phases, pycompat, tags as tagsmod, visibility
 from .node import nullrev
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def hideablerevs(repo):
@@ -140,7 +135,7 @@ def computeimpactable(repo):
             firstmutable = min(firstmutable, min(cl.rev(r) for r in roots))
     # protect from nullrev root
     firstmutable = max(0, firstmutable)
-    return frozenset(xrange(firstmutable, len(cl)))
+    return frozenset(range(firstmutable, len(cl)))
 
 
 # function to compute filtered set

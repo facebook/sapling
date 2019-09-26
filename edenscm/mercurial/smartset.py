@@ -10,12 +10,7 @@ from __future__ import absolute_import
 import bindings
 
 from . import error, util
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def _formatsetrepr(r):
@@ -174,11 +169,11 @@ class abstractsmartset(object):
         # but start > stop is allowed, which should be an empty set.
         ys = []
         it = iter(self)
-        for x in xrange(start):
+        for x in range(start):
             y = next(it, None)
             if y is None:
                 break
-        for x in xrange(stop - start):
+        for x in range(stop - start):
             y = next(it, None)
             if y is None:
                 break
@@ -1164,7 +1159,7 @@ class _spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
-    Note that spanset(x, y) behave almost like xrange(x, y) except for two
+    Note that spanset(x, y) behave almost like range(x, y) except for two
     notable points:
     - when x < y it will be automatically descending,
     - revision filtered with this repoview will be skipped.
@@ -1202,13 +1197,13 @@ class _spanset(abstractsmartset):
             return self.fastdesc()
 
     def fastasc(self):
-        iterrange = xrange(self._start, self._end)
+        iterrange = range(self._start, self._end)
         if self._hiddenrevs:
             return self._iterfilter(iterrange)
         return iter(iterrange)
 
     def fastdesc(self):
-        iterrange = xrange(self._end - 1, self._start - 1, -1)
+        iterrange = range(self._end - 1, self._start - 1, -1)
         if self._hiddenrevs:
             return self._iterfilter(iterrange)
         return iter(iterrange)

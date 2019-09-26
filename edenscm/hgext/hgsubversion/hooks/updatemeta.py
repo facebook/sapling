@@ -13,19 +13,14 @@ import edenscm.hgext.hgsubversion
 import edenscm.hgext.hgsubversion.svncommands
 import edenscm.hgext.hgsubversion.util
 from edenscm.mercurial import node
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from edenscm.mercurial.pycompat import range
 
 
 def hook(ui, repo, **kwargs):
     updatemeta = False
     startrev = repo[node.bin(kwargs["node"])].rev()
     # Check each rev until we find one that contains svn metadata
-    for rev in xrange(startrev, len(repo)):
+    for rev in range(startrev, len(repo)):
         svnrev = edenscm.hgext.hgsubversion.util.getsvnrev(repo[rev])
         if svnrev and svnrev.startswith("svn:"):
             updatemeta = True

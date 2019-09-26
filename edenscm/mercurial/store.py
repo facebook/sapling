@@ -14,18 +14,13 @@ import stat
 
 from . import error, policy, pycompat, util, vfs as vfsmod
 from .i18n import _
+from .pycompat import range
 
 
 parsers = policy.importmod(r"parsers")
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-
 def _encodedir(path):
     """
     >>> _encodedir(b'data/foo.i')
@@ -182,7 +177,7 @@ def _buildencodefun(forfncache):
     def decode(s):
         i = 0
         while i < len(s):
-            for l in xrange(1, 4):
+            for l in range(1, 4):
                 try:
                     yield dmap[s[i : i + l]]
                     i += l
@@ -194,7 +189,7 @@ def _buildencodefun(forfncache):
 
     if forfncache:
         return (
-            lambda s: "".join([cmap[s[c : c + 1]] for c in xrange(len(s))]),
+            lambda s: "".join([cmap[s[c : c + 1]] for c in range(len(s))]),
             lambda s: "".join(list(decode(s))),
         )
     else:
@@ -236,7 +231,7 @@ def _buildlowerencodefun():
     'the~07quick~adshot'
     """
     xchr = pycompat.bytechr
-    cmap = dict([(xchr(x), xchr(x)) for x in xrange(127)])
+    cmap = dict([(xchr(x), xchr(x)) for x in range(127)])
     for x in _reserved():
         cmap[xchr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z") + 1):

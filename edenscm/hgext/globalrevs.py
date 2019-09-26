@@ -453,7 +453,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
                 if grev:
                     globalrevmap.add(int(grev), node)
 
-            for rev in xrange(lastrev, repolen):  # noqa: F821
+            for rev in range(lastrev, repolen):  # noqa: F821
                 hgnode = clnode(rev)
                 commitdata = clrevision(rev)
                 extra = commitdata.extra

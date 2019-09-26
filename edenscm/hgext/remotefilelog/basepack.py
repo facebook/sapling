@@ -15,6 +15,7 @@ import time
 
 from edenscm.mercurial import error, policy, pycompat, util, vfs as vfsmod
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 from edenscmnative import litemmap
 
 from . import constants, shallowutil
@@ -24,11 +25,6 @@ from . import constants, shallowutil
 # exception when data is moved to a new pack after the process has already
 # loaded the pack list.
 REFRESHRATE = 0.1
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 if pycompat.isposix:
     # With glibc 2.7+ the 'e' flag uses O_CLOEXEC when opening.

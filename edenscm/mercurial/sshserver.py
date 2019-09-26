@@ -14,12 +14,7 @@ import sys
 
 from . import encoding, error, hook, util, wireproto
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 class sshserver(wireproto.abstractserverproto):
@@ -41,14 +36,14 @@ class sshserver(wireproto.abstractserverproto):
     def getargs(self, args):
         data = {}
         keys = args.split()
-        for n in xrange(len(keys)):
+        for n in range(len(keys)):
             argline = self.fin.readline()[:-1]
             arg, l = argline.split()
             if arg not in keys:
                 raise error.Abort(_("unexpected parameter %r") % arg)
             if arg == "*":
                 star = {}
-                for k in xrange(int(l)):
+                for k in range(int(l)):
                     argline = self.fin.readline()[:-1]
                     arg, l = argline.split()
                     val = self.fin.read(int(l))

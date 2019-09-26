@@ -60,6 +60,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullid, nullrev, short
+from ..pycompat import range
 from . import cmdtable
 
 
@@ -162,11 +163,6 @@ similarityopts = cmdutil.similarityopts
 debugrevlogopts = cmdutil.debugrevlogopts
 
 # Commands start here, listed alphabetically
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 @command("^add", walkopts + dryrunopts, _("[OPTION]... [FILE]..."), inferrepo=True)
@@ -3174,15 +3170,15 @@ def histgrep(ui, repo, pattern, *pats, **opts):
         sm = difflib.SequenceMatcher(None, a, b)
         for tag, alo, ahi, blo, bhi in sm.get_opcodes():
             if tag == "insert":
-                for i in xrange(blo, bhi):
+                for i in range(blo, bhi):
                     yield ("+", b[i])
             elif tag == "delete":
-                for i in xrange(alo, ahi):
+                for i in range(alo, ahi):
                     yield ("-", a[i])
             elif tag == "replace":
-                for i in xrange(alo, ahi):
+                for i in range(alo, ahi):
                     yield ("-", a[i])
-                for i in xrange(blo, bhi):
+                for i in range(blo, bhi):
                     yield ("+", b[i])
 
     def display(fm, fn, ctx, pstates, states):

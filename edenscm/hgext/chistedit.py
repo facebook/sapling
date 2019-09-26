@@ -31,14 +31,10 @@ import os
 
 from edenscm.mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 
 from . import histedit
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 try:
     import curses
@@ -191,7 +187,7 @@ def swap(state, oldpos, newpos):
 
     start = min(oldpos, newpos)
     end = max(oldpos, newpos)
-    for r in xrange(start, end + 1):
+    for r in range(start, end + 1):
         rules[newpos].checkconflicts(rules[r])
         rules[oldpos].checkconflicts(rules[r])
 

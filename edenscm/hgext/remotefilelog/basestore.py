@@ -17,14 +17,9 @@ import time
 from edenscm.mercurial import error, phases, progress, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex
+from edenscm.mercurial.pycompat import range
 
 from . import constants, datapack, historypack, shallowutil
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 # Cache of filename sha to filename, to prevent repeated search for the same
@@ -254,7 +249,7 @@ class basestore(object):
             self.ui, "resolving filenames", total=len(revs) + scanlen
         ) as prog:
             for i, rev in enumerate(
-                itertools.chain(revs, xrange(len(cl) - 1, len(cl) - scanlen, -1))
+                itertools.chain(revs, range(len(cl) - 1, len(cl) - scanlen, -1))
             ):
                 files = cl.readfiles(cl.node(rev))
                 prog.value = i, remainingstr

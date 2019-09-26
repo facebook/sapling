@@ -108,18 +108,14 @@ import bindings
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, short
+from .pycompat import range
 
 
 _fphasesentry = struct.Struct(">i20s")
 
-allphases = public, draft, secret = range(3)
+allphases = public, draft, secret = list(range(3))
 trackedphases = allphases[1:]
 phasenames = ["public", "draft", "secret"]
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _readroots(repo, phasedefaults=None):
@@ -429,7 +425,7 @@ class phasecache(object):
         repo = repo.unfiltered()
 
         delroots = []  # set of root deleted by this path
-        for phase in xrange(targetphase + 1, len(allphases)):
+        for phase in range(targetphase + 1, len(allphases)):
             # filter nodes that are not in a compatible phase already
             nodes = [n for n in nodes if self.phase(repo, repo[n].rev()) >= phase]
             if not nodes:
@@ -478,7 +474,7 @@ class phasecache(object):
             affected = set(repo.revs("(%ln::) - (%ln::)", new, old))
 
             # find the phase of the affected revision
-            for phase in xrange(targetphase, -1, -1):
+            for phase in range(targetphase, -1, -1):
                 if phase:
                     roots = oldroots[phase]
                     revs = set(repo.revs("%ln::%ld", roots, affected))

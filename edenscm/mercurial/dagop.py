@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import heapq
 
 from . import error, mdiff, node, patch, smartset
+from .pycompat import range
 
 
 baseset = smartset.baseset
@@ -17,11 +18,6 @@ generatorset = smartset.generatorset
 
 # possible maximum depth between null and wdir()
 _maxlogdepth = 0x80000000
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
@@ -201,7 +197,7 @@ def _builddescendantsmap(repo, startrev, followfirst):
     """Build map of 'rev -> child revs', offset from startrev"""
     cl = repo.changelog
     nullrev = node.nullrev
-    descmap = [[] for _rev in xrange(startrev, len(cl))]
+    descmap = [[] for _rev in range(startrev, len(cl))]
     for currev in cl.revs(startrev + 1):
         p1rev, p2rev = cl.parentrevs(currev)
         if p1rev >= startrev:

@@ -14,12 +14,7 @@ import socket
 import stat as statmod
 
 from .. import pycompat
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from ..pycompat import range
 
 
 def _mode_to_kind(mode):
@@ -158,7 +153,7 @@ if not pycompat.iswindows:
         rfdscount = (cmsg.cmsg_len - _cmsghdr.cmsg_data.offset) / ctypes.sizeof(
             ctypes.c_int
         )
-        return [rfds[i] for i in xrange(rfdscount)]
+        return [rfds[i] for i in range(rfdscount)]
 
 
 else:

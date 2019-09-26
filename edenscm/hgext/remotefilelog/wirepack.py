@@ -13,15 +13,10 @@ from StringIO import StringIO
 from edenscm.mercurial import perftrace, progress
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
+from edenscm.mercurial.pycompat import range
 
 from . import constants, shallowutil
 from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def sendpackpart(filename, history, data, version=1):
@@ -118,7 +113,7 @@ def receivepack(ui, fh, dpack, hpack, version=1):
 
 def readhistory(fh):
     count = readunpack(fh, "!I")[0]
-    for i in xrange(count):
+    for i in range(count):
         entry = readunpack(fh, "!20s20s20s20sH")
         if entry[4] != 0:
             copyfrom = readexactly(fh, entry[4])
@@ -130,7 +125,7 @@ def readhistory(fh):
 
 def readdeltas(fh, version=1):
     count = readunpack(fh, "!I")[0]
-    for i in xrange(count):
+    for i in range(count):
         node, deltabase, deltalen = readunpack(fh, "!20s20sQ")
         delta = readexactly(fh, deltalen)
         if version == 1:

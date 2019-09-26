@@ -14,12 +14,7 @@ from bindings import vlq
 
 from . import error, pycompat, util
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def parsedag(desc):
@@ -225,7 +220,7 @@ def parsedag(desc):
         elif c == "+":
             c, digs = nextrun(nextch(), pycompat.bytestr(string.digits))
             n = int(digs)
-            for i in xrange(0, n):
+            for i in range(0, n):
                 yield "n", (r, [p1])
                 p1 = r
                 r += 1

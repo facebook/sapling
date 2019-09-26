@@ -187,7 +187,7 @@ if sys.version_info[0] >= 3:
                 r, c = t.start
                 l = (
                     b"; from mercurial.pycompat import "
-                    b"delattr, getattr, hasattr, setattr, xrange, "
+                    b"delattr, getattr, hasattr, setattr, range, "
                     b"open, unicode\n"
                 )
                 for u in tokenize.tokenize(io.BytesIO(l).readline):

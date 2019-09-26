@@ -10,12 +10,8 @@ import traceback
 from bindings import edenapi
 from edenscm.mercurial import error, httpconnection
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 # Set to True to manually disable HTTPS fetching.
 _disabled = False
@@ -152,7 +148,7 @@ def _retryonerror(ui, exctypes, maxtries=3):
 
     def decorator(func):
         def wrapped(*args, **kwargs):
-            for i in xrange(maxtries):
+            for i in range(maxtries):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:

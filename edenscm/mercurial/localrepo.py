@@ -63,6 +63,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short
+from .pycompat import range
 
 
 release = lockmod.release
@@ -73,11 +74,6 @@ urlreq = util.urlreq
 # - 'plain for vfs relative paths
 # - '' for svfs relative paths
 _cachedfiles = set()
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class _basefilecache(scmutil.filecache):
@@ -847,7 +843,7 @@ class localrepository(object):
             # wdirrev isn't contiguous so the slice shouldn't include it
             return [
                 context.changectx(self, i)
-                for i in xrange(*changeid.indices(len(self)))
+                for i in range(*changeid.indices(len(self)))
                 if i not in self.changelog.filteredrevs
             ]
         try:
@@ -1413,7 +1409,7 @@ class localrepository(object):
             releasefn=releasefn,
             checkambigfiles=_cachedfiles,
         )
-        tr.changes["revs"] = xrange(0, 0)
+        tr.changes["revs"] = range(0, 0)
         tr.changes["obsmarkers"] = set()
         tr.changes["phases"] = {}
         tr.changes["bookmarks"] = {}
@@ -2302,9 +2298,17 @@ class localrepository(object):
                 removed = sorted(removed)
                 drop = sorted(drop)
                 if added or drop:
-                    mn = mctx.write(
-                        trp, linkrev, p1.manifestnode(), p2.manifestnode(), added, drop
-                    ) or p1.manifestnode()
+                    mn = (
+                        mctx.write(
+                            trp,
+                            linkrev,
+                            p1.manifestnode(),
+                            p2.manifestnode(),
+                            added,
+                            drop,
+                        )
+                        or p1.manifestnode()
+                    )
                 else:
                     mn = p1.manifestnode()
                 files = changed + removed

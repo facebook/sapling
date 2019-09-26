@@ -20,12 +20,7 @@ from __future__ import absolute_import
 
 from . import error, mdiff, pycompat, util
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 class CantReprocessAndShowBase(Exception):
@@ -60,7 +55,7 @@ def compare_range(a, astart, aend, b, bstart, bend):
     """
     if (aend - astart) != (bend - bstart):
         return False
-    for ia, ib in zip(xrange(astart, aend), xrange(bstart, bend)):
+    for ia, ib in zip(range(astart, aend), range(bstart, bend)):
         if a[ia] != b[ib]:
             return False
     else:

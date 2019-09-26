@@ -9,18 +9,12 @@ import os
 import struct
 
 from bindings import revisionstore
-from edenscm.mercurial import error, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
 from .lz4wrapper import lz4compress, lz4decompress
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 NODELENGTH = 20
 

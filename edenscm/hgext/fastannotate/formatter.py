@@ -6,16 +6,11 @@
 # GNU General Public License version 2 or any later version.
 
 from edenscm.mercurial import encoding, node, templatefilters, util
+from edenscm.mercurial.pycompat import range
 
 
 # imitating mercurial.commands.annotate, not using the vanilla formatter since
 # the data structures are a bit different, and we have some fast paths.
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-
 class defaultformatter(object):
     """the default formatter that does leftpad and support some common flags"""
 
@@ -85,7 +80,7 @@ class defaultformatter(object):
 
         # buffered output
         result = ""
-        for i in xrange(len(annotatedresult)):
+        for i in range(len(annotatedresult)):
             for j, p in enumerate(pieces):
                 sep = self.funcmap[j][1]
                 padding = " " * (maxwidths[j] - len(p[i]))
@@ -135,7 +130,7 @@ class jsonformatter(defaultformatter):
 
         result = ""
         lasti = len(annotatedresult) - 1
-        for i in xrange(len(annotatedresult)):
+        for i in range(len(annotatedresult)):
             result += "\n {\n"
             for j, p in enumerate(pieces):
                 k, vs = p

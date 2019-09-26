@@ -9,6 +9,8 @@ import os
 import urllib
 import warnings
 
+from edenscm.mercurial.pycompat import range
+
 from . import common
 
 
@@ -16,11 +18,6 @@ warnings.filterwarnings("ignore", module="svn.core", category=DeprecationWarning
 
 subvertpy_required = (0, 7, 4)
 subversion_required = (1, 5, 0)
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 try:
     from subvertpy import client
@@ -479,7 +476,7 @@ class SubversionRepo(object):
 
         # ensure that all parents are visited too; this may be slow
         for path in paths.copy():
-            for i in xrange(path.count("/"), -1, -1):
+            for i in range(path.count("/"), -1, -1):
                 p = path.rsplit("/", i)[0]
                 if p in paths:
                     continue

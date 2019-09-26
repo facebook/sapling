@@ -12,12 +12,7 @@ import collections
 from . import error, progress
 from .i18n import _
 from .node import nullid, short
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def findcommonincoming(repo, remote, heads=None, force=False):
@@ -107,7 +102,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
                 reqcnt += 1
                 prog.value = reqcnt
                 repo.ui.debug("request %d: %s\n" % (reqcnt, " ".join(map(short, r))))
-                for p in xrange(0, len(r), 10):
+                for p in range(0, len(r), 10):
                     for b in remote.branches(r[p : p + 10]):
                         repo.ui.debug("received %s:%s\n" % (short(b[0]), short(b[1])))
                         unknown.append(b)

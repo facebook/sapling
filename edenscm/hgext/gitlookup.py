@@ -200,7 +200,7 @@ def _getmissinglines(mapfile, missinghashes):
     # Walk backwards through the map file, since recent commits are added at the
     # end.
     count = len(content) / linelen
-    for i in xrange(count - 1, -1, -1):
+    for i in range(count - 1, -1, -1):
         offset = i * linelen
         line = content[offset : offset + linelen]
         hgsha = line[41:81]

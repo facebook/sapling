@@ -18,16 +18,12 @@ import tempfile
 from . import bundle2, error, httpconnection, pycompat, url, util, wireproto
 from .i18n import _
 from .node import nullid
+from .pycompat import range
 
 
 httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def encodevalueinheaders(value, header, limit):
@@ -52,7 +48,7 @@ def encodevalueinheaders(value, header, limit):
     result = []
 
     n = 0
-    for i in xrange(0, len(value), valuelen):
+    for i in range(0, len(value), valuelen):
         n += 1
         result.append((fmt % str(n), pycompat.strurl(value[i : i + valuelen])))
 

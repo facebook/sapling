@@ -11,6 +11,7 @@ import string
 
 from . import error, node, parser, pycompat, util
 from .i18n import _
+from .pycompat import range
 
 
 elements = {
@@ -46,10 +47,6 @@ keywords = {"and", "or", "not"}
 
 symbols = {}
 
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 _quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
@@ -59,7 +56,7 @@ _syminitletters = set(
     pycompat.iterbytestr(
         string.ascii_letters.encode("ascii") + string.digits.encode("ascii") + "._@"
     )
-) | set(map(pycompat.bytechr, xrange(128, 256)))
+) | set(map(pycompat.bytechr, range(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
 _symletters = _syminitletters | set(pycompat.iterbytestr("-/"))

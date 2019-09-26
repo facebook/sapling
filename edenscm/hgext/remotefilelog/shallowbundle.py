@@ -16,10 +16,12 @@ from edenscm.mercurial import (
     mdiff,
     phases,
     progress,
+    pycompat,
     util,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
+from edenscm.mercurial.pycompat import range
 
 from . import contentstore, fileserverclient, remotefilelog, shallowutil
 
@@ -30,11 +32,6 @@ LocalFiles = LocalTrees = 1
 AllFiles = AllTrees = 2
 
 requirement = "remotefilelog"
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
@@ -54,7 +51,7 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
     nodelist.insert(0, p)
 
     # build deltas
-    for i in xrange(len(nodelist) - 1):
+    for i in range(len(nodelist) - 1):
         prev, curr = nodelist[i], nodelist[i + 1]
         if self._cgdeltaconfig == changegroup.CFG_CGDELTA_ALWAYS_NULL:
             prev = nullid

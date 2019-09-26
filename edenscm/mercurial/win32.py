@@ -16,6 +16,7 @@ import random
 import subprocess
 
 from . import encoding, pycompat
+from .pycompat import range
 
 
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -46,11 +47,6 @@ _ERROR_INSUFFICIENT_BUFFER = 122
 
 # WPARAM is defined as UINT_PTR (unsigned type)
 # LPARAM is defined as LONG_PTR (signed type)
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
 if ctypes.sizeof(ctypes.c_long) == ctypes.sizeof(ctypes.c_void_p):
     _WPARAM = ctypes.c_ulong
     _LPARAM = ctypes.c_long
@@ -766,7 +762,7 @@ def unlink(f):
     # callers to recreate f immediately while having other readers do their
     # implicit zombie filename blocking on a temporary name.
 
-    for tries in xrange(10):
+    for tries in range(10):
         temp = "%s-%08x" % (f, random.randint(0, 0xFFFFFFFF))
         try:
             os.rename(f, temp)  # raises OSError EEXIST if temp exists

@@ -10,15 +10,11 @@ from __future__ import absolute_import
 from . import encoding, error, revlog, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid
+from .pycompat import range
 from .thirdparty import attr
 
 
 _defaultextra = {"branch": "default"}
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _string_escape(text):
@@ -328,7 +324,7 @@ class changelog(revlog.revlog):
 
     def tip(self):
         """filtered version of revlog.tip"""
-        for i in xrange(len(self) - 1, -2, -1):
+        for i in range(len(self) - 1, -2, -1):
             if i not in self.filteredrevs:
                 return self.node(i)
 
@@ -342,7 +338,7 @@ class changelog(revlog.revlog):
             return revlog.revlog.__iter__(self)
 
         def filterediter():
-            for i in xrange(len(self)):
+            for i in range(len(self)):
                 if i not in self.filteredrevs:
                     yield i
 
@@ -593,9 +589,9 @@ class changelog(revlog.revlog):
         if revs is not None:
             if revs:
                 assert revs[-1] + 1 == rev
-                revs = xrange(revs[0], rev + 1)
+                revs = range(revs[0], rev + 1)
             else:
-                revs = xrange(rev, rev + 1)
+                revs = range(rev, rev + 1)
             transaction.changes["revs"] = revs
         return node
 

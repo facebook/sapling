@@ -51,6 +51,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.node import nullid, wdirid
+from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.scmutil import status
 
 
@@ -58,11 +59,6 @@ testedwith = "ships-with-fb-hgext"
 
 # context nodes that are special and should not be cached.
 UNCACHEABLE_NODES = [None, nullid, wdirid]  # repo[None].node() returns this
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 mcroutersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -305,7 +301,7 @@ def localset(key, value, ui):
             random.shuffle(entries)
             evictionpercent = ui.configint("simplecache", "evictionpercent", 50)
             evictionpercent /= 100.0
-            for i in xrange(0, int(len(entries) * evictionpercent)):
+            for i in range(0, int(len(entries) * evictionpercent)):
                 os.remove(os.path.join(tempdirpath, entries[i]))
     except Exception:
         return

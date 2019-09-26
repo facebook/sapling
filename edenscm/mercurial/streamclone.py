@@ -11,12 +11,7 @@ import struct
 
 from . import error, phases, progress, store, util
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def canperformstreamclone(pullop, bailifbundle2supported=False):
@@ -335,7 +330,7 @@ def consumev1(repo, fp, filecount, bytecount):
         ) as prog:
             with repo.transaction("clone"):
                 with repo.svfs.backgroundclosing(repo.ui, expectedcount=filecount):
-                    for i in xrange(filecount):
+                    for i in range(filecount):
                         # XXX doesn't support '\n' or '\r' in filenames
                         l = fp.readline()
                         try:

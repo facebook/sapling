@@ -7,11 +7,7 @@
 
 from __future__ import absolute_import
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from ..pycompat import range
 
 
 def addlines(fp, hunk, lena, lenb, a, b):
@@ -21,7 +17,7 @@ def addlines(fp, hunk, lena, lenb, a, b):
         num = max(todoa, todob)
         if num == 0:
             break
-        for i in xrange(num):
+        for i in range(num):
             s = fp.readline()
             c = s[0]
             if s == "\\ No newline at end of file\n":
@@ -64,7 +60,7 @@ def testhunk(a, b, bstart):
     blen = len(b)
     if alen > blen - bstart:
         return -1
-    for i in xrange(alen):
+    for i in range(alen):
         if a[i][1:] != b[i + bstart]:
             return -1
     return 0

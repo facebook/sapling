@@ -44,6 +44,7 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
+from .pycompat import range
 from .thirdparty import attr
 
 
@@ -54,12 +55,6 @@ nonascii = re.compile(r"[^\x21-\x7f]").search
 slowstatuswarning = _(
     "(status will still be slow next time; try to complete or abort other source control operations and then run 'hg status' again)\n"
 )
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class basectx(object):
@@ -1112,7 +1107,7 @@ class basefilectx(object):
                 return (
                     [
                         annotateline(fctx=rev, lineno=i)
-                        for i in xrange(1, lines(text) + 1)
+                        for i in range(1, lines(text) + 1)
                     ],
                     text,
                 )
@@ -1292,7 +1287,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
         for idx, (parent, blocks) in enumerate(pblocks):
             for (a1, a2, b1, b2), _t in blocks:
                 if a2 - a1 >= b2 - b1:
-                    for bk in xrange(b1, b2):
+                    for bk in range(b1, b2):
                         if child[0][bk].fctx == childfctx:
                             ak = min(a1 + (bk - b1), a2 - 1)
                             child[0][bk] = attr.evolve(parent[0][ak], skip=True)
@@ -1303,7 +1298,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
         # line.
         for parent, blocks in remaining:
             for a1, a2, b1, b2 in blocks:
-                for bk in xrange(b1, b2):
+                for bk in range(b1, b2):
                     if child[0][bk].fctx == childfctx:
                         ak = min(a1 + (bk - b1), a2 - 1)
                         child[0][bk] = attr.evolve(parent[0][ak], skip=True)

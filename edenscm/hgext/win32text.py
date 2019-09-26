@@ -48,6 +48,7 @@ import re
 from edenscm.mercurial import registrar, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import short
+from edenscm.mercurial.pycompat import range
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -66,11 +67,6 @@ re_single_lf = re.compile("(^|[^\r])\n", re.MULTILINE)
 
 newlinestr = {"\r\n": "CRLF", "\r": "CR"}
 filterstr = {"\r\n": "clever", "\r": "mac"}
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def checknewline(s, newline, ui=None, repo=None, filename=None):
@@ -154,7 +150,7 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     # changegroup that contains an unacceptable commit followed later
     # by a commit that fixes the problem.
     tip = repo["tip"]
-    for rev in xrange(len(repo) - 1, repo[node].rev() - 1, -1):
+    for rev in range(len(repo) - 1, repo[node].rev() - 1, -1):
         c = repo[rev]
         for f in c.files():
             if f in seen or f not in tip or f not in c:

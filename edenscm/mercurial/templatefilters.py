@@ -22,15 +22,11 @@ from . import (
     url,
     util,
 )
+from .pycompat import range
 
 
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 if pycompat.ispy3:
     long = int
@@ -259,7 +255,7 @@ def indent(text, prefix):
     endswithnewline = text[-1:] == "\n"
 
     def indenter():
-        for i in xrange(num_lines):
+        for i in range(num_lines):
             l = lines[i]
             if i and l.strip():
                 yield prefix

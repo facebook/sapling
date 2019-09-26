@@ -214,7 +214,6 @@ if ispy3:
     getattr = _wrapattrfunc(builtins.getattr)
     hasattr = _wrapattrfunc(builtins.hasattr)
     setattr = _wrapattrfunc(builtins.setattr)
-    xrange = builtins.range
     unicode = str
 
     def open(name, mode="r", buffering=-1):
@@ -273,6 +272,7 @@ else:
     sysstr = identity
     strurl = identity
     bytesurl = identity
+    range = xrange  # noqa: F821
 
     # this can't be parsed on Python 3
     exec("def raisewithtb(exc, tb):\n" "    raise exc, None, tb\n")

@@ -29,6 +29,7 @@ from .i18n import _
 
 # import stuff from node for others to import from revlog
 from .node import bin, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
+from .pycompat import range
 
 
 parsers = policy.importmod(r"parsers")
@@ -66,11 +67,6 @@ ProgrammingError = error.ProgrammingError
 
 # Store flag processors (cf. 'addflagprocessor()' to register)
 _flagprocessors = {REVIDX_ISCENSORED: None}
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def addflagprocessor(flag, processor):
@@ -463,7 +459,7 @@ class revlog(object):
         return len(self.index) - 1
 
     def __iter__(self):
-        return iter(xrange(len(self)))
+        return iter(range(len(self)))
 
     def revs(self, start=0, stop=None):
         """iterate over all rev in this revlog (from start to stop)"""
@@ -474,7 +470,7 @@ class revlog(object):
             stop += step
         else:
             stop = len(self)
-        return xrange(start, stop, step)
+        return range(start, stop, step)
 
     @util.propertycache
     def nodemap(self):
@@ -517,7 +513,7 @@ class revlog(object):
             p = self._nodepos
             if p is None:
                 p = len(i) - 2
-            for r in xrange(p, -1, -1):
+            for r in range(p, -1, -1):
                 v = i[r][7]
                 n[v] = r
                 if v == node:
@@ -2258,7 +2254,7 @@ class revlog(object):
         self._cache = None
         self._chaininfocache = {}
         self._chunkclear()
-        for x in xrange(rev, len(self)):
+        for x in range(rev, len(self)):
             del self.nodemap[self.node(x)]
 
         del self.index[rev:-1]

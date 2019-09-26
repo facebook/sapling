@@ -69,15 +69,11 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial.pycompat import range
 
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -2209,7 +2205,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
             treemfmod.striptrees(None, repo, tr, rev, files)
         tr.endgroup()
 
-        for i in xrange(offset, len(tr.entries)):
+        for i in range(offset, len(tr.entries)):
             file, troffset, ignore = tr.entries[i]
             with repo.svfs(file, "a", checkambig=True) as fp:
                 util.truncate(fp, troffset)
@@ -2573,7 +2569,7 @@ def sqlverify(ui, repo, *args, **opts):
                         rl = repo.manifestlog._revlog
                     else:
                         rl = revlog.revlog(repo.svfs, filepath)
-                for rev in xrange(len(rl) - 1, -1, -1):
+                for rev in range(len(rl) - 1, -1, -1):
                     node = rl.node(rev)
                     linkrev = rl.linkrev(rev)
                     if linkrev < minrev:

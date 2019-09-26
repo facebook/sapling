@@ -111,6 +111,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -128,11 +129,6 @@ configitem("eol", "only-consistent", default=True)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile("(^|[^\r])\n")
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def inconsistenteol(data):
@@ -283,7 +279,7 @@ def _checkhook(ui, repo, node, headsonly):
     ensureenabled(ui)
     files = set()
     revs = set()
-    for rev in xrange(repo[node].rev(), len(repo)):
+    for rev in range(repo[node].rev(), len(repo)):
         revs.add(rev)
         if headsonly:
             ctx = repo[rev]

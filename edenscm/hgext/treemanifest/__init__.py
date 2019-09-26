@@ -197,6 +197,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.pycompat import range
 from edenscmnative import cstore
 
 from ..extutil import flock
@@ -258,11 +259,6 @@ RECEIVEDNODE_RECORD = "receivednodes"
 # When looking for a recent manifest to consider our base during tree
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def treeenabled(ui):
@@ -1424,7 +1420,7 @@ def backfilltree(ui, repo, *args, **opts):
         if start <= end:
             mfl = repo.manifestlog
             tmfl = mfl.treemanifestlog
-            revs = xrange(start, end)
+            revs = range(start, end)
             _backfilltree(tr, repo, mfl, tmfl, revs)
 
 
@@ -1741,7 +1737,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     builttrees = {}
 
     refcount = {}
-    for rev in xrange(oldtip, newtip):
+    for rev in range(oldtip, newtip):
         p1 = mfrevlog.parentrevs(rev)[0]
         p1node = mfrevlog.node(p1)
         refcount[p1node] = refcount.get(p1node, 0) + 1
@@ -1753,7 +1749,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
     includedentries = set()
     with progress.bar(ui, _("priming tree cache"), total=total) as prog:
-        for rev in xrange(oldtip, newtip):
+        for rev in range(oldtip, newtip):
             prog.value = rev - oldtip
             node = mfrevlog.node(rev)
             p1, p2 = mfrevlog.parentrevs(rev)
@@ -2688,7 +2684,7 @@ def serverrepack(repo, incremental=False, options=None):
         elif isinstance(mfl, treemanifestlog):
             treemfl = mfl
         mfrevlog = treemfl._revlog
-        for i in xrange(len(mfrevlog) - 1, 0, -1):
+        for i in range(len(mfrevlog) - 1, 0, -1):
             node = mfrevlog.node(i)
             if not fulldatapackstore.getmissing([("", node)]):
                 latestpackedlinkrev = mfrevlog.linkrev(i)
@@ -2728,7 +2724,7 @@ def collectfiles(orig, repo, striprev):
 
     files = set()
 
-    for x in xrange(striprev, len(repo)):
+    for x in range(striprev, len(repo)):
         ctx = repo[x]
         parents = ctx.parents()
         if len(parents) > 1:
@@ -3002,7 +2998,7 @@ class vfscachestore(cachestorecommon):
                         random.shuffle(entries)
                         evictionpercent = self.evictionrate / 100.0
                         unlink = self.vfs.tryunlink
-                        for i in xrange(0, int(len(entries) * evictionpercent)):
+                        for i in range(0, int(len(entries) * evictionpercent)):
                             unlink(os.path.join(cachedir, entries[i]))
             except Exception:
                 pass

@@ -9,14 +9,10 @@ import re
 import urllib
 
 from edenscm.mercurial import error, hg, node, phases, repair, util as hgutil
+from edenscm.mercurial.pycompat import range
 
 from . import compathacks
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 try:
     from collections import deque
@@ -444,7 +440,7 @@ def parse_revnum(svnrepo, r):
 def get_contexts(repo, fromrev=0):
     """Generator yielding contexts from the repository."""
 
-    for rev in xrange(fromrev, len(repo)):
+    for rev in range(fromrev, len(repo)):
         try:
             yield repo[rev]
         except error.RepoLookupError:

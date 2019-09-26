@@ -66,10 +66,12 @@ from edenscm.mercurial import (
     filelog,
     node,
     progress,
+    pycompat,
     registrar,
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 
 
 testedwith = "ships-with-fb-hgext"
@@ -78,11 +80,6 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 _chosendbm = None
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _choosedbm():
@@ -388,7 +385,7 @@ def _buildlinkrevcache(ui, repo, db, end):
     ancestorcountthreshold = 10
 
     with progress.bar(ui, _("building"), _("changesets"), end) as prog:
-        for rev in xrange(start, end + 1):
+        for rev in range(start, end + 1):
             prog.value = rev
             clr = cl.changelogrevision(rev)
             md = ml[clr.manifest].read()

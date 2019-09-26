@@ -74,15 +74,11 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, nullrev, short
+from ..pycompat import range
 from .cmdtable import command
 
 
 release = lockmod.release
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 @command("debugancestor", [], _("[INDEX] REV1 REV2"), optionalrepo=True)
@@ -198,7 +194,7 @@ def debugbuilddag(
     if mergeable_file:
         linesperrev = 2
         # make a file with k lines per rev
-        initialmergedlines = [str(i) for i in xrange(0, total * linesperrev)]
+        initialmergedlines = [str(i) for i in range(0, total * linesperrev)]
         initialmergedlines.append("")
 
     tags = []
@@ -2502,7 +2498,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         ts = 0
         heads = set()
 
-        for rev in xrange(numrevs):
+        for rev in range(numrevs):
             dbase = r.deltaparent(rev)
             if dbase == -1:
                 dbase = rev
@@ -2577,7 +2573,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         l[2] += size
 
     numrevs = len(r)
-    for rev in xrange(numrevs):
+    for rev in range(numrevs):
         p1, p2 = r.parentrevs(rev)
         delta = r.deltaparent(rev)
         if format > 0:
@@ -3192,7 +3188,7 @@ def debugprogress(
 
     if spinner:
         with progress.spinner(ui, _spinning):
-            for i in xrange(num):
+            for i in range(num):
                 if nested:
                     with progress.spinner(ui, _("nested spinning")):
                         pass
@@ -3202,7 +3198,7 @@ def debugprogress(
                     ui.write(("processed %d items") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
-            for i in xrange(num):
+            for i in range(num):
                 if nested:
                     with progress.bar(ui, _spinning, formatfunc=formatfunc):
                         pass
@@ -3213,12 +3209,12 @@ def debugprogress(
                     ui.write(("processed %d items") % i)
     else:
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
-            for i in xrange(num):
+            for i in range(num):
                 if nested:
                     with progress.bar(
                         ui, _spinning, total=5, formatfunc=formatfunc
                     ) as p2:
-                        for j in xrange(5):
+                        for j in range(5):
                             p2.value = (j, "item %s" % j)
                 if sleep:
                     time.sleep(sleep)

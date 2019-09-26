@@ -13,6 +13,7 @@ import struct
 
 from edenscm.mercurial import error as hgerror
 from edenscm.mercurial.node import hex
+from edenscm.mercurial.pycompat import range
 
 from . import error
 
@@ -44,11 +45,6 @@ renameflag = 2
 
 # len(mercurial.node.nullid)
 _hshlen = 20
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class revmap(object):
@@ -164,11 +160,11 @@ class revmap(object):
         if self._lastmaxrev == -1:  # write the entire file
             with open(self.path, "wb") as f:
                 f.write(self.HEADER)
-                for i in xrange(1, len(self._rev2hsh)):
+                for i in range(1, len(self._rev2hsh)):
                     self._writerev(i, f)
         else:  # append incrementally
             with open(self.path, "ab") as f:
-                for i in xrange(self._lastmaxrev + 1, len(self._rev2hsh)):
+                for i in range(self._lastmaxrev + 1, len(self._rev2hsh)):
                     self._writerev(i, f)
         self._lastmaxrev = self.maxrev
 

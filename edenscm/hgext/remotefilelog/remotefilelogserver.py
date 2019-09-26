@@ -21,6 +21,7 @@ from edenscm.mercurial import (
     extensions,
     match,
     progress,
+    pycompat,
     sshserver,
     store,
     util,
@@ -30,14 +31,10 @@ from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.hgweb import protocol as httpprotocol
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial.pycompat import range
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 try:
     from edenscm.mercurial import streamclone
@@ -591,7 +588,7 @@ def _receivepackrequest(stream):
         nodes = shallowutil.readexactly(stream, constants.NODESIZE * nodecount)
         nodes = set(
             nodes[i : i + constants.NODESIZE]
-            for i in xrange(0, len(nodes), constants.NODESIZE)
+            for i in range(0, len(nodes), constants.NODESIZE)
         )
 
         files[filename] = nodes

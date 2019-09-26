@@ -36,6 +36,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, short
+from .pycompat import range
 
 
 diffhelpers = policy.importmod(r"diffhelpers")
@@ -48,13 +49,6 @@ wordsplitter = re.compile(br"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-
 PatchError = error.PatchError
 
 # public functions
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-
 def split(stream):
     """return an iterator of individual patches from a stream"""
 
@@ -825,7 +819,7 @@ class patchfile(object):
         for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
 
-        for fuzzlen in xrange(self.ui.configint("patch", "fuzz") + 1):
+        for fuzzlen in range(self.ui.configint("patch", "fuzz") + 1):
             for toponly in [True, False]:
                 old, oldstart, new, newstart = h.fuzzit(fuzzlen, toponly)
                 oldstart = oldstart + self.offset + self.skew
@@ -1329,7 +1323,7 @@ class hunk(object):
         self.lena = int(aend) - self.starta
         if self.starta:
             self.lena += 1
-        for x in xrange(self.lena):
+        for x in range(self.lena):
             l = lr.readline()
             if l.startswith("---"):
                 # lines addition, old block is empty
@@ -1362,7 +1356,7 @@ class hunk(object):
         if self.startb:
             self.lenb += 1
         hunki = 1
-        for x in xrange(self.lenb):
+        for x in range(self.lenb):
             l = lr.readline()
             if l.startswith("\ "):
                 # XXX: the only way to hit this is with an invalid line range.
@@ -1441,14 +1435,14 @@ class hunk(object):
             top = 0
             bot = 0
             hlen = len(self.hunk)
-            for x in xrange(hlen - 1):
+            for x in range(hlen - 1):
                 # the hunk starts with the @@ line, so use x+1
                 if self.hunk[x + 1][0] == " ":
                     top += 1
                 else:
                     break
             if not toponly:
-                for x in xrange(hlen - 1):
+                for x in range(hlen - 1):
                     if self.hunk[hlen - bot - 1][0] == " ":
                         bot += 1
                     else:

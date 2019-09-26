@@ -24,12 +24,7 @@ import re
 
 from . import encoding, identity, pycompat, url, util
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def section(s):
@@ -345,7 +340,7 @@ def findtables(blocks):
             # position in bytes
             columns = [
                 x
-                for x in xrange(len(div))
+                for x in range(len(div))
                 if div[x : x + 1] == "=" and (x == 0 or div[x - 1 : x] == " ")
             ]
             rows = []
@@ -734,7 +729,7 @@ def format(text, width=80, indent=0, keep=None, style="plain", section=None):
                     if llen and llen != plen:
                         collapse = False
                     s = []
-                    for j in xrange(3, plen - 1):
+                    for j in range(3, plen - 1):
                         parent = parents[j]
                         if j >= llen or lastparents[j] != parent:
                             s.append(len(blocks))

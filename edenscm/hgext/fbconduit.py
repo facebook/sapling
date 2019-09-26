@@ -11,6 +11,7 @@ from urllib import urlencode
 from edenscm.mercurial import extensions, namespaces, node, registrar, revset, templater
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin
+from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.util import httplib
 
 
@@ -23,11 +24,6 @@ connection = None
 
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class ConduitError(Exception):
@@ -95,11 +91,11 @@ def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
         "Content-Type": "application/x-www-form-urlencoded",
     }
     e = None
-    for attempt in xrange(MAX_CONNECT_RETRIES):
+    for attempt in range(MAX_CONNECT_RETRIES):
         try:
             connection.request("POST", path, args, headers)
             break
-        except httplib.HTTPException as e:
+        except httplib.HTTPException:
             connection.connect()
     if e:
         raise e

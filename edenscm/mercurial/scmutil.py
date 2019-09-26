@@ -34,12 +34,8 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
+from .pycompat import range
 
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 if pycompat.iswindows:
     from . import scmwindows as scmplatform
@@ -1335,7 +1331,7 @@ def registersummarycallback(repo, otr, txnname=""):
         @reportsummary
         def reportnewcs(repo, tr):
             """Report the range of new revisions pulled/unbundled."""
-            newrevs = tr.changes.get("revs", xrange(0, 0))
+            newrevs = tr.changes.get("revs", range(0, 0))
             if not newrevs:
                 return
 

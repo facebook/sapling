@@ -27,13 +27,8 @@ from .. import (
 )
 from ..i18n import _
 from ..node import hex, nullid, short
+from ..pycompat import range
 from .common import HTTP_BAD_REQUEST, HTTP_NOT_FOUND, ErrorResponse, paritygen
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def up(p):
@@ -559,7 +554,7 @@ def compare(tmpl, context, leftlines, rightlines):
             len1 = lhi - llo
             len2 = rhi - rlo
             count = min(len1, len2)
-            for i in xrange(count):
+            for i in range(count):
                 yield compline(
                     type=type,
                     leftlineno=llo + i + 1,
@@ -568,7 +563,7 @@ def compare(tmpl, context, leftlines, rightlines):
                     rightline=rightlines[rlo + i],
                 )
             if len1 > len2:
-                for i in xrange(llo + count, lhi):
+                for i in range(llo + count, lhi):
                     yield compline(
                         type=type,
                         leftlineno=i + 1,
@@ -577,7 +572,7 @@ def compare(tmpl, context, leftlines, rightlines):
                         rightline=None,
                     )
             elif len2 > len1:
-                for i in xrange(rlo + count, rhi):
+                for i in range(rlo + count, rhi):
                     yield compline(
                         type=type,
                         leftlineno=None,

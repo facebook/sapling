@@ -18,22 +18,18 @@ from edenscm.mercurial import (
     mdiff,
     node,
     progress,
+    pycompat,
     scmutil,
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import range
 from edenscmnative import linelog as linelogmod
 
 from . import error as faerror, revmap as revmapmod
 
 
 # given path, get filelog, cached
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-
 @util.lrucachefunc
 def _getflog(repo, path):
     return repo.file(path)
@@ -68,7 +64,7 @@ def _decorate(fctx):
     linecount = text.count("\n")
     if text and not text.endswith("\n"):
         linecount += 1
-    return ([(fctx, i) for i in xrange(linecount)], text)
+    return ([(fctx, i) for i in range(linecount)], text)
 
 
 # extracted from mercurial.context.basefilectx.annotate. slightly modified
@@ -550,7 +546,7 @@ class _annotatecontext(object):
         result = [None] * len(annotateresult)
         # {(rev, linenum): [lineindex]}
         key2idxs = collections.defaultdict(list)
-        for i in xrange(len(result)):
+        for i in range(len(result)):
             key2idxs[(revs[i], annotateresult[i][1])].append(i)
         while key2idxs:
             # find an unresolved line and its linelog rev to annotate

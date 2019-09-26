@@ -26,6 +26,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullrev, short
+from .pycompat import range
 
 
 CFG_CGDELTA_ALWAYS_NULL = "always-null"
@@ -35,11 +36,6 @@ CFG_CGDELTA_DEFAULT = "default"
 _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
 _CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def readexactly(stream, n):
@@ -353,7 +349,7 @@ class cg1unpacker(object):
                 cl = repo.changelog
                 ml = repo.manifestlog
                 # validate incoming csets have their manifests
-                for cset in xrange(clstart, clend):
+                for cset in range(clstart, clend):
                     mfnode = cl.changelogrevision(cset).manifest
                     mfest = ml[mfnode].readnew()
                     # store file cgnodes we must see
@@ -398,7 +394,7 @@ class cg1unpacker(object):
                     "pretxnchangegroup", throw=True, **pycompat.strkwargs(hookargs)
                 )
 
-            added = [cl.node(r) for r in xrange(clstart, clend)]
+            added = [cl.node(r) for r in range(clstart, clend)]
             phaseall = None
             if srctype in ("push", "serve"):
                 # Old servers can not push the boundary themselves.
@@ -632,7 +628,7 @@ class cg1packer(object):
         # build deltas
         if prog is not None:
             prog._total = len(revs) - 1
-        for r in xrange(len(revs) - 1):
+        for r in range(len(revs) - 1):
             if prog is not None:
                 prog.value = r + 1
             prev, curr = revs[r], revs[r + 1]
@@ -1100,7 +1096,7 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
             revisions += len(fl) - o
             if f in needfiles:
                 needs = needfiles[f]
-                for new in xrange(o, len(fl)):
+                for new in range(o, len(fl)):
                     n = fl.node(new)
                     if n in needs:
                         needs.remove(n)

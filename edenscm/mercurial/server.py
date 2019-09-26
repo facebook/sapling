@@ -12,12 +12,7 @@ import tempfile
 
 from . import chgserver, cmdutil, commandserver, error, hgweb, pycompat, util
 from .i18n import _
-
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
+from .pycompat import range
 
 
 def runservice(
@@ -54,7 +49,7 @@ def runservice(
             runargs.append("--daemon-postexec=unlink:%s" % lockpath)
             # Don't pass --cwd to the child process, because we've already
             # changed directory.
-            for i in xrange(1, len(runargs)):
+            for i in range(1, len(runargs)):
                 if runargs[i].startswith("--cwd="):
                     del runargs[i]
                     break

@@ -50,6 +50,7 @@ import zlib
 import bindings
 
 from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
+from .pycompat import range
 
 
 base85 = policy.importmod(r"base85")
@@ -76,11 +77,6 @@ urlreq = urllibcompat.urlreq
 
 # workaround for win32mbcs
 _filenamebytestr = pycompat.bytestr
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def isatty(fp):
@@ -2672,7 +2668,7 @@ def MBTextWrapper(**kwargs):
         def _cutdown(self, ucstr, space_left):
             l = 0
             colwidth = encoding.ucolwidth
-            for i in xrange(len(ucstr)):
+            for i in range(len(ucstr)):
                 l += colwidth(ucstr[i])
                 if space_left < l:
                     return (ucstr[:i], ucstr[i:])

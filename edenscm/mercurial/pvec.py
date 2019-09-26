@@ -52,6 +52,7 @@ from __future__ import absolute_import
 
 from . import util
 from .node import nullrev
+from .pycompat import range
 
 
 _size = 448  # 70 chars b85-encoded
@@ -61,11 +62,6 @@ _depthbytes = _depthbits / 8
 _vecbytes = _bytes - _depthbytes
 _vecbits = _vecbytes * 8
 _radius = (_vecbits - 30) / 2  # high probability vectors are related
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _bin(bs):
@@ -78,7 +74,7 @@ def _bin(bs):
 
 def _str(v, l):
     bs = ""
-    for p in xrange(l):
+    for p in range(l):
         bs = chr(v & 255) + bs
         v >>= 8
     return bs
@@ -102,7 +98,7 @@ def _hweight(x):
     return c
 
 
-_htab = [_hweight(x) for x in xrange(256)]
+_htab = [_hweight(x) for x in range(256)]
 
 
 def _hamming(a, b):
@@ -167,7 +163,7 @@ def ctxpvec(ctx):
     pvc = r._pveccache
     if ctx.rev() not in pvc:
         cl = r.changelog
-        for n in xrange(ctx.rev() + 1):
+        for n in range(ctx.rev() + 1):
             if n not in pvc:
                 node = cl.node(n)
                 p1, p2 = cl.parentrevs(n)

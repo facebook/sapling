@@ -32,6 +32,7 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, nullid
+from .pycompat import range
 
 
 urlerr = util.urlerr
@@ -40,11 +41,6 @@ urlreq = util.urlreq
 bundle2requiredmain = _("incompatible Mercurial client; bundle2 required")
 bundle2requiredhint = _("see https://www.mercurial-scm.org/wiki/" "IncompatibleClient")
 bundle2required = "%s\n(%s)\n" % (bundle2requiredmain, bundle2requiredhint)
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class abstractserverproto(object):
@@ -458,7 +454,7 @@ class wirepeer(repository.legacypeer):
     def between(self, pairs):
         batch = 8  # avoid giant requests
         r = []
-        for i in xrange(0, len(pairs), batch):
+        for i in range(0, len(pairs), batch):
             n = " ".join([encodelist(p, "-") for p in pairs[i : i + batch]])
             d = self._call("between", pairs=n)
             try:

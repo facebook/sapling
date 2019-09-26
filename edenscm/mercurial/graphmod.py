@@ -21,6 +21,7 @@ from __future__ import absolute_import
 
 from . import dagop, smartset, util
 from .node import nullrev
+from .pycompat import range
 
 
 CHANGESET = "C"
@@ -32,11 +33,6 @@ MISSINGPARENT = "M"
 # will use that style, the rest will use the PARENT style. Add a - sign
 # (so making N negative) and all but the first N characters use that style.
 EDGES = {PARENT: "|", GRANDPARENT: ":", MISSINGPARENT: None}
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def dagwalker(repo, revs):
@@ -443,16 +439,16 @@ def ascii(ui, state, type, char, text, coldata):
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
     shift_interline = echars[: idx * 2]
-    for i in xrange(2 + coldiff):
+    for i in range(2 + coldiff):
         shift_interline.append(" ")
     count = ncols - idx - 1
     if coldiff == -1:
-        for i in xrange(count):
+        for i in range(count):
             shift_interline.extend(["/", " "])
     elif coldiff == 0:
         shift_interline.extend(echars[(idx + 1) * 2 : ncols * 2])
     else:
-        for i in xrange(count):
+        for i in range(count):
             shift_interline.extend(["\\", " "])
 
     # draw edges from the current node to its parents

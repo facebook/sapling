@@ -9,7 +9,6 @@ import hashlib
 import struct
 
 from bindings import revisionstore
-from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
@@ -39,11 +38,6 @@ ANC_P1NODE = 1
 ANC_P2NODE = 2
 ANC_LINKNODE = 3
 ANC_COPYFROM = 4
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class historypackstore(basepack.basepackstore):

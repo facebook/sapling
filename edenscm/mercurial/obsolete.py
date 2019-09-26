@@ -74,6 +74,7 @@ import struct
 
 from . import error, node, obsutil, perftrace, phases, policy, util
 from .i18n import _
+from .pycompat import range
 
 
 parsers = policy.importmod(r"parsers")
@@ -91,11 +92,6 @@ _enabled = False
 createmarkersopt = "createmarkers"
 allowunstableopt = "allowunstable"
 exchangeopt = "exchange"
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 def _getoptionvalue(repo, option):
@@ -426,7 +422,7 @@ def _fm1purereadmarkers(data, off, stop):
         off = o3 + metasize * nummeta
         metapairsize = unpack(">" + (metafmt * nummeta), data[o3:off])
         metadata = []
-        for idx in xrange(0, len(metapairsize), 2):
+        for idx in range(0, len(metapairsize), 2):
             o1 = off + metapairsize[idx]
             o2 = o1 + metapairsize[idx + 1]
             metadata.append((data[off:o1], data[o1:o2]))

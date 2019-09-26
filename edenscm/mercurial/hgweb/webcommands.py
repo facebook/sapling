@@ -28,6 +28,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import hex, short
+from ..pycompat import range
 from . import webutil
 from .common import (
     HTTP_FORBIDDEN,
@@ -42,11 +43,6 @@ from .common import (
 
 __all__ = []
 commands = {}
-
-try:
-    xrange(0)
-except NameError:
-    xrange = range
 
 
 class webcommand(object):
@@ -211,7 +207,7 @@ def _search(web, req, tmpl):
 
         def revgen():
             cl = web.repo.changelog
-            for i in xrange(len(web.repo) - 1, 0, -100):
+            for i in range(len(web.repo) - 1, 0, -100):
                 l = []
                 for j in cl.revs(max(0, i - 99), i):
                     ctx = web.repo[j]
