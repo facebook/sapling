@@ -188,30 +188,38 @@ pub enum CommitSyncRepos {
 }
 
 impl CommitSyncRepos {
-    pub fn get_source_repo_id(&self) -> RepositoryId {
+    pub fn get_source_repo(&self) -> &BlobRepo {
         match self {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
                 small_repo: _,
-            } => large_repo.get_repoid(),
+            } => large_repo,
             CommitSyncRepos::SmallToLarge {
                 large_repo: _,
                 small_repo,
-            } => small_repo.get_repoid(),
+            } => small_repo,
         }
     }
 
-    pub fn get_target_repo_id(&self) -> RepositoryId {
+    pub fn get_target_repo(&self) -> &BlobRepo {
         match self {
             CommitSyncRepos::LargeToSmall {
                 large_repo: _,
                 small_repo,
-            } => small_repo.get_repoid(),
+            } => small_repo,
             CommitSyncRepos::SmallToLarge {
                 large_repo,
                 small_repo: _,
-            } => large_repo.get_repoid(),
+            } => large_repo,
         }
+    }
+
+    pub fn get_source_repo_id(&self) -> RepositoryId {
+        self.get_source_repo().get_repoid()
+    }
+
+    pub fn get_target_repo_id(&self) -> RepositoryId {
+        self.get_target_repo().get_repoid()
     }
 }
 

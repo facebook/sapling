@@ -229,3 +229,17 @@ let us make sure that tailing cannot start with a non-ancestor of a tailed bookm
   * Sanity checking ancestorship between * and fbsource_master_newer (glob)
   * Last processed node * is not an ancestor of tailed bookmark fbsource_master_newer (glob)
   [1]
+
+test that synced commits are appropriately marked as public
+  $ cd $TESTTMP/meg-hg-cnt
+  $ hg log -T "{desc} {phase}\n" -r "all()"
+  megarepo commit 1 public
+  fbsource commit 2 public
+  ovrsource commit 2 public
+  fbsource commit 3 public
+  fbsource commit 4 (with copy of preserved path into preserved path) public
+  fbsource commit 5 (with copy of moved path into moved path) public
+  fbsource commit 6 (with copy of moved path into preserved path) public
+  fbsource commit 7 (with copy of preserved path into moved path) public
+  fbsource commit 8 (with removal of a moved path) public
+  fbsource commit 9 (with removal of a preserved path) public
