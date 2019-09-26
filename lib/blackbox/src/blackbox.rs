@@ -175,6 +175,11 @@ impl Blackbox {
         }
     }
 
+    /// Get the pid stored in session_id.
+    pub(crate) fn session_pid(&self) -> u32 {
+        (self.session_id & 0xffffff) as u32
+    }
+
     pub fn session_id(&self) -> u64 {
         self.session_id
     }

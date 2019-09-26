@@ -36,7 +36,11 @@ pub fn init(mut blackbox: Blackbox) {
             }
         }
     }
-    blackbox.session_id = old_blackbox.session_id;
+
+    // Perserve session_id if pid hasn't been changed.
+    if blackbox.session_pid() == old_blackbox.session_pid() {
+        blackbox.session_id = old_blackbox.session_id;
+    }
 
     *singleton.deref_mut() = blackbox;
 }
