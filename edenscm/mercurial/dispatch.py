@@ -655,10 +655,29 @@ def _runcatch(req):
             finally:
                 ui.flush()
         except:  # re-raises
-            # enter the debugger when we hit an exception
-            if req.earlyoptions["debugger"]:
+            # Potentially enter the debugger when we hit an exception
+            startdebugger = req.earlyoptions["debugger"]
+            if (
+                ui.configbool("devel", "debugger")
+                and ui.interactive()
+                and not ui.pageractive
+                and not ui.plain()
+            ):
+                ui.write_err(
+                    _(
+                        "Starting ipdb for this exception\nIf you don't want the behavior, set devel.debugger to False\n"
+                    )
+                )
+                startdebugger = True
+
+            if startdebugger:
+                # Enforce the use of ipdb, since it's always available and
+                # we can afford the import overhead here.
+                with demandimport.deactivated():
+                    import ipdb
+
                 traceback.print_exc()
-                debugmortem[debugger](sys.exc_info()[2])
+                ipdb.post_mortem(sys.exc_info()[2])
             raise
 
     return _callcatch(ui, _runcatchfunc)
