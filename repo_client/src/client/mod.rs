@@ -49,7 +49,7 @@ use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json::{self, json};
 use slog::{debug, info, o};
-use stats::{define_stats, Histogram, Timeseries};
+use stats::{define_stats, DynamicTimeseries, Histogram, Timeseries};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
@@ -80,6 +80,11 @@ define_stats! {
     quicksand_tree_size: timeseries(RATE, SUM),
     total_fetched_file_size: timeseries(RATE, SUM),
     quicksand_fetched_file_size: timeseries(RATE, SUM),
+
+    push_success: dynamic_timeseries("push_success.{}", (reponame: String); RATE, SUM),
+    push_hook_failure: dynamic_timeseries("push_hook_failure.{}", (reponame: String); RATE, SUM),
+    push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); RATE, SUM),
+    push_error: dynamic_timeseries("push_error.{}", (reponame: String); RATE, SUM),
 }
 
 mod ops {
@@ -1246,6 +1251,7 @@ impl HgCommands for RepoClient {
     ) -> HgCommandRes<Bytes> {
         let client = self.clone();
         let pure_push_allowed = self.pure_push_allowed;
+        let reponame = self.repo.reponame().clone();
         cloned!(self.hook_manager);
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
@@ -1279,8 +1285,28 @@ impl HgCommands for RepoClient {
                     pure_push_allowed,
                 );
 
-                res.timeout(*TIMEOUT)
+                res
+                    .inspect_err({
+                        cloned!(reponame);
+                        move |err| {
+                            use bundle2_resolver::BundleResolverError::*;
+                            match err {
+                                HookError(..) => {
+                                    STATS::push_hook_failure.add_value(1, (reponame, ));
+                                }
+                                PushrebaseConflicts(..) => {
+                                    STATS::push_conflicts.add_value(1, (reponame, ));
+                                }
+                                Error(..) => {
+                                    STATS::push_error.add_value(1, (reponame, ));
+                                }
+                            };
+                        }
+                    })
+                    .from_err()
+                    .timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
+                    .inspect(move |_| STATS::push_success.add_value(1, (reponame, )))
                     .traced(client.ctx.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
                         ctx.perf_counters().insert_perf_counters(&mut scuba_logger);

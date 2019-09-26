@@ -63,6 +63,56 @@ lazy_static! {
         BookmarkName::new("__pushrebase_donotrebase__").unwrap();
 }
 
+pub enum BundleResolverError {
+    HookError(
+        (
+            Vec<(ChangesetHookExecutionID, HookExecution)>,
+            Vec<(FileHookExecutionID, HookExecution)>,
+        ),
+    ),
+    PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
+    Error(Error),
+}
+
+impl From<Error> for BundleResolverError {
+    fn from(error: Error) -> Self {
+        Self::Error(error)
+    }
+}
+
+impl From<BundleResolverError> for Error {
+    fn from(error: BundleResolverError) -> Error {
+        // DO NOT CHANGE FORMATTING WITHOUT UPDATING https://fburl.com/diffusion/bs9fys78 first!!
+        use BundleResolverError::*;
+        match error {
+            HookError((cs_hook_failures, file_hook_failures)) => {
+                let mut err_msgs = vec![];
+                for (exec_id, exec_info) in cs_hook_failures {
+                    if let HookExecution::Rejected(info) = exec_info {
+                        err_msgs.push(format!(
+                            "{} for {}: {}",
+                            exec_id.hook_name, exec_id.cs_id, info.long_description
+                        ));
+                    }
+                }
+                for (exec_id, exec_info) in file_hook_failures {
+                    if let HookExecution::Rejected(info) = exec_info {
+                        err_msgs.push(format!(
+                            "{} for {}: {}",
+                            exec_id.hook_name, exec_id.cs_id, info.long_description
+                        ));
+                    }
+                }
+                err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
+            }
+            PushrebaseConflicts(conflicts) => {
+                err_msg(format!("pushrebase failed Conflicts({:?})", conflicts))
+            }
+            Error(err) => err,
+        }
+    }
+}
+
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
@@ -79,7 +129,7 @@ pub fn resolve(
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     pure_push_allowed: bool,
-) -> BoxFuture<Bytes, Error> {
+) -> BoxFuture<Bytes, BundleResolverError> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),
         repo,
@@ -127,6 +177,7 @@ pub fn resolve(
                     })
             }
         })
+        .from_err()
         .and_then(
             move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
                 let mut allow_non_fast_forward = false;
@@ -148,6 +199,8 @@ pub fn resolve(
                             maybe_full_content,
                             lca_hint,
                         )
+                        .from_err()
+                        .boxify()
                     } else {
                         fn changegroup_always_unacceptable() -> bool {
                             false
@@ -174,6 +227,8 @@ pub fn resolve(
                         lca_hint,
                         move || pure_push_allowed,
                     )
+                    .from_err()
+                    .boxify()
                 }
             },
         )
@@ -320,7 +375,7 @@ fn resolve_pushrebase(
     phases_hint: Arc<dyn Phases>,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> BoxFuture<Bytes, Error> {
+) -> BoxFuture<Bytes, BundleResolverError> {
     resolver
         .resolve_b2xtreegroup2(ctx.clone(), bundle2)
         .and_then({
@@ -445,35 +500,13 @@ fn resolve_pushrebase(
                     })
             }
         })
+        .from_err()
         .and_then({
             cloned!(ctx, resolver, lca_hint);
             move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id)| {
                 let bookmark = bookmark_spec.get_bookmark_name();
                 resolver
                     .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &bookmark)
-                    .map_err(|err| match err {
-                        RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
-                            let mut err_msgs = vec![];
-                            for (exec_id, exec_info) in cs_hook_failures {
-                                if let HookExecution::Rejected(info) = exec_info {
-                                    err_msgs.push(format!(
-                                        "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.long_description
-                                    ));
-                                }
-                            }
-                            for (exec_id, exec_info) in file_hook_failures {
-                                if let HookExecution::Rejected(info) = exec_info {
-                                    err_msgs.push(format!(
-                                        "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.long_description
-                                    ));
-                                }
-                            }
-                            err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
-                        }
-                        RunHooksError::Error(err) => err,
-                    })
                     .and_then(move |()| {
                         match bookmark_spec {
                             PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => resolver
@@ -481,6 +514,7 @@ fn resolve_pushrebase(
                                 .left_future(),
                             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => resolver
                                 .force_pushrebase(ctx, lca_hint, plain_push, maybe_raw_bundle2_id)
+                                .from_err()
                                 .right_future(),
                         }
                         .map(move |pushrebased_rev| {
@@ -508,6 +542,7 @@ fn resolve_pushrebase(
                             bookmark_push_part_id,
                         )
                     })
+                    .from_err()
             },
         )
         .boxify()
@@ -1482,8 +1517,10 @@ impl Bundle2Resolver {
         changesets: Changesets,
         onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error>
-    {
+    ) -> impl Future<
+        Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>),
+        Error = BundleResolverError,
+    > {
         let bookmark = &onto_bookmark.bookmark;
         let pushrebase = {
             let mut params = self.pushrebase.clone();
@@ -1501,7 +1538,7 @@ impl Bundle2Resolver {
             &self.bookmark_attrs,
             &self.infinitepush_params,
         ) {
-            return future::err(error).boxify();
+            return future::err(error).from_err().boxify();
         }
 
         let block_merges = pushrebase.block_merges.clone();
@@ -1515,6 +1552,7 @@ impl Bundle2Resolver {
                  If you need this for a specific use case please contact\n\
                  the Source Control team at https://fburl.com/27qnuyl2"
             ))
+            .from_err()
             .boxify();
         }
 
@@ -1535,7 +1573,12 @@ impl Bundle2Resolver {
                 )
             }
         })
-        .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
+        .map_err(|err| match err {
+            pushrebase::PushrebaseError::Conflicts(conflicts) => {
+                BundleResolverError::PushrebaseConflicts(conflicts)
+            }
+            _ => BundleResolverError::Error(err_msg(format!("pushrebase failed {:?}", err))),
+        })
         .timed({
             let mut scuba_logger = self.ctx.scuba().clone();
             move |stats, result| {
@@ -1558,7 +1601,7 @@ impl Bundle2Resolver {
         changesets: Changesets,
         pushvars: Option<HashMap<String, Bytes>>,
         onto_bookmark: &BookmarkName,
-    ) -> BoxFuture<(), RunHooksError> {
+    ) -> BoxFuture<(), BundleResolverError> {
         // TODO: should we also accept the Option<HgBookmarkPush> and run hooks on that?
         let mut futs = stream::FuturesUnordered::new();
         for (hg_cs_id, _) in changesets {
@@ -1602,7 +1645,7 @@ impl Bundle2Resolver {
                         })
                         .collect();
                 if cs_hook_failures.len() > 0 || file_hook_failures.len() > 0 {
-                    Err(RunHooksError::Failures((
+                    Err(BundleResolverError::HookError((
                         cs_hook_failures,
                         file_hook_failures,
                     )))
@@ -1611,23 +1654,6 @@ impl Bundle2Resolver {
                 }
             })
             .boxify()
-    }
-}
-
-#[derive(Debug)]
-pub enum RunHooksError {
-    Failures(
-        (
-            Vec<(ChangesetHookExecutionID, HookExecution)>,
-            Vec<(FileHookExecutionID, HookExecution)>,
-        ),
-    ),
-    Error(Error),
-}
-
-impl From<Error> for RunHooksError {
-    fn from(error: Error) -> Self {
-        RunHooksError::Error(error)
     }
 }
 
