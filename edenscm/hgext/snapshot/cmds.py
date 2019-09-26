@@ -11,6 +11,7 @@ from edenscm.mercurial import (
     error,
     hg,
     merge as mergemod,
+    node as nodemod,
     registrar,
     scmutil,
     util,
@@ -79,9 +80,10 @@ def snapshotcreate(ui, repo, *args, **opts):
         if not node:
             ui.status(_("nothing changed\n"))
             return
+        node = nodemod.hex(node)
         with repo.transaction("update-snapshot-list") as tr:
             repo.snapshotlist.add([node], tr)
-        ui.status(_("snapshot %s created\n") % (repo.unfiltered()[node].hex()))
+        ui.status(_("snapshot %s created\n") % (node))
         if opts.get("clean"):
             try:
                 # We want to bring the working copy to the p1 state

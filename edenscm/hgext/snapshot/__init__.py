@@ -99,6 +99,6 @@ revsetpredicate = registrar.revsetpredicate()
 def snapshot(repo, subset, x):
     """Snapshot changesets"""
     unfi = repo.unfiltered()
-    # get all the binary nodes of snapshots from the file
+    # get all the hex nodes of snapshots from the file
     nodes = repo.snapshotlist.snapshots
-    return subset & unfi.revs("%ln", nodes)
+    return subset & unfi.revs("%ls", nodes)

@@ -35,7 +35,7 @@ def _getsnapshotlistfile(repo):
 
 
 class snapshotlist(object):
-    """list of local snapshots
+    """list of local snapshots (hex nodes)
     """
 
     def __init__(self, repo, check=True):
@@ -44,7 +44,7 @@ class snapshotlist(object):
                 lines = snaplistfile.readlines()
             if not lines or lines[0].strip() != FORMAT_VERSION:
                 raise error.Abort("invalid snapshots file format")
-            self.snapshots = {node.bin(snapshot.strip()) for snapshot in lines[1:]}
+            self.snapshots = {snapshot.strip() for snapshot in lines[1:]}
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -56,16 +56,17 @@ class snapshotlist(object):
         unfi = repo.unfiltered()
         toremove = set()
         for snapshotnode in self.snapshots:
-            if snapshotnode not in unfi:
+            binsnapshotnode = node.bin(snapshotnode)
+            if binsnapshotnode not in unfi:
                 raise error.Abort("invalid snapshot node: %s" % snapshotnode)
-            if "snapshotmetadataid" not in unfi[snapshotnode].extra():
+            if "snapshotmetadataid" not in unfi[binsnapshotnode].extra():
                 toremove.add(snapshotnode)
         self.snapshots -= toremove
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)
         for s in sorted(self.snapshots):
-            fp.write("%s\n" % (node.hex(s),))
+            fp.write("%s\n" % (s,))
 
     def add(self, newnodes, tr):
         newnodes = self.snapshots.union(newnodes)
