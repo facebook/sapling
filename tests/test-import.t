@@ -101,9 +101,8 @@ the commit message, regardless of '--edit')
   > env | grep HGEDITFORM
   > cat \$1
   > EOF
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg --cwd b import ../diffed-tip.patch
+  $ HGEDITOR=cat hg --cwd b import ../diffed-tip.patch
   applying ../diffed-tip.patch
-  HGEDITFORM=import.normal.normal
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
