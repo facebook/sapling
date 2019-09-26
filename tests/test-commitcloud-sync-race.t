@@ -1,9 +1,10 @@
-  $ enable commitcloud infinitepush amend rebase
+  $ enable commitcloud infinitepush amend rebase remotenames
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=testrepo
   $ setconfig mutation.record=true mutation.enabled=true
   $ setconfig extensions.treemanifest=!
+  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
 
   $ newrepo server
@@ -13,6 +14,7 @@
   $ touch base
   $ hg commit -Aqm base
   $ hg phase -p .
+  $ hg bookmark master
   $ cd ..
 
   $ hg clone ssh://user@dummy/server client1 -q
@@ -24,14 +26,14 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
-  visibility: read 0 heads: 
+  visibility: read 1 heads: df4f53cec30a
   setting authentication token
   authentication successful
   $ hg cloud join
-  visibility: read 0 heads: 
+  visibility: read 1 heads: df4f53cec30a
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
+  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
@@ -45,14 +47,14 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
-  visibility: read 0 heads: 
+  visibility: read 1 heads: df4f53cec30a
   updating authentication token
   authentication successful
   $ hg cloud join
-  visibility: read 0 heads: 
+  visibility: read 1 heads: df4f53cec30a
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
+  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
@@ -60,8 +62,8 @@
   $ cd client1
   $ touch 1
   $ hg commit -Aqm commit1
-  visibility: read 0 heads: 
-  visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
+  visibility: read 1 heads: df4f53cec30a
+  visibility: removed 1 heads [df4f53cec30a]; added 1 heads [79089e97b9e7]
   visibility: wrote 1 heads: 79089e97b9e7
   $ hg cloud sync
   visibility: read 1 heads: 79089e97b9e7
@@ -85,8 +87,8 @@ While that is getting started, create a new commit locally.
   $ sleep 1
   $ touch 2
   $ hg commit -Aqm commit2
-  visibility: read 0 heads: 
-  visibility: removed 0 heads []; added 1 heads [1292cc1f1c17]
+  visibility: read 1 heads: df4f53cec30a
+  visibility: removed 1 heads [df4f53cec30a]; added 1 heads [1292cc1f1c17]
   visibility: wrote 1 heads: 1292cc1f1c17
   $ hg up -q 0
   visibility: read 1 heads: 1292cc1f1c17
@@ -112,7 +114,7 @@ Let the background sync we started earlier continue, and start a concurrent clou
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
   commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks
@@ -134,7 +136,7 @@ Wait for the background backup to finish and check its output.
   $ hg debugwaitbackup
   visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   $ cat $TESTTMP/bgsync.out
-  visibility: read 0 heads: 
+  visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
   abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
