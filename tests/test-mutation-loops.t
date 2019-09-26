@@ -1,5 +1,6 @@
-  $ enable amend rebase
+  $ enable amend rebase remotenames
   $ setconfig experimental.evolution=
+  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
@@ -23,7 +24,7 @@
 Loops are not normally possible, but they can sneak in through backfilling complex
 obsmarker graphs.  Create a fake one to check behaviour.
 
-  $ hg debugsh --hidden -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, m.mutation.ORIGIN_OBSMARKER, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
+  $ hg debugsh -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, m.mutation.ORIGIN_OBSMARKER, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
   $ tglogm --hidden
   @  5: 21c93100b04c 'commit5'
   |
@@ -43,9 +44,15 @@ obsmarker graphs.  Create a fake one to check behaviour.
 Check the normal revsets.
   $ hg log -r 'predecessors(21c93100b04c)' -T '{node} {desc}\n'
   e6c779c67aa947c951f334f4f312bd2b21d27e55 commit1
+  932f02c9fad3fa46e55b62560c88eb67528b02f0 commit2
+  d3c8fd338cf40a496d981b2ada8df4108f575897 commit3
+  672a4910c364d425231d2dd2fb0486f32a2d88f4 commit4
   21c93100b04c543843a7dab4fa0d5bada061b7a0 commit5
   $ hg log -r 'successors(e6c779c67aa9)' -T '{node} {desc}\n'
   e6c779c67aa947c951f334f4f312bd2b21d27e55 commit1
+  932f02c9fad3fa46e55b62560c88eb67528b02f0 commit2
+  d3c8fd338cf40a496d981b2ada8df4108f575897 commit3
+  672a4910c364d425231d2dd2fb0486f32a2d88f4 commit4
   21c93100b04c543843a7dab4fa0d5bada061b7a0 commit5
 
 If successorssets doesn't handle loops, this next command will hang as it
