@@ -22,7 +22,7 @@ using namespace std::chrono_literals;
 
 TEST(ProcessAccessLog, emptyLogHasNoAccesses) {
   auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
-  EXPECT_THAT(log.getAccessCounts(1s), ElementsAre());
+  EXPECT_THAT(log.getAccessCounts(10s), ElementsAre());
 }
 
 TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
@@ -48,5 +48,5 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   ac.fuseWrites = 1;
   ac.fuseBackingStoreImports = 1;
 
-  EXPECT_THAT(log.getAccessCounts(1s), Contains(std::pair{pid, ac}));
+  EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
 }
