@@ -34,7 +34,7 @@ else:
     import socketserver  # noqa: F401
 
 empty = _queue.Empty
-queue = _queue.Queue
+queue = _queue
 
 
 def identity(a):

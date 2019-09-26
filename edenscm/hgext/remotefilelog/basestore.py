@@ -534,9 +534,9 @@ class basestore(object):
         cachepath = self._path
 
         # prune cache
-        import Queue
+        from edenscm.mercurial.pycompat import queue
 
-        queue = Queue.PriorityQueue()
+        pqueue = queue.PriorityQueue()
         originalsize = 0
         size = 0
         count = 0
@@ -576,7 +576,7 @@ class basestore(object):
                     originalsize += pathstat.st_size
 
                     if key in keepkeys or pathstat.st_atime > limit:
-                        queue.put((pathstat.st_atime, path, pathstat))
+                        pqueue.put((pathstat.st_atime, path, pathstat))
                         size += pathstat.st_size
                     else:
                         try:
@@ -599,8 +599,8 @@ class basestore(object):
             with progress.bar(
                 ui, _("enforcing cache limit"), _("bytes"), excess
             ) as prog:
-                while queue and size > limit and size > 0:
-                    atime, oldpath, oldpathstat = queue.get()
+                while pqueue and size > limit and size > 0:
+                    atime, oldpath, oldpathstat = pqueue.get()
                     try:
                         shallowutil.unlinkfile(oldpath)
                     except OSError as e:

@@ -38,7 +38,6 @@ from __future__ import absolute_import
 
 import hashlib
 import os
-import Queue
 import sys
 import threading
 import time
@@ -69,7 +68,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import queue, range
 
 
 wrapcommand = extensions.wrapcommand
@@ -1076,17 +1075,16 @@ def wraprepo(repo):
                     # Inspect the changelog now that we have the lock
                     fetchstart = len(self.changelog)
 
-                    queue = Queue.Queue()
+                    q = queue.Queue()
                     abort = threading.Event()
 
                     t = threading.Thread(
-                        target=self.fetchthread,
-                        args=(queue, abort, fetchstart, fetchend),
+                        target=self.fetchthread, args=(q, abort, fetchstart, fetchend)
                     )
                     t.setDaemon(True)
                     try:
                         t.start()
-                        addentries(self, queue, transaction)
+                        addentries(self, q, transaction)
                     finally:
                         abort.set()
 
@@ -2493,16 +2491,16 @@ def _sqlreplay(repo, startrev, endrev):
 
         try:
             repo.sqlreplaytransaction = True
-            queue = Queue.Queue()
+            q = queue.Queue()
             abort = threading.Event()
 
             t = threading.Thread(
-                target=repo.fetchthread, args=(queue, abort, startrev, endrev)
+                target=repo.fetchthread, args=(q, abort, startrev, endrev)
             )
             t.setDaemon(True)
             try:
                 t.start()
-                addentries(repo, queue, transaction, ignoreexisting=True)
+                addentries(repo, q, transaction, ignoreexisting=True)
             finally:
                 abort.set()
 
@@ -2591,9 +2589,9 @@ def sqlverify(ui, repo, *args, **opts):
 
 
 def _sqlverify(repo, minrev, maxrev, revlogcache):
-    queue = Queue.Queue()
+    q = queue.Queue()
     abort = threading.Event()
-    t = threading.Thread(target=repo.fetchthread, args=(queue, abort, minrev, maxrev))
+    t = threading.Thread(target=repo.fetchthread, args=(q, abort, minrev, maxrev))
     t.setDaemon(True)
 
     insql = set()
@@ -2601,7 +2599,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
         t.start()
 
         while True:
-            revdata = queue.get()
+            revdata = q.get()
             if not revdata:
                 return insql
 
