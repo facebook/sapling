@@ -4,6 +4,8 @@ include(FBCMakeParseArgs)
 # built by Cargo. It will call Cargo to build a staticlib and generate a CMake
 # interface library with it.
 #
+# This function requires `find_package(Python COMPONENTS Interpreter)`.
+#
 # You need to set `lib:crate-type = ["staticlib"]` in your Cargo.toml to make
 # Cargo build static library.
 #
@@ -43,6 +45,15 @@ function(rust_static_library TARGET)
   set(staticlib_name "${CMAKE_STATIC_LIBRARY_PREFIX}${crate_name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
   set(rust_staticlib "${CMAKE_CURRENT_BINARY_DIR}/${target_dir}/${staticlib_name}")
 
+  if(USE_CARGO_VENDOR)
+    # setup_cargo_vendor.py is present only in the internal FB version of this repo,
+    # and is used to avoid downloading crates directly from the internet each time
+    # our CI runs a build.
+    set(pre_cargo_cmd ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/CMake/facebook/setup_cargo_vendor.py)
+  else()
+    set(pre_cargo_cmd "${CMAKE_COMMAND} -E echo NOP")
+  endif()
+
   if(WIN32)
     # compatibility for cmd.exe
     set(
@@ -58,6 +69,7 @@ function(rust_static_library TARGET)
 
   add_custom_target(
     ${cargo_target} ALL
+    COMMAND ${pre_cargo_cmd}
     COMMAND ${cargo_cmd}
     COMMENT "Building Rust crate '${crate_name}'..."
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -69,7 +81,7 @@ function(rust_static_library TARGET)
     ${TARGET}
     PROPERTIES
       INTERFACE_STATICLIB_OUTPUT_PATH "${rust_staticlib}"
-      INTERFACE_INSTALL_LIBNAME 
+      INTERFACE_INSTALL_LIBNAME
         "${CMAKE_STATIC_LIBRARY_PREFIX}${crate_name}_rs${CMAKE_STATIC_LIBRARY_SUFFIX}"
   )
   target_link_libraries(
