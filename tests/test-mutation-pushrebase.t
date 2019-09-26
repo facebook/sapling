@@ -1,25 +1,22 @@
   $ setconfig extensions.treemanifest=!
-#testcases nostackpush stackpush
-  $ enable pushrebase amend
+  $ enable pushrebase amend remotenames
   $ setconfig experimental.evolution=
+  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
   $ setconfig ui.ssh="python \"$RUNTESTDIR/dummyssh\""
 
-#if nostackpush
-  $ setconfig pushrebase.trystackpush=false
-#endif
-#if stackpush
   $ setconfig pushrebase.trystackpush=true
-#endif
 
 Set up server repository
 
   $ hg init server
   $ cd server
+  $ setconfig experimental.narrow-heads=false
   $ echo 1 > a
   $ echo 2 > b
   $ hg commit -Aqm base
+  $ hg bookmark master
 
 Set up client repository
 
@@ -33,6 +30,7 @@ Add more commits on the server
   $ hg commit -Aqm s1
   $ echo 4 > d
   $ hg commit -Aqm s2
+  $ hg bookmark master
 
 Pushrebase some commits from the client
 
@@ -50,8 +48,8 @@ Pushrebase some commits from the client
   |
   o  0: a7d6a32ae4ec public 'base'
   
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to master
+  pushing rev e52ebff26308 to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 2 changesets:
   remote:     b0c40d8745c8  c1
@@ -60,7 +58,8 @@ Pushrebase some commits from the client
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 4 files (+1 heads)
+  added 4 changesets with 2 changes to 4 files
+  updating bookmark master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
   @  7: bc165ecd11df public 'c2 (amended)'
@@ -85,7 +84,7 @@ Pushrebase some commits from the client
 
   $ cd ../server
   $ tglogp
-  o  4: bc165ecd11df public 'c2 (amended)'
+  o  4: bc165ecd11df public 'c2 (amended)' master
   |
   o  3: 466bbcaf803c public 'c1'
   |
@@ -119,11 +118,12 @@ Push an original commit to the server.  This doesn't get pushrebased.
   $ cd ../client
   $ echo 9 > i
   $ hg commit -Aqm c3
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to master
+  pushing rev 5cfa12ac15ac to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 1 changeset:
   remote:     5cfa12ac15ac  c3
+  updating bookmark master
 
   $ hg debugmutation .
    *  5cfa12ac15aca3668b5f91e5a7b92aa309b320a9
@@ -131,7 +131,7 @@ Push an original commit to the server.  This doesn't get pushrebased.
 Add commits on the server to pushrebase over.
 
   $ cd ../server
-  $ hg up -q tip
+  $ hg up -q master
   $ echo 7 > g
   $ hg commit -Aqm s3
   $ echo 8 > h
@@ -161,8 +161,8 @@ Add another commit on the client.
   
 Push this commit to the server.  We should create local mutation information.
 
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to master
+  pushing rev 254a42c0dcef to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 1 changeset:
   remote:     254a42c0dcef  c4 (amended)
@@ -170,7 +170,8 @@ Push this commit to the server.  We should create local mutation information.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 3 files (+1 heads)
+  added 3 changesets with 2 changes to 3 files
+  updating bookmark master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg debugmutation ".~4::."
@@ -194,7 +195,7 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   > [pushrebase]
   > pushback.obsmarkers=false
   > EOF
-  $ hg up -q tip
+  $ hg up -q master
   $ echo 11 > k
   $ hg commit -Aqm s5
 
@@ -203,8 +204,8 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   $ hg commit -Aqm c5
   $ echo 12a > l
   $ hg amend -qm "c5 (amended)"
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to master
+  pushing rev 6b21e03c2693 to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 1 changeset:
   remote:     6b21e03c2693  c5 (amended)
@@ -212,7 +213,8 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
+  updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
   @  17: 7a5f07a2de1e public 'c5 (amended)'
