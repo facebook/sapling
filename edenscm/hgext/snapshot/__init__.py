@@ -75,6 +75,11 @@ def extsetup(ui):
         extensions.wrapfunction(smartlog, "getrevs", _getrevssl)
     except KeyError:
         pass
+    try:
+        amend = extensions.find("amend")
+        extensions.wrapfunction(amend.hide, "_dounhide", _dounhide)
+    except KeyError:
+        pass
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
@@ -120,6 +125,13 @@ def _getrevssl(orig, ui, repo, masterstring, **opts):
         "smartlog(heads=snapshot(), master=%r)", masterstring
     )
     return revs.union(repo.unfiltered().anyrevs([snapshotstring], user=True))
+
+
+def _dounhide(orig, repo, revs):
+    unfi = repo.unfiltered()
+    revs = [r for r in revs if "snapshotmetadataid" not in unfi[r].extra()]
+    if len(revs) > 0:
+        orig(repo, revs)
 
 
 revsetpredicate = registrar.revsetpredicate()

@@ -45,7 +45,8 @@
 # Snapshot show test plan:
 # 1) Create a couple of snapshots (with public and with hidden parents);
 # 2) Show these snapshots;
-# 3) Show them in ssl.
+# 3) Show them in ssl;
+# 4) Hide a snapshot, check the ssl and unhide it;
 
 
 # 1) Create a couple of snapshots (with public and with hidden parents);
@@ -276,4 +277,79 @@
   |  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
+  
+  $ setconfig extensions.snapshot=
+
+
+# 4) Hide a snapshot, check the ssl and unhide it;
+  $ hg snapshot hide "$OID"
+  $ hg snapshot list
+  3d1b299b75fb snapshot
+  $ hg smartlog -T default
+  o  changeset:   8:fdf2c0326bba
+  |  parent:      2:fa948fa73a59
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     merge #2
+  |
+  | o  changeset:   7:9d3ebf4630d3
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge #1
+  | |
+  | o  changeset:   6:8e676f2ef130
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     draft2
+  | |
+  | o  changeset:   5:d521223a2fb5
+  |/   parent:      2:fa948fa73a59
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     draft1 amend2
+  |
+  | s  changeset:   10:3d1b299b75fb
+  | |  tag:         tip
+  | |  parent:      3:ffb8db6e9ac3
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  instability: orphan
+  | |  summary:     snapshot
+  | |
+  | x  changeset:   3:ffb8db6e9ac3
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsolete:    rewritten using amend as 5:d521223a2fb5
+  |    summary:     draft1
+  |
+  @  changeset:   2:fa948fa73a59
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add some files
+  |
+  o  changeset:   1:175dbab47dcc
+  |  user:        test
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     public1
+  
+  $ hg snapshot unhide "$OID"
+  $ hg snapshot list
+  3d1b299b75fb snapshot
+  b6124cfe90c6 snapshot
+  $ hg unhide "$HOID"
+  $ hg log -r "snapshot() & hidden()" --hidden
+  changeset:   9:b6124cfe90c6
+  parent:      8:fdf2c0326bba
+  parent:      7:9d3ebf4630d3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     snapshot
+  
+  changeset:   10:3d1b299b75fb
+  tag:         tip
+  parent:      3:ffb8db6e9ac3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  instability: orphan
+  summary:     snapshot
   

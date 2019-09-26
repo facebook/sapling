@@ -182,11 +182,15 @@ def unhide(ui, repo, *revs, **opts):
     Mark the specified commits as visible. Any ancestors of the specified
     commits will also become visible.
     """
-    unfi = repo.unfiltered()
     revs = list(revs) + opts.pop("rev", [])
     with repo.lock():
-        revs = set(scmutil.revrange(unfi, revs))
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            ctxs = unfi.set("not public() & ::(%ld) & obsolete()", revs)
-            obsolete.revive(ctxs, operation="unhide")
-        visibility.add(repo, [unfi[r].node() for r in revs])
+        revs = set(scmutil.revrange(repo.unfiltered(), revs))
+        _dounhide(repo, revs)
+
+
+def _dounhide(repo, revs):
+    unfi = repo.unfiltered()
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        ctxs = unfi.set("not public() & ::(%ld) & obsolete()", revs)
+        obsolete.revive(ctxs, operation="unhide")
+    visibility.add(repo, [unfi[r].node() for r in revs])

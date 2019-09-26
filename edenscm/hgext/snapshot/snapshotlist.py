@@ -69,10 +69,17 @@ class snapshotlist(object):
         for s in self.snapshots:
             fp.write("%s\n" % (s,))
 
-    def add(self, newnodes, tr):
-        toadd = set(newnodes) - set(self.snapshots)
-        if len(toadd) != 0:
-            self.snapshots += list(sorted(newnodes))
+    def update(self, tr, addnodes=[], removenodes=[]):
+        """transactionally update the list of snapshots
+
+        Elements of addnodes and removenodes are expected to be binary nodes"""
+        nodes = set(self.snapshots)
+        toadd = set(addnodes) - nodes
+        toremove = set(removenodes) & nodes
+        if len(toadd) != 0 or len(toremove) != 0:
+            self.snapshots = [s for s in self.snapshots if s not in toremove] + list(
+                sorted(addnodes)
+            )
             tr.addfilegenerator("snapshots", ("snapshotlist",), self._write)
 
     def printsnapshots(self, ui, repo, **opts):

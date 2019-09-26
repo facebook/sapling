@@ -88,8 +88,8 @@ def snapshotcreate(ui, repo, *args, **opts):
             ui.status(_("nothing changed\n"))
             return
         node = nodemod.hex(node)
-        with repo.transaction("update-snapshot-list") as tr:
-            repo.snapshotlist.add([node], tr)
+        with repo.transaction("add-snapshot") as tr:
+            repo.snapshotlist.update(tr, addnodes=[node])
         ui.status(_("snapshot %s created\n") % (node))
         if opts.get("clean"):
             try:
@@ -300,3 +300,39 @@ def snapshotlistcmd(ui, repo, *args, **opts):
     """list the local snapshots
     """
     repo.snapshotlist.printsnapshots(ui, repo, **opts)
+
+
+@subcmd("hide", [], _("REV"))
+def snapshothide(ui, repo, *args, **opts):
+    """hide a snapshot: remove it from the snapshot list
+    """
+    if not args or len(args) != 1:
+        raise error.Abort(_("you must specify a snapshot revision id\n"))
+    node = args[0]
+    try:
+        cctx = repo.unfiltered()[node]
+    except error.RepoLookupError:
+        ui.status(_("%s is not a valid revision id\n") % node)
+        raise
+    if "snapshotmetadataid" not in cctx.extra():
+        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    with repo.lock(), repo.transaction("hide-snapshot") as tr:
+        repo.snapshotlist.update(tr, removenodes=[cctx.hex()])
+
+
+@subcmd("unhide", [], _("REV"))
+def snapshotunhide(ui, repo, *args, **opts):
+    """unhide a snapshot: add it to the snapshot list
+    """
+    if not args or len(args) != 1:
+        raise error.Abort(_("you must specify a snapshot revision id\n"))
+    node = args[0]
+    try:
+        cctx = repo.unfiltered()[node]
+    except error.RepoLookupError:
+        ui.status(_("%s is not a valid revision id\n") % node)
+        raise
+    if "snapshotmetadataid" not in cctx.extra():
+        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    with repo.lock(), repo.transaction("unhide-snapshot") as tr:
+        repo.snapshotlist.update(tr, addnodes=[cctx.hex()])
