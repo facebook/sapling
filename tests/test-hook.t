@@ -185,6 +185,7 @@ more there after
   00changelog.d
   00changelog.i
   00manifest.i
+  allheads
   data
   fncache
   journal.phaseroots
