@@ -2517,6 +2517,84 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_multithread_sync() {
+        let dir = tempdir().unwrap();
+
+        const THREAD_COUNT: u8 = 30;
+
+        // Release mode runs much faster.
+        #[cfg(debug_assertions)]
+        const WRITE_COUNT_PER_THREAD: u8 = 30;
+        #[cfg(not(debug_assertions))]
+        const WRITE_COUNT_PER_THREAD: u8 = 150;
+
+        // Some indexes. They have different lag_threshold.
+        fn index_ref(data: &[u8]) -> Vec<IndexOutput> {
+            vec![IndexOutput::Reference(0..data.len() as u64)]
+        }
+        fn index_copy(data: &[u8]) -> Vec<IndexOutput> {
+            vec![IndexOutput::Owned(data.to_vec().into_boxed_slice())]
+        }
+        let indexes = vec![
+            IndexDef::new("key1", index_ref).lag_threshold(1),
+            IndexDef::new("key2", index_ref).lag_threshold(50),
+            IndexDef::new("key3", index_ref).lag_threshold(1000),
+            IndexDef::new("key4", index_copy).lag_threshold(1),
+            IndexDef::new("key5", index_copy).lag_threshold(50),
+            IndexDef::new("key6", index_copy).lag_threshold(1000),
+        ];
+        let index_len = indexes.len();
+        let open_opts = OpenOptions::new().create(true).index_defs(indexes);
+
+        let barrier = Arc::new(std::sync::Barrier::new(THREAD_COUNT as usize));
+        let threads: Vec<_> = (0..THREAD_COUNT)
+            .map(|i| {
+                let barrier = barrier.clone();
+                let open_opts = open_opts.clone();
+                let path = dir.path().to_path_buf();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    let mut log = open_opts.open(path).unwrap();
+                    for j in 1..=WRITE_COUNT_PER_THREAD {
+                        let buf = [i, j];
+                        log.append(&buf).unwrap();
+                        if j % (i + 1) == 0 || j == WRITE_COUNT_PER_THREAD {
+                            log.sync().unwrap();
+                            // Verify that the indexes match the entries.
+                            let mut entries =
+                                log.iter().map(|d| d.unwrap().to_vec()).collect::<Vec<_>>();
+                            entries.sort_unstable();
+                            for index_id in 0..index_len {
+                                let mut entries_index_keys = Vec::with_capacity(entries.len());
+                                let mut entries_index_values = Vec::with_capacity(entries.len());
+                                for entry_iter in log.lookup_range(index_id, ..).unwrap() {
+                                    let (key, value_iter) = entry_iter.unwrap();
+                                    entries_index_keys.push(key.as_ref().to_vec());
+                                    for value in value_iter {
+                                        entries_index_values.push(value.unwrap().to_vec());
+                                    }
+                                }
+                                assert_eq!(entries, entries_index_keys);
+                                assert_eq!(entries, entries_index_values);
+                            }
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        // Wait for them.
+        for thread in threads {
+            thread.join().expect("joined");
+        }
+
+        // Check how many entries were written.
+        let log = open_opts.open(dir.path()).unwrap();
+        let count = log.iter().count() as u64;
+        assert_eq!(count, THREAD_COUNT as u64 * WRITE_COUNT_PER_THREAD as u64);
+    }
+
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
             let mut buf = Vec::new();
