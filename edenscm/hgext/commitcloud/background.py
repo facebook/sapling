@@ -224,12 +224,12 @@ def backgroundbackup(repo, command=None, dest=None):
     if not logfile:
         logfile = os.devnull
 
-    with open(logfile, "a") as f:
+    with open(logfile, "a") as f, open(os.devnull, "r") as fin:
         timestamp = util.datestr(util.makedate(), "%Y-%m-%d %H:%M:%S %z")
         fullcmd = " ".join(util.shellquote(arg) for arg in background_cmd)
         f.write("\n%s starting: %s\n" % (timestamp, fullcmd))
         subprocess.Popen(
-            background_cmd, shell=False, stdout=f, stderr=subprocess.STDOUT
+            background_cmd, shell=False, stdin=fin, stdout=f, stderr=subprocess.STDOUT
         )
 
 
