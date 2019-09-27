@@ -499,7 +499,10 @@ class repo(object):
         projectnodes = manifestdom.getElementsByTagName("project")
 
         projectbranches = {
-            os.path.join(self.path, projectnode.getAttribute("path")): (
+            os.path.join(
+                self.path,
+                (projectnode.getAttribute("path") or projectnode.getAttribute("name")),
+            ): (
                 projectnode.getAttribute("name"),
                 # TODO: Allow project-specific remote
                 projectnode.getAttribute("revision")
