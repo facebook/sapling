@@ -14,7 +14,7 @@ use failure::Fallible;
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
 use encoding::{local_bytes_to_repo_path, repo_path_to_local_bytes};
-use manifest::{self, DiffType, FileMetadata, FileType, FsNode, Manifest};
+use manifest::{self, Diff, DiffType, FileMetadata, FileType, FsNode, Manifest};
 use pathmatcher::{AlwaysMatcher, Matcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonDataStore;
@@ -71,13 +71,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 py_class!(class treemanifest |py| {
     data underlying: RefCell<manifest::Tree>;
-    data use_bfs_diff: bool;
 
     def __new__(
         _cls,
         store: PyObject,
-        node: Option<&PyBytes> = None,
-        bfsdiff: bool = false
+        node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
         let store = PythonDataStore::new(store);
         let manifest_store = Arc::new(ManifestStore::new(store));
@@ -85,14 +83,13 @@ py_class!(class treemanifest |py| {
             None => manifest::Tree::ephemeral(manifest_store),
             Some(value) => manifest::Tree::durable(manifest_store, pybytes_to_node(py, value)?),
         };
-        treemanifest::create_instance(py, RefCell::new(underlying), bfsdiff)
+        treemanifest::create_instance(py, RefCell::new(underlying))
     }
 
     // Returns a new instance of treemanifest that contains the same data as the base.
     def copy(&self) -> PyResult<treemanifest> {
         let tree = self.underlying(py);
-        let use_bfs_diff = *self.use_bfs_diff(py);
-        treemanifest::create_instance(py, tree.clone(), use_bfs_diff)
+        treemanifest::create_instance(py, tree.clone())
     }
 
     // Returns (node, flag) for a given `path` in the manifest.
@@ -231,7 +228,7 @@ py_class!(class treemanifest |py| {
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
 
-        for entry in manifest::diff(&this_tree, &other_tree, &matcher, *self.use_bfs_diff(py)) {
+        for entry in Diff::new(&this_tree, &other_tree, &matcher) {
             let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
             let path = path_to_pybytes(py, &entry.path);
             let diff_left = convert_side_diff(py, entry.diff_type.left());
@@ -254,7 +251,7 @@ py_class!(class treemanifest |py| {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
-        for entry in manifest::diff(&this_tree, &other_tree, &matcher, *self.use_bfs_diff(py)) {
+        for entry in Diff::new(&this_tree, &other_tree, &matcher) {
             let entry = entry.map_pyerr::<exc::RuntimeError>(py)?;
             match entry.diff_type {
                 DiffType::LeftOnly(_) => {

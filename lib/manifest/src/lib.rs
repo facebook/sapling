@@ -68,6 +68,4 @@ pub enum FsNode {
 mod file;
 pub mod tree;
 pub use crate::file::{FileMetadata, FileType};
-pub use crate::tree::{
-    compat_subtree_diff, diff, BfsDiff, Diff, DiffEntry, DiffType, Tree, TreeStore,
-};
+pub use crate::tree::{compat_subtree_diff, Diff, DiffEntry, DiffType, Tree, TreeStore};

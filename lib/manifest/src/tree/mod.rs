@@ -3,7 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-mod bfs;
 mod cursor;
 mod diff;
 mod link;
@@ -26,7 +25,6 @@ use once_cell::sync::OnceCell;
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
-pub use self::bfs::BfsDiff;
 use self::cursor::{Cursor, Step};
 pub use self::diff::{Diff, DiffEntry, DiffType};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
@@ -509,21 +507,6 @@ where
                 Step::End => return None,
             }
         }
-    }
-}
-
-/// Wrapper around `Diff` and `BfsDiff`, allowing the diff algorithm to be dynamically
-/// chosen via user configuration.
-pub fn diff<'a, M: Matcher>(
-    left: &'a Tree,
-    right: &'a Tree,
-    matcher: &'a M,
-    bfs_diff: bool,
-) -> Box<dyn Iterator<Item = Fallible<DiffEntry>> + 'a> {
-    if bfs_diff {
-        Box::new(BfsDiff::new(left, right, matcher))
-    } else {
-        Box::new(Diff::new(left, right, matcher))
     }
 }
 

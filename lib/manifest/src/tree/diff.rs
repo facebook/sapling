@@ -3,49 +3,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::VecDeque, mem};
 
 use failure::Fallible;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};
 
-use super::cursor::{Cursor, Step};
-use super::link::{Durable, Leaf};
-pub use super::store::TreeStore;
-use crate::tree::Tree;
-use crate::FileMetadata;
-
-/// An iterator over all the differences between two [`Tree`]s. Keeping in mind that
-/// manifests operate over files, the difference space is limited to three cases described by
-/// [`DiffType`]:
-///  * a file may be present only in the left tree manifest
-///  * a file may be present only in the right tree manifest
-///  * a file may have different file_metadata between the two tree manifests
-///
-/// For the case where we have the the file "foo" in the `left` tree manifest and we have the "foo"
-/// directory in the `right` tree manifest, the differences returned will be:
-///  1. DiffEntry("foo", LeftOnly(_))
-///  2. DiffEntry(file, RightOnly(_)) for all `file`s under the "foo" directory
-pub struct Diff<'a, M> {
-    left: Cursor<'a>,
-    step_left: bool,
-    right: Cursor<'a>,
-    step_right: bool,
-    matcher: &'a M,
-}
-
-impl<'a, M> Diff<'a, M> {
-    pub fn new(left: &'a Tree, right: &'a Tree, matcher: &'a M) -> Self {
-        Self {
-            left: left.root_cursor(),
-            step_left: false,
-            right: right.root_cursor(),
-            step_right: false,
-            matcher,
-        }
-    }
-}
+use crate::{
+    file::FileMetadata,
+    tree::{store::InnerStore, Directory, File, Tree},
+};
 
 /// Represents a file that is different between two tree manifests.
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -87,129 +55,361 @@ impl DiffType {
     }
 }
 
-impl<'a, M> Iterator for Diff<'a, M>
-where
-    M: Matcher,
-{
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum Side {
+    Left,
+    Right,
+}
+
+/// A single item to process as part of the diffing process.
+///
+/// This may either be a single directory that was only present on one
+/// side of the diff, or it may be a pair of directories (with the same
+/// path) whose content is different on either side of the diff.
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum DiffItem<'a> {
+    Single(Directory<'a>, Side),
+    Changed(Directory<'a>, Directory<'a>),
+}
+
+impl<'a> DiffItem<'a> {
+    fn process(
+        self,
+        next: &mut VecDeque<DiffItem<'a>>,
+        lstore: &'a InnerStore,
+        rstore: &'a InnerStore,
+        matcher: &'a dyn Matcher,
+    ) -> Fallible<Vec<DiffEntry>> {
+        match self {
+            DiffItem::Single(dir, side) => {
+                let store = match side {
+                    Side::Left => lstore,
+                    Side::Right => rstore,
+                };
+                diff_single(dir, next, side, store, matcher)
+            }
+            DiffItem::Changed(left, right) => diff(left, right, next, lstore, rstore, matcher),
+        }
+    }
+
+    fn path(&self) -> &RepoPath {
+        match self {
+            DiffItem::Single(d, _) => &d.path,
+            DiffItem::Changed(d, _) => &d.path,
+        }
+    }
+
+    fn left(dir: Directory<'a>) -> Self {
+        DiffItem::Single(dir, Side::Left)
+    }
+
+    fn right(dir: Directory<'a>) -> Self {
+        DiffItem::Single(dir, Side::Right)
+    }
+}
+
+/// A breadth-first diff iterator over two trees.
+///
+/// This struct is an iterator that, given two trees, will iterate
+/// over the directories layer-by-layer, outputting diff entries
+/// for each mismatched file encountered. At the start of each layer
+/// of the traversal, all of the modified directories in that layer
+/// will be prefetched from the store, thereby reducing the total
+/// number of tree fetches required to perform a full-tree diff while
+/// only fetching tree nodes that have actually changed.
+pub struct Diff<'a> {
+    output: VecDeque<DiffEntry>,
+    current: VecDeque<DiffItem<'a>>,
+    next: VecDeque<DiffItem<'a>>,
+    lstore: &'a InnerStore,
+    rstore: &'a InnerStore,
+    matcher: &'a dyn Matcher,
+}
+
+impl<'a> Diff<'a> {
+    pub fn new(left: &'a Tree, right: &'a Tree, matcher: &'a dyn Matcher) -> Self {
+        let lroot = Directory::from_root(&left.root).expect("tree root is not a directory");
+        let rroot = Directory::from_root(&right.root).expect("tree root is not a directory");
+        let mut current = VecDeque::new();
+
+        // Don't even attempt to perform a diff if these trees are the same.
+        if lroot.node != rroot.node || lroot.node.is_none() {
+            current.push_back(DiffItem::Changed(lroot, rroot));
+        }
+
+        Diff {
+            output: VecDeque::new(),
+            current,
+            next: VecDeque::new(),
+            lstore: &left.store,
+            rstore: &right.store,
+            matcher,
+        }
+    }
+
+    /// Prefetch the contents of the directories in the next layer of the traversal.
+    ///
+    /// Given that each tree owns its own store, we need to perform two prefetches
+    /// to ensure that the keys for each tree are correctly prefetched from the
+    /// corresponding store.
+    fn prefetch(&self) -> Fallible<()> {
+        let mut lkeys = Vec::new();
+        let mut rkeys = Vec::new();
+
+        // Group the keys in the next layer by which tree
+        // they came from so that we can prefetch using
+        // the correct store for each tree.
+        for item in &self.next {
+            match item {
+                DiffItem::Single(dir, side) => {
+                    match side {
+                        Side::Left => dir.key().map(|key| lkeys.push(key)),
+                        Side::Right => dir.key().map(|key| rkeys.push(key)),
+                    };
+                }
+                DiffItem::Changed(left, right) => {
+                    left.key().map(|key| lkeys.push(key));
+                    right.key().map(|key| rkeys.push(key));
+                }
+            }
+        }
+
+        if !lkeys.is_empty() {
+            self.lstore.prefetch(lkeys)?;
+        }
+        if !rkeys.is_empty() {
+            self.rstore.prefetch(rkeys)?;
+        }
+
+        Ok(())
+    }
+
+    /// Process the next `DiffItem` for this layer (either a pair of modified directories
+    /// or an added/removed directory), potentially generating new `DiffEntry`s for
+    /// any changed files contained therein.
+    ///
+    /// If this method reaches the end of the current layer of the breadth-first traversal,
+    /// it will perform I/O to prefetch the next layer of directories before continuing. As
+    /// such, this function will occassionally block for an extended period of time.
+    ///
+    /// Returns `true` if there are more items to process after the current one. Once this
+    /// method returns `false`, the traversal is complete.
+    fn process_next_item(&mut self) -> Fallible<bool> {
+        if self.current.is_empty() {
+            self.prefetch()?;
+            mem::swap(&mut self.current, &mut self.next);
+        }
+
+        let entries = match self.current.pop_front() {
+            Some(item) => item.process(&mut self.next, &self.lstore, &self.rstore, self.matcher)?,
+            None => return Ok(false),
+        };
+
+        self.output.extend(entries);
+        Ok(true)
+    }
+}
+
+impl<'a> Iterator for Diff<'a> {
     type Item = Fallible<DiffEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // This is the standard algorithm for returning the differences in two lists but adjusted
-        // to have the iterator interface and to evaluate the tree lazily.
+        while self.output.is_empty() {
+            match self.process_next_item() {
+                Ok(true) => continue,
+                Ok(false) => break,
+                Err(e) => return Some(Err(e)),
+            }
+        }
+        self.output.pop_front().map(Ok)
+    }
+}
 
-        fn diff_entry(path: &RepoPath, diff_type: DiffType) -> Option<Fallible<DiffEntry>> {
-            Some(Ok(DiffEntry::new(path.to_owned(), diff_type)))
-        }
-        fn compare<'a>(left: &Cursor<'a>, right: &Cursor<'a>) -> Option<Ordering> {
-            // TODO: cache ordering state so we compare last components at most
-            match (left.finished(), right.finished()) {
-                (true, true) => None,
-                (false, true) => Some(Ordering::Less),
-                (true, false) => Some(Ordering::Greater),
-                (false, false) => Some(left.path().cmp(right.path())),
-            }
-        }
-        fn evaluate_cursor<M: Matcher>(
-            cursor: &mut Cursor<'_>,
-            matcher: &M,
-        ) -> Option<FileMetadata> {
-            if let Leaf(file_metadata) = cursor.link() {
-                if matcher.matches_file(cursor.path()) {
-                    return Some(*file_metadata);
-                }
-            }
-            try_skipping(cursor, matcher);
-            None
-        }
+/// Process a directory that is only present on one side of the diff.
+///
+/// Returns diff entries of all of the files in this directory, and
+/// adds any subdirectories to the next layer to be processed.
+fn diff_single<'a>(
+    dir: Directory<'a>,
+    next: &mut VecDeque<DiffItem<'a>>,
+    side: Side,
+    store: &'a InnerStore,
+    matcher: &'a dyn Matcher,
+) -> Fallible<Vec<DiffEntry>> {
+    let (files, dirs) = dir.list(store)?;
 
-        fn try_skipping<M: Matcher>(cursor: &mut Cursor<'_>, matcher: &M) {
-            if matcher.matches_directory(cursor.path()) == DirectoryMatch::Nothing {
-                cursor.skip_subtree();
-            }
+    let items = dirs
+        .into_iter()
+        .filter(|d| matcher.matches_directory(&d.path) != DirectoryMatch::Nothing)
+        .map(|d| DiffItem::Single(d, side));
+    next.extend(items);
+
+    let entries = files
+        .into_iter()
+        .filter(|f| matcher.matches_file(&f.path))
+        .map(|f| match side {
+            Side::Left => f.into_left(),
+            Side::Right => f.into_right(),
+        })
+        .collect();
+
+    Ok(entries)
+}
+
+/// Diff two directories.
+///
+/// The directories should correspond to the same path on either side of the
+/// diff. Returns diff entries for any changed files, and adds any changed
+/// directories to the next layer to be processed.
+fn diff<'a>(
+    left: Directory<'a>,
+    right: Directory<'a>,
+    next: &mut VecDeque<DiffItem<'a>>,
+    lstore: &'a InnerStore,
+    rstore: &'a InnerStore,
+    matcher: &'a dyn Matcher,
+) -> Fallible<Vec<DiffEntry>> {
+    let (lfiles, ldirs) = left.list(lstore)?;
+    let (rfiles, rdirs) = right.list(rstore)?;
+    next.extend(diff_dirs(ldirs, rdirs, matcher));
+    Ok(diff_files(lfiles, rfiles, matcher))
+}
+
+/// Given two sorted file lists, return diff entries for non-matching files.
+fn diff_files<'a>(
+    lfiles: Vec<File>,
+    rfiles: Vec<File>,
+    matcher: &'a dyn Matcher,
+) -> Vec<DiffEntry> {
+    let mut output = Vec::new();
+
+    let mut add_to_output = |entry: DiffEntry| {
+        if matcher.matches_file(&entry.path) {
+            output.push(entry);
         }
-        loop {
-            if self.step_left {
-                if let Step::Err(error) = self.left.step() {
-                    return Some(Err(error));
+    };
+
+    debug_assert!(is_sorted(&lfiles));
+    debug_assert!(is_sorted(&rfiles));
+
+    let mut lfiles = lfiles.into_iter();
+    let mut rfiles = rfiles.into_iter();
+    let mut lfile = lfiles.next();
+    let mut rfile = rfiles.next();
+
+    loop {
+        match (lfile, rfile) {
+            (Some(l), Some(r)) => match l.path.cmp(&r.path) {
+                Ordering::Less => {
+                    add_to_output(l.into_left());
+                    lfile = lfiles.next();
+                    rfile = Some(r);
                 }
-                self.step_left = false;
-            }
-            if self.step_right {
-                if let Step::Err(error) = self.right.step() {
-                    return Some(Err(error));
+                Ordering::Greater => {
+                    add_to_output(r.into_right());
+                    lfile = Some(l);
+                    rfile = rfiles.next();
                 }
-                self.step_right = false;
-            }
-            match compare(&self.left, &self.right) {
-                None => return None,
-                Some(Ordering::Less) => {
-                    self.step_left = true;
-                    if let Some(file_metadata) = evaluate_cursor(&mut self.left, &self.matcher) {
-                        return diff_entry(self.left.path(), DiffType::LeftOnly(file_metadata));
+                Ordering::Equal => {
+                    if l.meta != r.meta {
+                        add_to_output(l.into_changed(r));
                     }
+                    lfile = lfiles.next();
+                    rfile = rfiles.next();
                 }
-                Some(Ordering::Greater) => {
-                    self.step_right = true;
-                    if let Some(file_metadata) = evaluate_cursor(&mut self.right, &self.matcher) {
-                        return diff_entry(self.right.path(), DiffType::RightOnly(file_metadata));
-                    }
-                }
-                Some(Ordering::Equal) => {
-                    self.step_left = true;
-                    self.step_right = true;
-                    match (self.left.link(), self.right.link()) {
-                        (Leaf(left_metadata), Leaf(right_metadata)) => {
-                            if left_metadata != right_metadata
-                                && self.matcher.matches_file(self.left.path())
-                            {
-                                return diff_entry(
-                                    self.left.path(),
-                                    DiffType::Changed(*left_metadata, *right_metadata),
-                                );
-                            }
-                        }
-                        (Leaf(file_metadata), _) => {
-                            try_skipping(&mut self.right, &self.matcher);
-                            if self.matcher.matches_file(self.left.path()) {
-                                return diff_entry(
-                                    self.left.path(),
-                                    DiffType::LeftOnly(*file_metadata),
-                                );
-                            }
-                        }
-                        (_, Leaf(file_metadata)) => {
-                            try_skipping(&mut self.left, &self.matcher);
-                            if self.matcher.matches_file(self.right.path()) {
-                                return diff_entry(
-                                    self.right.path(),
-                                    DiffType::RightOnly(*file_metadata),
-                                );
-                            }
-                        }
-                        (Durable(left_entry), Durable(right_entry)) => {
-                            if left_entry.node == right_entry.node
-                                || self.matcher.matches_directory(self.left.path())
-                                    == DirectoryMatch::Nothing
-                            {
-                                self.left.skip_subtree();
-                                self.right.skip_subtree();
-                            }
-                        }
-                        _ => {
-                            // All other cases are two directories that we would iterate if not
-                            // for the matcher
-                            if self.matcher.matches_directory(self.left.path())
-                                == DirectoryMatch::Nothing
-                            {
-                                self.left.skip_subtree();
-                                self.right.skip_subtree();
-                            }
-                        }
-                    }
-                }
+            },
+            (Some(l), None) => {
+                add_to_output(l.into_left());
+                lfile = lfiles.next();
+                rfile = None;
             }
+            (None, Some(r)) => {
+                add_to_output(r.into_right());
+                lfile = None;
+                rfile = rfiles.next();
+            }
+            (None, None) => break,
         }
     }
+
+    output
+}
+
+/// Given two sorted directory lists, return diff items for non-matching directories.
+fn diff_dirs<'a>(
+    ldirs: Vec<Directory<'a>>,
+    rdirs: Vec<Directory<'a>>,
+    matcher: &'a dyn Matcher,
+) -> Vec<DiffItem<'a>> {
+    let mut output = Vec::new();
+
+    let mut add_to_output = |item: DiffItem<'a>| {
+        if matcher.matches_directory(item.path()) != DirectoryMatch::Nothing {
+            output.push(item);
+        }
+    };
+
+    debug_assert!(is_sorted(&ldirs));
+    debug_assert!(is_sorted(&rdirs));
+
+    let mut ldirs = ldirs.into_iter();
+    let mut rdirs = rdirs.into_iter();
+    let mut ldir = ldirs.next();
+    let mut rdir = rdirs.next();
+
+    loop {
+        match (ldir, rdir) {
+            (Some(l), Some(r)) => match l.path.cmp(&r.path) {
+                Ordering::Less => {
+                    add_to_output(DiffItem::left(l));
+                    ldir = ldirs.next();
+                    rdir = Some(r);
+                }
+                Ordering::Greater => {
+                    add_to_output(DiffItem::right(r));
+                    ldir = Some(l);
+                    rdir = rdirs.next();
+                }
+                Ordering::Equal => {
+                    // We only need to diff the directories if their hashes don't match.
+                    // The exception is if both hashes are None (indicating the trees
+                    // have not yet been persisted), in which case we must manually compare
+                    // all of the entries since we can't tell if they are the same.
+                    if l.node != r.node || l.node.is_none() {
+                        add_to_output(DiffItem::Changed(l, r));
+                    }
+                    ldir = ldirs.next();
+                    rdir = rdirs.next();
+                }
+            },
+            (Some(l), None) => {
+                add_to_output(DiffItem::left(l));
+                ldir = ldirs.next();
+                rdir = None;
+            }
+            (None, Some(r)) => {
+                add_to_output(DiffItem::right(r));
+                ldir = None;
+                rdir = rdirs.next();
+            }
+            (None, None) => break,
+        }
+    }
+
+    output
+}
+
+fn is_sorted<T: Ord>(iter: impl IntoIterator<Item = T>) -> bool {
+    let mut iter = iter.into_iter();
+    if let Some(mut prev) = iter.next() {
+        for i in iter {
+            if i < prev {
+                return false;
+            }
+            prev = i;
+        }
+    }
+    true
 }
 
 #[cfg(test)]
@@ -221,32 +421,191 @@ mod tests {
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
-    use crate::{tree::store::TestStore, Manifest};
+    use crate::{
+        tree::{store::TestStore, testutil::*, DiffType, Link},
+        FileMetadata, FileType, Manifest,
+    };
 
-    fn make_meta(hex: &str) -> FileMetadata {
-        FileMetadata::regular(node(hex))
+    #[test]
+    fn test_diff_single() {
+        let tree = make_tree(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
+        let dir = Directory::from_root(&tree.root).unwrap();
+        let mut next = VecDeque::new();
+
+        let matcher = AlwaysMatcher::new();
+        let entries = diff_single(dir, &mut next, Side::Left, &tree.store, &matcher).unwrap();
+
+        let expected_entries = vec![
+            DiffEntry::new(
+                repo_path_buf("a"),
+                DiffType::LeftOnly(FileMetadata {
+                    node: node("1"),
+                    file_type: FileType::Regular,
+                }),
+            ),
+            DiffEntry::new(
+                repo_path_buf("c"),
+                DiffType::LeftOnly(FileMetadata {
+                    node: node("3"),
+                    file_type: FileType::Regular,
+                }),
+            ),
+        ];
+        assert_eq!(entries, expected_entries);
+
+        let dummy = Link::ephemeral();
+        let expected_next = VecDeque::from(vec![
+            DiffItem::Single(make_dir("b", None, &dummy), Side::Left),
+            DiffItem::Single(make_dir("d", None, &dummy), Side::Left),
+        ]);
+
+        assert_eq!(next, expected_next);
+    }
+
+    #[test]
+    fn test_diff_files() {
+        let lfiles = vec![
+            make_file("a", "1"),
+            make_file("b", "2"),
+            make_file("c", "3"),
+            make_file("e", "4"),
+        ];
+        let rfiles = vec![
+            make_file("a", "1"),
+            make_file("c", "3"),
+            make_file("d", "5"),
+            make_file("e", "6"),
+        ];
+
+        let matcher = AlwaysMatcher::new();
+        let entries = diff_files(lfiles, rfiles, &matcher);
+        let expected = vec![
+            DiffEntry::new(
+                repo_path_buf("b"),
+                DiffType::LeftOnly(FileMetadata {
+                    node: node("2"),
+                    file_type: FileType::Regular,
+                }),
+            ),
+            DiffEntry::new(
+                repo_path_buf("d"),
+                DiffType::RightOnly(FileMetadata {
+                    node: node("5"),
+                    file_type: FileType::Regular,
+                }),
+            ),
+            DiffEntry::new(
+                repo_path_buf("e"),
+                DiffType::Changed(
+                    FileMetadata {
+                        node: node("4"),
+                        file_type: FileType::Regular,
+                    },
+                    FileMetadata {
+                        node: node("6"),
+                        file_type: FileType::Regular,
+                    },
+                ),
+            ),
+        ];
+
+        assert_eq!(entries, expected);
+    }
+
+    #[test]
+    fn test_diff() {
+        let ltree = make_tree(&[
+            ("changed", "1"),
+            ("d1/changed", "1"),
+            ("d1/leftonly", "1"),
+            ("d1/same", "1"),
+            ("d2/changed", "1"),
+            ("d2/leftonly", "1"),
+            ("d2/same", "1"),
+            ("leftonly", "1"),
+            ("same", "1"),
+        ]);
+        let rtree = make_tree(&[
+            ("changed", "2"),
+            ("d1/changed", "2"),
+            ("d1/rightonly", "1"),
+            ("d1/same", "1"),
+            ("d2/changed", "2"),
+            ("d2/rightonly", "1"),
+            ("d2/same", "1"),
+            ("rightonly", "1"),
+            ("same", "1"),
+        ]);
+
+        let matcher = AlwaysMatcher::new();
+        let diff = Diff::new(&ltree, &rtree, &matcher);
+        let entries = diff
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap()
+            .into_iter()
+            .map(|entry| entry.path)
+            .collect::<Vec<_>>();
+
+        let expected = vec![
+            repo_path_buf("changed"),
+            repo_path_buf("leftonly"),
+            repo_path_buf("rightonly"),
+            repo_path_buf("d1/changed"),
+            repo_path_buf("d1/leftonly"),
+            repo_path_buf("d1/rightonly"),
+            repo_path_buf("d2/changed"),
+            repo_path_buf("d2/leftonly"),
+            repo_path_buf("d2/rightonly"),
+        ];
+        assert_eq!(entries, expected);
+    }
+
+    #[test]
+    fn test_diff_matcher() {
+        let ltree = make_tree(&[
+            ("changed", "1"),
+            ("d1/changed", "1"),
+            ("d1/leftonly", "1"),
+            ("d1/same", "1"),
+            ("d2/changed", "1"),
+            ("d2/leftonly", "1"),
+            ("d2/same", "1"),
+            ("leftonly", "1"),
+            ("same", "1"),
+        ]);
+        let rtree = make_tree(&[
+            ("changed", "2"),
+            ("d1/changed", "2"),
+            ("d1/rightonly", "1"),
+            ("d1/same", "1"),
+            ("d2/changed", "2"),
+            ("d2/rightonly", "1"),
+            ("d2/same", "1"),
+            ("rightonly", "1"),
+            ("same", "1"),
+        ]);
+
+        let matcher = TreeMatcher::from_rules(["d1"].iter());
+        let diff = Diff::new(&ltree, &rtree, &matcher);
+        let entries = diff
+            .collect::<Fallible<Vec<_>>>()
+            .unwrap()
+            .into_iter()
+            .map(|entry| entry.path)
+            .collect::<Vec<_>>();
+
+        let expected = vec![
+            repo_path_buf("d1/changed"),
+            repo_path_buf("d1/leftonly"),
+            repo_path_buf("d1/rightonly"),
+        ];
+        assert_eq!(entries, expected);
     }
 
     #[test]
     fn test_diff_generic() {
-        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-        left.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        left.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        left.insert(repo_path_buf("a3/b1"), make_meta("40"))
-            .unwrap();
-
-        let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right
-            .insert(repo_path_buf("a1/b2"), make_meta("40"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a3/b1"), make_meta("40"))
-            .unwrap();
+        let mut left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let mut right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -254,16 +613,16 @@ mod tests {
                 .unwrap(),
             vec!(
                 DiffEntry::new(
-                    repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::LeftOnly(make_meta("10"))
-                ),
-                DiffEntry::new(
                     repo_path_buf("a1/b2"),
                     DiffType::Changed(make_meta("20"), make_meta("40"))
                 ),
                 DiffEntry::new(
                     repo_path_buf("a2/b2/c2"),
                     DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
                 ),
             )
         );
@@ -277,16 +636,16 @@ mod tests {
                 .unwrap(),
             vec!(
                 DiffEntry::new(
-                    repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::LeftOnly(make_meta("10"))
-                ),
-                DiffEntry::new(
                     repo_path_buf("a1/b2"),
                     DiffType::Changed(make_meta("20"), make_meta("40"))
                 ),
                 DiffEntry::new(
                     repo_path_buf("a2/b2/c2"),
                     DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
                 ),
             )
         );
@@ -338,8 +697,8 @@ mod tests {
                 .unwrap(),
             vec!(
                 DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(make_meta("30"))),
-                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(make_meta("10"))),
                 DiffEntry::new(repo_path_buf("a2"), DiffType::LeftOnly(make_meta("20"))),
+                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(make_meta("10"))),
                 DiffEntry::new(repo_path_buf("a2/b2"), DiffType::RightOnly(make_meta("40"))),
             )
         );
@@ -348,31 +707,21 @@ mod tests {
     #[test]
     fn test_diff_left_empty() {
         let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-
-        let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right
-            .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
+        let mut right = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                DiffEntry::new(
-                    repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::RightOnly(make_meta("10"))
-                ),
                 DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
                 DiffEntry::new(
                     repo_path_buf("a2/b2/c2"),
                     DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::RightOnly(make_meta("10"))
                 ),
             )
         );
@@ -385,39 +734,23 @@ mod tests {
                 .collect::<Fallible<Vec<_>>>()
                 .unwrap(),
             vec!(
-                DiffEntry::new(
-                    repo_path_buf("a1/b1/c1/d1"),
-                    DiffType::RightOnly(make_meta("10"))
-                ),
                 DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
                 DiffEntry::new(
                     repo_path_buf("a2/b2/c2"),
                     DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::RightOnly(make_meta("10"))
                 ),
             )
         );
     }
 
     #[test]
-    fn test_diff_matcher() {
-        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
-        left.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        left.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        left.insert(repo_path_buf("a3/b1"), make_meta("40"))
-            .unwrap();
-
-        let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
-        right
-            .insert(repo_path_buf("a1/b2"), make_meta("40"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
-        right
-            .insert(repo_path_buf("a3/b1"), make_meta("40"))
-            .unwrap();
+    fn test_diff_matcher_2() {
+        let left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
 
         assert_eq!(
             Diff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
@@ -470,18 +803,12 @@ mod tests {
 
     #[test]
     fn test_diff_on_sort_order_edge() {
-        let store = Arc::new(TestStore::new());
-
-        let mut left = Tree::ephemeral(store.clone());
-        left.insert(repo_path_buf("foo/bar-test/a.txt"), make_meta("10"))
-            .unwrap();
-        left.insert(repo_path_buf("foo/bartest/b.txt"), make_meta("20"))
-            .unwrap();
-
+        let left = make_tree(&[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")]);
         let mut right = left.clone();
         right
             .insert(repo_path_buf("foo/bar/c.txt"), make_meta("30"))
             .unwrap();
+
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
                 .collect::<Fallible<Vec<_>>>()
