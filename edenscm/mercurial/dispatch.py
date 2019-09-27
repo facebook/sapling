@@ -662,6 +662,7 @@ def _runcatch(req):
                 and ui.interactive()
                 and not ui.pageractive
                 and not ui.plain()
+                and ui.formatted()
             ):
                 ui.write_err(
                     _(
