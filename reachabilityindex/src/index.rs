@@ -144,6 +144,8 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error>;
 
+    /// Check if `ancestor` changeset is an ancestor of `descendant` changeset
+    /// Note that a changeset IS NOT its own ancestor
     fn is_ancestor(
         &self,
         ctx: CoreContext,
