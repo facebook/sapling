@@ -2871,6 +2871,9 @@ def hgcmd():
     to avoid things opening new shell windows like batch files, so we
     get either the python call or current executable.
     """
+    path = encoding.environ.get("HGEXECUTABLEPATH")
+    if path:
+        return [path]
     if mainfrozen():
         if getattr(sys, "frozen", None) == "macosx_app":
             # Env variable set by py2app
