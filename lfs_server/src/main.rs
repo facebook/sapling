@@ -11,11 +11,13 @@
 use clap::Arg;
 use failure::{err_msg, Error};
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
+use futures::{empty, future::Either, sync::oneshot, Future, IntoFuture};
+use futures_ext::FutureExt as Futures01Ext;
 use futures_preview::{FutureExt, TryFutureExt};
 use futures_util::{compat::Future01CompatExt, try_future::try_join_all};
 use gotham::bind_server;
 use scuba::ScubaSampleBuilder;
+use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -27,7 +29,7 @@ use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 
-use cmdlib::{args, monitoring::start_fb303_and_stats_agg};
+use cmdlib::{args, monitoring::create_fb303_and_stats_agg};
 
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
@@ -184,7 +186,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut runtime = tokio::runtime::Runtime::new()?;
 
-    start_fb303_and_stats_agg(fb, &mut runtime, SERVICE_NAME, &logger, &matches)?;
+    let stats_aggregation = match create_fb303_and_stats_agg(fb, SERVICE_NAME, &logger, &matches)? {
+        Some(fut) => fut.discard().left_future(),
+        None => empty().right_future(),
+    };
 
     let repos: HashMap<_, _> = runtime
         .block_on(try_join_all(futs).compat())?
@@ -220,9 +225,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(err_msg("Invalid Socket Address"))?;
 
     let listener = TcpListener::bind(&addr).chain_err(err_msg("Could not start TCP listener"))?;
-    info!(&logger, "Listening on {:?}", addr);
 
-    match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
+    let run_server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
             let config = secure_utils::SslConfig {
                 cert: tls_certificate.to_string(),
@@ -243,29 +247,62 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )?;
             let acceptor = fbs_tls_builder.build();
 
-            let server = bind_server(listener, root, move |socket| {
-                acceptor.accept_async(socket).map_err({
-                    let logger = logger.clone();
-                    move |e| {
-                        warn!(&logger, "TLS handshake failed: {:?}", e);
-                        ()
-                    }
-                })
-            });
-
-            runtime
-                .block_on(server)
-                .map_err(|()| err_msg("Server failed"))?;
+            bind_server(listener, root, {
+                let logger = logger.clone();
+                move |socket| {
+                    acceptor.accept_async(socket).map_err({
+                        let logger = logger.clone();
+                        move |e| {
+                            warn!(&logger, "TLS handshake failed: {:?}", e);
+                            ()
+                        }
+                    })
+                }
+            })
+            .left_future()
         }
         (None, None, None, None) => {
-            let server = bind_server(listener, root, |socket| Ok(socket).into_future());
-
-            runtime
-                .block_on(server)
-                .map_err(|()| err_msg("Server failed"))?;
+            bind_server(listener, root, |socket| Ok(socket).into_future()).right_future()
         }
         _ => return Err(err_msg("TLS flags must be passed together")),
+    };
+
+    let (sender, receiver) = oneshot::channel::<()>();
+    let main = run_server.join(stats_aggregation).select2(receiver).then({
+        let logger = logger.clone();
+        move |res| -> Result<(), ()> {
+            if let Ok(Either::B(_)) = res {
+                // We were signalled.
+                info!(&logger, "Shutting down server...");
+            } else {
+                // NOTE: We need to panic here, because otherwise main is going to be blocked on
+                // waiting for a signal forever. This shouldn't normally ever happen.
+                unreachable!("Server terminated or signal listener was dropped.")
+            }
+
+            Ok(())
+        }
+    });
+
+    // Start listening.
+    info!(&logger, "Listening on {:?}", addr);
+    runtime.spawn(main);
+
+    // Wait for a signal that tells us to exit.
+    let signals = Signals::new(&[SIGTERM, SIGINT])?;
+    for signal in signals.forever() {
+        info!(&logger, "Signalled: {}", signal);
+        let _ = sender.send(());
+        break;
     }
 
+    // Wait for requests to finish.
+    info!(&logger, "Waiting for in-flight requests to finish...");
+    runtime
+        .shutdown_on_idle()
+        .wait()
+        .map_err(|_| err_msg("Failed to shutdown runtime!"))?;
+
+    info!(&logger, "Exiting...");
     Ok(())
 }

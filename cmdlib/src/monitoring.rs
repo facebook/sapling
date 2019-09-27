@@ -11,10 +11,10 @@ use std::thread::{self};
 use clap::ArgMatches;
 use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
-use futures::future::Future;
+use futures::Future;
 use services::{self, AliveService};
 use slog::{info, Logger};
-use stats::schedule_stats_aggregation;
+use stats::{schedule_stats_aggregation, Scheduler};
 
 /// `service_name` should match tupperware to avoid confusion.
 /// e.g. for mononoke/blobstore_healer, pass blobstore_healer
@@ -24,7 +24,24 @@ pub fn start_fb303_and_stats_agg(
     service_name: &str,
     logger: &Logger,
     matches: &ArgMatches,
-) -> Result<Option<()>, Error> {
+) -> Result<(), Error> {
+    let service_name = service_name.to_string();
+    if let Some(scheduler) = create_fb303_and_stats_agg(fb, &service_name, logger, matches)? {
+        runtime.spawn(scheduler.map_err(|e| {
+            eprintln!("Unexpected error from stats aggregation: {:#?}", e);
+        }));
+    }
+    Ok(())
+}
+
+/// This is a lower-level function that requires you to spawn the stats aggregation future
+/// yourself. This is useful if you'd like to be able to drop it in order to cancel it.
+pub fn create_fb303_and_stats_agg(
+    fb: FacebookInit,
+    service_name: &str,
+    logger: &Logger,
+    matches: &ArgMatches,
+) -> Result<Option<Scheduler>, Error> {
     let service_name = service_name.to_string();
     matches
         .value_of("fb303-thrift-port")
@@ -48,12 +65,6 @@ pub fn start_fb303_and_stats_agg(
                 .and_then(|_| {
                     schedule_stats_aggregation()
                         .map_err(|e| format_err!("Failed to start stats aggregation {:?}", e))
-                })
-                .map(|stats_aggregation| {
-                    runtime.spawn(stats_aggregation.map_err(|e| {
-                        eprintln!("Unexpected error from stats aggregation: {:#?}", e);
-                    }));
-                    ()
                 })
         })
         .transpose()
