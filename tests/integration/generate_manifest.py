@@ -15,10 +15,6 @@ from mononoke.tests.integration.lib_buck import find_buck_out
 def map_name(k):
     v = os.environ[k]
 
-    # Hg is actually within a file there.
-    if k == "BINARY_HG":
-        return os.path.join(v, "hg")
-
     # We want our test root to be the directory that actually contains the
     # files.
     if k == "TEST_ROOT_FACEBOOK":
