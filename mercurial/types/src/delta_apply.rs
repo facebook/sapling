@@ -25,7 +25,7 @@ pub fn wrap_deltas<I: IntoIterator<Item = Delta>>(
     let mut content_offset = 0;
 
     for delta in deltas {
-        let wrapped_delta = FragmentWrapperIterator::new(&delta, content_offset as i32);
+        let wrapped_delta = FragmentWrapperIterator::new(&delta, content_offset as i64);
         for frag in delta.fragments() {
             data.extend_from_slice(frag.content.as_slice());
             content_offset += frag.content.len();
@@ -40,10 +40,10 @@ pub fn wrap_deltas<I: IntoIterator<Item = Delta>>(
 // Fragment Wrapper, it does not have actual data, only references to real data
 #[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, HeapSizeOf)]
 pub struct FragmentWrapper {
-    pub start: i32,
-    pub end: i32,
-    pub len: i32,
-    pub content_start: i32,
+    pub start: i64,
+    pub end: i64,
+    pub len: i64,
+    pub content_start: i64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, HeapSizeOf, Default)]
@@ -54,19 +54,19 @@ pub struct FragmentWrapperIterator {
 }
 
 impl FragmentWrapperIterator {
-    pub fn new(delta: &Delta, content_offset: i32) -> FragmentWrapperIterator {
+    pub fn new(delta: &Delta, content_offset: i64) -> FragmentWrapperIterator {
         // Convert Delta to Vec<FragmentWrapper>, using global offset of the content in Content Bytes
         let mut frag_wrappers = Vec::new();
         let mut offset = content_offset;
 
         for frag in delta.fragments() {
             let frag_wrapper = FragmentWrapper {
-                start: frag.start as i32,
-                end: frag.end as i32,
-                len: frag.content_length() as i32,
-                content_start: offset as i32,
+                start: frag.start as i64,
+                end: frag.end as i64,
+                len: frag.content_length() as i64,
+                content_start: offset as i64,
             };
-            offset += frag.content_length() as i32;
+            offset += frag.content_length() as i64;
             frag_wrappers.push(frag_wrapper);
         }
 
@@ -76,7 +76,7 @@ impl FragmentWrapperIterator {
         }
     }
 
-    pub fn content_length(&self) -> i32 {
+    pub fn content_length(&self) -> i64 {
         let mut size = 0;
         for frag in self.frags.as_slice() {
             size += frag.len;
@@ -167,9 +167,9 @@ fn combine(
 fn gather(
     dst: &mut FragmentWrapperIterator,
     src: &mut FragmentWrapperIterator,
-    cut: i32,
-    mut offset: i32,
-) -> i32 {
+    cut: i64,
+    mut offset: i64,
+) -> i64 {
     while !src.end() {
         let frag = src.current_fragment().clone();
 
@@ -213,7 +213,7 @@ fn gather(
 }
 
 /// Delete all fragments from src until cut
-fn discard(src: &mut FragmentWrapperIterator, cut: i32, mut offset: i32) -> i32 {
+fn discard(src: &mut FragmentWrapperIterator, cut: i64, mut offset: i64) -> i64 {
     while !src.end() {
         let frag = src.current_fragment().clone();
 
