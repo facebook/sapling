@@ -30,6 +30,8 @@ setup testing repo for mononoke
   $ hg add branch1
   $ hg commit -ma
   $ COMMITB1=$(hg --debug id -i)
+  $ COMMITB1_BOOKMARK=B1
+  $ hg bookmark $COMMITB1_BOOKMARK
   $ hg co $COMMIT2 > /dev/null
   $ touch branch2
   $ hg add branch2
@@ -228,6 +230,11 @@ test get tree
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000000000000000000000000000000000000001 | extract_json_error
   0000000000000000000000000000000000000001 is not found
   404
+test get bookmark
+  $ sslcurl $APISERVER/repo/resolve_bookmark/$COMMITB1_BOOKMARK | tee output | jq ".comment,.author"
+  "a"
+  "test"
+
 
 test get changeset
   $ sslcurl $APISERVER/repo/changeset/$COMMIT1 | tee output | jq ".comment,.author"

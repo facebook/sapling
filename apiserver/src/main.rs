@@ -219,6 +219,31 @@ fn get_changeset(
 }
 
 #[derive(Deserialize)]
+struct GetBookmarkParams {
+    repo: String,
+    bookmark: String,
+}
+
+fn get_bookmark(
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<GetBookmarkParams>,
+        HttpRequest<HttpServerState>,
+    ),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
+    state.mononoke.send_query(
+        get_ctx(&req, &state),
+        MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetChangeset {
+                revision: Revision::Bookmark(params.bookmark),
+            },
+        },
+    )
+}
+
+#[derive(Deserialize)]
 struct EdenGetDataParams {
     repo: String,
 }
@@ -673,6 +698,9 @@ fn main(fb: FacebookInit) -> Fallible<()> {
                 })
                 .resource("/changeset/{hash}", |r| {
                     r.method(http::Method::GET).with_async(get_changeset)
+                })
+                .resource("/resolve_bookmark/{bookmark}", |r| {
+                    r.method(http::Method::GET).with_async(get_bookmark)
                 })
                 .resource("/eden/data", |r| {
                     r.method(http::Method::POST)
