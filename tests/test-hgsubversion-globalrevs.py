@@ -44,7 +44,6 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
             ui.setconfig("extensions", "pushrebase", "")
             ui.setconfig("globalrevs", "onlypushrebase", False)
             ui.setconfig("globalrevs", "startrev", 5000)
-            ui.setconfig("globalrevs", "svnrevinteroperation", True)
             _set_hgsql_config(ui)
 
         def _set_hgsql_config(ui):

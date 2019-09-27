@@ -41,31 +41,6 @@ template.
     # undefined behaviour.
     startrev = 0
 
-    # If this configuration is true, the `globalrev` and `svnrev` based revsets
-    # would be interoperable. In particular, the commands
-    #
-    #   hg log -r "svnrev(<svnrev>/<globalrev>)"
-    #   hg log -r "globalrev(<svnrev>/<globalrev>)"
-    #   hg log -r "r<svnrev>/r<globalrev>"
-    #   hg log -r "m<svnrev>/m<globalrev>"
-    #
-    # would resolve to a commit with <svnrev> as the corresponding svn revision
-    # number and/or <globalrev> as the corresponding strictly increasing global
-    # revision number.
-    #
-    # Optionally, the `svnrev` and `globalrev` template keywords will exhibit
-    # similar behavior i.e. resolving to the `globalrev` if both this
-    # configuration and the `overridesvnrevkeyword` are true.
-    svnrevinteroperation = False
-
-    # If this configuration is true, the `svnrev` template keyword would
-    # function as it were the `globalrev` template keyword i.e. the `globalrev`
-    # would be returned when requesting for the `svnrev` via templates.
-    #
-    # Not that this configuration requires the `svnrevinteroperation`
-    # configuration to be true.
-    overridesvnrevkeyword = False
-
     # If this configuration is true, we use a cached mapping from `globalrev ->
     # hash` to enable fast lookup of commits based on the globalrev. This
     # mapping can be built using the `updateglobalrevmeta` command.
@@ -105,12 +80,10 @@ configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
 configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
-configitem("globalrevs", "overridesvnrevkeyword", default=False)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
 configitem("globalrevs", "scmquerylookup ", default=False)
 configitem("globalrevs", "startrev", default=0)
-configitem("globalrevs", "svnrevinteroperation", default=False)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -153,9 +126,26 @@ def uisetup(ui):
                 hgsubversionmod.util, "lookuprev", _lookupsvnrevwrapper
             )
             extensions.wrapfunction(hgsubversionmod, "_svnrevkw", _svnrevkwwrapper)
+        else:
 
-    if ui.configbool("globalrevs", "svnrevinteroperation"):
-        extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
+            @templatekeyword("svnrev")
+            def svnrevkw(repo, ctx, **kwargs):
+                return globalrevkw(repo, ctx, **kwargs)
+
+            @revsetpredicate("svnrev(number)", safe=True, weight=10)
+            def _revsetsvnrev(repo, subset, x):
+                """Changesets with given Subversion revision number.
+                """
+                args = revset.getargs(x, 1, 1, "svnrev takes one argument")
+                svnrev = revset.getinteger(
+                    args[0], "the argument to svnrev() must be a number"
+                )
+
+                torev = repo.changelog.rev
+                revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, svnrev))
+                return subset & revs
+
+    extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
 
     # We only wrap `hgsql` extension for embedding strictly increasing global
     # revision number in commits if the repository has `hgsql` enabled and it is
@@ -292,11 +282,7 @@ def _lookupsvnrevwrapper(orig, repo, rev):
 
 
 def _svnrevkwwrapper(orig, repo, ctx, **kwargs):
-    return (
-        globalrevkw(repo, ctx, **kwargs)
-        if repo.ui.configbool("globalrevs", "overridesvnrevkeyword")
-        else orig(repo, ctx, **kwargs)
-    )
+    return globalrevkw(repo, ctx, **kwargs)
 
 
 _u64lestruct = struct.Struct("<Q")
@@ -378,13 +364,7 @@ def _lookupglobalrev(repo, grev):
 
 
 def _lookupname(repo, name):
-    if (
-        name.startswith("m")
-        or (
-            repo.ui.configbool("globalrevs", "svnrevinteroperation")
-            and name.startswith("r")
-        )
-    ) and name[1:].isdigit():
+    if (name.startswith("m") or name.startswith("r")) and name[1:].isdigit():
         return _lookupglobalrev(repo, int(name[1:]))
 
 
@@ -404,7 +384,9 @@ def _revsetglobalrev(repo, subset, x):
         args[0], "the argument to globalrev() must be a number"
     )
 
-    return subset & smartset.baseset(_lookupglobalrev(repo, globalrev))
+    torev = repo.changelog.rev
+    revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, globalrev))
+    return subset & revs
 
 
 def getglobalrev(ui, ctx, defval=None):

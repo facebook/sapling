@@ -273,33 +273,6 @@ missing file: binary3
             self.ui(), repo=self.repo, args=[otherurl], unsafe_skip_uuid_check=True
         )
 
-    def test_svntruncatemeta(self):
-        repo, repo_path = self.load_and_fetch("two_heads.svndump", config={})
-        orig_tip_rev = len(repo) - 1
-        orig_tip_svn_rev = util.getsvnrevnum(repo["tip"])
-
-        orig_tip = repo["tip"]
-
-        # Create a new commit that has the same svnrev as the old one
-        new_ctx = context.metadataonlyctx(
-            repo, orig_tip, text="foo", extra=orig_tip.extra()
-        )
-        new_tip = repo[repo.commitctx(new_ctx)]
-
-        # Before the truncate, the svnrev points at the old commit
-        self.assertEqual(
-            list(repo.revs("svnrev(%s)" % orig_tip_svn_rev)), [orig_tip_rev]
-        )
-
-        svncommands.truncatemeta(self.ui(), repo=self.repo, args=[])
-        repo.invalidate()
-
-        # After the truncate, the svnrev points at the new commit
-        new_tip_rev = new_tip.rev()
-        self.assertEqual(
-            list(repo.revs("svnrev(%s)" % orig_tip_svn_rev)), [new_tip_rev]
-        )
-
     def test_svn_reposubdir_config(self):
         otherpath = self.load_svndump("binaryfiles-broken.svndump")
         otherurl = test_hgsubversion_util.fileurl(otherpath)
