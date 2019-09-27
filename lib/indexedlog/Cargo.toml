@@ -29,4 +29,3 @@ harness = false
 [[bench]]
 name = "log"
 harness = false
-
