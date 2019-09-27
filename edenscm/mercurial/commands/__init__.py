@@ -4601,6 +4601,13 @@ def phase(ui, repo, *revs, **opts):
             ctx = repo[r]
             ui.write("%i: %s\n" % (ctx.rev(), ctx.phasestr()))
     else:
+        if repo.ui.configbool("experimental", "narrow-heads"):
+            ui.warn(
+                _(
+                    "(phases are now managed by remotenames and heads; manully editing phases is a no-op)\n"
+                )
+            )
+            return 0
         tr = None
         lock = repo.lock()
         try:

@@ -129,3 +129,15 @@ Using commit hash to access C should be allowed
 
   $ hg log -r $C -T '{desc}'
   C (no-eol)
+
+Phases
+
+  $ hg phase --force --public $D
+  (phases are now managed by remotenames and heads; manully editing phases is a no-op)
+  $ hg phase $D
+  3: secret
+
+  $ hg phase --force --draft $A
+  (phases are now managed by remotenames and heads; manully editing phases is a no-op)
+  $ hg phase $A
+  0: public
