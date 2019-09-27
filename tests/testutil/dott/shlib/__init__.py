@@ -92,6 +92,8 @@ def chmod(*args):
     for arg in args:
         if arg == "+x":
             mode = 0o777
+        elif arg == "-x":
+            mode = 0o666
         elif arg[:1] in {"+", "-"}:
             raise NotImplementedError("chmod %s is unsupported" % arg)
         else:
