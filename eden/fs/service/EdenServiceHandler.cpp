@@ -103,6 +103,26 @@ std::string logHash(StringPiece thriftArg) {
     return folly::hexlify(thriftArg);
   }
 }
+
+/**
+ * Convert a vector of strings from a thrift argument to a field
+ * that we can log in an INSTRUMENT_THRIFT_CALL() log message.
+ *
+ * This truncates very log lists to only log the first few elements.
+ */
+std::string toLogArg(const std::vector<std::string>& args) {
+  constexpr size_t limit = 5;
+  if (args.size() <= limit) {
+    return "[" + folly::join(", ", args) + "]";
+  } else {
+    return folly::to<string>(
+        "[",
+        folly::join(", ", args.begin(), args.begin() + limit),
+        ", and ",
+        args.size() - limit,
+        " more]");
+  }
+}
 } // namespace
 
 #define TLOG(logger, level, file, line)     \
@@ -378,8 +398,7 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths) {
 #ifndef _WIN32
   TraceBlock block("getSHA1");
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
 
   vector<Future<Hash>> futures;
   for (const auto& path : *paths) {
@@ -715,8 +734,7 @@ EdenServiceHandler::future_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
 #ifndef _WIN32
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, "[" + folly::join(", ", *paths) + "]");
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -768,8 +786,7 @@ void EdenServiceHandler::glob(
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> globs) {
 #ifndef _WIN32
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, "[" + folly::join(", ", *globs.get()) + "]");
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*globs));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -805,7 +822,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
       params->mountPoint,
-      "[" + folly::join(", ", params->globs) + "]",
+      toLogArg(params->globs),
       params->includeDotfiles);
   auto edenMount = server_->getMount(params->mountPoint);
   auto rootInode = edenMount->getRootInode();
