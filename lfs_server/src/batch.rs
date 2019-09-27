@@ -254,8 +254,10 @@ fn batch_download_response_objects(
     objects: &[RequestObject],
     upstream: &UpstreamObjects,
     internal: &HashMap<RequestObject, ObjectAction>,
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Vec<ResponseObject> {
-    objects
+    let mut upstream_blobs = vec![];
+    let responses = objects
         .iter()
         .map(|object| {
             // For downloads, see if we can find it from internal or upstream (which means we
@@ -269,7 +271,10 @@ fn batch_download_response_objects(
                 Some((source, action)) => {
                     match source {
                         Source::Internal => STATS::download_redirect_internal.add_value(1),
-                        Source::Upstream => STATS::download_redirect_upstream.add_value(1),
+                        Source::Upstream => {
+                            upstream_blobs.push(object.oid.to_string());
+                            STATS::download_redirect_upstream.add_value(1);
+                        }
                     };
 
                     ObjectStatus::Ok {
@@ -293,7 +298,13 @@ fn batch_download_response_objects(
                 status,
             }
         })
-        .collect()
+        .collect();
+
+    if let Some(ref mut scuba) = scuba {
+        scuba.add("batch_internal_missing_blobs", upstream_blobs);
+    }
+
+    responses
 }
 
 /// Try to prepare a batch response with only internal objects. Returns None if any are missing.
@@ -327,14 +338,14 @@ fn batch_download_internal_only_response_objects(
 async fn batch_download(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
-    mut scuba: Option<&mut ScubaMiddlewareState>,
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<ResponseBatch, Error> {
     let upstream = upstream_objects(ctx, &batch.objects).fuse();
     let internal = internal_objects(ctx, &batch.objects).fuse();
     pin_mut!(upstream, internal);
 
-    let mut update_batch_order = move |status| {
-        if let Some(ref mut scuba) = scuba {
+    let mut update_batch_order = |status| {
+        if let Some(ref mut scuba) = scuba.as_mut() {
             scuba.add("batch_order", status);
         }
     };
@@ -348,7 +359,7 @@ async fn batch_download(
             debug!(ctx.logger(), "batch: upstream ready");
             let internal_objects = internal.await?;
             debug!(ctx.logger(), "batch: internal ready");
-            batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects)
+            batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects, scuba)
         }
         internal_objects = internal => {
             debug!(ctx.logger(), "batch: internal ready");
@@ -370,7 +381,7 @@ async fn batch_download(
                 update_batch_order("both");
                 let upstream_objects = upstream.await?;
                 debug!(ctx.logger(), "batch: upstream ready");
-                batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects)
+                batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects, scuba)
             }
         }
     };
@@ -407,7 +418,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let res = match request_batch.operation {
         Operation::Upload => batch_upload(&ctx, request_batch).await,
-        Operation::Download => batch_download(&ctx, request_batch, scuba).await,
+        Operation::Download => batch_download(&ctx, request_batch, &mut scuba).await,
     };
 
     let res = res.map_err(HttpError::e502)?;
@@ -461,6 +472,7 @@ mod test {
             &req,
             &UpstreamObjects::UpstreamPresence(upstream),
             &internal,
+            &mut None,
         );
 
         assert_eq!(
