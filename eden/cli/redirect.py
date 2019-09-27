@@ -20,6 +20,7 @@ from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
+from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import mkdir_p, mkscratch_bin
 from .version import get_running_eden_version_parts
@@ -425,6 +426,38 @@ def get_effective_redirections(
         redirs[rel_path] = redir
 
     return redirs
+
+
+def file_size(path: Path) -> int:
+    st = os.lstat(path)
+    return st.st_size
+
+
+def compact_redirection_sparse_images(instance: EdenInstance) -> None:
+    if sys.platform != "darwin":
+        return
+
+    mount_table = mtab.new()
+    for checkout in instance.get_checkouts():
+        for redir in get_effective_redirections(checkout, mount_table).values():
+            if redir.type in (RedirectionType.LEGACY, RedirectionType.BIND):
+                target = redir.expand_target_abspath(checkout)
+                assert target is not None
+                dmg_file = redir._dmg_file_name(bytes(target))
+                print(f"\nCompacting {redir.expand_repo_path(checkout)}: {dmg_file}")
+                size_before = file_size(dmg_file)
+
+                proc = subprocess.Popen(
+                    ["hdiutil", "compact", dmg_file],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                stdout, stderr = proc.communicate()
+                if proc.returncode != 0:
+                    print(f"Compaction failed: {proc.returncode} {stdout} {stderr}")
+
+                size_after = file_size(dmg_file)
+                print(f"Size {format_size(size_before)} -> {format_size(size_after)}")
 
 
 def apply_redirection_configs_to_checkout_config(

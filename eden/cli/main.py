@@ -880,6 +880,8 @@ class GcCmd(Subcmd):
             print()
             # TODO: clear kernel caches
 
+        redirect_mod.compact_redirection_sparse_images(instance)
+
         return 0
 
 
