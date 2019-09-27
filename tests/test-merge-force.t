@@ -12,26 +12,26 @@ remote content, then finally forgotten.
 
 Create base changeset
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 3 1
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 1
   $ hg addremove -q --similarity 0
   $ hg commit -qm 'base'
 
 Create remote changeset
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 3 2
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 2
   $ hg addremove -q --similarity 0
   $ hg commit -qm 'remote'
 
 Create local changeset
 
   $ hg update -q 0
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 3 3
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 3
   $ hg addremove -q --similarity 0
   $ hg commit -qm 'local'
 
 Set up working directory
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 3 wc
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 wc
   $ hg addremove -q --similarity 0
   $ hg forget *_*_*_*-untracked
   $ rm *_*_*_missing-*
@@ -283,7 +283,7 @@ missing_missing_content3_missing-tracked becomes removed ('R'), even though
 the remote side did not touch the file
 
   $ checkstatus() {
-  >   for f in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 3`
+  >   for f in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 3`
   >   do
   >     echo
   >     hg status -A $f
@@ -664,7 +664,7 @@ the remote side did not touch the file
   missing_missing_missing_missing-untracked: * (glob)
   <missing>
 
-  $ for f in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 3`
+  $ for f in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 3`
   > do
   >   if test -f ${f}.orig
   >   then
@@ -781,7 +781,7 @@ Set up working directory again
 
   $ hg -q update --clean 2
   $ hg --config extensions.purge= purge
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 3 wc
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 wc
   $ hg addremove -q --similarity 0
   $ hg forget *_*_*_*-untracked
   $ rm *_*_*_missing-*

@@ -5,7 +5,7 @@ combined correctly with the dirstate status.
 
 First commit
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 1
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 1
   $ hg addremove --similarity 0
   adding content1_content1_content1-tracked
   adding content1_content1_content1-untracked
@@ -31,7 +31,7 @@ First commit
 
 Second commit
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 2
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 2
   $ hg addremove --similarity 0
   removing content1_missing_content1-tracked
   removing content1_missing_content1-untracked
@@ -49,7 +49,7 @@ Second commit
 
 Working copy
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 wc
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 wc
   $ hg addremove --similarity 0
   adding content1_missing_content1-tracked
   adding content1_missing_content1-untracked

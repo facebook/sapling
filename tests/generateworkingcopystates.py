@@ -16,15 +16,15 @@
 #
 # Typical usage:
 #
-# $ python $TESTDIR/generate-working-copy-states.py state 2 1
+# $ python $TESTDIR/generateworkingcopystates.py state 2 1
 # $ hg addremove --similarity 0
 # $ hg commit -m 'first'
 #
-# $ python $TESTDIR/generate-working-copy-states.py state 2 1
+# $ python $TESTDIR/generateworkingcopystates.py state 2 1
 # $ hg addremove --similarity 0
 # $ hg commit -m 'second'
 #
-# $ python $TESTDIR/generate-working-copy-states.py state 2 wc
+# $ python $TESTDIR/generateworkingcopystates.py state 2 wc
 # $ hg addremove --similarity 0
 # $ hg forget *_*_*-untracked
 # $ rm *_*_missing-*

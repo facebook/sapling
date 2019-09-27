@@ -227,15 +227,15 @@ Generates history of files having 3 states, r0_r1_wc:
   $ hg init $TESTTMP/wcstates
   $ cd $TESTTMP/wcstates
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 1
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 1
   $ hg addremove -q --similarity 0
   $ hg commit -m0
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 2
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 2
   $ hg addremove -q --similarity 0
   $ hg commit -m1
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 wc
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 wc
   $ hg addremove -q --similarity 0
   $ hg forget *_*_*-untracked
   $ rm *_*_missing-*

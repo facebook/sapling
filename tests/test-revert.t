@@ -493,7 +493,7 @@ Write the python script to disk
 
 check list of planned files
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py filelist 2
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py filelist 2
   content1_content1_content1-tracked
   content1_content1_content1-untracked
   content1_content1_content3-tracked
@@ -548,7 +548,7 @@ Generate appropriate repo state
 
 Generate base changeset
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 1
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 1
   $ hg addremove --similarity 0
   adding content1_content1_content1-tracked
   adding content1_content1_content1-untracked
@@ -620,7 +620,7 @@ Generate base changeset
 
 Create parent changeset
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 2
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 2
   $ hg addremove --similarity 0
   removing content1_missing_content1-tracked
   removing content1_missing_content1-untracked
@@ -684,7 +684,7 @@ Create parent changeset
 
 Setup working directory
 
-  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 wc
+  $ $PYTHON $TESTDIR/generateworkingcopystates.py state 2 wc
   $ hg addremove --similarity 0
   adding content1_missing_content1-tracked
   adding content1_missing_content1-untracked
@@ -900,7 +900,7 @@ Test revert to parent content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  $ for file in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 2`; do
   >   echo '### revert for:' $file;
   >   hg revert $file;
   >   echo
@@ -993,7 +993,7 @@ Test revert to "base" content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  $ for file in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 2`; do
   >   echo '### revert for:' $file;
   >   hg revert $file --rev 'desc(base)';
   >   echo
@@ -1087,7 +1087,7 @@ Test revert to parent content with explicit file name but ignored files
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  $ for file in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 2`; do
   >   echo '### revert for:' $file;
   >   hg revert $file;
   >   echo
@@ -1181,7 +1181,7 @@ Test revert to "base" content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `$PYTHON $TESTDIR/generate-working-copy-states.py filelist 2`; do
+  $ for file in `$PYTHON $TESTDIR/generateworkingcopystates.py filelist 2`; do
   >   echo '### revert for:' $file;
   >   hg revert $file --rev 'desc(base)';
   >   echo
