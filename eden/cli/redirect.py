@@ -181,7 +181,7 @@ class Redirection:
         total_kb = total / 1024
         mount_path = Path(os.fsdecode(checkout_path)) / self.repo_path
         if not image_file_name.exists():
-            subprocess.check_call(
+            run_cmd_quietly(
                 [
                     "hdiutil",
                     "create",
@@ -197,7 +197,7 @@ class Redirection:
                 ]
             )
 
-        subprocess.check_call(
+        run_cmd_quietly(
             [
                 "hdiutil",
                 "attach",
@@ -210,7 +210,7 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout):
         mount_path = checkout.path / self.repo_path
-        subprocess.check_call(["hdiutil", "unmount", str(mount_path)])
+        run_cmd_quietly(["hdiutil", "unmount", str(mount_path)])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: bytes, target: bytes
@@ -433,6 +433,23 @@ def file_size(path: Path) -> int:
     return st.st_size
 
 
+def run_cmd_quietly(args, check=True) -> int:
+    """ Quietly run a command; if successful then its output is entirely suppressed.
+    If it fails then raise an exception containing the output/error streams.
+    If check=False then print the output and return the exit status """
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    if proc.returncode != 0:
+        cmd = " ".join([str(a) for a in args])
+        stdout = stdout.decode("utf-8")
+        stderr = stderr.decode("utf-8")
+        message = f"{cmd}: Failed with status {proc.returncode}: {stdout} {stderr}"
+        if check:
+            raise RuntimeError(message)
+        print(message, file=sys.stderr)
+    return proc.returncode
+
+
 def compact_redirection_sparse_images(instance: EdenInstance) -> None:
     if sys.platform != "darwin":
         return
@@ -447,14 +464,7 @@ def compact_redirection_sparse_images(instance: EdenInstance) -> None:
                 print(f"\nCompacting {redir.expand_repo_path(checkout)}: {dmg_file}")
                 size_before = file_size(dmg_file)
 
-                proc = subprocess.Popen(
-                    ["hdiutil", "compact", dmg_file],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                stdout, stderr = proc.communicate()
-                if proc.returncode != 0:
-                    print(f"Compaction failed: {proc.returncode} {stdout} {stderr}")
+                run_cmd_quietly(["hdiutil", "compact", dmg_file], check=False)
 
                 size_after = file_size(dmg_file)
                 print(f"Size {format_size(size_before)} -> {format_size(size_after)}")
