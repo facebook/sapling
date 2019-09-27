@@ -251,6 +251,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
 
   $ cd $TESTTMP
   $ hg clone ssh://user@dummy/server client3 -q --config visibility.enabled=false
+  migrating repo to old-style visibility and phases
+  (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
   $ cd client3
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig commitcloud.user_token_path=$TESTTMP

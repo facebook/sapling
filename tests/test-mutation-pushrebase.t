@@ -16,6 +16,8 @@ Set up server repository
   $ echo 1 > a
   $ echo 2 > b
   $ hg commit -Aqm base
+  migrating repo to old-style visibility and phases
+  (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
   $ hg bookmark master
 
 Set up client repository

@@ -48,6 +48,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   >   $PYTHON contrib/check-config.py
   undocumented: clone.requestfullclone (bool)
   undocumented: commitcloud.synccheckoutlocations (bool)
+  undocumented: extensions.remotenames (str)
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.enabled (bool)
   undocumented: fastmanifest.cachecutoffdays (int) [60]

@@ -349,7 +349,7 @@ class localrepository(object):
         "treestate",
         "storerequirements",
     }
-    _basestoresupported = {"visibleheads"}
+    _basestoresupported = {"visibleheads", "narrowheads"}
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
     # sets of (ui, featureset) functions for repo and store features.
@@ -572,6 +572,62 @@ class localrepository(object):
             if self.sharedvfs.exists(name) and not self.svfs.exists(name):
                 with self.wlock(), self.lock():
                     self.svfs.write(name, self.sharedvfs.read(name))
+
+        self._narrowheadsmigration()
+
+    def _narrowheadsmigration(self):
+        """Migrate if 'narrow-heads' config has changed."""
+        narrowheadsdesired = self.ui.configbool("experimental", "narrow-heads")
+        # 'narrow-heads' must work with visibility and remotenames
+        if (
+            not self.ui.configbool("visibility", "enabled")
+            or self.ui.config("extensions", "remotenames") == "!"
+        ):
+            narrowheadsdesired = False
+        narrowheadscurrent = "narrowheads" in self.storerequirements
+        if narrowheadsdesired != narrowheadscurrent:
+            if narrowheadsdesired:
+                # Migrating up is easy: Just add the requirement.
+                self.ui.write_err(
+                    _(
+                        "migrating repo to new-style visibility and phases\n"
+                        "(this does not affect most workflows; post in Source Control @ FB if you have issues)\n"
+                    )
+                )
+                with self.lock():
+                    self.storerequirements.add("narrowheads")
+                    self._writestorerequirements()
+            else:
+                # Migrating down to non-narrow heads requires restoring phases.
+                # For this invocation, still pretend that we use narrow-heads.
+                # But the next invocation will use non-narrow-heads.
+                self.ui.setconfig("experimental", "narrow-heads", True)
+                # Writing to <shared repo path>/.hg/phaseroots
+                self.ui.write_err(
+                    _(
+                        "migrating repo to old-style visibility and phases\n"
+                        "(this restores the behavior to a known good state; post in Source Control @ FB if you have issues)\n"
+                    )
+                )
+                with self.lock():
+                    # Accessing the raw file directly without going through
+                    # complicated phasescache APIs.
+                    draftroots = self.nodes("roots(draft())")
+                    lines = set(self.svfs.tryread("phaseroots").splitlines(True))
+                    toadd = ""
+                    for root in draftroots:
+                        # 1: phases.draft
+                        line = "1 %s\n" % hex(root)
+                        if line not in lines:
+                            toadd += line
+                    with self.svfs.open("phaseroots", "ab") as f:
+                        f.write(toadd)
+                    if toadd:
+                        self.ui.write_err(
+                            _("(added %s draft roots)\n") % toadd.count("\n")
+                        )
+                    self.storerequirements.remove("narrowheads")
+                    self._writestorerequirements()
 
     @property
     def vfs(self):
@@ -2684,5 +2740,8 @@ def newrepostorerequirements(repo):
     requirements = set()
     if ui.configbool("visibility", "enabled"):
         requirements.add("visibleheads")
+
+    if ui.configbool("experimental", "narrow-heads"):
+        requirements.add("narrowheads")
 
     return requirements
