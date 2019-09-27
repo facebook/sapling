@@ -115,7 +115,6 @@ getfstype = platform.getfstype
 gethgcmd = platform.gethgcmd
 getmaxrss = platform.getmaxrss
 getpid = os.getpid
-getuser = platform.getuser
 groupmembers = platform.groupmembers
 groupname = platform.groupname
 hidewindow = platform.hidewindow
@@ -1516,33 +1515,41 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed " "on Windows") % t
 
 
-if pycompat.iswindows:
-    checkosfilename = checkwinfilename
-    timer = time.clock
-else:
-    checkosfilename = platform.checkosfilename
-    timer = time.time
+def _reloadenv():
+    """Reset some functions that are sensitive to environment variables"""
 
-if safehasattr(time, "perf_counter"):
-    timer = time.perf_counter
+    global checkosfilename, timer, getuser, istest
+
+    if pycompat.iswindows:
+        checkosfilename = checkwinfilename
+        timer = time.clock
+    else:
+        checkosfilename = platform.checkosfilename
+        timer = time.time
+
+    if safehasattr(time, "perf_counter"):
+        timer = time.perf_counter
+
+    if "TESTTMP" in encoding.environ or "testutil" in sys.modules:
+        # Stabilize test output
+        def timer():
+            return 0
+
+        def getuser():
+            return "test"
+
+        def istest():
+            return True
+
+    else:
+
+        def istest():
+            return False
+
+        getuser = platform.getuser
 
 
-if "TESTTMP" in encoding.environ or "testutil" in sys.modules:
-    # Stabilize test output
-    def timer():
-        return 0
-
-    def getuser():
-        return "test"
-
-    def istest():
-        return True
-
-
-else:
-
-    def istest():
-        return False
+_reloadenv()
 
 
 def fstat(fp):

@@ -269,6 +269,8 @@ class chgcmdserver(commandserver.server):
         os.umask(mask)
 
     def runcommand(self):
+        # Environment variables might change, reload env.
+        util._reloadenv()
         args = self._readlist()
         pycompat.sysargv[1:] = args
         origui = uimod.ui
