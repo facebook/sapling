@@ -63,36 +63,45 @@ def generatestates(maxchangesets, parentcontents):
                 yield combination
 
 
-# retrieve the command line arguments
-target = sys.argv[1]
-maxchangesets = int(sys.argv[2])
-if target == "state":
-    depth = sys.argv[3]
+def main(target, maxchangesets, depth=None):
+    # sort to make sure we have stable output
+    combinations = sorted(generatestates(maxchangesets, []))
+    output = []
 
-# sort to make sure we have stable output
-combinations = sorted(generatestates(maxchangesets, []))
-
-# compute file content
-content = []
-for filename, states in combinations:
-    if target == "filelist":
-        print(filename)
-    elif target == "state":
-        if depth == "wc":
-            # Make sure there is content so the file gets written and can be
-            # tracked. It will be deleted outside of this script.
-            content.append((filename, states[maxchangesets] or "TOBEDELETED"))
+    # compute file content
+    content = []
+    for filename, states in combinations:
+        if target == "filelist":
+            output.append(filename)
+        elif target == "state":
+            if depth == "wc":
+                # Make sure there is content so the file gets written and can be
+                # tracked. It will be deleted outside of this script.
+                content.append((filename, states[maxchangesets] or "TOBEDELETED"))
+            else:
+                content.append((filename, states[int(depth) - 1]))
         else:
-            content.append((filename, states[int(depth) - 1]))
-    else:
-        print("unknown target:", target, file=sys.stderr)
-        sys.exit(1)
+            print("unknown target:", target, file=sys.stderr)
+            raise RuntimeError
 
-# write actual content
-for filename, data in content:
-    if data is not None:
-        f = open(filename, "wb")
-        f.write(data + "\n")
-        f.close()
-    elif os.path.exists(filename):
-        os.remove(filename)
+    # write actual content
+    for filename, data in content:
+        if data is not None:
+            f = open(filename, "wb")
+            f.write(data + "\n")
+            f.close()
+        elif os.path.exists(filename):
+            os.remove(filename)
+
+    return "\n".join(output)
+
+
+if __name__ == "__main__":
+    # retrieve the command line arguments
+    target = sys.argv[1]
+    maxchangesets = int(sys.argv[2])
+    if target == "state":
+        depth = sys.argv[3]
+    output = main(target, maxchangesets, depth)
+    if output:
+        print(output)
