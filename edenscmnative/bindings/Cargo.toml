@@ -30,4 +30,5 @@ pyrevlogindex = { path = "modules/pyrevlogindex" }
 pystackdesc = { path = "modules/pystackdesc" }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
+pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }

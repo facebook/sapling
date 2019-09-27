@@ -42,6 +42,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyObject> 
     m.add(py, "stackdesc", pystackdesc::init_module(py, &name)?)?;
     m.add(py, "treestate", pytreestate::init_module(py, &name)?)?;
     m.add(py, "vlq", pyvlq::init_module(py, &name)?)?;
+    m.add(py, "workingcopy", pyworkingcopy::init_module(py, &name)?)?;
     m.add(py, "zstd", pyzstd::init_module(py, &name)?)?;
     Ok(py.None())
 }
