@@ -62,6 +62,23 @@ else()
   set(EDEN_HAVE_GIT OFF)
 endif()
 
+if("${ENABLE_EDENSCM}" STREQUAL "AUTO")
+  find_package(EdenSCM MODULE)
+  set(EDEN_HAVE_EDENSCM "${EdenSCM_FOUND}")
+  if(NOT EDEN_HAVE_EDENSCM)
+    message(STATUS "Building with EdenSCM support disabled")
+  endif()
+elseif(ENABLE_EDENSCM)
+  find_package(EdenSCM MODULE REQUIRED)
+  set(EDEN_HAVE_EDENSCM "${EdenSCM_FOUND}")
+else()
+  set(EDEN_HAVE_EDENSCM OFF)
+endif()
+
+if("${EDEN_HAVE_EDENSCM}")
+  include(FBMercurialFeatures)
+endif()
+
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)

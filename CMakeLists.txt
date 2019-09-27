@@ -46,6 +46,8 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 
 # Configuration options
+set(ENABLE_EDENSCM AUTO CACHE STRING "Enable support for Eden SCM repositories")
+set_property(CACHE ENABLE_EDENSCM PROPERTY STRINGS AUTO ON OFF)
 set(ENABLE_GIT AUTO CACHE STRING "Enable support for Git repositories")
 set_property(CACHE ENABLE_GIT PROPERTY STRINGS AUTO ON OFF)
 
@@ -53,7 +55,6 @@ if (NOT WIN32)
   include(CompilerSettingsUnix)
 endif()
 include(EdenConfigChecks)
-include(FBMercurialFeatures)
 include(FBPythonBinary)
 include(FBThriftLibrary)
 

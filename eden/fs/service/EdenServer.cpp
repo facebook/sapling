@@ -58,10 +58,12 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
-#include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/ProcUtil.h"
 
+#ifdef EDEN_HAVE_EDENSCM
+#include "eden/fs/store/hg/HgBackingStore.h"
+#endif // EDEN_HAVE_EDENSCM
 #ifdef EDEN_HAVE_GIT
 #include "eden/fs/store/git/GitBackingStore.h" // @manual
 #endif
@@ -1161,6 +1163,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   if (type == "null") {
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
+#ifdef EDEN_HAVE_EDENSCM
     const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
         repoPath,
@@ -1169,6 +1172,10 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         shared_ptr<ReloadableConfig>(
             serverState_, &serverState_->getReloadableConfig()),
         getSharedStats());
+#else // EDEN_HAVE_EDENSCM
+    throw std::domain_error(
+        "support for Eden SCM was not enabled in this EdenFS build");
+#endif // EDEN_HAVE_EDENSCM
   } else if (type == "git") {
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
