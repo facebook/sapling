@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob:files
+  $ setup_common_config blob:files
   $ cp "${TEST_FIXTURES}/pushrebase_replay.bundle" "$TESTTMP/handle"
   $ create_pushrebaserecording_sqlite3_db
   $ init_pushrebaserecording_sqlite3_db
