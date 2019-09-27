@@ -1,4 +1,3 @@
-
 [simple]
 db.local_db_path = "/tmp/foo"
 blobstore_type = "blob:files"
