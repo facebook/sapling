@@ -1037,7 +1037,7 @@ def _buildtree(manifestlog, node=None):
     # manifestlog objects work
     store = manifestlog.datastore
     if _userustmanifest(manifestlog):
-        bfsdiff = manifestlog.ui.configbool("treemanifest", "bfsdiff", False)
+        bfsdiff = manifestlog.ui.configbool("treemanifest", "bfsdiff", True)
         kwargs = {"bfsdiff": bfsdiff}
         if node is not None and node != nullid:
             kwargs["node"] = node
