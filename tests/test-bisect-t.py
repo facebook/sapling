@@ -9,23 +9,17 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % "hg init"
 
 
 # committing changes
 
-sh % "'count=0'"
-sh % "echo" > "a"
-sh % "while test '$count' -lt 32"
-sh % "do" == r"""
-    >     echo 'a' >> a
-    >     test $count -eq 0 && hg add
-    >     hg ci -m "msg $count" -d "$count 0"
-    >     count=`expr $count + 1`
-    > done
-    adding a"""
-
+sh % "echo" >> "a"
+for i in range(32):
+    sh % "echo a" >> "a"
+    if i == 0:
+        sh % "hg add" == r"adding a"
+    sh % "hg ci -m 'msg {i}' -d '{i} 0'".format(i=i)
 
 sh % "hg log" == r"""
     changeset:   31:58c80a7c8a40
@@ -443,8 +437,6 @@ sh % "hg log -r 'bisected(bad)'" == r"""
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
 
-sh % "set +e"
-
 # test invalid command
 # assuming that the shell returns 127 if command not found ...
 
@@ -568,7 +560,8 @@ evolution.createmarkers=True
 # tip is obsolete
 # ---------------------
 
-sh % "hg debugobsolete '`hg' id --debug -i -r 'tip`'" == "obsoleted 1 changesets"
+cln = (sh % "hg id --debug -i -r tip").output
+sh % "hg debugobsolete {}".format(cln) == "obsoleted 1 changesets"
 sh % "hg bisect --reset"
 sh % "hg bisect --good 15"
 sh % "hg bisect --bad 30" == r"""
