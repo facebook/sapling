@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import atexit
 import errno
 import fnmatch
+import glob
 import os
 import re
 import shlex
@@ -49,6 +50,7 @@ class LazyCommand(object):
             else:
                 args = self._command
             args = map(os.path.expandvars, args)
+            args = [u for v in args for u in expandfilepaths(v)]
             # Work with environment variables
             backupenv = {}
             while args and "=" in args[0]:
@@ -282,3 +284,8 @@ def eqglob(a, b):
         elif aline != bline:
             return False
     return True
+
+def expandfilepaths(arg):
+    if (arg[0] == "'" and arg[-1] == "'") or not any(ch in arg for ch in ["*", "?", "["]):
+        return [arg]
+    return sorted(glob.glob(arg)) or [arg]
