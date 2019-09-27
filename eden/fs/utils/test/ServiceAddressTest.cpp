@@ -65,12 +65,6 @@ class MockServiceCacheIf : public ServiceCacheIf {
       folly::EventBase* /* eventBase */,
       ServiceOptions&& /* options */,
       ConnConfigs&& /* overrides */) override {}
-
-  bool invalidateSelection(
-      const string& /* serviceName */,
-      const Config& /* cfg */) override {
-    return true;
-  }
 };
 } // namespace
 
