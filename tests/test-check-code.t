@@ -7,7 +7,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg files . | egrep -v "^(edenscm/hgext/extlib/pywatchman|edenscm/hgext/p4fastimport|lib/cdatapack|lib/third-party|edenscm/mercurial/thirdparty|fb|newdoc)" \
+  $ testrepohg files . | egrep -v "^(edenscm/hgext/extlib/pywatchman|lib/cdatapack|lib/third-party|edenscm/mercurial/thirdparty|fb|newdoc)" \
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
   $ NPROC=`python -c 'import multiprocessing; print(multiprocessing.cpu_count())'`

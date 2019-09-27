@@ -1472,7 +1472,6 @@ packages = [
     "edenscm.hgext.infinitepush",
     "edenscm.hgext.lfs",
     "edenscm.hgext.memcommit",
-    "edenscm.hgext.p4fastimport",
     "edenscm.hgext.pushrebase",
     "edenscm.hgext.remotefilelog",
     "edenscm.hgext.snapshot",

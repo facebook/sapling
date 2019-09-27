@@ -348,7 +348,6 @@ Test extension help:
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        ownercheck    prevent operations on repos not owned by the current user
-       p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
        patchrmdir    (no help text available)
        perfsuite     (no help text available)
        phabdiff      (no help text available)
