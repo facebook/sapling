@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 
 use failure_ext::{bail_err, chain::*, err_msg};
+use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
-use rust_thrift::compact_protocol;
 
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
 use crate::datetime::DateTime;

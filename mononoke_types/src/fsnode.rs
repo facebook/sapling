@@ -14,7 +14,7 @@ use crate::path::MPathElement;
 use crate::thrift;
 use crate::typed_hash::{ContentId, FsnodeId, FsnodeIdContext};
 
-use rust_thrift::compact_protocol;
+use fbthrift::compact_protocol;
 use std::collections::BTreeMap;
 
 // An fsnode is a manifest node containing summary information about the

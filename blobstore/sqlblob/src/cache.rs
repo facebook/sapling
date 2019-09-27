@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use cloned::cloned;
 use failure_ext::{err_msg, Error, Result};
+use fbthrift::compact_protocol;
 use futures::prelude::*;
-use rust_thrift::compact_protocol;
 
 use cacheblob::{CacheOps, CacheOpsUtil};
 use mononoke_types::BlobstoreBytes;

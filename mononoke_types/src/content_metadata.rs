@@ -9,8 +9,8 @@ use std::convert::TryInto;
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use failure_ext::{bail_err, chain::*};
+use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
-use rust_thrift::compact_protocol;
 
 use crate::{
     blob::{Blob, BlobstoreValue, ContentMetadataBlob},

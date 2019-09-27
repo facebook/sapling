@@ -9,9 +9,9 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 use failure_ext::{err_msg, format_err, Error};
+use fbthrift::compact_protocol;
 use futures::prelude::*;
 use futures_ext::FutureExt;
-use rust_thrift::compact_protocol;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
 

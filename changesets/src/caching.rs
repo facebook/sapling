@@ -14,13 +14,13 @@ use caching_ext::{
 use changeset_entry_thrift as thrift;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
-use rust_thrift::compact_protocol;
 use stats::{define_stats, Timeseries};
 use std::collections::HashSet;
 use std::iter::FromIterator;

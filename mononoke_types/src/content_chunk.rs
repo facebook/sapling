@@ -9,8 +9,8 @@ use std::fmt::{self, Debug};
 
 use bytes::Bytes;
 use failure_ext::{bail_err, chain::*};
+use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
-use rust_thrift::compact_protocol;
 
 use crate::{
     blob::{Blob, BlobstoreValue, ContentChunkBlob},

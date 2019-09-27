@@ -9,13 +9,13 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Result};
 use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use mercurial_types::{HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
 use rand::random;
-use rust_thrift::compact_protocol;
 use stats::{define_stats, Histogram, Timeseries};
 use std::{collections::HashSet, convert::TryFrom, sync::Arc, time::Duration};
 

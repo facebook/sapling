@@ -28,7 +28,7 @@ use common::{
 };
 use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 
-use rust_thrift::compact_protocol;
+use fbthrift::compact_protocol;
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
 

@@ -8,11 +8,11 @@ use clap::ArgMatches;
 use cloned::cloned;
 use failure_ext::Error;
 use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
 use futures::future::{loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
-use rust_thrift::compact_protocol;
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -8,10 +8,10 @@ use std::time::Duration;
 
 use failure_ext::{err_msg, Error};
 use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
 use futures::{future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
-use rust_thrift::compact_protocol;
 
 use blobstore::{Blobstore, CountedBlobstore};
 use fbwhoami::FbWhoAmI;

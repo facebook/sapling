@@ -15,6 +15,7 @@ use caching_ext::{
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
@@ -22,7 +23,6 @@ use iobuf::IOBuf;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
-use rust_thrift::compact_protocol;
 use stats::{define_stats, Timeseries};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

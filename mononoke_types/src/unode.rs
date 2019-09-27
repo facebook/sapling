@@ -16,7 +16,7 @@ use crate::typed_hash::{
     ManifestUnodeIdContext,
 };
 
-use rust_thrift::compact_protocol;
+use fbthrift::compact_protocol;
 use std::collections::BTreeMap;
 
 /// Unode is a filenode with fixed linknodes. They are designed to find file or directory history
