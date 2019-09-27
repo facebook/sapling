@@ -62,36 +62,66 @@ impl<'a> PythonMatcher<'a> {
 
 impl<'a> Matcher for PythonMatcher<'a> {
     fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
-        let py = self.py;
-        let py_path = PyBytes::new(py, path.as_byte_slice());
-        // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
-        // it crashes the rust stuff and returns a rust exception to Python.
-        let py_result = self
-            .py_matcher
-            .call_method(py, "visitdir", (py_path,), None)
-            .unwrap();
-        match PyBool::extract(py, &py_result) {
-            Ok(py_bool) => match py_bool.is_true() {
-                true => DirectoryMatch::ShouldTraverse,
-                false => DirectoryMatch::Nothing,
-            },
-            Err(_) => {
-                let py_string = PyString::extract(py, &py_result).unwrap();
-                if py_string.to_string(py).unwrap() == "all" {
-                    DirectoryMatch::Everything
-                } else {
-                    panic!("Unexpected value returned from matcher: {:?}", py_result);
-                }
-            }
-        }
+        matches_directory_impl(self.py, &self.py_matcher, &path)
     }
 
     fn matches_file(&self, path: &RepoPath) -> bool {
-        let py = self.py;
-        let py_path = PyBytes::new(py, path.as_byte_slice());
-        // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
-        // it crashes the rust stuff and returns a rust exception to Python.
-        let py_result = self.py_matcher.call(py, (py_path,), None).unwrap();
-        PyBool::extract(py, &py_result).unwrap().is_true()
+        matches_file_impl(self.py, &self.py_matcher, &path)
     }
+}
+
+// Matcher which does not store py. Should only be used when py cannot be stored in PythonMatcher
+// struct and it is known that the GIL is acquired when calling matcher methods.
+// Otherwise use PythonMatcher struct above
+pub struct UnsafePythonMatcher {
+    py_matcher: PyObject,
+}
+
+impl UnsafePythonMatcher {
+    pub fn new(py_matcher: PyObject) -> Self {
+        UnsafePythonMatcher { py_matcher }
+    }
+}
+
+impl<'a> Matcher for UnsafePythonMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
+        let assumed_py = unsafe { Python::assume_gil_acquired() };
+        matches_directory_impl(assumed_py, &self.py_matcher, &path)
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> bool {
+        let assumed_py = unsafe { Python::assume_gil_acquired() };
+        matches_file_impl(assumed_py, &self.py_matcher, &path)
+    }
+}
+
+fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> DirectoryMatch {
+    let py_path = PyBytes::new(py, path.as_byte_slice());
+    // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
+    // it crashes the rust stuff and returns a rust exception to Python.
+    let py_result = py_matcher
+        .call_method(py, "visitdir", (py_path,), None)
+        .unwrap();
+    match PyBool::extract(py, &py_result) {
+        Ok(py_bool) => match py_bool.is_true() {
+            true => DirectoryMatch::ShouldTraverse,
+            false => DirectoryMatch::Nothing,
+        },
+        Err(_) => {
+            let py_string = PyString::extract(py, &py_result).unwrap();
+            if py_string.to_string(py).unwrap() == "all" {
+                DirectoryMatch::Everything
+            } else {
+                panic!("Unexpected value returned from matcher: {:?}", py_result);
+            }
+        }
+    }
+}
+
+fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> bool {
+    let py_path = PyBytes::new(py, path.as_byte_slice());
+    // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
+    // it crashes the rust stuff and returns a rust exception to Python.
+    let py_result = py_matcher.call(py, (py_path,), None).unwrap();
+    PyBool::extract(py, &py_result).unwrap().is_true()
 }
