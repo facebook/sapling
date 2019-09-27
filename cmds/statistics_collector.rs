@@ -23,8 +23,8 @@ use futures_ext::FutureExt;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::FileType;
-//use scuba::{ScubaClient, ScubaSample};
 use scuba_ext::ScubaSampleBuilder;
+use slog::info;
 use std::ops::{Add, Sub};
 use std::sync::Arc;
 use std::time::Duration;
@@ -153,19 +153,32 @@ pub fn get_statistics_from_changeset(
     blobstore: impl Blobstore + Clone,
     hg_cs_id: HgChangesetId,
 ) -> impl Future<Item = RepoStatistics, Error = Error> {
+    info!(
+        ctx.logger(),
+        "Started calculating statistics for changeset {}", hg_cs_id
+    );
     get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone()).and_then({
         cloned!(ctx, repo);
         move |manifest_id| {
             manifest_id
                 .list_leaf_entries(ctx.clone(), blobstore.clone())
-                .map(move |(_, leaf)| {
-                    get_statistics_from_entry(ctx.clone(), repo.clone(), Entry::Leaf(leaf))
+                .map({
+                    cloned!(ctx);
+                    move |(_, leaf)| {
+                        get_statistics_from_entry(ctx.clone(), repo.clone(), Entry::Leaf(leaf))
+                    }
                 })
                 .buffered(100)
                 .fold(RepoStatistics::default(), |statistics, new_stat| {
                     future::ok::<_, Error>(statistics + new_stat)
                 })
-                .map(|statistics| statistics)
+                .map(move |statistics| {
+                    info!(
+                        ctx.logger(),
+                        "Finished calculating statistics for changeset {}", hg_cs_id
+                    );
+                    statistics
+                })
         }
     })
 }
@@ -212,10 +225,14 @@ pub fn update_statistics(
     .map(move |statistics| statistics)
 }
 
-pub fn print_statistics(changeset: HgChangesetId, statistics: RepoStatistics) {
-    println!(
-        "Changeset: {:?}. Number of files: {}, total file size: {}, number of lines: {}",
-        changeset, statistics.num_files, statistics.total_file_size, statistics.num_lines
+pub fn print_statistics(ctx: CoreContext, changeset: HgChangesetId, statistics: RepoStatistics) {
+    info!(
+        ctx.logger(),
+        "Statistics for changeset {}\nNumber of files {}\nTotal file size {}\nNumber of lines {}",
+        changeset,
+        statistics.num_files,
+        statistics.total_file_size,
+        statistics.num_lines
     );
 }
 
@@ -279,9 +296,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 changeset.clone(),
                             )
                             .and_then({
-                                cloned!(repo_name, scuba_logger);
+                                cloned!(repo_name, scuba_logger, ctx);
                                 move |statistics| {
-                                    print_statistics(changeset, statistics);
+                                    print_statistics(ctx, changeset, statistics);
                                     log_statistics(scuba_logger, repo_name, statistics);
                                     future::ok((changeset, statistics))
                                 }
@@ -289,11 +306,21 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                             .boxify(),
                             Pass::NextPass(prev_changeset, cur_changeset) => {
                                 if prev_changeset == cur_changeset {
-                                    tokio_timer::sleep(Duration::from_millis(1000))
+                                    let duration = Duration::from_millis(1000);
+                                    info!(
+                                        ctx.logger(),
+                                        "Changeset hasn't changed, sleeping {:?}", duration
+                                    );
+                                    tokio_timer::sleep(duration)
                                         .from_err()
                                         .map(move |()| (cur_changeset, statistics))
                                         .boxify()
                                 } else {
+                                    info!(
+                                        ctx.logger(),
+                                        "Found new changeset: {}, updating statistics",
+                                        cur_changeset
+                                    );
                                     get_manifest_from_changeset(
                                         ctx.clone(),
                                         repo.clone(),
@@ -317,17 +344,26 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                                     cur_manifest_id.clone(),
                                                 ),
                                             )
-                                            .map(
+                                            .map({
+                                                cloned!(ctx);
+                                                info!(
+                                                    ctx.logger(),
+                                                    "Statistics for new changeset updated."
+                                                );
                                                 move |statistics| {
-                                                    print_statistics(cur_changeset, statistics);
+                                                    print_statistics(
+                                                        ctx,
+                                                        cur_changeset,
+                                                        statistics,
+                                                    );
                                                     log_statistics(
                                                         scuba_logger,
                                                         repo_name,
                                                         statistics,
                                                     );
                                                     (cur_changeset, statistics)
-                                                },
-                                            )
+                                                }
+                                            })
                                         }
                                     })
                                     .boxify()
