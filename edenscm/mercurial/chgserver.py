@@ -218,7 +218,12 @@ class chgcmdserver(commandserver.server):
                     bufsize = 1  # line buffered
                 else:
                     bufsize = -1  # system default
-                newfp = util.fdopen(fp.fileno(), mode, bufsize)
+                try:
+                    newfp = util.fdopen(fp.fileno(), mode, bufsize)
+                except OSError:
+                    # fdopen can fail with EINVAL. For example, run
+                    # with nohup. Do not set buffer size in that case.
+                    newfp = fp
                 setattr(ui, fn, newfp)
             setattr(self, cn, newfp)
 
