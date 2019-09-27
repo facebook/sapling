@@ -373,12 +373,14 @@ impl<'a> Iterator for BfsDiff<'a> {
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::testutil::*;
 
     use crate::{
-        tree::{testutil::*, DiffType, Link},
-        FileMetadata, FileType,
+        tree::{store::TestStore, testutil::*, DiffType, Link},
+        FileMetadata, FileType, Manifest,
     };
 
     #[test]
@@ -555,5 +557,223 @@ mod tests {
             repo_path_buf("d1/rightonly"),
         ];
         assert_eq!(entries, expected);
+    }
+
+    #[test]
+    fn test_diff_generic() {
+        let mut left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let mut right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(
+                    repo_path_buf("a1/b2"),
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
+                ),
+            )
+        );
+
+        left.flush().unwrap();
+        right.flush().unwrap();
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(
+                    repo_path_buf("a1/b2"),
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::LeftOnly(make_meta("10"))
+                ),
+            )
+        );
+        right
+            .insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("a1/b2"), make_meta("40"))
+            .unwrap();
+        left.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
+            .unwrap();
+
+        assert!(BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+            .next()
+            .is_none());
+    }
+
+    #[test]
+    fn test_diff_does_not_evaluate_durable_on_node_equality() {
+        // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
+        let left = Tree::durable(Arc::new(TestStore::new()), node("10"));
+        let right = Tree::durable(Arc::new(TestStore::new()), node("10"));
+        assert!(BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+            .next()
+            .is_none());
+
+        let right = Tree::durable(Arc::new(TestStore::new()), node("20"));
+        assert!(BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+            .next()
+            .unwrap()
+            .is_err());
+    }
+
+    #[test]
+    fn test_diff_one_file_one_directory() {
+        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
+        left.insert(repo_path_buf("a1/b1"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("a2"), make_meta("20")).unwrap();
+
+        let mut right = Tree::ephemeral(Arc::new(TestStore::new()));
+        right.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
+        right
+            .insert(repo_path_buf("a2/b2"), make_meta("40"))
+            .unwrap();
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(make_meta("30"))),
+                DiffEntry::new(repo_path_buf("a2"), DiffType::LeftOnly(make_meta("20"))),
+                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(make_meta("10"))),
+                DiffEntry::new(repo_path_buf("a2/b2"), DiffType::RightOnly(make_meta("40"))),
+            )
+        );
+    }
+
+    #[test]
+    fn test_diff_left_empty() {
+        let mut left = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut right = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::RightOnly(make_meta("10"))
+                ),
+            )
+        );
+
+        left.flush().unwrap();
+        right.flush().unwrap();
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(make_meta("20"))),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a1/b1/c1/d1"),
+                    DiffType::RightOnly(make_meta("10"))
+                ),
+            )
+        );
+    }
+
+    #[test]
+    fn test_diff_matcher_2() {
+        let left = make_tree(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
+        let right = make_tree(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &TreeMatcher::from_rules(["a1/b1"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(DiffEntry::new(
+                repo_path_buf("a1/b1/c1/d1"),
+                DiffType::LeftOnly(make_meta("10"))
+            ),)
+        );
+        assert_eq!(
+            BfsDiff::new(&left, &right, &TreeMatcher::from_rules(["a1/b2"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(DiffEntry::new(
+                repo_path_buf("a1/b2"),
+                DiffType::Changed(make_meta("20"), make_meta("40"))
+            ),)
+        );
+        assert_eq!(
+            BfsDiff::new(&left, &right, &TreeMatcher::from_rules(["a2/b2"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(DiffEntry::new(
+                repo_path_buf("a2/b2/c2"),
+                DiffType::RightOnly(make_meta("30"))
+            ),)
+        );
+        assert_eq!(
+            BfsDiff::new(&left, &right, &TreeMatcher::from_rules(["*/b2"].iter()))
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec!(
+                DiffEntry::new(
+                    repo_path_buf("a1/b2"),
+                    DiffType::Changed(make_meta("20"), make_meta("40"))
+                ),
+                DiffEntry::new(
+                    repo_path_buf("a2/b2/c2"),
+                    DiffType::RightOnly(make_meta("30"))
+                ),
+            )
+        );
+        assert!(
+            BfsDiff::new(&left, &right, &TreeMatcher::from_rules(["a3/**"].iter()))
+                .next()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_diff_on_sort_order_edge() {
+        let left = make_tree(&[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")]);
+        let mut right = left.clone();
+        right
+            .insert(repo_path_buf("foo/bar/c.txt"), make_meta("30"))
+            .unwrap();
+
+        assert_eq!(
+            BfsDiff::new(&left, &right, &AlwaysMatcher::new())
+                .collect::<Fallible<Vec<_>>>()
+                .unwrap(),
+            vec![DiffEntry::new(
+                repo_path_buf("foo/bar/c.txt"),
+                DiffType::RightOnly(make_meta("30"))
+            ),],
+        );
     }
 }
