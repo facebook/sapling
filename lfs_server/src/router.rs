@@ -14,7 +14,7 @@ use gotham::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::{request_id, State},
+    state::{request_id, FromState, State},
 };
 use hyper::{Body, Response};
 use itertools::Itertools;
@@ -110,7 +110,13 @@ fn upload_handler(mut state: State) -> Box<HandlerFuture> {
 }
 
 fn health_handler(state: State) -> (State, &'static str) {
-    (state, "I_AM_ALIVE")
+    let lfs_ctx = LfsServerContext::borrow_from(&state);
+    let res = if lfs_ctx.will_exit() {
+        "EXITING"
+    } else {
+        "I_AM_ALIVE"
+    };
+    (state, res)
 }
 
 pub fn build_router(lfs_ctx: LfsServerContext) -> Router {

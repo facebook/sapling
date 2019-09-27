@@ -20,6 +20,7 @@ use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::{o, Logger};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::spawn;
 
 use blobrepo::BlobRepo;
@@ -47,6 +48,7 @@ struct LfsServerContextInner {
 pub struct LfsServerContext {
     fb: FacebookInit,
     inner: Arc<Mutex<LfsServerContextInner>>,
+    will_exit: Arc<AtomicBool>,
 }
 
 impl LfsServerContext {
@@ -56,6 +58,7 @@ impl LfsServerContext {
         repositories: HashMap<String, BlobRepo>,
         server: ServerUris,
         always_wait_for_upstream: bool,
+        will_exit: Arc<AtomicBool>,
     ) -> Result<Self, Error> {
         // TODO: Configure threads?
         let connector = HttpsConnector::new(4)
@@ -74,6 +77,7 @@ impl LfsServerContext {
         Ok(LfsServerContext {
             fb,
             inner: Arc::new(Mutex::new(inner)),
+            will_exit,
         })
     }
 
@@ -102,6 +106,10 @@ impl LfsServerContext {
             }
             None => Err(ErrorKind::RepositoryDoesNotExist(repository).into()),
         }
+    }
+
+    pub fn will_exit(&self) -> bool {
+        self.will_exit.load(Ordering::Relaxed)
     }
 }
 

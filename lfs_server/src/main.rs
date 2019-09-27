@@ -21,6 +21,12 @@ use signal_hook::{iterator::Signals, SIGINT, SIGTERM};
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use std::thread;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
@@ -62,6 +68,7 @@ const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
+const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -127,6 +134,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .long(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
             .takes_value(false)
             .help("Whether to always wait for an upstream response (primarily useful in testing)"),
+    )
+    .arg(
+        Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
+            .long("shutdown-grace-period")
+            .takes_value(true)
+            .required(false)
+            .default_value("0"),
     );
 
     let app = args::add_fb303_args(app);
@@ -196,12 +210,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .into_iter()
         .collect();
 
+    let will_exit = Arc::new(AtomicBool::new(false));
+
     let ctx = LfsServerContext::new(
         fb,
         logger.clone(),
         repos,
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
+        will_exit.clone(),
     )?;
 
     let router = build_router(ctx);
@@ -273,7 +290,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         move |res| -> Result<(), ()> {
             if let Ok(Either::B(_)) = res {
                 // We were signalled.
-                info!(&logger, "Shutting down server...");
+                info!(&logger, "Shut down server");
             } else {
                 // NOTE: We need to panic here, because otherwise main is going to be blocked on
                 // waiting for a signal forever. This shouldn't normally ever happen.
@@ -292,9 +309,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let signals = Signals::new(&[SIGTERM, SIGINT])?;
     for signal in signals.forever() {
         info!(&logger, "Signalled: {}", signal);
-        let _ = sender.send(());
         break;
     }
+
+    // Report unhealthy
+    let shutdown_grace_period: u64 = matches
+        .value_of(ARG_SHUTDOWN_GRACE_PERIOD)
+        .unwrap()
+        .parse()
+        .map_err(Error::from)?;
+
+    info!(
+        &logger,
+        "Waiting {}s before shutting down server", shutdown_grace_period,
+    );
+    will_exit.store(true, Ordering::Relaxed);
+    thread::sleep(Duration::from_secs(shutdown_grace_period));
+
+    info!(&logger, "Shutting down server...");
+    let _ = sender.send(());
 
     // Wait for requests to finish.
     info!(&logger, "Waiting for in-flight requests to finish...");
