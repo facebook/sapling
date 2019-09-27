@@ -6,10 +6,11 @@
 
 from __future__ import absolute_import
 
+import time
+
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % "setconfig 'extensions.treemanifest=!'"
 sh % ". helpers-usechg.sh"
 
@@ -40,7 +41,7 @@ sh % "hg up -q 3"
 sh % "echo b" > "e"
 sh % "hg ci -m5"
 #  (Make sure mtime < fsnow to make the next merge commit stable)
-sh % "sleep 1"
+time.sleep(1)
 sh % "hg status"
 sh % "hg debugsetparents 4 5"
 sh % "hg ci -m6"
@@ -177,7 +178,7 @@ sh % "hg graft 1 5 4 3 'merge()' 2 -n" == r'''
     grafting 4:9c233e8e184d "4"
     grafting 3:4c60f11aa304 "3"'''
 
-sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug" == r"""
+sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.backgroundclose=False" == r"""
     skipping ungraftable merge revision 6
     scanning for duplicate grafts
     skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
@@ -192,7 +193,6 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug" == r"""
      branchmerge: True, force: True, partial: False
      ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
      preserving b for resolve of b
-    starting 4 threads for background file closing (?)
      b: local copied/moved from a -> m (premerge)
     picked tool ':merge' for b (binary False symlink False changedelete False)
     merging b and a to b
@@ -241,7 +241,11 @@ sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
 
 # Summary should mention graft:
 
-sh % "hg summary '|grep' graft" == "commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)"
+sh % "hg summary" == r"""
+    parent: 9:9436191a062e tip
+     5
+    commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
+    phases: 5 draft, 1 secret"""
 
 # Using status to get more context
 
@@ -375,9 +379,9 @@ sh % "hg log -G --template '{author}@{rev}.{phase}: {desc}\\n'" == r"""
     o  test@0.public: 0"""
 # Graft again onto another branch should preserve the original source
 sh % "hg up -q 0"
-sh % "echo 'g>g'"
-sh % "hg add g"
-sh % "hg ci -m 7"
+sh % "echo g" > "g"
+sh % "hg add g" == ""
+sh % "hg ci -m 7" == ""
 sh % "hg graft 7" == 'grafting 7:ef0ef43d49e7 "2"'
 
 sh % "hg log -r 7 --template '{rev}:{node}\\n'" == "7:ef0ef43d49e79e81ddafdc7997401ba0041efc82"
@@ -405,56 +409,23 @@ sh % "hg graft 7" == r"""
     skipping already grafted revision 7:ef0ef43d49e7 (was grafted from 2:5c095ad7e90f)
     [255]"""
 
-sh % "hg pdiff --config 'extensions.extdiff=' --patch -r 2 -r 13" == r"""
-    --- */hg-5c095ad7e90f.patch	* (glob)
-    +++ */hg-7a4785234d87.patch	* (glob)
-    @@ -1,18 +1,18 @@
-     # HG changeset patch
-    -# User test
-    +# User foo
-     # Date 0 0
-     #      Thu Jan 01 00:00:00 1970 +0000
-    -# Node ID 5c095ad7e90f871700f02dd1fa5012cb4498a2d4
-    -# Parent  5d205f8b35b66bc36375c9534ffd3237730e8f04
-    +# Node ID 7a4785234d87ec1aa420ed6b11afe40fa73e12a9
-    +# Parent  b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
-     2
-      (trailing space)
-    -diff -r 5d205f8b35b6 -r 5c095ad7e90f a
-    +diff -r b592ea63bb0c -r 7a4785234d87 a
-     --- a/a	Thu Jan 01 00:00:00 1970 +0000
-     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-     @@ -1,1 +0,0 @@
-    --b
-    -diff -r 5d205f8b35b6 -r 5c095ad7e90f b
-    +-a
-    +diff -r b592ea63bb0c -r 7a4785234d87 b
-     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-     +++ b/b	Thu Jan 01 00:00:00 1970 +0000
-     @@ -0,0 +1,1 @@
-    -+b
-    ++a
-    [1]"""
+sh % "hg diff -r 2 -r 13" == r"""
+    diff -r 5c095ad7e90f -r 7a4785234d87 b
+    --- a/b Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:00 1970 +0000
+    @@ -1,1 +1,1 @@
+    -b
+    +a
+    diff -r 5c095ad7e90f -r 7a4785234d87 g
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/g Thu Jan 01 00:00:00 1970 +0000
+    @@ -0,0 +1,1 @@
+    +g"""
 
-sh % "hg pdiff --config 'extensions.extdiff=' --patch -r 2 -r 13 -X ." == r"""
-    --- */hg-5c095ad7e90f.patch	* (glob)
-    +++ */hg-7a4785234d87.patch	* (glob)
-    @@ -1,8 +1,8 @@
-     # HG changeset patch
-    -# User test
-    +# User foo
-     # Date 0 0
-     #      Thu Jan 01 00:00:00 1970 +0000
-    -# Node ID 5c095ad7e90f871700f02dd1fa5012cb4498a2d4
-    -# Parent  5d205f8b35b66bc36375c9534ffd3237730e8f04
-    +# Node ID 7a4785234d87ec1aa420ed6b11afe40fa73e12a9
-    +# Parent  b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
-     2
-      (trailing space)
-    [1]"""
+sh % "hg diff -r 2 -r 13 -X ." == ""
 
 # Disallow grafting already grafted csets with the same origin onto each other
-sh % "hg up -q 13"
+sh % "hg up -q 13" == ""
 sh % "hg graft 2" == r"""
     skipping revision 2:5c095ad7e90f (already grafted to 13:7a4785234d87)
     [255]"""
@@ -495,12 +466,12 @@ sh % "hg resolve --all" == r"""
     merging a
     warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
     [1]"""
-sh % "cat a"
-#  <<<<<<< local: aaa4406d4f0a - test: 9
-#  c
-#  =======
-#  b
-#  >>>>>>> graft: 5d205f8b35b6 - bar: 1
+sh % "cat a" == r"""
+  <<<<<<< local: aaa4406d4f0a - test: 9
+  c
+  =======
+  b
+  >>>>>>> graft: 5d205f8b35b6 - bar: 1"""
 sh % "echo b" > "a"
 sh % "hg resolve -m a" == r"""
     (no more unresolved files)
