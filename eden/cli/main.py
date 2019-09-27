@@ -924,8 +924,11 @@ class ChownCmd(Subcmd):
             checkout, mtab.new()
         ).values():
             target = redir.expand_target_abspath(checkout)
-            print(f"Chowning bindmount: {redir.repo_path}...", end="", flush=True)
+            print(f"Chowning redirection: {redir.repo_path}...", end="", flush=True)
             subprocess.run(["sudo", "chown", "-R", f"{uid}:{gid}", str(target)])
+            subprocess.run(
+                ["sudo", "chown", f"{uid}:{gid}", str(checkout.path / redir.repo_path)]
+            )
             print("done")
 
         return 0
