@@ -1178,6 +1178,36 @@ mod tests {
     }
 
     #[test]
+    fn test_finalize_materialization() {
+        let store = Arc::new(TestStore::new());
+        let entry_1 = store::Entry::from_elements(vec![
+            store_element("foo", "10", store::Flag::Directory),
+            store_element("baz", "20", store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
+        store
+            .insert(RepoPath::empty(), node("1"), entry_1.to_bytes())
+            .unwrap();
+        let parent = Tree::durable(store.clone(), node("1"));
+
+        let entry_2 = store::Entry::from_elements(vec![
+            store_element("foo", "10", store::Flag::Directory),
+            store_element("baz", "21", store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
+        store
+            .insert(RepoPath::empty(), node("2"), entry_2.to_bytes())
+            .unwrap();
+
+        let mut tree = Tree::durable(store.clone(), node("2"));
+
+        let _changes: Vec<_> = tree.finalize(vec![&parent]).unwrap().collect();
+        // expecting the code to not panic
+        // the panic would be caused by materializing link (foo, 10) which
+        // doesn't have a store entry
+    }
+
+    #[test]
     fn test_cursor_skip_on_root() {
         let tree = Tree::ephemeral(Arc::new(TestStore::new()));
         let mut cursor = tree.root_cursor();
