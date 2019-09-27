@@ -12,7 +12,7 @@ import functools
 import os
 import pprint
 import re
-import xml
+import xml.dom.minidom
 
 from edenscm.mercurial import error, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
