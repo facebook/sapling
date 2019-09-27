@@ -657,20 +657,6 @@ def _runcatch(req):
         except:  # re-raises
             # Potentially enter the debugger when we hit an exception
             startdebugger = req.earlyoptions["debugger"]
-            if (
-                ui.configbool("devel", "debugger")
-                and ui.interactive()
-                and not ui.pageractive
-                and not ui.plain()
-                and ui.formatted()
-            ):
-                ui.write_err(
-                    _(
-                        "Starting ipdb for this exception\nIf you don't want the behavior, set devel.debugger to False\n"
-                    )
-                )
-                startdebugger = True
-
             if startdebugger:
                 # Enforce the use of ipdb, since it's always available and
                 # we can afford the import overhead here.
@@ -679,6 +665,7 @@ def _runcatch(req):
 
                 traceback.print_exc()
                 ipdb.post_mortem(sys.exc_info()[2])
+                os._exit(255)
             raise
 
     return _callcatch(ui, _runcatchfunc)
@@ -738,6 +725,27 @@ def _callcatch(ui, func):
     except KeyboardInterrupt:
         raise
     except:  # probably re-raises
+        # Potentially enter ipdb debugger when we hit an uncaught exception
+        if (
+            ui.configbool("devel", "debugger")
+            and ui.interactive()
+            and not ui.pageractive
+            and not ui.plain()
+            and ui.formatted()
+        ):
+            ui.write_err(
+                _(
+                    "Starting ipdb for this exception\nIf you don't want the behavior, set devel.debugger to False\n"
+                )
+            )
+
+            with demandimport.deactivated():
+                import ipdb
+
+            if not ui.tracebackflag:
+                traceback.print_exc()
+            ipdb.post_mortem(sys.exc_info()[2])
+            os._exit(255)
         if not handlecommandexception(ui):
             raise
 
