@@ -176,18 +176,18 @@ class ThriftLogHelper {
   template <typename ReturnType>
   Future<ReturnType> wrapFuture(folly::Future<ReturnType>&& f) {
     wrapperExecuted_ = true;
-    return std::move(f).thenValue(
+    return std::move(f).thenTry(
         [timer = itcTimer_,
          logger = this->itcLogger_,
          funcName = itcFunctionName_,
          level = level_,
          filename = itcFileName_,
-         linenumber = itcLineNumber_](ReturnType&& ret) {
+         linenumber = itcLineNumber_](folly::Try<ReturnType>&& ret) {
           // Logging completion time for the request
           // The line number points to where the object was originally created
           TLOG(logger, level, filename, linenumber) << folly::format(
               "{}() took {:,}us", funcName, timer.elapsed().count());
-          return std::forward<ReturnType>(ret);
+          return std::forward<folly::Try<ReturnType>>(ret);
         });
   }
 
