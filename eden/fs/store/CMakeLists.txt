@@ -30,6 +30,7 @@ target_link_libraries(
     eden_model_git
     eden_service_thrift_cpp
     eden_sqlite
+    fb303::fb303
 )
 
 if (NOT WIN32)
