@@ -1061,9 +1061,9 @@ class EdenCheckout:
             "redirections": redirections,
         }
 
-        with self._config_path().open("w") as f:
-            # pyre-fixme[6]: Expected `_Writable` for 2nd param but got `IO[]`.
-            toml.dump(config_data, f)
+        util.write_file_atomically(
+            self._config_path(), toml.dumps(config_data).encode()
+        )
 
         # Update our local config cache
         self._config = checkout_config
