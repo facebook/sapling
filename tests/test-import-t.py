@@ -58,7 +58,6 @@ sh % "hg --cwd b tip" == r"""
     user:        someone
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     second change"""
-sh % "rm -r b"
 
 
 # import exported patch with external patcher
@@ -70,15 +69,8 @@ from __future__ import print_function
 print('patching file a')
 file('a', 'wb').write('line2\n')
 """ > "dummypatch.py"
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'HGEDITOR=cat' hg --config 'ui.patch=$PYTHON ../dummypatch.py' --cwd b import --edit ../exported-tip.patch" == r"""
+sh % "hg clone -qr0 a b0"
+sh % "'HGEDITOR=cat' hg --config 'ui.patch=$PYTHON ../dummypatch.py' --cwd b0 import --edit ../exported-tip.patch" == r"""
     applying ../exported-tip.patch
     second change
 
@@ -89,27 +81,19 @@ sh % "'HGEDITOR=cat' hg --config 'ui.patch=$PYTHON ../dummypatch.py' --cwd b imp
     HG: user: someone
     HG: branch 'default'
     HG: changed a"""
-sh % "cat b/a" == "line2"
-sh % "rm -r b"
+sh % "cat b0/a" == "line2"
 
 
 # import of plain diff should fail without message
 # (this also tests that editor is invoked, if the patch doesn't contain
 # the commit message, regardless of '--edit')
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -r0 a b1 -q"
 sh % "cat" << r"""
 env | grep HGEDITFORM
 cat \$1
 """ > "$TESTTMP/editor.sh"
-sh % "'HGEDITOR=cat' hg --cwd b import ../diffed-tip.patch" == r"""
+sh % "'HGEDITOR=cat' hg --cwd b1 import ../diffed-tip.patch" == r"""
     applying ../diffed-tip.patch
 
 
@@ -125,46 +109,29 @@ sh % "'HGEDITOR=cat' hg --cwd b import ../diffed-tip.patch" == r"""
 # Test avoiding editor invocation at applying the patch with --exact,
 # even if commit message is empty
 
-sh % "echo a" >> "b/a"
-sh % "hg --cwd b commit -m ' '"
-sh % "hg --cwd b tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
-sh % "hg --cwd b export -o ../empty-log.diff ."
-sh % "hg --cwd b update -q -C '.^1'"
-sh % "hg --cwd b debugstrip -q tip"
-sh % "'HGEDITOR=cat' hg --cwd b import --exact ../empty-log.diff" == "applying ../empty-log.diff"
-sh % "hg --cwd b tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
-
-sh % "rm -r b"
+sh % "echo a" >> "b1/a"
+sh % "hg --cwd b1 commit -m ' '"
+sh % "hg --cwd b1 tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
+sh % "hg --cwd b1 export -o ../empty-log.diff ."
+sh % "hg --cwd b1 update -q -C '.^1'"
+sh % "hg --cwd b1 debugstrip -q tip"
+sh % "'HGEDITOR=cat' hg --cwd b1 import --exact ../empty-log.diff" == "applying ../empty-log.diff"
+sh % "hg --cwd b1 tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
 
 
 # import of plain diff should be ok with message
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "hg --cwd b import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip.patch"
-sh % "rm -r b"
+sh % "hg clone -r0 a b2 -q"
+sh % "hg --cwd b2 import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 
 
 # import of plain diff with specific date and user
 # (this also tests that editor is not invoked, if
 # '--message'/'--logfile' is specified and '--edit' is not)
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "hg --cwd b import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
-sh % "hg -R b tip -pv" == r"""
+sh % "hg clone -qr0 a b3"
+sh % "hg --cwd b3 import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
+sh % "hg -R b3 tip -pv" == r"""
     changeset:   1:ca68f19f3a40
     tag:         tip
     user:        user@nowhere.net
@@ -180,51 +147,34 @@ sh % "hg -R b tip -pv" == r"""
     @@ -1,1 +1,2 @@
      line 1
     +line 2"""
-sh % "rm -r b"
 
 
 # import of plain diff should be ok with --no-commit
 # (this also tests that editor is not invoked, if '--no-commit' is
 # specified, regardless of '--edit')
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'HGEDITOR=cat' hg --cwd b import --no-commit --edit ../diffed-tip.patch" == "applying ../diffed-tip.patch"
-sh % "hg --cwd b diff --nodates" == r"""
+sh % "hg clone -qr0 a b4"
+sh % "'HGEDITOR=cat' hg --cwd b4 import --no-commit --edit ../diffed-tip.patch" == "applying ../diffed-tip.patch"
+sh % "hg --cwd b4 diff --nodates" == r"""
     diff -r 80971e65b431 a
     --- a/a
     +++ b/a
     @@ -1,1 +1,2 @@
      line 1
     +line 2"""
-sh % "rm -r b"
 
 
 # import of malformed plain diff should fail
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -qr0 a b5"
 
 content = open("diffed-tip.patch").read().replace("1,1", "foo")
 open("broken.patch", "wb").write(content)
 
-sh % "hg --cwd b import -mpatch ../broken.patch" == r"""
+sh % "hg --cwd b5 import -mpatch ../broken.patch" == r"""
     applying ../broken.patch
     abort: bad hunk #1
     [255]"""
-sh % "rm -r b"
 
 
 # hg -R repo import
@@ -232,60 +182,35 @@ sh % "rm -r b"
 # used to hide a bug.
 
 sh % "mkdir dir"
-sh % "hg clone -r0 a dir/b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -qr0 a dir/b"
 sh % "cd dir"
 sh % "hg -R b import ../exported-tip.patch" == "applying ../exported-tip.patch"
 sh % "cd .."
-sh % "rm -r dir"
 
 
 # import from stdin
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "hg --cwd b import -" << open(
+sh % "hg clone -qr0 a b6"
+sh % "hg --cwd b6 import -" << open(
     "exported-tip.patch"
 ).read() == "applying patch from stdin"
-sh % "rm -r b"
 
 
 # import two patches in one stream
 
-sh % "hg init b"
-sh % "hg --cwd a export '0:tip'" | "hg --cwd b import -" == "applying patch from stdin"
+sh % "hg init b7"
+sh % "hg --cwd a export '0:tip'" | "hg --cwd b7 import -" == "applying patch from stdin"
 sh % "hg --cwd a id" == "1d4bd90af0e4 tip"
-sh % "hg --cwd b id" == "1d4bd90af0e4 tip"
-sh % "rm -r b"
+sh % "hg --cwd b7 id" == "1d4bd90af0e4 tip"
 
 
 # override commit message
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "hg --cwd b import -m override -" << open(
+sh % "hg clone -qr0 a b8"
+sh % "hg --cwd b8 import -m override -" << open(
     "exported-tip.patch"
 ).read() == "applying patch from stdin"
-sh % "hg --cwd b log -r tip -T '{desc}'" == "override"
-sh % "rm -r b"
+sh % "hg --cwd b8 log -r tip -T '{desc}'" == "override"
 
 
 def mkmsg(path1, path2):
@@ -301,41 +226,25 @@ def mkmsg(path1, path2):
 
 # plain diff in email, subject, message body
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -qr0 a b9"
 
 mkmsg("diffed-tip.patch", "msg.patch")
 
-sh % "hg --cwd b import ../msg.patch" == "applying ../msg.patch"
-sh % "hg --cwd b log -r tip -T '{author}\\n{desc}'" == r"""
+sh % "hg --cwd b9 import ../msg.patch" == "applying ../msg.patch"
+sh % "hg --cwd b9 log -r tip -T '{author}\\n{desc}'" == r"""
     email patcher
     email patch
     email commit message"""
-sh % "rm -r b"
 
 
 # hg export in email, should use patch header
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -qr0 a b10"
 
 mkmsg("exported-tip.patch", "msg.patch")
 
-sh % "cat msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
-sh % "hg --cwd b log -r tip -T '{desc}'" == "second change"
-sh % "rm -r b"
+sh % "cat msg.patch" | "hg --cwd b10 import -" == "applying patch from stdin"
+sh % "hg --cwd b10 log -r tip -T '{desc}'" == "second change"
 
 
 # subject: duplicate detection, removal of [PATCH]
@@ -355,21 +264,13 @@ def mkmsg2(path1, path2):
 
 # plain diff in email, [PATCH] subject, message body with subject
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    new changesets 80971e65b431
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "hg clone -qr0 a b11"
 mkmsg2("diffed-tip.patch", "msg.patch")
-sh % "cat msg.patch" | "hg --cwd b import -" == "applying patch from stdin"
-sh % "hg --cwd b tip --template '{desc}\\n'" == r"""
+sh % "cat msg.patch" | "hg --cwd b11 import -" == "applying patch from stdin"
+sh % "hg --cwd b11 tip --template '{desc}\\n'" == r"""
     email patch
 
     next line"""
-sh % "rm -r b"
 
 
 # Issue963: Parent of working dir incorrect after import of multiple
@@ -381,9 +282,9 @@ sh % "rm -r b"
 sh % "echo line 3" >> "a/a"
 sh % "hg --cwd a ci '-mthird change'"
 sh % "hg --cwd a export -o '../patch%R' 1 2"
-sh % "hg clone -qr0 a b"
-sh % "hg --cwd b parents --template 'parent: {rev}\\n'" == "parent: 0"
-sh % "hg --cwd b import -v ../patch1 ../patch2" == r"""
+sh % "hg clone -qr0 a b12"
+sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 0"
+sh % "hg --cwd b12 import -v ../patch1 ../patch2" == r"""
     applying ../patch1
     patching file a
     committing files:
@@ -398,10 +299,10 @@ sh % "hg --cwd b import -v ../patch1 ../patch2" == r"""
     committing manifest
     committing changelog
     created 6d019af21222"""
-sh % "hg --cwd b rollback" == r"""
+sh % "hg --cwd b12 rollback" == r"""
     repository tip rolled back to revision 0 (undo import)
     working directory now based on revision 0"""
-sh % "hg --cwd b parents --template 'parent: {rev}\\n'" == "parent: 0"
+sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 0"
 
 # Test that "hg rollback" doesn't restore dirstate to one at the
 # beginning of the rolled back transaction in not-"parent-gone" case.
@@ -410,19 +311,18 @@ sh % "hg --cwd b parents --template 'parent: {rev}\\n'" == "parent: 0"
 # to be restored when rolling back, after DirstateTransactionPlan (see wiki
 # page for detail).
 
-sh % "hg --cwd b commit -m foobar"
-sh % "hg --cwd b update 0 -q"
-sh % "hg --cwd b import ../patch1 ../patch2 --config 'hooks.pretxncommit=true'" == r"""
+sh % "hg --cwd b12 commit -m foobar"
+sh % "hg --cwd b12 update 0 -q"
+sh % "hg --cwd b12 import ../patch1 ../patch2 --config 'hooks.pretxncommit=true'" == r"""
     applying ../patch1
     applying ../patch2"""
-sh % "hg --cwd b update -q 1"
-sh % "hg --cwd b rollback -q"
-sh % "hg --cwd b parents --template 'parent: {rev}\\n'" == "parent: 1"
+sh % "hg --cwd b12 update -q 1"
+sh % "hg --cwd b12 rollback -q"
+sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 1"
 
-sh % "hg --cwd b update -q -C 0"
-sh % "hg --cwd b debugstrip -q 1"
+sh % "hg --cwd b12 update -q -C 0"
+sh % "hg --cwd b12 debugstrip -q 1"
 
-sh % "rm -rf b"
 
 # importing a patch in a subdirectory failed at the commit stage
 
@@ -431,7 +331,7 @@ sh % "hg --cwd a ci -u someoneelse -d '1 0' '-msubdir change'"
 
 # hg import in a subdirectory
 
-sh % "hg clone -r0 a b" == r"""
+sh % "hg clone -r0 a b13" == r"""
     adding changesets
     adding manifests
     adding file changes
@@ -442,14 +342,14 @@ sh % "hg clone -r0 a b" == r"""
 sh % "hg --cwd a export tip" > "tmp"
 open("subdir-tip.patch", "wb").write(open("tmp").read().replace("d1/d2", ""))
 
-sh % "cd b/d1/d2"
+sh % "cd b13/d1/d2"
 sh % "hg import ../../../subdir-tip.patch" == "applying ../../../subdir-tip.patch"
 sh % "cd ../../.."
 
 # message should be 'subdir change'
 # committer should be 'someoneelse'
 
-sh % "hg --cwd b tip" == r"""
+sh % "hg --cwd b13 tip" == r"""
     changeset:   1:3577f5aea227
     tag:         tip
     user:        someoneelse
@@ -458,7 +358,7 @@ sh % "hg --cwd b tip" == r"""
 
 # should be empty
 
-sh % "hg --cwd b status"
+sh % "hg --cwd b13 status"
 
 
 # Test fuzziness (ambiguous patch location, fuzz=2)
@@ -966,9 +866,7 @@ else:
     sh % "hg sum" == r"""
         parent: 1:28f089cc9ccc tip
          help management of empty pkg and lib directories in perforce
-        branch: default
         commit: (clean)
-        update: (current)
         phases: 2 draft"""
 
     sh % "hg diff --git -c tip" == r"""
