@@ -225,11 +225,11 @@ pub fn update_statistics(
     .map(move |statistics| statistics)
 }
 
-pub fn print_statistics(ctx: CoreContext, changeset: HgChangesetId, statistics: RepoStatistics) {
+pub fn print_statistics(ctx: CoreContext, hg_cs_id: HgChangesetId, statistics: RepoStatistics) {
     info!(
         ctx.logger(),
         "Statistics for changeset {}\nNumber of files {}\nTotal file size {}\nNumber of lines {}",
-        changeset,
+        hg_cs_id,
         statistics.num_files,
         statistics.total_file_size,
         statistics.num_lines
@@ -239,6 +239,7 @@ pub fn print_statistics(ctx: CoreContext, changeset: HgChangesetId, statistics: 
 pub fn log_statistics(
     mut scuba_logger: ScubaSampleBuilder,
     repo_name: String,
+    hg_cs_id: HgChangesetId,
     statistics: RepoStatistics,
 ) {
     scuba_logger
@@ -246,6 +247,7 @@ pub fn log_statistics(
         .add("num_files", statistics.num_files)
         .add("total_file_size", statistics.total_file_size)
         .add("num_lines", statistics.num_lines)
+        .add("changeset", hg_cs_id.to_hex().to_string())
         .log();
 }
 
@@ -299,7 +301,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 cloned!(repo_name, scuba_logger, ctx);
                                 move |statistics| {
                                     print_statistics(ctx, changeset, statistics);
-                                    log_statistics(scuba_logger, repo_name, statistics);
+                                    log_statistics(scuba_logger, repo_name, changeset, statistics);
                                     future::ok((changeset, statistics))
                                 }
                             })
@@ -359,6 +361,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                                     log_statistics(
                                                         scuba_logger,
                                                         repo_name,
+                                                        cur_changeset,
                                                         statistics,
                                                     );
                                                     (cur_changeset, statistics)
