@@ -286,6 +286,6 @@ def eqglob(a, b):
     return True
 
 def expandfilepaths(arg):
-    if (arg[0] == "'" and arg[-1] == "'") or not any(ch in arg for ch in ["*", "?", "["]):
+    if not any(ch in arg for ch in ["*", "?", "[", "'"]):
         return [arg]
     return sorted(glob.glob(arg)) or [arg]
