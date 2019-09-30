@@ -234,9 +234,11 @@ pub fn update_statistics(
     .map(move |statistics| statistics)
 }
 
-pub fn print_statistics(
+pub fn log_statistics(
     ctx: CoreContext,
+    mut scuba_logger: ScubaSampleBuilder,
     cs_timestamp: i64,
+    repo_name: String,
     hg_cs_id: HgChangesetId,
     statistics: RepoStatistics,
 ) {
@@ -249,15 +251,6 @@ pub fn print_statistics(
         statistics.total_file_size,
         statistics.num_lines
     );
-}
-
-pub fn log_statistics(
-    mut scuba_logger: ScubaSampleBuilder,
-    cs_timestamp: i64,
-    repo_name: String,
-    hg_cs_id: HgChangesetId,
-    statistics: RepoStatistics,
-) {
     scuba_logger
         .add("repo_name", repo_name)
         .add("num_files", statistics.num_files)
@@ -322,8 +315,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                         changeset,
                                     )
                                     .map(move |cs_timestamp| {
-                                        print_statistics(ctx, cs_timestamp, changeset, statistics);
                                         log_statistics(
+                                            ctx,
                                             scuba_logger,
                                             cs_timestamp,
                                             repo_name,
@@ -389,13 +382,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                                             cur_changeset,
                                                         )
                                                         .map(move |cs_timestamp| {
-                                                            print_statistics(
-                                                                ctx,
-                                                                cs_timestamp,
-                                                                cur_changeset,
-                                                                statistics,
-                                                            );
                                                             log_statistics(
+                                                                ctx,
                                                                 scuba_logger,
                                                                 cs_timestamp,
                                                                 repo_name,
