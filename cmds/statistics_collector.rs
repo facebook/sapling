@@ -121,6 +121,15 @@ pub fn get_manifest_from_changeset(
         .map(move |changeset| changeset.manifestid())
 }
 
+pub fn get_changeset_timestamp_from_changeset(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hg_cs_id: HgChangesetId,
+) -> impl Future<Item = i64, Error = Error> {
+    repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id.clone())
+        .map(move |changeset| changeset.time().timestamp_secs())
+}
+
 // Calculates number of lines only for regular-type file
 pub fn get_statistics_from_entry(
     ctx: CoreContext,
@@ -225,11 +234,17 @@ pub fn update_statistics(
     .map(move |statistics| statistics)
 }
 
-pub fn print_statistics(ctx: CoreContext, hg_cs_id: HgChangesetId, statistics: RepoStatistics) {
+pub fn print_statistics(
+    ctx: CoreContext,
+    cs_timestamp: i64,
+    hg_cs_id: HgChangesetId,
+    statistics: RepoStatistics,
+) {
     info!(
         ctx.logger(),
-        "Statistics for changeset {}\nNumber of files {}\nTotal file size {}\nNumber of lines {}",
+        "Statistics for changeset {}\nCs timestamp: {}\nNumber of files {}\nTotal file size {}\nNumber of lines {}",
         hg_cs_id,
+        cs_timestamp,
         statistics.num_files,
         statistics.total_file_size,
         statistics.num_lines
@@ -238,6 +253,7 @@ pub fn print_statistics(ctx: CoreContext, hg_cs_id: HgChangesetId, statistics: R
 
 pub fn log_statistics(
     mut scuba_logger: ScubaSampleBuilder,
+    cs_timestamp: i64,
     repo_name: String,
     hg_cs_id: HgChangesetId,
     statistics: RepoStatistics,
@@ -248,7 +264,7 @@ pub fn log_statistics(
         .add("total_file_size", statistics.total_file_size)
         .add("num_lines", statistics.num_lines)
         .add("changeset", hg_cs_id.to_hex().to_string())
-        .log();
+        .log_with_time(cs_timestamp as u64);
 }
 
 enum Pass {
@@ -298,11 +314,24 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 changeset.clone(),
                             )
                             .and_then({
-                                cloned!(repo_name, scuba_logger, ctx);
+                                cloned!(repo, repo_name, scuba_logger, ctx);
                                 move |statistics| {
-                                    print_statistics(ctx, changeset, statistics);
-                                    log_statistics(scuba_logger, repo_name, changeset, statistics);
-                                    future::ok((changeset, statistics))
+                                    get_changeset_timestamp_from_changeset(
+                                        ctx.clone(),
+                                        repo,
+                                        changeset,
+                                    )
+                                    .map(move |cs_timestamp| {
+                                        print_statistics(ctx, cs_timestamp, changeset, statistics);
+                                        log_statistics(
+                                            scuba_logger,
+                                            cs_timestamp,
+                                            repo_name,
+                                            changeset,
+                                            statistics,
+                                        );
+                                        (changeset, statistics)
+                                    })
                                 }
                             })
                             .boxify(),
@@ -346,27 +375,38 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                                     cur_manifest_id.clone(),
                                                 ),
                                             )
-                                            .map({
-                                                cloned!(ctx);
-                                                info!(
-                                                    ctx.logger(),
-                                                    "Statistics for new changeset updated."
-                                                );
-                                                move |statistics| {
-                                                    print_statistics(
-                                                        ctx,
-                                                        cur_changeset,
-                                                        statistics,
+                                            .and_then(
+                                                {
+                                                    cloned!(ctx);
+                                                    info!(
+                                                        ctx.logger(),
+                                                        "Statistics for new changeset updated."
                                                     );
-                                                    log_statistics(
-                                                        scuba_logger,
-                                                        repo_name,
-                                                        cur_changeset,
-                                                        statistics,
-                                                    );
-                                                    (cur_changeset, statistics)
-                                                }
-                                            })
+                                                    move |statistics| {
+                                                        get_changeset_timestamp_from_changeset(
+                                                            ctx.clone(),
+                                                            repo,
+                                                            cur_changeset,
+                                                        )
+                                                        .map(move |cs_timestamp| {
+                                                            print_statistics(
+                                                                ctx,
+                                                                cs_timestamp,
+                                                                cur_changeset,
+                                                                statistics,
+                                                            );
+                                                            log_statistics(
+                                                                scuba_logger,
+                                                                cs_timestamp,
+                                                                repo_name,
+                                                                cur_changeset,
+                                                                statistics,
+                                                            );
+                                                            (cur_changeset, statistics)
+                                                        })
+                                                    }
+                                                },
+                                            )
                                         }
                                     })
                                     .boxify()
