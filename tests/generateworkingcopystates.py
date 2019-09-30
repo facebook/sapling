@@ -102,6 +102,8 @@ if __name__ == "__main__":
     maxchangesets = int(sys.argv[2])
     if target == "state":
         depth = sys.argv[3]
+    else:
+        depth = None
     output = main(target, maxchangesets, depth)
     if output:
         print(output)
