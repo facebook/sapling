@@ -26,7 +26,7 @@ translateeq(
 )
 
 # shell functions
-translateeq("  $ echo 'foo bar' baz > a.txt", "sh % \"echo 'foo bar' baz\" > 'a.txt'")
+translateeq("  $ echo 'foo bar' baz > a.txt", "sh % 'echo \"foo bar\" baz' > 'a.txt'")
 translateeq(
     r"""
   $ cat p.txt < a.txt \
@@ -97,7 +97,7 @@ translateeq(
   > }
 """,
     r'''
-    sh % "'foo()' '{'" == r"""
+    sh % '"foo()" "{"' == r"""
         >   hg commit -m "$1"
         >   echo "$2"
         > }"""''',
@@ -111,7 +111,7 @@ translateeq(
   > done
 """,
     r'''
-    sh % "for i in a b 'c;' do" == r"""
+    sh % 'for i in a b "c;" do' == r"""
         >   hg commit -m $i
         > done"""''',
 )

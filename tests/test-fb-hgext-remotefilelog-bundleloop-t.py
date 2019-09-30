@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig 'remotefilelog.cachepath=$TESTTMP/cache' 'extensions.remotefilelog='"
+sh % "setconfig \"remotefilelog.cachepath=$TESTTMP/cache\" 'extensions.remotefilelog='"
 
 sh % "newrepo"
 sh % "echo remotefilelog" >> ".hg/requires"
@@ -22,11 +22,11 @@ B  # B/X=2
 A  # A/X=1
 """
 
-sh % "hg bundle --all '$TESTTMP/bundle' --traceback -q"
+sh % 'hg bundle --all "$TESTTMP/bundle" --traceback -q'
 
 sh % "newrepo"
 sh % "echo remotefilelog" >> ".hg/requires"
-sh % "hg unbundle '$TESTTMP/bundle'" == r"""
+sh % 'hg unbundle "$TESTTMP/bundle"' == r"""
     adding changesets
     adding manifests
     adding file changes

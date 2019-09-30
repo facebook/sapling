@@ -22,7 +22,7 @@ logtemplate={rev}\n
 
 sh % "hg init test01"
 sh % "cd test01"
-sh % "hg unbundle '$TESTDIR/bundles/remote.hg'" == r"""
+sh % 'hg unbundle "$TESTDIR/bundles/remote.hg"' == r"""
     adding changesets
     adding manifests
     adding file changes

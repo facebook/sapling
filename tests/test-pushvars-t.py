@@ -91,7 +91,7 @@ def hook(ui, repo, hooktype, **kwargs):
             ui.write("Got pushvar: %s=%s\n" % (k, v))
 """ >> "$TESTTMP/pyhook.py"
 
-sh % "cp '$HGRCPATH' '$TESTTMP/hgrc.bak'"
+sh % 'cp "$HGRCPATH" "$TESTTMP/hgrc.bak"'
 sh % "cat" << r"""
 [hooks]
 pretxnchangegroup.pyhook = python:$TESTTMP/pyhook.py:hook
@@ -106,7 +106,7 @@ sh % "hg push --pushvars 'A=1' --pushvars 'B=2'" == r"""
     added 1 changesets with 1 changes to 1 files
     Got pushvar: USERVAR_A=1
     Got pushvar: USERVAR_B=2"""
-sh % "cp '$TESTTMP/hgrc.bak' '$HGRCPATH'"
+sh % 'cp "$TESTTMP/hgrc.bak" "$HGRCPATH"'
 
 # Test pushvars for enforcing push reasons
 sh % "cat" << r"""
@@ -129,4 +129,4 @@ sh % "hg push --pushvars 'PUSH_REASON=I want to'" == r"""
     adding file changes
     added 1 changesets with 1 changes to 1 files"""
 sh % 'hg blackbox --pattern \'{"legacy_log": {"service": "pushreason"}}\'' == "* [legacy][pushreason] bypassing push block with reason: I want to (glob)"
-sh % "cp '$TESTTMP/hgrc.bak' '$HGRCPATH'"
+sh % 'cp "$TESTTMP/hgrc.bak" "$HGRCPATH"'

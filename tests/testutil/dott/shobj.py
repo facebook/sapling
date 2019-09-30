@@ -11,11 +11,10 @@ import fnmatch
 import glob
 import os
 import re
-import shlex
 import sys
 
 from .. import autofix
-from . import shlib
+from . import shlex, shlib
 
 
 class LazyCommand(object):
@@ -46,11 +45,10 @@ class LazyCommand(object):
         """
         if self._output is None:
             if isinstance(self._command, str):
-                args = shlex.split(self._command)
+                args = shlex.split(self._command, expandfunc=expandarg)
             else:
-                args = self._command
-            args = map(os.path.expandvars, args)
-            args = [u for v in args for u in expandfilepaths(v)]
+                assert isinstance(args, list)
+                args = map(os.path.expandvars, self._command)
             # Work with environment variables
             backupenv = {}
             while args and "=" in args[0]:
@@ -200,7 +198,8 @@ def _checkdelayedexception(_delayedexception=_delayedexception):
         # Only raise the first "delayed exception"
         _delayedexception[:] = [(None, None, None)]
         if excvalue is not None:
-            raise exctype, excvalue, traceback
+            # Workaround Python 2 syntax check by black.
+            exec("raise exctype, excvalue, traceback")
 
 
 # Functions to normalize outputs (ex. replace "$TESTTMP")
@@ -285,7 +284,21 @@ def eqglob(a, b):
             return False
     return True
 
+
 def expandfilepaths(arg):
     if not any(ch in arg for ch in ["*", "?", "[", "'"]):
         return [arg]
     return sorted(glob.glob(arg)) or [arg]
+
+
+def expandarg(arg, quote):
+    assert arg is not None
+    expandenv = quote not in {"'"}
+    expandglob = quote not in {"'", '"'}
+    if expandenv:
+        arg = os.path.expandvars(arg)
+    if expandglob:
+        args = expandfilepaths(arg)
+    else:
+        args = [arg]
+    return args

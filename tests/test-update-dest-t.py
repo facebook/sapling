@@ -11,7 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "setconfig 'extensions.treemanifest=!'"
 # Test update.requiredest
-sh % "cd '$TESTTMP'"
+sh % 'cd "$TESTTMP"'
 sh % "cat" << r"""
 [commands]
 update.requiredest = True

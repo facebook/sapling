@@ -14,7 +14,7 @@ sh % "enable share"
 sh % "newrepo repo1"
 sh % "echo a" > "a"
 sh % "hg commit -q -A -m init"
-sh % "cd '$TESTTMP'"
+sh % 'cd "$TESTTMP"'
 sh % "hg share -q repo1 repo2"
 sh % "cd repo2"
 

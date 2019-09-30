@@ -18,7 +18,7 @@ B
 A   # A/x/1=1
 """
 
-sh % "hg update -q '$C'"
+sh % "hg update -q $C"
 
 # Log a directory:
 

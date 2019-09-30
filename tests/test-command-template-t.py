@@ -2887,7 +2887,7 @@ sh % "hg log -G --template '{rev}: {latesttag % '\\''{tag}+{distance},{changes} 
     |
     o  0: null+1,1"""
 
-sh % "hg log -G --template '{rev}: {latesttag('\\''re:^t[13]$'\\'') % '\\''{tag}, C: {changes}, D: {distance}'\\''}\\n'" == r"""
+sh % "hg log -G --template '{rev}: {latesttag('\\'\"re:^t[13]$\"\\'') % '\\''{tag}, C: {changes}, D: {distance}'\\''}\\n'" == r"""
     @  11: t3, C: 9, D: 8
     |
     o  10: t3, C: 8, D: 7
@@ -3806,7 +3806,7 @@ sh % "hg log --template '{rev} {ifcontains('\\''foo'\\'', bookmarks, '\\''t'\\''
 
 # Test namespaces dict
 
-sh % "hg --config 'extensions.revnamesext=$TESTDIR/revnamesext.py' log -T '{rev}\\n{namespaces % \" {namespace} color={colorname} builtin={builtin}\\n  {join(names, \",\")}\\n\"}\\n'" == r"""
+sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev}\\n{namespaces % " {namespace} color={colorname} builtin={builtin}\\n  {join(names, ",")}\\n"}\\n\'' == r"""
     2
      bookmarks color=bookmark builtin=True
       bar,foo,text.{rev}
@@ -4231,14 +4231,14 @@ sh % "'wrappabletext=a a a a a a a a a a a a'"
 
 sh % "printf 'first\\n'" > "file"
 sh % "hg add file"
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "printf 'first\\nsecond\\n'" > "file"
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg checkout 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "printf 'third\\nfirst\\n'" > "file"
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg merge" == r"""
     merging file
@@ -4251,7 +4251,7 @@ sh % "hg log --graph -T '{graphwidth}'" == r"""
     | @  5
     |/
     o  3"""
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @    5
@@ -4264,7 +4264,7 @@ sh % "hg log --graph -T '{graphwidth}'" == r"""
 
 sh % "hg checkout 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "printf 'third\\nfirst\\nsecond\\n'" > "file"
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @  3
@@ -4290,10 +4290,10 @@ sh % "hg log --graph -T '{graphwidth}' -r 1" == r"""
 sh % "hg merge" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (branch merge, don't forget to commit)"""
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "printf 'seventh\\n'" >> "file"
-sh % "hg commit -m '$wrappabletext'"
+sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @  3

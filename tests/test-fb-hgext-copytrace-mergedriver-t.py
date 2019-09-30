@@ -31,7 +31,7 @@ def conclude(ui, repo, hooktype, mergestate, wctx, labels):
     pass
 """ > "$TESTTMP/m.py"
 
-sh % "hg up -q '$B'"
+sh % "hg up -q $B"
 #  (trigger amend copytrace code path)
 sh % "hg cp A D"
 sh % "hg cp A E"
@@ -40,7 +40,7 @@ sh % "hg bookmark -i book-B"
 
 # Do the merge:
 
-sh % "hg up -q '$C'"
+sh % "hg up -q $C"
 sh % "hg graft book-B" == 'grafting 4:b55db8435dc2 "B2" (tip book-B)'
 
 sh % "hg status"
@@ -55,5 +55,5 @@ sh % "hg log -r . -T '{desc}\\n' --stat" == r"""
 
 sh % "setconfig 'extensions.copytrace=!' 'experimental.copytrace=on' 'copytrace.fastcopytrace=0'"
 
-sh % "hg up -q '$C'"
+sh % "hg up -q $C"
 sh % "hg graft book-B" == 'grafting 4:b55db8435dc2 "B2" (book-B)'

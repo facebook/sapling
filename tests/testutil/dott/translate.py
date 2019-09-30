@@ -30,9 +30,9 @@ from .. import autofix
 _repr = autofix._repr
 
 
-def shellquote(s, _needsshellquote=re.compile(br"[^a-zA-Z0-9._/+-]").search):
+def shellquote(s, _needsshellquote=re.compile(r"[^\w@%+=:,./-]").search):
     if _needsshellquote(s):
-        s = "'%s'" % s.replace("'", "'\\''")
+        s = '"%s"' % s.replace('"', '\\"')
     return s
 
 

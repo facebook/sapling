@@ -30,7 +30,7 @@ evolution=createmarkers
 """ >> "$HGRCPATH"
 
 # Make sure obs-based shelve can be used with an empty repo
-sh % "cd '$TESTTMP'"
+sh % 'cd "$TESTTMP"'
 sh % "hg init obsrepo"
 sh % "cd obsrepo"
 
@@ -900,7 +900,7 @@ if feature.check("false"):
 
     sh % "echo nnnn" >> "n"
 
-    sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
+    sh % 'sh "$TESTTMP/checkvisibility.sh" before-unshelving' == r"""
         ==== before-unshelving:
         VISIBLE 47f190a8b2e0
         ACTUAL  47f190a8b2e0
@@ -928,7 +928,7 @@ if feature.check("false"):
     preupdate.visibility =
     """ >> ".hg/hgrc"
 
-    sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
+    sh % 'sh "$TESTTMP/checkvisibility.sh" after-unshelving' == r"""
         ==== after-unshelving:
         VISIBLE 47f190a8b2e0
         ACTUAL  47f190a8b2e0
@@ -945,7 +945,7 @@ if feature.check("false"):
 
     sh % "echo nnnn" >> "n"
 
-    sh % "sh '$TESTTMP/checkvisibility.sh' before-unshelving" == r"""
+    sh % 'sh "$TESTTMP/checkvisibility.sh" before-unshelving' == r"""
         ==== before-unshelving:
         VISIBLE 47f190a8b2e0
         ACTUAL  47f190a8b2e0
@@ -974,7 +974,7 @@ if feature.check("false"):
     update.visibility =
     """ >> ".hg/hgrc"
 
-    sh % "sh '$TESTTMP/checkvisibility.sh' after-unshelving" == r"""
+    sh % 'sh "$TESTTMP/checkvisibility.sh" after-unshelving' == r"""
         ==== after-unshelving:
         VISIBLE 47f190a8b2e0
         ACTUAL  47f190a8b2e0

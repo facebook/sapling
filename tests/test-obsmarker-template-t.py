@@ -52,8 +52,8 @@ shlib.mkcommit = mkcommit
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-amend'"
-sh % "cd '$TESTTMP/templates-local-amend'"
+sh % 'hg init "$TESTTMP/templates-local-amend"'
+sh % 'cd "$TESTTMP/templates-local-amend"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "echo 42" >> "A0"
@@ -342,8 +342,8 @@ sh % "hg log -G -T default --hidden -v" == r"""
 # Test templates with splitted commit
 # ===================================
 
-sh % "hg init '$TESTTMP/templates-local-split'"
-sh % "cd '$TESTTMP/templates-local-split'"
+sh % 'hg init "$TESTTMP/templates-local-split"'
+sh % 'cd "$TESTTMP/templates-local-split"'
 sh % "mkcommit ROOT"
 sh % "echo 42" >> "a"
 sh % "echo 43" >> "b"
@@ -526,8 +526,8 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-fold'"
-sh % "cd '$TESTTMP/templates-local-fold'"
+sh % 'hg init "$TESTTMP/templates-local-fold"'
+sh % 'cd "$TESTTMP/templates-local-fold"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "mkcommit B0"
@@ -734,8 +734,8 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-divergence'"
-sh % "cd '$TESTTMP/templates-local-divergence'"
+sh % 'hg init "$TESTTMP/templates-local-divergence"'
+sh % 'cd "$TESTTMP/templates-local-divergence"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "hg commit --amend -m A1"
@@ -997,8 +997,8 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-amend-fold'"
-sh % "cd '$TESTTMP/templates-local-amend-fold'"
+sh % 'hg init "$TESTTMP/templates-local-amend-fold"'
+sh % 'cd "$TESTTMP/templates-local-amend-fold"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "mkcommit B0"
@@ -1276,14 +1276,14 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-remote-markers-1'"
-sh % "cd '$TESTTMP/templates-local-remote-markers-1'"
+sh % 'hg init "$TESTTMP/templates-local-remote-markers-1"'
+sh % 'cd "$TESTTMP/templates-local-remote-markers-1"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
-sh % "hg clone '$TESTTMP/templates-local-remote-markers-1' '$TESTTMP/templates-local-remote-markers-2'" == r"""
+sh % 'hg clone "$TESTTMP/templates-local-remote-markers-1" "$TESTTMP/templates-local-remote-markers-2"' == r"""
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "cd '$TESTTMP/templates-local-remote-markers-2'"
+sh % 'cd "$TESTTMP/templates-local-remote-markers-2"'
 sh % "hg log --hidden -G" == r"""
     @  changeset:   1:471f378eab4c
     |  tag:         tip
@@ -1295,7 +1295,7 @@ sh % "hg log --hidden -G" == r"""
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     ROOT"""
-sh % "cd '$TESTTMP/templates-local-remote-markers-1'"
+sh % 'cd "$TESTTMP/templates-local-remote-markers-1"'
 sh % "hg commit --amend -m A1"
 sh % "hg commit --amend -m A2"
 sh % "hg log --hidden -G" == r"""
@@ -1323,7 +1323,7 @@ sh % "hg log --hidden -G" == r"""
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     ROOT"""
-sh % "cd '$TESTTMP/templates-local-remote-markers-2'"
+sh % 'cd "$TESTTMP/templates-local-remote-markers-2"'
 sh % "hg pull" == r"""
     pulling from $TESTTMP/templates-local-remote-markers-1
     searching for changes
@@ -1458,8 +1458,8 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/templates-local-prune'"
-sh % "cd '$TESTTMP/templates-local-prune'"
+sh % 'hg init "$TESTTMP/templates-local-prune"'
+sh % 'cd "$TESTTMP/templates-local-prune"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "hg debugobsolete --record-parent ." == "obsoleted 1 changesets"
@@ -1482,8 +1482,8 @@ sh % "hg fatelog" == r"""
 # Test setup
 # ----------
 
-sh % "hg init '$TESTTMP/multiple-local-prune'"
-sh % "cd '$TESTTMP/multiple-local-prune'"
+sh % 'hg init "$TESTTMP/multiple-local-prune"'
+sh % 'cd "$TESTTMP/multiple-local-prune"'
 sh % "mkcommit ROOT"
 sh % "mkcommit A0"
 sh % "hg commit --amend -m A1"
@@ -1576,8 +1576,8 @@ sh % "hg log -G -T default --hidden" == r"""
 # Test templates with splitted and pruned commit
 # ==============================================
 
-sh % "hg init '$TESTTMP/templates-local-split-prune'"
-sh % "cd '$TESTTMP/templates-local-split-prune'"
+sh % 'hg init "$TESTTMP/templates-local-split-prune"'
+sh % 'cd "$TESTTMP/templates-local-split-prune"'
 sh % "mkcommit ROOT"
 sh % "echo 42" >> "a"
 sh % "echo 43" >> "b"

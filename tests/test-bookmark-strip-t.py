@@ -9,7 +9,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Test bookmark -D
-sh % "cd '$TESTTMP'"
 sh % "hg init book-D"
 sh % "cd book-D"
 sh % "cat" << r"""

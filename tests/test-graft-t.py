@@ -527,16 +527,16 @@ C D
 |/|
 A B
 """
-sh % "hg update -q '$C'"
-sh % "hg graft '$B'" == 'grafting 1:fc2b737bb2e5 "B"'
+sh % "hg update -q $C"
+sh % "hg graft $B" == 'grafting 1:fc2b737bb2e5 "B"'
 sh % "hg rm A B C"
 sh % "hg commit -m remove-all"
-sh % "hg graft '$B' '$A' '$D'" == r"""
+sh % "hg graft $B $A $D" == r"""
     skipping ungraftable merge revision 3
     skipping ancestor revision 0:426bada5c675
     skipping revision 1:fc2b737bb2e5 (already grafted to 4:bd8a7a0a7392)
     [255]"""
-sh % "hg graft '$B' '$A' '$D' --force" == r'''
+sh % "hg graft $B $A $D --force" == r'''
     skipping ungraftable merge revision 3
     grafting 1:fc2b737bb2e5 "B"
     grafting 0:426bada5c675 "A"'''
@@ -577,8 +577,8 @@ sh % "newrepo"
 sh % "drawdag" << r"""
 A  B  # B/A=A
 """
-sh % "hg up -qr '$B'"
-sh % "hg graft '$A'" == r"""
+sh % "hg up -qr $B"
+sh % "hg graft $A" == r"""
     grafting 0:426bada5c675 "A"
     note: graft of 0:426bada5c675 created no changes to commit"""
 

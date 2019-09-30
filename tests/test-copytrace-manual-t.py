@@ -19,7 +19,7 @@ A
 """
 
 sh % "hg up -q $C"
-sh % "hg rebase -r '$C' -d '$D' '--config=ui.interactive=1' '--config=experimental.copytrace=off'" << r"""
+sh % "hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.copytrace=off'" << r"""
 r
 Renamed
 """ == r"""

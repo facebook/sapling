@@ -70,7 +70,7 @@ print('patching file a')
 file('a', 'wb').write('line2\n')
 """ > "dummypatch.py"
 sh % "hg clone -qr0 a b0"
-sh % "'HGEDITOR=cat' hg --config 'ui.patch=$PYTHON ../dummypatch.py' --cwd b0 import --edit ../exported-tip.patch" == r"""
+sh % "'HGEDITOR=cat' hg --config \"ui.patch=$PYTHON ../dummypatch.py\" --cwd b0 import --edit ../exported-tip.patch" == r"""
     applying ../exported-tip.patch
     second change
 
@@ -1486,7 +1486,7 @@ height
  seven
 +heigt
 """ > "$TESTTMP/foo.patch"
-sh % "hg import '$TESTTMP/foo.patch'" == r"""
+sh % 'hg import "$TESTTMP/foo.patch"' == r"""
     applying $TESTTMP/foo.patch
     imported-foo: bar"""
 sh % "hg log --debug -r . -T '{extras}'" == r"branch=defaultfoo=bar"

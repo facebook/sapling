@@ -59,7 +59,7 @@ sh % "hg merge branchb -q"
 
 sh % "hg ci -m c1 -d '13 0'"
 sh % "hg bookmark -d brancha branchb branchc"
-sh % "cd '$TESTTMP'"
+sh % 'cd "$TESTTMP"'
 
 # convert with datesort
 

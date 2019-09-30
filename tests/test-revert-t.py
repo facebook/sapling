@@ -1185,7 +1185,7 @@ sh % "cd .."
 
 sh % "cp -R revert-ref revert-parent-explicit-ignored"
 sh % "cd revert-parent-explicit-ignored"
-sh % "echo '*'" > ".gitignore"
+sh % "echo *" > ".gitignore"
 
 # revert all files individually and check the output
 # (output is expected to be different than in the --all case)
@@ -1312,7 +1312,7 @@ sh % "cd .."
 
 sh % "cp -R revert-ref revert-base-explicit-ignored"
 sh % "cd revert-base-explicit-ignored"
-sh % "echo '*'" > ".gitignore"
+sh % "echo *" > ".gitignore"
 
 # revert all files individually and check the output
 # (output is expected to be different than in the --all case)

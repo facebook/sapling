@@ -14,7 +14,7 @@ sh % "newrepo"
 sh % "drawdag" << r"""
 A
 """
-sh % "hg up -Cq '$A'"
+sh % "hg up -Cq $A"
 
 # Test disabling the `hg merge` command:
 sh % "hg merge" == r"""

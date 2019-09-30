@@ -10,7 +10,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "'CACHEDIR=`pwd`/hgcache'"
 
-sh % ". '$TESTDIR/library.sh'"
+sh % '. "$TESTDIR/library.sh"'
 
 sh % "hg init client1"
 sh % "cd client1"

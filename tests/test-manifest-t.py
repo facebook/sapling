@@ -22,7 +22,7 @@ sh % "setconfig 'extensions.treemanifest=!'"
 # hg ci -Amb -d'1 0'
 
 sh % "hg init"
-sh % "hg -q pull '$TESTDIR/bundles/test-manifest.hg'"
+sh % 'hg -q pull "$TESTDIR/bundles/test-manifest.hg"'
 
 # The next call is expected to return nothing:
 

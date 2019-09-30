@@ -21,7 +21,7 @@ sh % "touch a/b/c b/c/d"
 sh % "hg status" == "? a/b/c"
 
 # More complex pattern
-sh % "hg sparse include ''\\''a*/b*/c'\\'''"
+sh % "hg sparse include 'a*/b*/c'"
 sh % "mkdir -p a1/b1"
 sh % "touch a1/b1/c"
 

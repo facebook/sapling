@@ -18,7 +18,7 @@ checkmessagehook=
 sh % "hg init repo"
 sh % "cd repo"
 sh % "touch a"
-sh % "hg commit -A -l '$TESTDIR/ctrlchar-msg.txt'" == r"""
+sh % 'hg commit -A -l "$TESTDIR/ctrlchar-msg.txt"' == r"""
     adding a
     non-printable characters in commit message
     Line 5: 'This has a sneaky ctrl-A: \x01'
@@ -27,7 +27,7 @@ sh % "hg commit -A -l '$TESTDIR/ctrlchar-msg.txt'" == r"""
     rollback completed
     abort: pretxncommit.checkmessage hook failed
     [255]"""
-sh % "hg commit -A -l '$TESTDIR/perfectlyok-msg.txt'" == "adding a"
+sh % 'hg commit -A -l "$TESTDIR/perfectlyok-msg.txt"' == "adding a"
 sh % "hg log -r ." == r"""
     changeset:   0:d9cf9881be7b
     tag:         tip

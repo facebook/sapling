@@ -60,7 +60,7 @@ for testcase in ["v0", "v1", "v2"]:
       A     # C/filemerged = 2
             # D/filemerged = 12
     """
-    sh % "hg up -q '$D'"
+    sh % "hg up -q $D"
     sh % "hg debugpathcomplete f" == r"""
         filemerged
         filenormal

@@ -10,7 +10,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "setconfig 'extensions.treemanifest=!'"
 
-sh % ". '$TESTDIR/library.sh'"
+sh % '. "$TESTDIR/library.sh"'
 sh % "setconfig 'treemanifest.treeonly=False'"
 
 sh % "hginit master"

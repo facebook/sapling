@@ -27,11 +27,11 @@ sh % "hg log -Gr 'all()' -T '{desc} {node}'" == r"""
     |/
     o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0"""
 
-sh % "hg book -r '$A' book/a"
-sh % "hg book -r '$B' book/b"
-sh % "hg book -r '$C' draft/c"
+sh % 'hg book -r "$A" book/a'
+sh % 'hg book -r "$B" book/b'
+sh % 'hg book -r "$C" draft/c'
 
-sh % "cd '$TESTTMP'"
+sh % 'cd "$TESTTMP"'
 sh % "hg clone -q --pull server client"
 sh % "cd client"
 
