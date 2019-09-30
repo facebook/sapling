@@ -10,7 +10,7 @@ mod tracing_blobstore;
 mod utils;
 
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
-use blobrepo::{compute_changed_files, BlobRepo};
+use blobrepo::{compute_changed_files, BlobRepo, UploadEntries};
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -26,13 +26,16 @@ use mercurial_types::{
     manifest, Changeset, FileType, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,
 };
-use mercurial_types_mocks::nodehash::ONES_FNID;
+use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
 };
 use rand::{distributions::Normal, SeedableRng};
 use rand_xorshift::XorShiftRng;
+use scuba_ext::ScubaSampleBuilder;
+use sql_ext::SqlConstructors;
+use sqlfilenodes::SqlFilenodes;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::FromIterator,
@@ -430,6 +433,91 @@ test_both_repotypes!(
     create_bad_changeset,
     create_bad_changeset_lazy,
     create_bad_changeset_eager
+);
+
+fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
+    let ctx = CoreContext::test_mock(fb);
+
+    let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+
+    let (filehash, file_future) =
+        upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
+
+    let (roothash, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("file\0{}\n", filehash),
+        &RepoPath::root(),
+    );
+
+    let (file_blob, _) = run_future(file_future).unwrap();
+    let (root_mf_blob, _) = run_future(root_manifest_future).unwrap();
+
+    let entries = UploadEntries::new(
+        repo.get_blobstore(),
+        repo.get_repoid(),
+        ScubaSampleBuilder::with_discard(),
+        false, /* draft */
+    );
+
+    run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
+
+    run_future(entries.process_one_entry(ctx.clone(), &file_blob, fake_file_path)).unwrap();
+
+    let filenodes = Arc::new(SqlFilenodes::with_sqlite_in_memory().unwrap());
+    run_future(entries.finalize(
+        ctx.clone(),
+        filenodes,
+        ONES_CSID.into_nodehash(),
+        HgManifestId::new(roothash),
+        vec![],
+    ))
+    .unwrap();
+}
+
+test_both_repotypes!(
+    upload_entries_finalize_success,
+    upload_entries_finalize_success_lazy,
+    upload_entries_finalize_success_eager
+);
+
+fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
+    let entries = UploadEntries::new(
+        repo.get_blobstore(),
+        repo.get_repoid(),
+        ScubaSampleBuilder::with_discard(),
+        false, /* draft */
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+
+    let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
+    let (_, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
+    let (root_mf_blob, _) = run_future(root_manifest_future).unwrap();
+
+    run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
+
+    let filenodes = Arc::new(SqlFilenodes::with_sqlite_in_memory().unwrap());
+    let res = run_future(entries.finalize(
+        ctx.clone(),
+        filenodes,
+        ONES_CSID.into_nodehash(),
+        HgManifestId::new(root_mf_blob.get_hash().into_nodehash()),
+        vec![],
+    ));
+
+    assert!(res.is_err());
+}
+
+test_both_repotypes!(
+    upload_entries_finalize_fail,
+    upload_entries_finalize_fail_lazy,
+    upload_entries_finalize_fail_eager
 );
 
 fn create_double_linknode(fb: FacebookInit, repo: BlobRepo) {

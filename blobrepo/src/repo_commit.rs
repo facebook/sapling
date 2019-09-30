@@ -10,8 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use cloned::cloned;
 use failure_ext::{
-    err_msg, format_err, prelude::*, Compat, Error, FutureFailureErrorExt, Result,
-    StreamFailureErrorExt,
+    format_err, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
 };
 use futures::future::{self, ok, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
@@ -23,16 +22,17 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::Timeseries;
 use tracing::{trace_args, Traced};
 
+use ::manifest::{find_intersection_of_diffs, Entry};
 use blobstore::Blobstore;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope, HgChangesetContent},
-    manifest::{self, Content},
+    manifest,
     manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus},
     nodehash::{HgFileNodeId, HgManifestId},
-    Changeset, HgChangesetId, HgEntry, HgEntryId, HgManifest, HgNodeHash, HgNodeKey, HgParents,
-    MPath, RepoPath, NULL_HASH,
+    Changeset, HgChangesetId, HgEntry, HgManifest, HgNodeHash, HgNodeKey, HgParents, MPath,
+    RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 use stats::define_stats;
@@ -46,8 +46,6 @@ define_stats! {
     process_file_entry: timeseries(RATE, SUM),
     process_tree_entry: timeseries(RATE, SUM),
     finalize_required: timeseries(RATE, AVG, SUM),
-    finalize_required_found: timeseries(RATE, AVG, SUM),
-    finalize_required_uploading: timeseries(RATE, AVG, SUM),
     finalize_parent: timeseries(RATE, AVG, SUM),
     finalize_uploaded: timeseries(RATE, AVG, SUM),
     finalize_uploaded_filenodes: timeseries(RATE, AVG, SUM),
@@ -133,9 +131,6 @@ impl ChangesetHandle {
 /// State used while tracking uploaded entries, to ensure that a changeset ends up with the right
 /// set of blobs uploaded, and all filenodes present.
 struct UploadEntriesState {
-    /// Listing of blobs that we need, based on parsing the root manifest and all the newly
-    /// uploaded child manifests
-    required_entries: HashMap<RepoPath, HgEntryId>,
     /// All the blobs that have been uploaded in this changeset
     uploaded_entries: HashMap<RepoPath, HgBlobEntry>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
@@ -164,7 +159,6 @@ impl UploadEntries {
         Self {
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
-                required_entries: HashMap::new(),
                 uploaded_entries: HashMap::new(),
                 parents: HashSet::new(),
                 blobstore,
@@ -186,40 +180,14 @@ impl UploadEntries {
         entry: &HgBlobEntry,
         path: RepoPath,
     ) -> BoxFuture<(), Error> {
-        let inner_mutex = self.inner.clone();
-        let parents_found = self.find_parents(ctx.clone(), entry, path.clone());
-        let entry_hash = entry.get_hash().into_nodehash();
-        let entry_type = entry.get_type();
-
-        entry
-            .get_content(ctx)
-            .and_then(move |content| match content {
-                Content::Tree(manifest) => {
-                    for entry in manifest.list() {
-                        let mpath = MPath::join_element_opt(path.mpath(), entry.get_name());
-                        let mpath = match mpath {
-                            Some(mpath) => mpath,
-                            None => {
-                                return future::err(err_msg(
-                                    "internal error: unexpected empty MPath",
-                                ))
-                                .boxify();
-                            }
-                        };
-                        let path = match entry.get_type() {
-                            manifest::Type::File(_) => RepoPath::FilePath(mpath),
-                            manifest::Type::Tree => RepoPath::DirectoryPath(mpath),
-                        };
-                        let mut inner = inner_mutex.lock().expect("Lock poisoned");
-                        inner.required_entries.insert(path, entry.get_hash());
-                    }
-                    future::ok(()).boxify()
-                }
-                _ => future::err(ErrorKind::NotAManifest(entry_hash, entry_type).into()).boxify(),
-            })
-            .join(parents_found)
-            .map(|_| ())
+        if entry.get_type() != manifest::Type::Tree {
+            future::err(
+                ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
+            )
             .boxify()
+        } else {
+            self.find_parents(ctx.clone(), entry, path.clone())
+        }
     }
 
     fn find_parents(
@@ -260,12 +228,6 @@ impl UploadEntries {
                 ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
             )
             .boxify();
-        }
-        {
-            let mut inner = self.inner.lock().expect("Lock poisoned");
-            inner
-                .required_entries
-                .insert(RepoPath::root(), entry.get_hash());
         }
         self.process_one_entry(ctx, entry, RepoPath::root())
     }
@@ -326,39 +288,41 @@ impl UploadEntries {
         ctx: CoreContext,
         filenodes: Arc<dyn Filenodes>,
         cs_id: HgNodeHash,
+        mf_id: HgManifestId,
+        parent_manifest_ids: Vec<HgManifestId>,
     ) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
-            let required_len = inner.required_entries.len();
+            let blobstore = inner.blobstore.clone();
+            let boxed_blobstore = blobstore.boxed();
+            find_intersection_of_diffs(
+                ctx.clone(),
+                boxed_blobstore.clone(),
+                mf_id,
+                parent_manifest_ids,
+            )
+            .map({
+                cloned!(ctx);
+                move |(path, entry)| {
+                    let (node, is_tree) = match entry {
+                        Entry::Tree(mf_id) => (mf_id.into_nodehash(), true),
+                        Entry::Leaf((_, file_id)) => (file_id.into_nodehash(), false),
+                    };
 
-            let checks: Vec<_> = inner
-                .required_entries
-                .iter()
-                .filter_map(|(path, entryid)| {
-                    if inner.uploaded_entries.contains_key(path) {
-                        None
-                    } else {
-                        let path = path.clone();
-                        let assert = Self::assert_in_blobstore(
-                            ctx.clone(),
-                            inner.blobstore.clone(),
-                            entryid.into_nodehash(),
-                            path.is_tree(),
-                        );
-                        Some(
-                            assert
-                                .with_context(move |_| format!("While checking for path: {}", path))
-                                .from_err(),
-                        )
-                    }
-                })
-                .collect();
+                    let assert =
+                        Self::assert_in_blobstore(ctx.clone(), blobstore.clone(), node, is_tree);
 
-            STATS::finalize_required.add_value(required_len as i64);
-            STATS::finalize_required_found.add_value((required_len - checks.len()) as i64);
-            STATS::finalize_required_uploading.add_value(checks.len() as i64);
-
-            future::join_all(checks).timed({
+                    assert
+                        .with_context(move |_| format!("While checking for path: {:?}", path))
+                        .map_err(Error::from)
+                }
+            })
+            .buffer_unordered(100)
+            .collect()
+            .map(|checks| {
+                STATS::finalize_required.add_value(checks.len() as i64);
+            })
+            .timed({
                 let mut scuba_logger = self.scuba_logger();
                 move |stats, result| {
                     if result.is_ok() {

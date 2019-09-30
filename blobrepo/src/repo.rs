@@ -1854,7 +1854,7 @@ impl CreateChangeset {
                                 make_new_changeset(parents, root_mf_id, cs_metadata, files)
                             })
                             .and_then({
-                                cloned!(ctx);
+                                cloned!(ctx, parent_manifest_hashes);
                                 move |hg_cs| {
                                     create_bonsai_changeset_object(
                                         ctx,
@@ -1929,7 +1929,13 @@ impl CreateChangeset {
                                                 .context("While writing to blobstore")
                                                 .join(
                                                     entry_processor
-                                                        .finalize(ctx, filenodes, cs_id)
+                                                        .finalize(
+                                                            ctx,
+                                                            filenodes,
+                                                            cs_id,
+                                                            root_mf_id,
+                                                            parent_manifest_hashes,
+                                                        )
                                                         .context("While finalizing processing"),
                                                 )
                                                 .from_err()
