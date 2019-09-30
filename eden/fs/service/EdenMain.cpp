@@ -12,6 +12,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <folly/ssl/Init.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
 #include <sysexits.h>
@@ -97,6 +98,11 @@ int EdenMain::main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
 
   std::vector<std::string> originalCommandLine{argv, argv + argc};
+
+  // This is normally performed just-in-time by folly::ssl::SSLContext,
+  // but we need to explicitly ensure that it is initialized
+  // prior to initializing libcurl
+  folly::ssl::init();
 
 #ifdef EDEN_HAVE_CURL
   // We need to call curl_global_init before any thread is created to avoid
