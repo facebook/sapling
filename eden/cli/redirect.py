@@ -122,6 +122,22 @@ class RedirectionType(enum.Enum):
         raise ValueError(f"{arg} is not a valid RedirectionType")
 
 
+def paths_are_equal(a: Path, b: Path) -> bool:
+    """ Returns true if the string content of two Path objects
+    are equal.   Comparing the Path objects themselves doesn't
+    return true! """
+    return str(a) == str(b)
+
+
+def opt_paths_are_equal(a: Optional[Path], b: Optional[Path]) -> bool:
+    if a is not None and b is not None:
+        return paths_are_equal(a, b)
+    if a is None and b is None:
+        return True
+    # either one or the other is None, but not both, so they are not equal
+    return False
+
+
 class Redirection:
     """Information about an individual redirection"""
 
@@ -138,6 +154,15 @@ class Redirection:
         self.target = target
         self.source = source
         self.state = state or RedirectionState.MATCHES_CONFIGURATION
+
+    def __eq__(self, b) -> bool:
+        return (
+            paths_are_equal(self.repo_path, b.repo_path)
+            and self.type == b.type
+            and opt_paths_are_equal(self.target, b.target)
+            and self.source == b.source
+            and self.state == b.state
+        )
 
     def as_dict(self, checkout: EdenCheckout) -> Dict[str, str]:
         res = {}
@@ -600,6 +625,16 @@ class AddCmd(Subcmd):
             help="The type of the redirection",
             choices=["bind", "symlink"],
         )
+        parser.add_argument(
+            "--force-remount-bind-mounts",
+            help=(
+                "Unmount and re-bind mount any bind mount redirections "
+                "to ensure that they are pointing to the right place.  "
+                "This is not the default behavior in the interest of "
+                "preserving kernel caches"
+            ),
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         redir_type = RedirectionType.from_arg_str(args.redir_type)
@@ -614,6 +649,19 @@ class AddCmd(Subcmd):
         # the configuration.
         redirs = get_configured_redirections(checkout)
         redir = Redirection(args.repo_path, redir_type, None, USER_REDIRECTION_SOURCE)
+        existing_redir = redirs.get(args.repo_path, None)
+        if (
+            existing_redir
+            and existing_redir == redir
+            and not args.force_remount_bind_mounts
+        ):
+            print(
+                f"Skipping {redir.repo_path}; it is already configured "
+                "(use --force-remount-bind-mounts to force reconfiguring "
+                "this redirection)",
+                file=sys.stderr,
+            )
+            return 0
 
         redir.apply(checkout)
 
