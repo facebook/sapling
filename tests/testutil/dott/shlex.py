@@ -29,7 +29,12 @@ class shlex:
     "A lexical analyzer class for simple shell-like syntaxes."
 
     def __init__(
-        self, instream=None, infile=None, posix=False, punctuation_chars=False
+        self,
+        instream=None,
+        infile=None,
+        posix=False,
+        punctuation_chars=False,
+        expandfunc=None,
     ):
         if isinstance(instream, str):
             instream = StringIO(instream)
@@ -77,6 +82,8 @@ class shlex:
             # remove any punctuation chars from wordchars
             t = self.wordchars.maketrans(dict.fromkeys(punctuation_chars))
             self.wordchars = self.wordchars.translate(t)
+        self.expandfunc = expandfunc
+        self.expandbuffer = []
 
     def push_token(self, tok):
         "Push a token onto the stack popped by the get_token method"
@@ -139,7 +146,10 @@ class shlex:
         return raw
 
     def read_token(self):
+        if self.expandbuffer:
+            return self.expandbuffer.pop(0)
         quoted = False
+        quotechar = ""
         escapedstate = " "
         while True:
             if self.punctuation_chars and self._pushback_chars:
@@ -190,6 +200,8 @@ class shlex:
                     else:
                         continue
             elif self.state in self.quotes:
+                if not quoted:
+                    quotechar = self.state
                 quoted = True
                 if not nextchar:  # end of file
                     if self.debug >= 2:
@@ -289,6 +301,11 @@ class shlex:
                 print("shlex: raw token=" + repr(result))
             else:
                 print("shlex: raw token=EOF")
+        if self.expandfunc is not None and result is not None:
+            assert not self.expandbuffer
+            self.expandbuffer = self.expandfunc(result, quotechar)
+            assert isinstance(self.expandbuffer, list)
+            return self.read_token()
         return result
 
     def sourcehook(self, newfile):
@@ -321,8 +338,12 @@ class shlex:
     next = __next__
 
 
-def split(s, comments=False, posix=True):
-    lex = shlex(s, posix=posix)
+def split(s, comments=False, posix=True, expandfunc=None):
+    """expandfunc: (arg, quotechar) -> [newarg]
+
+    quotechar can be one of ['', '"', "'"].
+    """
+    lex = shlex(s, posix=posix, expandfunc=expandfunc)
     lex.whitespace_split = True
     if not comments:
         lex.commenters = ""
