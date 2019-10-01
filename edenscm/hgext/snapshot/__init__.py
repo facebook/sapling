@@ -8,10 +8,19 @@
 """extension to snapshot the working copy
 
 With this extension, Mercurial will get a set of commands
-for working with full snapshots of the working copy,
+for working with snapshots of the whole working copy,
 including the untracked files and unresolved merge artifacts.
 
-TODO(alexeyqu): finish docs
+A snapshot is a hidden commit which has some extra metadata attached to it.
+The metadata preserves the information about the
+
+* untracked files (?);
+
+* missing files (!);
+
+* aux files related to merge/rebase state.
+
+The snapshot metadata is stored in the `.hg/store/snapshots/` directory and is synced via infinitepush and commitcloud Mercurial extensions.
 
 Configs::
 
@@ -91,6 +100,8 @@ def extsetup(ui):
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
+    """prevents the repo from updating onto a snapshot node
+    """
     allowsnapshots = repo.ui.configbool("ui", "allow-checkout-snapshot")
     unfi = repo.unfiltered()
     if not allowsnapshots and node in unfi:
@@ -107,6 +118,8 @@ def _updaterepo(orig, repo, node, overwrite, **opts):
 
 
 def _updateheads(orig, self, repo, newheads, tr):
+    """ensures that we don't try to make the snapshot nodes visible
+    """
     unfi = repo.unfiltered()
     heads = []
     for h in newheads:
@@ -144,6 +157,8 @@ def _getrevssl(orig, ui, repo, masterstring, **opts):
 
 
 def _dounhide(orig, repo, revs):
+    """prevents the snapshot nodes from being visible
+    """
     unfi = repo.unfiltered()
     revs = [r for r in revs if "snapshotmetadataid" not in unfi[r].extra()]
     if len(revs) > 0:

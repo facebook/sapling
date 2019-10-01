@@ -13,8 +13,7 @@ from edenscm.mercurial.utils import cborutil
 
 
 class filewrapper(object):
-    """
-    Helper class that links files to oids in the blob storage.
+    """Helper class that links files to oids in the blob storage.
     Also does serialization/deserialization for metadata.
     """
 
@@ -35,16 +34,51 @@ class filewrapper(object):
 
 
 class snapshotmetadata(object):
-    """
-    Main class that contains snapshot metadata representation.
+    """Snapshot metadata.
+
+    Snapshot metadata is the main class of this extension.
+    Snapshot metadata consists of
+    * missing files (marked with `!` in `hg status` output);
+    * unknown files (marked with `?` in `hg status` output);
+    * internal files (important for the repo state, located in `.hg` directory).
+
+    The dict representation of metadata looks like this:
+    {
+        "version": "1",
+        "files": {
+            "deleted": {
+                "path/to/deleted/file": None,
+                . . .
+            },
+            "unknown": {
+                "path/to/unknown/file": {
+                    "oid": <oid of the blob in the storage>,
+                    "size": <size of this blob>
+                },
+                . . .
+            },
+            "localvfsfiles": {
+                "path/to/aux/file": {
+                    "oid": <oid of the blob in the storage>,
+                    "size": <size of this blob>
+                },
+                . . .
+            }
+        }
+    }
+    It gets serialized to CBOR for storage/transfer.
+
+    Currently the metadata keeps track of
+    * merge state (by preserving the contents of the `.hg/merge` directory);
+    * rebase state (by preserving the `.hg/rebasestate` file).
     """
 
     VERSION = 1
 
     def __init__(self, deleted=[], unknown=[], localvfsfiles=[]):
-        self.deleted = deleted
-        self.unknown = unknown
-        self.localvfsfiles = localvfsfiles
+        self.deleted = deleted  # missing files
+        self.unknown = unknown  # unknown files
+        self.localvfsfiles = localvfsfiles  # internal files
 
     @property
     def empty(self):
@@ -96,6 +130,10 @@ class snapshotmetadata(object):
 
     @classmethod
     def createfromworkingcopy(cls, repo, status=None, include_untracked=True):
+        """create a new snapshot from the working copy
+
+        This method gets called from the `hg snapshot create` cmd.
+        """
         # populate the metadata
         status = status or repo.status(unknown=include_untracked)
         deleted = [filewrapper(path) for path in status.deleted]
@@ -113,6 +151,8 @@ class snapshotmetadata(object):
 
     @classmethod
     def getfromlocalstorage(cls, repo, oid):
+        """get the existing snapshot from the local storage"""
+
         def checkfileisstored(store, oid, path):
             if oid is not None and not store.has(oid):
                 raise error.Abort(

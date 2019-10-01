@@ -41,15 +41,25 @@ def snapshot(ui, repo, *args, **opts):
     to shelve command, but is available anytime (e.g. in the middle of
     a merge conflict resolution).
 
-    Use 'hg snapshot create' to create a snapshot. It will print the snapshot's id.
+    Use `hg snapshot create` to create a snapshot.
+    It will print the snapshot's revision.
 
-    Use 'hg snapshot checkout SNAPSHOT_ID' to checkout to the snapshot.
+    Use `hg snapshot checkout REV` to checkout to the snapshot.
+
+    Use `hg snapshot show REV` to show the contents of the snapshot.
+
+    Use `hg snapshot list` to list the local snapshots.
+
+    Use `hg snapshot hide/unhide REV` to add/remove snapshot from this list.
     """
     pass
 
 
 subcmd = snapshot.subcommand(
-    categories=[("Snapshot create/restore", ["create", "checkout"])]
+    categories=[
+        ("Create/restore a snapshot", ["create", "checkout"]),
+        ("Manage the list of snapshots", ["list", "hide", "unhide"]),
+    ]
 )
 
 
@@ -62,14 +72,11 @@ subcmd = snapshot.subcommand(
     inferrepo=True,
 )
 def snapshotcreate(ui, repo, *args, **opts):
-    """
-    Creates a snapshot of the working copy.
-    TODO(alexeyqu): finish docs
+    """creates a snapshot of the working copy
     """
 
     def removeuntrackedfiles(ui, repo):
-        """
-        Removes all untracked files from the repo.
+        """removes all untracked files from the repo
         """
         # the same behavior is implemented better in the purge extension
         # more corner cases are handled there
@@ -226,8 +233,7 @@ def _show(orig, self, ctx, *args):
     "checkout", [("f", "force", False, _("force checkout"))], _("REV"), inferrepo=True
 )
 def snapshotcheckout(ui, repo, *args, **opts):
-    """
-    Checks out the working copy to the snapshot state, given its revision id.
+    """checks out the working copy to the snapshot state, given its revision id
     """
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a snapshot revision id\n"))

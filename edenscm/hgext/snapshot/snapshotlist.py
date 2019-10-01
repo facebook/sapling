@@ -36,6 +36,12 @@ def _getsnapshotlistfile(repo):
 
 class snapshotlist(object):
     """list of local snapshots (hex nodes)
+
+    It is used by `hg snapshot list` command.
+    The nodes from this file are returned by the `snapshot()` revset expression.
+    E.g. only these nodes are synced to CommitCloud.
+
+    Locally is stored in `.hg/store/snapshotlist`.
     """
 
     def __init__(self, repo, check=True):
