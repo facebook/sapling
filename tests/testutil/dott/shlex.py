@@ -25,7 +25,7 @@ except ImportError:
 __all__ = ["shlex", "split"]
 
 
-class shlex:
+class shlex(object):
     "A lexical analyzer class for simple shell-like syntaxes."
 
     def __init__(
@@ -351,7 +351,7 @@ def split(s, comments=False, posix=True, expandfunc=None):
 
 
 def _print_tokens(lexer):
-    while 1:
+    while True:
         tt = lexer.get_token()
         if not tt:
             break
