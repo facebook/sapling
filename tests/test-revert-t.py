@@ -160,7 +160,7 @@ sh % "hg revert --all -r0" == r"""
 sh % "hg revert --all -rtip" == r"""
     forgetting a
     undeleting d"""
-sh % "rm a '*.orig'"
+sh % "rm a *.orig"
 
 # revert to another revision (--rev) and exact match
 # --------------------------------------------------
