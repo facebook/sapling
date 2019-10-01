@@ -511,17 +511,21 @@ def get_username() -> str:
 class LoadedNode(typing.NamedTuple):
     path: str
     is_write: bool
-    file_size: Optional[int]
+    file_size: int
+
+
+def make_loaded_node(path: str, is_write: bool, file_size: Optional[int]) -> LoadedNode:
+    assert file_size is not None, "File should have associated file size"
+    return LoadedNode(path=path, is_write=is_write, file_size=file_size)
 
 
 def split_inodes_by_operation_type(
     inode_results: typing.Sequence[TreeInodeDebugInfo]
 ) -> typing.Tuple[
-    typing.List[typing.Tuple[str, Optional[int]]],
-    typing.List[typing.Tuple[str, Optional[int]]],
+    typing.List[typing.Tuple[str, int]], typing.List[typing.Tuple[str, int]]
 ]:
     loaded_node_info = [
-        LoadedNode(
+        make_loaded_node(
             path=os.path.join(os.fsdecode(tree.path), os.fsdecode(n.name)),
             is_write=n.materialized or not n.hash,
             file_size=n.fileSize,
@@ -540,7 +544,7 @@ def fdatasync(fd: int) -> None:
     getattr(os, "fdatasync", os.fsync)(fd)
 
 
-def write_file_atomically(path: Path, contents: bytes):
+def write_file_atomically(path: Path, contents: bytes) -> None:
     "Atomically writes or replaces a file at path with the given contents."
     tmp = path.with_suffix(".tmp" + hex(random.getrandbits(64))[2:])
     try:

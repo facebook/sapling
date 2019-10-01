@@ -407,7 +407,7 @@ class FileStatsCMD(Subcmd):
         parser.add_argument("--sizes", action="store_true", help="Compute file sizes")
 
     def make_file_entries(
-        self, base_path: str, paths: List[Tuple[str, Optional[int]]], get_sizes: bool
+        self, base_path: str, paths: List[Tuple[str, int]], get_sizes: bool
     ) -> List[Dict[str, Any]]:
         if get_sizes:
             return [{"path": path, "size": file_size} for (path, file_size) in paths]
