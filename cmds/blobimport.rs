@@ -12,13 +12,16 @@ use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
-use failure_ext::{format_err, Result, SlogKVError};
+use failure_ext::{err_msg, format_err, Error, Result, ResultExt, SlogKVError};
 use fbinit::FacebookInit;
 use futures::Future;
 use futures_ext::FutureExt;
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgChangesetId, HgNodeHash};
 use phases::SqlPhases;
-use slog::error;
+use slog::{error, warn, Logger};
+use std::collections::HashMap;
+use std::fs::read;
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{trace_args, Traced};
@@ -53,6 +56,69 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             )
             .conflicts_with("changeset"),
         )
+        .arg(
+            Arg::with_name("fix-parent-order")
+                .long("fix-parent-order")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "file which fixes order or parents for commits in format 'HG_CS_ID P1_CS_ID [P2_CS_ID]'\
+                     This is useful in case of merge commits - mercurial ignores order of parents of the merge commit \
+                     while Mononoke doesn't ignore it. That might result in different bonsai hashes for the same \
+                     Mercurial commit. Using --fix-parent-order allows to fix order of the parents."
+                 )
+        )
+}
+
+fn parse_fixed_parent_order<P: AsRef<Path>>(
+    logger: &Logger,
+    p: P,
+) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>> {
+    let content = read(p)?;
+    let mut res = HashMap::new();
+
+    for line in String::from_utf8(content).map_err(Error::from)?.split("\n") {
+        if line.is_empty() {
+            continue;
+        }
+        let mut iter = line.split(" ").map(HgChangesetId::from_str).fuse();
+        let maybe_hg_cs_id = iter.next();
+        let hg_cs_id = match maybe_hg_cs_id {
+            Some(hg_cs_id) => hg_cs_id?,
+            None => {
+                continue;
+            }
+        };
+
+        let parents = match (iter.next(), iter.next()) {
+            (Some(p1), Some(p2)) => vec![p1?, p2?],
+            (Some(p), None) => {
+                warn!(
+                    logger,
+                    "{}: parent order is fixed for a single parent, most likely won't have any effect",
+                    hg_cs_id,
+                );
+                vec![p?]
+            }
+            (None, None) => {
+                warn!(
+                    logger, "{}: parent order is fixed for a commit with no parents, most likely won't have any effect",
+                    hg_cs_id,
+                );
+                vec![]
+            }
+            (None, Some(_)) => unreachable!(),
+        };
+        if let Some(_) = iter.next() {
+            return Err(err_msg("got 3 parents, but mercurial supports at most 2!"));
+        }
+
+        if res.insert(hg_cs_id, parents).is_some() {
+            warn!(logger, "order is fixed twice for {}!", hg_cs_id);
+        }
+    }
+    Ok(res)
 }
 
 #[fbinit::main]
@@ -117,6 +183,13 @@ fn main(fb: FacebookInit) -> Result<()> {
         args::create_repo_unredacted(fb, &ctx.logger(), &matches).right_future()
     };
 
+    let fixed_parent_order = if let Some(path) = matches.value_of("fix-parent-order") {
+        parse_fixed_parent_order(&logger, path)
+            .context("while parsing file with fixed parent order")?
+    } else {
+        HashMap::new()
+    };
+
     let blobimport = blobrepo
         .join(phases_store)
         .and_then(move |(blobrepo, phases_store)| {
@@ -136,6 +209,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 concurrent_changesets,
                 concurrent_blobs,
                 concurrent_lfs_imports,
+                fixed_parent_order,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())

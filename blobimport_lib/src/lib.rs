@@ -11,6 +11,7 @@ mod changeset;
 mod concurrency;
 
 use std::cmp;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -23,7 +24,7 @@ use slog::{debug, error, info, Logger};
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgChangesetId, HgNodeHash};
 use phases::Phases;
 
 use crate::changeset::UploadChangesets;
@@ -50,6 +51,7 @@ pub struct Blobimport {
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
     pub concurrent_lfs_imports: usize,
+    pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
 }
 
 impl Blobimport {
@@ -68,6 +70,7 @@ impl Blobimport {
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
+            fixed_parent_order,
         } = self;
 
         let stale_bookmarks = {
@@ -94,6 +97,7 @@ impl Blobimport {
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
+            fixed_parent_order,
         }
         .upload()
         .enumerate()

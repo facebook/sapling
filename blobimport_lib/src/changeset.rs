@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -39,6 +39,7 @@ use mercurial_types::{
 };
 use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use phases::Phases;
+use slog::info;
 
 use crate::concurrency::JobProcessor;
 
@@ -265,6 +266,7 @@ pub struct UploadChangesets {
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
     pub concurrent_lfs_imports: usize,
+    pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
 }
 
 impl UploadChangesets {
@@ -281,6 +283,7 @@ impl UploadChangesets {
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
+            fixed_parent_order,
         } = self;
 
         let changesets = match changeset {
@@ -388,11 +391,37 @@ impl UploadChangesets {
                         .traced_with_id(&ctx.trace(), "parse changeset from revlog", trace_args!(), event_id)
                 }
             })
-            .map(move |(csid, cs, rootmf, entries)| {
+            .and_then({
+                cloned!(ctx);
+                move |(csid, cs, rootmf, entries)| {
+                let parents_from_revlog: Vec<_> = cs.parents().into_iter().map(HgChangesetId::new).collect();
+
+                if let Some(parent_order) = fixed_parent_order.get(&HgChangesetId::new(csid.clone())) {
+                    let actual: HashSet<_> = parents_from_revlog.into_iter().collect();
+                    let expected: HashSet<_> = parent_order.iter().map(|csid| *csid).collect();
+                    if actual != expected {
+                        return Err(err_msg(format!(
+                            "Changeset {} has unexpected parents: actual {:?}\nexpected {:?}",
+                            csid,
+                            actual,
+                            expected
+                        )));
+                    }
+
+                    info!(ctx.logger(), "fixing parent order for {}: {:?}", csid, parent_order);
+                    Ok((csid, cs, rootmf, entries, parent_order.clone()))
+                } else {
+                    Ok((csid, cs, rootmf, entries, parents_from_revlog))
+                }
+
+            }})
+            .map(move |(csid, cs, rootmf, entries, parents)| {
                 let entries = stream::futures_unordered(entries).boxify();
 
                 let (p1handle, p2handle) = {
-                    let mut parents = cs.parents().into_iter().map(|p| {
+
+                    let mut parents = parents.into_iter().map(|p| {
+                        let p = p.into_nodehash();
                         let maybe_handle = parent_changeset_handles.get(&p).cloned();
 
                         if is_import_from_beggining {
