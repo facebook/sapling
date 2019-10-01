@@ -74,7 +74,6 @@
   $TESTTMP/hgcache/repos
 
   $ hg pull -q --config remotefilelog.backgroundrepack=True --config remotefilelog.packsonlyrepack=True
-  (running background incremental repack)
   $ sleep 0.5
   $ hg debugwaitonprefetch >/dev/null 2>%1
 

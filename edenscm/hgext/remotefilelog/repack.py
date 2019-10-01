@@ -72,7 +72,7 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
 
     cmd = " ".join(map(util.shellquote, cmd))
 
-    repo.ui.warn(msg)
+    repo.ui.status(msg)
     runshellcommand(cmd, encoding.environ)
 
 

@@ -294,7 +294,6 @@
   $ hg commit -m 'move z -> z2'
   $ cd ../packprefetch
   $ hg pull -q
-  (running background incremental repack)
   $ hg prefetch -r tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ hg up tip -q
