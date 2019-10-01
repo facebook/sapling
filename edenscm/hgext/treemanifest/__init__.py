@@ -551,6 +551,9 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
+            if self._httpprefetchtrees(mfnodes, depth):
+                return
+
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):
                 with self.connectionpool.get(fallbackpath) as conn:
@@ -571,6 +574,20 @@ def wraprepo(repo):
             if self.svfs.treemanifestserver:
                 caps = _addservercaps(self, caps)
             return caps
+
+        def _httpprefetchtrees(self, mfnodes, depth=None):
+            mfl = self.manifestlog
+            if _userustmanifest(mfl) and _usehttp(self.ui):
+                try:
+                    with progress.spinner(self.ui, "Prefetching trees over HTTPS"):
+                        for node in mfnodes:
+                            rustmanifest.prefetch(mfl.datastore, node, "", depth)
+                    return True
+                except Exception as e:
+                    self.ui.warn(_("encountered error during HTTPS fetching;"))
+                    self.ui.warn(_(" falling back to SSH\n"))
+                    edenapi.logexception(self.ui, e)
+            return False
 
         def _httpgettrees(self, keys):
             """
@@ -1018,6 +1035,10 @@ class hybridmanifestlog(manifest.manifestlog):
     def abortpending(self):
         super(hybridmanifestlog, self).abortpending()
         self.treemanifestlog.abortpending()
+
+
+def _usehttp(ui):
+    return edenapi.enabled(ui) and ui.configbool("treemanifest", "usehttp")
 
 
 def _userustmanifest(manifestlog):
@@ -2529,8 +2550,7 @@ class remotetreestore(generatingdatastore):
         # back to the old prefetch-based fetching behavior if the
         # HTTP fetch fails. Unlike _prefetch(), the HTTP fetching
         # only fetches the individually requested tree node.
-        usehttp = self._repo.ui.configbool("treemanifest", "usehttp")
-        if edenapi.enabled(self._repo.ui) and usehttp:
+        if _usehttp(self._repo.ui):
             try:
                 self._repo._httpgettrees([(name, node)])
                 return
@@ -2578,8 +2598,7 @@ class remotetreestore(generatingdatastore):
         self._sharedhistory.markforrefresh()
 
     def prefetch(self, keys):
-        usehttp = self._repo.ui.configbool("treemanifest", "usehttp")
-        if edenapi.enabled(self._repo.ui) and usehttp:
+        if _usehttp(self._repo.ui):
             keys = self._shareddata.getmissing(keys)
             try:
                 self._repo._httpgettrees(keys)

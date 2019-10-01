@@ -66,6 +66,19 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(
+        py,
+        "prefetch",
+        py_fn!(
+            py,
+            prefetch(
+                store: PyObject,
+                node: &PyBytes,
+                path: &PyBytes,
+                depth: Option<usize> = None
+            )
+        ),
+    )?;
     Ok(m)
 }
 
@@ -440,6 +453,21 @@ pub fn subdir_diff(
         result.push(tuple);
     }
     vec_to_iter(py, result)
+}
+
+pub fn prefetch(
+    py: Python,
+    store: PyObject,
+    node: &PyBytes,
+    path: &PyBytes,
+    depth: Option<usize>,
+) -> PyResult<PyObject> {
+    let store = Arc::new(ManifestStore::new(PythonDataStore::new(store)));
+    let node = pybytes_to_node(py, node)?;
+    let path = pybytes_to_path(py, path);
+    let key = Key::new(path, node);
+    manifest::prefetch(store, key, depth).map_pyerr::<exc::RuntimeError>(py)?;
+    Ok(py.None())
 }
 
 fn vec_to_iter<T: ToPyObject>(py: Python, items: Vec<T>) -> PyResult<PyObject> {

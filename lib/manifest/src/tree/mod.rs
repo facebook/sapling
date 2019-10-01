@@ -568,6 +568,38 @@ pub fn compat_subtree_diff(
     Ok(state.result)
 }
 
+pub fn prefetch(
+    store: Arc<dyn TreeStore + Send + Sync>,
+    key: Key,
+    mut depth: Option<usize>,
+) -> Fallible<()> {
+    let tree = Tree::durable(store, key.node);
+    let mut dirs = vec![Directory::from_link(&tree.root, key.path).unwrap()];
+
+    while !dirs.is_empty() {
+        let keys = dirs.iter().filter_map(|d| d.key()).collect::<Vec<_>>();
+        if !keys.is_empty() {
+            tree.store.prefetch(keys)?;
+        }
+
+        dirs = dirs
+            .into_iter()
+            .map(|d| Ok(d.list(&tree.store)?.1))
+            .collect::<Fallible<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect();
+
+        depth = match depth {
+            Some(0) => break,
+            Some(d) => Some(d - 1),
+            None => None,
+        };
+    }
+
+    Ok(())
+}
+
 /// A file (leaf node) encountered during a tree traversal.
 ///
 /// Consists of the full path to the file along with the associated file metadata.
