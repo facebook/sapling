@@ -499,7 +499,7 @@ if feature.check(["execbit"]):
                 @@ -0,1 +0,1 @@
         99b4ae7 -
         99b4ae7 +bla
-    
+
         1 changeset affected
         99b4ae7 foo"""
     sh % "hg absorb --apply-changes" == r"""
@@ -507,7 +507,7 @@ if feature.check(["execbit"]):
                 @@ -0,1 +0,1 @@
         99b4ae7 -
         99b4ae7 +bla
-    
+
         1 changeset affected
         99b4ae7 foo
         1 of 1 chunk applied"""
