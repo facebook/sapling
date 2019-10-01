@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import (
     IO,
     Any,
-    BinaryIO,
     Callable,
     Dict,
     Iterator,
@@ -53,6 +52,7 @@ from .subcmd import Subcmd
 from .util import split_inodes_by_operation_type
 
 
+MB = 1024 ** 2
 debug_cmd = subcmd_mod.Decorator()
 
 
@@ -416,6 +416,19 @@ class FileStatsCMD(Subcmd):
             {"path": path, "size": file_size} for (path, file_size) in paths_and_sizes
         ]
 
+    def make_summary(self, paths_and_sizes: List[Tuple[str, int]]) -> Dict[str, Any]:
+        large_paths_and_sizes = [
+            (path, size) for path, size in paths_and_sizes if size > 10 * MB
+        ]
+        summary = {
+            "file_count": len(paths_and_sizes),
+            "total_bytes": sum(size for _, size in paths_and_sizes),
+            "large_file_count (> 10MB)": len(large_paths_and_sizes),
+            "large_files": self.make_file_entries(large_paths_and_sizes),
+        }
+
+        return summary
+
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
@@ -427,8 +440,14 @@ class FileStatsCMD(Subcmd):
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)
         operations = {
-            "read_files": self.make_file_entries(read_files),
-            "written_files": self.make_file_entries(written_files),
+            "summary": {
+                "read": self.make_summary(read_files),
+                "written": self.make_summary(written_files),
+            },
+            "details": {
+                "read_files": self.make_file_entries(read_files),
+                "written_files": self.make_file_entries(written_files),
+            },
         }
         json.dump(operations, fp=sys.stdout, indent=4, separators=(",", ": "))
         return 0
