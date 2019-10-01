@@ -22,7 +22,7 @@ use futures_ext::{
 };
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
-use hooks::HookManager;
+use hooks::{HookExecution, HookManager};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::hashmap;
@@ -82,7 +82,7 @@ define_stats! {
     quicksand_fetched_file_size: timeseries(RATE, SUM),
 
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); RATE, SUM),
-    push_hook_failure: dynamic_timeseries("push_hook_failure.{}", (reponame: String); RATE, SUM),
+    push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); RATE, SUM),
     push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); RATE, SUM),
     push_error: dynamic_timeseries("push_error.{}", (reponame: String); RATE, SUM),
 }
@@ -1291,8 +1291,24 @@ impl HgCommands for RepoClient {
                         move |err| {
                             use bundle2_resolver::BundleResolverError::*;
                             match err {
-                                HookError(..) => {
-                                    STATS::push_hook_failure.add_value(1, (reponame, ));
+                                HookError((cs_hooks, file_hooks)) => {
+                                    let mut failed_hooks = HashSet::new();
+                                    for (exec_id, exec_info) in cs_hooks {
+                                        if let HookExecution::Rejected(_) = exec_info {
+                                            failed_hooks.insert(exec_id.hook_name.clone());
+                                        }
+                                    }
+                                    for (exec_id, exec_info) in file_hooks {
+                                        if let HookExecution::Rejected(_) = exec_info {
+                                            failed_hooks.insert(exec_id.hook_name.clone());
+                                        }
+                                    }
+
+                                    for failed_hook in failed_hooks {
+                                        STATS::push_hook_failure.add_value(
+                                            1, (reponame.clone(), failed_hook)
+                                        );
+                                    }
                                 }
                                 PushrebaseConflicts(..) => {
                                     STATS::push_conflicts.add_value(1, (reponame, ));
