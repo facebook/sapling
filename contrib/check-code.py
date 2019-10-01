@@ -289,22 +289,10 @@ pypats = [
         (r"[^_]_\([ \t\n]*(?:'[^']+'[ \t\n+]*)+%", "don't use % inside _()"),
         (r"(\w|\)),\w", "missing whitespace after ,"),
         (r"(\w|\))[+/*\-<>]\w", "missing whitespace in expression"),
-        #   false positive on multi-line keyword arguments
-        #    (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
-        (r"\w\s=\s\s+\w", "gratuitous whitespace after ="),
-        # (r".{81}", "line too long"),
-        (r"[^\n]\Z", "no trailing newline"),
-        (r"(\S[ \t]+|^[ \t]+)\n", "trailing whitespace"),
-        #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=',
-        #     "don't use underbars in identifiers"),
         (
             r"^\s+(self\.)?[A-Za-z][a-z0-9]+[A-Z]\w* = ",
             "don't use camelcase in identifiers",
             r"#.*camelcase-required",
-        ),
-        (
-            r"^\s*(if|while|def|class|except|try)\s[^[\n]*:\s*[^\\n]#\s]+",
-            "linebreak after :",
         ),
         (
             r"class\s[^( \n]+:",
@@ -321,30 +309,8 @@ pypats = [
             % "|".join(k for k in keyword.kwlist if k not in ("print", "exec")),
             "Python keyword is not a function",
         ),
-        (r",]", "unneeded trailing ',' in list"),
-        #    (r'class\s[A-Z][^\(]*\((?!Exception)',
-        #     "don't capitalize non-exception classes"),
-        #    (r'in range\(', "use xrange"),
-        #    (r'^\s*print\s+', "avoid using print in core and extensions"),
         (r"[\x80-\xff]", "non-ASCII character literal"),
         (r'("\')\.format\(', "str.format() has no bytes counterpart, use %"),
-        # (
-        #     r"^\s*(%s)\s\s" % "|".join(keyword.kwlist),
-        #     "gratuitous whitespace after Python keyword",
-        # ),
-        (r"([\(\[][ \t]\S)|(\S[ \t][\)\]])", "gratuitous whitespace in () or []"),
-        #    (r'\s\s=', "gratuitous whitespace before ="),
-        (
-            r"[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=|%=)\S",
-            "missing whitespace around operator",
-        ),
-        (
-            r"[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=|%=)\s",
-            "missing whitespace around operator",
-        ),
-        (r"\s(\+=|-=|!=|<>|<=|>=|<<=|>>=|%=)\S", "missing whitespace around operator"),
-        (r"[^^+=*/!<>&| %-](\s=|=\s)[^= ]", "wrong whitespace around ="),
-        (r"\([^()]*( =[^=]|[^<>!=]= )", "no whitespace around = for named parameters"),
         (r"raise Exception", "don't raise generic exceptions"),
         (
             r"raise [^,(]+, (\([^\)]+\)|[^,\(\)]+)$",
@@ -383,7 +349,6 @@ pypats = [
             r"^\s*except\s([^\(,]+|\([^\)]+\))\s*,",
             'legacy exception syntax; use "as" instead of ","',
         ),
-        (r":\n(    )*( ){1,3}[^ ]", "must indent 4 spaces"),
         (r"release\(.*wlock, .*lock\)", "wrong lock release order"),
         (r"\bdef\s+__bool__\b", "__bool__ should be __nonzero__ in Python 2"),
         (
