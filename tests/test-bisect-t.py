@@ -458,12 +458,12 @@ if repo['.'].rev() < 6:
 """ > "script.py"
 sh % "hg bisect -r"
 sh % "hg up -qr tip"
-sh % "hg bisect --command 'hg debugpython -- \"$TESTTMP/script.py\" and some parameters'" == r"""
+sh % "hg bisect --command 'hg debugpython -- script.py and some parameters'" == r"""
     changeset 31:58c80a7c8a40: good
     abort: cannot bisect (no known bad revisions)
     [255]"""
 sh % "hg up -qr 0"
-sh % "hg bisect --command 'hg debugpython -- \"$TESTTMP/script.py\" and some parameters'" == r"""
+sh % "hg bisect --command 'hg debugpython -- script.py and some parameters'" == r"""
     changeset 0:b99c7b9c8e11: bad
     changeset 15:e7fa0811edb0: good
     changeset 7:03750880c6b5: good
@@ -494,7 +494,7 @@ sh % "chmod +x script.sh"
 sh % "hg bisect -r"
 sh % "hg bisect --good tip --noupdate"
 sh % "hg bisect --bad 0 --noupdate" == "Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)"
-sh % "hg bisect --command 'sh \"$TESTTMP/script.sh\" and some params' --noupdate" == r"""
+sh % "hg bisect --command 'sh script.sh and some params' --noupdate" == r"""
     changeset 15:e7fa0811edb0: good
     changeset 7:03750880c6b5: good
     changeset 3:b53bea5e2fcb: bad
@@ -524,12 +524,12 @@ test "$rev" -ge 6
 sh % "chmod +x script.sh"
 sh % "hg bisect -r"
 sh % "hg up -qr tip"
-sh % "hg bisect --command 'sh \"$TESTTMP/script.sh\" and some params'" == r"""
+sh % "hg bisect --command 'sh script.sh and some params'" == r"""
     changeset 31:58c80a7c8a40: good
     abort: cannot bisect (no known bad revisions)
     [255]"""
 sh % "hg up -qr 0"
-sh % "hg bisect --command 'sh \"$TESTTMP/script.sh\" and some params'" == r"""
+sh % "hg bisect --command 'sh script.sh and some params'" == r"""
     changeset 0:b99c7b9c8e11: bad
     changeset 15:e7fa0811edb0: good
     changeset 7:03750880c6b5: good
