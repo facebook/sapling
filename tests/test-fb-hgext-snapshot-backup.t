@@ -111,20 +111,25 @@
   $ OID="$(hg snapshot create | cut -f2 -d' ')"
   $ echo "$OID"
   f890179e6e66eeb2a5a676efb96f150133a437c9
+# Do it one more time to trigger rebundling on the server side
+  $ hg snapshot create -m "second snapshot"
+  snapshot 1357825b79d89e00627c3c847951eebfd46b6356 created
 
 # Back it up
   $ hg cloud backup
   backing up stack rooted at f473d4d5a1c0
-  remote: pushing 3 commits:
+  remote: pushing 4 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
   remote:     f890179e6e66  snapshot
+  remote:     1357825b79d8  second snapshot
   backing up stack rooted at 6eb2552aed20
-  remote: pushing 3 commits:
+  remote: pushing 4 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
   remote:     f890179e6e66  snapshot
-  commitcloud: backed up 3 commits
+  remote:     1357825b79d8  second snapshot
+  commitcloud: backed up 4 commits
 
 # Restore it on another client
   $ cd ../restored

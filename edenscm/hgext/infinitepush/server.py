@@ -449,6 +449,15 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
             except BaseException as ex:
                 parts.append(bundle2.createerrorpart(str(ex)))
 
+    try:
+        snapshot = extensions.find("snapshot")
+    except KeyError:
+        pass
+    else:
+        snapshot.bundleparts.appendsnapshotmetadatabundlepart(
+            bundlerepo, outgoing.missing, parts
+        )
+
     return parts
 
 

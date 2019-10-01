@@ -31,6 +31,8 @@ Configs::
 from __future__ import absolute_import
 
 from edenscm.mercurial import (
+    blobstore as blobstoremod,
+    bundlerepo,
     error,
     extensions,
     hg,
@@ -61,8 +63,11 @@ def reposetup(ui, repo):
     # Nothing to do with a remote repo
     if not repo.local():
         return
-
     repo.svfs.snapshotstore = blobstore.local(repo)
+    if isinstance(repo, bundlerepo.bundlerepository):
+        repo.svfs.snapshotstore = blobstoremod.unionstore(
+            repo.svfs.snapshotstore, repo._snapshotbundlestore
+        )
     snapshotlist.reposetup(ui, repo)
 
 
@@ -70,6 +75,9 @@ def extsetup(ui):
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
     extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
     extensions.wrapfunction(templatekw, "showgraphnode", _showgraphnode)
+    extensions.wrapfunction(
+        bundlerepo.bundlerepository, "_handlebundle2part", _handlebundle2part
+    )
     try:
         smartlog = extensions.find("smartlog")
         extensions.wrapfunction(smartlog, "getrevs", _getrevssl)
@@ -117,6 +125,14 @@ def _showgraphnode(orig, repo, ctx, **args):
     if "snapshotmetadataid" in ctx.extra():
         return "s"
     return orig(repo, ctx, **args)
+
+
+def _handlebundle2part(orig, self, bundle, part):
+    if part.type != bundleparts.snapshotmetadataparttype:
+        return orig(self, bundle, part)
+    self._snapshotbundlestore = blobstoremod.memlocal()
+    for oid, data in bundleparts.binarydecode(part):
+        self._snapshotbundlestore.write(oid, data)
 
 
 def _getrevssl(orig, ui, repo, masterstring, **opts):

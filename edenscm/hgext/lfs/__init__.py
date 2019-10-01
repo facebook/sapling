@@ -46,6 +46,7 @@ from __future__ import absolute_import
 import hashlib
 
 from edenscm.mercurial import (
+    blobstore as blobstoremod,
     bundle2,
     changegroup,
     context,
@@ -111,7 +112,7 @@ def reposetup(ui, repo):
     if repo.ui.configbool("lfs", "localstore"):
         localstore = blobstore.local(repo)
     else:
-        localstore = blobstore.memlocal()
+        localstore = blobstoremod.memlocal()
     repo.svfs.lfslocalblobstore = localstore
     repo.svfs.lfsremoteblobstore = blobstore.remote(repo.ui)
 
@@ -219,7 +220,7 @@ def _adhocstores(ui, url):
     """return local and remote stores for ad-hoc (outside repo) uses"""
     if url is not None:
         ui.setconfig("lfs", "url", url)
-    return blobstore.memlocal(), blobstore.remote(ui)
+    return blobstoremod.memlocal(), blobstore.remote(ui)
 
 
 @command("debuglfssend", [], _("hg debuglfssend [URL]"), norepo=True)

@@ -76,34 +76,6 @@ class local(blobstore.localblobstore):
         super(local, self).__init__(vfs, cachevfs)
 
 
-class memlocal(object):
-    """In-memory local blobstore for ad-hoc uploading/downloading without
-    writing to the filesystem.
-
-    Used by debuglfssingleupload and debuglfssingledownload.
-    """
-
-    def __init__(self):
-        self._files = {}
-
-    def write(self, oid, data):
-        self._files[oid] = data
-
-    def read(self, oid):
-        return self._files[oid]
-
-    def has(self, oid):
-        return oid in self._files
-
-    def vfs(self, oid, mode="r"):
-        """wrapper for a "streaming" way to access a file
-
-        Used by _gitlfsremote._basictransfer.
-        """
-        assert mode == "r"
-        return util.stringio(self.read(oid))
-
-
 class _gitlfsremote(object):
     def __init__(self, ui, url):
         self.ui = ui

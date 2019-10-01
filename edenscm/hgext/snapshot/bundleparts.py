@@ -20,6 +20,14 @@ def uisetup(ui):
         bundle2.capabilities[snapshotmetadataparttype] = ()
 
 
+def appendsnapshotmetadatabundlepart(repo, revs, parts):
+    """construct the bundlepart and append it to the list
+    """
+    data = getmetadatafromrevs(repo, revs)
+    if data:
+        parts.append(bundle2.bundlepart(snapshotmetadataparttype, data=data))
+
+
 def getmetadatafromrevs(repo, revs):
     """get binary representation of snapshot metadata by a list of revs
     """

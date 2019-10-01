@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import hashlib
 
-from . import error
+from . import error, util
 from .i18n import _
 
 
@@ -50,3 +50,52 @@ class localblobstore(object):
         """Returns True if the local blobstore contains the requested blob,
         False otherwise."""
         return (self.cachevfs and self.cachevfs.exists(oid)) or self.vfs.exists(oid)
+
+
+class memlocal(object):
+    """In-memory local blobstore for ad-hoc uploading/downloading without
+    writing to the filesystem.
+
+    Used by LFS (debuglfssingleupload and debuglfssingledownload) and snapshot (rebundle).
+    """
+
+    def __init__(self):
+        self._files = {}
+
+    def write(self, oid, data):
+        self._files[oid] = data
+
+    def read(self, oid):
+        return self._files[oid]
+
+    def has(self, oid):
+        return oid in self._files
+
+    def vfs(self, oid, mode="r"):
+        """wrapper for a "streaming" way to access a file
+
+        Used by _gitlfsremote._basictransfer.
+        """
+        assert mode == "r"
+        return util.stringio(self.read(oid))
+
+
+class unionstore(object):
+    """A store which offers uniform access to in-memory store and local on-disk store.
+    """
+
+    def __init__(self, diskstore, memstore):
+        self.diskstore = diskstore
+        self.memstore = memstore
+
+    def write(self, oid, data):
+        self.diskstore.write(oid, data)
+
+    def read(self, oid):
+        if self.memstore.has(oid):
+            return self.memstore.read(oid)
+        else:
+            return self.diskstore.read(oid)
+
+    def has(self, oid):
+        return self.memstore.has(oid) or self.diskstore.has(oid)
