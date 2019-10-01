@@ -24,6 +24,7 @@
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
@@ -316,6 +317,11 @@ int main(int argc, char** argv) {
     XLOG(INFO) << "Running in experimental systemd mode";
   }
 #endif
+
+  // Reference FLAGS_edenfsctlPath so that it is linked into fake_edenfs
+  // when compiling in opt mode.  Without this reference the linker will
+  // discard the symbol and our tests will claim that this flag is unknown
+  XLOG(INFO) << "edenfsctlPath is " << FLAGS_edenfsctlPath;
 
   if (argc != 1 && !FLAGS_allowExtraArgs) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");

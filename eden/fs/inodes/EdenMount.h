@@ -31,6 +31,8 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+DECLARE_string(edenfsctlPath);
+
 namespace folly {
 class EventBase;
 class File;
