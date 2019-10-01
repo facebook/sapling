@@ -367,18 +367,6 @@ def tglogm(*args):
 # helper specific to shlib
 
 
-def reload(*args):
-    """Reload edenscm Python modules. Cancel side effects by hg extensions."""
-    todel = [k for k in sys.modules if k.startswith("edenscm")]
-    for name in todel:
-        del sys.modules[name]
-    from edenscm.mercurial import dispatch, ui as uimod, util
-
-    globals()["dispatch"] = dispatch
-    globals()["uimod"] = uimod
-    globals()["util"] = util
-
-
 def expandpath(path):
     # Replace `pwd`, it is commonly used in tests.
     pwd = os.getcwd()
