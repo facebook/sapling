@@ -143,6 +143,16 @@ implementation rather than the C++ one.
 
     [treemanifest]
     rustmanifest = True
+
+`treemanifest.bfsprefetch` causes the client to perform a BFS over the
+tree to be prefetched and manually request all missing nodes from the
+server, rather than relying on the server to perform this computation.
+This option has no effect unless treemanifest.usehttp is set to true.
+
+::
+
+    [treemanifest]
+    bfsprefetch = True
 """
 from __future__ import absolute_import
 
@@ -551,7 +561,7 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
-            if self._httpprefetchtrees(mfnodes, depth):
+            if self._httpprefetchtrees(rootdir, mfnodes, basemfnodes, depth):
                 return
 
             start = util.timer()
@@ -575,19 +585,36 @@ def wraprepo(repo):
                 caps = _addservercaps(self, caps)
             return caps
 
-        def _httpprefetchtrees(self, mfnodes, depth=None):
-            mfl = self.manifestlog
-            if _userustmanifest(mfl) and _usehttp(self.ui):
+        def _httpprefetchtrees(self, rootdir, mfnodes, basemfnodes, depth=None):
+            if _usehttp(self.ui):
                 try:
-                    with progress.spinner(self.ui, "Prefetching trees over HTTPS"):
-                        for node in mfnodes:
-                            rustmanifest.prefetch(mfl.datastore, node, "", depth)
+                    if self.ui.configbool("treemanifest", "bfsprefetch"):
+                        self._httpbfsprefetch(rootdir, mfnodes, depth)
+                    else:
+                        self._httpgettreepack(rootdir, mfnodes, basemfnodes, depth)
                     return True
                 except Exception as e:
                     self.ui.warn(_("encountered error during HTTPS fetching;"))
                     self.ui.warn(_(" falling back to SSH\n"))
                     edenapi.logexception(self.ui, e)
             return False
+
+        def _httpgettreepack(self, rootdir, mfnodes, basemfnodes, depth=None):
+            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
+
+            with progress.spinner(self.ui, "prefetching trees over HTTPS"):
+                stats = self.edenapi.prefetch_trees(
+                    rootdir, mfnodes, basemfnodes, dpack, depth
+                )
+
+            if self.ui.interactive() and edenapi.debug(self.ui):
+                self.ui.warn(_("%s\n") % stats.to_str())
+
+        def _httpbfsprefetch(self, rootdir, mfnodes, depth=None):
+            with progress.spinner(self.ui, "prefetching trees over HTTPS"):
+                store = self.manifestlog.datastore
+                for node in mfnodes:
+                    rustmanifest.prefetch(store, node, rootdir, depth)
 
         def _httpgettrees(self, keys):
             """
