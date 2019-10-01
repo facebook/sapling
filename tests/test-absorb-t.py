@@ -6,22 +6,37 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
-# TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
 sh % "enable absorb"
 
-sh % "'sedi()' '{'" == r"""
-    > pattern="$1"
-    > shift
-    > for i in "$@"; do
-    >     sed "$pattern" "$i" > "$i".tmp
-    >     mv "$i".tmp "$i"
-    > done
-    > }"""
+sh % "cat" << r"""
+from edenscm.mercurial import commands, registrar
+cmdtable = {}
+command = registrar.command(cmdtable)
+@command('amend', [], '')
+def amend(ui, repo, *pats, **opts):
+    return 3
+""" >> "$TESTTMP/dummyamend.py"
+sh % "cat" << r"""
+[extensions]
+amend=$TESTTMP/dummyamend.py
+[absorb]
+amendflag = correlated
+""" >> "$HGRCPATH"
+
+
+def sedi(pattern, *paths):
+    # pattern looks like 's/foo/bar/'
+    _s, a, b = pattern.split("/")[:3]
+    for path in paths:
+        content = open(path, "rb").read().replace(a, b)
+        open(path, "wb").write(content)
+
+
+shlib.sedi = sedi
 
 sh % "newrepo"
 
@@ -33,17 +48,9 @@ sh % "hg absorb" == r"""
 
 # Make some commits:
 
-sh % "for i in 1 2 3 4 '5;' do" == r"""
-    >   echo $i >> a
-    >   hg commit -A a -m "commit $i" -q
-    > done"""
-
-sh % "hg annotate a" == r"""
-    0: 1
-    1: 2
-    2: 3
-    3: 4
-    4: 5"""
+for i in range(1, 6):
+    open("a", "ab").write("%s\n" % i)
+    sh % ("hg commit -A a -q -m 'commit %s'" % i)
 
 # Change a few lines:
 
@@ -308,12 +315,10 @@ sh % "newrepo"
 
 # Make some commits to multiple files:
 
-sh % "for f in a 'b;' do" == r"""
-    >   for i in 1 2; do
-    >     echo $f line $i >> $f
-    >     hg commit -A $f -m "commit $f $i" -q
-    >   done
-    > done"""
+for f in ["a", "b"]:
+    for i in [1, 2]:
+        open(f, "ab").write("%s line %s\n" % (f, i))
+        sh.hg("commit", "-A", f, "-m", "commit %s %s" % (f, i), "-q")
 
 # Use pattern to select files to be fixed up:
 
@@ -433,21 +438,6 @@ sh % "hg log -T '{rev}:{node|short} {desc} {get(extras, \"absorb_source\")}\\n'"
 
 # Test config option absorb.amendflags and running as a sub command of amend:
 
-sh % "cat" << r"""
-from edenscm.mercurial import commands, registrar
-cmdtable = {}
-command = registrar.command(cmdtable)
-@command('amend', [], '')
-def amend(ui, repo, *pats, **opts):
-    return 3
-""" >> "$TESTTMP/dummyamend.py"
-sh % "cat" << r"""
-[extensions]
-amend=$TESTTMP/dummyamend.py
-[absorb]
-amendflag = correlated
-""" >> "$HGRCPATH"
-
 sh % "hg amend -h" == r"""
     hg amend
 
@@ -460,10 +450,17 @@ sh % "hg amend -h" == r"""
 
     (some details hidden, use --verbose to show complete help)"""
 
-sh % "'$PYTHON' -c 'print(\"\".join(map(chr, range(0,3))))'" > "c"
+open("c", "wb").write(bytearray([0, 1, 2, 10]))
+
 sh % "hg commit -A c -m 'c is a binary file'"
 sh % "echo c" >> "c"
-sh % "sedi '$2i\\\\\\nINS\\n' b"
+
+sh % "cat b" == r"""
+    b line 1
+    b line 2
+"""
+sh % "cat" << "b line 1\nINS\nb line 2\n" > "b"
+
 sh % "echo END" >> "b"
 sh % "hg rm a"
 sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
@@ -485,42 +482,43 @@ sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
 
 # Executable files:
 
-sh % "cat" << r"""
-[diff]
-git=True
-""" >> "$HGRCPATH"
-sh % "newrepo"
-sh % "echo" > "foo.py"
-sh % "chmod +x foo.py"
-sh % "hg add foo.py"
-sh % "hg commit -mfoo"
+if feature.check(["execbit"]):
+    sh % "cat" << r"""
+    [diff]
+    git=True
+    """ >> "$HGRCPATH"
+    sh % "newrepo"
+    sh % "echo" > "foo.py"
+    sh % "chmod +x foo.py"
+    sh % "hg add foo.py"
+    sh % "hg commit -mfoo"
 
-sh % "echo bla" > "foo.py"
-sh % "hg absorb --dry-run" == r"""
-    showing changes for foo.py
-            @@ -0,1 +0,1 @@
-    99b4ae7 -
-    99b4ae7 +bla
-
-    1 changeset affected
-    99b4ae7 foo"""
-sh % "hg absorb --apply-changes" == r"""
-    showing changes for foo.py
-            @@ -0,1 +0,1 @@
-    99b4ae7 -
-    99b4ae7 +bla
-
-    1 changeset affected
-    99b4ae7 foo
-    1 of 1 chunk applied"""
-sh % "hg diff -c ." == r"""
-    diff --git a/foo.py b/foo.py
-    new file mode 100755
-    --- /dev/null
-    +++ b/foo.py
-    @@ -0,0 +1,1 @@
-    +bla"""
-sh % "hg diff"
+    sh % "echo bla" > "foo.py"
+    sh % "hg absorb --dry-run" == r"""
+        showing changes for foo.py
+                @@ -0,1 +0,1 @@
+        99b4ae7 -
+        99b4ae7 +bla
+    
+        1 changeset affected
+        99b4ae7 foo"""
+    sh % "hg absorb --apply-changes" == r"""
+        showing changes for foo.py
+                @@ -0,1 +0,1 @@
+        99b4ae7 -
+        99b4ae7 +bla
+    
+        1 changeset affected
+        99b4ae7 foo
+        1 of 1 chunk applied"""
+    sh % "hg diff -c ." == r"""
+        diff --git a/foo.py b/foo.py
+        new file mode 100755
+        --- /dev/null
+        +++ b/foo.py
+        @@ -0,0 +1,1 @@
+        +bla"""
+    sh % "hg diff"
 
 # Remove lines may delete changesets:
 

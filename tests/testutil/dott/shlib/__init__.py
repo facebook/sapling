@@ -226,6 +226,18 @@ def true():
 globals()["["] = test
 
 
+# grep
+
+
+def grep(pattern, stdin=None):
+    import re
+
+    pattern = re.compile(pattern)
+    if stdin is None:
+        raise NotImplementedError("this grep implementation requires stdin")
+    return "".join(l for l in stdin.splitlines(True) if pattern.search(l))
+
+
 # shell builtin
 
 
