@@ -27,6 +27,7 @@ from typing import (
     Optional,
     Pattern,
     Tuple,
+    Union,
     cast,
 )
 
@@ -404,18 +405,19 @@ class InodeCmd(Subcmd):
 class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the eden mount point")
+
+        # TODO: remove after updating Sandcastle code to stop using this flag
         parser.add_argument("--sizes", action="store_true", help="Compute file sizes")
 
     def make_file_entries(
-        self, base_path: str, paths: List[Tuple[str, int]], get_sizes: bool
-    ) -> List[Dict[str, Any]]:
-        if get_sizes:
-            return [{"path": path, "size": file_size} for (path, file_size) in paths]
-        return [{"path": path} for (path, _) in paths]
+        self, paths_and_sizes: List[Tuple[str, int]]
+    ) -> List[Dict[str, Union[str, int]]]:
+        return [
+            {"path": path, "size": file_size} for (path, file_size) in paths_and_sizes
+        ]
 
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
-        get_sizes = args.sizes
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
 
         with instance.get_thrift_client() as client:
@@ -425,12 +427,8 @@ class FileStatsCMD(Subcmd):
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)
         operations = {
-            "read_files": self.make_file_entries(
-                base_path=request_root, paths=read_files, get_sizes=get_sizes
-            ),
-            "written_files": self.make_file_entries(
-                base_path=request_root, paths=written_files, get_sizes=get_sizes
-            ),
+            "read_files": self.make_file_entries(read_files),
+            "written_files": self.make_file_entries(written_files),
         }
         json.dump(operations, fp=sys.stdout, indent=4, separators=(",", ": "))
         return 0
