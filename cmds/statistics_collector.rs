@@ -9,7 +9,7 @@ use blobstore::Blobstore;
 use bookmarks::BookmarkName;
 use clap::{App, Arg};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, monitoring};
 use context::CoreContext;
 use failure::err_msg;
 use failure_ext::Error;
@@ -25,9 +25,15 @@ use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgManif
 use mononoke_types::FileType;
 use scuba_ext::ScubaSampleBuilder;
 use slog::info;
+use stats::{define_stats, Timeseries};
 use std::ops::{Add, Sub};
 use std::sync::Arc;
 use std::time::Duration;
+
+define_stats! {
+    prefix = "mononoke.statistics_collector";
+    calculated_changesets: timeseries(RATE, SUM),
+}
 
 const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 
@@ -35,7 +41,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
     };
-    app.build("Tool to calculate repo statistic")
+    let app = app
+        .build("Tool to calculate repo statistic")
         .version("0.0.0")
         .arg(
             Arg::with_name("bookmark")
@@ -50,7 +57,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("if set then statistics are logged to scuba"),
-        )
+        );
+    args::add_fb303_args(app)
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -323,6 +331,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                             changeset,
                                             statistics,
                                         );
+                                        STATS::calculated_changesets.add_value(1);
                                         (changeset, statistics)
                                     })
                                 }
@@ -390,6 +399,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                                                 cur_changeset,
                                                                 statistics,
                                                             );
+                                                            STATS::calculated_changesets
+                                                                .add_value(1);
                                                             (cur_changeset, statistics)
                                                         })
                                                     }
@@ -419,6 +430,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
+    monitoring::start_fb303_and_stats_agg(
+        fb,
+        &mut runtime,
+        "statistics_collector",
+        &logger,
+        &matches,
+    )?;
+
     runtime.block_on(run)?;
     runtime.shutdown_on_idle();
     Ok(())
