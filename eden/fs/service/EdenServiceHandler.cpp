@@ -469,6 +469,13 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::getBindMounts(
+    std::vector<std::string>&,
+    std::unique_ptr<std::string>) {
+  // This deprecated method is only here until buck has swung through a
+  // migration
+}
+
 void EdenServiceHandler::addBindMount(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> repoPath,
