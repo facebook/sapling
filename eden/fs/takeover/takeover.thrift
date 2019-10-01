@@ -31,6 +31,7 @@ struct SerializedFileHandleMap {}
 struct SerializedMountInfo {
   1: string mountPath,
   2: string stateDirectory,
+  // TODO: remove this field, it is no longer used
   3: list<string> bindMountPaths,
   // This binary blob is really a fuse_init_out instance.
   // We don't transcribe that into thrift because the layout

@@ -127,6 +127,22 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
   void fuseUnmount(const char* mountPath) override {
     auto future = getResultFuture(data_.wlock()->fuseUnmountResults, mountPath);
     std::move(future).get(1s);
+
+    // fuseUnmount has the side effect of implicitly unmounting all contained
+    // bind mounts, so let's make that appear to be the case here.
+    // This loop is the C++20 suggested impl of erase_if, but inlined here for
+    // environments that are not yet C++20.
+    auto data = data_.wlock();
+    auto mountPrefix = folly::to<std::string>(mountPath, "/");
+    for (auto iter = data->bindUnmountResults.begin(),
+              last = data->bindUnmountResults.end();
+         iter != last;) {
+      if (folly::StringPiece(iter->first).startsWith(mountPrefix)) {
+        iter = data->bindUnmountResults.erase(iter);
+      } else {
+        ++iter;
+      }
+    }
   }
 
   void bindMount(const char* /* clientPath */, const char* mountPath) override {
@@ -315,14 +331,16 @@ TEST_F(PrivHelperTest, bindMounts) {
   client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
 
   // Manually unmount /data/users/foo/somerepo
-  // This shouldn't finish until the bind unmount completes.
+  // This will finish even though somerepoBuckOutUnmountPromise is still
+  // outstanding because the privhelper and the OS don't care about relative
+  // ordering of these two operations.
   auto unmountResult = client_->fuseUnmount("/data/users/foo/somerepo");
-  /* sleep override */ std::this_thread::sleep_for(20ms);
-  EXPECT_FALSE(unmountResult.isReady());
-  // Fulfilling the bind unmount promise for the buck-out bind mount should
-  // allow the overall unmount operation to complete.
-  somerepoBuckOutUnmountPromise.setValue();
   std::move(unmountResult).get(1s);
+
+  // Clean up this promise: no one is waiting on its results, but we just
+  // want to make sure that it doesn't generate a BrokenPromise error
+  // when the destructors run.
+  somerepoBuckOutUnmountPromise.setValue();
 
   // Now shut down the privhelper.  It should clean up the remaining mount
   // points.  The only leftover results should be the extra ones we

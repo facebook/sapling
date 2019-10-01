@@ -425,9 +425,6 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
              << bindMounts.size() << " bind mounts";
 
   mountPoints_.insert(mountPath);
-  for (auto& bindMount : bindMounts) {
-    bindMountPoints_.insert({mountPath, bindMount});
-  }
   return makeResponse();
 }
 
@@ -453,12 +450,6 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
         folly::to<string>("No FUSE mount found for ", mountPath));
   }
 
-  const auto range = bindMountPoints_.equal_range(mountPath);
-  for (auto bindIter = range.first; bindIter != range.second; ++bindIter) {
-    bindUnmount(bindIter->second.c_str());
-  }
-  bindMountPoints_.erase(range.first, range.second);
-
   fuseUnmount(mountPath.c_str());
   mountPoints_.erase(mountPath);
   return makeResponse();
@@ -475,9 +466,6 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
     throw std::domain_error(
         folly::to<string>("No FUSE mount found for ", mountPath));
   }
-
-  const auto range = bindMountPoints_.equal_range(mountPath);
-  bindMountPoints_.erase(range.first, range.second);
 
   mountPoints_.erase(mountPath);
   return makeResponse();
@@ -504,7 +492,6 @@ UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   auto key = findMatchingMountPrefix(mountPath);
 
   bindMount(clientPath.c_str(), mountPath.c_str());
-  bindMountPoints_.insert({key, mountPath});
   return makeResponse();
 }
 
@@ -519,14 +506,6 @@ UnixSocket::Message PrivHelperServer::processBindUnMountMsg(Cursor& cursor) {
   findMatchingMountPrefix(mountPath);
 
   bindUnmount(mountPath.c_str());
-
-  const auto range = bindMountPoints_.equal_range(mountPath);
-  for (auto bindIter = range.first; bindIter != range.second; ++bindIter) {
-    if (bindIter->second == mountPath) {
-      bindMountPoints_.erase(bindIter);
-      break;
-    }
-  }
 
   return makeResponse();
 }
@@ -762,25 +741,7 @@ void PrivHelperServer::receiveError(
 }
 
 void PrivHelperServer::cleanupMountPoints() {
-  size_t numBindMountsRemoved = 0;
   for (const auto& mountPoint : mountPoints_) {
-    // Clean up the bind mounts for a FUSE mount before the FUSE mount itself.
-    //
-    // Note that these unmounts might fail if the main eden process has already
-    // exited: these are inside an eden mount, and so accessing the parent
-    // directory will fail with ENOTCONN the eden has already closed the fuse
-    // connection.
-    const auto range = bindMountPoints_.equal_range(mountPoint);
-    for (auto it = range.first; it != range.second; ++it) {
-      try {
-        bindUnmount(it->second.c_str());
-      } catch (const std::exception& ex) {
-        XLOG(ERR) << "error unmounting bind mount \"" << it->second
-                  << "\": " << folly::exceptionStr(ex);
-      }
-      ++numBindMountsRemoved;
-    }
-
     try {
       fuseUnmount(mountPoint.c_str());
     } catch (const std::exception& ex) {
@@ -789,10 +750,6 @@ void PrivHelperServer::cleanupMountPoints() {
     }
   }
 
-  XLOG_IF(ERR, bindMountPoints_.size() != numBindMountsRemoved)
-      << "Not all bind mounts were removed during cleanup: had "
-      << bindMountPoints_.size() << ", removed " << numBindMountsRemoved;
-  bindMountPoints_.clear();
   mountPoints_.clear();
 }
 

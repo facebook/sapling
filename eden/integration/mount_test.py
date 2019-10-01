@@ -203,6 +203,7 @@ class MountTest(testcase.EdenRepoTest):
             # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
             self._wait_for_mount_running(client)
+            self._wait_until_alive(client)
             self.assertEqual(fb303_status.ALIVE, client.getStatus())
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
@@ -236,6 +237,14 @@ class MountTest(testcase.EdenRepoTest):
             return None
 
         poll_until(mount_running, timeout=60)
+
+    def _wait_until_alive(self, client: EdenClient) -> None:
+        def is_alive() -> Optional[bool]:
+            if client.getStatus() == fb303_status.ALIVE:
+                return True
+            return None
+
+        poll_until(is_alive, timeout=60)
 
     def test_remount_creates_mount_point_dir(self) -> None:
         """Test that eden will automatically create the mount point directory if

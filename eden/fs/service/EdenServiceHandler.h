@@ -55,9 +55,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<WorkingDirectoryParents> parents) override;
 
-  void getBindMounts(
-      std::vector<std::string>& out,
-      std::unique_ptr<std::string> mountPoint) override;
   void addBindMount(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> repoPath,

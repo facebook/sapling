@@ -117,7 +117,9 @@ def parse_macos_mount_output(contents: bytes) -> List[MountInfo]:
 
 class MacOSMountTable(MountTable):
     def read(self) -> List[MountInfo]:
-        contents = subprocess.check_output(["mount"])
+        # Specifying the path is important, as sudo may have munged the path
+        # such that /sbin is not part of it any longer
+        contents = subprocess.check_output(["/sbin/mount"])
         return parse_macos_mount_output(contents)
 
     def unmount_lazy(self, mount_point: bytes) -> bool:

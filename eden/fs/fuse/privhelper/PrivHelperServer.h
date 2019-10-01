@@ -110,7 +110,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state
   std::set<std::string> mountPoints_;
-  std::unordered_multimap<std::string, std::string> bindMountPoints_;
 };
 
 } // namespace eden

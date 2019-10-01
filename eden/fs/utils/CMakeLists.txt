@@ -9,6 +9,7 @@ if (WIN32)
   list(
     REMOVE_ITEM UTILS_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/CoverageSet.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FutureSubprocess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FutureUnixSocket.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/IoFuture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ProcessAccessLog.cpp

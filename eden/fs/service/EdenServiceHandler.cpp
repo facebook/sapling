@@ -256,7 +256,6 @@ EdenServiceHandler::EdenServiceHandler(
       std::make_tuple("checkOutRevision", HistConfig{}),
       std::make_tuple("resetParentCommits", HistConfig{20, 0, 1000}),
       std::make_tuple("getSHA1", HistConfig{}),
-      std::make_tuple("getBindMounts", HistConfig{20, 0, 1000}),
       std::make_tuple("getCurrentJournalPosition", HistConfig{20, 0, 1000}),
       std::make_tuple("getFilesChangedSince", HistConfig{}),
       std::make_tuple("debugGetRawJournal", HistConfig{}),
@@ -451,25 +450,6 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
     }
     return fileInode->getSha1();
   });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
-}
-
-void EdenServiceHandler::getBindMounts(
-    std::vector<string>& out,
-    std::unique_ptr<string> mountPointPtr) {
-#ifndef _WIN32
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPointPtr);
-  auto mountPoint = *mountPointPtr.get();
-  auto mountPointPath = AbsolutePathPiece{mountPoint};
-  auto edenMount = server_->getMount(mountPoint);
-
-  for (auto& bindMount : edenMount->getBindMounts()) {
-    out.emplace_back(mountPointPath.relativize(bindMount.pathInMountDir)
-                         .stringPiece()
-                         .str());
-  }
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

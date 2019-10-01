@@ -7,8 +7,10 @@
 #include "PrivHelperTestServer.h"
 
 #include <boost/filesystem.hpp>
+#include <folly/Conv.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Range.h>
 #include <system_error>
 #include "eden/fs/utils/SystemError.h"
 
@@ -43,6 +45,14 @@ void PrivHelperTestServer::fuseUnmount(const char* mountPath) {
   // Replace the file contents with "unmounted".
   folly::writeFile(
       StringPiece{"unmounted"}, getPathToMountMarker(mountPath).c_str());
+
+  // Implicitly unmount all bind mounts
+  auto mountPrefix = folly::to<std::string>(mountPath, "/");
+  for (auto& path : allBindMounts_) {
+    if (folly::StringPiece(path).startsWith(mountPrefix)) {
+      folly::writeFile(StringPiece{"bind-unmounted"}, path.c_str());
+    }
+  }
 }
 
 bool PrivHelperTestServer::isMounted(folly::StringPiece mountPath) const {
@@ -67,6 +77,7 @@ void PrivHelperTestServer::bindMount(
 
   auto fileInMountPath = getPathToBindMountMarker(mountPath);
   folly::writeFile(StringPiece{"bind-mounted"}, fileInMountPath.c_str());
+  allBindMounts_.push_back(fileInMountPath);
 }
 
 void PrivHelperTestServer::bindUnmount(const char* mountPath) {

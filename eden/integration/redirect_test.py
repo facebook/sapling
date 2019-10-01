@@ -52,9 +52,7 @@ via-profile = "bind"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 }
             ],
         )
@@ -144,9 +142,7 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 },
             ],
             msg="We can interpret the saved bind mount configuration",
@@ -181,9 +177,7 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 },
             ],
             msg="saved config agrees with last output",
@@ -225,9 +219,7 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 },
             ],
             msg="saved config agrees with last output",
@@ -258,9 +250,7 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 },
             ],
             msg="saved config agrees with last output",
@@ -282,9 +272,7 @@ buck-out = "buck-out"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    # until we hook up post-update or post-mount hooks,
-                    # this won't auto-mount
-                    "state": "not-mounted",
+                    "state": "ok",
                 }
             ],
         )

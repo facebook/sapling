@@ -14,6 +14,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import types
 import typing
@@ -643,6 +644,8 @@ Do you want to run `eden mount %s` instead?"""
         cmd = [
             daemon_binary,
             "--edenfs",
+            "--edenfsctlPath",
+            os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0])),
             "--edenDir",
             str(self._config_dir),
             "--etcEdenDir",

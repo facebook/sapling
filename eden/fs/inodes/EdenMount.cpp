@@ -10,6 +10,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
 #include <folly/File.h>
+#include <folly/Subprocess.h>
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
@@ -45,6 +46,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/FutureSubprocess.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -63,6 +65,10 @@ using std::vector;
 using std::chrono::system_clock;
 
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
+DEFINE_string(
+    edenfsctlPath,
+    "edenfsctl",
+    "the path to the edenfsctl executable");
 
 namespace facebook {
 namespace eden {
@@ -193,7 +199,6 @@ EdenMount::EdenMount(
       blobAccess_{objectStore_, blobCache_},
       overlay_{std::make_unique<Overlay>(config_->getOverlayPath())},
       overlayFileAccess_{overlay_.get()},
-      bindMounts_{config_->getBindMounts()},
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
@@ -386,102 +391,51 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
     AbsolutePathPiece targetPath) {
   auto absRepoPath = getPath() + repoPath;
 
-  // Sanity check that the mount point isn't pre-existing so that
-  // we can show a nicer error message than we would otherwise.
-  {
-    auto bindMounts = bindMounts_.rlock();
-    for (const auto& bindMount : *bindMounts) {
-      if (bindMount.pathInMountDir == absRepoPath) {
-        return folly::make_exception_wrapper<std::runtime_error>(
-            folly::to<std::string>(
-                "attempted to bind mount ",
-                targetPath,
-                " over ",
-                bindMount.pathInMountDir,
-                " but that path is already a bind mount for ",
-                bindMount.pathInClientDir));
-      }
-    }
-  }
-
-  return this->ensureDirectoryExists(repoPath)
-      .thenValue([this,
-                  target = targetPath.copy(),
-                  pathInMountDir = getPath() + repoPath](auto&&) {
+  return this->ensureDirectoryExists(repoPath).thenValue(
+      [this, target = targetPath.copy(), pathInMountDir = getPath() + repoPath](
+          auto&&) {
         return serverState_->getPrivHelper()->bindMount(
             target.stringPiece(), pathInMountDir.stringPiece());
-      })
-      .thenValue([this,
-                  target = targetPath.copy(),
-                  pathInMountDir = getPath() + repoPath](auto&&) {
-        // Record a successful mount into the list
-        bindMounts_.wlock()->emplace_back(target, pathInMountDir);
       });
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
     RelativePathPiece repoPath) {
   auto absRepoPath = getPath() + repoPath;
-  return serverState_->getPrivHelper()
-      ->bindUnMount(absRepoPath.stringPiece())
-      .thenValue([this, absRepoPath](auto&&) {
-        auto bindMounts = bindMounts_.wlock();
-        bindMounts->erase(
-            std::remove_if(
-                bindMounts->begin(),
-                bindMounts->end(),
-                [&](const auto& bindMount) {
-                  return bindMount.pathInMountDir == absRepoPath;
-                }),
-            bindMounts->end());
-      });
+  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.stringPiece());
 }
 
-Future<Unit> EdenMount::performBindMounts() {
-  vector<Future<Unit>> futures;
-
-  auto bindMounts = bindMounts_.rlock();
-  for (const auto& bindMount : *bindMounts) {
-    futures.push_back(folly::makeFutureWith([this, bindMount] {
-      // Make sure that both pathInClientDir and pathInMountDir exist before we
-      // attempt to perform the mount.
-      boost::filesystem::path boostBindMountSrc{
-          bindMount.pathInClientDir.value()};
-      boost::filesystem::create_directories(boostBindMountSrc);
-
-      // pathInMountDir is absolute, rather than relative from the mount point.
-      // This unfortunately is hard to change because it's baked into the
-      // takeover protocol. So relativize here.
-      auto relativePath = getPath().relativize(bindMount.pathInMountDir);
-      return this->ensureDirectoryExists(relativePath)
-          .thenValue([this,
-                      pathInClientDir = AbsolutePath{bindMount.pathInClientDir},
-                      pathInMountDir =
-                          AbsolutePath{bindMount.pathInMountDir}](auto&&) {
-            return serverState_->getPrivHelper()->bindMount(
-                pathInClientDir.stringPiece(), pathInMountDir.stringPiece());
-          });
-    }));
-  }
-
-  return folly::collectAll(futures).thenValue(
-      [](std::vector<Try<Unit>> results) {
-        std::vector<folly::exception_wrapper> errors;
-        for (auto& result : results) {
-          if (result.hasException()) {
-            errors.push_back(result.exception());
-          }
-        }
-
-        if (errors.empty()) {
+folly::SemiFuture<Unit> EdenMount::performBindMounts() {
+  return folly::makeSemiFutureWith([&] {
+           std::vector<std::string> argv{FLAGS_edenfsctlPath,
+                                         "redirect",
+                                         "fixup",
+                                         "--mount",
+                                         getPath().c_str()};
+           return futureSubprocess(folly::Subprocess(argv));
+         })
+      .deferValue([&](folly::ProcessReturnCode&& returnCode) {
+        if (returnCode.state() == folly::ProcessReturnCode::EXITED &&
+            returnCode.exitStatus() == 0) {
           return folly::unit;
-        } else {
-          std::string message{"Error creating bind mounts:\n"};
-          for (const auto& error : errors) {
-            message += folly::to<std::string>("  ", error.what(), "\n");
-          }
-          throw EdenMountError{message};
         }
+        folly::CalledProcessError err(returnCode);
+        throw std::runtime_error(folly::to<std::string>(
+            "Failed to run `",
+            FLAGS_edenfsctlPath,
+            " fixup --mount ",
+            getPath(),
+            "`: ",
+            folly::exceptionStr(err)));
+      })
+      .deferError([&](folly::exception_wrapper err) {
+        throw std::runtime_error(folly::to<std::string>(
+            "Failed to run `",
+            FLAGS_edenfsctlPath,
+            " fixup --mount ",
+            getPath(),
+            "`: ",
+            folly::exceptionStr(err)));
       });
 }
 
@@ -673,10 +627,6 @@ const AbsolutePath& EdenMount::getPath() const {
 
 EdenStats* EdenMount::getStats() const {
   return &serverState_->getStats();
-}
-
-vector<BindMount> EdenMount::getBindMounts() const {
-  return *bindMounts_.rlock();
 }
 
 TreeInodePtr EdenMount::getRootInode() const {
@@ -1143,12 +1093,6 @@ void EdenMount::fuseInitSuccessful(
         }
 
         std::vector<AbsolutePath> bindMounts;
-        {
-          auto locked = bindMounts_.rlock();
-          for (const auto& entry : *locked) {
-            bindMounts.push_back(entry.pathInMountDir);
-          }
-        }
 
         fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
             getPath(),

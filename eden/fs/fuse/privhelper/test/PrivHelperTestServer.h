@@ -38,6 +38,10 @@ class PrivHelperTestServer : public PrivHelperServer {
   bool isBindMounted(folly::StringPiece mountPath) const;
 
  private:
+  // all of the paths we've ever bind mounted; we remember this
+  // so that we can mark them as unmounted when we unmount things.
+  std::vector<std::string> allBindMounts_;
+
   folly::File fuseMount(const char* mountPath) override;
   void fuseUnmount(const char* mountPath) override;
   std::string getPathToMountMarker(folly::StringPiece mountPath) const;

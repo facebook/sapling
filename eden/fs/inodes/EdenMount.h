@@ -245,12 +245,6 @@ class EdenMount {
     return parentInfo_.rlock()->parents;
   }
 
-  /*
-   * Return bind mounts that are applied for this mount. These are based on the
-   * state of the CheckoutConfig when this EdenMount was created.
-   */
-  std::vector<BindMount> getBindMounts() const;
-
   /**
    * Return the ObjectStore used by this mount point.
    *
@@ -563,7 +557,7 @@ class EdenMount {
    * This requires that the filesystem already be mounted, and must not
    * be called in the context of a fuseWorkerThread().
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> performBindMounts();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> performBindMounts();
 
   FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
       RelativePathPiece repoPath,
@@ -726,12 +720,6 @@ class EdenMount {
    */
 
   folly::Synchronized<ParentInfo> parentInfo_;
-
-  /*
-   * Note that this config will not be updated if the user modifies the
-   * underlying config files after the CheckoutConfig was created.
-   */
-  folly::Synchronized<std::vector<BindMount>> bindMounts_;
 
   std::unique_ptr<Journal> journal_;
 

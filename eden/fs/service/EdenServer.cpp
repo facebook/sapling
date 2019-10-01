@@ -988,21 +988,14 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 // client.  We don't need to do this for the takeover
                 // case as they are already mounted.
                 return edenMount->performBindMounts()
-                    .thenValue([edenMount](auto&&) { return edenMount; })
-                    .thenError([this,
-                                edenMount,
-                                finishFuture = std::move(finishFuture)](
-                                   folly::exception_wrapper ew) mutable {
-                      // Creating a bind mount failed. Trigger an unmount.
-                      return unmount(edenMount->getPath().stringPiece())
-                          .thenTry([finishFuture = std::move(finishFuture)](
-                                       auto&&) mutable {
-                            return std::move(finishFuture);
-                          })
-                          .thenTry([ew = std::move(ew)](auto&&) {
-                            return makeFuture<shared_ptr<EdenMount>>(ew);
-                          });
-                    });
+                    .deferValue([edenMount](auto&&) { return edenMount; })
+                    .deferError([edenMount](folly::exception_wrapper ew) {
+                      XLOG(ERR)
+                          << "Error while performing bind mounts, will continue with mount anyway: "
+                          << folly::exceptionStr(ew);
+                      return edenMount;
+                    })
+                    .via(getServerState()->getThreadPool().get());
               }
             });
       });
