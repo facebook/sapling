@@ -262,6 +262,7 @@ configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
+configitem("remotefilelog", "commitsperrepack", default=100)
 
 # Config items for HTTP data fetching.
 configitem("edenapi", "enabled", default=False)

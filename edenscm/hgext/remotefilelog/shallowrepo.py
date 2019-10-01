@@ -24,6 +24,7 @@ from .metadatastore import (
     remotemetadatastore,
     unionmetadatastore,
 )
+from .repack import domaintenancerepack
 
 
 requirement = "remotefilelog"
@@ -87,6 +88,21 @@ def wraprepo(repo):
             result = super(shallowrepository, self).close()
             self.fileservice.close()
             return result
+
+        @localrepo.unfilteredmethod
+        def commitpending(self):
+            super(shallowrepository, self).commitpending()
+
+            self.numtransactioncommits += 1
+            # In some cases, we can have many transactions in the same repo, in
+            # which case each one will create a packfile, let's trigger a repack at
+            # this point to bring the number of packfiles down to a reasonable
+            # number.
+            if self.numtransactioncommits >= self.ui.configint(
+                "remotefilelog", "commitsperrepack"
+            ):
+                domaintenancerepack(self)
+                self.numtransactioncommits = 0
 
         @localrepo.unfilteredmethod
         def commitctx(self, ctx, error=False):
@@ -217,6 +233,8 @@ def wraprepo(repo):
 
     repo.shallowmatch = match.always(repo.root, "")
     repo.fileservice = fileserverclient.fileserverclient(repo)
+
+    repo.numtransactioncommits = 0
 
     # Force fileslog to be instantiated, so it populates all the stores on repo.
     # This is temporary until all paths that access file contents go through

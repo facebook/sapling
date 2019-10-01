@@ -504,12 +504,12 @@ class HgServer(object):
             # We have to call repo._prefetchtrees() directly if we have a path.
             # We cannot compute the set of base nodes in this case.
             self.repo._prefetchtrees(path, mfnodes, [], [])
-            self.repo.manifestlog.commitpending()
+            self.repo.commitpending()
         else:
             # When querying the top-level node use repo.prefetchtrees()
             # It will compute a reasonable set of base nodes to send in the query.
             self.repo.prefetchtrees(mfnodes)
-            self.repo.manifestlog.commitpending()
+            self.repo.commitpending()
 
     def send_chunk(self, request, *data, **kwargs):
         is_last = kwargs.pop("is_last", True)
