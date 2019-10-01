@@ -1798,6 +1798,13 @@ def main() -> int:
     return return_code
 
 
-if __name__ == "__main__":
+def zipapp_main() -> None:
+    """zipapp_main() is used when running edenfsctl as a Python 3 zipapp executable.
+    The zipapp module expects the main function to call sys.exit() on its own if it
+    wants to exit with a non-zero status."""
     retcode = main()
     sys.exit(retcode)
+
+
+if __name__ == "__main__":
+    zipapp_main()
