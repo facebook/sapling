@@ -24,7 +24,7 @@ remotefilelog=
 rebase=
 
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=python {}/dummyssh
 [server]
 preferuncompressed=True
 
@@ -33,7 +33,9 @@ changegroup3=True
 
 [rebase]
 singletransaction=True
-"""
+""".format(
+        shlib.TESTDIR
+    )
 )
 
 
