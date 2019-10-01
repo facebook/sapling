@@ -10,8 +10,8 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
@@ -20,7 +20,7 @@
 #include <optional>
 
 #if EDEN_HAVE_RUST_DATAPACK
-#include "scm/hg/lib/revisionstore/RevisionStore.h" // @manual
+#include "eden/fs/store/hg/HgDatapackStore.h" // @manual
 #endif
 
 /* forward declare support classes from mercurial */
@@ -203,7 +203,7 @@ class HgBackingStore : public BackingStore {
   std::string repoName_;
   folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;
 #if EDEN_HAVE_RUST_DATAPACK
-  std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
+  std::optional<HgDatapackStore> datapackStore_;
 #endif
 };
 } // namespace eden

@@ -4,6 +4,14 @@
 # GNU General Public License version 2.
 
 file(GLOB STORE_HG_SRCS "*.cpp")
+
+if (NOT EDEN_HAVE_RUST_DATAPACK)
+  list(
+    REMOVE_ITEM STORE_HG_SRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/HgDatapackStore.cpp
+  )
+endif()
+
 add_library(
   eden_store_hg STATIC
     ${STORE_HG_SRCS}

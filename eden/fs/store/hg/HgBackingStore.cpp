@@ -37,7 +37,7 @@
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
 
 #if EDEN_HAVE_RUST_DATAPACK
-#include "scm/hg/lib/configparser/ConfigParser.h" // @manual
+#include "eden/fs/store/hg/HgDatapackStore.h" // @manual
 #endif
 
 #if EDEN_HAVE_MONONOKE
@@ -190,32 +190,6 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
   }
   return nullptr;
 }
-
-#if EDEN_HAVE_RUST_DATAPACK
-std::unique_ptr<Blob> getBlobFromDataPackUnion(
-    DataPackUnion& store,
-    const Hash& id,
-    const HgProxyHash& hgInfo) {
-  try {
-    auto content =
-        store.get(hgInfo.path().stringPiece(), hgInfo.revHash().getBytes());
-    if (content) {
-      auto bytes = content->bytes();
-      return make_unique<Blob>(
-          id, IOBuf(IOBuf::CopyBufferOp{}, bytes.data(), bytes.size()));
-    }
-    // If we get here, it was a KeyError, meaning that the data wasn't
-    // present in the hgcache, rather than a more terminal problems such
-    // as an IOError of some kind.
-    // Regardless, we'll return nullptr and fallback to other sources.
-  } catch (const DataPackUnionGetError& exc) {
-    XLOG(ERR) << "Error getting " << hgInfo.path() << " " << hgInfo.revHash()
-              << " from dataPackStore_: " << exc.what()
-              << ", will fall back to other methods";
-  }
-  return nullptr;
-}
-#endif
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -249,7 +223,7 @@ HgBackingStore::HgBackingStore(
       config_(config),
       serverThreadPool_(serverThreadPool) {
 #if EDEN_HAVE_RUST_DATAPACK
-  initializeDatapackImport(repository);
+  datapackStore_ = makeHgDatapackStore(repository, config_);
 #endif
   HgImporter importer(
       repository, localStore, getSharedHgImporterStatsForCurrentThread(stats));
@@ -278,69 +252,6 @@ HgBackingStore::HgBackingStore(
 }
 
 HgBackingStore::~HgBackingStore() {}
-
-#if EDEN_HAVE_RUST_DATAPACK
-namespace {
-folly::Synchronized<DataPackUnion> makeUnionStore(
-    AbsolutePathPiece repository,
-    folly::StringPiece repoName,
-    AbsolutePathPiece cachePath,
-    RelativePathPiece subdir) {
-  std::vector<AbsolutePath> paths;
-
-  paths.emplace_back(repository + ".hg/store"_relpath + subdir);
-  paths.emplace_back(cachePath + RelativePathPiece{repoName} + subdir);
-
-  std::vector<const char*> cStrings;
-  for (auto& path : paths) {
-    cStrings.emplace_back(path.c_str());
-  }
-  return folly::Synchronized<DataPackUnion>(
-      DataPackUnion(cStrings.data(), cStrings.size()));
-}
-} // namespace
-
-void HgBackingStore::initializeDatapackImport(AbsolutePathPiece repository) {
-  HgRcConfigSet config;
-
-  auto repoConfigPath = repository + ".hg/hgrc"_relpath;
-
-  try {
-    config.loadSystem();
-    config.loadUser();
-    config.loadPath(repoConfigPath.c_str());
-  } catch (const HgRcConfigError& exc) {
-    XLOG(ERR)
-        << "Disabling loading blobs from hgcache: Error(s) while loading '"
-        << repoConfigPath << "': " << exc.what();
-    return;
-  }
-
-  auto maybeRepoName = config.get("remotefilelog", "reponame");
-  auto maybeCachePath = config.get("remotefilelog", "cachepath");
-
-  if (maybeRepoName.hasValue() && maybeCachePath.hasValue()) {
-    folly::StringPiece repoName{maybeRepoName.value().bytes()};
-
-    std::optional<StringPiece> homeDir = config_
-        ? std::make_optional(
-              config_->getEdenConfig()->getUserHomePath().stringPiece())
-        : std::nullopt;
-    auto cachePath =
-        expandUser(StringPiece{maybeCachePath.value().bytes()}, homeDir);
-
-    dataPackStore_ =
-        makeUnionStore(repository, repoName, cachePath, "packs"_relpath);
-    // TODO: create a treePackStore here with `packs/manifests` as the subdir.
-    // That depends on some future work to port the manifest code from C++
-    // to Rust.
-  } else {
-    XLOG(DBG2)
-        << "Disabling loading blobs from hgcache: remotefilelog.reponame "
-           "and/or remotefilelog.cachepath are not configured";
-  }
-}
-#endif
 
 void HgBackingStore::initializeTreeManifestImport(
     const ImporterOptions& options,
@@ -758,10 +669,8 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #if EDEN_HAVE_RUST_DATAPACK
-  if (useDatapackGetBlob_ && dataPackStore_) {
-    auto content =
-        getBlobFromDataPackUnion(*dataPackStore_.value().wlock(), id, hgInfo);
-    if (content) {
+  if (useDatapackGetBlob_ && datapackStore_) {
+    if (auto content = datapackStore_->getBlob(id, hgInfo)) {
       return makeFuture(std::move(content));
     }
   } else
