@@ -145,7 +145,7 @@ pub fn create_getbundle_response(
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-        parts.push(parts::changegroup_part(changelogentries));
+        parts.push(parts::changegroup_part(changelogentries, None));
     }
 
     // Phases part has to be after the changegroup part.

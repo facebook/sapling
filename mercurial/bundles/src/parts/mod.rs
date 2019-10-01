@@ -20,7 +20,7 @@ use context::CoreContext;
 use failure_ext::prelude::*;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use futures_stats::Timed;
 use mercurial_types::{
     Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH,
@@ -82,9 +82,14 @@ where
     Ok(builder)
 }
 
-pub fn changegroup_part<S>(changelogentries: S) -> Result<PartEncodeBuilder>
+pub fn changegroup_part<CS>(
+    changelogentries: CS,
+    filenodeentries: Option<
+        BoxStream<(MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error>,
+    >,
+) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
+    CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam("version", "02")?;
@@ -94,10 +99,19 @@ where
         // One more SectionEnd entry is necessary because hg client excepts filelog section
         // even if it's empty. Add a fake SectionEnd part (the choice of
         // Manifest is just for convenience).
-        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
-        .chain(once(Ok(Part::End)));
+        .chain(once(Ok(Part::SectionEnd(Section::Manifest))));
 
-    let cgdata = CgPacker::new(changelogentries);
+    let changegroup = if let Some(filenodeentries) = filenodeentries {
+        changelogentries
+            .chain(convert_file_stream(filenodeentries))
+            .left_stream()
+    } else {
+        changelogentries.right_stream()
+    };
+
+    let changegroup = changegroup.chain(once(Ok(Part::End)));
+
+    let cgdata = CgPacker::new(changegroup);
     builder.set_data_generated(cgdata);
 
     Ok(builder)
