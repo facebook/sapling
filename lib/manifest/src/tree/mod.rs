@@ -5,6 +5,7 @@
 
 mod cursor;
 mod diff;
+mod files;
 mod link;
 mod store;
 #[cfg(test)]
@@ -22,11 +23,12 @@ use crypto::{digest::Digest, sha1::Sha1};
 use failure::{bail, Fallible};
 use once_cell::sync::OnceCell;
 
-use pathmatcher::{DirectoryMatch, Matcher};
+use pathmatcher::Matcher;
 use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
 pub use self::diff::{Diff, DiffEntry, DiffType};
+pub use self::files::Files;
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
 use self::store::InnerStore;
 pub use self::store::TreeStore;
@@ -59,14 +61,11 @@ impl Tree {
     }
 
     /// Returns an iterator over all the files that are present in the tree.
-    pub fn files<'a, M>(&'a self, matcher: &'a M) -> Files<'a, M>
+    pub fn files<'a, M>(&'a self, matcher: &'a M) -> Files<'a>
     where
         M: Matcher,
     {
-        Files {
-            cursor: self.root_cursor(),
-            matcher,
-        }
+        Files::new(self, matcher)
     }
 
     fn root_cursor<'a>(&'a self) -> Cursor<'a> {
@@ -476,40 +475,6 @@ impl Tree {
     }
 }
 
-pub struct Files<'a, M> {
-    cursor: Cursor<'a>,
-    matcher: &'a M,
-}
-
-impl<'a, M> Iterator for Files<'a, M>
-where
-    M: Matcher,
-{
-    type Item = Fallible<(RepoPathBuf, FileMetadata)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.cursor.step() {
-                Step::Success => {
-                    if let Leaf(file_metadata) = self.cursor.link() {
-                        if self.matcher.matches_file(self.cursor.path()) {
-                            return Some(Ok((self.cursor.path().to_owned(), *file_metadata)));
-                        }
-                    } else {
-                        if self.matcher.matches_directory(self.cursor.path())
-                            == DirectoryMatch::Nothing
-                        {
-                            self.cursor.skip_subtree();
-                        }
-                    }
-                }
-                Step::Err(error) => return Some(Err(error)),
-                Step::End => return None,
-            }
-        }
-    }
-}
-
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum List {
     NotFound,
@@ -607,9 +572,9 @@ pub fn compat_subtree_diff(
 ///
 /// Consists of the full path to the file along with the associated file metadata.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct File {
-    path: RepoPathBuf,
-    meta: FileMetadata,
+pub struct File {
+    pub path: RepoPathBuf,
+    pub meta: FileMetadata,
 }
 
 impl File {
@@ -636,6 +601,12 @@ impl File {
 
     pub(crate) fn into_changed(self, other: File) -> DiffEntry {
         DiffEntry::new(self.path, DiffType::Changed(self.meta, other.meta))
+    }
+}
+
+impl From<(RepoPathBuf, FileMetadata)> for File {
+    fn from((path, meta): (RepoPathBuf, FileMetadata)) -> Self {
+        Self { path, meta }
     }
 }
 
@@ -741,7 +712,6 @@ impl PartialOrd for Directory<'_> {
 mod tests {
     use super::*;
 
-    use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use types::{node::NULL_ID, testutil::*};
 
     use self::{store::TestStore, testutil::*};
@@ -1254,112 +1224,6 @@ mod tests {
             Step::End => (), // success
             Step::Err(error) => panic!(error),
         }
-    }
-
-    #[test]
-    fn test_files_empty() {
-        let tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
-    }
-
-    #[test]
-    fn test_files_ephemeral() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
-
-        assert_eq!(
-            tree.files(&AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
-            vec!(
-                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")),
-                (repo_path_buf("a1/b2"), make_meta("20")),
-                (repo_path_buf("a2/b2/c2"), make_meta("30")),
-            )
-        );
-    }
-
-    #[test]
-    fn test_files_durable() {
-        let store = Arc::new(TestStore::new());
-        let mut tree = Tree::ephemeral(store.clone());
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
-        let node = tree.flush().unwrap();
-        let tree = Tree::durable(store.clone(), node);
-
-        assert_eq!(
-            tree.files(&AlwaysMatcher::new())
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
-            vec!(
-                (repo_path_buf("a1/b1/c1/d1"), make_meta("10")),
-                (repo_path_buf("a1/b2"), make_meta("20")),
-                (repo_path_buf("a2/b2/c2"), make_meta("30")),
-            )
-        );
-    }
-
-    #[test]
-    fn test_files_matcher() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
-        tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
-            .unwrap();
-        tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
-            .unwrap();
-        tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
-            .unwrap();
-        tree.insert(repo_path_buf("a2/b2/c3"), make_meta("40"))
-            .unwrap();
-        tree.insert(repo_path_buf("a3/b2/c3"), make_meta("50"))
-            .unwrap();
-
-        assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a2/b2"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
-            vec!(
-                (repo_path_buf("a2/b2/c2"), make_meta("30")),
-                (repo_path_buf("a2/b2/c3"), make_meta("40"))
-            )
-        );
-        assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["a1/*/c1"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
-            vec!((repo_path_buf("a1/b1/c1/d1"), make_meta("10")),)
-        );
-        assert_eq!(
-            tree.files(&TreeMatcher::from_rules(["**/c3"].iter()))
-                .collect::<Fallible<Vec<_>>>()
-                .unwrap(),
-            vec!(
-                (repo_path_buf("a2/b2/c3"), make_meta("40")),
-                (repo_path_buf("a3/b2/c3"), make_meta("50"))
-            )
-        );
-    }
-
-    #[test]
-    fn test_files_finish_on_error_when_collecting_to_vec() {
-        let tree = Tree::durable(Arc::new(TestStore::new()), node("1"));
-        let file_results = tree.files(&AlwaysMatcher::new()).collect::<Vec<_>>();
-        assert_eq!(file_results.len(), 1);
-        assert!(file_results[0].is_err());
-
-        let files_result = tree
-            .files(&AlwaysMatcher::new())
-            .collect::<Result<Vec<_>, _>>();
-        assert!(files_result.is_err());
     }
 
     #[test]

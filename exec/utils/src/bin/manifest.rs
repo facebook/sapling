@@ -30,8 +30,8 @@ fn main() {
     let store = Arc::new(DataPackStore::new(PathBuf::from(args.manifest_path)).unwrap());
     let manifest = manifest::Tree::durable(store, args.node);
 
-    for (file, _meta) in manifest.files(&AlwaysMatcher::new()).map(|x| x.unwrap()) {
-        println!("{}", file);
+    for file in manifest.files(&AlwaysMatcher::new()).map(|x| x.unwrap()) {
+        println!("{}", file.path);
     }
 }
 

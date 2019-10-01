@@ -141,8 +141,8 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
-            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            result.push(path_to_pybytes(py, &path));
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &file.path));
         }
         Ok(result)
     }
@@ -164,12 +164,12 @@ py_class!(class treemanifest |py| {
         let mut lines = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
             lines.push(format!(
                 "{}\0{}{}\n",
-                path,
-                file_metadata.node,
-                file_type_to_str(file_metadata.file_type)
+                file.path,
+                file.meta.node,
+                file_type_to_str(file.meta.file_type)
             ));
         }
         lines.sort();
@@ -269,12 +269,12 @@ py_class!(class treemanifest |py| {
         let result = manifestdict.call(py, NoArgs, None)?;
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
-            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            let pypath = path_to_pybytes(py, &path);
-            let pynode = node_to_pybytes(py, file_metadata.node);
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let pypath = path_to_pybytes(py, &file.path);
+            let pynode = node_to_pybytes(py, file.meta.node);
             result.call_method(py, "__setitem__", (pypath, pynode), None)?;
-            let pypath = path_to_pybytes(py, &path);
-            let pyflags = file_type_to_pystring(py, file_metadata.file_type);
+            let pypath = path_to_pybytes(py, &file.path);
+            let pyflags = file_type_to_pystring(py, file.meta.file_type);
             result.call_method(py, "setflag", (pypath, pyflags), None)?;
         }
         Ok(result)
@@ -315,8 +315,8 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            result.push(path_to_pybytes(py, &path));
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &file.path));
         }
         Ok(result)
     }
@@ -336,8 +336,8 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            result.push(path_to_pybytes(py, &path));
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &file.path));
         }
         vec_to_iter(py, result)
     }
@@ -346,10 +346,10 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let (path, file_metadata) = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
             let tuple = (
-                path_to_pybytes(py, &path),
-                node_to_pybytes(py, file_metadata.node),
+                path_to_pybytes(py, &file.path),
+                node_to_pybytes(py, file.meta.node),
             );
             result.push(tuple);
         }
@@ -360,8 +360,8 @@ py_class!(class treemanifest |py| {
         let mut result = Vec::new();
         let tree = self.underlying(py).borrow();
         for entry in tree.files(&AlwaysMatcher::new()) {
-            let (path, _) = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            result.push(path_to_pybytes(py, &path));
+            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
+            result.push(path_to_pybytes(py, &file.path));
         }
         vec_to_iter(py, result)
     }
