@@ -8,6 +8,12 @@
 
 #include <folly/Range.h>
 
+namespace apache {
+namespace thrift {
+class ResponseChannelRequest;
+}
+} // namespace apache
+
 namespace facebook {
 namespace eden {
 
@@ -29,7 +35,8 @@ class DiffContext {
       DiffCallback* cb,
       bool listIgnored,
       const ObjectStore* os,
-      std::unique_ptr<TopLevelIgnores> topLevelIgnores);
+      std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
 
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;
@@ -48,9 +55,11 @@ class DiffContext {
   bool const listIgnored;
 
   const GitIgnoreStack* getToplevelIgnore() const;
+  bool isCancelled() const;
 
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
+  apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
 };
 } // namespace eden
 } // namespace facebook

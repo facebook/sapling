@@ -233,6 +233,20 @@ facebook::eden::InodePtr inodeFromUserPath(
         logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
   }(__func__, __FILE__, __LINE__))
 
+// INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME works in the same way as
+// INSTRUMENT_THRIFT_CALL but takes the function name as a parameter in case of
+// using inside of a lambda (in which case __func__ is "()")
+
+#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(level, functionName, ...)  \
+  ([&](folly::StringPiece fileName, uint32_t lineNumber) {                   \
+    static folly::Logger logger(                                             \
+        "eden.thrift." + folly::to<string>(functionName));                   \
+    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
+        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
+    return ThriftLogHelper(                                                  \
+        logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
+  }(__FILE__, __LINE__))
+
 namespace facebook {
 namespace eden {
 
@@ -945,21 +959,31 @@ std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
 #endif // !_WIN32
 }
 
-folly::Future<std::unique_ptr<ScmStatus>>
-EdenServiceHandler::future_getScmStatus(
+void EdenServiceHandler::async_tm_getScmStatus(
+    std::unique_ptr<apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>>
+        callback,
     std::unique_ptr<std::string> mountPoint,
     bool listIgnored,
     std::unique_ptr<std::string> commitHash) {
 #ifndef _WIN32
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
-      *mountPoint,
-      folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
-      folly::to<string>("commitHash=", logHash(*commitHash)));
+  auto* request = callback->getRequest();
+  folly::makeFutureWith([&, func = __func__] {
+    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
+        DBG2,
+        func,
+        *mountPoint,
+        folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
+        folly::to<string>("commitHash=", logHash(*commitHash)));
 
-  auto mount = server_->getMount(*mountPoint);
-  auto hash = hashFromThrift(*commitHash);
-  return helper.wrapFuture(mount->diff(hash, listIgnored));
+    auto mount = server_->getMount(*mountPoint);
+    auto hash = hashFromThrift(*commitHash);
+    return helper.wrapFuture(mount->diff(hash, listIgnored, request));
+  })
+      .thenTry([cb = std::move(callback)](
+                   folly::Try<std::unique_ptr<ScmStatus>>&& result) mutable {
+        apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>::
+            completeInThread(std::move(cb), std::move(result));
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

@@ -1818,6 +1818,12 @@ Future<Unit> TreeInode::diff(
     bool isIgnored) {
   static const PathComponentPiece kIgnoreFilename{".gitignore"};
 
+  if (context->isCancelled()) {
+    XLOG(DBG7) << "diff() on directory " << getLogPath()
+               << " cancelled due to client request no longer being active";
+    return makeFuture();
+  }
+
   InodePtr inode;
   auto inodeFuture = Future<InodePtr>::makeEmpty();
   vector<IncompleteInodeLoad> pendingLoads;

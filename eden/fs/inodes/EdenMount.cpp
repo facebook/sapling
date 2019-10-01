@@ -50,6 +50,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
+using apache::thrift::ResponseChannelRequest;
 using folly::Future;
 using folly::makeFuture;
 using folly::setThreadName;
@@ -847,12 +848,14 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
-    bool listIgnored) const {
+    bool listIgnored,
+    ResponseChannelRequest* request) const {
   return make_unique<DiffContext>(
       callback,
       listIgnored,
       getObjectStore(),
-      serverState_->getTopLevelIgnores());
+      serverState_->getTopLevelIgnores(),
+      request);
 }
 
 Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
@@ -872,9 +875,10 @@ Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
 Future<Unit> EdenMount::diff(
     DiffCallback* callback,
     Hash commitHash,
-    bool listIgnored) const {
+    bool listIgnored,
+    ResponseChannelRequest* request) const {
   // Create a DiffContext object for this diff operation.
-  auto context = createDiffContext(callback, listIgnored);
+  auto context = createDiffContext(callback, listIgnored, request);
   const DiffContext* ctxPtr = context.get();
 
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
@@ -886,10 +890,11 @@ Future<Unit> EdenMount::diff(
 
 folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
     Hash commitHash,
-    bool listIgnored) {
+    bool listIgnored,
+    ResponseChannelRequest* request) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr = callback.get();
-  return this->diff(callbackPtr, commitHash, listIgnored)
+  return this->diff(callbackPtr, commitHash, listIgnored, request)
       .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });

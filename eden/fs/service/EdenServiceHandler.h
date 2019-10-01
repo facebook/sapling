@@ -118,7 +118,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> relativePath) override;
 
-  folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
+  void async_tm_getScmStatus(
+      std::unique_ptr<
+          apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>> callback,
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored,
       std::unique_ptr<std::string> commitHash) override;
