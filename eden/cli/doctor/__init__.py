@@ -17,7 +17,6 @@ from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
-    check_bind_mounts,
     check_filesystems,
     check_hg,
     check_os,
@@ -330,7 +329,6 @@ def check_running_mount(
 
     check_filesystems.check_using_nfs_path(tracker, checkout.path)
     check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
-    check_bind_mounts.check_bind_mounts(tracker, checkout, mount_table, fs_util)
     if config.scm_type == "hg":
         check_hg.check_hg(tracker, checkout)
 
