@@ -1385,8 +1385,8 @@ def _rootsanddirs(kindpats):
 
     # Append the parents as non-recursive/exact directories, since they must be
     # scanned to get to either the roots or the other exact directories.
-    d.extend(util.dirs(d))
-    d.extend(util.dirs(r))
+    d.extend(sorted(util.dirs(d)))
+    d.extend(sorted(util.dirs(r)))
 
     return r, d
 
