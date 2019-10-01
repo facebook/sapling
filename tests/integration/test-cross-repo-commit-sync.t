@@ -113,6 +113,8 @@ run the sync, expected to fail, as parent of the synced commit is not present in
   * Checking if * is already synced 1->0 (glob)
   * Done preparing * (glob)
   * Remapped commit * expected in target repo, but not present (glob)
+  * Queue size is 0 (glob)
+  * Remapped commit * expected in target repo, but not present (glob)
   [1]
 
 insert sync mapping entry
@@ -135,6 +137,7 @@ run the sync again, from fbsource first
   * Checking if * is already synced 1->0 (glob)
   * Done preparing * (glob)
   * synced as * in *ms (glob)
+  * Queue size is 0 (glob)
 
 check that the changes are synced
   $ cd $TESTTMP/meg-hg-cnt
@@ -151,6 +154,7 @@ run the sync from ovrsource now
   * Checking if * is already synced 2->0 (glob)
   * Done preparing * (glob)
   * synced as * in *ms (glob)
+  * Queue size is 0 (glob)
 
 this is after we also synced the ovrsource commit
   $ cd $TESTTMP/meg-hg-cnt
@@ -207,6 +211,7 @@ let us test the auto-detection of last processed changeset
   * stopping tailing (glob)
   * Done preparing * (glob)
   * synced as * in *ms (glob)
+  * Queue size is 0 (glob)
 
 
 let us test that auto-detection works on a caught-up repo
