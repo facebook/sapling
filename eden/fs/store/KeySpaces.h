@@ -24,11 +24,8 @@ static constexpr std::
                 "blobmeta",
             },
 
-            // If the trees were imported from a flatmanifest, we cannot delete
-            // them. See test_contents_are_the_same_if_handle_is_held_open when
-            // running against a flatmanifest repository.
             LocalStore::KeySpaceRecord{LocalStore::TreeFamily,
-                                       LocalStore::Persistence::Persistent,
+                                       LocalStore::Persistence::Ephemeral,
                                        "tree"},
 
             // Proxy hashes are required to fetch objects from hg from a hash.
