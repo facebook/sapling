@@ -81,7 +81,7 @@ fn setup_logger<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     };
 
     Logger::root(
-        drain.fuse(),
+        drain.ignore_res(),
         o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
 }

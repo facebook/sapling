@@ -158,7 +158,7 @@ impl<'a> StdioRelay<'a> {
             };
             let drain = slog_term::PlainSyncDecorator::new(stderr_write);
             let drain = slog_term::FullFormat::new(drain).build();
-            Logger::root(drain.fuse(), o!())
+            Logger::root(drain.ignore_res(), o!())
         };
 
         if self.show_session_output {

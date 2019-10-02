@@ -423,8 +423,8 @@ fn setup_logger(fb: FacebookInit, debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
     let decorator = slog_term::TermDecorator::new().build();
-    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer).fuse();
-    let stderr_drain = slog_async::Async::new(stderr_drain).build().fuse();
+    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer).ignore_res();
+    let stderr_drain = slog_async::Async::new(stderr_drain).build().ignore_res();
     let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke_apiserver");
 
     let drain = slog::Duplicate::new(stderr_drain, logview_drain);
@@ -432,7 +432,7 @@ fn setup_logger(fb: FacebookInit, debug: bool) -> Logger {
     let drain = drain.filter_level(level);
 
     Logger::root(
-        drain.fuse(),
+        drain.ignore_res(),
         o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
 }

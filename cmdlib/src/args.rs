@@ -151,7 +151,7 @@ pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
     // at the stdlog level there.
     let stdlog_level = log::init_stdlog_once(Logger::root(glog_drain.clone(), o![]), stdlog_env);
 
-    let glog_drain = glog_drain.filter_level(level).fuse();
+    let glog_drain = glog_drain.filter_level(level).ignore_res();
 
     let logger = if matches.is_present("fb303-thrift-port") {
         Logger::root(slog_stats::StatsDrain::new(glog_drain), o![])

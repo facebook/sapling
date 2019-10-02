@@ -357,7 +357,7 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
     };
 
     Logger::root(
-        drain.fuse(),
+        drain.ignore_res(),
         o!("repo" => repo_name,
         kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
