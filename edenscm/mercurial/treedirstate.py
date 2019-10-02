@@ -101,11 +101,16 @@ class treedirstatemap(object):
         if importmap is not None:
             self._rmap.importmap(importmap)
             self._parents = importmap._parents
-            tracked = self._rmap.hastrackedfile
-            self._nonnormalset = set(filter(tracked, importmap.nonnormalset))
-            self._otherparentset = set(filter(tracked, importmap.otherparentset))
+
+            def shouldtrack(filename):
+                return self._rmap.hastrackedfile(filename) or self._rmap.hasremovedfile(
+                    filename
+                )
+
+            self._nonnormalset = set(filter(shouldtrack, importmap.nonnormalset))
+            self._otherparentset = set(filter(shouldtrack, importmap.otherparentset))
             self.copymap = {
-                dst: src for dst, src in importmap.copymap.items() if tracked(dst)
+                dst: src for dst, src in importmap.copymap.items() if shouldtrack(dst)
             }
         else:
             self.read()
