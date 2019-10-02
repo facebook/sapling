@@ -262,7 +262,7 @@ def snapshotcheckout(ui, repo, *args, **opts):
         hg.update(repo.unfiltered(), parents[0], quietempty=True)
         # Then we update snapshot files in the working copy
         # Here the dirstate is not updated because of the matcher
-        matcher = scmutil.match(cctx, cctx.files(), opts)
+        matcher = scmutil.matchfiles(repo, cctx.files(), opts)
         mergemod.update(repo.unfiltered(), node, False, False, matcher=matcher)
         # Finally, we mark the modified files in the dirstate
         scmutil.addremove(repo, matcher, "", opts)

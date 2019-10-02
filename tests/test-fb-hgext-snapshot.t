@@ -32,12 +32,14 @@
 # Snapshot test plan:
 # 1) Empty snapshot (no changes);
 # 2) Snapshot with an empty metadata (changes only in tracked files);
-# 3.1) Snapshot with metadata (merge state only);
-# 3.2) Snapshot with metadata (merge state + mixed changes);
-# 3.3) List the snapshots
-# 4) Same as 3 but test the --clean flag on creation;
-# 5) Same as 3 but test the --force flag on restore;
-# 6) TODO(alexeyqu): Same as 3 but sync to the server and another client.
+# 3) Snapshot with metadata (untracked changes only);
+# 4) Snapshot with metadata (merge state only);
+# 5) Snapshot with metadata (merge state + mixed changes);
+# 6) List the snapshots;
+# 7) Same as 3 but test the --clean flag on creation;
+# 8) Same as 3 but test the --force flag on restore;
+# 9) Resolve the merge conflict after restoring the snapshot;
+# 10) Negative tests.
 
 
 # 1) Empty snapshot -- no need to create a snapshot now
@@ -83,34 +85,12 @@
   $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid
   snapshotmetadataid=
 # The snapshot commit is hidden
-  $ hg log --hidden -r  "not hidden() & $EMPTYOID"
-# But it exists!
-  $ hg show --hidden "$EMPTYOID"
+  $ hg log --hidden -r  "hidden() & $EMPTYOID"
   changeset:   1:bd8d77aecb3d
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  files:       bar/file bazfile foofile
-  description:
-  first snapshot
-  
-  
-  diff -r 3490593cf53c -r bd8d77aecb3d bar/file
-  --- a/bar/file	Thu Jan 01 00:00:00 1970 +0000
-  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +0,0 @@
-  -bar
-  diff -r 3490593cf53c -r bd8d77aecb3d bazfile
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/bazfile	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +another
-  diff -r 3490593cf53c -r bd8d77aecb3d foofile
-  --- a/foofile	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/foofile	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +1,2 @@
-   foo
-  +change
+  summary:     first snapshot
   
 # Rollback to BASEREV and checkout on EMPTYOID
   $ hg update -q --clean "$BASEREV" && rm bazfile
@@ -122,8 +102,27 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 
-# 3.1) Snapshot with metadata (merge state only);
+# 3) Snapshot with metadata (untracked changes only);
   $ hg update -q --clean "$BASEREV" && rm bazfile
+  $ cd bar
+  $ echo 'a' > untrackedfile
+  $ BEFORESTATUS="$(hg status --verbose)"
+  $ echo "$BEFORESTATUS"
+  ? bar/untrackedfile
+  $ BEFOREDIFF="$(hg diff)"
+  $ echo "$BEFOREDIFF"
+  
+  $ OIDUNTRACKED="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
+  $ hg snapshot checkout "$OIDUNTRACKED"
+  will checkout on 17ea1568cba9731930a5dec3be5762b3620ddbb3
+  checkout complete
+  $ test "$BEFORESTATUS" = "$(hg status --verbose)"
+  $ test "$BEFOREDIFF" = "$(hg diff)"
+  $ cd ..
+
+
+# 4) Snapshot with metadata (merge state only);
+  $ hg update -q --clean "$BASEREV" && rm bar/untrackedfile
   $ hg status --verbose
   $ echo "a" > mergefile
   $ hg add mergefile
@@ -181,7 +180,7 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 
-# 3.2) Snapshot with metadata (merge state + mixed changes);
+# 5) Snapshot with metadata (merge state + mixed changes);
   $ hg status --verbose
   M mergefile
   ? mergefile.orig
@@ -244,9 +243,13 @@
   +>>>>>>> merge rev:    f473d4d5a1c0 - test: merge #1
 
 # Create the snapshot
-  $ OID="$(hg snapshot create | cut -f2 -d' ')"
+  $ OID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ echo "$OID"
   f890179e6e66eeb2a5a676efb96f150133a437c9
+
+  $ hg snapshot checkout "$OID"
+  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  checkout complete
 
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -260,17 +263,19 @@
   .hg/store/snapshots/objects/7e/b6f96f1f02eb9ab7102f4f2a9936e07bded02cd20ec6faad01285168b920c7
 
 
-# 3.3) List the snapshots
+# 6) List the snapshots
 # Check the list of snapshots directly
   $ cat .hg/store/snapshotlist
   v1
   bd8d77aecb3d474ec545981fe5b7aa9cd40f5df2
+  17ea1568cba9731930a5dec3be5762b3620ddbb3
   6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
   f890179e6e66eeb2a5a676efb96f150133a437c9
 
 # Use the list cmd
   $ hg snapshot list --verbose
   bd8d77aecb3d           None first snapshot
+  17ea1568cba9   9034098d7ea3 snapshot
   6d8aaa4ab672   18a588cc0809 another
   f890179e6e66   7eb6f96f1f02 snapshot
 
@@ -313,7 +318,7 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 
 
-# 4) Test the --clean flag
+# 7) Test the --clean flag on snapshot creation;
   $ find .hg/merge | sort
   .hg/merge
   .hg/merge/fc4ffdcb8ed23cecd44a0e11d23af83b445179b4
@@ -330,7 +335,7 @@
   checkout complete
 
 
-# 5) Test the --force flag
+# 8) Test the --force flag on checkout;
   $ hg update -q --clean "$BASEREV"
   $ hg status --verbose
   ? bazfile
@@ -345,7 +350,8 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 
-# Finally, resolve the conflict
+
+# 9) Resolve the merge conflict after restoring the snapshot;
   $ hg resolve --mark mergefile
   (no more unresolved files)
   $ hg remove foofile
@@ -369,7 +375,7 @@
   ? untrackedfile
 
 
-# Negative tests
+# 10) Negative tests.
   $ BROKENSNAPSHOTID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ BROKENMETADATAID="$(hg log --hidden -r \"$BROKENSNAPSHOTID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
 # Delete all the related files from the local store
