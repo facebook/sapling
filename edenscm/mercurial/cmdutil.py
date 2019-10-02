@@ -292,13 +292,11 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
 
         force = opts.get("force")
         if not force:
-            vdirs = []
-            match.explicitdir = vdirs.append
             match.bad = fail
 
         status = repo.status(match=match)
         if not force:
-            repo.checkcommitpatterns(wctx, vdirs, match, status, fail)
+            repo.checkcommitpatterns(wctx, match, status, fail)
         diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True

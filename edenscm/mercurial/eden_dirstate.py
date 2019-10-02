@@ -144,7 +144,6 @@ class eden_dirstate(dirstate.dirstate):
     #
     # match callbacks:
     # - bad: called for file/directory patterns that don't match anything
-    # - explicitdir: called for patterns that match a directory
     # - traversedir: used by `hg purge` (hgext/purge.py) to purge empty
     #   directories
     #   - we potentially should just implement purge inside Eden
@@ -240,7 +239,7 @@ class eden_dirstate(dirstate.dirstate):
     def _call_match_callbacks(self, match, results1, results2):
         """
         Process all explicit patterns in the match, and call match.bad()
-        or match.explicitdir() if necessary
+        if necessary
 
         Returns a dictionary of (path -> mode) for all explicit matches that
         are not already present in the results.  The mode will be None if the
@@ -259,8 +258,7 @@ class eden_dirstate(dirstate.dirstate):
                     continue
                 mode = os.lstat(os.path.join(self._root, path)).st_mode
                 if stat.S_ISDIR(mode):
-                    if match.explicitdir:
-                        match.explicitdir(path)
+                    pass
                 elif stat.S_ISREG(mode) or stat.S_ISLNK(mode):
                     explicit_matches[path] = mode
             except OSError as ex:

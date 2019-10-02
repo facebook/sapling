@@ -601,10 +601,6 @@ class basematcher(object):
         """Callback from dirstate.walk for each explicit file that can't be
         found/accessed, with an error message."""
 
-    # If an explicitdir is set, it will be called when an explicitly listed
-    # directory is visited.
-    explicitdir = None
-
     # If an traversedir is set, it will be called when a directory discovered
     # by recursive traversal is visited.
     traversedir = None
@@ -869,8 +865,8 @@ class differencematcher(basematcher):
     matches are treated specially. So, since this differencematcher is used for
     excludes, it needs to special-case exact matching.
 
-    The second matcher's non-matching-attributes (root, cwd, bad, explicitdir,
-    traversedir) are ignored.
+    The second matcher's non-matching-attributes (root, cwd, bad, traversedir)
+    are ignored.
 
     TODO: If we want to keep the behavior described above for exact matches, we
     should consider instead treating the above case something like this:
@@ -882,7 +878,6 @@ class differencematcher(basematcher):
         self._m1 = m1
         self._m2 = m2
         self.bad = m1.bad
-        self.explicitdir = m1.explicitdir
         self.traversedir = m1.traversedir
 
     def matchfn(self, f):
@@ -918,8 +913,8 @@ class differencematcher(basematcher):
 def intersectmatchers(m1, m2):
     """Composes two matchers by matching if both of them match.
 
-    The second matcher's non-matching-attributes (root, cwd, bad, explicitdir,
-    traversedir) are ignored.
+    The second matcher's non-matching-attributes (root, cwd, bad, traversedir)
+    are ignored.
     """
     if m1 is None or m2 is None:
         return m1 or m2
@@ -928,7 +923,6 @@ def intersectmatchers(m1, m2):
         # TODO: Consider encapsulating these things in a class so there's only
         # one thing to copy from m1.
         m.bad = m1.bad
-        m.explicitdir = m1.explicitdir
         m.traversedir = m1.traversedir
         m.abs = m1.abs
         m.rel = m1.rel
@@ -947,7 +941,6 @@ class intersectionmatcher(basematcher):
         self._m1 = m1
         self._m2 = m2
         self.bad = m1.bad
-        self.explicitdir = m1.explicitdir
         self.traversedir = m1.traversedir
 
     @propertycache
@@ -1070,14 +1063,13 @@ class subdirmatcher(basematcher):
 class unionmatcher(basematcher):
     """A matcher that is the union of several matchers.
 
-    The non-matching-attributes (root, cwd, bad, explicitdir, traversedir) are
+    The non-matching-attributes (root, cwd, bad, traversedir) are
     taken from the first matcher.
     """
 
     def __init__(self, matchers):
         m1 = matchers[0]
         super(unionmatcher, self).__init__(m1._root, m1._cwd)
-        self.explicitdir = m1.explicitdir
         self.traversedir = m1.traversedir
         self._matchers = matchers
 

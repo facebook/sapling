@@ -2130,7 +2130,7 @@ class localrepository(object):
 
         return fparent1
 
-    def checkcommitpatterns(self, wctx, vdirs, match, status, fail):
+    def checkcommitpatterns(self, wctx, match, status, fail):
         """check for commit arguments that aren't committable"""
         if match.isexact() or match.prefix():
             matched = set(status.modified + status.added + status.removed)
@@ -2141,15 +2141,16 @@ class localrepository(object):
                     continue
                 if f in status.deleted:
                     fail(f, _("file not found!"))
-                if f in vdirs:  # visited directory
-                    d = f + "/"
-                    for mf in matched:
-                        if mf.startswith(d):
-                            break
-                    else:
+
+                d = f + "/"
+                for mf in matched:
+                    if mf.startswith(d):
+                        break
+                else:
+                    if self.wvfs.isdir(f):
                         fail(f, _("no match under directory!"))
-                elif f not in self.dirstate:
-                    fail(f, _("file not tracked!"))
+                    elif f not in self.dirstate:
+                        fail(f, _("file not tracked!"))
 
     @unfilteredmethod
     def commit(
@@ -2182,8 +2183,6 @@ class localrepository(object):
             match = matchmod.always(self.root, "")
 
         if not force:
-            vdirs = []
-            match.explicitdir = vdirs.append
             match.bad = fail
 
         wlock = lock = tr = None
@@ -2208,7 +2207,7 @@ class localrepository(object):
 
             # make sure all explicit patterns are matched
             if not force:
-                self.checkcommitpatterns(wctx, vdirs, match, status, fail)
+                self.checkcommitpatterns(wctx, match, status, fail)
 
             loginfo.update({"checkoutidentifier": self.dirstate.checkoutidentifier})
 

@@ -47,8 +47,8 @@ def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
     remove, and dirs is an iterable of directories to remove.
     """
     if finddirs:
-        directories = []
-        match.explicitdir = match.traversedir = directories.append
+        directories = [f for f in match.files() if repo.wvfs.isdir(f)]
+        match.traversedir = directories.append
 
     status = repo.status(match=match, ignored=includeignored, unknown=True)
 
