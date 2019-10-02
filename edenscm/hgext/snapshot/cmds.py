@@ -214,7 +214,8 @@ def _getsnapshotrepostate(ctx):
         return None
     repo = ctx.repo()
     snapmetadata = snapshotmetadata.getfromlocalstorage(repo, metadataid)
-    if "rebasestate" in snapmetadata.localvfsfiles:
+    # TODO(alexeyqu): make snapshotmetadata inherit from dict
+    if any(f.path == "rebasestate" for f in snapmetadata.localvfsfiles):
         return "rebase"
     if len(ctx.parents()) > 1:
         return "merge"

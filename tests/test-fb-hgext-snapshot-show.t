@@ -59,6 +59,32 @@
   $ echo "b" > mergefile
   $ hg add mergefile
   $ hg commit -m "merge #2"
+
+# Try creating the rebasestate snapshot
+  $ hg rebase -s "$MERGEREV" -d .
+  rebasing 7:9d3ebf4630d3 "merge #1"
+  merging mergefile
+  warning: 1 conflicts while merging mergefile! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg status --verbose
+  M mergefile
+  ? mergefile.orig
+  # The repository is in an unfinished *rebase* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     mergefile
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+  
+  $ REBASEOID="$(hg snapshot create | head -n 1 | cut -f2 -d' ')"
+  $ hg rebase --abort
+  rebase aborted
+
   $ hg merge "$MERGEREV"
   merging mergefile
   warning: 1 conflicts while merging mergefile! (edit, then use 'hg resolve --mark')
@@ -95,8 +121,35 @@
   abort: fa948fa73a59 is not a valid snapshot id
   
   [255]
+
+  $ hg snapshot show "$REBASEOID"
+  changeset:   9:404ae306a972
+  parent:      8:fdf2c0326bba
+  parent:      7:9d3ebf4630d3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     snapshot
+  
+  diff -r fdf2c0326bba -r 404ae306a972 mergefile
+  --- a/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/mergefile	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,5 @@
+  +<<<<<<< dest:   fdf2c0326bba - test: merge #2
+   b
+  +=======
+  +a
+  +>>>>>>> source: 9d3ebf4630d3 - test: merge #1
+  
+  ===
+  Untracked changes:
+  ===
+  ? mergefile.orig
+  @@ -0,0 +1,1 @@
+  +b
+  
+  The snapshot is in an unfinished *rebase* state.
   $ hg snapshot show "$OID"
-  changeset:   9:b6124cfe90c6
+  changeset:   10:b6124cfe90c6
   parent:      8:fdf2c0326bba
   parent:      7:9d3ebf4630d3
   user:        test
@@ -149,7 +202,7 @@
   The snapshot is in an unfinished *merge* state.
 
   $ hg snapshot show "$HOID"
-  changeset:   10:3d1b299b75fb
+  changeset:   11:3d1b299b75fb
   tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
@@ -167,7 +220,7 @@
   
 
   $ hg show --hidden "$HOID"
-  changeset:   10:3d1b299b75fb
+  changeset:   11:3d1b299b75fb
   tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
@@ -181,12 +234,19 @@
 
 # 3) Show them in ssl
   $ hg smartlog -T default
-  s    changeset:   9:b6124cfe90c6
+  s    changeset:   10:b6124cfe90c6
   |\   parent:      8:fdf2c0326bba
   | |  parent:      7:9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
+  | |
+  +---s  changeset:   9:404ae306a972
+  | |/   parent:      8:fdf2c0326bba
+  | |    parent:      7:9d3ebf4630d3
+  | |    user:        test
+  | |    date:        Thu Jan 01 00:00:00 1970 +0000
+  | |    summary:     snapshot
   | |
   | o  changeset:   8:fdf2c0326bba
   | |  parent:      2:fa948fa73a59
@@ -210,7 +270,7 @@
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
-  | s  changeset:   10:3d1b299b75fb
+  | s  changeset:   11:3d1b299b75fb
   | |  tag:         tip
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
@@ -284,31 +344,39 @@
 # 4) Hide a snapshot, check the ssl and unhide it;
   $ hg snapshot hide "$OID"
   $ hg snapshot list
+  404ae306a972 snapshot
   3d1b299b75fb snapshot
   $ hg smartlog -T default
-  o  changeset:   8:fdf2c0326bba
-  |  parent:      2:fa948fa73a59
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     merge #2
-  |
-  | o  changeset:   7:9d3ebf4630d3
+  s    changeset:   9:404ae306a972
+  |\   parent:      8:fdf2c0326bba
+  | |  parent:      7:9d3ebf4630d3
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     snapshot
+  | |
+  | o  changeset:   8:fdf2c0326bba
+  | |  parent:      2:fa948fa73a59
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge #2
+  | |
+  o |  changeset:   7:9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #1
   | |
-  | o  changeset:   6:8e676f2ef130
+  o |  changeset:   6:8e676f2ef130
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     draft2
   | |
-  | o  changeset:   5:d521223a2fb5
+  o |  changeset:   5:d521223a2fb5
   |/   parent:      2:fa948fa73a59
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
-  | s  changeset:   10:3d1b299b75fb
+  | s  changeset:   11:3d1b299b75fb
   | |  tag:         tip
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
@@ -334,18 +402,26 @@
   
   $ hg snapshot unhide "$OID"
   $ hg snapshot list
+  404ae306a972 snapshot
   3d1b299b75fb snapshot
   b6124cfe90c6 snapshot
   $ hg unhide "$HOID"
   $ hg log -r "snapshot() & hidden()" --hidden
-  changeset:   9:b6124cfe90c6
+  changeset:   9:404ae306a972
   parent:      8:fdf2c0326bba
   parent:      7:9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
   
-  changeset:   10:3d1b299b75fb
+  changeset:   10:b6124cfe90c6
+  parent:      8:fdf2c0326bba
+  parent:      7:9d3ebf4630d3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     snapshot
+  
+  changeset:   11:3d1b299b75fb
   tag:         tip
   parent:      3:ffb8db6e9ac3
   user:        test
