@@ -886,22 +886,30 @@ def _interestingfiles(repo, matcher):
     audit_path = pathutil.pathauditor(repo.root, cached=True)
 
     dirstate = repo.dirstate
-    walkresults = dirstate.walk(matcher, unknown=True, ignored=False, full=False)
-    for abs, st in walkresults.iteritems():
-        dstate = dirstate[abs]
-        if dstate == "?" and audit_path.check(abs):
-            unknown.append(abs)
-        elif dstate != "r" and not st:
-            deleted.append(abs)
-        elif dstate == "r" and st:
-            forgotten.append(abs)
-        # for finding renames
-        elif dstate == "r" and not st:
-            removed.append(abs)
-        elif dstate == "a":
-            added.append(abs)
+    exists = repo.wvfs.isfileorlink
+    status = dirstate.status(matcher, False, False, True)
 
-    return added, unknown, deleted, removed, forgotten
+    unknown = [file for file in status.unknown if audit_path.check(file)]
+
+    removed = []
+    forgotten = []
+    for file in status.removed:
+        dstate = dirstate[file]
+        if exists(file):
+            forgotten.append(file)
+        else:
+            removed.append(file)
+
+    # The user may have specified ignored files. It's expensive to compute them
+    # via status, so let's manually add them here.
+    ignored = repo.dirstate._ignore
+    unknown.extend(
+        file
+        for file in matcher.files()
+        if ignored(file) and repo.wvfs.isfileorlink(file) and audit_path.check(file)
+    )
+
+    return status.added, unknown, status.deleted, removed, forgotten
 
 
 def _findrenames(repo, matcher, added, removed, similarity):
