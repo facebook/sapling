@@ -29,6 +29,7 @@ tests/*.err
 fb/tests/*.err
 tests/htmlcov
 tests/getdb.sh
+tests/testutil/getdb.py
 contrib/chg/chg
 contrib/chg/libchg.a
 contrib/hgsh/hgsh

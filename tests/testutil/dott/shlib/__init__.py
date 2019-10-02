@@ -254,6 +254,11 @@ def source(path):
             from . import remotefilelog
 
             defs = remotefilelog.__dict__
+        elif name == "hgsql":
+            # hgsql helpers
+            from . import hgsql
+
+            defs = hgsql.__dict__
     if defs:
         for name, body in defs.items():
             if callable(body):

@@ -93,8 +93,5 @@ configureclient() {
   cat >> $1/.hg/hgrc <<EOF
 [ui]
 ssh=python "$TESTDIR/dummyssh"
-
-[extensions]
-hgsql=
 EOF
 }
