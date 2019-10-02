@@ -114,8 +114,7 @@ sh % "hg globalrev" == "5000"
 # number once.
 
 cmd = sh % "hg initglobalrev 5000 --i-know-what-i-am-doing"
-if "[1]" not in cmd.output:
-    raise Exception("initglobalrev twice should fail")
+assert "[1]" in cmd.output, "initglobalrev twice should fail"
 
 
 # - Server is configured properly now. We can create an initial commit in the
@@ -562,21 +561,20 @@ sh % "hg log -r munknown" == r"""
 def testlookup():
     output = shlib.hg("log", "--rev=all()", "--template={globalrev}\n").split("\n")
     output = list(int(l) for l in output if l)
-    if not output:
-        raise Exception("not globalrevs")
+    assert output, "not globalrevs"
 
     for globalrev in output:
         result = getglobalrev("globalrev(%s)" % globalrev)
-        if result != globalrev:
-            raise Exception(
-                "globalrev revset doesn't roundtrip: globalrev(%s) == %s"
-                % (globalrev, result)
-            )
+        assert result == globalrev, (
+            "globalrev revset doesn't roundtrip: globalrev(%s) == %s"
+            % (globalrev, result)
+        )
+
         result = getglobalrev("m%s" % globalrev)
-        if result != globalrev:
-            raise Exception(
-                "globalrev revset doesn't roundtrip: m%s == %s" % (globalrev, result)
-            )
+        assert result == globalrev, "globalrev revset doesn't roundtrip: m%s == %s" % (
+            globalrev,
+            result,
+        )
 
 
 testlookup()
