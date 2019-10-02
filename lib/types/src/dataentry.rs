@@ -80,9 +80,11 @@ impl DataEntry {
 
         ensure!(
             &computed == expected,
-            "Content hash validation failed. Expected: {}; Computed: {}",
+            "Content hash validation failed. Expected: {}; Computed: {}; Parents: (p1: {}, p2: {})",
             expected.to_hex(),
-            computed.to_hex()
+            computed.to_hex(),
+            p1.to_hex(),
+            p2.to_hex(),
         );
 
         Ok(())
