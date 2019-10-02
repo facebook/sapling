@@ -1601,7 +1601,25 @@ class committablectx(basectx):
 
     def walk(self, match):
         """Generates matching file names."""
-        return sorted(self._repo.dirstate.walk(match, unknown=True, ignored=False))
+        repo = self._repo
+        dirstate = repo.dirstate
+        status = dirstate.status(match, False, True, True)
+        files = set(file for files in status for file in files)
+
+        # It's expensive to ask status to return ignored files, and we only care
+        # about it for explicitly mentioned files, so let's manually check them.
+        # Also check for explicitly requested files. There's legacy behavior
+        # where walk is expected to return explicitly requested files, even if
+        # the provided matcher says we shouldn't visit the directories leading
+        # to the explicit file (ex: `hg debugwalk -Xbeans beans/black` should
+        # show beans/black).
+        ignored = dirstate._ignore
+        files.update(
+            file
+            for file in match.files()
+            if file in self or (ignored(file) and repo.wvfs.isfileorlink(file))
+        )
+        return sorted(files)
 
     def matches(self, match):
         return sorted(self._repo.dirstate.matches(match))
