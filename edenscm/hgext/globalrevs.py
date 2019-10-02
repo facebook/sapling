@@ -187,6 +187,9 @@ def _sqllocalrepowrapper(orig, repo):
     # hgsql extension.
     orig(repo)
 
+    if not extensions.isenabled(repo.ui, "globalrevs"):
+        return
+
     # This class will effectively extend the `sqllocalrepo` class.
     class globalrevsrepo(repo.__class__):
         def commitctx(self, ctx, error=False):

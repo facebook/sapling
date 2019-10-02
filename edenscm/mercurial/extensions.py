@@ -83,21 +83,22 @@ DEFAULT_EXTENSIONS = {
 ALWAYS_ON_EXTENSIONS = ()
 
 
+def isenabled(ui, name):
+    for format in ["%s", "hgext.%s"]:
+        conf = ui.config("extensions", format % name)
+        if name in ALWAYS_ON_EXTENSIONS:
+            return True
+        if conf is not None and not conf.startswith("!"):
+            return True
+        # Check DEFAULT_EXTENSIONS if no config for this extension was
+        # specified.
+        if conf is None and name in DEFAULT_EXTENSIONS:
+            return True
+
+
 def extensions(ui=None):
     if ui:
-
-        def enabled(name):
-            for format in ["%s", "hgext.%s"]:
-                conf = ui.config("extensions", format % name)
-                if name in ALWAYS_ON_EXTENSIONS:
-                    return True
-                if conf is not None and not conf.startswith("!"):
-                    return True
-                # Check DEFAULT_EXTENSIONS if no config for this extension was
-                # specified.
-                if conf is None and name in DEFAULT_EXTENSIONS:
-                    return True
-
+        enabled = lambda name: isenabled(ui, name)
     else:
         enabled = lambda name: True
     for name in _order:
