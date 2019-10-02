@@ -362,7 +362,7 @@ class _tree(dict):
                 for pat in globpats:
                     components = _globpatsplit(pat)
                     parentpat = ""
-                    for comp in components[:-1]:
+                    for comp in components:
                         if parentpat:
                             parentpat += "/"
                         parentpat += comp
