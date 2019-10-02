@@ -429,7 +429,7 @@ def clearfilecache(repo, attrname):
 def perfwalk(ui, repo, *pats, **opts):
     timer, fm = gettimer(ui, opts)
     m = scmutil.match(repo[None], pats, {})
-    timer(lambda: len(list(repo.dirstate.walk(m, unknown=True, ignored=False))))
+    timer(lambda: len(list(set().union(*repo.dirstate.status(m, False, True, False)))))
     fm.end()
 
 
