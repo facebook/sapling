@@ -12,6 +12,7 @@ Description=EdenFS FUSE filesystem
 
 [Service]
 LimitNOFILE=1048576
+OOMScoreAdjust=-20
 Environment=EDENFS_EXECUTABLE_PATH=/usr/local/libexec/eden/edenfs
 Environment=EDENFS_EXTRA_ARGUMENTS=
 Environment=EDENFS_SYSTEM_CONFIG_DIR=/etc/eden
