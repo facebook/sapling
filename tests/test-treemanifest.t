@@ -550,6 +550,11 @@ within that.
    1 files changed, 1 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
+Test files with an unusual pattern
+
+  $ hg files -r . 'rootfilesin:b/bar'
+  b/bar/fruits.txt
+
 Add some more changes to the deep repo
   $ echo narf >> b/bar/fruits.txt
   $ hg ci -m narf

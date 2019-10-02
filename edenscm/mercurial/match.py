@@ -775,6 +775,8 @@ class patternmatcher(basematcher):
         dir = normalizerootdir(dir, "visitdir")
         if self._prefix and dir in self._fileset:
             return "all"
+        if not self._prefix:
+            return True
         return (
             dir in self._fileset
             or dir in self._dirs
