@@ -26,7 +26,7 @@ Configure master as a server backed by sql.
   $ configureserver master masterrepo
   $ cd master
   $ hg log -GT '{files}' 2>&1 | grep "CorruptionException:"
-  edenscm.hgext.hgsql.CorruptionException: heads don't match after sync
+  CorruptionException: heads don't match after sync
 
 
 Fix the server using sqlrefill.

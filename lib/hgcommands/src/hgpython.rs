@@ -6,7 +6,7 @@ use crate::python::{
 };
 use clidispatch::io::IO;
 use cpython::*;
-use cpython_ext::{wrap_pyio, Bytes, WrappedIO};
+use cpython_ext::{format_py_error, wrap_pyio, Bytes, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
@@ -124,8 +124,9 @@ impl HgPython {
                         Err(_) => 255,
                     }
                 } else {
-                    // Print a traceback
-                    err.print(py);
+                    let message =
+                        format_py_error(py, &err).unwrap_or("unknown python exception".to_string());
+                    let _ = io.write_err(&message);
                     1
                 }
             }

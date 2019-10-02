@@ -111,8 +111,8 @@ Verify master2 is stripped
 Verify master is broken
 
   $ cd ../master
-  $ hg log 2>&1 | egrep 'hgext.hgsql.CorruptionException'
-  edenscm.hgext.hgsql.CorruptionException: heads don't match after sync
+  $ hg log 2>&1 | egrep 'CorruptionException:'
+  CorruptionException: heads don't match after sync
 
 Run sqlstrip on master as well
 

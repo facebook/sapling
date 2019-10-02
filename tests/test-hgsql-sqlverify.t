@@ -33,7 +33,7 @@ Run with incorrect local revlogs
   add b
   $ hg sqlverify >$TESTTMP/sqlverify.out 2>&1 || true
   $ grep Corruption $TESTTMP/sqlverify.out || cat $TESTTMP/sqlverify.out
-  edenscm.hgext.hgsql.CorruptionException: * with linkrev *, disk does not match mysql (glob)
+  CorruptionException: * with linkrev *, disk does not match mysql (glob)
 
   $ hg debugstrip -q -r 1: --config hgsql.bypass=True --no-backup
   $ hg log -r tip --forcesync -T '\n'
