@@ -47,7 +47,7 @@ Here we expect a cache hit of 100% because we are based of revision -1 that
 is cached
   $ mkcommit a
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -61,7 +61,7 @@ For all the next ones, we expect a cache hit of 50% because we are checking the
 manifest of each parent, one is cached (-1) and the other is not:
   $ mkcommit b
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 0)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -72,7 +72,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] End metrics
   $ mkcommit c
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 0)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -83,7 +83,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] End metrics
   $ mkcommit d
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 0)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -94,7 +94,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] End metrics
   $ mkcommit e
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 0)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics

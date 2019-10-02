@@ -3121,16 +3121,31 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     badfn = lambda x, y: bad.append(x) or match.bad(x, y)
     names = []
     wctx = repo[None]
+    pctx = wctx.parents()[0]
     cca = None
     abort, warn = scmutil.checkportabilityalert(ui)
     if abort or warn:
         cca = scmutil.casecollisionauditor(ui, abort, repo.dirstate)
 
     badmatch = matchmod.badmatch(match, badfn)
-    dirstate = repo.dirstate
-    # We don't want to just call wctx.walk here, since it would return a lot of
-    # clean files, which we aren't interested in and takes time.
-    for f in sorted(dirstate.walk(badmatch, unknown=True, ignored=False, full=False)):
+
+    # While we technically can't add certain files, and therefore may not need
+    # them returned from status, we still want them returned from status so we
+    # can report errors if the user tries to add something that already exists.
+    status = repo.dirstate.status(badmatch, False, False, True)
+    files = set(file for files in status for file in files)
+
+    # Status might not have returned clean or ignored files, so let's add them
+    # so we can add ignored files and warn them if they try to add an existing
+    # file.
+    ignored = repo.dirstate._ignore
+    files.update(
+        file
+        for file in match.files()
+        if file in pctx or (ignored(file) and repo.wvfs.isfileorlink(file))
+    )
+
+    for f in sorted(files):
         exact = match.exact(f)
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
