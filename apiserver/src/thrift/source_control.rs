@@ -4,10 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::cmp::min;
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryFrom;
+use std::fmt::{Debug, Display};
+use std::ops::RangeBounds;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use bytes::BufMut;
 use faster_hex::hex_string;
 use fbinit::FacebookInit;
 use futures::stream::Stream;
@@ -29,6 +34,7 @@ use tracing::TraceContext;
 use uuid::Uuid;
 
 const MAX_LIMIT: i64 = 1000;
+const MAX_CHUNK_SIZE: i64 = 16 * 1024 * 1024;
 
 trait SpecifierExt {
     fn description(&self) -> String;
@@ -494,6 +500,31 @@ impl_from_request_binary_id!(FileId, "file id");
 impl_from_request_binary_id!(Sha1, "sha-1");
 impl_from_request_binary_id!(Sha256, "sha-256");
 
+/// Check that an input value is in range for the request, and convert it to
+/// the internal type.  Returns a invalid request error if the number was out
+/// of range, and an internal error if the conversion failed.
+fn check_range_and_convert<F, T, B>(
+    name: &'static str,
+    value: F,
+    range: B,
+) -> Result<T, errors::ServiceError>
+where
+    F: Copy + Display + PartialOrd,
+    T: TryFrom<F>,
+    B: Debug + RangeBounds<F>,
+    <T as TryFrom<F>>::Error: Display,
+{
+    if range.contains(&value) {
+        T::try_from(value).map_err(|e| {
+            let msg = format!("failed to convert {} ({}): {}", name, value, e);
+            errors::internal_error(msg).into()
+        })
+    } else {
+        let msg = format!("{} ({}) out of range ({:?})", name, value, range);
+        Err(errors::invalid_request(msg).into())
+    }
+}
+
 trait IntoResponse<T> {
     fn into_response(self) -> T;
 }
@@ -560,12 +591,19 @@ mod errors {
 
     pub(super) enum ServiceError {
         Request(thrift::RequestError),
+        Internal(thrift::InternalError),
         Mononoke(MononokeError),
     }
 
     impl From<thrift::RequestError> for ServiceError {
         fn from(e: thrift::RequestError) -> Self {
             Self::Request(e)
+        }
+    }
+
+    impl From<thrift::InternalError> for ServiceError {
+        fn from(e: thrift::InternalError) -> Self {
+            Self::Internal(e)
         }
     }
 
@@ -581,6 +619,7 @@ mod errors {
                 fn from(e: ServiceError) -> Self {
                     match e {
                         ServiceError::Request(e) => e.into(),
+                        ServiceError::Internal(e) => e.into(),
                         ServiceError::Mononoke(e) => e.into(),
                     }
                 }
@@ -597,11 +636,19 @@ mod errors {
     impl_into_thrift_error!(service::TreeListExn);
     impl_into_thrift_error!(service::FileExistsExn);
     impl_into_thrift_error!(service::FileInfoExn);
+    impl_into_thrift_error!(service::FileContentChunkExn);
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::INVALID_REQUEST,
             reason: reason.to_string(),
+        }
+    }
+
+    pub(super) fn internal_error(error: impl ToString) -> thrift::InternalError {
+        thrift::InternalError {
+            reason: error.to_string(),
+            backtrace: None,
         }
     }
 
@@ -684,16 +731,9 @@ impl SourceControlService for SourceControlServiceImpl {
         params: thrift::RepoListBookmarksParams,
     ) -> Result<thrift::RepoListBookmarksResponse, service::RepoListBookmarksExn> {
         let ctx = self.create_ctx(Some(&repo));
-        let limit = match params.limit {
+        let limit = match check_range_and_convert("limit", params.limit, 0..=MAX_LIMIT)? {
             0 => None,
-            limit @ 1...MAX_LIMIT => Some(limit as u64),
-            limit => {
-                return Err(errors::invalid_request(format!(
-                    "limit ({}) out of range (0..{})",
-                    limit, MAX_LIMIT,
-                ))
-                .into())
-            }
+            limit => Some(limit),
         };
         let prefix = if !params.bookmark_prefix.is_empty() {
             Some(params.bookmark_prefix)
@@ -919,6 +959,39 @@ impl SourceControlService for SourceControlServiceImpl {
         let ctx = self.create_ctx(Some(&file));
         match self.repo_file(ctx, &file).await? {
             (_repo, Some(file)) => Ok(file.metadata().await?.into_response()),
+            (_repo, None) => Err(errors::file_not_found(file.description()).into()),
+        }
+    }
+
+    /// Get a chunk of file content.
+    async fn file_content_chunk(
+        &self,
+        file: thrift::FileSpecifier,
+        params: thrift::FileContentChunkParams,
+    ) -> Result<thrift::FileChunk, service::FileContentChunkExn> {
+        let ctx = self.create_ctx(Some(&file));
+        let offset: u64 = check_range_and_convert("offset", params.offset, 0..)?;
+        let size: u64 = check_range_and_convert("size", params.size, 0..=MAX_CHUNK_SIZE)?;
+        match self.repo_file(ctx, &file).await? {
+            (_repo, Some(file)) => {
+                let metadata = file.metadata().await?;
+                let expected_size = min(size, metadata.total_size.saturating_sub(offset));
+                let mut data = Vec::with_capacity(expected_size as usize);
+                file.content_range(offset, size)
+                    .await
+                    .for_each(|bytes| {
+                        data.put(bytes);
+                        Ok(())
+                    })
+                    .compat()
+                    .await
+                    .map_err(errors::internal_error)?;
+                Ok(thrift::FileChunk {
+                    offset: params.offset,
+                    file_size: metadata.total_size as i64,
+                    data,
+                })
+            }
             (_repo, None) => Err(errors::file_not_found(file.description()).into()),
         }
     }
