@@ -176,6 +176,13 @@ class EdenConfig : public ConfigSettingManager {
     return fuseDaemonTimeout_.getValue();
   }
 
+  /**
+   * Controls if Eden reads from Mercurial's datapack store.
+   */
+  bool getUseDatapack() const {
+    return useDatapack_.getValue();
+  }
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -317,6 +324,8 @@ class EdenConfig : public ConfigSettingManager {
       "fuse:daemon-timeout",
       std::chrono::nanoseconds::max(),
       this};
+
+  ConfigSetting<bool> useDatapack_{"hg:use-datapack", false, this};
 };
 } // namespace eden
 } // namespace facebook

@@ -198,7 +198,6 @@ class HgBackingStore : public BackingStore {
   // UnionDatapackStore is alive.
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
-  bool useDatapackGetBlob_{false};
 
   std::string repoName_;
   folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;

@@ -664,19 +664,23 @@ folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
 }
 
 Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
+  auto edenConfig = config_->getEdenConfig();
+
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #if EDEN_HAVE_RUST_DATAPACK
-  if (useDatapackGetBlob_ && datapackStore_) {
+  if (edenConfig->getUseDatapack() && datapackStore_) {
     if (auto content = datapackStore_->getBlob(id, hgInfo)) {
+      XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
+                 << hgInfo.revHash().toString() << " from datapack store";
       return makeFuture(std::move(content));
     }
   } else
 #endif
       // Prefer using the above rust implementation over the C++ implementation
-      if (useDatapackGetBlob_ && unionStore_) {
+      if (edenConfig->getUseDatapack() && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
       return makeFuture(std::move(content));
