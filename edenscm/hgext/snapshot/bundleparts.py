@@ -104,7 +104,8 @@ def binarydecode(stream):
     """
 
     try:
-        bundlepartdict = cborutil.decodeall(stream.read())[0]
+        data = stream.read()
+        bundlepartdict = cborutil.decodeall(data)[0]
     except cborutil.CBORDecodeError:
         raise error.Abort(_("invalid bundlepart stream"))
     try:

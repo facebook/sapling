@@ -86,7 +86,7 @@ class LocalService(baseservice.BaseService):
                 "commitcloud local service: "
                 "get_references for current version %s\n" % version
             )
-            return baseservice.References(version, None, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None, None)
         else:
             self._ui.debug(
                 "commitcloud local service: "
@@ -108,6 +108,8 @@ class LocalService(baseservice.BaseService):
         newobsmarkers,
         oldremotebookmarks=[],
         newremotebookmarks={},
+        oldsnapshots=[],
+        newsnapshots=[],
     ):
         data = self._load()
         if version != data["version"]:
@@ -130,8 +132,12 @@ class LocalService(baseservice.BaseService):
                 len(data["remote_bookmarks"]),
             )
         )
+        data["snapshots"] = newsnapshots
         self._save(data)
-        return True, baseservice.References(newversion, None, None, None, None, None)
+        return (
+            True,
+            baseservice.References(newversion, None, None, None, None, None, None),
+        )
 
     def getsmartlog(self, reponame, workspace, repo, limit):
         filename = os.path.join(self.path, "usersmartlogdata")

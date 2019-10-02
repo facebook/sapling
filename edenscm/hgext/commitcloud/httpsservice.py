@@ -240,7 +240,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 % workspace,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None, None)
 
         if version == baseversion:
             self.ui.debug(
@@ -248,7 +248,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 % version,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None, None)
 
         self.ui.debug(
             "'get_references' returns version %s, current version %s\n"
@@ -270,6 +270,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
         newobsmarkers,
         oldremotebookmarks=[],
         newremotebookmarks={},
+        oldsnapshots=[],
+        newsnapshots=[],
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
 
@@ -294,6 +296,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             "new_obsmarkers_data": self._encodedmarkers(newobsmarkers),
             "removed_remote_bookmarks": self._makeremotebookmarks(oldremotebookmarks),
             "updated_remote_bookmarks": self._makeremotebookmarks(newremotebookmarks),
+            "removed_snapshots": oldsnapshots,
+            "new_snapshots": newsnapshots,
         }
 
         start = util.timer()
@@ -324,7 +328,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
             component="commitcloud",
         )
 
-        return True, baseservice.References(newversion, None, None, None, None, None)
+        return (
+            True,
+            baseservice.References(newversion, None, None, None, None, None, None),
+        )
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
     def getsmartlog(self, reponame, workspace, repo, limit):

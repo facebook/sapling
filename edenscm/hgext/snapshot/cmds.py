@@ -95,7 +95,7 @@ def snapshotcreate(ui, repo, *args, **opts):
             ui.status(_("nothing changed\n"))
             return
         node = nodemod.hex(node)
-        with repo.transaction("add-snapshot") as tr:
+        with repo.transaction("update-snapshot-list") as tr:
             repo.snapshotlist.update(tr, addnodes=[node])
         ui.status(_("snapshot %s created\n") % (node))
         if opts.get("clean"):

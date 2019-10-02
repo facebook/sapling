@@ -79,6 +79,15 @@ def _getremotebookmarks(repo):
     return remotebookmarks
 
 
+def _getsnapshots(repo, lastsyncstate):
+    try:
+        extensions.find("snapshot")
+        return repo.snapshotlist.snapshots
+    except KeyError:
+        # to prevent snapshot deletion if we disabled the extension
+        return lastsyncstate.snapshots
+
+
 @perftrace.tracefunc("Cloud Sync")
 def sync(
     repo, remotepath, getconnection, cloudrefs=None, full=False, cloudversion=None
@@ -215,19 +224,35 @@ def sync(
     return _maybeupdateworkingcopy(repo, startnode)
 
 
-def logsyncop(repo, op, version, oldheads, newheads, oldbm, newbm, oldrbm, newrbm):
+def logsyncop(
+    repo,
+    op,
+    version,
+    oldheads,
+    newheads,
+    oldbm,
+    newbm,
+    oldrbm,
+    newrbm,
+    oldsnapshots,
+    newsnapshots,
+):
     oldheadsset = set(oldheads)
     newheadsset = set(newheads)
     oldbmset = set(oldbm)
     newbmset = set(newbm)
     oldrbmset = set(oldrbm)
     newrbmset = set(newrbm)
+    oldsnapset = set(oldsnapshots)
+    newsnapset = set(newsnapshots)
     addedheads = blackbox.shortlist([h for h in newheads if h not in oldheadsset])
     removedheads = blackbox.shortlist([h for h in oldheads if h not in newheadsset])
     addedbm = blackbox.shortlist([h for h in newbm if h not in oldbmset])
     removedbm = blackbox.shortlist([h for h in oldbm if h not in newbmset])
     addedrbm = blackbox.shortlist([h for h in newrbm if h not in oldrbmset])
     removedrbm = blackbox.shortlist([h for h in oldrbm if h not in newrbmset])
+    addedsnaps = blackbox.shortlist([h for h in newsnapshots if h not in oldsnapset])
+    removedsnaps = blackbox.shortlist([h for h in oldsnapshots if h not in newsnapset])
     blackbox.log(
         {
             "commit_cloud_sync": {
@@ -239,6 +264,8 @@ def logsyncop(repo, op, version, oldheads, newheads, oldbm, newbm, oldrbm, newrb
                 "removed_bookmarks": removedbm,
                 "added_remote_bookmarks": addedrbm,
                 "removed_remote_bookmarks": removedrbm,
+                "added_snapshots": addedsnaps,
+                "removed_snapshots": removedsnaps,
             }
         }
     )
@@ -359,6 +386,25 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             if node not in unfi:
                 remotebookmarknodes.append(node)
 
+    try:
+        snapshot = extensions.find("snapshot")
+    except KeyError:
+        snapshot = None
+        addedsnapshots = []
+        removedsnapshots = []
+        newsnapshots = lastsyncstate.snapshots
+    else:
+        addedsnapshots = [
+            s for s in cloudrefs.snapshots if s not in lastsyncstate.snapshots
+        ]
+        removedsnapshots = [
+            s for s in lastsyncstate.snapshots if s not in cloudrefs.snapshots
+        ]
+        newsnapshots = cloudrefs.snapshots
+
+    # TODO(alexeyqu): pull snapshots separately
+    newheads += addedsnapshots
+
     backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
     if remotebookmarknodes or newheads:
@@ -408,6 +454,12 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     if _isremotebookmarkssyncenabled(repo.ui):
         _updateremotebookmarks(repo, tr, newremotebookmarks)
+
+    if snapshot:
+        with repo.lock(), repo.transaction("sync-snapshots") as tr:
+            repo.snapshotlist.update(
+                tr, addnodes=addedsnapshots, removenodes=removedsnapshots
+            )
 
     _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
 
@@ -468,6 +520,8 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         cloudrefs.bookmarks,
         lastsyncstate.remotebookmarks,
         newremotebookmarks,
+        lastsyncstate.snapshots,
+        newsnapshots,
     )
     lastsyncstate.update(
         cloudrefs.version,
@@ -477,6 +531,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         omittedbookmarks,
         maxage,
         newremotebookmarks,
+        newsnapshots,
     )
 
     # Also update backup state.  These new heads are already backed up,
@@ -770,6 +825,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     localheads = _getheads(repo)
     localbookmarks = _getbookmarks(repo)
     localremotebookmarks = _getremotebookmarks(repo)
+    localsnapshots = _getsnapshots(repo, lastsyncstate)
     obsmarkers = obsmarkersmod.getsyncingobsmarkers(repo)
 
     # If any commits failed to back up, exclude them.  Revert any bookmark changes
@@ -804,12 +860,16 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         _isremotebookmarkssyncenabled(repo.ui)
         and localremotebookmarks != lastsyncstate.remotebookmarks
     )
+
+    localsnapshotsset = set(localsnapshots)
+
     if (
         set(localheads) == set(localsyncedheads)
         and localbookmarks == localsyncedbookmarks
         and not remotebookmarkschanged
         and lastsyncstate.version != 0
         and not obsmarkers
+        and localsnapshotsset == set(lastsyncstate.snapshots)
     ):
         # Nothing to send.
         return True, None
@@ -836,11 +896,15 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         set(newcloudbookmarks.keys()).difference(localbookmarks.keys())
     )
 
+    newcloudsnapshots = util.removeduplicates(
+        [s for s in lastsyncstate.snapshots if s in localsnapshotsset] + localsnapshots
+    )
+
     # Check for workspace oscillation.  This is where we try to revert the
     # workspace back to how it was immediately prior to applying the cloud
     # changes at the start of the sync.  This is usually an error caused by
     # inconsistent obsmarkers.
-    if lastsyncstate.oscillating(newcloudheads, newcloudbookmarks):
+    if lastsyncstate.oscillating(newcloudheads, newcloudbookmarks, newcloudsnapshots):
         raise ccerror.SynchronizationError(
             repo.ui,
             _(
@@ -869,6 +933,8 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         obsmarkers,
         oldremotebookmarks,
         newremotebookmarks,
+        lastsyncstate.snapshots,
+        localsnapshots,
     )
     if synced:
         logsyncop(
@@ -881,6 +947,8 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newcloudbookmarks,
             oldremotebookmarks,
             newremotebookmarks,
+            lastsyncstate.snapshots,
+            localsnapshots,
         )
         lastsyncstate.update(
             cloudrefs.version,
@@ -890,6 +958,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newomittedbookmarks,
             lastsyncstate.maxage,
             newremotebookmarks,
+            localsnapshots,
         )
         obsmarkersmod.clearsyncingobsmarkers(repo)
 

@@ -27,7 +27,8 @@ def _splitremotename(remotename):
 
 abstractmethod = abc.abstractmethod
 References = collections.namedtuple(
-    "References", "version heads bookmarks obsmarkers headdates remotebookmarks"
+    "References",
+    "version heads bookmarks obsmarkers headdates remotebookmarks snapshots",
 )
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
@@ -146,6 +147,7 @@ class BaseService(object):
             ): book["node"].encode("ascii")
             for book in data.get("remote_bookmarks", [])
         }
+        newsnapshots = [s.encode("ascii") for s in data["snapshots"]]
 
         return References(
             version,
@@ -154,6 +156,7 @@ class BaseService(object):
             newobsmarkers,
             headdates,
             newremotebookmarks,
+            newsnapshots,
         )
 
     def _encodedmarkers(self, obsmarkers):
@@ -216,6 +219,8 @@ class BaseService(object):
         newobsmarkers,
         oldremotebookmarks,
         newremotebookmarks,
+        oldsnapshots,
+        newsnapshots,
     ):
         """Updates the references to a new version.
 

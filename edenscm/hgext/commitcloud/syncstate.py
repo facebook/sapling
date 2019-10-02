@@ -64,6 +64,7 @@ class SyncState(object):
                 self.omittedbookmarks = [
                     n.encode("utf-8") for n in data.get("omittedbookmarks", ())
                 ]
+                self.snapshots = [s.encode() for s in data.get("snapshots", [])]
                 self.maxage = data.get("maxage", None)
                 self.lastupdatetime = data.get("lastupdatetime", None)
         else:
@@ -73,6 +74,7 @@ class SyncState(object):
             self.remotebookmarks = {}
             self.omittedheads = []
             self.omittedbookmarks = []
+            self.snapshots = []
             self.maxage = None
             self.lastupdatetime = None
 
@@ -85,6 +87,7 @@ class SyncState(object):
         newomittedbookmarks,
         newmaxage,
         newremotebookmarks={},
+        newsnapshots=[],
     ):
         data = {
             "version": newversion,
@@ -92,23 +95,25 @@ class SyncState(object):
             "bookmarks": newbookmarks,
             "omittedheads": newomittedheads,
             "omittedbookmarks": newomittedbookmarks,
+            "snapshots": newsnapshots,
             "maxage": newmaxage,
             "lastupdatetime": time.time(),
             "remotebookmarks": newremotebookmarks,
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)
-        self.prevstate = (self.version, self.heads, self.bookmarks)
+        self.prevstate = (self.version, self.heads, self.bookmarks, self.snapshots)
         self.version = newversion
         self.heads = newheads
         self.bookmarks = newbookmarks
         self.remotebookmarks = newremotebookmarks
         self.omittedheads = newomittedheads
         self.omittedbookmarks = newomittedbookmarks
+        self.snapshots = newsnapshots
         self.maxage = newmaxage
         self.repo.ui.log(
             "commitcloud_sync",
-            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks\n",
+            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks, %d snapshots\n",
             self.workspacename,
             newversion,
             len(newheads),
@@ -116,9 +121,10 @@ class SyncState(object):
             len(newbookmarks),
             len(newomittedbookmarks),
             len(newremotebookmarks),
+            len(newsnapshots),
         )
 
-    def oscillating(self, newheads, newbookmarks):
+    def oscillating(self, newheads, newbookmarks, newsnapshots):
         """detect oscillating workspaces
 
         Returns true if updating the cloud state to the new heads or bookmarks
@@ -126,11 +132,12 @@ class SyncState(object):
         version.
         """
         if self.prevstate is not None and self.lastupdatetime is not None:
-            prevversion, prevheads, prevbookmarks = self.prevstate
+            prevversion, prevheads, prevbookmarks, prevsnapshots = self.prevstate
             return (
                 prevversion == self.version - 1
                 and prevheads == newheads
                 and prevbookmarks == newbookmarks
+                and prevsnapshots == newsnapshots
                 and self.lastupdatetime > time.time() - 60
             )
         return False
