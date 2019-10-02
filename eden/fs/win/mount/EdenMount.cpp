@@ -57,7 +57,7 @@ EdenMount::EdenMount(
       serverState_{std::move(serverState)},
       objectStore_{std::move(objectStore)},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
-      dispatcher_{this},
+      dispatcher_{*this},
       fsChannel_{config_->getMountPath(), this},
       journal_{std::move(journal)},
       mountGeneration_{generateLuid()} {

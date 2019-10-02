@@ -16,29 +16,30 @@
 #include "eden/fs/win/mount/EdenMount.h"
 #include "eden/fs/win/utils/StringConv.h"
 
-namespace facebook {
-namespace eden {
 using namespace std;
 using namespace folly;
 
-WinStore::WinStore(const EdenMount* mount) : mount_{mount} {
+namespace facebook {
+namespace eden {
+
+WinStore::WinStore(const EdenMount& mount) : mount_{mount} {
   XLOGF(
       INFO,
       "Creating WinStore mount(0x{:x}) root {} WinStore (0x{:x}))",
-      int(mount),
-      mount->getPath(),
-      int(this));
+      reinterpret_cast<uintptr_t>(&mount),
+      mount.getPath(),
+      reinterpret_cast<uintptr_t>(this));
 }
 WinStore ::~WinStore() {}
 
 shared_ptr<const Tree> WinStore::getTree(
     const RelativePathPiece& relPath) const {
-  auto tree = mount_->getRootTree();
+  auto tree = getMount().getRootTree();
 
   for (auto piece : relPath.components()) {
     auto entry = tree->getEntryPtr(piece);
     if (entry != nullptr && entry->isTree()) {
-      tree = mount_->getObjectStore()->getTree(entry->getHash()).get();
+      tree = getMount().getObjectStore()->getTree(entry->getHash()).get();
     } else {
       return nullptr;
     }
@@ -70,7 +71,8 @@ bool WinStore::getAllEntries(
       if (size.has_value()) {
         fileSize = size.value();
       } else {
-        futures.emplace_back(mount_->getObjectStore()
+        futures.emplace_back(getMount()
+                                 .getObjectStore()
                                  ->getBlobMetadata(treeEntries[i].getHash())
                                  .thenValue([index = i](BlobMetadata data) {
                                    return make_pair(data, index);
@@ -119,8 +121,10 @@ bool WinStore::getFileMetadata(
         if (size.has_value()) {
           fileMetadata.size = size.value();
         } else {
-          BlobMetadata metaData =
-              mount_->getObjectStore()->getBlobMetadata(entry->getHash()).get();
+          BlobMetadata metaData = getMount()
+                                      .getObjectStore()
+                                      ->getBlobMetadata(entry->getHash())
+                                      .get();
           fileMetadata.size = metaData.size;
         }
       }
@@ -146,7 +150,7 @@ std::shared_ptr<const Blob> WinStore::getBlob(const std::wstring& path) const {
     return nullptr;
   }
 
-  return (mount_->getObjectStore()->getBlob(file->getHash()).get());
+  return (getMount().getObjectStore()->getBlob(file->getHash()).get());
 }
 
 } // namespace eden

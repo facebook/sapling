@@ -44,13 +44,13 @@ constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MB
 #define TRACE(fmt, ...) XLOG(DBG6) << sformat(fmt, ##__VA_ARGS__)
 #endif
 
-EdenDispatcher::EdenDispatcher(const EdenMount* mount)
+EdenDispatcher::EdenDispatcher(EdenMount& mount)
     : mount_{mount}, winStore_{mount} {
   XLOGF(
       INFO,
       "Creating Dispatcher mount (0x{:x}) root ({}) dispatcher (0x{:x})",
-      reinterpret_cast<uintptr_t>(mount_),
-      mount_->getPath(),
+      reinterpret_cast<uintptr_t>(&getMount()),
+      getMount().getPath(),
       reinterpret_cast<uintptr_t>(this));
 }
 
@@ -63,8 +63,8 @@ HRESULT EdenDispatcher::startEnumeration(
 
     TRACE(
         "startEnumeration mount (0x{:x}) root ({}) path ({})",
-        reinterpret_cast<uintptr_t>(mount_),
-        mount_->getPath(),
+        reinterpret_cast<uintptr_t>(&getMount()),
+        getMount().getPath(),
         wstringToString(path));
 
     if (!winStore_.getAllEntries(path, list)) {

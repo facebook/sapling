@@ -26,7 +26,7 @@ class EdenMount;
 
 class EdenDispatcher {
  public:
-  explicit EdenDispatcher(const EdenMount* mount);
+  explicit EdenDispatcher(EdenMount& mount);
 
   HRESULT startEnumeration(
       const PRJ_CALLBACK_DATA& callbackData,
@@ -78,7 +78,10 @@ class EdenDispatcher {
   // Store a raw pointer to EdenMount. It doesn't own or maintain the lifetime
   // of Mount. Instead, at this point, Eden dispatcher is owned by the
   // mount.
-  const EdenMount* mount_;
+  EdenMount& mount_;
+  EdenMount& getMount() {
+    return mount_;
+  }
 
   WinStore winStore_;
 

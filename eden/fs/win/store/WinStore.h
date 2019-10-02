@@ -46,7 +46,7 @@ struct FileMetadata {
 
 class WinStore {
  public:
-  WinStore(const EdenMount* mount);
+  WinStore(const EdenMount& mount);
   ~WinStore();
 
   //
@@ -70,7 +70,11 @@ class WinStore {
   // Store a pointer to EdenMount. WinStore doesn't own or maintain the lifetime
   // of Mount. Instead, at this point, WinStore will be owned by the mount in
   // some direct or indirect way.
-  const EdenMount* mount_;
+  const EdenMount& mount_;
+
+  const EdenMount& getMount() const {
+    return mount_;
+  }
 
   // Forbidden copy constructor and assignment operator
   WinStore(WinStore const&) = delete;
