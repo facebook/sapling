@@ -36,6 +36,8 @@ define_stats! {
 }
 
 const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
+// Tool doesn't count number of lines from files with size greater than 10MB
+const BIG_FILE_THRESHOLD: u64 = 10000000;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
@@ -145,23 +147,21 @@ pub fn get_statistics_from_entry(
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
 ) -> impl Future<Item = RepoStatistics, Error = Error> {
     match entry {
-        Entry::Leaf((file_type, filenode_id)) => match file_type {
-            FileType::Regular => {
-                number_of_lines(repo.get_file_content(ctx.clone(), filenode_id)).left_future()
-            }
-            _ => future::ok(0).right_future(),
-        }
-        .join(
-            repo.get_file_size(ctx.clone(), filenode_id)
-                .and_then(move |size| future::ok(size as i64)),
-        )
-        .left_future(),
-        Entry::Tree(_) => future::ok((0, 0)).right_future(),
+        Entry::Leaf((file_type, filenode_id)) => repo
+            .get_file_size(ctx.clone(), filenode_id)
+            .and_then(move |size| {
+                if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
+                    number_of_lines(repo.get_file_content(ctx.clone(), filenode_id))
+                        .join(future::ok(size))
+                        .left_future()
+                } else {
+                    future::ok((0, size)).right_future()
+                }
+            })
+            .map(move |(lines, size)| RepoStatistics::new(1, size as i64, lines))
+            .left_future(),
+        Entry::Tree(_) => future::ok(RepoStatistics::default()).right_future(),
     }
-    .map(move |(lines, size)| match entry {
-        Entry::Leaf(_) => RepoStatistics::new(1, size, lines),
-        Entry::Tree(_) => RepoStatistics::new(0, size, lines),
-    })
 }
 
 pub fn get_statistics_from_changeset(
