@@ -574,6 +574,75 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+fn filestore_get_range(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock(fb);
+
+    rt.block_on(filestore::store(
+        blob.clone(),
+        &DEFAULT_CONFIG,
+        ctx.clone(),
+        &req,
+        stream::once(Ok(Bytes::from(HELLO_WORLD))),
+    ))?;
+
+    let res = rt.block_on(
+        filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
+            .map(|maybe_str| maybe_str.map(|(s, _size)| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(&HELLO_WORLD[7..])));
+
+    Ok(())
+}
+
+#[fbinit::test]
+fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    let small = FilestoreConfig {
+        chunk_size: Some(3),
+        concurrency: 5,
+    };
+
+    let blob = memblob::LazyMemblob::new();
+    let ctx = CoreContext::test_mock(fb);
+
+    let full_data = &b"foobarbazquxxyz"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Store in 3-byte chunks
+    rt.block_on(filestore::store(
+        blob.clone(),
+        &small,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    let res = rt.block_on(
+        filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
+            .map(|maybe_str| maybe_str.map(|(s, _size)| s.concat2()))
+            .flatten(),
+    );
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(&b"arbazq"[..])));
+
+    Ok(())
+}
+
+#[fbinit::test]
 fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio::runtime::Runtime::new()?;
 

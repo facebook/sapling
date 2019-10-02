@@ -207,8 +207,45 @@ pub fn fetch_with_size<B: Blobstore + Clone>(
             cloned!(blobstore, ctx);
             move |content_id| match content_id {
                 Some(content_id) => {
-                    fetch::fetch_with_size(blobstore, ctx, content_id).left_future()
+                    fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::All)
+                        .left_future()
                 }
+                None => Ok(None).into_future().right_future(),
+            }
+        })
+}
+
+/// This function has the same functionality as fetch_with_size, but only
+/// returns data for a range within the file.
+///
+/// Requests for data beyond the end of the file will return only the part of
+/// the file that overlaps with the requested range, if any.
+pub fn fetch_range_with_size<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+    start: u64,
+    size: u64,
+) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
+    key.load(ctx.clone(), blobstore)
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing(_) => Ok(None),
+        })
+        .and_then({
+            cloned!(blobstore, ctx);
+            move |content_id| match content_id {
+                Some(content_id) => fetch::fetch_with_size(
+                    blobstore,
+                    ctx,
+                    content_id,
+                    fetch::Range::Span {
+                        start,
+                        end: start.saturating_add(size),
+                    },
+                )
+                .left_future(),
                 None => Ok(None).into_future().right_future(),
             }
         })
@@ -221,6 +258,18 @@ pub fn fetch<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
     fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
+}
+
+/// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
+pub fn fetch_range<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+    start: u64,
+    size: u64,
+) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+    fetch_range_with_size(blobstore, ctx, key, start, size)
+        .map(|res| res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was

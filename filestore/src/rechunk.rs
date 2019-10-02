@@ -11,8 +11,7 @@ use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
 use mononoke_types::{ContentId, ContentMetadata};
 
-use crate::fetch::stream_file_bytes;
-use crate::{store, FilestoreConfig, StoreRequest};
+use crate::{fetch, store, FilestoreConfig, StoreRequest};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -37,7 +36,12 @@ pub fn rechunk<B: Blobstore + Clone>(
         })
         .and_then(move |file_contents| {
             let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-            let file_stream = stream_file_bytes(blobstore.clone(), ctx.clone(), file_contents);
+            let file_stream = fetch::stream_file_bytes(
+                blobstore.clone(),
+                ctx.clone(),
+                file_contents,
+                fetch::Range::All,
+            );
             store(blobstore, &config, ctx, &req, file_stream)
         })
 }

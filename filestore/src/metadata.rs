@@ -14,7 +14,7 @@ use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadata
 
 use crate::alias::alias_stream;
 use crate::expected_size::ExpectedSize;
-use crate::fetch::stream_file_bytes;
+use crate::fetch;
 
 #[derive(Debug, Fail)]
 pub enum RebuildBackmappingError {
@@ -91,7 +91,8 @@ fn rebuild_metadata<B: Blobstore + Clone>(
                 // NOTE: We implicitly trust data from the Filestore here. We do not validate
                 // the size, nor the ContentId.
                 let total_size = file_contents.size();
-                let content_stream = stream_file_bytes(blobstore, ctx, file_contents);
+                let content_stream =
+                    fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::All);
 
                 alias_stream(ExpectedSize::new(total_size), content_stream)
                     .from_err()
