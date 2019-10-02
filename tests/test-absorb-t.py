@@ -482,11 +482,12 @@ sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
 
 # Executable files:
 
+sh % "cat" << r"""
+[diff]
+git=True
+""" >> "$HGRCPATH"
+
 if feature.check(["execbit"]):
-    sh % "cat" << r"""
-    [diff]
-    git=True
-    """ >> "$HGRCPATH"
     sh % "newrepo"
     sh % "echo" > "foo.py"
     sh % "chmod +x foo.py"
