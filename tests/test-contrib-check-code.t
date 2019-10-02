@@ -4,9 +4,9 @@
   >     return (5 + 6, 9)
   > EOF
   $ cat > wrong.py <<EOF
-  > def toto( arg1, arg2):
+  > def toto(arg1, arg2):
   >     del(arg2)
-  >     return ( 5+6, 9)
+  >     return (5+6, 9)
   > EOF
   $ cat > quote.py <<EOF
   > # let's use quote in comments
@@ -32,9 +32,8 @@
   > EOF
   $ check_code="$TESTDIR"/../contrib/check-code.py
   $ "$check_code" ./wrong.py ./correct.py ./quote.py ./classstyle.py
-  ./wrong.py:1: gratuitous whitespace in () or [] --> def toto( arg1, arg2):
   ./wrong.py:2: Python keyword is not a function --> del(arg2)
-  ./wrong.py:3: gratuitous whitespace in () or [] --> return ( 5+6, 9)
+  ./wrong.py:3: missing whitespace in expression --> return (5+6, 9)
   ./quote.py:5: missing whitespace in expression --> '"""', 42+1, """and
   ./classstyle.py:4: old-style class, use class foo(object) --> class oldstyle_class:
   ./classstyle.py:7: class foo() creates old style object, use class foo(object) --> class empty():
