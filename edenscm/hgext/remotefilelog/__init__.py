@@ -197,6 +197,7 @@ from edenscm.mercurial import (
     commands,
     context,
     copies,
+    dirstate,
     dispatch,
     error,
     exchange,
@@ -562,19 +563,19 @@ def onetimeclientsetup(ui):
     wrapfunction(merge, "_checkunknownfiles", checkunknownfiles)
 
     # Prefetch files before status attempts to look at their size and contents
-    def checklookup(orig, self, files):
+    def checklookup(orig, self, wctx, files):
         repo = self._repo
         if shallowrepo.requirement in repo.requirements:
             prefetchfiles = []
-            for parent in self._parents:
+            for parent in wctx._parents:
                 for f in files:
                     if f in parent:
                         prefetchfiles.append((f, hex(parent.filenode(f))))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(prefetchfiles)
-        return orig(self, files)
+        return orig(self, wctx, files)
 
-    wrapfunction(context.workingctx, "_checklookup", checklookup)
+    wrapfunction(dirstate.dirstate, "_checklookup", checklookup)
 
     # Prefetch the logic that compares added and removed files for renames
     def findrenames(orig, repo, matcher, added, removed, *args, **kwargs):

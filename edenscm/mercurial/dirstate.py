@@ -12,6 +12,7 @@ import contextlib
 import errno
 import os
 import stat
+import weakref
 
 from . import (
     encoding,
@@ -39,6 +40,11 @@ filecache = scmutil.filecache
 _rangemask = 0x7FFFFFFF
 
 dirstatetuple = parsers.dirstatetuple
+
+slowstatuswarning = _(
+    "(status will still be slow next time; try to complete or abort "
+    "other source control operations and then run 'hg status' again)\n"
+)
 
 
 class repocache(filecache):
@@ -72,6 +78,7 @@ class dirstate(object):
         ui,
         root,
         validate,
+        repo,
         sparsematchfn=None,
         istreestate=False,
         istreedirstate=False,
@@ -85,6 +92,7 @@ class dirstate(object):
         self._opener = opener
         self._validate = validate
         self._root = root
+        self._repo = weakref.proxy(repo)
         # ntpath.join(root, '') of Python 2.7.9 does not add sep if root is
         # UNC path pointing to root share (issue4557)
         self._rootdir = pathutil.normasprefix(root)
@@ -1100,6 +1108,11 @@ class dirstate(object):
             files that have definitely not been modified since the
             dirstate was written
         """
+        wctx = self._repo[None]
+        # Prime the wctx._parents cache so the parent doesn't change out from
+        # under us if a checkout happens in another process.
+        wctx.parents()
+
         listignored, listclean, listunknown = ignored, clean, unknown
         lookup, modified, added, unknown, ignored = [], [], [], [], []
         removed, deleted, clean = [], [], []
@@ -1236,15 +1249,158 @@ class dirstate(object):
         if cleanmarked:
             self._dirty = True
 
+        status = scmutil.status(
+            modified, added, removed, deleted, unknown, ignored, clean
+        )
+
+        fixup = []
+        if lookup:
+            modified2, deleted2, fixup = self._checklookup(wctx, lookup)
+            status.modified.extend(modified2)
+            status.deleted.extend(deleted2)
+
+            if fixup and listclean:
+                status.clean.extend(fixup)
+
+        if not getattr(self._repo, "_insidepoststatusfixup", False):
+            self._poststatusfixup(status, fixup, wctx)
+
         perftrace.tracevalue("A/M/R Files", len(modified) + len(added) + len(removed))
         if len(unknown) > 0:
             perftrace.tracevalue("Unknown Files", len(unknown))
         if len(ignored) > 0:
             perftrace.tracevalue("Ignored Files", len(ignored))
-        return (
-            lookup,
-            scmutil.status(modified, added, removed, deleted, unknown, ignored, clean),
-        )
+        return status
+
+    def _checklookup(self, wctx, files):
+        # check for any possibly clean files
+        if not files:
+            return [], [], []
+
+        modified = []
+        deleted = []
+        fixup = []
+        pctx = wctx.parents()[0]
+
+        # Log some samples
+        ui = self._ui
+        mtolog = ftolog = dtolog = ui.configint("experimental", "samplestatus")
+
+        # do a full compare of any files that might have changed
+        for f in sorted(files):
+            try:
+                # This will return True for a file that got replaced by a
+                # directory in the interim, but fixing that is pretty hard.
+                if (
+                    f not in pctx
+                    or wctx.flags(f) != pctx.flags(f)
+                    or pctx[f].cmp(wctx[f])
+                ):
+                    modified.append(f)
+                    if mtolog > 0:
+                        mtolog -= 1
+                        ui.log("status", "M %s: checked in filesystem" % f)
+                else:
+                    fixup.append(f)
+                    if ftolog > 0:
+                        ftolog -= 1
+                        ui.log("status", "C %s: checked in filesystem" % f)
+            except (IOError, OSError):
+                # A file become inaccessible in between? Mark it as deleted,
+                # matching dirstate behavior (issue5584).
+                # The dirstate has more complex behavior around whether a
+                # missing file matches a directory, etc, but we don't need to
+                # bother with that: if f has made it to this point, we're sure
+                # it's in the dirstate.
+                deleted.append(f)
+                if dtolog > 0:
+                    dtolog -= 1
+                    ui.log("status", "R %s: checked in filesystem" % f)
+
+        return modified, deleted, fixup
+
+    def _poststatusfixup(self, status, fixup, wctx):
+        """update dirstate for files that are actually clean"""
+        poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
+        poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
+        ui = self._repo.ui
+        if fixup or poststatusbefore or poststatusafter or self._dirty:
+            # prevent infinite loop because fsmonitor postfixup might call
+            # wctx.status()
+            self._repo._insidepoststatusfixup = True
+            try:
+                oldid = self.identity()
+
+                # Updating the dirstate is optional so we don't wait on the
+                # lock.
+                # wlock can invalidate the dirstate, so cache normal _after_
+                # taking the lock. This is a bit weird because we're inside the
+                # dirstate that is no longer valid.
+
+                # If watchman reports fresh instance, still take the lock,
+                # since not updating watchman state leads to very painful
+                # performance.
+                freshinstance = False
+                try:
+                    freshinstance = self._repo.dirstate._fsmonitorstate._lastisfresh
+                except Exception:
+                    pass
+                if freshinstance:
+                    ui.debug(
+                        "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
+                    )
+
+                with self._repo.wlock(freshinstance):
+                    if self._repo.dirstate.identity() == oldid:
+                        if poststatusbefore:
+                            for ps in poststatusbefore:
+                                ps(wctx, status)
+
+                        if fixup:
+                            normal = self.normal
+                            for f in fixup:
+                                normal(f)
+
+                        # write changes out explicitly, because nesting
+                        # wlock at runtime may prevent 'wlock.release()'
+                        # after this block from doing so for subsequent
+                        # changing files
+                        #
+                        # This is a no-op if dirstate is not dirty.
+                        tr = self._repo.currenttransaction()
+                        self.write(tr)
+
+                        if poststatusafter:
+                            for ps in poststatusafter:
+                                ps(wctx, status)
+                    else:
+                        if freshinstance:
+                            ui.write_err(
+                                _(
+                                    "warning: failed to update watchman state because dirstate has been changed by other processes\n"
+                                )
+                            )
+                            ui.write_err(slowstatuswarning)
+
+                        # in this case, writing changes out breaks
+                        # consistency, because .hg/dirstate was
+                        # already changed simultaneously after last
+                        # caching (see also issue5584 for detail)
+                        self._repo.ui.debug(
+                            "skip updating dirstate: " "identity mismatch\n"
+                        )
+            except error.LockError:
+                if freshinstance:
+                    ui.write_err(
+                        _(
+                            "warning: failed to update watchman state because wlock cannot be obtained\n"
+                        )
+                    )
+                    ui.write_err(slowstatuswarning)
+            finally:
+                # Even if the wlock couldn't be grabbed, clear out the list.
+                self._repo.clearpostdsstatus()
+                self._repo._insidepoststatusfixup = False
 
     def matches(self, match):
         """

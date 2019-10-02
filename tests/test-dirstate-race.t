@@ -54,16 +54,16 @@ confused with a file with the exec bit set
 
   $ cat >> $TESTTMP/dirstaterace.py << EOF
   > from edenscm.mercurial import (
-  >     context,
+  >     dirstate,
   >     extensions,
   > )
   > def extsetup():
-  >     extensions.wrapfunction(context.workingctx, '_checklookup', overridechecklookup)
-  > def overridechecklookup(orig, self, files):
+  >     extensions.wrapfunction(dirstate.dirstate, '_checklookup', overridechecklookup)
+  > def overridechecklookup(orig, self, wctx, files):
   >     # make an update that changes the dirstate from underneath
   >     self._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
   >                          cwd=self._repo.root)
-  >     return orig(self, files)
+  >     return orig(self, wctx, files)
   > EOF
 
   $ hg debugrebuilddirstate

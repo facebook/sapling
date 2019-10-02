@@ -871,6 +871,7 @@ class localrepository(object):
             self.ui,
             self.root,
             self._dirstatevalidate,
+            self,
             istreestate=istreestate,
             istreedirstate=istreedirstate,
         )

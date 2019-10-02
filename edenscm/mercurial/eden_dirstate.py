@@ -53,11 +53,11 @@ class eden_dirstate(dirstate.dirstate):
             opener = repo.vfs
 
         try:
-            super(eden_dirstate, self).__init__(opener, ui, root, validate)
+            super(eden_dirstate, self).__init__(opener, ui, root, validate, repo)
         except TypeError:
             sparsematchfn = None
             super(eden_dirstate, self).__init__(
-                opener, ui, root, validate, sparsematchfn
+                opener, ui, root, validate, repo, sparsematchfn
             )
 
         def create_eden_dirstate(ui, opener, root):
@@ -432,9 +432,7 @@ class eden_dirstate(dirstate.dirstate):
             clean_files,
         )
 
-        # We should never have any files we are unsure about
-        unsure_files = []
-        return (unsure_files, status)
+        return status
 
     def _parent_commit_matches(self, match):
         # Wrap match.bad()

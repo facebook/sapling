@@ -1843,152 +1843,11 @@ class workingctx(committablectx):
             sane.append(f)
         return sane
 
-    def _checklookup(self, files):
-        # check for any possibly clean files
-        if not files:
-            return [], [], []
-
-        modified = []
-        deleted = []
-        fixup = []
-        pctx = self._parents[0]
-
-        # Log some samples
-        ui = self._repo.ui
-        mtolog = ftolog = dtolog = ui.configint("experimental", "samplestatus")
-
-        # do a full compare of any files that might have changed
-        for f in sorted(files):
-            try:
-                # This will return True for a file that got replaced by a
-                # directory in the interim, but fixing that is pretty hard.
-                if (
-                    f not in pctx
-                    or self.flags(f) != pctx.flags(f)
-                    or pctx[f].cmp(self[f])
-                ):
-                    modified.append(f)
-                    if mtolog > 0:
-                        mtolog -= 1
-                        ui.log("status", "M %s: checked in filesystem" % f)
-                else:
-                    fixup.append(f)
-                    if ftolog > 0:
-                        ftolog -= 1
-                        ui.log("status", "C %s: checked in filesystem" % f)
-            except (IOError, OSError):
-                # A file become inaccessible in between? Mark it as deleted,
-                # matching dirstate behavior (issue5584).
-                # The dirstate has more complex behavior around whether a
-                # missing file matches a directory, etc, but we don't need to
-                # bother with that: if f has made it to this point, we're sure
-                # it's in the dirstate.
-                deleted.append(f)
-                if dtolog > 0:
-                    dtolog -= 1
-                    ui.log("status", "R %s: checked in filesystem" % f)
-
-        return modified, deleted, fixup
-
-    def _poststatusfixup(self, status, fixup):
-        """update dirstate for files that are actually clean"""
-        poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
-        poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
-        dirstate = self._repo.dirstate
-        ui = self._repo.ui
-        if fixup or poststatusbefore or poststatusafter or dirstate._dirty:
-            # prevent infinite loop because fsmonitor postfixup might call
-            # wctx.status()
-            self._repo._insidepoststatusfixup = True
-            try:
-                oldid = dirstate.identity()
-
-                # updating the dirstate is optional
-                # so we don't wait on the lock
-                # wlock can invalidate the dirstate, so cache normal _after_
-                # taking the lock
-
-                # If watchman reports fresh instance, still take the lock,
-                # since not updating watchman state leads to very painful
-                # performance.
-                freshinstance = False
-                try:
-                    freshinstance = self._repo.dirstate._fsmonitorstate._lastisfresh
-                except Exception:
-                    pass
-                if freshinstance:
-                    ui.debug(
-                        "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
-                    )
-                with self._repo.wlock(freshinstance):
-                    if self._repo.dirstate.identity() == oldid:
-                        if poststatusbefore:
-                            for ps in poststatusbefore:
-                                ps(self, status)
-
-                        if fixup:
-                            normal = dirstate.normal
-                            for f in fixup:
-                                normal(f)
-
-                        # write changes out explicitly, because nesting
-                        # wlock at runtime may prevent 'wlock.release()'
-                        # after this block from doing so for subsequent
-                        # changing files
-                        #
-                        # This is a no-op if dirstate is not dirty.
-                        tr = self._repo.currenttransaction()
-                        dirstate.write(tr)
-
-                        if poststatusafter:
-                            for ps in poststatusafter:
-                                ps(self, status)
-                    else:
-                        if freshinstance:
-                            ui.write_err(
-                                _(
-                                    "warning: failed to update watchman state because dirstate has been changed by other processes\n"
-                                )
-                            )
-                            ui.write_err(slowstatuswarning)
-                        # in this case, writing changes out breaks
-                        # consistency, because .hg/dirstate was
-                        # already changed simultaneously after last
-                        # caching (see also issue5584 for detail)
-                        self._repo.ui.debug(
-                            "skip updating dirstate: " "identity mismatch\n"
-                        )
-            except error.LockError:
-                if freshinstance:
-                    ui.write_err(
-                        _(
-                            "warning: failed to update watchman state because wlock cannot be obtained\n"
-                        )
-                    )
-                    ui.write_err(slowstatuswarning)
-            finally:
-                # Even if the wlock couldn't be grabbed, clear out the list.
-                self._repo.clearpostdsstatus()
-                self._repo._insidepoststatusfixup = False
-
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Gets the status from the dirstate -- internal use only."""
-        cmp, s = self._repo.dirstate.status(
+        s = self._repo.dirstate.status(
             match, ignored=ignored, clean=clean, unknown=unknown
         )
-
-        # check for any possibly clean files
-        fixup = []
-        if cmp:
-            modified2, deleted2, fixup = self._checklookup(cmp)
-            s.modified.extend(modified2)
-            s.deleted.extend(deleted2)
-
-            if fixup and clean:
-                s.clean.extend(fixup)
-
-        if not getattr(self._repo, "_insidepoststatusfixup", False):
-            self._poststatusfixup(s, fixup)
 
         if match.always():
             # cache for performance
@@ -2041,12 +1900,20 @@ class workingctx(committablectx):
         building a new manifest if self (working directory) is not comparing
         against its parent (repo['.']).
         """
+        # After calling status below, we compare `other` with the current
+        # working copy parent. There's a potential race condition where the
+        # working copy parent changes while or after we do the status, and
+        # therefore resolving self._repo["."] could result in a different,
+        # incorrect parent. Let's grab a copy of it now, so the parent is
+        # consistent before and after.
+        pctx = self._repo["."]
+
         s = self._dirstatestatus(match, listignored, listclean, listunknown)
         # Filter out symlinks that, in the case of FAT32 and NTFS filesystems,
         # might have accidentally ended up with the entire contents of the file
         # they are supposed to be linking to.
         s.modified[:] = self._filtersuspectsymlink(s.modified)
-        if other != self._repo["."]:
+        if other != pctx:
             s = super(workingctx, self)._buildstatus(
                 other, s, match, listignored, listclean, listunknown
             )

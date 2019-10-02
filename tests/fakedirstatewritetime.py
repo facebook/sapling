@@ -67,9 +67,9 @@ def fakewrite(ui, func):
         dirstate._getfsnow = orig_dirstate_getfsnow
 
 
-def _poststatusfixup(orig, workingctx, status, fixup):
+def _poststatusfixup(orig, self, status, fixup, workingctx):
     ui = workingctx.repo().ui
-    return fakewrite(ui, lambda: orig(workingctx, status, fixup))
+    return fakewrite(ui, lambda: orig(self, status, fixup, workingctx))
 
 
 def markcommitted(orig, committablectx, node):
@@ -94,7 +94,7 @@ def treestatewrite(orig, self, st, now):
 
 
 def extsetup(ui):
-    extensions.wrapfunction(context.workingctx, "_poststatusfixup", _poststatusfixup)
+    extensions.wrapfunction(dirstate.dirstate, "_poststatusfixup", _poststatusfixup)
     extensions.wrapfunction(context.committablectx, "markcommitted", markcommitted)
     extensions.wrapfunction(treedirstate.treedirstatemap, "write", treedirstatewrite)
     extensions.wrapfunction(treestate.treestatemap, "write", treestatewrite)
