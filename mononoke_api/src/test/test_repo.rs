@@ -7,10 +7,13 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use failure::Error;
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
+use futures::stream::Stream;
+use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, TryFutureExt};
 
 use crate::{
@@ -448,6 +451,38 @@ fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
                 .expect("file exists");
             let metadata = file.metadata().await?;
             assert_eq!(metadata, expected_metadata);
+
+            Ok(())
+        }
+            .boxed()
+            .compat(),
+    )
+}
+
+#[fbinit::test]
+fn file_contents(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let mononoke =
+                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
+            let ctx = CoreContext::test_mock(fb);
+            let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+
+            let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
+            let cs_id = ChangesetId::from_str(hash)?;
+            let cs = repo
+                .changeset(ChangesetSpecifier::Bonsai(cs_id))
+                .await?
+                .expect("changeset exists");
+
+            let path = cs.path("dir1/file_1_in_dir1")?;
+            let file = path.file().await?.unwrap();
+            let content = file.content().await.concat2().compat().await?;
+            assert_eq!(content, Bytes::from("content1\n"));
+
+            let content_range = file.content_range(3, 4).await.concat2().compat().await?;
+            assert_eq!(content_range, Bytes::from("tent"));
 
             Ok(())
         }
