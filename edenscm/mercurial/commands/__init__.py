@@ -2862,18 +2862,10 @@ def grep(ui, repo, pattern, *pats, **opts):
 
         return 0
 
-    ds = repo.dirstate
-    getkind = stat.S_IFMT
-    lnkkind = stat.S_IFLNK
-    results = ds.walk(m, unknown=False, ignored=False)
-
-    files = []
-    for f in sorted(results.keys()):
-        st = results[f]
-        # skip symlinks and removed files
-        if st is None or getkind(st.st_mode) == lnkkind:
-            continue
-        files.append(f)
+    islink = repo.wvfs.islink
+    status = repo.dirstate.status(m, False, True, False)
+    files = sorted(status.clean + status.modified + status.added)
+    files = [file for file in files if not islink(file)]
 
     return _rungrep(cmd, files, m)
 

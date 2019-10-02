@@ -96,6 +96,15 @@ Test --include and --exclude flags together
   $ hg grep -I '**/*file1' -X '**/grepfile1' -n foobar
   subdir1/subfile1:1:foobar_subdir
 
+#if symlink no-osx
+Test symlinks
+  $ echo file_content > target_file
+  $ ln -s target_file sym_link
+  $ hg add sym_link
+  $ hg grep file_content
+  [123]
+#endif
+
 Test basic biggrep client
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
   > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake foobar \
