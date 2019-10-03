@@ -896,7 +896,10 @@ def _interestingfiles(repo, matcher):
     for file in status.removed:
         dstate = dirstate[file]
         if exists(file):
-            forgotten.append(file)
+            if dirstate.normalize(file) == file:
+                forgotten.append(file)
+            else:
+                removed.append(file)
         else:
             removed.append(file)
 
