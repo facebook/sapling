@@ -10,7 +10,7 @@ include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries
 const i32 MC_CODEVER = 0
-const i32 MC_SITEVER = 0
+const i32 MC_SITEVER = 1
 
 typedef i32 RepoId (hs.newtype)
 
