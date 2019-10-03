@@ -19,7 +19,7 @@ use bytes::Bytes;
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
-use mercurial_types::{Delta, HgNodeHash, MPath};
+use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
 
 use crate::changegroup;
 #[cfg(test)]
@@ -287,6 +287,14 @@ impl Arbitrary for changegroup::CgDeltaChunk {
 
 impl changegroup::CgDeltaChunk {
     fn arbitrary_with_flags<G: Gen>(g: &mut G) -> Self {
+        let flags = u8::arbitrary(g) % 3;
+        let flags = if flags == 0 {
+            RevFlags::REVIDX_DEFAULT_FLAGS
+        } else if flags == 1 {
+            RevFlags::REVIDX_EXTSTORED
+        } else {
+            RevFlags::REVIDX_ELLIPSIS
+        };
         changegroup::CgDeltaChunk {
             node: HgNodeHash::arbitrary(g),
             p1: HgNodeHash::arbitrary(g),
@@ -294,7 +302,7 @@ impl changegroup::CgDeltaChunk {
             base: HgNodeHash::arbitrary(g),
             linknode: HgNodeHash::arbitrary(g),
             delta: Delta::arbitrary(g),
-            flags: Some(g.gen_range(0, 0xffff)),
+            flags: Some(flags),
         }
     }
 }

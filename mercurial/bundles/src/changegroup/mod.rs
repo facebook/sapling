@@ -4,10 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{Delta, HgNodeHash, MPath};
+use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
 
 pub mod packer;
 pub mod unpacker;
+pub use unpacker::CgVersion;
 
 pub const CG_PART_VERSION_HEADER_NAME: &'static str = "cgversion";
 
@@ -43,7 +44,7 @@ pub struct CgDeltaChunk {
     pub base: HgNodeHash,
     pub linknode: HgNodeHash,
     pub delta: Delta,
-    pub flags: Option<u16>,
+    pub flags: Option<RevFlags>,
 }
 
 #[cfg(test)]

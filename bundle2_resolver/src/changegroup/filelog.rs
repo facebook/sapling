@@ -25,8 +25,8 @@ use mercurial_types::{
         ContentBlobInfo, ContentBlobMeta, File, HgBlobEntry, UploadHgFileContents,
         UploadHgFileEntry, UploadHgNodeHash,
     },
-    delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
-    RevFlags, NULL_HASH,
+    delta, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath, RevFlags,
+    NULL_HASH,
 };
 use remotefilelog::create_raw_filenode_blob;
 
@@ -116,7 +116,7 @@ where
                 p1,
                 p2,
                 linknode,
-                flags: flags_value,
+                flags,
             } = chunk;
 
             delta_cache
@@ -124,23 +124,20 @@ where
                 .and_then({
                     cloned!(ctx, node, path, repo);
                     move |data| {
-                        parse_rev_flags(flags_value)
-                            .into_future()
-                            .and_then(move |flags| {
-                                get_filelog_data(ctx.clone(), repo, data, flags).map(
-                                    move |file_log_data| Filelog {
-                                        node_key: HgNodeKey {
-                                            path: RepoPath::FilePath(path),
-                                            hash: node,
-                                        },
-                                        p1: p1.into_option(),
-                                        p2: p2.into_option(),
-                                        linknode,
-                                        data: file_log_data,
-                                        flags,
-                                    },
-                                )
-                            })
+                        let flags = flags.unwrap_or(RevFlags::REVIDX_DEFAULT_FLAGS);
+                        get_filelog_data(ctx.clone(), repo, data, flags).map(move |file_log_data| {
+                            Filelog {
+                                node_key: HgNodeKey {
+                                    path: RepoPath::FilePath(path),
+                                    hash: node,
+                                },
+                                p1: p1.into_option(),
+                                p2: p2.into_option(),
+                                linknode,
+                                data: file_log_data,
+                                flags,
+                            }
+                        })
                     }
                 })
                 .with_context(move |_| {

@@ -11,12 +11,12 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use failure_ext::bail_err;
+use failure_ext::{bail_err, err_msg};
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
 
 use context::CoreContext;
-use mercurial_types::MPath;
+use mercurial_types::{MPath, RevFlags};
 
 use crate::delta;
 use crate::errors::*;
@@ -24,10 +24,19 @@ use crate::utils::BytesExt;
 
 use super::{CgDeltaChunk, Part, Section};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CgVersion {
     Cg2Version,
     Cg3Version,
+}
+
+impl CgVersion {
+    pub fn to_str(&self) -> &str {
+        match self {
+            CgVersion::Cg2Version => "02",
+            CgVersion::Cg3Version => "03",
+        }
+    }
 }
 
 impl FromStr for CgVersion {
@@ -275,7 +284,12 @@ impl CgUnpacker {
         let linknode = buf.drain_node();
         let flags = match version {
             CgVersion::Cg2Version => None,
-            CgVersion::Cg3Version => Some(buf.drain_u16()),
+            CgVersion::Cg3Version => {
+                let bits = buf.drain_u16();
+                let flags = RevFlags::from_bits(bits)
+                    .ok_or(err_msg(format!("unknown revlog flags: {}", bits)))?;
+                Some(flags)
+            }
         };
 
         let delta = delta::decode_delta(buf.split_to(chunk_len - Self::chunk_header_len(version)))?;

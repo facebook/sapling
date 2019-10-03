@@ -12,7 +12,7 @@ use context::{CoreContext, Metric, PerfCounterType};
 use failure::err_msg;
 use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
-use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
+use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
 use mononoke_types::ChangesetId;
@@ -145,7 +145,11 @@ pub fn create_getbundle_response(
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-        parts.push(parts::changegroup_part(changelogentries, None));
+        parts.push(parts::changegroup_part(
+            changelogentries,
+            None,
+            CgVersion::Cg2Version,
+        ));
     }
 
     // Phases part has to be after the changegroup part.

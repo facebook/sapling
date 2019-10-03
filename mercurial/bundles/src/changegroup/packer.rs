@@ -113,6 +113,7 @@ impl ChunkBuilder {
         self.inner.put_slice(chunk.linknode.as_ref());
 
         if let Some(flags) = chunk.flags {
+            let flags = flags.bits();
             self.inner
                 .put_slice(&[(flags >> 8) as u8, (flags & 0xff) as u8]);
         }

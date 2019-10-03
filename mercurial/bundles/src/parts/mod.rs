@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::changegroup::packer::CgPacker;
+use super::changegroup::{packer::CgPacker, unpacker::CgVersion};
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::chunk::Chunk;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
@@ -17,13 +17,15 @@ use crate::part_header::{PartHeaderType, PartId};
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use context::CoreContext;
+use failure::err_msg;
 use failure_ext::prelude::*;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use futures_stats::Timed;
 use mercurial_types::{
-    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH,
+    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, RevFlags,
+    NULL_HASH,
 };
 use mononoke_types::DateTime;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -85,25 +87,42 @@ where
 pub fn changegroup_part<CS>(
     changelogentries: CS,
     filenodeentries: Option<
-        BoxStream<(MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error>,
+        BoxStream<
+            (
+                MPath,
+                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
+            ),
+            Error,
+        >,
     >,
+    version: CgVersion,
 ) -> Result<PartEncodeBuilder>
 where
     CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
-    builder.add_mparam("version", "02")?;
+    builder.add_mparam("version", version.to_str())?;
 
-    let changelogentries = convert_changeset_stream(changelogentries)
+    let changelogentries = convert_changeset_stream(changelogentries, version)
         .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
         // One more SectionEnd entry is necessary because hg client excepts filelog section
         // even if it's empty. Add a fake SectionEnd part (the choice of
         // Manifest is just for convenience).
         .chain(once(Ok(Part::SectionEnd(Section::Manifest))));
 
+    let changelogentries = if version == CgVersion::Cg3Version {
+        // Changegroup V3 requires one empty chunk after manifest section
+        // hence adding Part::SectionEnd below
+        changelogentries
+            .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
+            .boxify()
+    } else {
+        changelogentries.boxify()
+    };
+
     let changegroup = if let Some(filenodeentries) = filenodeentries {
         changelogentries
-            .chain(convert_file_stream(filenodeentries))
+            .chain(convert_file_stream(filenodeentries, version))
             .left_stream()
     } else {
         changelogentries.right_stream()
@@ -124,21 +143,27 @@ pub fn pushrebase_changegroup_part<CS, FS>(
 ) -> Result<PartEncodeBuilder>
 where
     CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
-    FS: Stream<Item = (MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error = Error>
-        + Send
+    FS: Stream<
+            Item = (
+                MPath,
+                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
+            ),
+            Error = Error,
+        > + Send
         + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xRebase)?;
     builder.add_mparam("onto", onto_bookmark.as_ref())?;
-    builder.add_aparam("cgversion", "02")?;
+    let version = CgVersion::Cg2Version;
+    builder.add_aparam("cgversion", version.to_str())?;
 
-    let changelogentries = convert_changeset_stream(changelogentries)
+    let changelogentries = convert_changeset_stream(changelogentries, version)
         .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
         // One more SectionEnd entry is necessary because hg client excepts filelog section
         // even if it's empty. Add a fake SectionEnd part (the choice of
         // Manifest is just for convenience).
         .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
-        .chain(convert_file_stream(filenodeentries))
+        .chain(convert_file_stream(filenodeentries, version))
         .chain(once(Ok(Part::End)));
 
     let cgdata = CgPacker::new(changelogentries);
@@ -147,11 +172,14 @@ where
     Ok(builder)
 }
 
-fn convert_changeset_stream<S>(changelogentries: S) -> impl Stream<Item = Part, Error = Error>
+fn convert_changeset_stream<S>(
+    changelogentries: S,
+    version: CgVersion,
+) -> impl Stream<Item = Part, Error = Error>
 where
     S: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
 {
-    changelogentries.map(|(node, blobnode)| {
+    changelogentries.map(move |(node, blobnode)| {
         let parents = blobnode.parents().get_nodes();
         let p1 = parents.0.unwrap_or(NULL_HASH);
         let p2 = parents.1.unwrap_or(NULL_HASH);
@@ -161,6 +189,12 @@ where
         let text = blobnode.as_blob().as_inner().clone();
         let delta = Delta::new_fulltext(text.to_vec());
 
+        let flags = if version == CgVersion::Cg3Version {
+            Some(RevFlags::REVIDX_DEFAULT_FLAGS)
+        } else {
+            None
+        };
+
         let deltachunk = CgDeltaChunk {
             node,
             p1,
@@ -168,22 +202,30 @@ where
             base,
             linknode,
             delta,
-            flags: None,
+            flags,
         };
         Part::CgChunk(Section::Changeset, deltachunk)
     })
 }
 
-fn convert_file_stream<FS>(filenodeentries: FS) -> impl Stream<Item = Part, Error = Error>
+fn convert_file_stream<FS>(
+    filenodeentries: FS,
+    cg_version: CgVersion,
+) -> impl Stream<Item = Part, Error = Error>
 where
-    FS: Stream<Item = (MPath, Vec<(HgFileNodeId, HgChangesetId, HgBlobNode)>), Error = Error>
-        + Send
+    FS: Stream<
+            Item = (
+                MPath,
+                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
+            ),
+            Error = Error,
+        > + Send
         + 'static,
 {
     filenodeentries
-        .map(|(path, nodes)| {
+        .map(move |(path, nodes)| {
             let mut items = vec![];
-            for (node, hg_cs_id, blobnode) in nodes {
+            for (node, hg_cs_id, blobnode, flags) in nodes {
                 let parents = blobnode.parents().get_nodes();
                 let p1 = parents.0.unwrap_or(NULL_HASH);
                 let p2 = parents.1.unwrap_or(NULL_HASH);
@@ -200,14 +242,19 @@ where
                     base,
                     linknode,
                     delta,
-                    // TODO(stash) - need flags for lfs
-                    flags: None,
+                    flags,
                 };
+                if flags.is_some() && cg_version == CgVersion::Cg2Version {
+                    return once(Err(err_msg(
+                        "internal error: unexpected flags in cg2 generation",
+                    )))
+                    .boxify();
+                }
                 items.push(Part::CgChunk(Section::Filelog(path.clone()), deltachunk));
             }
 
             items.push(Part::SectionEnd(Section::Filelog(path)));
-            iter_ok(items)
+            iter_ok(items).boxify()
         })
         .flatten()
 }
