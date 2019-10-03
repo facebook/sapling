@@ -3357,6 +3357,11 @@ void TreeInode::prefetch() {
   }
 
   folly::via(getMount()->getThreadPool().get(), [self = inodePtrFromThis()] {
+    // prefetch() is called by readdir, under the assumption that a series of
+    // stat calls on its entries will follow. (e.g. `ls -l` or `find -ls`).
+    // To optimize that common situation, load trees and blob metadata in
+    // parallel here.
+
     std::vector<IncompleteInodeLoad> pendingLoads;
     std::vector<Future<Unit>> inodeFutures;
 
@@ -3369,15 +3374,15 @@ void TreeInode::prefetch() {
           continue;
         }
 
-        // TODO: It's probably excessive to actually load the inodes during
-        // prefetch. Ideally, all that's required here is to fetch the blob's
-        // metadata (if the entry is a file) or the tree's metadata (if the
-        // entry is a directory) so that future lookup() and stat() calls don't
-        // block on network or disk fetches. But, for now, Eden does not have
-        // tree metadata, so just load all of the children so that lookup()
-        // returns cheaply.
+        // Userspace will commonly issue a readdir() followed by a series of
+        // stat()s. In FUSE, that translates into readdir() and then lookup(),
+        // which returns the same information as a stat(), including the number
+        // of directory entries or number of bytes in a file.
+        // Perform those operations here by loading inodes, trees, and blob
+        // sizes.
         inodeFutures.emplace_back(
             self->loadChildLocked(contents->entries, name, entry, pendingLoads)
+                .thenValue([](InodePtr inode) { return inode->getattr(); })
                 .unit());
       }
     }
