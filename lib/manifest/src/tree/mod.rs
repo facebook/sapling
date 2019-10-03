@@ -29,10 +29,11 @@ use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 use self::cursor::{Cursor, Step};
 pub use self::diff::{Diff, DiffEntry, DiffType};
 pub use self::files::Files;
-use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
+pub(crate) use self::link::Link;
+use self::link::{Durable, DurableEntry, Ephemeral, Leaf};
 use self::store::InnerStore;
 pub use self::store::TreeStore;
-use crate::{FileMetadata, FsNode, Manifest};
+use crate::{File, FileMetadata, FsNode, Manifest};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
@@ -598,48 +599,6 @@ pub fn prefetch(
     }
 
     Ok(())
-}
-
-/// A file (leaf node) encountered during a tree traversal.
-///
-/// Consists of the full path to the file along with the associated file metadata.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct File {
-    pub path: RepoPathBuf,
-    pub meta: FileMetadata,
-}
-
-impl File {
-    pub(crate) fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
-        Self { path, meta }
-    }
-
-    /// Create a file record for a `Link`, failing if the link
-    /// refers to a directory rather than a file.
-    pub(crate) fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
-        match link {
-            Link::Leaf(meta) => Some(Self::new(path, *meta)),
-            _ => None,
-        }
-    }
-
-    pub(crate) fn into_left(self) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::LeftOnly(self.meta))
-    }
-
-    pub(crate) fn into_right(self) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::RightOnly(self.meta))
-    }
-
-    pub(crate) fn into_changed(self, other: File) -> DiffEntry {
-        DiffEntry::new(self.path, DiffType::Changed(self.meta, other.meta))
-    }
-}
-
-impl From<(RepoPathBuf, FileMetadata)> for File {
-    fn from((path, meta): (RepoPathBuf, FileMetadata)) -> Self {
-        Self { path, meta }
-    }
 }
 
 /// A directory (inner node) encountered during a tree traversal.
@@ -1477,34 +1436,6 @@ mod tests {
         let durable = Link::durable(node("a"));
         let file = File::from_link(&durable, path.clone());;
         assert!(file.is_none());
-    }
-
-    #[test]
-    fn test_diff_entry_from_file() {
-        let path = repo_path_buf("foo/bar");
-        let meta = make_meta("a");
-        let file = File {
-            path: path.clone(),
-            meta: meta.clone(),
-        };
-
-        let left = file.clone().into_left();
-        let expected = DiffEntry::new(path.clone(), DiffType::LeftOnly(meta.clone()));
-        assert_eq!(left, expected);
-
-        let right = file.clone().into_right();
-        let expected = DiffEntry::new(path.clone(), DiffType::RightOnly(meta.clone()));
-        assert_eq!(right, expected);
-
-        let meta2 = make_meta("b");
-        let file2 = File {
-            path: path.clone(),
-            meta: meta2.clone(),
-        };
-
-        let changed = file.into_changed(file2);
-        let expected = DiffEntry::new(path, DiffType::Changed(meta, meta2));
-        assert_eq!(changed, expected);
     }
 
     #[test]

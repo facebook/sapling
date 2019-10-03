@@ -11,8 +11,8 @@ use pathmatcher::{DirectoryMatch, Matcher};
 use types::{RepoPath, RepoPathBuf};
 
 use crate::{
-    file::FileMetadata,
-    tree::{store::InnerStore, Directory, File, Tree},
+    file::{File, FileMetadata},
+    tree::{store::InnerStore, Directory, Tree},
 };
 
 /// Represents a file that is different between two tree manifests.
@@ -22,17 +22,30 @@ pub struct DiffEntry {
     pub diff_type: DiffType,
 }
 
+impl DiffEntry {
+    pub(crate) fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
+        DiffEntry { path, diff_type }
+    }
+
+    pub(crate) fn left(file: File) -> Self {
+        Self::new(file.path, DiffType::LeftOnly(file.meta))
+    }
+
+    pub(crate) fn right(file: File) -> Self {
+        Self::new(file.path, DiffType::RightOnly(file.meta))
+    }
+
+    pub(crate) fn changed(left: File, right: File) -> Self {
+        debug_assert!(left.path == right.path);
+        Self::new(left.path, DiffType::Changed(left.meta, right.meta))
+    }
+}
+
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum DiffType {
     LeftOnly(FileMetadata),
     RightOnly(FileMetadata),
     Changed(FileMetadata, FileMetadata),
-}
-
-impl DiffEntry {
-    pub(crate) fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
-        DiffEntry { path, diff_type }
-    }
 }
 
 impl DiffType {
@@ -248,8 +261,8 @@ fn diff_single<'a>(
         .into_iter()
         .filter(|f| matcher.matches_file(&f.path))
         .map(|f| match side {
-            Side::Left => f.into_left(),
-            Side::Right => f.into_right(),
+            Side::Left => DiffEntry::left(f),
+            Side::Right => DiffEntry::right(f),
         })
         .collect();
 
@@ -301,30 +314,30 @@ fn diff_files<'a>(
         match (lfile, rfile) {
             (Some(l), Some(r)) => match l.path.cmp(&r.path) {
                 Ordering::Less => {
-                    add_to_output(l.into_left());
+                    add_to_output(DiffEntry::left(l));
                     lfile = lfiles.next();
                     rfile = Some(r);
                 }
                 Ordering::Greater => {
-                    add_to_output(r.into_right());
+                    add_to_output(DiffEntry::right(r));
                     lfile = Some(l);
                     rfile = rfiles.next();
                 }
                 Ordering::Equal => {
                     if l.meta != r.meta {
-                        add_to_output(l.into_changed(r));
+                        add_to_output(DiffEntry::changed(l, r));
                     }
                     lfile = lfiles.next();
                     rfile = rfiles.next();
                 }
             },
             (Some(l), None) => {
-                add_to_output(l.into_left());
+                add_to_output(DiffEntry::left(l));
                 lfile = lfiles.next();
                 rfile = None;
             }
             (None, Some(r)) => {
-                add_to_output(r.into_right());
+                add_to_output(DiffEntry::right(r));
                 lfile = None;
                 rfile = rfiles.next();
             }
@@ -425,6 +438,34 @@ mod tests {
         tree::{store::TestStore, testutil::*, DiffType, Link},
         FileMetadata, FileType, Manifest,
     };
+
+    #[test]
+    fn test_diff_entry_from_file() {
+        let path = repo_path_buf("foo/bar");
+        let meta = make_meta("a");
+        let file = File {
+            path: path.clone(),
+            meta: meta.clone(),
+        };
+
+        let left = DiffEntry::left(file.clone());
+        let expected = DiffEntry::new(path.clone(), DiffType::LeftOnly(meta.clone()));
+        assert_eq!(left, expected);
+
+        let right = DiffEntry::right(file.clone());
+        let expected = DiffEntry::new(path.clone(), DiffType::RightOnly(meta.clone()));
+        assert_eq!(right, expected);
+
+        let meta2 = make_meta("b");
+        let file2 = File {
+            path: path.clone(),
+            meta: meta2.clone(),
+        };
+
+        let changed = DiffEntry::changed(file, file2);
+        let expected = DiffEntry::new(path, DiffType::Changed(meta, meta2));
+        assert_eq!(changed, expected);
+    }
 
     #[test]
     fn test_diff_single() {

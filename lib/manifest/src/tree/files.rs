@@ -9,7 +9,10 @@ use failure::Fallible;
 
 use pathmatcher::{DirectoryMatch, Matcher};
 
-use crate::tree::{store::InnerStore, Directory, File, Tree};
+use crate::{
+    tree::{store::InnerStore, Directory, Tree},
+    File,
+};
 
 pub struct Files<'a> {
     output: VecDeque<File>,

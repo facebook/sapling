@@ -3,7 +3,39 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use types::Node;
+use types::{Node, RepoPathBuf};
+
+use crate::tree::Link;
+
+/// A file entry in a tree manifest.
+///
+/// Consists of the full path to the file along with the associated file metadata.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct File {
+    pub path: RepoPathBuf,
+    pub meta: FileMetadata,
+}
+
+impl File {
+    pub fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
+        Self { path, meta }
+    }
+
+    /// Create a file record for a `Link`, failing if the link
+    /// refers to a directory rather than a file.
+    pub fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
+        match link {
+            Link::Leaf(meta) => Some(Self::new(path, *meta)),
+            _ => None,
+        }
+    }
+}
+
+impl From<(RepoPathBuf, FileMetadata)> for File {
+    fn from((path, meta): (RepoPathBuf, FileMetadata)) -> Self {
+        Self { path, meta }
+    }
+}
 
 /// The contents of the Manifest for a file.
 /// * node: used to determine the revision of the file in the repository.
