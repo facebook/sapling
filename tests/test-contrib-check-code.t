@@ -33,8 +33,6 @@
   $ check_code="$TESTDIR"/../contrib/check-code.py
   $ "$check_code" ./wrong.py ./correct.py ./quote.py ./classstyle.py
   ./wrong.py:2: Python keyword is not a function --> del(arg2)
-  ./wrong.py:3: missing whitespace in expression --> return (5+6, 9)
-  ./quote.py:5: missing whitespace in expression --> '"""', 42+1, """and
   ./classstyle.py:4: old-style class, use class foo(object) --> class oldstyle_class:
   ./classstyle.py:7: class foo() creates old style object, use class foo(object) --> class empty():
   [1]

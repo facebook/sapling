@@ -283,12 +283,8 @@ pypats = [
         ),
         (r"\.has_key\b", "dict.has_key is not available in Python 3+"),
         (r"\s<>\s", "<> operator is not available in Python 3+, use !="),
-        (r"^\s*\t", "don't use tabs"),
-        (r"\S;\s*\n", "semicolon"),
         (r'[^_]_\([ \t\n]*(?:"[^"]+"[ \t\n+]*)+%', "don't use % inside _()"),
         (r"[^_]_\([ \t\n]*(?:'[^']+'[ \t\n+]*)+%", "don't use % inside _()"),
-        (r"(\w|\)),\w", "missing whitespace after ,"),
-        (r"(\w|\))[+/*\-<>]\w", "missing whitespace in expression"),
         (
             r"^\s+(self\.)?[A-Za-z][a-z0-9]+[A-Z]\w* = ",
             "don't use camelcase in identifiers",
