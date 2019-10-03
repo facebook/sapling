@@ -149,6 +149,12 @@ constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kConfig{"config.toml"};
 
+std::optional<std::string> getUnixDomainSocketPath(
+    const folly::SocketAddress& address) {
+  return AF_UNIX == address.getFamily() ? std::make_optional(address.getPath())
+                                        : std::nullopt;
+}
+
 } // namespace
 
 namespace facebook {
@@ -161,7 +167,12 @@ class EdenServer::ThriftServerEventHandler
   explicit ThriftServerEventHandler(EdenServer* edenServer)
       : AsyncSignalHandler{nullptr}, edenServer_{edenServer} {}
 
-  void preServe(const folly::SocketAddress* /*address*/) override {
+  void preServe(const folly::SocketAddress* address) override {
+    if (auto path = getUnixDomainSocketPath(*address)) {
+      folly::checkUnixError(
+          chmod(path->c_str(), 0777), "failed to chmod ", *path, " to 777");
+    }
+
     // preServe() will be called from the thrift server thread once when it is
     // about to start serving.
     //
@@ -1212,15 +1223,14 @@ void EdenServer::prepareThriftAddress() {
   // that may be left over from a previous instance.
   // We have already acquired the mount point lock at this time, so we know
   // that any existing socket is unused and safe to remove.
-  const auto& addr = server_->getAddress();
-  if (addr.getFamily() != AF_UNIX) {
+  const auto& path = getUnixDomainSocketPath(server_->getAddress());
+  if (!path) {
     return;
   }
-  const int rc = unlink(addr.getPath().c_str());
+  const int rc = unlink(path->c_str());
   if (rc != 0 && errno != ENOENT) {
     // This might happen if we don't have permission to remove the file.
-    folly::throwSystemError(
-        "unable to remove old Eden thrift socket ", addr.getPath());
+    folly::throwSystemError("unable to remove old Eden thrift socket ", *path);
   }
 }
 
