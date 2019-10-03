@@ -61,7 +61,8 @@ function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
   PYTHONWARNINGS="ignore:::requests" \
-  "$MONONOKE_SERVER" "$@" --ca-pem "$TEST_CERTDIR/root-ca.crt" \
+  GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
+  --ca-pem "$TEST_CERTDIR/root-ca.crt" \
   --private-key "$TEST_CERTDIR/localhost.key" \
   --cert "$TEST_CERTDIR/localhost.crt" \
   --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
@@ -80,7 +81,7 @@ function mononoke_hg_sync {
   START_ID="$1"
   shift
 
-  $MONONOKE_HG_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
@@ -90,7 +91,7 @@ function mononoke_hg_sync {
 }
 
 function megarepo_tool {
-  $MEGAREPO_TOOL \
+  GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${CACHING_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
@@ -104,7 +105,7 @@ function mononoke_x_repo_sync_once() {
   shift
   shift
   shift
-  $MONONOKE_X_REPO_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${CACHING_ARGS[@]}" \
     --source-tier-config "$TESTTMP/mononoke-config" \
     --target-tier-config "$TESTTMP/mononoke-config" \
@@ -115,7 +116,7 @@ function mononoke_x_repo_sync_once() {
 }
 
 function mononoke_rechunker {
-    "$MONONOKE_RECHUNKER" \
+    GLOG_minloglevel=5 "$MONONOKE_RECHUNKER" \
     "${CACHING_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config \
@@ -123,7 +124,7 @@ function mononoke_rechunker {
 }
 
 function mononoke_hg_sync_with_retry {
-  $MONONOKE_HG_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHING_ARGS[@]}" \
     --base-retry-delay-ms 1 \
     --repo-id $REPOID \
@@ -135,7 +136,7 @@ function mononoke_hg_sync_with_retry {
 function mononoke_hg_sync_with_failure_handler {
   sql_name="${TESTTMP}/hgrepos/repo_lock"
 
-  $MONONOKE_HG_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
@@ -176,7 +177,7 @@ function mononoke_bookmarks_filler {
     sql_name="${TESTTMP}/replaybookmarksqueue"
   fi
 
-  "$MONONOKE_BOOKMARKS_FILLER" \
+  GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
     "${CACHING_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path mononoke-config  \
@@ -222,7 +223,7 @@ function mononoke_hg_sync_loop {
   shift
   shift
 
-  $MONONOKE_HG_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
@@ -236,7 +237,7 @@ function mononoke_hg_sync_loop_regenerate {
   shift
   shift
 
-  $MONONOKE_HG_SYNC \
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --repo-id 0 \
@@ -245,14 +246,14 @@ function mononoke_hg_sync_loop_regenerate {
 }
 
 function mononoke_admin {
-  "$MONONOKE_ADMIN" \
+  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${CACHING_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
 function write_stub_log_entry {
-  "$WRITE_STUB_LOG_ENTRY" \
+  GLOG_minloglevel=5 "$WRITE_STUB_LOG_ENTRY" \
     "${CACHING_ARGS[@]}" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
@@ -590,12 +591,12 @@ function blobimport {
 }
 
 function bonsai_verify {
-  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo-id $REPOID \
-  --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
+  GLOG_minloglevel=5 "$MONONOKE_BONSAI_VERIFY" --repo-id "$REPOID" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
 function lfs_import {
-  "$MONONOKE_LFS_IMPORT" --repo-id "$REPOID" \
+  GLOG_minloglevel=5 "$MONONOKE_LFS_IMPORT" --repo-id "$REPOID" \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
@@ -607,8 +608,9 @@ function setup_no_ssl_apiserver {
 
 
 function apiserver {
-  "$MONONOKE_APISERVER" "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
-   --without-skiplist \
+  GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --without-skiplist \
     --ssl-ca "$TEST_CERTDIR/root-ca.crt" \
     --ssl-private-key "$TEST_CERTDIR/localhost.key" \
     --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
@@ -619,7 +621,7 @@ function apiserver {
 }
 
 function no_ssl_apiserver {
-  "$MONONOKE_APISERVER" "$@" \
+  GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
    --without-skiplist \
    --mononoke-config-path "$TESTTMP/mononoke-config" \
    "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
@@ -696,7 +698,8 @@ function lfs_server {
   uri="${proto}://localhost:${port}"
   echo "$uri"
 
-  RUST_LOG=gotham=info "$LFS_SERVER" "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
+  GLOG_minloglevel=5 "$LFS_SERVER" \
+    "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
 
   for _ in $(seq 1 200); do
     if "$poll" "${uri}/health_check" >/dev/null 2>&1; then
@@ -894,7 +897,7 @@ EOF
 function aliasverify() {
   mode=$1
   shift 1
-  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo-id $REPOID \
+  GLOG_minloglevel=5 "$MONONOKE_ALIAS_VERIFY" --repo-id $REPOID \
      "${CACHING_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
@@ -917,7 +920,7 @@ function pushrebase_replay() {
   REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
   THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
   THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
-  "$PUSHREBASE_REPLAY" \
+  GLOG_minloglevel=5 "$PUSHREBASE_REPLAY" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --reponame repo \
     --hgcli "$MONONOKE_HGCLI" \
