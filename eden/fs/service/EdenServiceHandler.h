@@ -37,6 +37,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
 
+  std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override;
+
   fb303::cpp2::fb303_status getStatus() override;
 
   void mount(std::unique_ptr<MountArgument> mount) override;

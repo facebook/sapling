@@ -48,6 +48,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
@@ -301,6 +302,14 @@ EdenServiceHandler::EdenServiceHandler(
         histConfig.max);
   }
 #endif
+}
+
+std::unique_ptr<apache::thrift::AsyncProcessor>
+EdenServiceHandler::getProcessor() {
+  auto processor = StreamingEdenServiceSvIf::getProcessor();
+  processor->addEventHandler(std::make_shared<ThriftPermissionChecker>(
+      server_->getServerState()->getUserInfo()));
+  return processor;
 }
 
 facebook::fb303::cpp2::fb303_status EdenServiceHandler::getStatus() {
