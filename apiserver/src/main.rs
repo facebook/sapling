@@ -635,6 +635,7 @@ fn main(fb: FacebookInit) -> Fallible<()> {
     if let Ok(port) = thrift_port {
         thrift::make_thrift(
             fb,
+            runtime.executor(),
             thrift_logger,
             host.to_string(),
             port,
