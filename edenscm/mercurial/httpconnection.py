@@ -82,7 +82,7 @@ def readauthforuri(ui, uri, user):
         for key in ("cert", "key"):
             val = auth.get(key)
             if val is not None and not os.path.exists(val):
-                ui.warn(
+                ui.debug(
                     _("ignoring [auth] key '%s': %s does not exist at %s\n")
                     % (group, key, val)
                 )
