@@ -16,7 +16,6 @@ use memmap::{Mmap, MmapOptions};
 
 use types::Node;
 
-use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;
 use crate::sliceext::SliceExt;
 
@@ -260,7 +259,7 @@ impl DataIndex {
         Ok(())
     }
 
-    pub fn get_entry(&self, node: &Node) -> Fallible<IndexEntry> {
+    pub fn get_entry(&self, node: &Node) -> Fallible<Option<IndexEntry>> {
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), node)?;
         let start = start + self.index_start;
         let end = match end {
@@ -268,8 +267,12 @@ impl DataIndex {
             Option::Some(pos) => pos + self.index_start,
         };
 
-        let entry_offset = self.binary_search(node, &self.mmap[start..end])?;
+        let entry_offset = match self.binary_search(node, &self.mmap[start..end]) {
+            None => return Ok(None),
+            Some(offset) => offset,
+        };
         self.read_entry((start + entry_offset) - self.index_start)
+            .map(Some)
     }
 
     pub fn read_entry(&self, offset: usize) -> Fallible<IndexEntry> {
@@ -278,17 +281,14 @@ impl DataIndex {
         IndexEntry::read(raw_entry)
     }
 
-    fn binary_search(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
+    fn binary_search(&self, key: &Node, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; ENTRY_LEN]] =
             unsafe { ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; ENTRY_LEN], size) };
         match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
-            Ok(offset) => Ok(offset * ENTRY_LEN),
-            Err(_offset) => Err(KeyError::new(
-                DataIndexError(format!("no node {:?} in slice", key)).into(),
-            )
-            .into()),
+            Ok(offset) => Some(offset * ENTRY_LEN),
+            Err(_offset) => None,
         }
     }
 
@@ -339,7 +339,7 @@ mod tests {
         );
         let index = make_index(&values);
 
-        let delta = index.get_entry(&node).unwrap();
+        let delta = index.get_entry(&node).unwrap().unwrap();
         assert_eq!(delta.delta_base_offset(), DeltaBaseOffset::Missing);
     }
 
@@ -359,11 +359,7 @@ mod tests {
         let index = make_index(&values);
 
         let other = Node::random(&mut rng);
-        assert!(index
-            .get_entry(&other)
-            .unwrap_err()
-            .downcast_ref::<KeyError>()
-            .is_some())
+        assert!(index.get_entry(&other).unwrap().is_none());
     }
 
     quickcheck! {
@@ -402,7 +398,7 @@ mod tests {
             let mut offset = 0;
             for &(node, size) in nodes.iter() {
                 let size = size + 1;
-                let entry = index.get_entry(&node).expect("get_entry");
+                let entry = index.get_entry(&node).expect("get_entry").unwrap();
                 assert_eq!(entry.node(), &node);
                 assert_eq!(entry.delta_base_offset(), DeltaBaseOffset::FullText);
                 assert_eq!(entry.pack_entry_offset(), offset);
@@ -412,9 +408,7 @@ mod tests {
 
             let mut rng = ChaChaRng::from_seed([0u8; 32]);
             let last_node = last_node.unwrap_or((Node::random(&mut rng), 0)).0;
-            index.get_entry(&last_node).expect_err("get_entry with missing node");
-
-            true
+            index.get_entry(&last_node).unwrap().is_none()
         }
     }
 }

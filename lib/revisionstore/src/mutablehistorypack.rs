@@ -22,7 +22,7 @@ use tempfile::NamedTempFile;
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
-use crate::error::{EmptyMutablePack, KeyError};
+use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
@@ -295,7 +295,7 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
 }
 
 impl HistoryStore for MutableHistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         AncestorIterator::new(
             key,
             |k, _seen| self.get_node_info(k),
@@ -304,27 +304,13 @@ impl HistoryStore for MutableHistoryPack {
         .collect()
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let inner = self.inner.lock();
         Ok(inner
             .mem_index
             .get(&key.path)
-            .ok_or(KeyError::new(
-                MutableHistoryPackError(format!(
-                    "key '{:?}' not present in mutable history pack",
-                    key
-                ))
-                .into(),
-            ))?
-            .get(key)
-            .ok_or(KeyError::new(
-                MutableHistoryPackError(format!(
-                    "key '{:?}' not present in mutable history pack",
-                    key
-                ))
-                .into(),
-            ))?
-            .clone())
+            .and_then(|nodes| nodes.get(key))
+            .cloned())
     }
 }
 
@@ -502,7 +488,7 @@ mod tests {
             }
 
             for &(ref key, _) in keys.iter() {
-                let in_pack = muthistorypack.get_ancestors(&key).expect("get ancestors");
+                let in_pack = muthistorypack.get_ancestors(&key).expect("get ancestors").unwrap();
                 if in_pack != chains[&key] {
                     return false;
                 }
@@ -521,13 +507,13 @@ mod tests {
             }
 
             for (key, info) in insert.iter() {
-                if *info != muthistorypack.get_node_info(key).unwrap() {
+                if *info != muthistorypack.get_node_info(key).unwrap().unwrap() {
                     return false;
                 }
             }
 
             for key in notinsert.iter() {
-                if muthistorypack.get_node_info(key).is_ok() {
+                if muthistorypack.get_node_info(key).unwrap().is_some() {
                     return false;
                 }
             }

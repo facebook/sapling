@@ -1,48 +1,30 @@
 // Copyright Facebook, Inc. 2018
 // Union history store
-use failure::{Fail, Fallible};
+use failure::Fallible;
 
 use types::{Key, NodeInfo};
 
 use crate::ancestors::{AncestorTraversal, BatchedAncestorIterator};
-use crate::error::KeyError;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::unionstore::UnionStore;
 
 pub type UnionHistoryStore<T> = UnionStore<T>;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Union History Store Error: {:?}", _0)]
-struct UnionHistoryStoreError(String);
-
-impl From<UnionHistoryStoreError> for KeyError {
-    fn from(err: UnionHistoryStoreError) -> Self {
-        KeyError::new(err.into())
-    }
-}
-
 impl<T: HistoryStore> UnionHistoryStore<T> {
-    fn get_partial_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_partial_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         for store in self {
-            match store.get_ancestors(key) {
-                Ok(res) => return Ok(res),
-                Err(e) => match e.downcast_ref::<KeyError>() {
-                    Some(_) => continue,
-                    None => return Err(e),
-                },
+            match store.get_ancestors(key)? {
+                None => continue,
+                Some(res) => return Ok(Some(res)),
             }
         }
 
-        Err(KeyError::from(UnionHistoryStoreError(format!(
-            "No ancestors found for key {:?}",
-            key
-        )))
-        .into())
+        Ok(None)
     }
 }
 
 impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         BatchedAncestorIterator::new(
             key,
             |k, _seen| self.get_partial_ancestors(k),
@@ -51,22 +33,15 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
         .collect()
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         for store in self {
-            match store.get_node_info(key) {
-                Ok(res) => return Ok(res),
-                Err(e) => match e.downcast_ref::<KeyError>() {
-                    Some(_) => continue,
-                    None => return Err(e),
-                },
+            match store.get_node_info(key)? {
+                None => continue,
+                Some(res) => return Ok(Some(res)),
             }
         }
 
-        Err(KeyError::from(UnionHistoryStoreError(format!(
-            "No NodeInfo found for key {:?}",
-            key
-        )))
-        .into())
+        Ok(None)
     }
 }
 
@@ -74,35 +49,26 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
 mod tests {
     use super::*;
 
+    use failure::Fail;
     use quickcheck::quickcheck;
 
     use crate::localstore::LocalStore;
 
     struct BadHistoryStore;
 
+    struct EmptyHistoryStore;
+
     #[derive(Debug, Fail)]
     #[fail(display = "Bad history store always has error which is not KeyError")]
     struct BadHistoryStoreError;
 
-    struct EmptyHistoryStore;
-
-    #[derive(Debug, Fail)]
-    #[fail(display = "History Store is empty")]
-    struct EmptyHistoryStoreError;
-
-    impl From<EmptyHistoryStoreError> for KeyError {
-        fn from(err: EmptyHistoryStoreError) -> Self {
-            KeyError::new(err.into())
-        }
-    }
-
     impl HistoryStore for EmptyHistoryStore {
-        fn get_ancestors(&self, _key: &Key) -> Fallible<Ancestors> {
-            Err(KeyError::from(EmptyHistoryStoreError).into())
+        fn get_ancestors(&self, _key: &Key) -> Fallible<Option<Ancestors>> {
+            Ok(None)
         }
 
-        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
-            Err(KeyError::from(EmptyHistoryStoreError).into())
+        fn get_node_info(&self, _key: &Key) -> Fallible<Option<NodeInfo>> {
+            Ok(None)
         }
     }
 
@@ -113,11 +79,11 @@ mod tests {
     }
 
     impl HistoryStore for BadHistoryStore {
-        fn get_ancestors(&self, _key: &Key) -> Fallible<Ancestors> {
+        fn get_ancestors(&self, _key: &Key) -> Fallible<Option<Ancestors>> {
             Err(BadHistoryStoreError.into())
         }
 
-        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
+        fn get_node_info(&self, _key: &Key) -> Fallible<Option<NodeInfo>> {
             Err(BadHistoryStoreError.into())
         }
     }
@@ -131,8 +97,8 @@ mod tests {
     quickcheck! {
         fn test_empty_unionstore_get_ancestors(key: Key) -> bool {
             match UnionHistoryStore::<EmptyHistoryStore>::new().get_ancestors(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_some(),
+                Ok(None) => true,
+                _ => false,
             }
         }
 
@@ -140,8 +106,8 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(EmptyHistoryStore);
             match unionstore.get_ancestors(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_some(),
+                Ok(None) => true,
+                _ => false,
             }
         }
 
@@ -149,15 +115,15 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_ancestors(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+                Err(e) => true,
+                _ => false,
             }
         }
 
         fn test_empty_unionstore_get_node_info(key: Key) -> bool {
             match UnionHistoryStore::<EmptyHistoryStore>::new().get_node_info(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_some(),
+                Ok(None) => true,
+                _ => false,
             }
         }
 
@@ -165,8 +131,8 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(EmptyHistoryStore);
             match unionstore.get_node_info(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_some(),
+                Ok(None) => true,
+                _ => false,
             }
         }
 
@@ -174,8 +140,8 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_node_info(&key) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+                Err(e) => true,
+                _ => false,
             }
         }
 
@@ -193,8 +159,8 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_missing(&keys) {
-                Ok(_) => false,
-                Err(e) => e.downcast_ref::<KeyError>().is_none(),
+                Err(e) => true,
+                _ => false,
             }
         }
     }

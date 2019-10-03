@@ -32,10 +32,10 @@ pub struct Metadata {
 }
 
 pub trait DataStore: LocalStore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>>;
-    fn get_delta(&self, key: &Key) -> Fallible<Delta>;
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>>;
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>>;
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>>;
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>>;
 }
 
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
@@ -58,16 +58,16 @@ pub trait MutableDeltaStore: DataStore {
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         T::get(self, key)
     }
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         T::get_delta(self, key)
     }
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         T::get_delta_chain(self, key)
     }
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         T::get_meta(self, key)
     }
 }

@@ -7,7 +7,6 @@ use failure::{format_err, Fallible};
 use types::{Key, NodeInfo};
 
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
-use crate::error::KeyError;
 use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 
@@ -63,41 +62,38 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
 }
 
 impl<'a> DataStore for MultiplexDeltaStore<'a> {
-    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
         Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         for store in self.stores.iter() {
-            let result = store.get_delta(key);
-            if let Ok(delta) = result {
-                return Ok(delta);
+            if let Some(result) = store.get_delta(key)? {
+                return Ok(Some(result));
             }
         }
 
-        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+        Ok(None)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         for store in self.stores.iter() {
-            let result = store.get_delta_chain(key);
-            if let Ok(delta_chain) = result {
-                return Ok(delta_chain);
+            if let Some(result) = store.get_delta_chain(key)? {
+                return Ok(Some(result));
             }
         }
 
-        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+        Ok(None)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         for store in self.stores.iter() {
-            let result = store.get_meta(key);
-            if let Ok(meta) = result {
-                return Ok(meta);
+            if let Some(result) = store.get_meta(key)? {
+                return Ok(Some(result));
             }
         }
 
-        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+        Ok(None)
     }
 }
 
@@ -132,26 +128,24 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
 }
 
 impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         for store in self.stores.iter() {
-            let result = store.get_ancestors(key);
-            if let Ok(ancestors) = result {
-                return Ok(ancestors);
+            if let Some(ancestors) = store.get_ancestors(key)? {
+                return Ok(Some(ancestors));
             }
         }
 
-        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexHistoryStore", key)).into())
+        Ok(None)
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         for store in self.stores.iter() {
-            let result = store.get_node_info(key);
-            if let Ok(ancestors) = result {
-                return Ok(ancestors);
+            if let Some(nodeinfo) = store.get_node_info(key)? {
+                return Ok(Some(nodeinfo));
             }
         }
 
-        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexHistoryStore", key)).into())
+        Ok(None)
     }
 }
 
@@ -201,7 +195,7 @@ mod tests {
         multiplex.add(&delta, &metadata)?;
         drop(multiplex);
         let read_delta = log.get_delta(&delta.key)?;
-        assert_eq!(delta, read_delta);
+        assert_eq!(Some(delta), read_delta);
         log.flush()?;
         Ok(())
     }
@@ -226,10 +220,10 @@ mod tests {
         drop(multiplex);
 
         let read_delta = log.get_delta(&delta.key)?;
-        assert_eq!(delta, read_delta);
+        assert_eq!(Some(delta.clone()), read_delta);
 
         let read_delta = pack.get_delta(&delta.key)?;
-        assert_eq!(delta, read_delta);
+        assert_eq!(Some(delta), read_delta);
 
         log.flush()?;
         pack.flush()?;
@@ -253,7 +247,7 @@ mod tests {
         drop(multiplex);
 
         let read_node = pack.get_node_info(&k)?;
-        assert_eq!(nodeinfo, read_node);
+        assert_eq!(Some(nodeinfo), read_node);
 
         pack.flush()?;
         Ok(())
@@ -278,10 +272,10 @@ mod tests {
         drop(multiplex);
 
         let read_node = pack1.get_node_info(&k)?;
-        assert_eq!(nodeinfo, read_node);
+        assert_eq!(Some(nodeinfo.clone()), read_node);
 
         let read_node = pack2.get_node_info(&k)?;
-        assert_eq!(nodeinfo, read_node);
+        assert_eq!(Some(nodeinfo), read_node);
 
         pack1.flush()?;
         pack2.flush()?;

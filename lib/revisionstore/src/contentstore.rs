@@ -115,19 +115,19 @@ impl ContentStore {
 }
 
 impl DataStore for ContentStore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         self.datastore.get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         self.datastore.get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         self.datastore.get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         self.datastore.get_meta(key)
     }
 }
@@ -233,7 +233,7 @@ mod tests {
             key: k1.clone(),
         };
         store.add(&delta, &Default::default())?;
-        assert_eq!(store.get_delta(&k1)?, delta);
+        assert_eq!(store.get_delta(&k1)?, Some(delta));
         Ok(())
     }
 
@@ -255,7 +255,7 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config, None)?;
-        assert!(store.get_delta(&k1).is_err());
+        assert!(store.get_delta(&k1)?.is_none());
         Ok(())
     }
 
@@ -275,7 +275,7 @@ mod tests {
         };
         store.add(&delta, &Default::default())?;
         store.flush()?;
-        assert_eq!(store.get_delta(&k1)?, delta);
+        assert_eq!(store.get_delta(&k1)?, Some(delta));
         Ok(())
     }
 
@@ -298,7 +298,7 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config, None)?;
-        assert_eq!(store.get_delta(&k1)?, delta);
+        assert_eq!(store.get_delta(&k1)?, Some(delta));
         Ok(())
     }
 
@@ -319,7 +319,7 @@ mod tests {
         let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
         let data_get = store.get(&k)?;
 
-        assert_eq!(data_get, data);
+        assert_eq!(data_get.unwrap(), data);
         Ok(())
     }
 
@@ -344,25 +344,25 @@ mod tests {
         let store = ContentStore::new(&localdir, &config, None)?;
         let data_get = store.get(&k)?;
 
-        assert_eq!(data_get, data);
+        assert_eq!(data_get.unwrap(), data);
 
         Ok(())
     }
 
     #[test]
-    #[should_panic(expected = "KeyError")]
-    fn test_not_in_remote_store() {
-        let cachedir = TempDir::new().unwrap();
-        let localdir = TempDir::new().unwrap();
+    fn test_not_in_remote_store() -> Fallible<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
         let map = HashMap::new();
         let edenapi = fake_edenapi(map);
 
-        let store = ContentStore::new(&localdir, &config, Some(edenapi)).unwrap();
+        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
 
         let k = key("a", "1");
-        store.get(&k).unwrap();
+        assert_eq!(store.get(&k)?, None);
+        Ok(())
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
         let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
         store.get(&k)?;
         store.shared_mutabledatastore.get(&k)?;
-        assert!(store.local_mutabledatastore.get(&k).is_err());
+        assert!(store.local_mutabledatastore.get(&k)?.is_none());
         Ok(())
     }
 }

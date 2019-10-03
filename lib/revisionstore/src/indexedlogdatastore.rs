@@ -11,7 +11,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{bail, ensure, format_err, Fallible};
+use failure::{bail, ensure, Fallible};
 use parking_lot::RwLock;
 
 use indexedlog::{
@@ -23,7 +23,6 @@ use types::{node::ReadNodeExt, Key, Node, RepoPath};
 
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
-    error::KeyError,
     indexedlogutil,
     localstore::LocalStore,
     repack::ToKeys,
@@ -98,13 +97,14 @@ impl Entry {
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
+    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Option<Self>> {
         let mut log_entry = log.lookup(0, key.node.as_ref())?;
-        let buf = log_entry
-            .nth(0)
-            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
+        let buf = match log_entry.nth(0) {
+            None => return Ok(None),
+            Some(buf) => buf?,
+        };
 
-        Entry::from_slice(buf)
+        Entry::from_slice(buf).map(Some)
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
@@ -206,36 +206,41 @@ impl LocalStore for IndexedLogDataStore {
         let inner = self.inner.read();
         Ok(keys
             .iter()
-            .filter(|k| Entry::from_log(k, &inner.log).is_err())
+            .filter(|k| match Entry::from_log(k, &inner.log) {
+                Ok(None) | Err(_) => true,
+                Ok(Some(_)) => false,
+            })
             .map(|k| k.clone())
             .collect())
     }
 }
 
 impl DataStore for IndexedLogDataStore {
-    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
         unreachable!()
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         let inner = self.inner.read();
-        let mut entry = Entry::from_log(&key, &inner.log)?;
+        let mut entry = match Entry::from_log(&key, &inner.log)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
         let content = entry.content()?;
-        return Ok(Delta {
+        return Ok(Some(Delta {
             data: content,
             base: None,
             key: key.clone(),
-        });
+        }));
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        let delta = self.get_delta(key)?;
-        return Ok(vec![delta]);
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+        Ok(self.get_delta(key)?.map(|delta| vec![delta]))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         let inner = self.inner.read();
-        Ok(Entry::from_log(&key, &inner.log)?.metadata().clone())
+        Ok(Entry::from_log(&key, &inner.log)?.map(|entry| entry.metadata().clone()))
     }
 }
 
@@ -302,7 +307,7 @@ mod tests {
 
         let log = IndexedLogDataStore::new(&tempdir).unwrap();
         let read_delta = log.get_delta(&delta.key).unwrap();
-        assert_eq!(delta, read_delta);
+        assert_eq!(Some(delta), read_delta);
     }
 
     #[test]
@@ -311,13 +316,7 @@ mod tests {
         let log = IndexedLogDataStore::new(&tempdir).unwrap();
 
         let key = key("a", "1");
-        let err = log.get_delta(&key);
-
-        if let Err(err) = err {
-            assert!(err.downcast_ref::<KeyError>().is_some());
-        } else {
-            panic!("Lookup didn't fail");
-        }
+        assert!(log.get_delta(&key).unwrap().is_none());
     }
 
     #[test]

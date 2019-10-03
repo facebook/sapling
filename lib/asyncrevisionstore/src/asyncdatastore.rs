@@ -23,13 +23,13 @@ impl<T: DataStore + Send + Sync> AsyncDataStore<T> {
     }
 
     /// Asynchronously call the DataStore::get method.
-    pub fn get(&self, key: &Key) -> impl Future<Item = Vec<u8>, Error = Error> + Send {
+    pub fn get(&self, key: &Key) -> impl Future<Item = Option<Vec<u8>>, Error = Error> + Send {
         cloned!(key);
         self.data.block(move |store| store.get(&key))
     }
 
     /// Asynchronously call the DataStore::get_delta method.
-    pub fn get_delta(&self, key: &Key) -> impl Future<Item = Delta, Error = Error> + Send {
+    pub fn get_delta(&self, key: &Key) -> impl Future<Item = Option<Delta>, Error = Error> + Send {
         cloned!(key);
         self.data.block(move |store| store.get_delta(&key))
     }
@@ -38,13 +38,16 @@ impl<T: DataStore + Send + Sync> AsyncDataStore<T> {
     pub fn get_delta_chain(
         &self,
         key: &Key,
-    ) -> impl Future<Item = Vec<Delta>, Error = Error> + Send {
+    ) -> impl Future<Item = Option<Vec<Delta>>, Error = Error> + Send {
         cloned!(key);
         self.data.block(move |store| store.get_delta_chain(&key))
     }
 
     /// Asynchronously call the DataStore::get_meta method.
-    pub fn get_meta(&self, key: &Key) -> impl Future<Item = Metadata, Error = Error> + Send {
+    pub fn get_meta(
+        &self,
+        key: &Key,
+    ) -> impl Future<Item = Option<Metadata>, Error = Error> + Send {
         cloned!(key);
         self.data.block(move |store| store.get_meta(&key))
     }

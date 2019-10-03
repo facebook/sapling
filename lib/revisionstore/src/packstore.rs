@@ -11,13 +11,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use failure::{format_err, Fallible};
+use failure::Fallible;
 
 use types::{Key, NodeInfo};
 
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
-use crate::error::KeyError;
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
@@ -261,9 +260,9 @@ impl<T: LocalStore + Repackable> PackStore<T> {
     }
 
     /// Execute the `op` function. May call `rescan` when `op` fails with `KeyError`.
-    fn run<R, F>(&self, op: F, key: &Key) -> Fallible<R>
+    fn run<R, F>(&self, op: F, key: &Key) -> Fallible<Option<R>>
     where
-        F: Fn(&T) -> Fallible<R>,
+        F: Fn(&T) -> Fallible<Option<R>>,
     {
         for _ in 0..2 {
             let mut found = None;
@@ -273,19 +272,13 @@ impl<T: LocalStore + Repackable> PackStore<T> {
                 let mut lrustore = self.packs.try_borrow_mut()?;
                 for (index, store) in lrustore.iter_mut().enumerate() {
                     match op(store) {
-                        Ok(result) => {
+                        Ok(None) => continue,
+                        Ok(Some(result)) => {
                             found = Some((index, result));
                             break;
                         }
-                        Err(e) => {
-                            // When a store doesn't contain the asked data, it returns
-                            // Err(KeyError). Ideally, the store interface should return a
-                            // Fallible<Option<T>> and Ok(None) would indicate that the data asked
-                            // isn't present. Until we make this change, we have to resort to using
-                            // an ugly downcast :(
-                            if e.downcast_ref::<KeyError>().is_none() {
-                                corrupted.push(index);
-                            }
+                        Err(_) => {
+                            corrupted.push(index);
                         }
                     }
                 }
@@ -302,7 +295,7 @@ impl<T: LocalStore + Repackable> PackStore<T> {
 
             if let Some((index, result)) = found {
                 self.packs.borrow_mut().update(index);
-                return Ok(result);
+                return Ok(Some(result));
             }
 
             // We didn't find anything, let's try to probe the filesystem to discover new packfiles
@@ -312,7 +305,7 @@ impl<T: LocalStore + Repackable> PackStore<T> {
             }
         }
 
-        Err(KeyError::new(format_err!("Key {:?} not found in PackStore", key)).into())
+        Ok(None)
     }
 }
 
@@ -335,29 +328,29 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
 }
 
 impl DataStore for DataPackStore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         self.run(|store| store.get(key), key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         self.run(|store| store.get_delta(key), key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         self.run(|store| store.get_delta_chain(key), key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         self.run(|store| store.get_meta(key), key)
     }
 }
 
 impl HistoryStore for HistoryPackStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         self.run(|store| store.get_ancestors(key), key)
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         self.run(|store| store.get_node_info(key), key)
     }
 }
@@ -393,19 +386,19 @@ impl MutableDataPackStore {
 }
 
 impl DataStore for MutableDataPackStore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         self.inner.union_store.get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         self.inner.union_store.get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         self.inner.union_store.get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         self.inner.union_store.get_meta(key)
     }
 }
@@ -463,11 +456,11 @@ impl MutableHistoryPackStore {
 }
 
 impl HistoryStore for MutableHistoryPackStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         self.inner.union_store.get_ancestors(key)
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         self.inner.union_store.get_node_info(key)
     }
 }
@@ -527,7 +520,7 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        let delta = store.get_delta(&k)?;
+        let delta = store.get_delta(&k)?.unwrap();
         assert_eq!(delta, revision.0);
         Ok(())
     }
@@ -569,13 +562,12 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let delta = store.get_delta(&k)?;
+        let delta = store.get_delta(&k)?.unwrap();
         assert_eq!(delta, revision.0);
         Ok(())
     }
 
     #[test]
-    #[should_panic(expected = "KeyError")]
     fn test_slow_rescan() {
         let tempdir = TempDir::new().unwrap();
         let store = PackStoreOptions::new()
@@ -608,7 +600,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        store.get_delta(&k).unwrap();
+        assert_eq!(store.get_delta(&k).unwrap(), None);
     }
 
     #[test]
@@ -645,7 +637,7 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         store.force_rescan();
-        store.get_delta(&k)?;
+        assert!(store.get_delta(&k)?.is_some());
         Ok(())
     }
 
@@ -658,7 +650,7 @@ mod tests {
         let (nodes, _) = get_nodes(&mut rng);
         make_historypack(&tempdir, &nodes);
         for (key, info) in nodes.iter() {
-            let response: NodeInfo = store.get_node_info(key)?;
+            let response: NodeInfo = store.get_node_info(key)?.unwrap();
             assert_eq!(response, *info);
         }
 
@@ -713,7 +705,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "KeyError")]
     fn test_corrupted() {
         let tempdir = TempDir::new().unwrap();
 
@@ -741,7 +732,7 @@ mod tests {
             .unwrap();
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        packstore.get_delta(&k1).unwrap();
+        assert_eq!(packstore.get_delta(&k1).unwrap(), None);
     }
 
     #[test]
@@ -772,7 +763,7 @@ mod tests {
         assert_eq!(read_dir(&tempdir)?.count(), 2);
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::IGNORE);
-        assert!(packstore.get_delta(&k1).is_err());
+        assert!(packstore.get_delta(&k1)?.is_none());
 
         assert_eq!(read_dir(&tempdir)?.count(), 2);
         Ok(())
@@ -808,7 +799,7 @@ mod tests {
         };
 
         packstore.add(&delta, &Default::default())?;
-        assert_eq!(packstore.get_delta(&k1)?, delta);
+        assert_eq!(packstore.get_delta(&k1)?.unwrap(), delta);
         Ok(())
     }
 
@@ -826,7 +817,7 @@ mod tests {
 
         packstore.add(&delta, &Default::default())?;
         packstore.flush()?;
-        assert_eq!(packstore.get_delta(&k1)?, delta);
+        assert_eq!(packstore.get_delta(&k1)?.unwrap(), delta);
         Ok(())
     }
 
@@ -842,7 +833,7 @@ mod tests {
         }
 
         for (key, info) in nodes {
-            let nodeinfo = packstore.get_node_info(&key)?;
+            let nodeinfo = packstore.get_node_info(&key)?.unwrap();
             assert_eq!(nodeinfo, info);
         }
         Ok(())
@@ -862,7 +853,7 @@ mod tests {
         packstore.flush()?;
 
         for (key, info) in nodes {
-            let nodeinfo = packstore.get_node_info(&key)?;
+            let nodeinfo = packstore.get_node_info(&key)?.unwrap();
             assert_eq!(nodeinfo, info);
         }
         Ok(())

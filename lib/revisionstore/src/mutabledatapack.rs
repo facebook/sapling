@@ -15,7 +15,7 @@ use std::{
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{format_err, Error, Fail, Fallible};
+use failure::{format_err, Fail, Fallible};
 use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
 
@@ -25,7 +25,7 @@ use types::{Key, Node};
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
-use crate::error::{EmptyMutablePack, KeyError};
+use crate::error::EmptyMutablePack;
 use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
@@ -81,14 +81,12 @@ impl MutableDataPackInner {
         })
     }
 
-    fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
-        let location: &DeltaLocation = self.mem_index.get(&key.node).ok_or::<Error>(
-            KeyError::new(
-                MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
-                    .into(),
-            )
-            .into(),
-        )?;
+    fn read_entry(&self, key: &Key) -> Fallible<Option<(Delta, Metadata)>> {
+        let location: &DeltaLocation = match self.mem_index.get(&key.node) {
+            None => return Ok(None),
+            Some(location) => location,
+        };
+
         // Make sure the buffers are empty so the reads below are consistent with what is being
         // written.
         self.data_file.flush_inner()?;
@@ -101,7 +99,7 @@ impl MutableDataPackInner {
         file.read_exact(&mut data)?;
 
         let entry = DataEntry::new(&data, 0, DataPackVersion::One)?;
-        Ok((
+        Ok(Some((
             Delta {
                 data: entry.delta()?,
                 base: entry
@@ -110,7 +108,7 @@ impl MutableDataPackInner {
                 key: Key::new(key.path.clone(), entry.node().clone()),
             },
             entry.metadata().clone(),
-        ))
+        )))
     }
 
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
@@ -216,30 +214,40 @@ impl MutablePack for MutableDataPack {
 }
 
 impl DataStore for MutableDataPack {
-    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
         Err(
             MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
                 .into(),
         )
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let (delta, _metadata) = self.inner.lock().read_entry(&key)?;
-        Ok(delta)
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+        let (delta, _metadata) = match self.inner.lock().read_entry(&key)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
+        Ok(Some(delta))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
         let inner = self.inner.lock();
         while let Some(key) = next_key {
             let (delta, _metadata) = match inner.read_entry(&key) {
-                Ok(entry) => entry,
+                Ok(Some(entry)) => entry,
+                Ok(None) => {
+                    if chain.is_empty() {
+                        return Ok(None);
+                    } else {
+                        return Ok(Some(chain));
+                    }
+                }
                 Err(e) => {
                     if chain.is_empty() {
                         return Err(e);
                     } else {
-                        return Ok(chain);
+                        return Ok(Some(chain));
                     }
                 }
             };
@@ -247,12 +255,15 @@ impl DataStore for MutableDataPack {
             chain.push(delta);
         }
 
-        Ok(chain)
+        Ok(Some(chain))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let (_, metadata) = self.inner.lock().read_entry(&key)?;
-        Ok(metadata)
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+        Ok(self
+            .inner
+            .lock()
+            .read_entry(&key)?
+            .map(|(_, metadata)| metadata))
     }
 }
 
@@ -347,10 +358,10 @@ mod tests {
         mutdatapack.add(&delta2, &Default::default()).unwrap();
 
         let chain = mutdatapack.get_delta_chain(&delta.key).unwrap();
-        assert_eq!(&vec![delta.clone()], &chain);
+        assert_eq!(&vec![delta.clone()], &chain.unwrap());
 
         let chain = mutdatapack.get_delta_chain(&delta2.key).unwrap();
-        assert_eq!(&vec![delta2.clone(), delta.clone()], &chain);
+        assert_eq!(&vec![delta2.clone(), delta.clone()], &chain.unwrap());
     }
 
     #[test]
@@ -365,7 +376,7 @@ mod tests {
         };
 
         mutdatapack.add(&delta, &Default::default())?;
-        let chain = mutdatapack.get_delta_chain(&delta.key)?;
+        let chain = mutdatapack.get_delta_chain(&delta.key)?.unwrap();
         assert_eq!(chain.len(), 1);
         assert_eq!(chain.get(0), Some(&delta));
 
@@ -396,17 +407,15 @@ mod tests {
 
         // Requesting a default metadata
         let found_meta = mutdatapack.get_meta(&delta.key).unwrap();
-        assert_eq!(found_meta, Metadata::default());
+        assert_eq!(found_meta.unwrap(), Metadata::default());
 
         // Requesting a specified metadata
         let found_meta = mutdatapack.get_meta(&delta2.key).unwrap();
-        assert_eq!(found_meta, meta2);
+        assert_eq!(found_meta.unwrap(), meta2);
 
         // Requesting a non-existent metadata
         let not = key("not", "10000");
-        mutdatapack
-            .get_meta(&not)
-            .expect_err("expected error for non existent node");
+        assert_eq!(mutdatapack.get_meta(&not).unwrap(), None);
     }
 
     #[test]

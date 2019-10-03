@@ -25,6 +25,6 @@ fn main() {
     store.add(pack);
 
     let key = Key::new(RepoPathBuf::new(), args.node);
-    let result = store.get(&key).unwrap();
+    let result = store.get(&key).unwrap().unwrap();
     println!("{:?}", String::from_utf8_lossy(&result));
 }

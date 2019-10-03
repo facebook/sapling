@@ -4,7 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{
-    FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python, PythonObject,
+    exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
+    PythonObject, PythonObjectWithTypeObject,
 };
 use failure::Fallible;
 
@@ -28,31 +29,49 @@ impl PythonDataStore {
 }
 
 impl DataStore for PythonDataStore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
 
-        let py_data = self
+        let py_data = match self
             .py_store
             .call_method(py, "get", (py_name, py_node), None)
-            .map_err(|e| pyerr_to_error(py, e))?;
+        {
+            Ok(data) => data,
+            Err(py_err) => {
+                if py_err.get_type(py) == exc::KeyError::type_object(py) {
+                    return Ok(None);
+                } else {
+                    return Err(pyerr_to_error(py, py_err));
+                }
+            }
+        };
 
         let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| pyerr_to_error(py, e))?;
 
-        Ok(py_bytes.data(py).to_vec())
+        Ok(Some(py_bytes.data(py).to_vec()))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
-        let py_delta = self
+        let py_delta = match self
             .py_store
             .call_method(py, "getdelta", (py_name, py_node), None)
-            .map_err(|e| pyerr_to_error(py, e))?;
+        {
+            Ok(data) => data,
+            Err(py_err) => {
+                if py_err.get_type(py) == exc::KeyError::type_object(py) {
+                    return Ok(None);
+                } else {
+                    return Err(pyerr_to_error(py, py_err));
+                }
+            }
+        };
         let py_tuple = PyTuple::extract(py, &py_delta).map_err(|e| pyerr_to_error(py, e))?;
 
         let py_name = bytes_from_tuple(py, &py_tuple, 0)?;
@@ -63,7 +82,7 @@ impl DataStore for PythonDataStore {
 
         let base_key =
             to_key(py, &py_delta_name, &py_delta_node).map_err(|e| pyerr_to_error(py, e))?;
-        Ok(Delta {
+        Ok(Some(Delta {
             data: py_bytes.data(py).to_vec().into(),
             base: if base_key.node.is_null() {
                 None
@@ -71,37 +90,58 @@ impl DataStore for PythonDataStore {
                 Some(base_key)
             },
             key: to_key(py, &py_name, &py_node).map_err(|e| pyerr_to_error(py, e))?,
-        })
+        }))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
-        let py_chain = self
-            .py_store
-            .call_method(py, "getdeltachain", (py_name, py_node), None)
-            .map_err(|e| pyerr_to_error(py, e))?;
+        let py_chain =
+            match self
+                .py_store
+                .call_method(py, "getdeltachain", (py_name, py_node), None)
+            {
+                Ok(data) => data,
+                Err(py_err) => {
+                    if py_err.get_type(py) == exc::KeyError::type_object(py) {
+                        return Ok(None);
+                    } else {
+                        return Err(pyerr_to_error(py, py_err));
+                    }
+                }
+            };
         let py_list = PyList::extract(py, &py_chain).map_err(|e| pyerr_to_error(py, e))?;
         let deltas = py_list
             .iter(py)
             .map(|b| from_tuple_to_delta(py, &b).map_err(|e| pyerr_to_error(py, e).into()))
             .collect::<Fallible<Vec<Delta>>>()?;
-        Ok(deltas)
+        Ok(Some(deltas))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
-        let py_meta = self
+        let py_meta = match self
             .py_store
             .call_method(py, "getmeta", (py_name, py_node), None)
-            .map_err(|e| pyerr_to_error(py, e))?;
+        {
+            Ok(data) => data,
+            Err(py_err) => {
+                if py_err.get_type(py) == exc::KeyError::type_object(py) {
+                    return Ok(None);
+                } else {
+                    return Err(pyerr_to_error(py, py_err));
+                }
+            }
+        };
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
-        to_metadata(py, &py_dict).map_err(|e| pyerr_to_error(py, e))
+        to_metadata(py, &py_dict)
+            .map_err(|e| pyerr_to_error(py, e))
+            .map(Some)
     }
 }
 

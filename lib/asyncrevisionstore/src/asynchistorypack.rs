@@ -110,7 +110,7 @@ mod tests {
             work = work
                 .and_then(move |historypack| {
                     historypack.get_ancestors(&key).map(move |response| {
-                        assert_eq!(&response, ancestors.get(&key).unwrap());
+                        assert_eq!(&response.unwrap(), ancestors.get(&key).unwrap());
                         historypack
                     })
                 })
@@ -133,7 +133,7 @@ mod tests {
             work = work
                 .and_then(move |historypack| {
                     historypack.get_node_info(&key).map(move |response| {
-                        assert_eq!(response, info);
+                        assert_eq!(response.unwrap(), info);
                         historypack
                     })
                 })

@@ -13,8 +13,8 @@ use revisionstore::{DataStore, MutableDeltaStore, ToKeys};
 use types::{Key, Node};
 
 use crate::pythonutil::{
-    from_base, from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_delta,
-    to_key, to_metadata, to_pyerr,
+    from_base, from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, key_error,
+    to_delta, to_key, to_metadata, to_pyerr,
 };
 
 pub trait DataStorePyExt {
@@ -45,14 +45,20 @@ pub trait MutableDeltaStorePyExt: DataStorePyExt {
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
     fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
-        let result = self.get(&key).map_err(|e| to_pyerr(py, &e))?;
+        let result = self
+            .get(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
 
         Ok(PyBytes::new(py, &result[..]))
     }
 
     fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
-        let delta = self.get_delta(&key).map_err(|e| to_pyerr(py, &e))?;
+        let delta = self
+            .get_delta(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
 
         let (base_name, base_node) = if let Some(key) = delta.base {
             from_key(py, &key)
@@ -77,7 +83,11 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
 
     fn get_delta_chain_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
-        let deltachain = self.get_delta_chain(&key).map_err(|e| to_pyerr(py, &e))?;
+        let deltachain = self
+            .get_delta_chain(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
+
         let pychain = deltachain
             .iter()
             .map(|d| from_delta_to_tuple(py, &d))
@@ -87,7 +97,11 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
 
     fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
-        let metadata = self.get_meta(&key).map_err(|e| to_pyerr(py, &e))?;
+        let metadata = self
+            .get_meta(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
+
         let metadict = PyDict::new(py);
         if let Some(size) = metadata.size {
             metadict.set_item(py, "s", size)?;
@@ -124,7 +138,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
-            let delta = self.get_delta(&key)?;
+            let delta = self.get_delta(&key)?.unwrap();
             let (name, node) = from_key(py, &key);
             let (_, base_node) = from_base(py, &delta);
             let tuple = (

@@ -14,8 +14,8 @@ use crate::localstore::LocalStore;
 pub type Ancestors = HashMap<Key, NodeInfo>;
 
 pub trait HistoryStore: LocalStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors>;
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>>;
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>>;
 }
 
 pub trait MutableHistoryStore: HistoryStore {
@@ -29,10 +29,10 @@ pub trait MutableHistoryStore: HistoryStore {
 
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
 impl<T: HistoryStore + ?Sized, U: Deref<Target = T>> HistoryStore for U {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         T::get_ancestors(self, key)
     }
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         T::get_node_info(self, key)
     }
 }

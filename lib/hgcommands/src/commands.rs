@@ -96,8 +96,9 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     unionstore.add(packstore);
     unionstore.add(indexedstore);
     let k = Key::new(path, node);
-    let content = unionstore.get(&k).unwrap();
-    io.write(content)?;
+    if let Some(content) = unionstore.get(&k)? {
+        io.write(content)?;
+    }
     Ok(0)
 }
 

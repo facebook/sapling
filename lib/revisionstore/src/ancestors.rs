@@ -23,14 +23,14 @@ pub enum AncestorTraversal {
     Complete,
 }
 
-pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> {
+pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<NodeInfo>>> {
     traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,
     queue: VecDeque<Key>,
 }
 
-pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> {
+pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<Ancestors>>> {
     #[allow(dead_code)]
     traversal: AncestorTraversal,
     get_more: T,
@@ -39,7 +39,7 @@ pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancest
     pending_infos: HashMap<Key, NodeInfo>,
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> AncestorIterator<T> {
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<NodeInfo>>> AncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = AncestorIterator {
             traversal,
@@ -56,7 +56,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> AncestorIterator<T> {
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> BatchedAncestorIterator<T> {
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<Ancestors>>> BatchedAncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = BatchedAncestorIterator {
             traversal,
@@ -74,12 +74,32 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> BatchedAncestorIterator<
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> Iterator for AncestorIterator<T> {
-    type Item = Fallible<(Key, NodeInfo)>;
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<NodeInfo>>> Iterator for AncestorIterator<T> {
+    type Item = Fallible<Option<(Key, NodeInfo)>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(current) = self.queue.pop_front() {
             return match (self.get_more)(&current, &self.seen) {
+                Ok(Some(node_info)) => {
+                    for parent in node_info.parents.iter() {
+                        // We add the parent to seen here (vs when we pop it off), so we can
+                        // avoid processing commits an exponential number of times same
+                        // commits multiple times when traversing across a very mergy history.
+                        if self.seen.insert(parent.clone()) {
+                            self.queue.push_back(parent.clone());
+                        }
+                    }
+                    Some(Ok(Some((current, node_info.clone()))))
+                }
+                Ok(None) => match self.traversal {
+                    AncestorTraversal::Partial => {
+                        if self.seen.len() == 2 {
+                            return Some(Ok(None));
+                        }
+                        continue;
+                    }
+                    AncestorTraversal::Complete => Some(Ok(None)),
+                },
                 Err(e) => match self.traversal {
                     AncestorTraversal::Partial => {
                         // If the only entries are the original and the the null entry,
@@ -91,17 +111,6 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> Iterator for AncestorIter
                     }
                     AncestorTraversal::Complete => Some(Err(e)),
                 },
-                Ok(node_info) => {
-                    for parent in node_info.parents.iter() {
-                        // We add the parent to seen here (vs when we pop it off), so we can
-                        // avoid processing commits an exponential number of times same
-                        // commits multiple times when traversing across a very mergy history.
-                        if self.seen.insert(parent.clone()) {
-                            self.queue.push_back(parent.clone());
-                        }
-                    }
-                    Some(Ok((current, node_info.clone())))
-                }
             };
         }
 
@@ -109,15 +118,18 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> Iterator for AncestorIter
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAncestorIterator<T> {
-    type Item = Fallible<(Key, NodeInfo)>;
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Option<Ancestors>>> Iterator
+    for BatchedAncestorIterator<T>
+{
+    type Item = Fallible<Option<(Key, NodeInfo)>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(current) = self.queue.pop_front() {
             if !self.pending_infos.contains_key(&current) {
                 match (self.get_more)(&current, &self.seen) {
                     Err(e) => return Some(Err(e)),
-                    Ok(partial_ancestors) => {
+                    Ok(None) => return Some(Ok(None)),
+                    Ok(Some(partial_ancestors)) => {
                         for (key, node_info) in partial_ancestors.iter() {
                             self.pending_infos.insert(key.clone(), node_info.clone());
                         }
@@ -132,7 +144,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAnce
                     }
                 }
 
-                Some(Ok((current.clone(), node_info.clone())))
+                Some(Ok(Some((current.clone(), node_info.clone()))))
             } else {
                 Some(Err(AncestorIteratorError(format!(
                     "expected {:?} ancestor",
@@ -195,10 +207,11 @@ mod tests {
 
         let found_ancestors = AncestorIterator::new(
             &tip,
-            |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
+            |k, _seen| Ok(ancestors.get(&k).cloned()),
             AncestorTraversal::Complete,
         )
-        .collect::<Fallible<Ancestors>>()
+        .collect::<Fallible<Option<Ancestors>>>()
+        .unwrap()
         .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
@@ -219,11 +232,12 @@ mod tests {
                     let k_p1_info = ancestors.get(&k_info.parents[0]).unwrap();
                     k_ancestors.insert(k_info.parents[0].clone(), k_p1_info.clone());
                 }
-                Ok(k_ancestors)
+                Ok(Some(k_ancestors))
             },
             AncestorTraversal::Complete,
         )
-        .collect::<Fallible<Ancestors>>()
+        .collect::<Fallible<Option<Ancestors>>>()
+        .unwrap()
         .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
@@ -265,10 +279,11 @@ mod tests {
 
         let found_ancestors = AncestorIterator::new(
             &tip,
-            |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
+            |k, _seen| Ok(ancestors.get(&k).cloned()),
             AncestorTraversal::Complete,
         )
-        .collect::<Fallible<Ancestors>>()
+        .collect::<Fallible<Option<Ancestors>>>()
+        .unwrap()
         .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }

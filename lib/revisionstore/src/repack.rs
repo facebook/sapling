@@ -32,14 +32,17 @@ pub trait Repackable {
 fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fallible<()> {
     for k in data_pack.to_keys() {
         let key = k?;
-        let chain = data_pack.get_delta_chain(&key)?;
-        for delta in chain.iter() {
-            if mut_pack.contains(&delta.key)? {
-                break;
-            }
 
-            let meta = data_pack.get_meta(&delta.key)?;
-            mut_pack.add(&delta, &meta)?;
+        if let Some(chain) = data_pack.get_delta_chain(&key)? {
+            for delta in chain.iter() {
+                if mut_pack.contains(&delta.key)? {
+                    break;
+                }
+
+                // If we managed to get a delta, the metadata must be present.
+                let meta = data_pack.get_meta(&delta.key)?.unwrap();
+                mut_pack.add(&delta, &meta)?;
+            }
         }
     }
 
@@ -148,8 +151,9 @@ fn repack_historypack(
 ) -> Fallible<()> {
     for k in history_pack.to_keys() {
         let key = k?;
-        let node = history_pack.get_node_info(&key)?;
-        mut_pack.add(&key, &node)?;
+        if let Some(node) = history_pack.get_node_info(&key)? {
+            mut_pack.add(&key, &node)?;
+        }
     }
 
     Ok(())
@@ -437,7 +441,7 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
         for (ref key, _) in nodes.iter() {
-            let response: Ancestors = newpack.get_ancestors(key).unwrap();
+            let response: Ancestors = newpack.get_ancestors(key).unwrap().unwrap();
             assert_eq!(&response, ancestors.get(key).unwrap());
         }
     }
@@ -465,7 +469,7 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
-            let response = newpack.get_ancestors(&key).unwrap();
+            let response = newpack.get_ancestors(&key).unwrap().unwrap();
             assert_eq!(&response, ancestors.get(key).unwrap());
         }
     }

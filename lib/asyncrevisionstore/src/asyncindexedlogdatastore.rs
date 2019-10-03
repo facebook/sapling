@@ -53,7 +53,7 @@ mod tests {
         runtime.block_on(work).unwrap();
 
         let log = IndexedLogDataStore::new(tempdir.path()).unwrap();
-        let stored_delta = log.get_delta(&cloned_delta.key).unwrap();
+        let stored_delta = log.get_delta(&cloned_delta.key).unwrap().unwrap();
         assert_eq!(stored_delta, cloned_delta);
     }
 }

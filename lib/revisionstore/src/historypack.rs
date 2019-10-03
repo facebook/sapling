@@ -328,7 +328,7 @@ impl HistoryPack {
 }
 
 impl HistoryStore for HistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         AncestorIterator::new(
             key,
             |k, _seen| self.get_node_info(k),
@@ -337,9 +337,12 @@ impl HistoryStore for HistoryPack {
         .collect()
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        let node_location = self.index.get_node_entry(key)?;
-        self.read_node_info(key, node_location.offset)
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+        let node_location = match self.index.get_node_entry(key)? {
+            None => return Ok(None),
+            Some(location) => location,
+        };
+        self.read_node_info(key, node_location.offset).map(Some)
     }
 }
 
@@ -351,7 +354,10 @@ impl LocalStore for HistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| self.index.get_node_entry(k).is_err())
+            .filter(|k| match self.index.get_node_entry(&k) {
+                Ok(None) | Err(_) => true,
+                Ok(Some(_)) => false,
+            })
             .map(|k| k.clone())
             .collect())
     }
@@ -542,7 +548,7 @@ pub mod tests {
 
         for (ref key, _) in nodes.iter() {
             pack.get_node_info(key).unwrap();
-            let response: Ancestors = pack.get_ancestors(key).unwrap();
+            let response: Ancestors = pack.get_ancestors(key).unwrap().unwrap();
             assert_eq!(&response, ancestors.get(key).unwrap());
         }
     }
@@ -557,7 +563,7 @@ pub mod tests {
         let pack = make_historypack(&tempdir, &nodes);
 
         for (ref key, ref info) in nodes.iter() {
-            let response: NodeInfo = pack.get_node_info(key).unwrap();
+            let response: NodeInfo = pack.get_node_info(key).unwrap().unwrap();
             assert_eq!(response, **info);
         }
     }

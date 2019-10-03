@@ -77,6 +77,6 @@ mod tests {
 
         let pack = HistoryPack::new(&path).unwrap();
 
-        assert_eq!(pack.get_node_info(&my_key).unwrap(), info);
+        assert_eq!(pack.get_node_info(&my_key).unwrap().unwrap(), info);
     }
 }

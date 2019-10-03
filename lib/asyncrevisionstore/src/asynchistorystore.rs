@@ -23,7 +23,10 @@ impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
     }
 
     /// Asynchronously call the HistoryStore::get_ancestors method.
-    pub fn get_ancestors(&self, key: &Key) -> impl Future<Item = Ancestors, Error = Error> + Send {
+    pub fn get_ancestors(
+        &self,
+        key: &Key,
+    ) -> impl Future<Item = Option<Ancestors>, Error = Error> + Send {
         cloned!(key);
         self.history.block(move |store| store.get_ancestors(&key))
     }
@@ -37,7 +40,10 @@ impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
     }
 
     /// Asynchronously call the HistoryStore::get_node_info method.
-    pub fn get_node_info(&self, key: &Key) -> impl Future<Item = NodeInfo, Error = Error> + Send {
+    pub fn get_node_info(
+        &self,
+        key: &Key,
+    ) -> impl Future<Item = Option<NodeInfo>, Error = Error> + Send {
         cloned!(key);
         self.history.block(move |store| store.get_node_info(&key))
     }

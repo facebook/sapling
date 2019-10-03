@@ -6,7 +6,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
-use failure::Fallible;
+use failure::{format_err, Fallible};
 use structopt::StructOpt;
 
 use pathmatcher::AlwaysMatcher;
@@ -68,7 +68,10 @@ impl DataPackStore {
 impl manifest::TreeStore for DataPackStore {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
         let key = Key::new(path.to_owned(), node);
-        let result = self.union_store.get(&key)?;
+        let result = self
+            .union_store
+            .get(&key)?
+            .ok_or_else(|| format_err!("Key {:?} not found", key))?;
         Ok(Bytes::from(result))
     }
 

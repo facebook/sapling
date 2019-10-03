@@ -569,28 +569,28 @@ py_class!(pub class mutabledeltastore |py| {
 });
 
 impl DataStore for mutabledeltastore {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get_delta(key)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get_delta_chain(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -679,14 +679,14 @@ py_class!(pub class mutablehistorystore |py| {
 });
 
 impl HistoryStore for mutablehistorystore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get_ancestors(key)
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 

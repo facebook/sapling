@@ -60,7 +60,7 @@ mod tests {
             .and_then(move |datapack| datapack.get_delta(&key("a", "2")));
 
         let mut runtime = Runtime::new().unwrap();
-        let ret_delta = runtime.block_on(work).unwrap();
+        let ret_delta = runtime.block_on(work).unwrap().unwrap();
         assert_eq!(my_delta, ret_delta);
     }
 
@@ -79,13 +79,13 @@ mod tests {
         let work = work.and_then(move |datapack| {
             let delta = datapack.get_delta(&key("a", "2"));
             delta.and_then(move |delta| {
-                assert_eq!(delta, delta1);
+                assert_eq!(delta.unwrap(), delta1);
                 datapack.get_delta(&key("a", "4"))
             })
         });
 
         let mut runtime = Runtime::new().unwrap();
-        let ret_delta = runtime.block_on(work).unwrap();
+        let ret_delta = runtime.block_on(work).unwrap().unwrap();
         assert_eq!(delta2, ret_delta);
     }
 }

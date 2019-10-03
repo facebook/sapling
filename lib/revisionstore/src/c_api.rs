@@ -24,7 +24,6 @@ use types::{Key, Node, RepoPath};
 
 use crate::datapack::DataPack;
 use crate::datastore::DataStore;
-use crate::error::KeyError;
 use crate::uniondatastore::UnionDataStore;
 
 pub struct DataPackUnion {
@@ -110,15 +109,12 @@ impl DataPackUnion {
     }
 
     /// Lookup Key. If the key is missing, scan for changes in the pack files and try once more.
-    fn get(&mut self, key: &Key) -> Fallible<Vec<u8>> {
-        match self.store.get(key) {
-            Ok(data) => return Ok(data),
-            Err(e) => match e.downcast_ref::<KeyError>() {
-                Some(_) => match self.rescan_paths() {
-                    ScanResult::ChangesDetected => self.store.get(key),
-                    ScanResult::NoChanges => Err(e),
-                },
-                None => Err(e),
+    fn get(&mut self, key: &Key) -> Fallible<Option<Vec<u8>>> {
+        match self.store.get(key)? {
+            Some(data) => return Ok(Some(data)),
+            None => match self.rescan_paths() {
+                ScanResult::ChangesDetected => self.store.get(key),
+                ScanResult::NoChanges => Ok(None),
             },
         }
     }
@@ -186,7 +182,7 @@ fn datapackunion_get_impl(
     name_len: usize,
     node: *const u8,
     node_len: usize,
-) -> Fallible<Vec<u8>> {
+) -> Fallible<Option<Vec<u8>>> {
     debug_assert!(!store.is_null());
     let store = unsafe { &mut *store };
     let key = make_key(name, name_len, node, node_len)?;
@@ -217,22 +213,20 @@ pub extern "C" fn revisionstore_datapackunion_get(
     node_len: usize,
 ) -> GetData {
     match datapackunion_get_impl(store, name, name_len, node, node_len) {
-        Ok(key) => GetData {
-            value: Box::into_raw(Box::new(key)),
+        Ok(Some(data)) => GetData {
+            value: Box::into_raw(Box::new(data)),
             error: ptr::null_mut(),
             is_key_error: false,
         },
-        Err(err) => match err.downcast_ref::<KeyError>() {
-            Some(_) => GetData {
-                value: ptr::null_mut(),
-                error: ptr::null_mut(),
-                is_key_error: true,
-            },
-            None => GetData {
-                value: ptr::null_mut(),
-                error: Box::into_raw(Box::new(format!("{}", err))),
-                is_key_error: false,
-            },
+        Ok(None) => GetData {
+            value: ptr::null_mut(),
+            error: ptr::null_mut(),
+            is_key_error: true,
+        },
+        Err(err) => GetData {
+            value: ptr::null_mut(),
+            error: Box::into_raw(Box::new(format!("{}", err))),
+            is_key_error: false,
         },
     }
 }

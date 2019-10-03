@@ -59,6 +59,6 @@ mod tests {
 
         let store = IndexedLogHistoryStore::new(tempdir.path().to_path_buf()).unwrap();
 
-        assert_eq!(store.get_node_info(&my_key).unwrap(), info);
+        assert_eq!(store.get_node_info(&my_key).unwrap().unwrap(), info);
     }
 }

@@ -12,7 +12,6 @@ use cpython::{
 use failure::{Error, Fallible};
 
 use revisionstore::datastore::{Delta, Metadata};
-use revisionstore::error::KeyError;
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 use crate::pyerror::pyerr_to_error;
@@ -23,8 +22,6 @@ pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
             py,
             (io_error.raw_os_error(), format!("{}", error.as_fail())),
         )
-    } else if error.downcast_ref::<KeyError>().is_some() {
-        PyErr::new::<exc::KeyError, _>(py, format!("{}", error.as_fail()))
     } else {
         PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error.as_fail()))
     }
@@ -150,4 +147,8 @@ pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
             None => None,
         },
     })
+}
+
+pub fn key_error(py: Python, key: &Key) -> PyErr {
+    PyErr::new::<exc::KeyError, _>(py, format!("Key not found {:?}", key))
 }

@@ -11,7 +11,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{format_err, Fallible};
+use failure::Fallible;
 
 use indexedlog::{
     log::IndexOutput,
@@ -24,7 +24,6 @@ use types::{
 
 use crate::{
     ancestors::{AncestorIterator, AncestorTraversal},
-    error::KeyError,
     historystore::{Ancestors, HistoryStore, MutableHistoryStore},
     indexedlogutil,
     localstore::LocalStore,
@@ -135,14 +134,15 @@ impl Entry {
     }
 
     /// Read an entry from the `IndexedLog` and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
+    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
         let mut log_entry = log.lookup(0, index_key)?;
-        let buf = log_entry
-            .nth(0)
-            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
+        let buf = match log_entry.nth(0) {
+            None => return Ok(None),
+            Some(buf) => buf?,
+        };
 
-        Self::from_slice(buf)
+        Self::from_slice(buf).map(Some)
     }
 
     /// Write an entry to the `IndexedLog`. See [`from_slice`] for the detail about the on-disk
@@ -223,14 +223,17 @@ impl LocalStore for IndexedLogHistoryStore {
         let inner = self.inner.read().unwrap();
         Ok(keys
             .iter()
-            .filter(|k| Entry::from_log(k, &inner.log).is_err())
+            .filter(|k| match Entry::from_log(k, &inner.log) {
+                Ok(None) | Err(_) => true,
+                Ok(Some(_)) => false,
+            })
             .map(|k| k.clone())
             .collect())
     }
 }
 
 impl HistoryStore for IndexedLogHistoryStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
         AncestorIterator::new(
             key,
             |k, _seen| self.get_node_info(k),
@@ -239,10 +242,13 @@ impl HistoryStore for IndexedLogHistoryStore {
         .collect()
     }
 
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let inner = self.inner.read().unwrap();
-        let entry = Entry::from_log(key, &inner.log)?;
-        Ok(entry.node_info())
+        let entry = match Entry::from_log(key, &inner.log)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
+        Ok(Some(entry.node_info()))
     }
 }
 
@@ -323,7 +329,7 @@ mod tests {
 
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let read_nodeinfo = log.get_node_info(&k)?;
-        assert_eq!(nodeinfo, read_nodeinfo);
+        assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
     }
 
@@ -341,7 +347,7 @@ mod tests {
         for (key, _) in nodes.iter() {
             log.get_node_info(&key)?;
             let response = log.get_ancestors(&key)?;
-            assert_eq!(&response, ancestors.get(&key).unwrap());
+            assert_eq!(response.as_ref(), ancestors.get(&key));
         }
         Ok(())
     }

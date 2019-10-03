@@ -305,28 +305,34 @@ impl DataPack {
 }
 
 impl DataStore for DataPack {
-    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
         Err(format_err!(
             "DataPack doesn't support raw get(), only getdeltachain"
         ))
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let entry = self.index.get_entry(&key.node)?;
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+        let entry = match self.index.get_entry(&key.node)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
         let data_entry = self.read_entry(entry.pack_entry_offset())?;
 
-        Ok(Delta {
+        Ok(Some(Delta {
             data: data_entry.delta()?,
             base: data_entry
                 .delta_base()
                 .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
             key: Key::new(key.path.clone(), data_entry.node().clone()),
-        })
+        }))
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
-        let mut next_entry = self.index.get_entry(&key.node)?;
+        let mut next_entry = match self.index.get_entry(&key.node)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
         loop {
             let data_entry = self.read_entry(next_entry.pack_entry_offset())?;
             chain.push(Delta {
@@ -344,12 +350,17 @@ impl DataStore for DataPack {
             }
         }
 
-        Ok(chain)
+        Ok(Some(chain))
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let index_entry = self.index.get_entry(&key.node)?;
-        Ok(self.read_entry(index_entry.pack_entry_offset())?.metadata)
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+        let index_entry = match self.index.get_entry(&key.node)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
+        Ok(Some(
+            self.read_entry(index_entry.pack_entry_offset())?.metadata,
+        ))
     }
 }
 
@@ -361,7 +372,10 @@ impl LocalStore for DataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| self.index.get_entry(&k.node).is_err())
+            .filter(|k| match self.index.get_entry(&k.node) {
+                Ok(None) | Err(_) => true,
+                Ok(Some(_)) => false,
+            })
             .map(|k| k.clone())
             .collect())
     }
@@ -504,7 +518,7 @@ pub mod tests {
 
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref metadata) in revisions.iter() {
-            let meta = pack.get_meta(&delta.key).unwrap();
+            let meta = pack.get_meta(&delta.key).unwrap().unwrap();
             assert_eq!(&meta, metadata);
         }
     }
@@ -534,7 +548,7 @@ pub mod tests {
 
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
-            let chain = pack.get_delta_chain(&delta.key).unwrap();
+            let chain = pack.get_delta_chain(&delta.key).unwrap().unwrap();
             assert_eq!(chain[0], *delta);
         }
     }
@@ -564,7 +578,7 @@ pub mod tests {
 
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref expected_delta, _) in revisions.iter() {
-            let delta = pack.get_delta(&expected_delta.key).unwrap();
+            let delta = pack.get_delta(&expected_delta.key).unwrap().unwrap();
             assert_eq!(expected_delta, &delta);
         }
     }
@@ -613,7 +627,7 @@ pub mod tests {
         ];
 
         for i in 0..2 {
-            let chain = pack.get_delta_chain(&revisions[i].0.key).unwrap();
+            let chain = pack.get_delta_chain(&revisions[i].0.key).unwrap().unwrap();
             assert_eq!(&chains[i], &chain);
         }
     }
@@ -713,7 +727,7 @@ pub mod tests {
         )];
 
         let pack = Rc::new(make_datapack(&tempdir, &revisions));
-        let delta = pack.get_delta(&revisions[0].0.key).unwrap();
+        let delta = pack.get_delta(&revisions[0].0.key).unwrap().unwrap();
         assert_eq!(delta.data, revisions[0].0.data);
     }
 

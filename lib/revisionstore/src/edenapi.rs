@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use failure::{format_err, Fallible};
+use failure::Fallible;
 use parking_lot::Mutex;
 
 use edenapi::EdenApi;
@@ -10,7 +10,6 @@ use types::Key;
 
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
-    error::KeyError,
     localstore::LocalStore,
 };
 
@@ -56,28 +55,28 @@ impl RemoteDataStore for EdenApiRemoteStore {
 }
 
 impl DataStore for EdenApiRemoteStore {
-    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
         unreachable!();
     }
 
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.lock().store.get_delta(key),
-            Err(_) => Err(KeyError::new(format_err!("Key {:?} not found remotely", key)).into()),
+            Err(_) => Ok(None),
         }
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.lock().store.get_delta_chain(key),
-            Err(_) => Err(KeyError::new(format_err!("Key {:?} not found remotely", key)).into()),
+            Err(_) => Ok(None),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
         match self.prefetch(vec![key.clone()]) {
             Ok(()) => self.inner.lock().store.get_meta(key),
-            Err(_) => Err(KeyError::new(format_err!("Key {:?} not found remotely", key)).into()),
+            Err(_) => Ok(None),
         }
     }
 }
@@ -114,17 +113,16 @@ mod tests {
         let edenapi = fake_edenapi(map);
 
         let remotestore = EdenApiRemoteStore::new(edenapi, Box::new(store.clone()));
-        assert_eq!(remotestore.get_delta(&k)?, d);
-        assert_eq!(store.get_delta(&k)?, d);
+        assert_eq!(remotestore.get_delta(&k)?.unwrap(), d);
+        assert_eq!(store.get_delta(&k)?.unwrap(), d);
 
         Ok(())
     }
 
     #[test]
-    #[should_panic(expected = "KeyError")]
-    fn test_missing() {
-        let tmp = TempDir::new().unwrap();
-        let store = IndexedLogDataStore::new(&tmp).unwrap();
+    fn test_missing() -> Fallible<()> {
+        let tmp = TempDir::new()?;
+        let store = IndexedLogDataStore::new(&tmp)?;
 
         let map = HashMap::new();
         let edenapi = fake_edenapi(map);
@@ -132,6 +130,7 @@ mod tests {
         let remotestore = EdenApiRemoteStore::new(edenapi, Box::new(store.clone()));
 
         let k = key("a", "1");
-        remotestore.get_delta(&k).unwrap();
+        assert_eq!(remotestore.get_delta(&k)?, None);
+        Ok(())
     }
 }

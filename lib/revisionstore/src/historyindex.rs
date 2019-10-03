@@ -19,7 +19,6 @@ use memmap::{Mmap, MmapOptions};
 
 use types::{Key, Node, RepoPath};
 
-use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;
 use crate::historypack::HistoryPackVersion;
 use crate::sliceext::SliceExt;
@@ -311,7 +310,7 @@ impl HistoryIndex {
         Ok(())
     }
 
-    pub fn get_file_entry(&self, key: &Key) -> Fallible<FileIndexEntry> {
+    pub fn get_file_entry(&self, key: &Key) -> Fallible<Option<FileIndexEntry>> {
         let filename_node = sha1(key.path.as_byte_slice());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
         let start = start + self.index_start;
@@ -320,20 +319,31 @@ impl HistoryIndex {
             .unwrap_or(self.index_end);
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = self.binary_search_files(&filename_node, buf)?;
+        let entry_offset = match self.binary_search_files(&filename_node, buf) {
+            None => return Ok(None),
+            Some(offset) => offset,
+        };
         self.read_file_entry((start + entry_offset) - self.index_start)
+            .map(Some)
     }
 
-    pub fn get_node_entry(&self, key: &Key) -> Fallible<NodeIndexEntry> {
-        let file_entry = self.get_file_entry(&key)?;
+    pub fn get_node_entry(&self, key: &Key) -> Fallible<Option<NodeIndexEntry>> {
+        let file_entry = match self.get_file_entry(&key)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
 
         let start = file_entry.node_index_offset as usize + 2 + key.path.as_byte_slice().len();
         let end = start + file_entry.node_index_size as usize;
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = self.binary_search_nodes(&key.node, &buf)?;
+        let entry_offset = match self.binary_search_nodes(&key.node, &buf) {
+            None => return Ok(None),
+            Some(offset) => offset,
+        };
 
         self.read_node_entry((start + entry_offset) - self.index_start)
+            .map(Some)
     }
 
     fn read_file_entry(&self, offset: usize) -> Fallible<FileIndexEntry> {
@@ -351,7 +361,7 @@ impl HistoryIndex {
 
     // These two binary_search_* functions are very similar, but I couldn't find a way to unify
     // them without using macros.
-    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
+    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / FILE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; FILE_ENTRY_LEN]] = unsafe {
@@ -362,15 +372,12 @@ impl HistoryIndex {
             None => Ordering::Greater,
         });
         match search_result {
-            Ok(offset) => Ok(offset * FILE_ENTRY_LEN),
-            Err(_offset) => Err(KeyError::new(
-                HistoryIndexError(format!("no node {:?} in slice", key)).into(),
-            )
-            .into()),
+            Ok(offset) => Some(offset * FILE_ENTRY_LEN),
+            Err(_offset) => None,
         }
     }
 
-    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
+    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / NODE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; NODE_ENTRY_LEN]] = unsafe {
@@ -381,11 +388,8 @@ impl HistoryIndex {
             None => Ordering::Greater,
         });
         match search_result {
-            Ok(offset) => Ok(offset * NODE_ENTRY_LEN),
-            Err(_offset) => Err(KeyError::new(
-                HistoryIndexError(format!("no node {:?} in slice", key)).into(),
-            )
-            .into()),
+            Ok(offset) => Some(offset * NODE_ENTRY_LEN),
+            Err(_offset) => None,
         }
     }
 
@@ -507,7 +511,7 @@ mod tests {
             // Lookup each file section
             for (path, location) in file_sections {
                 let my_key = Key::new(path.to_owned(), Node::null_id().clone());
-                let entry = index.get_file_entry(&my_key).unwrap();
+                let entry = index.get_file_entry(&my_key).unwrap().unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
             }
@@ -516,7 +520,7 @@ mod tests {
             for (path, node_map) in file_nodes {
                 for (key, location) in node_map {
                     assert_eq!(path, key.path.as_ref());
-                    let entry = index.get_node_entry(&key).unwrap();
+                    let entry = index.get_node_entry(&key).unwrap().unwrap();
                     assert_eq!(key.node, entry.node);
                     assert_eq!(location.offset, entry.offset);
                 }

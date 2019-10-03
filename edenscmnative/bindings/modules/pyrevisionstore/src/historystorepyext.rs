@@ -13,7 +13,7 @@ use revisionstore::{HistoryStore, MutableHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{
-    from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_node, to_path, to_pyerr,
+    from_key, from_key_to_tuple, from_tuple_to_key, key_error, to_key, to_node, to_path, to_pyerr,
 };
 
 pub trait HistoryStorePyExt {
@@ -43,7 +43,11 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
 impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
     fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
-        let ancestors = self.get_ancestors(&key).map_err(|e| to_pyerr(py, &e))?;
+        let ancestors = self
+            .get_ancestors(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
+
         let ancestors = ancestors
             .iter()
             .map(|(k, v)| (PyBytes::new(py, k.node.as_ref()), from_node_info(py, k, v)));
@@ -73,7 +77,11 @@ impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
 
     fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
         let key = to_key(py, name, node)?;
-        let info = self.get_node_info(&key).map_err(|e| to_pyerr(py, &e))?;
+        let info = self
+            .get_node_info(&key)
+            .map_err(|e| to_pyerr(py, &e))?
+            .ok_or_else(|| key_error(py, &key))?;
+
         Ok(from_node_info(py, &key, &info))
     }
 }
@@ -135,7 +143,7 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
-            let node_info = self.get_node_info(&key)?;
+            let node_info = self.get_node_info(&key)?.unwrap();
             let (name, node) = from_key(py, &key);
             let copyfrom = if key.path != node_info.parents[0].path {
                 if node_info.parents[0].path.is_empty() {

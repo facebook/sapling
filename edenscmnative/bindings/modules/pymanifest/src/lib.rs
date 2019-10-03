@@ -9,7 +9,7 @@ use std::{borrow::Borrow, cell::RefCell, ops::Deref, str, sync::Arc};
 
 use bytes::Bytes;
 use cpython::*;
-use failure::Fallible;
+use failure::{format_err, Fallible};
 
 use cpython_ext::{pyset_add, pyset_new};
 use cpython_failure::ResultPyErrExt;
@@ -34,7 +34,10 @@ impl<T> ManifestStore<T> {
 impl<T: DataStore + RemoteDataStore> manifest::TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
         let key = Key::new(path.to_owned(), node);
-        self.underlying.get(&key).map(|data| Bytes::from(data))
+        self.underlying
+            .get(&key)?
+            .ok_or_else(|| format_err!("Key {:?} not found in manifest", key))
+            .map(|data| Bytes::from(data))
     }
 
     fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Fallible<()> {
