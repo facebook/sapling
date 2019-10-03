@@ -7,6 +7,18 @@ use std::{fs, io::Write, path::Path, time::Instant};
 
 /// Rename a path and write down error messages for investigation purpose.
 pub(crate) fn debug_backup_error(path: &Path, error: failure::Error) -> failure::Fallible<()> {
+    #[cfg(unix)]
+    {
+        if let Ok(hostname) = fs::read_to_string("/etc/hostname") {
+            if hostname.starts_with("od") {
+                // Preserve the error. Do not delete anything.
+                // Bandaid to help investiate some reported issues where
+                // 'error.txt' is missing.
+                return Err(error);
+            }
+        }
+    }
+
     let backup_path = path.with_extension("bak");
     let error_path = backup_path.join("error.txt");
     if backup_path.exists() {
