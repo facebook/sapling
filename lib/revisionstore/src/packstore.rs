@@ -260,7 +260,7 @@ impl<T: LocalStore + Repackable> PackStore<T> {
     }
 
     /// Execute the `op` function. May call `rescan` when `op` fails with `KeyError`.
-    fn run<R, F>(&self, op: F, key: &Key) -> Fallible<Option<R>>
+    fn run<R, F>(&self, op: F) -> Fallible<Option<R>>
     where
         F: Fn(&T) -> Fallible<Option<R>>,
     {
@@ -329,29 +329,29 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
 
 impl DataStore for DataPackStore {
     fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
-        self.run(|store| store.get(key), key)
+        self.run(|store| store.get(key))
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
-        self.run(|store| store.get_delta(key), key)
+        self.run(|store| store.get_delta(key))
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
-        self.run(|store| store.get_delta_chain(key), key)
+        self.run(|store| store.get_delta_chain(key))
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
-        self.run(|store| store.get_meta(key), key)
+        self.run(|store| store.get_meta(key))
     }
 }
 
 impl HistoryStore for HistoryPackStore {
     fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        self.run(|store| store.get_ancestors(key), key)
+        self.run(|store| store.get_ancestors(key))
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
-        self.run(|store| store.get_node_info(key), key)
+        self.run(|store| store.get_node_info(key))
     }
 }
 
