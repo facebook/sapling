@@ -69,7 +69,6 @@ use crate::lock::ScopedFileLock;
 use crate::utils::{mmap_empty, mmap_readonly};
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use failure::{self, Fallible};
 use fs2::FileExt;
 use memmap::Mmap;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
@@ -2022,10 +2021,12 @@ impl Index {
     ///
     /// For in-memory-only indexes, this function does nothing and returns 0,
     /// unless read-only was set at open time.
-    pub fn flush(&mut self) -> Fallible<u64> {
+    pub fn flush(&mut self) -> crate::Result<u64> {
         if self.open_options.write == Some(false) {
-            let err: io::Error = io::ErrorKind::PermissionDenied.into();
-            return Err(err.into());
+            return Err(crate::Error::path(
+                self.path(),
+                "cannot flush: Index opened with read-only mode",
+            ));
         }
         if self.file.is_none() {
             // Why is this Ok, not Err?
@@ -2052,10 +2053,14 @@ impl Index {
         {
             let mut offset_map = OffsetMap::empty_for_index(self);
             let estimated_dirty_bytes = self.dirty_links.len() * 50;
-            let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)?;
-            let len = lock.as_mut().seek(SeekFrom::End(0))?;
+            let path = self.path.clone(); // for error messages; and make the borrowck happy.
+            let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)
+                .context(&path, "cannot lock")?;
+            let len = lock
+                .as_mut()
+                .seek(SeekFrom::End(0))
+                .context(&path, "cannot seek to end")?;
             if len < old_len {
-                let path = &self.path;
                 let message = format!(
                     "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     len, old_len
@@ -2064,7 +2069,7 @@ impl Index {
                 // file, potentially recreating it. We haven't checked the
                 // new content, so it's not considered as "data corruption".
                 // TODO: Review this decision.
-                let err = crate::Error::path(path, message);
+                let err = crate::Error::path(&path, message);
                 return Err(err.into());
             }
 
@@ -2075,14 +2080,14 @@ impl Index {
             // Latter entries depend on former entries.
 
             if len == 0 {
-                buf.write_all(&[TYPE_HEAD])?;
+                buf.write_all(&[TYPE_HEAD]).infallible()?;
             }
 
             for (i, entry) in self.dirty_keys.iter().enumerate() {
                 if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
                     offset_map.key_map[i] = offset;
-                    entry.write_to(&mut buf, &offset_map)?;
+                    entry.write_to(&mut buf, &offset_map).infallible()?;
                 };
             }
 
@@ -2109,7 +2114,7 @@ impl Index {
                 if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
                     offset_map.ext_key_map[i] = offset;
-                    entry.write_to(&mut buf, &offset_map)?;
+                    entry.write_to(&mut buf, &offset_map).infallible()?;
                 }
             }
 
@@ -2117,7 +2122,7 @@ impl Index {
                 if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
                     offset_map.link_map[i] = offset;
-                    entry.write_to(&mut buf, &offset_map)?;
+                    entry.write_to(&mut buf, &offset_map).infallible()?;
                 }
             }
 
@@ -2126,31 +2131,41 @@ impl Index {
                 if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
                     offset_map.leaf_map[i] = offset;
-                    entry.write_noninline_to(&mut buf, &offset_map)?;
+                    entry
+                        .write_noninline_to(&mut buf, &offset_map)
+                        .infallible()?;
                 }
             }
 
             // Write Radix entries in reversed order since former ones might refer to latter ones.
             for (i, entry) in self.dirty_radixes.iter().rev().enumerate() {
                 let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map)?;
+                entry.write_to(&mut buf, &offset_map).infallible()?;
                 offset_map.radix_map[i] = offset;
             }
 
-            self.dirty_root.write_to(&mut buf, &offset_map)?;
+            self.dirty_root
+                .write_to(&mut buf, &offset_map)
+                .infallible()?;
             new_len = buf.len() as u64 + len;
-            lock.as_mut().write_all(&buf)?;
+            lock.as_mut()
+                .write_all(&buf)
+                .context(&path, "cannot write new data to index")?;
 
             if self.open_options.fsync {
-                lock.as_mut().sync_all()?;
+                lock.as_mut().sync_all().context(&path, "cannot sync")?;
             }
 
             // Remap and update root since length has changed
-            let (mmap, mmap_len) = mmap_readonly(lock.as_ref(), None)?;
+            let (mmap, mmap_len) =
+                mmap_readonly(lock.as_ref(), None).context(&path, "cannot mmap")?;
             self.buf = mmap;
 
+            // 'path' should not have changed.
+            debug_assert_eq!(&self.path, &path);
+
             // This is to workaround the borrow checker.
-            let this = SimpleIndexBuf(&self.buf, &self.path, &None);
+            let this = SimpleIndexBuf(&self.buf, &path, &None);
 
             // Sanity check - the length should be expected. Otherwise, the lock
             // is somehow ineffective.
@@ -2217,7 +2232,10 @@ impl Index {
 
     /// Scan entries which match the given prefix in base16 form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_base16(&self, mut base16: impl Iterator<Item = u8>) -> Fallible<RangeIter> {
+    pub fn scan_prefix_base16(
+        &self,
+        mut base16: impl Iterator<Item = u8>,
+    ) -> crate::Result<RangeIter> {
         let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut front_stack = Vec::<IterState>::new();
 
@@ -2273,13 +2291,13 @@ impl Index {
 
     /// Scan entries which match the given prefix in base256 form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
-    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<RangeIter> {
+    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
     }
 
     /// Scan entries which match the given prefix in hex form.
     /// Return [`RangeIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<RangeIter> {
+    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter> {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
         self.scan_prefix_base16(base16)
@@ -2289,7 +2307,7 @@ impl Index {
     ///
     /// Returns a double-ended iterator, which provides accesses to keys and
     /// values.
-    pub fn range<'a>(&self, range: impl RangeBounds<&'a [u8]>) -> Fallible<RangeIter> {
+    pub fn range<'a>(&self, range: impl RangeBounds<&'a [u8]>) -> crate::Result<RangeIter> {
         let is_empty_range = match (range.start_bound(), range.end_bound()) {
             (Included(start), Included(end)) => start > end,
             (Included(start), Excluded(end)) => start > end,
@@ -2311,7 +2329,7 @@ impl Index {
     /// Insert a key-value pair. The value will be the head of the linked list.
     /// That is, `get(key).values().first()` will return the newly inserted
     /// value.
-    pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> Fallible<()> {
+    pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> crate::Result<()> {
         self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
     }
 
@@ -2330,7 +2348,7 @@ impl Index {
         key: InsertKey,
         value: u64,
         link: Option<LinkOffset>,
-    ) -> Fallible<()> {
+    ) -> crate::Result<()> {
         let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut step = 0;
         let (key, key_buf_offset) = match key {
@@ -2435,7 +2453,11 @@ impl Index {
     // Calculate the [`IterState`] stack used by [`RangeIter`].
     // `side` is the side of the `bound`, starting side of the iteration,
     // the opposite of "towards" side.
-    fn iter_stack_by_bound(&self, bound: Bound<&&[u8]>, side: Side) -> Fallible<Vec<IterState>> {
+    fn iter_stack_by_bound(
+        &self,
+        bound: Bound<&&[u8]>,
+        side: Side,
+    ) -> crate::Result<Vec<IterState>> {
         let root_radix = self.dirty_root.radix_offset;
         let (inclusive, mut base16iter) = match bound {
             Unbounded => {
@@ -2511,7 +2533,7 @@ impl Index {
         child: u8,
         old_link_offset: LinkOffset,
         new_link_offset: LinkOffset,
-    ) -> Fallible<()> {
+    ) -> crate::Result<()> {
         // This is probably the most complex part. Here are some explanation about input parameters
         // and what this function is supposed to do for some cases:
         //
@@ -3357,7 +3379,7 @@ mod tests {
         // In case error happens, the iteration still stops.
         index.insert(&[], 5).expect("insert");
         index.dirty_links[0].next_link_offset = LinkOffset(Offset(1000));
-        // Note: `collect` can return `Fallible<Vec<u64>>`. But that does not exercises the
+        // Note: `collect` can return `crate::Result<Vec<u64>>`. But that does not exercises the
         // infinite loop avoidance logic since `collect` stops iteration at the first error.
         let list_errored: Vec<crate::Result<u64>> =
             index.get(&[]).unwrap().values(&index).collect();

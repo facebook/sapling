@@ -617,7 +617,7 @@ impl Log {
         self.update_indexes_for_on_disk_entries()?;
         for i in indexes_to_flush {
             let new_length = self.indexes[i].flush();
-            let new_length = self.maybe_set_index_error(new_length)?;
+            let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
             let name = self.open_options.index_defs[i].name.to_string();
             self.meta.indexes.insert(name, new_length);
         }
@@ -665,7 +665,7 @@ impl Log {
             // Flush all indexes.
             for i in 0..self.indexes.len() {
                 let new_length = self.indexes[i].flush();
-                let new_length = self.maybe_set_index_error(new_length)?;
+                let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
                 let name = self.open_options.index_defs[i].name.to_string();
                 self.meta.indexes.insert(name, new_length);
             }
