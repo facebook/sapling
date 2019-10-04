@@ -6,7 +6,6 @@ edition = "2018"
 [dependencies]
 byteorder = "1.2.7"
 bytes = "0.4.10"
-failure = "0.1.5"
 fs2 = "0.4.3"
 memmap = "0.7.0"
 tempfile = "3.0.7"

@@ -60,7 +60,7 @@ mod unix_tests {
                 let path = dir.path().join("rotatelog");
                 std::thread::spawn(move || {
                     barrier.wait();
-                    let run = || -> failure::Fallible<()> {
+                    let run = || -> indexedlog::Result<()> {
                         // This might fail with fileno limit
                         let mut log = open_opts.clone().open(&path)?;
                         for j in 1..=WRITE_COUNT_PER_THREAD {
