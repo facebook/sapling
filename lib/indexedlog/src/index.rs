@@ -332,12 +332,12 @@ impl RadixOffset {
 
             if Self::parse_have_link_from_flag(flag) {
                 let bitmap_start = flag_start + RADIX_FLAG_BYTES;
-                let bitmap = Self::read_bitmap_unchecked(&index.buf, bitmap_start)?;
+                let bitmap = Self::read_bitmap_unchecked(index, bitmap_start)?;
                 let int_size = Self::parse_int_size_from_flag(flag);
                 let link_offset =
                     bitmap_start + RADIX_BITMAP_BYTES + bitmap.count_ones() as usize * int_size;
                 index.verify_checksum(link_offset as u64, int_size as u64)?;
-                let raw_offset = Self::read_raw_int_unchecked(&index.buf, int_size, link_offset)?;
+                let raw_offset = Self::read_raw_int_unchecked(index, int_size, link_offset)?;
                 LinkOffset::from_offset(Offset::from_disk(raw_offset)?, &index.buf, &index.checksum)
             } else {
                 Ok(LinkOffset::default())
@@ -358,7 +358,7 @@ impl RadixOffset {
             let bitmap_start = flag_start + RADIX_FLAG_BYTES;
             // Integrity of "bitmap" is checked below to reduce calls to verify_checksum, since
             // this is a hot path.
-            let bitmap = Self::read_bitmap_unchecked(&index.buf, bitmap_start)?;
+            let bitmap = Self::read_bitmap_unchecked(index, bitmap_start)?;
             let has_child = (1u16 << i) & bitmap != 0;
             if has_child {
                 let flag = *index
@@ -372,7 +372,7 @@ impl RadixOffset {
                     flag_start as u64,
                     (child_offset + int_size - flag_start) as u64,
                 )?;
-                let raw_offset = Self::read_raw_int_unchecked(&index.buf, int_size, child_offset)?;
+                let raw_offset = Self::read_raw_int_unchecked(index, int_size, child_offset)?;
                 Ok(Offset::from_disk(raw_offset)?)
             } else {
                 index.verify_checksum(bitmap_start as u64, RADIX_BITMAP_BYTES as u64)?;
@@ -388,7 +388,7 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(self)
         } else {
-            let entry = MemRadix::read_from(&index.buf, u64::from(self), &index.checksum)?;
+            let entry = MemRadix::read_from(&index, u64::from(self), &index.checksum)?;
             let len = index.dirty_radixes.len();
             index.dirty_radixes.push(entry);
             Ok(RadixOffset::from_dirty_index(len))
@@ -442,27 +442,37 @@ impl RadixOffset {
 
     /// Read bitmap from the given offset without integrity check.
     #[inline]
-    fn read_bitmap_unchecked(buf: &[u8], bitmap_offset: usize) -> Fallible<u16> {
+    fn read_bitmap_unchecked(index: &Index, bitmap_offset: usize) -> crate::Result<u16> {
         debug_assert_eq!(RADIX_BITMAP_BYTES, size_of::<u16>());
-        Ok(LittleEndian::read_u16(
-            buf.get(bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES)
-                .ok_or_else(|| range_error(bitmap_offset, RADIX_BITMAP_BYTES))?,
-        ))
+        let buf = &index.buf;
+        buf.get(bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES)
+            .map(|buf| LittleEndian::read_u16(buf))
+            .ok_or_else(|| {
+                crate::Error::corruption(
+                    &index.path,
+                    format!("cannot read radix bitmap at {}", bitmap_offset),
+                )
+            })
     }
 
     /// Read integer from the given offset without integrity check.
     #[inline]
-    fn read_raw_int_unchecked(buf: &[u8], int_size: usize, offset: usize) -> Fallible<u64> {
-        Ok(match int_size {
-            4 => LittleEndian::read_u32(
-                buf.get(offset..offset + 4)
-                    .ok_or_else(|| range_error(offset, 4))?,
-            ) as u64,
-            8 => LittleEndian::read_u64(
-                buf.get(offset..offset + 8)
-                    .ok_or_else(|| range_error(offset, 8))?,
-            ),
+    fn read_raw_int_unchecked(index: &Index, int_size: usize, offset: usize) -> crate::Result<u64> {
+        let buf = &index.buf;
+        let result = match int_size {
+            4 => buf
+                .get(offset..offset + 4)
+                .map(|buf| LittleEndian::read_u32(buf) as u64),
+            8 => buf
+                .get(offset..offset + 8)
+                .map(|buf| LittleEndian::read_u64(buf)),
             _ => unreachable!(),
+        };
+        result.ok_or_else(|| {
+            crate::Error::corruption(
+                &index.path,
+                format!("cannot read {}-byte int at {}", int_size, offset),
+            )
         })
     }
 }
@@ -901,8 +911,8 @@ fn check_type(buf: &[u8], offset: usize, expected: u8) -> Fallible<()> {
 }
 
 impl MemRadix {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
-        let buf = buf.as_ref();
+    fn read_from(index: &Index, offset: u64, checksum: &Checksum) -> Fallible<Self> {
+        let buf = &index.buf;
         let offset = offset as usize;
         let mut pos = 0;
 
@@ -915,7 +925,7 @@ impl MemRadix {
             .ok_or_else(|| range_error(offset + pos, 1))?;
         pos += RADIX_FLAG_BYTES;
 
-        let bitmap = RadixOffset::read_bitmap_unchecked(buf, offset + pos)?;
+        let bitmap = RadixOffset::read_bitmap_unchecked(index, offset + pos)?;
         pos += RADIX_BITMAP_BYTES;
 
         let int_size = RadixOffset::parse_int_size_from_flag(flag);
@@ -924,7 +934,7 @@ impl MemRadix {
         for i in 0..16 {
             if (bitmap >> i) & 1 == 1 {
                 offsets[i] = Offset::from_disk(RadixOffset::read_raw_int_unchecked(
-                    buf,
+                    index,
                     int_size,
                     offset + pos,
                 )?)?;
@@ -933,7 +943,7 @@ impl MemRadix {
         }
 
         let link_offset = if RadixOffset::parse_have_link_from_flag(flag) {
-            let raw_offset = RadixOffset::read_raw_int_unchecked(buf, int_size, offset + pos)?;
+            let raw_offset = RadixOffset::read_raw_int_unchecked(index, int_size, offset + pos)?;
             pos += int_size;
             LinkOffset::from_offset(Offset::from_disk(raw_offset)?, buf, checksum)?
         } else {
@@ -2531,7 +2541,7 @@ impl Debug for Index {
             let i = i as u64;
             match type_int {
                 TYPE_RADIX => {
-                    let e = MemRadix::read_from(&self.buf, i, &None).expect("read");
+                    let e = MemRadix::read_from(&self, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
