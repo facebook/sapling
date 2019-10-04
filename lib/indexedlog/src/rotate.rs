@@ -142,20 +142,26 @@ impl OpenOptions {
                                     // latest is fine, but logs cannot be read.
                                     // Try auto recover by creating an empty log.
                                     let latest = latest.wrapping_add(1);
-                                    let new_log = create_empty_log(Some(dir), &self, latest);
-                                    if let Ok(new_log) = new_log {
-                                        if let Ok(logs) = read_logs(dir, &self, latest) {
-                                            (latest, logs)
-                                        } else {
-                                            (latest, vec![new_log])
+                                    match create_empty_log(Some(dir), &self, latest) {
+                                        Ok(new_log) => {
+                                            if let Ok(logs) = read_logs(dir, &self, latest) {
+                                                (latest, logs)
+                                            } else {
+                                                (latest, vec![new_log])
+                                            }
                                         }
-                                    } else {
-                                        return Err(err
-                                            .context(errors::path_data_error(
-                                                dir,
-                                                format!("cannot create new log {}", latest),
-                                            ))
+                                        Err(new_log_err) => {
+                                            let high_level_error = errors::path_data_error(dir, format!("cannot create new empty log {} or read existing log", latest));
+                                            // There are 2 contexts:
+                                            // - Why existing logs cannot be read?
+                                            // - Why a new log cannot be created?
+                                            // Record both of them.
+                                            return Err(failure::Error::from(
+                                                new_log_err.context(err),
+                                            )
+                                            .context(high_level_error)
                                             .into());
+                                        }
                                     }
                                 }
                             }
@@ -507,25 +513,29 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
     let mut remaining = open_options.max_log_count;
     while remaining > 0 {
         let log_path = dir.join(format!("{}", current));
-        if let Ok(log) = open_options
+        match open_options
             .log_open_options
             .clone()
             .create(false)
             .open(&log_path)
         {
-            logs.push(log);
-            current = current.wrapping_sub(1);
-            remaining -= 1;
-        } else {
-            break;
+            Ok(log) => {
+                logs.push(log);
+                current = current.wrapping_sub(1);
+                remaining -= 1;
+            }
+            Err(err) => {
+                if logs.is_empty() {
+                    let high_level_error = errors::path_data_error(&dir, "no valid logs found");
+                    return Err(err.context(high_level_error).into());
+                } else {
+                    break;
+                }
+            }
         }
     }
 
-    if logs.is_empty() {
-        Err(errors::path_data_error(&dir, "no valid logs found"))?
-    } else {
-        Ok(logs)
-    }
+    Ok(logs)
 }
 
 fn read_latest_and_logs(dir: &Path, open_options: &OpenOptions) -> Fallible<(u8, Vec<Log>)> {
