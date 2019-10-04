@@ -361,8 +361,7 @@ impl ChecksumTable {
             }
 
             // Write changes to disk
-            atomic_write(&self.checksum_path, &buf, self.fsync)
-                .context(&self.checksum_path, "cannot atomic write")?;
+            atomic_write(&self.checksum_path, &buf, self.fsync)?;
 
             // Update fields
             self.buf = mmap;

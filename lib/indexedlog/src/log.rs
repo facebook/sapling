@@ -670,9 +670,7 @@ impl Log {
 
             // Step 5: Write the updated meta file.
             let meta_path = self.dir.as_ref().unwrap().join(META_FILE);
-            self.meta
-                .write_file(&meta_path, self.open_options.fsync)
-                .context(&meta_path, "cannot write Log metadata")?;
+            self.meta.write_file(&meta_path, self.open_options.fsync)?;
 
             Ok(self.meta.primary_len)
         })();
@@ -720,12 +718,7 @@ impl Log {
                 }
 
                 let meta_path = dir.join(META_FILE);
-                self.meta
-                    .write_file(&meta_path, self.open_options.fsync)
-                    .context(
-                        &meta_path,
-                        "cannot write Log metadata (with finalized indexes)",
-                    )?;
+                self.meta.write_file(&meta_path, self.open_options.fsync)?;
             }
             Ok(())
         })();
@@ -779,9 +772,7 @@ impl Log {
                     self.meta.indexes.insert(name.to_string(), 0);
                     self.meta
                         .write_file(&meta_path, self.open_options.fsync)
-                        .context(&meta_path, || {
-                            format!("cannot update metadata (before replacing index {:?})", name)
-                        })?;
+                        .context(|| format!("  before replacing index {:?})", name))?;
 
                     let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                     tmp.persist(&path).map_err(|e| {
@@ -798,9 +789,7 @@ impl Log {
                     self.meta.indexes.insert(name.to_string(), index_len);
                     self.meta
                         .write_file(&meta_path, self.open_options.fsync)
-                        .context(&meta_path, || {
-                            format!("cannot update metadata (after replacing index {:?})", name)
-                        })?;
+                        .context(|| format!("  after replacing index {:?}", name))?;
                 }
             }
 
@@ -883,9 +872,7 @@ impl Log {
                     self.meta.primary_len = valid_len;
                     self.meta.indexes.clear();
                     let meta_path = dir.join(META_FILE);
-                    self.meta
-                        .write_file(&meta_path, self.open_options.fsync)
-                        .context(&meta_path, "cannot write")?;
+                    self.meta.write_file(&meta_path, self.open_options.fsync)?;
 
                     // Truncate the file!
                     primary_file
@@ -1187,8 +1174,7 @@ impl Log {
                         indexes: BTreeMap::new(),
                     };
                     // An empty meta file is easy to recreate. No need to use fsync.
-                    meta.write_file(&meta_path, false)
-                        .context(&meta_path, "cannot write")?;
+                    meta.write_file(&meta_path, false)?;
                     Ok(meta)
                 } else {
                     Err(err).context(&meta_path, "cannot read")
@@ -1936,9 +1922,9 @@ impl LogMetadata {
         Self::read(&mut cur)
     }
 
-    pub fn write_file<P: AsRef<Path>>(&self, path: P, fsync: bool) -> io::Result<()> {
+    pub fn write_file<P: AsRef<Path>>(&self, path: P, fsync: bool) -> crate::Result<()> {
         let mut buf = Vec::new();
-        self.write(&mut buf)?;
+        self.write(&mut buf).infallible()?;
         atomic_write(path, &buf, fsync)?;
         Ok(())
     }

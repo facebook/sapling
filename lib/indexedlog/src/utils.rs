@@ -10,7 +10,7 @@ use std::{
     path::Path,
 };
 
-use crate::errors::IoResultExt;
+use crate::errors::{IoResultExt, ResultExt};
 use memmap::{Mmap, MmapOptions};
 use twox_hash::{XxHash, XxHash32};
 
@@ -115,26 +115,49 @@ pub fn atomic_write(
     path: impl AsRef<Path>,
     content: impl AsRef<[u8]>,
     fsync: bool,
-) -> io::Result<()> {
+) -> crate::Result<()> {
     let path = path.as_ref();
-    let dir = path.parent().expect("path has a parent");
-    let mut file = tempfile::NamedTempFile::new_in(dir)?;
-    file.as_file_mut().write_all(content.as_ref())?;
-    if fsync {
-        file.as_file_mut().sync_data()?;
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // The tempfile crate is working on adding a way to do this automatically, until then, we
-        // need to do that by hand.
-        // https://github.com/Stebalien/tempfile/pull/61
-        let permissions = PermissionsExt::from_mode(0o664);
-        file.as_file().set_permissions(permissions)?;
-    }
-    let file = file.persist(path)?;
-    if fsync {
-        file.sync_all()?;
-    }
-    Ok(())
+    let content = content.as_ref();
+    let result: crate::Result<_> = {
+        let dir = path.parent().expect("path has a parent");
+        let mut file =
+            tempfile::NamedTempFile::new_in(dir).context(&dir, "cannot create tempfile")?;
+        file.as_file_mut()
+            .write_all(content)
+            .context(&file.path(), "cannot write to tempfile")?;
+        if fsync {
+            file.as_file_mut()
+                .sync_data()
+                .context(&file.path(), "cannot fdatasync")?;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // The tempfile crate is working on adding a way to do this automatically, until then, we
+            // need to do that by hand.
+            // https://github.com/Stebalien/tempfile/pull/61
+            let permissions = PermissionsExt::from_mode(0o664);
+            file.as_file()
+                .set_permissions(permissions)
+                .context(&file.path(), "cannot chmod")?;
+        }
+        let file = file
+            .persist(path)
+            .map_err(|e| crate::Error::wrap(Box::new(e), "cannot persist"))?;
+        if fsync {
+            file.sync_all().context(path, "cannot fsync")?;
+        }
+        Ok(())
+    };
+    result.context(|| {
+        let content_desc = if content.len() < 128 {
+            format!("{:?}", content)
+        } else {
+            format!("<{}-byte slice>", content.len())
+        };
+        format!(
+            "  in atomic_write(path={:?}, content={}) ",
+            path, content_desc
+        )
+    })
 }
