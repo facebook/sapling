@@ -84,6 +84,7 @@ def extsetup(ui):
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
     extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
     extensions.wrapfunction(templatekw, "showgraphnode", _showgraphnode)
+    templatekw.keywords["graphnode"] = templatekw.showgraphnode
     extensions.wrapfunction(
         bundlerepo.bundlerepository, "_handlebundle2part", _handlebundle2part
     )

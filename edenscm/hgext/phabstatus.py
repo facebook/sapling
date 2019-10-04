@@ -135,7 +135,7 @@ def populateresponseforphab(repo, diffnum):
         # Remove it so we will bail out earlier next time.
         del repo._phabstatusrevs
 
-    alldiffnumbers = [getdiffnum(repo, repo[rev]) for rev in next_revs]
+    alldiffnumbers = [getdiffnum(repo, repo.unfiltered()[rev]) for rev in next_revs]
     okdiffnumbers = set(d for d in alldiffnumbers if d is not None)
     # Make sure we always include the requested diff number
     okdiffnumbers.add(diffnum)
