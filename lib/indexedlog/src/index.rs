@@ -64,7 +64,6 @@ use std::sync::Arc;
 
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
-use crate::errors::{data_error, parameter_error, path_data_error};
 use crate::lock::ScopedFileLock;
 use crate::utils::{mmap_empty, mmap_readonly};
 
@@ -191,9 +190,9 @@ impl Offset {
     /// Convert `Fallible<u64>` read from disk to a non-dirty `Offset`.
     /// Return [`errors::IndexError`] if the offset is dirty.
     #[inline]
-    fn from_disk(value: u64) -> Fallible<Self> {
+    fn from_disk(index: impl IndexBuf, value: u64) -> crate::Result<Self> {
         if value >= DIRTY_OFFSET {
-            Err(data_error(format!("illegal disk offset {}", value)))
+            Err(index.corruption(format!("illegal disk offset {}", value)))
         } else {
             Ok(Offset(value))
         }
@@ -207,8 +206,8 @@ impl Offset {
     }
 
     /// Convert to `TypedOffset`.
-    fn to_typed(self, index: impl IndexBuf) -> Fallible<TypedOffset> {
-        let type_int = self.type_int(index)?;
+    fn to_typed(self, index: impl IndexBuf) -> crate::Result<TypedOffset> {
+        let type_int = self.type_int(&index)?;
         match type_int {
             TYPE_RADIX => Ok(TypedOffset::Radix(RadixOffset(self))),
             TYPE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
@@ -217,7 +216,7 @@ impl Offset {
             TYPE_EXT_KEY => Ok(TypedOffset::ExtKey(ExtKeyOffset(self))),
             // LeafOffset handles inline transparently.
             TYPE_INLINE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
-            _ => Err(data_error(format!("type {} is unsupported", type_int))),
+            _ => Err(index.corruption(format!("type {} is unsupported", type_int))),
         }
     }
 
@@ -283,15 +282,15 @@ trait TypedOffsetMethods: Sized {
     }
 
     #[inline]
-    fn from_offset(offset: Offset, index: impl IndexBuf) -> Fallible<Self> {
+    fn from_offset(offset: Offset, index: impl IndexBuf) -> crate::Result<Self> {
         if offset.is_null() {
             Ok(Self::from_offset_unchecked(offset))
         } else {
-            let type_int = offset.type_int(index)?;
+            let type_int = offset.type_int(&index)?;
             if type_int == Self::type_int() {
                 Ok(Self::from_offset_unchecked(offset))
             } else {
-                Err(data_error("inconsistent type"))
+                Err(index.corruption(format!("inconsistent type at {:?}", offset)))
             }
         }
     }
@@ -344,7 +343,10 @@ impl RadixOffset {
                     bitmap_start + RADIX_BITMAP_BYTES + bitmap.count_ones() as usize * int_size;
                 index.verify_checksum(link_offset as u64, int_size as u64)?;
                 let raw_offset = Self::read_raw_int_unchecked(index, int_size, link_offset)?;
-                LinkOffset::from_offset(Offset::from_disk(raw_offset)?, index)
+                Ok(LinkOffset::from_offset(
+                    Offset::from_disk(index, raw_offset)?,
+                    index,
+                )?)
             } else {
                 Ok(LinkOffset::default())
             }
@@ -379,7 +381,7 @@ impl RadixOffset {
                     (child_offset + int_size - flag_start) as u64,
                 )?;
                 let raw_offset = Self::read_raw_int_unchecked(index, int_size, child_offset)?;
-                Ok(Offset::from_disk(raw_offset)?)
+                Ok(Offset::from_disk(index, raw_offset)?)
             } else {
                 index.verify_checksum(bitmap_start as u64, RADIX_BITMAP_BYTES as u64)?;
                 Ok(Offset::default())
@@ -490,7 +492,7 @@ fn extract_key_content(index: &Index, key_offset: Offset) -> Fallible<&[u8]> {
         TypedOffset::Key(x) => Ok(x.key_content(index)?),
         TypedOffset::ExtKey(x) => Ok(x.key_content(index)?),
         _ => Err(index
-            .data_error(format!("unexpected key type at {}", key_offset.0))
+            .corruption(format!("unexpected key type at {}", key_offset.0))
             .into()),
     }
 }
@@ -508,8 +510,10 @@ impl LeafOffset {
                 TYPE_INLINE_LEAF => {
                     let raw_key_offset = u64::from(self) + TYPE_BYTES as u64;
                     // PERF: Consider skip checksum for this read.
-                    let key_offset =
-                        ExtKeyOffset::from_offset(Offset::from_disk(raw_key_offset)?, index)?;
+                    let key_offset = ExtKeyOffset::from_offset(
+                        Offset::from_disk(index, raw_key_offset)?,
+                        index,
+                    )?;
                     // Avoid using key_content. Skip one checksum check.
                     let (key_content, key_entry_size) =
                         key_offset.key_content_and_entry_size_unchecked(index)?;
@@ -524,7 +528,7 @@ impl LeafOffset {
                 TYPE_LEAF => {
                     let (raw_key_offset, vlq_len): (u64, _) =
                         index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
-                    let key_offset = Offset::from_disk(raw_key_offset)?;
+                    let key_offset = Offset::from_disk(index, raw_key_offset)?;
                     let key_content = extract_key_content(index, key_offset)?;
                     let (raw_link_offset, vlq_len2) = index
                         .buf
@@ -538,7 +542,7 @@ impl LeafOffset {
                 _ => unreachable!("bug: LeafOffset constructed with non-leaf types"),
             };
             let link_offset =
-                LinkOffset::from_offset(Offset::from_disk(raw_link_offset as u64)?, index)?;
+                LinkOffset::from_offset(Offset::from_disk(index, raw_link_offset as u64)?, index)?;
             Ok((key_content, link_offset))
         }
     }
@@ -642,7 +646,7 @@ impl<'a> RangeIter<'a> {
     }
 
     /// Reconstruct "key" from the stack.
-    fn key(stack: &Vec<IterState>) -> Fallible<Vec<u8>> {
+    fn key(stack: &Vec<IterState>, index: &Index) -> crate::Result<Vec<u8>> {
         // Reconstruct key. Collect base16 child stack (prefix + visiting),
         // then convert to base256.
         let mut prefix = Vec::with_capacity(stack.len() - 1);
@@ -655,7 +659,7 @@ impl<'a> RangeIter<'a> {
         }
         if prefix.len() & 1 == 1 {
             // Odd-length key
-            Err(data_error("unexpected odd-length key"))
+            Err(index.corruption("unexpected odd-length key"))
         } else {
             Ok(base16_to_base256(&prefix))
         }
@@ -702,17 +706,17 @@ impl<'a> RangeIter<'a> {
                             continue;
                         }
                         Ok(_) => Some(Err(index
-                            .data_error("unexpected type during iteration")
+                            .corruption("unexpected type during iteration")
                             .into())),
-                        Err(err) => Some(Err(err)),
+                        Err(err) => Some(Err(err.into())),
                     },
                     Err(err) => Some(Err(err)),
                 },
                 IterState::RadixLeaf(radix) => match radix.link_offset(index) {
                     Ok(link_offset) if link_offset.is_null() => continue,
-                    Ok(link_offset) => match Self::key(stack) {
+                    Ok(link_offset) => match Self::key(stack, index) {
                         Ok(key) => Some(Ok((Cow::Owned(key), link_offset))),
-                        Err(err) => Some(Err(err)),
+                        Err(err) => Some(Err(err.into())),
                     },
                     Err(err) => Some(Err(err)),
                 },
@@ -788,7 +792,7 @@ impl LinkOffset {
                 .buf
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
             index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
-            let next_link = LinkOffset::from_offset(Offset::from_disk(next_link)?, index)?;
+            let next_link = LinkOffset::from_offset(Offset::from_disk(index, next_link)?, index)?;
             Ok((value, next_link))
         }
     }
@@ -933,11 +937,10 @@ impl MemRadix {
         let mut offsets = [Offset::default(); 16];
         for i in 0..16 {
             if (bitmap >> i) & 1 == 1 {
-                offsets[i] = Offset::from_disk(RadixOffset::read_raw_int_unchecked(
+                offsets[i] = Offset::from_disk(
                     index,
-                    int_size,
-                    offset + pos,
-                )?)?;
+                    RadixOffset::read_raw_int_unchecked(index, int_size, offset + pos)?,
+                )?;
                 pos += int_size;
             }
         }
@@ -945,7 +948,7 @@ impl MemRadix {
         let link_offset = if RadixOffset::parse_have_link_from_flag(flag) {
             let raw_offset = RadixOffset::read_raw_int_unchecked(index, int_size, offset + pos)?;
             pos += int_size;
-            LinkOffset::from_offset(Offset::from_disk(raw_offset)?, index)?
+            LinkOffset::from_offset(Offset::from_disk(index, raw_offset)?, index)?
         } else {
             LinkOffset::default()
         };
@@ -1029,9 +1032,9 @@ impl MemLeaf {
                 let (_key_len, vlq_len): (u64, _) = buf.read_vlq_at(offset)?;
                 let offset = offset + vlq_len;
                 // Checksum will be verified by ExtKey and Leaf nodes
-                let key_offset = Offset::from_disk(key_offset as u64)?;
+                let key_offset = Offset::from_disk(index, key_offset as u64)?;
                 let link_offset =
-                    LinkOffset::from_offset(Offset::from_disk(offset as u64)?, index)?;
+                    LinkOffset::from_offset(Offset::from_disk(index, offset as u64)?, index)?;
                 Ok(MemLeaf {
                     key_offset,
                     link_offset,
@@ -1039,9 +1042,10 @@ impl MemLeaf {
             }
             Some(&TYPE_LEAF) => {
                 let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-                let key_offset = Offset::from_disk(key_offset)?;
+                let key_offset = Offset::from_disk(index, key_offset)?;
                 let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
-                let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, index)?;
+                let link_offset =
+                    LinkOffset::from_offset(Offset::from_disk(index, link_offset)?, index)?;
                 index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
                 Ok(MemLeaf {
                     key_offset,
@@ -1148,7 +1152,7 @@ impl MemLink {
         let (value, len1) = buf.read_vlq_at(offset + 1)?;
         let (next_link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         let next_link_offset =
-            LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, &index)?;
+            LinkOffset::from_offset(Offset::from_disk(&index, next_link_offset)?, &index)?;
         index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLink {
             value,
@@ -1247,7 +1251,8 @@ impl MemRoot {
         let (radix_offset, vlq_len) = index.buf().read_vlq_at(cur)?;
         cur += vlq_len;
 
-        let radix_offset = RadixOffset::from_offset(Offset::from_disk(radix_offset)?, &index)?;
+        let radix_offset =
+            RadixOffset::from_offset(Offset::from_disk(&index, radix_offset)?, &index)?;
 
         let (meta_len, vlq_len): (usize, _) = index.buf().read_vlq_at(cur)?;
         cur += vlq_len;
@@ -1273,7 +1278,12 @@ impl MemRoot {
             index.verify_checksum(end - vlq_size, vlq_size)?;
             Self::read_from(index, end - vlq_size - root_size)
         } else {
-            Err(parameter_error("end is too small"))
+            Err(index
+                .corruption(format!(
+                    "index::MemRoot::read_from_end received an 'end' that is too small ({})",
+                    end
+                ))
+                .into())
         }
     }
 
@@ -1672,9 +1682,10 @@ impl OpenOptions {
     /// Return an error if `checksum_chunk_size` is not 0.
     pub fn create_in_memory(&self) -> Fallible<Index> {
         if self.checksum_chunk_size != 0 {
-            return Err(parameter_error(
+            return Err(crate::Error::programming(
                 "checksum_chunk_size is not supported for in-memory Index",
-            ));
+            )
+            .into());
         }
         let dirty_radixes = vec![MemRadix::default()];
         let clean_root = {
@@ -1936,7 +1947,12 @@ impl Index {
                     "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     len, old_len
                 );
-                return Err(path_data_error(path, message));
+                // This is not a "corruption" - something has truncated the
+                // file, potentially recreating it. We haven't checked the
+                // new content, so it's not considered as "data corruption".
+                // TODO: Review this decision.
+                let err = crate::Error::path(path, message);
+                return Err(err.into());
             }
 
             let mut buf = Vec::with_capacity(estimated_dirty_bytes);
@@ -2020,10 +2036,13 @@ impl Index {
             let (mmap, mmap_len) = mmap_readonly(lock.as_ref(), None)?;
             self.buf = mmap;
 
+            // This is to workaround the borrow checker.
+            let this = SimpleIndexBuf(&self.buf, &self.path, &None);
+
             // Sanity check - the length should be expected. Otherwise, the lock
             // is somehow ineffective.
             if mmap_len != new_len {
-                return Err(data_error("file changed unexpectedly"));
+                return Err(this.corruption("file changed unexpectedly").into());
             }
 
             if let Some(ref mut table) = self.checksum {
@@ -2033,8 +2052,6 @@ impl Index {
                 table.update(chunk_size_log.into())?;
             }
 
-            // Workaround the borrow checker.
-            let this = SimpleIndexBuf(&self.buf, &self.path, &None);
             self.clean_root = MemRoot::read_from_end(this, new_len)?;
         }
 
@@ -2077,7 +2094,7 @@ impl Index {
                         return Ok(LinkOffset::default());
                     }
                 }
-                _ => return Err(data_error("unexpected type during key lookup")),
+                _ => return Err(self.corruption("unexpected type during key lookup").into()),
             }
         }
 
@@ -2133,7 +2150,7 @@ impl Index {
                         return Ok(RangeIter::new(self, front_stack.clone(), front_stack));
                     };
                 }
-                _ => return Err(data_error("unexpected type during prefix scan")),
+                _ => return Err(self.corruption("unexpected type during prefix scan").into()),
             }
         }
 
@@ -2294,7 +2311,7 @@ impl Index {
                     }
                     return Ok(());
                 }
-                _ => return Err(data_error("unexpected type during insertion")),
+                _ => return Err(self.corruption("unexpected type during insertion").into()),
             }
 
             step += 1;
@@ -2357,7 +2374,7 @@ impl Index {
                     stack.push(state);
                     return Ok(stack);
                 }
-                _ => return Err(data_error("unexpected type following prefix")),
+                _ => return Err(self.corruption("unexpected type following prefix").into()),
             }
         }
 
@@ -2489,12 +2506,6 @@ impl Index {
             None => KeyOffset::create(self, key).into(),
             Some((start, len)) => ExtKeyOffset::create(self, start, len).into(),
         }
-    }
-
-    /// Raise [`errors::PathDataError`] with path of this index attached.
-    #[inline(never)]
-    fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
-        path_data_error(&self.path, message)
     }
 }
 
