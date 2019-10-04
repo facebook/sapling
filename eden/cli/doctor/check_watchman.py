@@ -233,6 +233,11 @@ def _check_json_output(args: List[str]) -> Dict[str, Any]:
     try:
         output = subprocess.check_output(args)
         return typing.cast(Dict[str, Any], json.loads(output))
+    except FileNotFoundError as e:
+        # Same as below, but we don't need to emit a warning if they don't have
+        # nuclide-connections installed.
+        errstr = getattr(e, "strerror", str(e))
+        return {"error": str(e)}
     except Exception as e:
         # FileNotFoundError if the command is not found.
         # CalledProcessError if the command exits unsuccessfully.
