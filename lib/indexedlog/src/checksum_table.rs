@@ -24,10 +24,9 @@
 // infrequently updated, and are already complex that it's cleaner to not
 // embed checksum logic into them.
 
-use crate::errors::{self, data_error, parameter_error};
+use crate::errors::{IoResultExt, ResultExt};
 use crate::utils::{atomic_write, mmap_empty, mmap_readonly, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
 use fs2::FileExt;
 use memmap::Mmap;
 use std::{
@@ -102,7 +101,7 @@ impl ChecksumTable {
     /// Depending on `chunk_size_log`, `ChecksumError` might be caused by
     /// something within a same chunk, but outside the provided range being
     /// broken, or if the range is outside what the checksum table covers.
-    pub fn check_range(&self, offset: u64, length: u64) -> Fallible<()> {
+    pub fn check_range(&self, offset: u64, length: u64) -> crate::Result<()> {
         // Empty range is treated as good.
         if length == 0 {
             return Ok(());
@@ -152,64 +151,87 @@ impl ChecksumTable {
     ///
     /// Once the table is loaded from disk, changes on disk won't affect
     /// the table in memory.
-    pub fn new<P: AsRef<Path>>(path: &P) -> Fallible<Self> {
+    pub fn new<P: AsRef<Path>>(path: &P) -> crate::Result<Self> {
         // Read the source of truth file as a mmap buffer
-        let file = OpenOptions::new().read(true).open(path)?;
-        let (mmap, len) = mmap_readonly(&file, None)?;
+        let result = (|| {
+            let path = path.as_ref();
+            let file = OpenOptions::new()
+                .read(true)
+                .open(path)
+                .context(path, "cannot open checksummed file")?;
+            let (mmap, len) =
+                mmap_readonly(&file, None).context(path, "cannot mmap checksummed file")?;
 
-        // Read checksum file into memory
-        let checksum_path = path_appendext(path.as_ref(), "sum");
-        let mut checksum_buf = Vec::new();
-        match OpenOptions::new().read(true).open(&checksum_path) {
-            Ok(mut checksum_file) => {
-                checksum_file.read_to_end(&mut checksum_buf)?;
-            }
-            Err(err) => {
-                if err.kind() != io::ErrorKind::NotFound {
-                    return Err(err.into());
+            // Read checksum file into memory
+            let checksum_path = path_appendext(path.as_ref(), "sum");
+            let mut checksum_buf = Vec::new();
+            match OpenOptions::new().read(true).open(&checksum_path) {
+                Ok(mut checksum_file) => {
+                    checksum_file
+                        .read_to_end(&mut checksum_buf)
+                        .context(&checksum_path, "cannot read checksum file")?;
+                }
+                Err(err) => {
+                    if err.kind() != io::ErrorKind::NotFound {
+                        return Err(err).context(&checksum_path, "cannot open checksum file");
+                    }
                 }
             }
-        }
 
-        // Parse checksum file
-        let (chunk_size_log, chunk_end, checksums, checked) = if checksum_buf.len() == 0 {
-            (DEFAULT_CHUNK_SIZE_LOG, 0, vec![], vec![])
-        } else {
-            let mut cur = Cursor::new(checksum_buf);
-            let chunk_size_log = cur.read_u64::<LittleEndian>()?;
-            if chunk_size_log > MAX_CHUNK_SIZE_LOG as u64 {
-                let msg = format!(
-                    "invalid chunk_size_log {:?} when opening {:?} for checksum",
-                    chunk_size_log,
-                    &path.as_ref()
+            // Parse checksum file
+            let (chunk_size_log, chunk_end, checksums, checked) = if checksum_buf.len() == 0 {
+                (DEFAULT_CHUNK_SIZE_LOG, 0, vec![], vec![])
+            } else {
+                let mut cur = Cursor::new(checksum_buf);
+                let chunk_size_log = cur
+                    .read_u64::<LittleEndian>()
+                    .context(
+                        &checksum_path,
+                        "cannot read chunk_size_log from checksum file",
+                    )
+                    .corruption()?;
+                if chunk_size_log > MAX_CHUNK_SIZE_LOG as u64 {
+                    let err = crate::Error::corruption(
+                        &checksum_path,
+                        format!("chunk_size_log {:} is too large", chunk_size_log),
+                    );
+                    return Err(err);
+                }
+                let chunk_size_log = chunk_size_log as u32;
+                let chunk_size = 1 << chunk_size_log;
+                let file_size = len.min(
+                    cur.read_u64::<LittleEndian>()
+                        .context(&checksum_path, "file_size field cannot be read")
+                        .corruption()?,
                 );
-                return Err(data_error(msg));
-            }
-            let chunk_size_log = chunk_size_log as u32;
-            let chunk_size = 1 << chunk_size_log;
-            let file_size = len.min(cur.read_u64::<LittleEndian>()?);
-            let n = (file_size + chunk_size - 1) / chunk_size;
-            let mut checksums = Vec::with_capacity(n as usize);
-            for _ in 0..n {
-                checksums.push(cur.read_u64::<LittleEndian>()?);
-            }
-            let checked = (0..(n as usize + 63) / 64)
-                .map(|_| AtomicU64::new(0))
-                .collect();
-            (chunk_size_log, file_size, checksums, checked)
-        };
+                let n = (file_size + chunk_size - 1) / chunk_size;
+                let mut checksums = Vec::with_capacity(n as usize);
+                for _ in 0..n {
+                    checksums.push(
+                        cur.read_u64::<LittleEndian>()
+                            .context(&checksum_path, "checksum cannot be read")
+                            .corruption()?,
+                    );
+                }
+                let checked = (0..(n as usize + 63) / 64)
+                    .map(|_| AtomicU64::new(0))
+                    .collect();
+                (chunk_size_log, file_size, checksums, checked)
+            };
 
-        Ok(ChecksumTable {
-            file,
-            buf: mmap,
-            path: path.as_ref().to_path_buf(),
-            fsync: false,
-            chunk_size_log,
-            end: chunk_end,
-            checksum_path,
-            checksums,
-            checked,
-        })
+            Ok(ChecksumTable {
+                file,
+                buf: mmap,
+                path: path.to_path_buf(),
+                fsync: false,
+                chunk_size_log,
+                end: chunk_end,
+                checksum_path,
+                checksums,
+                checked,
+            })
+        })();
+        result.map_err(|err| err.message("in ChecksumTable::new"))
     }
 
     /// Set fsync behavior.
@@ -222,29 +244,43 @@ impl ChecksumTable {
     }
 
     /// Clone the checksum table.
-    pub fn try_clone(&self) -> Fallible<Self> {
-        let file = self.file.duplicate()?;
-        // Special case: buf.len() == 1 might still mean an empty file.
-        let mmap = if self.buf.len() == 1 && file.metadata()?.len() == 0 {
-            mmap_empty()?
-        } else {
-            mmap_readonly(&file, (self.buf.len() as u64).into())?.0
-        };
-        Ok(ChecksumTable {
-            file,
-            buf: mmap,
-            path: self.path.clone(),
-            fsync: self.fsync,
-            checksum_path: self.checksum_path.clone(),
-            chunk_size_log: self.chunk_size_log,
-            end: self.end,
-            checksums: self.checksums.clone(),
-            checked: self
-                .checked
-                .iter()
-                .map(|val| AtomicU64::new(val.load(Ordering::Acquire)))
-                .collect(),
-        })
+    pub fn try_clone(&self) -> crate::Result<Self> {
+        let result: crate::Result<Self> = (|| {
+            let file = self
+                .file
+                .duplicate()
+                .context(&self.path, "cannot duplicate file descriptor")?;
+            // Special case: buf.len() == 1 might still mean an empty file.
+            let mmap = if self.buf.len() == 1
+                && file
+                    .metadata()
+                    .context(&self.path, "cannot read metadata")?
+                    .len()
+                    == 0
+            {
+                mmap_empty().context(&self.path, "cannot mmap")?
+            } else {
+                mmap_readonly(&file, (self.buf.len() as u64).into())
+                    .context(&self.path, "cannot mmap")?
+                    .0
+            };
+            Ok(ChecksumTable {
+                file,
+                buf: mmap,
+                path: self.path.clone(),
+                fsync: self.fsync,
+                checksum_path: self.checksum_path.clone(),
+                chunk_size_log: self.chunk_size_log,
+                end: self.end,
+                checksums: self.checksums.clone(),
+                checked: self
+                    .checked
+                    .iter()
+                    .map(|val| AtomicU64::new(val.load(Ordering::Acquire)))
+                    .collect(),
+            })
+        })();
+        result.map_err(|err| err.message("in ChecksumTable::try_clone"))
     }
 
     /// Update the checksum table and write it back to disk.
@@ -264,75 +300,82 @@ impl ChecksumTable {
     ///
     /// Otherwise, update the in-memory checksum table. Then write it in an
     /// atomic-replace way.  Return write errors if write fails.
-    pub fn update(&mut self, chunk_size_log: Option<u32>) -> Fallible<()> {
-        let (mmap, len) = mmap_readonly(&self.file, None)?;
-        let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
-        if chunk_size_log > MAX_CHUNK_SIZE_LOG {
-            return Err(parameter_error("chunk_size_log is too largee"));
-        }
-        let chunk_size = 1 << chunk_size_log;
-        let old_chunk_size = 1 << self.chunk_size_log;
-
-        if chunk_size == 0 {
-            return Err(parameter_error("chunk_size_log cannot be 0"));
-        }
-
-        if len == self.end && chunk_size == old_chunk_size {
-            return Ok(());
-        }
-
-        if len < self.end {
-            // Breaks the "append-only" assumption.
-            return Err(errors::path_data_error(
-                &self.path,
-                "file was truncated unexpectedly",
-            ));
-        }
-
-        let mut checksums = self.checksums.clone();
-        if chunk_size == old_chunk_size {
-            if self.end % chunk_size != 0 {
-                // The last block need recalculate
-                checksums.pop();
+    pub fn update(&mut self, chunk_size_log: Option<u32>) -> crate::Result<()> {
+        let result = (|| {
+            let (mmap, len) = mmap_readonly(&self.file, None).context(&self.path, "cannot mmap")?;
+            let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
+            if chunk_size_log > MAX_CHUNK_SIZE_LOG {
+                return Err(crate::Error::programming("chunk_size_log is too large"));
             }
-        } else {
-            // Recalculate everything
-            checksums.clear();
-        };
+            let chunk_size = 1 << chunk_size_log;
+            let old_chunk_size = 1 << self.chunk_size_log;
 
-        // Before recalculating, verify the changed chunks first.
-        let start = checksums.len() as u64 * old_chunk_size;
-        self.check_range(start, self.end - start)?;
+            if chunk_size == 0 {
+                return Err(crate::Error::programming("chunk_size_log cannot be 0"));
+            }
 
-        let mut offset = checksums.len() as u64 * chunk_size;
-        while offset < len {
-            let end = (offset + chunk_size).min(len);
-            let chunk = &mmap[offset as usize..end as usize];
-            checksums.push(xxhash(chunk));
-            offset = end;
-        }
+            if len == self.end && chunk_size == old_chunk_size {
+                return Ok(());
+            }
 
-        // Prepare changes
-        let mut buf = vec![];
-        buf.write_u64::<LittleEndian>(chunk_size_log as u64)?;
-        buf.write_u64::<LittleEndian>(len)?;
-        for checksum in &checksums {
-            buf.write_u64::<LittleEndian>(*checksum)?;
-        }
+            if len < self.end {
+                // Breaks the "append-only" assumption.
+                // This is not marked as a "corruption" error since we have no
+                // evidence that the new data is corrupted.
+                return Err(crate::Error::path(
+                    &self.path,
+                    "file was truncated unexpectedly",
+                ));
+            }
 
-        // Write changes to disk
-        atomic_write(&self.checksum_path, &buf, self.fsync)?;
+            let mut checksums = self.checksums.clone();
+            if chunk_size == old_chunk_size {
+                if self.end % chunk_size != 0 {
+                    // The last block need recalculate
+                    checksums.pop();
+                }
+            } else {
+                // Recalculate everything
+                checksums.clear();
+            };
 
-        // Update fields
-        self.buf = mmap;
-        self.end = len;
-        self.checked = (0..(checksums.len() + 63) / 64)
-            .map(|_| AtomicU64::new(0))
-            .collect();
-        self.chunk_size_log = 63 - (chunk_size as u64).leading_zeros();
-        self.checksums = checksums;
+            // Before recalculating, verify the changed chunks first.
+            let start = checksums.len() as u64 * old_chunk_size;
+            self.check_range(start, self.end - start)?;
 
-        Ok(())
+            let mut offset = checksums.len() as u64 * chunk_size;
+            while offset < len {
+                let end = (offset + chunk_size).min(len);
+                let chunk = &mmap[offset as usize..end as usize];
+                checksums.push(xxhash(chunk));
+                offset = end;
+            }
+
+            // Prepare changes
+            let mut buf = Vec::with_capacity(16 + checksums.len() * 8);
+            buf.write_u64::<LittleEndian>(chunk_size_log as u64)
+                .infallible()?;
+            buf.write_u64::<LittleEndian>(len).infallible()?;
+            for checksum in &checksums {
+                buf.write_u64::<LittleEndian>(*checksum).infallible()?;
+            }
+
+            // Write changes to disk
+            atomic_write(&self.checksum_path, &buf, self.fsync)
+                .context(&self.checksum_path, "cannot atomic write")?;
+
+            // Update fields
+            self.buf = mmap;
+            self.end = len;
+            self.checked = (0..(checksums.len() + 63) / 64)
+                .map(|_| AtomicU64::new(0))
+                .collect();
+            self.chunk_size_log = 63 - (chunk_size as u64).leading_zeros();
+            self.checksums = checksums;
+
+            Ok(())
+        })();
+        result.map_err(|err| err.message("in ChecksumTable::update"))
     }
 
     /// Reset the table as if it's recreated from an empty file. Do not write to
@@ -351,13 +394,15 @@ impl ChecksumTable {
 //
 // Reduce instruction count in `Index::verify_checksum`.
 #[inline(never)]
-fn checksum_error(table: &ChecksumTable, offset: u64, length: u64) -> Fallible<()> {
-    Err(errors::ChecksumError {
-        path: table.path.to_string_lossy().to_string(),
-        start: offset,
-        end: offset + length,
-    }
-    .into())
+fn checksum_error(table: &ChecksumTable, offset: u64, length: u64) -> crate::Result<()> {
+    Err(crate::Error::corruption(
+        &table.path,
+        format!(
+            "range {}..{} failed checksum check",
+            offset,
+            offset + length
+        ),
+    ))
 }
 
 #[cfg(test)]
@@ -366,7 +411,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempdir;
 
-    fn setup() -> (File, Box<dyn Fn() -> Fallible<ChecksumTable>>) {
+    fn setup() -> (File, Box<dyn Fn() -> crate::Result<ChecksumTable>>) {
         let dir = tempdir().unwrap();
 
         // Checksum an non-existed file is an error.
