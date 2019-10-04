@@ -29,15 +29,34 @@ from typing import (
 )
 
 from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.hypothesis import set_up_hypothesis
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.thrift import EdenClient
-from hypothesis.internal.detection import is_hypothesis_test
 
 from . import edenclient, gitrepo, hgrepo, repobase
+from .find_executables import FindExe
 
 
-set_up_hypothesis()
+try:
+    from eden.test_support.hypothesis import set_up_hypothesis
+    import hypothesis.internal.detection
+
+    set_up_hypothesis()
+
+    def is_hypothesis_test(test):
+        return hypothesis.internal.detection.is_hypothesis_test(test)
+        return False
+
+
+except ImportError:
+    # Continue even if the hypothesis module is not available
+    def is_hypothesis_test(test):
+        return False
+
+
+if not FindExe.is_buck_build() or os.environ.get("EDENFS_SUFFIX", "") != "":
+    _build_flavor = "open_source"
+else:
+    _build_flavor = "facebook"
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -141,7 +160,7 @@ class EdenTestCase(
         if self.enable_fault_injection:
             extra_args.append("--enable_fault_injection")
 
-        if not self.enable_logview and not os.environ.get("EDENFS_SUFFIX", ""):
+        if _build_flavor == "facebook" and not self.enable_logview:
             # add option to disable logview
             # we set `EDENFS_SUFFIX` when running our tests with OSS build
             extra_args.append("--eden_logview=false")

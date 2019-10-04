@@ -70,7 +70,9 @@ set_property(
 )
 add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
+add_subdirectory(eden/integration)
 add_subdirectory(eden/py)
+add_subdirectory(eden/test_support)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in

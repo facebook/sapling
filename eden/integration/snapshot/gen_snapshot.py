@@ -59,7 +59,7 @@ def main() -> int:
         date_stamp = time.strftime("%Y%m%d")
         base_name = f"{args.name}-{date_stamp}.tar.xz"
         output_path = Path(
-            FindExe.REPO_ROOT, "eden", "test-data", "snapshots", base_name
+            FindExe.EDEN_SRC_ROOT, "eden", "test-data", "snapshots", base_name
         )
 
     logging.info(f'Running "{args.name}" snapshot generator')

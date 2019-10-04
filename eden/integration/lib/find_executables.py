@@ -17,7 +17,14 @@ import sys
 import typing
 from typing import Callable, Dict, List, Optional, Type
 
-from libfb.py import pathutils
+
+try:
+    import __manifest__
+
+    assert __manifest__.fbmake.get("build_tool", None) == "buck"
+    _is_buck_build = True
+except ImportError:
+    _is_buck_build = False
 
 
 class cached_property(object):
@@ -41,13 +48,18 @@ class cached_property(object):
 
 class FindExeClass(object):
     _BUCK_OUT: Optional[str] = None
-    _REPO_ROOT: Optional[str] = None
+    _EDEN_SRC_ROOT: Optional[str] = None
 
     def __init__(self) -> None:
         self._cache: Dict[str, str] = {}
 
+    def is_buck_build(self) -> bool:
+        return _is_buck_build
+
     @property
     def BUCK_OUT(self) -> str:
+        if not _is_buck_build:
+            raise Exception("There is no buck-out path in a non-Buck build")
         if self._BUCK_OUT is None:
             self._find_repo_root_and_buck_out()
             assert self._BUCK_OUT is not None
@@ -55,29 +67,33 @@ class FindExeClass(object):
         return self._BUCK_OUT
 
     @property
-    def REPO_ROOT(self) -> str:
-        if self._REPO_ROOT is None:
-            self._find_repo_root_and_buck_out()
-            assert self._REPO_ROOT is not None
+    def EDEN_SRC_ROOT(self) -> str:
+        if self._EDEN_SRC_ROOT is None:
+            if _is_buck_build:
+                self._find_repo_root_and_buck_out()
+                assert self._EDEN_SRC_ROOT is not None
+            else:
+                self._EDEN_SRC_ROOT = self._find_cmake_src_dir()
         # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
-        return self._REPO_ROOT
+        return self._EDEN_SRC_ROOT
 
     @cached_property
     def EDEN_CLI(self) -> str:
         return self._find_exe(
             "eden CLI",
             env="EDENFS_CLI_PATH",
-            candidates=[os.path.join(self.BUCK_OUT, "gen/eden/cli/edenfsctl.par")],
+            buck_path="eden/cli/edenfsctl.par",
+            cmake_path="eden/cli/edenfsctl",
         )
 
     @cached_property
     def EDEN_DAEMON(self) -> str:
         edenfs_suffix = os.environ.get("EDENFS_SUFFIX", "")
-        edenfs = os.path.join(
-            self.BUCK_OUT, "gen/eden/fs/service/edenfs%s" % edenfs_suffix
-        )
         return self._find_exe(
-            "edenfs daemon", env="EDENFS_SERVER_PATH", candidates=[edenfs]
+            "edenfs daemon",
+            env="EDENFS_SERVER_PATH",
+            buck_path="eden/fs/service/edenfs" + edenfs_suffix,
+            cmake_path="eden/fs/edenfs",
         )
 
     @cached_property
@@ -85,9 +101,7 @@ class FindExeClass(object):
         return self._find_exe(
             "fsattr",
             env="EDENFS_FSATTR_BIN",
-            candidates=[
-                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/fsattr")
-            ],
+            buck_path="eden/integration/helpers/fsattr",
         )
 
     @cached_property
@@ -95,9 +109,7 @@ class FindExeClass(object):
         return self._find_exe(
             "fake_edenfs",
             env="EDENFS_FAKE_EDENFS",
-            candidates=[
-                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/fake_edenfs")
-            ],
+            buck_path="eden/integration/helpers/fake_edenfs",
         )
 
     @cached_property
@@ -105,27 +117,19 @@ class FindExeClass(object):
         return self._find_exe(
             "force_sd_booted",
             env="EDENFS_FORCE_SD_BOOTED_PATH",
-            candidates=[
-                os.path.join(
-                    self.BUCK_OUT, "gen/eden/integration/helpers/force_sd_booted"
-                )
-            ],
+            buck_path="eden/integration/helpers/force_sd_booted",
         )
 
     @cached_property
     def SYSTEMD_FB_EDENFS_SERVICE(self) -> str:
-        return os.path.join(self.REPO_ROOT, "eden/fs/service/fb-edenfs@.service")
+        return os.path.join(self.EDEN_SRC_ROOT, "eden/fs/service/fb-edenfs@.service")
 
     @cached_property
     def TAKEOVER_TOOL(self) -> str:
         return self._find_exe(
             "takeover_tool",
             env="EDENFS_TAKEOVER_TOOL",
-            candidates=[
-                os.path.join(
-                    self.BUCK_OUT, "gen/eden/integration/helpers/takeover_tool"
-                )
-            ],
+            buck_path="eden/integration/helpers/takeover_tool",
         )
 
     @cached_property
@@ -133,9 +137,7 @@ class FindExeClass(object):
         return self._find_exe(
             "zero_blob",
             env="EDENFS_ZERO_BLOB",
-            candidates=[
-                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/zero_blob")
-            ],
+            buck_path="eden/integration/helpers/zero_blob",
         )
 
     @cached_property
@@ -143,11 +145,7 @@ class FindExeClass(object):
         return self._find_exe(
             "drop_privs",
             env="EDENFS_DROP_PRIVS",
-            candidates=[
-                os.path.join(
-                    self.BUCK_OUT, "gen/eden/fs/fuse/privhelper/test/drop_privs"
-                )
-            ],
+            buck_path="eden/fs/fuse/privhelper/test/drop_privs",
         )
 
     @cached_property
@@ -172,37 +170,22 @@ class FindExeClass(object):
         return hg
 
     def _find_hg(self) -> str:
-        # If EDEN_HG_BINARY is set in the environment, use that.
-        # This is always set when the tests are run by `buck test`
-        # The code below is only used as a fallback when the tests are invoked manually.
-        hg_bin = os.environ.get("EDEN_HG_BINARY")
-        if hg_bin:
-            return hg_bin
-
-        # Look for the hg wrapper
-        start_path = os.path.abspath(sys.argv[0])
-        hg_bin = pathutils.get_build_rule_output_path(
-            "//scm/telemetry/hg:hg",
-            pathutils.BuildRuleTypes.RUST_BINARY,
-            start_path=start_path,
+        hg_bin = self._find_exe_optional(
+            "hg", env="EDEN_HG_BINARY", buck_path="scm/telemetry/hg/hg#binary/hg"
         )
         if hg_bin:
             return hg_bin
 
-        # Fall back to the real hg binary
-        return typing.cast(str, self.HG_REAL)  # T38947910
-
-    def _find_hg_real(self) -> str:
-        # If HG_REAL_BIN is set in the environment, use that.
-        # This is always set when the tests are run by `buck test`
-        # The code below is only used as a fallback when the tests are invoked manually.
-        hg_real_bin = os.environ.get("HG_REAL_BIN")
+        hg_real_bin = distutils.spawn.find_executable("hg")
         if hg_real_bin:
             return hg_real_bin
 
-        start_path = os.path.abspath(sys.argv[0])
-        hg_real_bin = pathutils.get_build_rule_output_path(
-            "//scm/hg:hg", pathutils.BuildRuleTypes.SH_BINARY, start_path=start_path
+        # Fall back to the hg.real binary
+        return typing.cast(str, self.HG_REAL)  # T38947910
+
+    def _find_hg_real(self) -> str:
+        hg_real_bin = self._find_exe_optional(
+            "hg.real", env="HG_REAL_BIN", buck_path="scm/hg/__hg__/hg.sh"
         )
         if hg_real_bin:
             return hg_real_bin
@@ -217,7 +200,31 @@ class FindExeClass(object):
 
         raise Exception("No hg binary found!")
 
-    def _find_exe(self, name: str, env: str, candidates: List[str]) -> str:
+    def _find_exe(
+        self,
+        name: str,
+        env: str,
+        buck_path: Optional[str] = None,
+        cmake_path: Optional[str] = None,
+    ) -> str:
+        exe = self._find_exe_optional(
+            name=name,
+            env=env,
+            buck_path=buck_path,
+            cmake_path=cmake_path,
+            require_found=True,
+        )
+        assert exe is not None
+        return exe
+
+    def _find_exe_optional(
+        self,
+        name: str,
+        env: str,
+        buck_path: Optional[str] = None,
+        cmake_path: Optional[str] = None,
+        require_found: bool = False,
+    ) -> Optional[str]:
         if env is not None:
             path = os.environ.get(env)
             if path:
@@ -228,11 +235,26 @@ class FindExeClass(object):
                     )
                 return path
 
+        candidates = []
+        if _is_buck_build:
+            if buck_path is not None:
+                candidates.append(os.path.join(self.BUCK_OUT, "gen", buck_path))
+        else:
+            # If an explicit CMake output was specified use it,
+            # otherwise use the same path as for Buck.
+            if cmake_path is not None:
+                candidates.append(os.path.join(os.getcwd(), cmake_path))
+            elif buck_path is not None:
+                candidates.append(os.path.join(os.getcwd(), buck_path))
+
         for path in candidates:
             if os.access(path, os.X_OK):
                 return path
 
-        raise Exception(f"unable to find {name}")
+        if require_found:
+            raise Exception(f"unable to find {name}: candidates checked={candidates}")
+
+        return None
 
     def _find_repo_root_and_buck_out(self) -> None:
         """Finds the paths to buck-out and the repo root.
@@ -241,10 +263,6 @@ class FindExeClass(object):
         root because Buck could have been run with `buck --config
         project.buck_out` and sys.argv[0] could be the realpath rather than the
         symlink under buck-out.
-
-        TODO: We will have to use a different heuristic for open source builds
-        that build with CMake. (Ultimately, we would prefer to build them with
-        Buck.)
         """
         executable = sys.argv[0]
         path = os.path.dirname(os.path.abspath(executable))
@@ -252,7 +270,7 @@ class FindExeClass(object):
             parent = os.path.dirname(path)
             parent_basename = os.path.basename(parent)
             if parent_basename == "buck-out":
-                self._REPO_ROOT = os.path.dirname(parent)
+                self._EDEN_SRC_ROOT = os.path.dirname(parent)
                 if os.path.basename(path) in ["bin", "gen"]:
                     self._BUCK_OUT = parent
                 else:
@@ -261,6 +279,15 @@ class FindExeClass(object):
             if parent == path:
                 raise Exception("Path to repo root not found from %s" % executable)
             path = parent
+
+    def _find_cmake_src_dir(self) -> str:
+        src_dir = os.environ.get("CMAKE_SOURCE_DIR", "")
+        if not src_dir:
+            raise Exception(
+                "unable to find source directory: "
+                "CMAKE_SOURCE_DIR environment variable is not set"
+            )
+        return src_dir
 
 
 # The main FindExe singleton

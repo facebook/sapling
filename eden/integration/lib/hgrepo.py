@@ -51,19 +51,34 @@ class HgRepository(repobase.Repository):
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
-        hgrc_path = "scm/hg/fb/staticfiles/etc/mercurial"
+        if FindExe.is_buck_build():
+            hgrc_path = os.path.join(
+                FindExe.EDEN_SRC_ROOT, "scm/hg/fb/staticfiles/etc/mercurial"
+            )
+            platform_rc = "posix.rc"
+        else:
+            # TODO: We should ideally build fb-mercurial as a dependency with getdeps,
+            # and use the current version of hg from master as well as its configs.
+            #
+            # Currently this uses the system configs, which may be slightly out-of-date
+            # with the EdenFS code.
+            # TODO: Use the right system path here on Windows
+            hgrc_path = "/etc/mercurial"
+            # TODO: Use the right platform-sepecific config file on Windows
+            platform_rc = "posix.rc"
+
         contents = textwrap.dedent(
-            """
-            %include {repo_root}/{hgrc_path}/facebook.rc
-            %include {repo_root}/{hgrc_path}/tier-specific/posix.rc
-            %include {repo_root}/{hgrc_path}/tier-specific/client.rc
+            f"""
+            %include {hgrc_path}/facebook.rc
+            %include {hgrc_path}/tier-specific/{platform_rc}
+            %include {hgrc_path}/tier-specific/client.rc
 
             # Override ui.merge to make sure it does not get set
             # to something that tries to prompt for user input.
             [ui]
             merge = :merge
             """
-        ).format(repo_root=FindExe.REPO_ROOT, hgrc_path=hgrc_path)
+        )
         return contents
 
     def run_hg(
@@ -75,7 +90,7 @@ class HgRepository(repobase.Repository):
         input: Optional[str] = None,
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
-        check: bool = True
+        check: bool = True,
     ) -> subprocess.CompletedProcess:
         cmd = [self.hg_bin] + list(args)
         env = self.hg_environment
@@ -109,7 +124,7 @@ class HgRepository(repobase.Repository):
         input: Optional[str] = None,
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
-        check: bool = True
+        check: bool = True,
     ) -> str:
         completed_process = self.run_hg(
             *args,
@@ -117,7 +132,7 @@ class HgRepository(repobase.Repository):
             input=input,
             hgeditor=hgeditor,
             cwd=cwd,
-            check=check
+            check=check,
         )
         return typing.cast(str, completed_process.stdout.decode(encoding))
 
