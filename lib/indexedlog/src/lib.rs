@@ -19,9 +19,11 @@ mod macros;
 
 pub mod base16;
 pub mod checksum_table;
-pub mod errors;
+mod errors;
 pub mod index;
 pub mod lock;
 pub mod log;
 pub mod rotate;
 pub mod utils;
+
+pub use errors::{Error, Result};
