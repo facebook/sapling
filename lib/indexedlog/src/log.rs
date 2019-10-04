@@ -316,89 +316,109 @@ impl Log {
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::sync`].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> crate::Result<()> {
-        let data = data.as_ref();
+        let result: crate::Result<_> = (|| {
+            let data = data.as_ref();
 
-        let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
-            // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
-            //
-            // bytes  xxhash32  xxhash64 (MB/s)
-            //   32       1882      1600
-            //   40       1739      1538
-            //   48       2285      1846
-            //   56       2153      2000
-            //   64       2666      2782
-            //   72       2400      2322
-            //   80       2962      2758
-            //   88       2750      2750
-            //   96       3200      3692
-            //  104       2810      3058
-            //  112       3393      3500
-            //  120       3000      3428
-            //  128       3459      4266
-            const XXHASH64_THRESHOLD: usize = 88;
-            if data.len() >= XXHASH64_THRESHOLD {
-                ChecksumType::Xxhash64
+            let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
+                // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
+                //
+                // bytes  xxhash32  xxhash64 (MB/s)
+                //   32       1882      1600
+                //   40       1739      1538
+                //   48       2285      1846
+                //   56       2153      2000
+                //   64       2666      2782
+                //   72       2400      2322
+                //   80       2962      2758
+                //   88       2750      2750
+                //   96       3200      3692
+                //  104       2810      3058
+                //  112       3393      3500
+                //  120       3000      3428
+                //  128       3459      4266
+                const XXHASH64_THRESHOLD: usize = 88;
+                if data.len() >= XXHASH64_THRESHOLD {
+                    ChecksumType::Xxhash64
+                } else {
+                    ChecksumType::Xxhash32
+                }
             } else {
-                ChecksumType::Xxhash32
-            }
-        } else {
-            self.open_options.checksum_type
-        };
+                self.open_options.checksum_type
+            };
 
-        let offset = self.meta.primary_len + self.mem_buf.len() as u64;
+            let offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
-        // Design note: Currently checksum_type is the only thing that decides
-        // entry_flags.  Entry flags is not designed to just cover different
-        // checksum types.  For example, if we'd like to introduce transparent
-        // compression (maybe not a good idea since it can be more cleanly built
-        // at an upper layer), or some other ways to store data (ex. reference
-        // to other data, or fixed length data), they can probably be done by
-        // extending the entry type.
-        let mut entry_flags = 0;
-        entry_flags |= match checksum_type {
-            ChecksumType::Xxhash64 => ENTRY_FLAG_HAS_XXHASH64,
-            ChecksumType::Xxhash32 => ENTRY_FLAG_HAS_XXHASH32,
-            ChecksumType::Auto => unreachable!(),
-        };
+            // Design note: Currently checksum_type is the only thing that decides
+            // entry_flags.  Entry flags is not designed to just cover different
+            // checksum types.  For example, if we'd like to introduce transparent
+            // compression (maybe not a good idea since it can be more cleanly built
+            // at an upper layer), or some other ways to store data (ex. reference
+            // to other data, or fixed length data), they can probably be done by
+            // extending the entry type.
+            let mut entry_flags = 0;
+            entry_flags |= match checksum_type {
+                ChecksumType::Xxhash64 => ENTRY_FLAG_HAS_XXHASH64,
+                ChecksumType::Xxhash32 => ENTRY_FLAG_HAS_XXHASH32,
+                ChecksumType::Auto => unreachable!(),
+            };
 
-        self.mem_buf.write_vlq(entry_flags).infallible()?;
-        self.mem_buf.write_vlq(data.len()).infallible()?;
+            self.mem_buf.write_vlq(entry_flags).infallible()?;
+            self.mem_buf.write_vlq(data.len()).infallible()?;
 
-        match checksum_type {
-            ChecksumType::Xxhash64 => {
-                self.mem_buf
-                    .write_u64::<LittleEndian>(xxhash(data))
-                    .infallible()?;
-            }
-            ChecksumType::Xxhash32 => {
-                self.mem_buf
-                    .write_u32::<LittleEndian>(xxhash32(data))
-                    .infallible()?;
-            }
-            ChecksumType::Auto => unreachable!(),
-        };
-        let data_offset = self.meta.primary_len + self.mem_buf.len() as u64;
+            match checksum_type {
+                ChecksumType::Xxhash64 => {
+                    self.mem_buf
+                        .write_u64::<LittleEndian>(xxhash(data))
+                        .infallible()?;
+                }
+                ChecksumType::Xxhash32 => {
+                    self.mem_buf
+                        .write_u32::<LittleEndian>(xxhash32(data))
+                        .infallible()?;
+                }
+                ChecksumType::Auto => unreachable!(),
+            };
+            let data_offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
-        self.mem_buf.write_all(data).infallible()?;
-        self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
-        Ok(())
+            self.mem_buf.write_all(data).infallible()?;
+            self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
+            Ok(())
+        })();
+
+        result
+            .context(|| {
+                let data = data.as_ref();
+                if data.len() < 128 {
+                    format!("in Log::append({:?})", data)
+                } else {
+                    format!("in Log::append(<a {}-byte long slice>)", data.len())
+                }
+            })
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Remove dirty (in-memory) state. Restore the [`Log`] to the state as
     /// if it's just loaded from disk without modifications.
     pub fn clear_dirty(&mut self) -> crate::Result<()> {
-        self.maybe_return_index_error()?;
-        for index in self.indexes.iter_mut() {
-            index.clear_dirty();
-        }
-        self.mem_buf.clear();
-        self.update_indexes_for_on_disk_entries()?;
-        Ok(())
+        let result: crate::Result<_> = (|| {
+            self.maybe_return_index_error()?;
+            for index in self.indexes.iter_mut() {
+                index.clear_dirty();
+            }
+            self.mem_buf.clear();
+            self.update_indexes_for_on_disk_entries()?;
+            Ok(())
+        })();
+        result
+            .context("in Log::clear_dirty")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Return a cloned [`Log`] with pending in-memory changes.
     pub fn try_clone(&self) -> crate::Result<Self> {
         self.try_clone_internal(true)
+            .context("in Log:try_clone")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Return a cloned [`Log`] without pending in-memory changes.
@@ -407,6 +427,7 @@ impl Log {
     /// on the result after `try_clone`, but potentially cheaper.
     pub fn try_clone_without_dirty(&self) -> crate::Result<Self> {
         self.try_clone_internal(false)
+            .context("in Log:try_clone_without_dirty")
     }
 
     fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Self> {
@@ -475,184 +496,190 @@ impl Log {
     ///
     /// For in-memory-only Logs, this function does nothing, and returns 0.
     pub fn sync(&mut self) -> crate::Result<u64> {
-        if self.dir.is_none() {
-            // See Index::flush for why this is not an Err.
-            return Ok(0);
-        }
+        let result: crate::Result<_> = (|| {
+            if self.dir.is_none() {
+                // See Index::flush for why this is not an Err.
+                return Ok(0);
+            }
 
-        fn check_append_only(this: &Log, new_meta: &LogMetadata) -> crate::Result<()> {
-            let old_meta = &this.meta;
-            if old_meta.primary_len > new_meta.primary_len {
-                Err(crate::Error::path(this.dir.as_ref().unwrap(), format!(
+            fn check_append_only(this: &Log, new_meta: &LogMetadata) -> crate::Result<()> {
+                let old_meta = &this.meta;
+                if old_meta.primary_len > new_meta.primary_len {
+                    Err(crate::Error::path(this.dir.as_ref().unwrap(), format!(
                     "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     new_meta.primary_len, old_meta.primary_len
                 )))
-            } else {
-                Ok(())
-            }
-        }
-
-        // Read-only fast path - no need to take directory lock.
-        if self.mem_buf.is_empty() {
-            let meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
-            check_append_only(self, &meta)?;
-            let changed = self.meta != meta;
-            // No need to reload anything if metadata hasn't changed.
-            if changed {
-                // Indexes can be reused, since they do not have new in-memory
-                // entries, and the on-disk primary log is append-only (so data
-                // already present in the indexes is valid).
-                *self = self
-                    .open_options
-                    .clone()
-                    .open_internal(self.dir.as_ref().unwrap(), Some(&self.indexes))?;
-            }
-            return Ok(self.meta.primary_len);
-        }
-
-        // Take the lock so no other `flush` runs for this directory. Then reload meta, append
-        // log, then update indexes.
-        let dir = self.dir.clone().unwrap();
-        let _lock = ScopedDirLock::new(&dir)?;
-
-        // Step 1: Reload metadata to get the latest view of the files.
-        let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
-        let changed = self.meta != meta;
-        check_append_only(self, &meta)?;
-
-        if changed && self.open_options.flush_filter.is_some() {
-            let filter = self.open_options.flush_filter.unwrap();
-
-            // Start with a clean log that does not have dirty entries.
-            let mut log = self.open_options.clone().open(self.dir.as_ref().unwrap())?;
-
-            for entry in self.iter_dirty() {
-                let content = entry?;
-                let context = FlushFilterContext { log: &log };
-                // Re-insert entries to that clean log.
-                match filter(&context, content)
-                    .map_err(|err| crate::Error::wrap(err, "failed to run filter function"))?
-                {
-                    FlushFilterOutput::Drop => (),
-                    FlushFilterOutput::Keep => log.append(content)?,
-                    FlushFilterOutput::Replace(content) => log.append(content)?,
+                } else {
+                    Ok(())
                 }
             }
 
-            // Replace "self" so we can continue flushing the updated data.
-            *self = log;
-        }
+            // Read-only fast path - no need to take directory lock.
+            if self.mem_buf.is_empty() {
+                let meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
+                check_append_only(self, &meta)?;
+                let changed = self.meta != meta;
+                // No need to reload anything if metadata hasn't changed.
+                if changed {
+                    // Indexes can be reused, since they do not have new in-memory
+                    // entries, and the on-disk primary log is append-only (so data
+                    // already present in the indexes is valid).
+                    *self = self
+                        .open_options
+                        .clone()
+                        .open_internal(self.dir.as_ref().unwrap(), Some(&self.indexes))?;
+                }
+                return Ok(self.meta.primary_len);
+            }
 
-        // Step 2: Append to the primary log.
-        let primary_path = self.dir.as_ref().unwrap().join(PRIMARY_FILE);
-        let mut primary_file = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&primary_path)
-            .context(&primary_path, "cannot open for read-write")?;
+            // Take the lock so no other `flush` runs for this directory. Then reload meta, append
+            // log, then update indexes.
+            let dir = self.dir.clone().unwrap();
+            let _lock = ScopedDirLock::new(&dir)?;
 
-        // It's possible that the previous write was interrupted. In that case,
-        // the length of "log" can be longer than the length of "log" stored in
-        // the metadata. Seek to the length specified by the metadata and
-        // overwrite (broken) data.
-        // This breaks the "append-only" property of the physical file. But all
-        // readers use "meta" to decide the length of "log". So "log" is still
-        // append-only as seen by readers, as long as the length specified in
-        // "meta" is append-only (i.e. "meta" is not rewritten to have a smaller
-        // length, and all bytes in the specified length are immutable).
-        // Note: file.set_len might easily fail on Windows due to mmap.
-        let pos = primary_file
-            .seek(SeekFrom::Start(meta.primary_len))
-            .context(&primary_path, || {
-                format!("cannot seek to {}", meta.primary_len)
-            })?;
-        if pos != meta.primary_len {
-            let msg = format!(
-                "log file {} has {} bytes, expect at least {} bytes",
-                primary_path.to_string_lossy(),
-                pos,
-                meta.primary_len
-            );
-            // This might be another process re-creating the file.
-            // Do not consider this as a corruption (?).
-            // TODO: Review this decision.
-            let err = crate::Error::path(&primary_path, msg);
-            return Err(err);
-        }
+            // Step 1: Reload metadata to get the latest view of the files.
+            let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
+            let changed = self.meta != meta;
+            check_append_only(self, &meta)?;
 
-        // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
-        primary_file
-            .write_all(&self.mem_buf)
-            .context(&primary_path, || {
-                format!("cannot write data ({} bytes)", self.mem_buf.len())
-            })?;
+            if changed && self.open_options.flush_filter.is_some() {
+                let filter = self.open_options.flush_filter.unwrap();
 
-        if self.open_options.fsync {
+                // Start with a clean log that does not have dirty entries.
+                let mut log = self.open_options.clone().open(self.dir.as_ref().unwrap())?;
+
+                for entry in self.iter_dirty() {
+                    let content = entry?;
+                    let context = FlushFilterContext { log: &log };
+                    // Re-insert entries to that clean log.
+                    match filter(&context, content)
+                        .map_err(|err| crate::Error::wrap(err, "failed to run filter function"))?
+                    {
+                        FlushFilterOutput::Drop => (),
+                        FlushFilterOutput::Keep => log.append(content)?,
+                        FlushFilterOutput::Replace(content) => log.append(content)?,
+                    }
+                }
+
+                // Replace "self" so we can continue flushing the updated data.
+                *self = log;
+            }
+
+            // Step 2: Append to the primary log.
+            let primary_path = self.dir.as_ref().unwrap().join(PRIMARY_FILE);
+            let mut primary_file = fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&primary_path)
+                .context(&primary_path, "cannot open for read-write")?;
+
+            // It's possible that the previous write was interrupted. In that case,
+            // the length of "log" can be longer than the length of "log" stored in
+            // the metadata. Seek to the length specified by the metadata and
+            // overwrite (broken) data.
+            // This breaks the "append-only" property of the physical file. But all
+            // readers use "meta" to decide the length of "log". So "log" is still
+            // append-only as seen by readers, as long as the length specified in
+            // "meta" is append-only (i.e. "meta" is not rewritten to have a smaller
+            // length, and all bytes in the specified length are immutable).
+            // Note: file.set_len might easily fail on Windows due to mmap.
+            let pos = primary_file
+                .seek(SeekFrom::Start(meta.primary_len))
+                .context(&primary_path, || {
+                    format!("cannot seek to {}", meta.primary_len)
+                })?;
+            if pos != meta.primary_len {
+                let msg = format!(
+                    "log file {} has {} bytes, expect at least {} bytes",
+                    primary_path.to_string_lossy(),
+                    pos,
+                    meta.primary_len
+                );
+                // This might be another process re-creating the file.
+                // Do not consider this as a corruption (?).
+                // TODO: Review this decision.
+                let err = crate::Error::path(&primary_path, msg);
+                return Err(err);
+            }
+
+            // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
             primary_file
-                .sync_all()
-                .context(&primary_path, "cannot fsync")?;
-        }
+                .write_all(&self.mem_buf)
+                .context(&primary_path, || {
+                    format!("cannot write data ({} bytes)", self.mem_buf.len())
+                })?;
 
-        meta.primary_len += self.mem_buf.len() as u64;
-        self.mem_buf.clear();
+            if self.open_options.fsync {
+                primary_file
+                    .sync_all()
+                    .context(&primary_path, "cannot fsync")?;
+            }
 
-        // Decide what indexes need to be updated on disk.
-        let indexes_to_flush: Vec<usize> = self
-            .open_options
-            .index_defs
-            .iter()
-            .enumerate()
-            .filter(|&(_i, def)| {
-                let indexed = self.meta.indexes.get(def.name).cloned().unwrap_or(0);
-                indexed + def.lag_threshold < meta.primary_len
-            })
-            .map(|(i, _def)| i)
-            .collect();
+            meta.primary_len += self.mem_buf.len() as u64;
+            self.mem_buf.clear();
 
-        // Step 3: Reload primary log and indexes to get the latest view.
-        let (disk_buf, indexes) = Self::load_log_and_indexes(
-            Some(self.dir.as_ref().unwrap()),
-            &meta,
-            &self.open_options.index_defs,
-            &self.mem_buf,
-            if changed {
-                // Existing indexes cannot be reused.
-                None
-            } else {
-                // Indexes can be reused, because they already contain all entries
-                // that were just written to disk and the on-disk files do not
-                // have new entries (tested by "self.meta != meta" in Step 1).
-                //
-                // The indexes contain all entries, because they were previously
-                // "always-up-to-date", and the on-disk log does not have anything new.
-                // Update "meta" so "update_indexes_for_on_disk_entries" below won't
-                // re-index entries.
-                Self::set_index_log_len(self.indexes.iter_mut(), meta.primary_len);
-                Some(&self.indexes)
-            },
-            self.open_options.fsync,
-        )?;
+            // Decide what indexes need to be updated on disk.
+            let indexes_to_flush: Vec<usize> = self
+                .open_options
+                .index_defs
+                .iter()
+                .enumerate()
+                .filter(|&(_i, def)| {
+                    let indexed = self.meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    indexed + def.lag_threshold < meta.primary_len
+                })
+                .map(|(i, _def)| i)
+                .collect();
 
-        self.disk_buf = disk_buf;
-        self.indexes = indexes;
-        self.meta = meta;
+            // Step 3: Reload primary log and indexes to get the latest view.
+            let (disk_buf, indexes) = Self::load_log_and_indexes(
+                Some(self.dir.as_ref().unwrap()),
+                &meta,
+                &self.open_options.index_defs,
+                &self.mem_buf,
+                if changed {
+                    // Existing indexes cannot be reused.
+                    None
+                } else {
+                    // Indexes can be reused, because they already contain all entries
+                    // that were just written to disk and the on-disk files do not
+                    // have new entries (tested by "self.meta != meta" in Step 1).
+                    //
+                    // The indexes contain all entries, because they were previously
+                    // "always-up-to-date", and the on-disk log does not have anything new.
+                    // Update "meta" so "update_indexes_for_on_disk_entries" below won't
+                    // re-index entries.
+                    Self::set_index_log_len(self.indexes.iter_mut(), meta.primary_len);
+                    Some(&self.indexes)
+                },
+                self.open_options.fsync,
+            )?;
 
-        // Step 4: Update the indexes. Optionally flush them.
-        self.update_indexes_for_on_disk_entries()?;
-        for i in indexes_to_flush {
-            let new_length = self.indexes[i].flush();
-            let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
-            let name = self.open_options.index_defs[i].name.to_string();
-            self.meta.indexes.insert(name, new_length);
-        }
+            self.disk_buf = disk_buf;
+            self.indexes = indexes;
+            self.meta = meta;
 
-        // Step 5: Write the updated meta file.
-        let meta_path = self.dir.as_ref().unwrap().join(META_FILE);
-        self.meta
-            .write_file(&meta_path, self.open_options.fsync)
-            .context(&meta_path, "cannot write Log metadata")?;
+            // Step 4: Update the indexes. Optionally flush them.
+            self.update_indexes_for_on_disk_entries()?;
+            for i in indexes_to_flush {
+                let new_length = self.indexes[i].flush();
+                let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
+                let name = self.open_options.index_defs[i].name.to_string();
+                self.meta.indexes.insert(name, new_length);
+            }
 
-        Ok(self.meta.primary_len)
+            // Step 5: Write the updated meta file.
+            let meta_path = self.dir.as_ref().unwrap().join(META_FILE);
+            self.meta
+                .write_file(&meta_path, self.open_options.fsync)
+                .context(&meta_path, "cannot write Log metadata")?;
+
+            Ok(self.meta.primary_len)
+        })();
+
+        result
+            .context("in Log::sync")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Renamed. Use [`Log::sync`] instead.
@@ -666,40 +693,45 @@ impl Log {
     /// This is used internally by [`RotateLog`] to make sure a [`Log`] has
     /// complate indexes before rotating.
     pub(crate) fn finalize_indexes(&mut self) -> crate::Result<()> {
-        if let Some(ref dir) = self.dir {
-            let dir = dir.clone();
-            if !self.mem_buf.is_empty() {
-                return Err(crate::Error::programming(
-                    "sync() should be called before finalize_indexes()",
-                ));
-            }
+        let result: crate::Result<_> = (|| {
+            if let Some(ref dir) = self.dir {
+                let dir = dir.clone();
+                if !self.mem_buf.is_empty() {
+                    return Err(crate::Error::programming(
+                        "sync() should be called before finalize_indexes()",
+                    ));
+                }
 
-            let _lock = ScopedDirLock::new(&dir)?;
+                let _lock = ScopedDirLock::new(&dir)?;
 
-            let meta = Self::load_or_create_meta(&dir, false)?;
-            if self.meta != meta {
-                return Err(crate::Error::programming(
+                let meta = Self::load_or_create_meta(&dir, false)?;
+                if self.meta != meta {
+                    return Err(crate::Error::programming(
                         "race detected, callsite responsible for preventing races",
                     ));
-            }
+                }
 
-            // Flush all indexes.
-            for i in 0..self.indexes.len() {
-                let new_length = self.indexes[i].flush();
-                let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
-                let name = self.open_options.index_defs[i].name.to_string();
-                self.meta.indexes.insert(name, new_length);
-            }
+                // Flush all indexes.
+                for i in 0..self.indexes.len() {
+                    let new_length = self.indexes[i].flush();
+                    let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
+                    let name = self.open_options.index_defs[i].name.to_string();
+                    self.meta.indexes.insert(name, new_length);
+                }
 
-            let meta_path = dir.join(META_FILE);
-            self.meta
-                .write_file(&meta_path, self.open_options.fsync)
-                .context(
-                    &meta_path,
-                    "cannot write Log metadata (with finalized indexes)",
-                )?;
-        }
-        Ok(())
+                let meta_path = dir.join(META_FILE);
+                self.meta
+                    .write_file(&meta_path, self.open_options.fsync)
+                    .context(
+                        &meta_path,
+                        "cannot write Log metadata (with finalized indexes)",
+                    )?;
+            }
+            Ok(())
+        })();
+        result
+            .context("in Log::finalize_indexes")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Rebuild indexes.
@@ -710,68 +742,74 @@ impl Log {
     /// The function consumes the [`Log`] object, since it is hard to recover
     /// from an error case.
     pub fn rebuild_indexes(mut self) -> crate::Result<()> {
-        if let Some(ref dir) = self.dir {
-            let _lock = ScopedDirLock::new(&dir)?;
+        let result: crate::Result<_> = (|| {
+            if let Some(ref dir) = self.dir {
+                let _lock = ScopedDirLock::new(&dir)?;
 
-            let key_buf = Arc::new(mmap_len(&dir.join(PRIMARY_FILE), self.meta.primary_len)?);
+                let key_buf = Arc::new(mmap_len(&dir.join(PRIMARY_FILE), self.meta.primary_len)?);
 
-            // Drop indexes. This will munmap index files, which is required on
-            // Windows to rewrite the index files. It's also the reason why it's
-            // hard to recover from an error state.
-            self.indexes.clear();
+                // Drop indexes. This will munmap index files, which is required on
+                // Windows to rewrite the index files. It's also the reason why it's
+                // hard to recover from an error state.
+                self.indexes.clear();
 
-            for def in self.open_options.index_defs.iter() {
-                let name = def.name;
+                for def in self.open_options.index_defs.iter() {
+                    let name = def.name;
 
-                let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
-                    format!("cannot create tempfile for rebuilding index {:?}", name)
-                })?;
-                let index_len = {
-                    let mut index = index::OpenOptions::new()
-                        .key_buf(Some(key_buf.clone()))
-                        .open(&tmp.path())?;
-                    Self::update_index_for_on_disk_entry_unchecked(
-                        &self.dir,
-                        &mut index,
-                        def,
-                        &self.disk_buf,
-                        self.meta.primary_len,
-                    )?;
-                    index.flush()?
-                };
+                    let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
+                        format!("cannot create tempfile for rebuilding index {:?}", name)
+                    })?;
+                    let index_len = {
+                        let mut index = index::OpenOptions::new()
+                            .key_buf(Some(key_buf.clone()))
+                            .open(&tmp.path())?;
+                        Self::update_index_for_on_disk_entry_unchecked(
+                            &self.dir,
+                            &mut index,
+                            def,
+                            &self.disk_buf,
+                            self.meta.primary_len,
+                        )?;
+                        index.flush()?
+                    };
 
-                // Before replacing the index, set its "logic length" to 0 so
-                // readers won't get inconsistent view about index length and data.
-                let meta_path = dir.join(META_FILE);
-                self.meta.indexes.insert(name.to_string(), 0);
-                self.meta
-                    .write_file(&meta_path, self.open_options.fsync)
-                    .context(&meta_path, || {
-                        format!("cannot update metadata (before replacing index {:?})", name)
+                    // Before replacing the index, set its "logic length" to 0 so
+                    // readers won't get inconsistent view about index length and data.
+                    let meta_path = dir.join(META_FILE);
+                    self.meta.indexes.insert(name.to_string(), 0);
+                    self.meta
+                        .write_file(&meta_path, self.open_options.fsync)
+                        .context(&meta_path, || {
+                            format!("cannot update metadata (before replacing index {:?})", name)
+                        })?;
+
+                    let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+                    tmp.persist(&path).map_err(|e| {
+                        crate::Error::wrap(Box::new(e), || {
+                            format!("cannot persist tempfile to replace index {:?}", name)
+                        })
                     })?;
 
-                let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
-                tmp.persist(&path).map_err(|e| {
-                    crate::Error::wrap(Box::new(e), || {
-                        format!("cannot persist tempfile to replace index {:?}", name)
-                    })
-                })?;
+                    // Update checksum table.
+                    let mut table = ChecksumTable::new(&path)?;
+                    table.clear();
+                    table.update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))?;
 
-                // Update checksum table.
-                let mut table = ChecksumTable::new(&path)?;
-                table.clear();
-                table.update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))?;
-
-                self.meta.indexes.insert(name.to_string(), index_len);
-                self.meta
-                    .write_file(&meta_path, self.open_options.fsync)
-                    .context(&meta_path, || {
-                        format!("cannot update metadata (after replacing index {:?})", name)
-                    })?;
+                    self.meta.indexes.insert(name.to_string(), index_len);
+                    self.meta
+                        .write_file(&meta_path, self.open_options.fsync)
+                        .context(&meta_path, || {
+                            format!("cannot update metadata (after replacing index {:?})", name)
+                        })?;
+                }
             }
-        }
 
-        Ok(())
+            Ok(())
+        })();
+
+        result
+            .context("in Log::rebuild_indexes")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Try to repair the [`Log`] by truncating entries.
@@ -788,77 +826,83 @@ impl Log {
             "programming error: calling 'repair' with dirty entries is unsupported"
         );
 
-        if let Some(ref dir) = self.dir {
-            let _lock = ScopedDirLock::new(&dir)?;
+        let result: crate::Result<_> = (|| {
+            if let Some(ref dir) = self.dir {
+                let _lock = ScopedDirLock::new(&dir)?;
 
-            let mut iter = self.iter();
+                let mut iter = self.iter();
 
-            // Read entries until hitting a (checksum) error.
-            while let Some(Ok(_)) = iter.next() {}
+                // Read entries until hitting a (checksum) error.
+                while let Some(Ok(_)) = iter.next() {}
 
-            let valid_len = iter.next_offset;
-            if valid_len != self.meta.primary_len {
-                assert!(valid_len < self.meta.primary_len);
+                let valid_len = iter.next_offset;
+                if valid_len != self.meta.primary_len {
+                    assert!(valid_len < self.meta.primary_len);
 
-                // Truncate primary log to valid_len.
-                // Drop memory maps so file truncation can work on Windows.
-                self.indexes.clear();
-                self.disk_buf = Arc::new(mmap_empty().infallible()?);
+                    // Truncate primary log to valid_len.
+                    // Drop memory maps so file truncation can work on Windows.
+                    self.indexes.clear();
+                    self.disk_buf = Arc::new(mmap_empty().infallible()?);
 
-                let primary_path = dir.join(PRIMARY_FILE);
-                let mut primary_file = fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .open(&primary_path)
-                    .context(&primary_path, "cannot open")?;
-
-                // Backup the part to be truncated.
-                {
-                    let backup_path = dir.join(format!("log.truncate-{}", valid_len));
-                    let mut backup_file = fs::OpenOptions::new()
-                        .create_new(true)
+                    let primary_path = dir.join(PRIMARY_FILE);
+                    let mut primary_file = fs::OpenOptions::new()
+                        .read(true)
                         .write(true)
-                        .open(&backup_path)
-                        .context(&backup_path, "cannot open")?;
+                        .open(&primary_path)
+                        .context(&primary_path, "cannot open")?;
 
-                    primary_file
-                        .seek(SeekFrom::Start(valid_len))
-                        .context(&primary_path, "cannot seek")?;
+                    // Backup the part to be truncated.
+                    {
+                        let backup_path = dir.join(format!("log.truncate-{}", valid_len));
+                        let mut backup_file = fs::OpenOptions::new()
+                            .create_new(true)
+                            .write(true)
+                            .open(&backup_path)
+                            .context(&backup_path, "cannot open")?;
 
-                    let mut buf = Vec::with_capacity(1 << 22);
-                    buf.set_len(buf.capacity());
-                    loop {
-                        let size = primary_file
-                            .read(&mut buf[..])
-                            .context(&primary_path, "cannot read")?;
-                        if size == 0 {
-                            break;
+                        primary_file
+                            .seek(SeekFrom::Start(valid_len))
+                            .context(&primary_path, "cannot seek")?;
+
+                        let mut buf = Vec::with_capacity(1 << 22);
+                        buf.set_len(buf.capacity());
+                        loop {
+                            let size = primary_file
+                                .read(&mut buf[..])
+                                .context(&primary_path, "cannot read")?;
+                            if size == 0 {
+                                break;
+                            }
+                            backup_file
+                                .write_all(&buf[..size])
+                                .context(&backup_path, "cannot write")?;
                         }
-                        backup_file
-                            .write_all(&buf[..size])
-                            .context(&backup_path, "cannot write")?;
                     }
+
+                    // Update metadata. Invalidate indexes.
+                    self.meta.primary_len = valid_len;
+                    self.meta.indexes.clear();
+                    let meta_path = dir.join(META_FILE);
+                    self.meta
+                        .write_file(&meta_path, self.open_options.fsync)
+                        .context(&meta_path, "cannot write")?;
+
+                    // Truncate the file!
+                    primary_file
+                        .seek(SeekFrom::Start(0))
+                        .context(&primary_path, "cannot seek")?;
+                    primary_file
+                        .set_len(valid_len)
+                        .context(&primary_path, "cannot truncate")?;
                 }
-
-                // Update metadata. Invalidate indexes.
-                self.meta.primary_len = valid_len;
-                self.meta.indexes.clear();
-                let meta_path = dir.join(META_FILE);
-                self.meta
-                    .write_file(&meta_path, self.open_options.fsync)
-                    .context(&meta_path, "cannot write")?;
-
-                // Truncate the file!
-                primary_file
-                    .seek(SeekFrom::Start(0))
-                    .context(&primary_path, "cannot seek")?;
-                primary_file
-                    .set_len(valid_len)
-                    .context(&primary_path, "cannot truncate")?;
             }
-        }
 
-        Ok(())
+            Ok(())
+        })();
+
+        result
+            .context("in Log::repair")
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -866,25 +910,30 @@ impl Log {
     ///
     /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> crate::Result<LogLookupIter> {
-        self.maybe_return_index_error()?;
-        if let Some(index) = self.indexes.get(index_id) {
-            assert!(key.as_ref().len() > 0);
-            let link_offset = index.get(&key)?;
-            let inner_iter = link_offset.values(index);
-            Ok(LogLookupIter {
-                inner_iter,
-                errored: false,
-                log: self,
-            })
-        } else {
-            let msg = format!(
-                "invalid index_id {} (len={}, path={:?})",
-                index_id,
-                self.indexes.len(),
-                &self.dir
-            );
-            Err(crate::Error::programming(msg))
-        }
+        let result: crate::Result<_> = (|| {
+            self.maybe_return_index_error()?;
+            if let Some(index) = self.indexes.get(index_id) {
+                assert!(key.as_ref().len() > 0);
+                let link_offset = index.get(&key)?;
+                let inner_iter = link_offset.values(index);
+                Ok(LogLookupIter {
+                    inner_iter,
+                    errored: false,
+                    log: self,
+                })
+            } else {
+                let msg = format!(
+                    "invalid index_id {} (len={}, path={:?})",
+                    index_id,
+                    self.indexes.len(),
+                    &self.dir
+                );
+                Err(crate::Error::programming(msg))
+            }
+        })();
+        result
+            .context(|| format!("in Log::lookup({}, {:?})", index_id, key.as_ref()))
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Look up keys and entries using the given prefix.
@@ -898,14 +947,20 @@ impl Log {
         index_id: usize,
         prefix: K,
     ) -> crate::Result<LogRangeIter> {
-        let index = self.indexes.get(index_id).unwrap();
-        let inner_iter = index.scan_prefix(prefix)?;
-        Ok(LogRangeIter {
-            inner_iter,
-            errored: false,
-            log: self,
-            index,
-        })
+        let prefix = prefix.as_ref();
+        let result: crate::Result<_> = (|| {
+            let index = self.indexes.get(index_id).unwrap();
+            let inner_iter = index.scan_prefix(prefix)?;
+            Ok(LogRangeIter {
+                inner_iter,
+                errored: false,
+                log: self,
+                index,
+            })
+        })();
+        result
+            .context(|| format!("in Log::lookup_prefix({}, {:?})", index_id, prefix))
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Look up keys and entries by querying a specified index about a specified
@@ -921,14 +976,26 @@ impl Log {
         index_id: usize,
         range: impl RangeBounds<&'a [u8]>,
     ) -> crate::Result<LogRangeIter> {
-        let index = self.indexes.get(index_id).unwrap();
-        let inner_iter = index.range(range)?;
-        Ok(LogRangeIter {
-            inner_iter,
-            errored: false,
-            log: self,
-            index,
-        })
+        let start = range.start_bound();
+        let end = range.end_bound();
+        let result: crate::Result<_> = (|| {
+            let index = self.indexes.get(index_id).unwrap();
+            let inner_iter = index.range((start, end))?;
+            Ok(LogRangeIter {
+                inner_iter,
+                errored: false,
+                log: self,
+                index,
+            })
+        })();
+        result
+            .context(|| {
+                format!(
+                    "in Log::lookup_range({}, {:?} to {:?})",
+                    index_id, start, end,
+                )
+            })
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Look up keys and entries using the given hex prefix.
@@ -942,14 +1009,20 @@ impl Log {
         index_id: usize,
         hex_prefix: K,
     ) -> crate::Result<LogRangeIter> {
-        let index = self.indexes.get(index_id).unwrap();
-        let inner_iter = index.scan_prefix_hex(hex_prefix)?;
-        Ok(LogRangeIter {
-            inner_iter,
-            errored: false,
-            log: self,
-            index,
-        })
+        let prefix = hex_prefix.as_ref();
+        let result: crate::Result<_> = (|| {
+            let index = self.indexes.get(index_id).unwrap();
+            let inner_iter = index.scan_prefix_hex(prefix)?;
+            Ok(LogRangeIter {
+                inner_iter,
+                errored: false,
+                log: self,
+                index,
+            })
+        })();
+        result
+            .context(|| format!("in Log::lookup_prefix_hex({}, {:?})", index_id, prefix))
+            .context(|| format!("  Log.dir = {:?}", self.dir))
     }
 
     /// Return an iterator for all entries.
@@ -1578,34 +1651,48 @@ impl OpenOptions {
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
         let dir = dir.as_ref();
         self.open_internal(dir, None)
+            .context(|| format!("in log::OpenOptions::open({:?})", dir))
+            .context(|| format!("  OpenOptions = {:?}", self))
     }
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
     /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
     pub fn create_in_memory(self) -> crate::Result<Log> {
-        let meta = LogMetadata {
-            primary_len: PRIMARY_START_OFFSET,
-            indexes: BTreeMap::new(),
-        };
-        let mem_buf = Box::pin(Vec::new());
-        let (disk_buf, indexes) =
-            Log::load_log_and_indexes(None, &meta, &self.index_defs, &mem_buf, None, self.fsync)?;
+        let result: crate::Result<_> = (|| {
+            let meta = LogMetadata {
+                primary_len: PRIMARY_START_OFFSET,
+                indexes: BTreeMap::new(),
+            };
+            let mem_buf = Box::pin(Vec::new());
+            let (disk_buf, indexes) = Log::load_log_and_indexes(
+                None,
+                &meta,
+                &self.index_defs,
+                &mem_buf,
+                None,
+                self.fsync,
+            )?;
 
-        Ok(Log {
-            dir: None,
-            disk_buf,
-            mem_buf,
-            meta,
-            indexes,
-            index_corrupted: false,
-            open_options: self,
-        })
+            Ok(Log {
+                dir: None,
+                disk_buf,
+                mem_buf,
+                meta,
+                indexes,
+                index_corrupted: false,
+                open_options: self.clone(),
+            })
+        })();
+
+        result
+            .context("in log::OpenOptions::create_in_memory")
+            .context(|| format!("  OpenOptions = {:?}", self))
     }
 
     // "Back-door" version of "open" that allows reusing indexes.
     // Used by [`Log::sync`]. See [`Log::load_log_and_indexes`] for when indexes
     // can be reused.
-    fn open_internal(self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> crate::Result<Log> {
+    fn open_internal(&self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> crate::Result<Log> {
         let create = self.create;
 
         // Do a lock-less load_or_create_meta to avoid the flock overhead.
@@ -1638,7 +1725,7 @@ impl OpenOptions {
             meta,
             indexes,
             index_corrupted: false,
-            open_options: self,
+            open_options: self.clone(),
         };
         log.update_indexes_for_on_disk_entries()?;
         Ok(log)
@@ -1910,6 +1997,26 @@ impl ReadonlyBuffer for ExternalKeyBuffer {
             let mem_buf = unsafe { &*self.mem_buf };
             &mem_buf[(start as usize)..(start + len) as usize]
         }
+    }
+}
+
+impl fmt::Debug for OpenOptions {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "OpenOptions {{ ")?;
+        write!(
+            f,
+            "index_defs: {:?}, ",
+            self.index_defs.iter().map(|d| d.name).collect::<Vec<_>>()
+        )?;
+        write!(f, "fsync: {}, ", self.fsync)?;
+        write!(f, "create: {}, ", self.create)?;
+        write!(f, "checksum_type: {:?}, ", self.checksum_type)?;
+        let flush_filter_desc = match self.flush_filter {
+            Some(ref _buf) => "Some(_)",
+            None => "None",
+        };
+        write!(f, "flush_filter: {} }}", flush_filter_desc)?;
+        Ok(())
     }
 }
 
