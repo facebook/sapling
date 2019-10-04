@@ -324,7 +324,7 @@ impl RadixOffset {
             let flag = *index
                 .buf
                 .get(flag_start)
-                .ok_or_else(|| range_error(flag_start, 1))?;
+                .ok_or_else(|| index.range_error(flag_start, 1))?;
             index.verify_checksum(
                 flag_start as u64,
                 (RADIX_FLAG_BYTES + RADIX_BITMAP_BYTES) as u64,
@@ -364,7 +364,7 @@ impl RadixOffset {
                 let flag = *index
                     .buf
                     .get(flag_start)
-                    .ok_or_else(|| range_error(flag_start, 1))?;
+                    .ok_or_else(|| index.range_error(flag_start, 1))?;
                 let int_size = Self::parse_int_size_from_flag(flag);
                 let skip_child_count = (((1u16 << i) - 1) & bitmap).count_ones() as usize;
                 let child_offset = bitmap_start + RADIX_BITMAP_BYTES + skip_child_count * int_size;
@@ -565,7 +565,7 @@ impl LeafOffset {
             index.dirty_leafs[self.dirty_index()].link_offset = link_offset;
             Ok(self)
         } else {
-            let entry = MemLeaf::read_from(&index.buf, u64::from(self), &index.checksum)?;
+            let entry = MemLeaf::read_from(&index, u64::from(self), &index.checksum)?;
             Ok(Self::create(index, link_offset, entry.key_offset))
         }
     }
@@ -823,7 +823,7 @@ impl KeyOffset {
             let end = start + key_len;
             index.verify_checksum(u64::from(self), end as u64 - u64::from(self))?;
             if end > index.buf.len() {
-                Err(range_error(start, end - start))
+                Err(index.range_error(start, end - start).into())
             } else {
                 Ok(&index.buf[start..end])
             }
@@ -922,7 +922,7 @@ impl MemRadix {
 
         let flag = *buf
             .get(offset + pos)
-            .ok_or_else(|| range_error(offset + pos, 1))?;
+            .ok_or_else(|| index.range_error(offset + pos, 1))?;
         pos += RADIX_FLAG_BYTES;
 
         let bitmap = RadixOffset::read_bitmap_unchecked(index, offset + pos)?;
@@ -1016,8 +1016,8 @@ impl MemRadix {
 }
 
 impl MemLeaf {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
-        let buf = buf.as_ref();
+    fn read_from(index: &Index, offset: u64, checksum: &Checksum) -> Fallible<Self> {
+        let buf = &index.buf;
         let offset = offset as usize;
         match buf.get(offset) {
             Some(&TYPE_INLINE_LEAF) => {
@@ -1049,7 +1049,7 @@ impl MemLeaf {
                     link_offset,
                 })
             }
-            _ => Err(range_error(offset, 1)),
+            _ => Err(index.range_error(offset, 1).into()),
         }
     }
 
@@ -2422,6 +2422,14 @@ impl Index {
     fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
         path_data_error(&self.path, message)
     }
+
+    #[inline(never)]
+    fn range_error(&self, start: usize, length: usize) -> crate::Error {
+        crate::Error::corruption(
+            &self.path,
+            format!("byte range {}..{} is unavailable", start, start + length),
+        )
+    }
 }
 
 //// Debug Formatter
@@ -2546,12 +2554,12 @@ impl Debug for Index {
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_LEAF => {
-                    let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
+                    let e = MemLeaf::read_from(&self, i, &None).expect("read");
                     e.write_noninline_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_INLINE_LEAF => {
-                    let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
+                    let e = MemLeaf::read_from(&self, i, &None).expect("read");
                     write!(f, "Inline{:?}\n", e)?;
                     // Just skip the type int byte so we can parse inlined structures.
                     buf.push(TYPE_INLINE_LEAF);
