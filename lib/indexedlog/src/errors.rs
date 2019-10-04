@@ -195,6 +195,34 @@ impl std::error::Error for Error {
     // use-needs.
 }
 
+pub(crate) trait IoResultExt<T> {
+    /// Wrap [`io::Result`] in [`Result`] with extra context about filesystem
+    /// path and the operation name.
+    ///
+    /// Consider using [`ResultExt::corruption`] to mark the error as data
+    /// corruption if appropriate.
+    fn context<TS: LazyToString>(self, path: &Path, message: TS) -> Result<T>;
+
+    /// Wrap an infallible Result. For example, writing to memory.
+    fn infallible(self) -> Result<T>;
+}
+
+impl<T> IoResultExt<T> for std::io::Result<T> {
+    fn context<TS: LazyToString>(self, path: &Path, message: TS) -> Result<T> {
+        self.map_err(|err| {
+            Error::blank().source(err).message(format!(
+                "{:?}: {}",
+                path,
+                message.to_string_costly()
+            ))
+        })
+    }
+
+    fn infallible(self) -> Result<T> {
+        self.map_err(|err| Error::blank().source(err).message("Unexpected failure"))
+    }
+}
+
 pub(crate) trait LazyToString {
     fn to_string_costly(&self) -> String;
 }
@@ -329,5 +357,32 @@ Caused by 2 errors:
         assert!(Error::blank()
             .source(Error::blank().source(Error::blank().mark_corruption()))
             .is_corruption());
+    }
+
+    #[test]
+    fn test_io_result_ext() {
+        let err = io_result().context(Path::new("a.txt"), "cannot open for reading");
+        assert_eq!(
+            format!("{}", err.unwrap_err()),
+            r#""a.txt": cannot open for reading
+Caused by 1 errors:
+- io::Error: something wrong happened"#
+        );
+
+        let name = "b.txt";
+        let err = io_result().context(Path::new(&name), || format!("cannot open {}", &name));
+        assert_eq!(
+            format!("{}", err.unwrap_err()),
+            r#""b.txt": cannot open b.txt
+Caused by 1 errors:
+- io::Error: something wrong happened"#
+        );
+    }
+
+    fn io_result() -> std::io::Result<()> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "io::Error: something wrong happened",
+        ))
     }
 }
