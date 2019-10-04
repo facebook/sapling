@@ -17,3 +17,5 @@ target_link_libraries(
     Userenv.lib
     Folly::folly
 )
+
+add_subdirectory(test)

@@ -4,7 +4,6 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-#define _CRT_SECURE_NO_WARNINGS
 #include "folly/portability/Windows.h"
 
 #include <iostream>
@@ -14,6 +13,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/utils/UserInfo.h"
+#include "folly/portability/Unistd.h"
 #include "gtest/gtest.h"
 
 using namespace facebook::eden;
