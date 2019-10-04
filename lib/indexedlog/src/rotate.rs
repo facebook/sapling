@@ -5,12 +5,11 @@
 
 //! Rotation support for a set of [`Log`]s.
 
-use crate::errors;
+use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::utils::atomic_write;
 use bytes::Bytes;
-use failure::Fallible;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -116,7 +115,7 @@ impl OpenOptions {
     }
 
     /// Open [`RotateLog`] at given location.
-    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<RotateLog> {
+    pub fn open(self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
         let dir = dir.as_ref();
 
         let latest_and_log = read_latest_and_logs(dir, &self);
@@ -127,7 +126,7 @@ impl OpenOptions {
                 if !self.log_open_options.create {
                     return Err(e);
                 } else {
-                    fs::create_dir_all(dir)?;
+                    fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
                     let _lock = ScopedDirLock::new(&dir)?;
 
                     match read_latest_raw(dir) {
@@ -150,16 +149,8 @@ impl OpenOptions {
                                             }
                                         }
                                         Err(new_log_err) => {
-                                            let high_level_error = errors::path_data_error(dir, format!("cannot create new empty log {} or read existing log", latest));
-                                            // There are 2 contexts:
-                                            // - Why existing logs cannot be read?
-                                            // - Why a new log cannot be created?
-                                            // Record both of them.
-                                            return Err(failure::Error::from(
-                                                new_log_err.context(err),
-                                            )
-                                            .context(high_level_error)
-                                            .into());
+                                            let msg = "cannot create new empty log after failing to read existing logs";
+                                            return Err(new_log_err.message(msg).source(err));
                                         }
                                     }
                                 }
@@ -175,9 +166,15 @@ impl OpenOptions {
                                 (latest, vec![log])
                             } else {
                                 // latest cannot be read for other reasons.
-                                return Err(failure::Error::from(err)
-                                    .context(format!("cannot read 'latest' in {:?}", dir))
-                                    .into());
+                                //
+                                // Mark as corrupted, if 'latest' contains a number that cannot be
+                                // parsed.
+                                let corrupted = err.kind() == io::ErrorKind::InvalidData;
+                                let mut result = Err(err).context(dir, "cannot read 'latest'");
+                                if corrupted {
+                                    result = result.corruption();
+                                }
+                                return result;
                             }
                         }
                     }
@@ -194,7 +191,7 @@ impl OpenOptions {
     }
 
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
-    pub fn create_in_memory(self) -> Fallible<RotateLog> {
+    pub fn create_in_memory(self) -> crate::Result<RotateLog> {
         let logs = vec![create_empty_log(None, &self, 0)?];
         Ok(RotateLog {
             dir: None,
@@ -207,14 +204,18 @@ impl OpenOptions {
 
 impl RotateLog {
     /// Append data to the writable [`Log`].
-    pub fn append(&mut self, data: impl AsRef<[u8]>) -> Fallible<()> {
+    pub fn append(&mut self, data: impl AsRef<[u8]>) -> crate::Result<()> {
         self.writable_log().append(data)?;
         Ok(())
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` stored in [`OpenOptions`].
-    pub fn lookup(&self, index_id: usize, key: impl Into<Bytes>) -> Fallible<RotateLogLookupIter> {
+    pub fn lookup(
+        &self,
+        index_id: usize,
+        key: impl Into<Bytes>,
+    ) -> crate::Result<RotateLogLookupIter> {
         let key = key.into();
         Ok(RotateLogLookupIter {
             inner_iter: self.logs[0].lookup(index_id, &key)?,
@@ -254,7 +255,7 @@ impl RotateLog {
     /// Return the index of the latest [`Log`].
     ///
     /// For in-memory [`RotateLog`], this function always returns 0.
-    pub fn sync(&mut self) -> Fallible<u8> {
+    pub fn sync(&mut self) -> crate::Result<u8> {
         if self.dir.is_none() {
             return Ok(0);
         }
@@ -328,7 +329,7 @@ impl RotateLog {
     /// This function assumes it's protected by a directory lock, and the
     /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
     /// and do not have dirty entries in non-writable logs).
-    fn rotate_assume_locked(&mut self) -> Fallible<()> {
+    fn rotate_assume_locked(&mut self) -> crate::Result<()> {
         // Create a new Log. Bump latest.
         let next = self.latest.wrapping_add(1);
         let log = create_empty_log(Some(self.dir.as_ref().unwrap()), &self.open_options, next)?;
@@ -342,7 +343,7 @@ impl RotateLog {
     }
 
     /// Renamed. Use [`RotateLog::sync`] instead.
-    pub fn flush(&mut self) -> Fallible<u8> {
+    pub fn flush(&mut self) -> crate::Result<u8> {
         self.sync()
     }
 
@@ -398,7 +399,7 @@ pub trait RotateLowLevelExt {
     /// data can be written when data corruption happens.
     ///
     /// Data not written will get lost.
-    fn force_rotate(&mut self) -> Fallible<()>;
+    fn force_rotate(&mut self) -> crate::Result<()>;
 }
 
 impl RotateLowLevelExt for RotateLog {
@@ -406,7 +407,7 @@ impl RotateLowLevelExt for RotateLog {
         &self.logs
     }
 
-    fn force_rotate(&mut self) -> Fallible<()> {
+    fn force_rotate(&mut self) -> crate::Result<()> {
         if self.dir.is_none() {
             // rotate does not make sense for an in-memory RotateLog.
             return Ok(());
@@ -467,7 +468,11 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
     }
 }
 
-fn create_empty_log(dir: Option<&Path>, open_options: &OpenOptions, latest: u8) -> Fallible<Log> {
+fn create_empty_log(
+    dir: Option<&Path>,
+    open_options: &OpenOptions,
+    latest: u8,
+) -> crate::Result<Log> {
     Ok(match dir {
         Some(dir) => {
             let latest_path = dir.join(LATEST_FILE);
@@ -485,12 +490,8 @@ fn create_empty_log(dir: Option<&Path>, open_options: &OpenOptions, latest: u8) 
     })
 }
 
-fn read_latest(dir: &Path) -> Fallible<u8> {
-    read_latest_raw(dir).map_err(|e| {
-        failure::Error::from(e)
-            .context(errors::path_data_error(dir, "cannot read 'latest'"))
-            .into()
-    })
+fn read_latest(dir: &Path) -> crate::Result<u8> {
+    read_latest_raw(dir).context(dir, "cannot read latest")
 }
 
 // Unlike read_latest, this function returns io::Result.
@@ -509,7 +510,7 @@ fn read_latest_raw(dir: &Path) -> io::Result<u8> {
     Ok(id)
 }
 
-fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec<Log>> {
+fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> crate::Result<Vec<Log>> {
     let mut logs = Vec::new();
     let mut current = latest;
     let mut remaining = open_options.max_log_count;
@@ -541,7 +542,7 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
     Ok(logs)
 }
 
-fn read_latest_and_logs(dir: &Path, open_options: &OpenOptions) -> Fallible<(u8, Vec<Log>)> {
+fn read_latest_and_logs(dir: &Path, open_options: &OpenOptions) -> crate::Result<(u8, Vec<Log>)> {
     let latest = read_latest(dir)?;
     Ok((latest, read_logs(dir, open_options, latest)?))
 }
@@ -861,22 +862,21 @@ mod tests {
     }
 
     #[test]
-    fn test_recover_from_empty_logs() -> Fallible<()> {
+    fn test_recover_from_empty_logs() {
         let dir = tempdir().unwrap();
-        let rotate = OpenOptions::new().create(true).open(&dir)?;
+        let rotate = OpenOptions::new().create(true).open(&dir).unwrap();
         drop(rotate);
 
         // Delete all logs, but keep "latest".
-        for dirent in fs::read_dir(&dir)? {
-            let dirent = dirent?;
+        for dirent in fs::read_dir(&dir).unwrap() {
+            let dirent = dirent.unwrap();
             let path = dirent.path();
             if path.is_dir() {
-                fs::remove_dir_all(path)?;
+                fs::remove_dir_all(path).unwrap();
             }
         }
 
-        let _ = OpenOptions::new().create(true).open(&dir)?;
-        Ok(())
+        let _ = OpenOptions::new().create(true).open(&dir).unwrap();
     }
 
     #[test]

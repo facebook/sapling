@@ -172,7 +172,7 @@ impl IndexedLogDataStore {
                 // XXX: This removes or renames path, which can break various
                 // "append-only" assumption made by indexedlog. Other processes
                 // might break during "sync()".
-                indexedlogutil::debug_backup_error(path.as_ref(), err)?;
+                indexedlogutil::debug_backup_error(path.as_ref(), err.into())?;
                 open_options.open(&path)?
             }
         };
