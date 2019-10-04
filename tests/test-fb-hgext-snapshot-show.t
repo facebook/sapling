@@ -294,6 +294,28 @@
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
   
+  $ hg log -Gr 'smartlog()' -T '[{graphnode}] {node|short} {author|emailuser}\n{desc|firstline}'
+  s  [s] 3d1b299b75fb test
+  |  snapshot
+  | s    [s] b6124cfe90c6 test
+  | |\   snapshot
+  | +---s  [s] 404ae306a972 test
+  | | |/   snapshot
+  | | o  [o] fdf2c0326bba test
+  | | |  merge #2
+  | o |  [o] 9d3ebf4630d3 test
+  | | |  merge #1
+  | o |  [o] 8e676f2ef130 test
+  | | |  draft2
+  | o |  [o] d521223a2fb5 test
+  | |/   draft1 amend2
+  x /  [x] ffb8db6e9ac3 test
+  |/   draft1
+  @  [@] fa948fa73a59 test
+  |  add some files
+  o  [o] 175dbab47dcc test
+  |  public1
+  ~
 
 
 # If we don't have a snapshot extension

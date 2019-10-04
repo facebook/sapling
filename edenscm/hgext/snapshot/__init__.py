@@ -44,9 +44,11 @@ from edenscm.mercurial import (
     bundlerepo,
     error,
     extensions,
+    graphmod,
     hg,
     registrar,
     revsetlang,
+    smartset,
     templatekw,
     visibility,
 )
@@ -81,6 +83,7 @@ def reposetup(ui, repo):
 
 
 def extsetup(ui):
+    extensions.wrapfunction(graphmod, "dagwalker", _dagwalker)
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
     extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
     extensions.wrapfunction(templatekw, "showgraphnode", _showgraphnode)
@@ -88,16 +91,26 @@ def extsetup(ui):
     extensions.wrapfunction(
         bundlerepo.bundlerepository, "_handlebundle2part", _handlebundle2part
     )
-    try:
-        smartlog = extensions.find("smartlog")
-        extensions.wrapfunction(smartlog, "getrevs", _getrevssl)
-    except KeyError:
-        pass
-    try:
+
+    def wrapamend(loaded):
+        if not loaded:
+            return
         amend = extensions.find("amend")
         extensions.wrapfunction(amend.hide, "_dounhide", _dounhide)
-    except KeyError:
-        pass
+
+    def wrapsmartlog(loaded):
+        if not loaded:
+            return
+        smartlog = extensions.find("smartlog")
+        extensions.wrapfunction(smartlog, "smartlogrevset", _smartlogrevset)
+        smartlog.revsetpredicate._table["smartlog"] = smartlog.smartlogrevset
+
+    extensions.afterloaded("amend", wrapamend)
+    extensions.afterloaded("smartlog", wrapsmartlog)
+
+
+def _dagwalker(orig, repo, revs):
+    return orig(repo.unfiltered(), revs)
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
@@ -149,12 +162,10 @@ def _handlebundle2part(orig, self, bundle, part):
         self._snapshotbundlestore.write(oid, data)
 
 
-def _getrevssl(orig, ui, repo, masterstring, **opts):
-    revs = orig(ui, repo, masterstring, **opts)
-    snapshotstring = revsetlang.formatspec(
-        "smartlog(heads=snapshot(), master=%r)", masterstring
-    )
-    return revs.union(repo.unfiltered().anyrevs([snapshotstring], user=True))
+def _smartlogrevset(orig, repo, subset, x):
+    revs = orig(repo, subset, x)
+    snapshotstring = revsetlang.formatspec("snapshot()")
+    return smartset.addset(revs, repo.unfiltered().anyrevs([snapshotstring], user=True))
 
 
 def _dounhide(orig, repo, revs):
