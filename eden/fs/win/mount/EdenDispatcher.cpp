@@ -62,10 +62,11 @@ HRESULT EdenDispatcher::startEnumeration(
     wstring path{callbackData.FilePathName};
 
     TRACE(
-        "startEnumeration mount (0x{:x}) root ({}) path ({})",
+        "startEnumeration mount (0x{:x}) root ({}) path ({}) process ({})",
         reinterpret_cast<uintptr_t>(&getMount()),
         getMount().getPath(),
-        wstringToString(path));
+        wstringToString(path),
+        wcharToString(callbackData.TriggeringProcessImageFileName));
 
     if (!winStore_.getAllEntries(path, list)) {
       TRACE("File not found path ({})", wstringToString(path));
@@ -170,10 +171,11 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     }
 
     TRACE(
-        "Found {} {} size= {}",
+        "Found {} {} size= {} process {}",
         wstringToString(metadata.name),
         metadata.isDirectory ? "Dir" : "File",
-        metadata.size);
+        metadata.size,
+        wcharToString(callbackData.TriggeringProcessImageFileName));
 
     placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDirectory;
     placeholderInfo.FileBasicInfo.FileSize = metadata.size;
