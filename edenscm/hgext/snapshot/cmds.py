@@ -89,11 +89,24 @@ def snapshotcreate(ui, repo, *args, **opts):
             except OSError:
                 ui.warn(_("%s cannot be removed") % file)
 
+    def removesnapshotfiles(ui, repo, metadata):
+        removeuntrackedfiles(ui, repo)
+        tr = repo.currenttransaction()
+        if tr:
+            for f in metadata.localvfsfiles:
+                tr.removefilegenerator(f.path)
+        for f in metadata.localvfsfiles:
+            try:
+                repo.localvfs.unlinkpath(f.path, ignoremissing=True)
+            except OSError:
+                ui.warn(_("%s cannot be removed") % f.path)
+
     with repo.wlock(), repo.lock():
-        node = createsnapshotcommit(ui, repo, opts)
-        if not node:
+        result = createsnapshotcommit(ui, repo, opts)
+        if not result:
             ui.status(_("nothing changed\n"))
             return
+        node, metadata = result
         node = nodemod.hex(node)
         with repo.transaction("update-snapshot-list") as tr:
             repo.snapshotlist.update(tr, addnodes=[node])
@@ -103,7 +116,7 @@ def snapshotcreate(ui, repo, *args, **opts):
                 # We want to bring the working copy to the p1 state
                 rev = repo[None].p1()
                 hg.updatetotally(ui, repo, rev, rev, clean=True)
-                removeuntrackedfiles(ui, repo)
+                removesnapshotfiles(ui, repo, metadata)
             except (KeyboardInterrupt, Exception) as exc:
                 ui.warn(_("failed to clean the working copy: %s\n") % exc)
 
@@ -125,7 +138,7 @@ def createsnapshotcommit(ui, repo, opts):
     if len(cctx.files()) == 0 and emptymetadata:  # don't need an empty snapshot
         return None
     with repo.transaction("snapshot"):
-        return repo.commitctx(cctx, error=True)
+        return repo.commitctx(cctx, error=True), snapmetadata
 
 
 @subcmd("show", cmdutil.logopts, _("REV"), cmdtype=registrar.command.readonly)

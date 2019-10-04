@@ -81,7 +81,11 @@
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
   
-  $ REBASEOID="$(hg snapshot create | head -n 1 | cut -f2 -d' ')"
+  $ REBASEOID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
+  $ hg status --verbose
+  $ hg snapshot checkout "$REBASEOID"
+  will checkout on bcda34b7ba8ac6336db59e0c393bb8f7af39e730
+  checkout complete
   $ hg rebase --abort
   rebase aborted
 
