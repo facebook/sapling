@@ -1142,7 +1142,7 @@ impl Log {
         len: u64,
         buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
         fsync: bool,
-    ) -> Fallible<Index> {
+    ) -> crate::Result<Index> {
         match dir {
             Some(dir) => {
                 let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
@@ -1575,7 +1575,7 @@ impl<'a> Iterator for LogLookupIter<'a> {
             None => None,
             Some(Err(err)) => {
                 self.errored = true;
-                Some(Err(err))
+                Some(Err(err.into()))
             }
             Some(Ok(offset)) => match self
                 .log
@@ -1636,13 +1636,13 @@ impl<'a> LogRangeIter<'a> {
     /// Wrap `next()` or `next_back()` result by the inner iterator.
     fn wrap_inner_next_result(
         &mut self,
-        item: Option<Fallible<(Cow<'a, [u8]>, index::LinkOffset)>>,
+        item: Option<crate::Result<(Cow<'a, [u8]>, index::LinkOffset)>>,
     ) -> Option<Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>> {
         match item {
             None => None,
             Some(Err(err)) => {
                 self.errored = true;
-                Some(Err(err))
+                Some(Err(err.into()))
             }
             Some(Ok((key, link_offset))) => {
                 let iter = LogLookupIter {

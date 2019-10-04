@@ -64,6 +64,7 @@ use std::sync::Arc;
 
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
+use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedFileLock;
 use crate::utils::{mmap_empty, mmap_readonly};
 
@@ -116,7 +117,7 @@ type Checksum = Option<ChecksumTable>;
 
 /// Read reversed vlq at the given end offset (exclusive).
 /// Return the decoded integer and the bytes used by the VLQ integer.
-fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> Fallible<(u64, usize)> {
+fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> io::Result<(u64, usize)> {
     let buf = buf.as_ref();
     let mut int_buf = Vec::new();
     for i in (0..end_offset).rev() {
@@ -187,7 +188,7 @@ enum TypedOffset {
 }
 
 impl Offset {
-    /// Convert `Fallible<u64>` read from disk to a non-dirty `Offset`.
+    /// Convert an unverified `u64` read from disk to a non-dirty `Offset`.
     /// Return [`errors::IndexError`] if the offset is dirty.
     #[inline]
     fn from_disk(index: impl IndexBuf, value: u64) -> crate::Result<Self> {
@@ -321,7 +322,7 @@ impl_offset!(ExtKeyOffset, TYPE_EXT_KEY, "ExtKey");
 impl RadixOffset {
     /// Link offset of a radix entry.
     #[inline]
-    fn link_offset(self, index: &Index) -> Fallible<LinkOffset> {
+    fn link_offset(self, index: &Index) -> crate::Result<LinkOffset> {
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].link_offset)
         } else {
@@ -356,7 +357,7 @@ impl RadixOffset {
     /// Lookup the `i`-th child inside a radix entry.
     /// Return stored offset, or `Offset(0)` if that child does not exist.
     #[inline]
-    fn child(self, index: &Index, i: u8) -> Fallible<Offset> {
+    fn child(self, index: &Index, i: u8) -> crate::Result<Offset> {
         // "i" is not derived from user input.
         assert!(i < 16);
         if self.is_dirty() {
@@ -392,7 +393,7 @@ impl RadixOffset {
     /// Copy an on-disk entry to memory so it can be modified. Return new offset.
     /// If the offset is already in-memory, return it as-is.
     #[inline]
-    fn copy(self, index: &mut Index) -> Fallible<RadixOffset> {
+    fn copy(self, index: &mut Index) -> crate::Result<RadixOffset> {
         if self.is_dirty() {
             Ok(self)
         } else {
@@ -486,7 +487,7 @@ impl RadixOffset {
 }
 
 /// Extract key_content from an untyped Offset. Internal use only.
-fn extract_key_content(index: &Index, key_offset: Offset) -> Fallible<&[u8]> {
+fn extract_key_content(index: &Index, key_offset: Offset) -> crate::Result<&[u8]> {
     let typed_offset = key_offset.to_typed(index)?;
     match typed_offset {
         TypedOffset::Key(x) => Ok(x.key_content(index)?),
@@ -500,7 +501,7 @@ fn extract_key_content(index: &Index, key_offset: Offset) -> Fallible<&[u8]> {
 impl LeafOffset {
     /// Key content and link offsets of a leaf entry.
     #[inline]
-    fn key_and_link_offset(self, index: &Index) -> Fallible<(&[u8], LinkOffset)> {
+    fn key_and_link_offset(self, index: &Index) -> crate::Result<(&[u8], LinkOffset)> {
         if self.is_dirty() {
             let e = &index.dirty_leafs[self.dirty_index()];
             let key_content = extract_key_content(index, e.key_offset)?;
@@ -526,13 +527,24 @@ impl LeafOffset {
                     (key_content, raw_link_offset)
                 }
                 TYPE_LEAF => {
-                    let (raw_key_offset, vlq_len): (u64, _) =
-                        index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+                    let (raw_key_offset, vlq_len): (u64, _) = index
+                        .buf
+                        .read_vlq_at(usize::from(self) + TYPE_BYTES)
+                        .context(
+                            index.path(),
+                            "cannot read key_offset in LeafOffset::key_and_link_offset",
+                        )
+                        .corruption()?;
                     let key_offset = Offset::from_disk(index, raw_key_offset)?;
                     let key_content = extract_key_content(index, key_offset)?;
                     let (raw_link_offset, vlq_len2) = index
                         .buf
-                        .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+                        .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)
+                        .context(
+                            index.path(),
+                            "cannot read link_offset in LeafOffset::key_and_link_offset",
+                        )
+                        .corruption()?;
                     index.verify_checksum(
                         u64::from(self),
                         (TYPE_BYTES + vlq_len + vlq_len2) as u64,
@@ -565,7 +577,7 @@ impl LeafOffset {
     /// Note: the old leaf is expected to be no longer needed. If that's not true, don't call
     /// this function.
     #[inline]
-    fn set_link(self, index: &mut Index, link_offset: LinkOffset) -> Fallible<LeafOffset> {
+    fn set_link(self, index: &mut Index, link_offset: LinkOffset) -> crate::Result<LeafOffset> {
         if self.is_dirty() {
             index.dirty_leafs[self.dirty_index()].link_offset = link_offset;
             Ok(self)
@@ -598,7 +610,7 @@ pub struct LeafValueIter<'a> {
 }
 
 impl<'a> Iterator for LeafValueIter<'a> {
-    type Item = Fallible<u64>;
+    type Item = crate::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset.is_null() || self.errored {
@@ -671,7 +683,7 @@ impl<'a> RangeIter<'a> {
         stack: &mut Vec<IterState>,
         towards: Side,
         exclusive: IterState,
-    ) -> Option<Fallible<(Cow<'a, [u8]>, LinkOffset)>> {
+    ) -> Option<crate::Result<(Cow<'a, [u8]>, LinkOffset)>> {
         loop {
             let state = match stack.pop().unwrap().step(towards) {
                 // Pop. Visit next.
@@ -718,7 +730,7 @@ impl<'a> RangeIter<'a> {
                         Ok(key) => Some(Ok((Cow::Owned(key), link_offset))),
                         Err(err) => Some(Err(err.into())),
                     },
-                    Err(err) => Some(Err(err)),
+                    Err(err) => Some(Err(err.into())),
                 },
                 IterState::Leaf(leaf) => match leaf.key_and_link_offset(index) {
                     Ok((key, link_offset)) => Some(Ok((Cow::Borrowed(key), link_offset))),
@@ -736,7 +748,7 @@ impl<'a> RangeIter<'a> {
 }
 
 impl<'a> Iterator for RangeIter<'a> {
-    type Item = Fallible<(Cow<'a, [u8]>, LinkOffset)>;
+    type Item = crate::Result<(Cow<'a, [u8]>, LinkOffset)>;
 
     /// Return the next key and corresponding [`LinkOffset`].
     fn next(&mut self) -> Option<Self::Item> {
@@ -782,15 +794,27 @@ impl LinkOffset {
 
     /// Get value, and the next link offset.
     #[inline]
-    fn value_and_next(self, index: &Index) -> Fallible<(u64, LinkOffset)> {
+    fn value_and_next(self, index: &Index) -> crate::Result<(u64, LinkOffset)> {
         if self.is_dirty() {
             let e = &index.dirty_links[self.dirty_index()];
             Ok((e.value, e.next_link_offset))
         } else {
-            let (value, vlq_len) = index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let (value, vlq_len) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES)
+                .context(
+                    index.path(),
+                    "cannot read link_value in LinkOffset::value_and_next",
+                )
+                .corruption()?;
             let (next_link, vlq_len2) = index
                 .buf
-                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)
+                .context(
+                    index.path(),
+                    "cannot read next_link_offset in LinkOffset::value_and_next",
+                )
+                .corruption()?;
             index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
             let next_link = LinkOffset::from_offset(Offset::from_disk(index, next_link)?, index)?;
             Ok((value, next_link))
@@ -814,12 +838,18 @@ impl LinkOffset {
 impl KeyOffset {
     /// Key content of a key entry.
     #[inline]
-    fn key_content(self, index: &Index) -> Fallible<&[u8]> {
+    fn key_content(self, index: &Index) -> crate::Result<&[u8]> {
         if self.is_dirty() {
             Ok(&index.dirty_keys[self.dirty_index()].key[..])
         } else {
-            let (key_len, vlq_len): (usize, _) =
-                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let (key_len, vlq_len): (usize, _) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES)
+                .context(
+                    index.path(),
+                    "cannot read key_len in KeyOffset::key_content",
+                )
+                .corruption()?;
             let start = usize::from(self) + TYPE_BYTES + vlq_len;
             let end = start + key_len;
             index.verify_checksum(u64::from(self), end as u64 - u64::from(self))?;
@@ -854,7 +884,7 @@ impl KeyOffset {
 impl ExtKeyOffset {
     /// Key content of a key entry.
     #[inline]
-    fn key_content(self, index: &Index) -> Fallible<&[u8]> {
+    fn key_content(self, index: &Index) -> crate::Result<&[u8]> {
         let (key_content, entry_size) = self.key_content_and_entry_size_unchecked(index)?;
         if let Some(entry_size) = entry_size {
             index.verify_checksum(u64::from(self), entry_size as u64)?;
@@ -867,16 +897,27 @@ impl ExtKeyOffset {
     fn key_content_and_entry_size_unchecked(
         self,
         index: &Index,
-    ) -> Fallible<(&[u8], Option<usize>)> {
+    ) -> crate::Result<(&[u8], Option<usize>)> {
         let (start, len, entry_size) = if self.is_dirty() {
             let e = &index.dirty_ext_keys[self.dirty_index()];
             (e.start, e.len, None)
         } else {
-            let (start, vlq_len1): (u64, _) =
-                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let (start, vlq_len1): (u64, _) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES)
+                .context(
+                    index.path(),
+                    "cannot read ext_key_start in ExtKeyOffset::key_content",
+                )
+                .corruption()?;
             let (len, vlq_len2): (u64, _) = index
                 .buf
-                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len1)?;
+                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len1)
+                .context(
+                    index.path(),
+                    "cannot read ext_key_len in ExtKeyOffset::key_content",
+                )
+                .corruption()?;
             (start, len, Some(TYPE_BYTES + vlq_len1 + vlq_len2))
         };
         let key_buf = index.key_buf.as_ref();
@@ -915,7 +956,7 @@ fn check_type(index: impl IndexBuf, offset: usize, expected: u8) -> crate::Resul
 }
 
 impl MemRadix {
-    fn read_from(index: &Index, offset: u64) -> Fallible<Self> {
+    fn read_from(index: &Index, offset: u64) -> crate::Result<Self> {
         let buf = &index.buf;
         let offset = offset as usize;
         let mut pos = 0;
@@ -961,7 +1002,7 @@ impl MemRadix {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         // Prepare data to write
         let mut flag = 0;
         let mut bitmap = 0;
@@ -1019,7 +1060,7 @@ impl MemRadix {
 }
 
 impl MemLeaf {
-    fn read_from(index: &Index, offset: u64) -> Fallible<Self> {
+    fn read_from(index: &Index, offset: u64) -> crate::Result<Self> {
         let buf = &index.buf;
         let offset = offset as usize;
         match buf.get(offset) {
@@ -1027,9 +1068,15 @@ impl MemLeaf {
                 let key_offset = offset + TYPE_BYTES;
                 // Skip the key part
                 let offset = key_offset + TYPE_BYTES;
-                let (_key_start, vlq_len): (u64, _) = buf.read_vlq_at(offset)?;
+                let (_key_start, vlq_len): (u64, _) = buf
+                    .read_vlq_at(offset)
+                    .context(index.path(), "cannot read key_start in MemLeaf::read_from")
+                    .corruption()?;
                 let offset = offset + vlq_len;
-                let (_key_len, vlq_len): (u64, _) = buf.read_vlq_at(offset)?;
+                let (_key_len, vlq_len): (u64, _) = buf
+                    .read_vlq_at(offset)
+                    .context(index.path(), "cannot read key_len in MemLeaf::read_from")
+                    .corruption()?;
                 let offset = offset + vlq_len;
                 // Checksum will be verified by ExtKey and Leaf nodes
                 let key_offset = Offset::from_disk(index, key_offset as u64)?;
@@ -1041,9 +1088,18 @@ impl MemLeaf {
                 })
             }
             Some(&TYPE_LEAF) => {
-                let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
+                let (key_offset, len1) = buf
+                    .read_vlq_at(offset + TYPE_BYTES)
+                    .context(index.path(), "cannot read key_offset in MemLeaf::read_from")
+                    .corruption()?;
                 let key_offset = Offset::from_disk(index, key_offset)?;
-                let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
+                let (link_offset, len2) = buf
+                    .read_vlq_at(offset + TYPE_BYTES + len1)
+                    .context(
+                        index.path(),
+                        "cannot read link_offset in MemLeaf::read_from",
+                    )
+                    .corruption()?;
                 let link_offset =
                     LinkOffset::from_offset(Offset::from_disk(index, link_offset)?, index)?;
                 index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
@@ -1061,15 +1117,15 @@ impl MemLeaf {
     ///
     /// The caller probably wants to set this entry to "unused" to prevent writing twice,
     /// if true is returned.
-    fn maybe_write_inline_to<W: Write>(
+    fn maybe_write_inline_to(
         &self,
-        writer: &mut W,
+        writer: &mut Vec<u8>,
         buf: &[u8],
         buf_offset: u64,
         dirty_ext_keys: &mut Vec<MemExtKey>,
         dirty_links: &mut Vec<MemLink>,
         offset_map: &mut OffsetMap,
-    ) -> Fallible<bool> {
+    ) -> crate::Result<bool> {
         debug_assert!(!self.is_unused());
 
         // Conditions to be inlined:
@@ -1099,17 +1155,17 @@ impl MemLeaf {
                 }
 
                 // Header
-                writer.write_all(&[TYPE_INLINE_LEAF])?;
+                writer.write_all(&[TYPE_INLINE_LEAF]).infallible()?;
 
                 // Inlined ExtKey
                 let offset = buf.len() as u64 + buf_offset;
                 offset_map.ext_key_map[ext_key_index] = offset;
-                ext_key.write_to(writer, offset_map)?;
+                ext_key.write_to(writer, offset_map).infallible()?;
 
                 // Inlined Link
                 let offset = buf.len() as u64 + buf_offset;
                 offset_map.link_map[ext_key_index] = offset;
-                link.write_to(writer, offset_map)?;
+                link.write_to(writer, offset_map).infallible()?;
 
                 ext_key.mark_unused();
                 link.mark_unused();
@@ -1125,7 +1181,11 @@ impl MemLeaf {
     }
 
     /// Write a Leaf entry.
-    fn write_noninline_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
+    fn write_noninline_to<W: Write>(
+        &self,
+        writer: &mut W,
+        offset_map: &OffsetMap,
+    ) -> io::Result<()> {
         debug_assert!(!self.is_unused());
         writer.write_all(&[TYPE_LEAF])?;
         writer.write_vlq(self.key_offset.to_disk(offset_map))?;
@@ -1145,12 +1205,21 @@ impl MemLeaf {
 }
 
 impl MemLink {
-    fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
+    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<Self> {
         let buf = index.buf();
         let offset = offset as usize;
         check_type(&index, offset, TYPE_LINK)?;
-        let (value, len1) = buf.read_vlq_at(offset + 1)?;
-        let (next_link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
+        let (value, len1) = buf
+            .read_vlq_at(offset + 1)
+            .context(index.path(), "cannot read link_value in MemLink::read_from")
+            .corruption()?;
+        let (next_link_offset, len2) = buf
+            .read_vlq_at(offset + TYPE_BYTES + len1)
+            .context(
+                index.path(),
+                "cannot read next_link_offset in MemLink::read_from",
+            )
+            .corruption()?;
         let next_link_offset =
             LinkOffset::from_offset(Offset::from_disk(&index, next_link_offset)?, &index)?;
         index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
@@ -1161,7 +1230,7 @@ impl MemLink {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_LINK])?;
         writer.write_vlq(self.value)?;
         writer.write_vlq(self.next_link_offset.to_disk(offset_map))?;
@@ -1180,11 +1249,14 @@ impl MemLink {
 }
 
 impl MemKey {
-    fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
+    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<Self> {
         let buf = index.buf();
         let offset = offset as usize;
         check_type(&index, offset, TYPE_KEY)?;
-        let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
+        let (key_len, len): (usize, _) = buf
+            .read_vlq_at(offset + 1)
+            .context(index.path(), "cannot read key_len in MemKey::read_from")
+            .corruption()?;
         let key = Vec::from(
             buf.get(offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len)
                 .ok_or_else(|| index.range_error(offset + TYPE_BYTES + len, key_len))?,
@@ -1194,7 +1266,7 @@ impl MemKey {
         Ok(MemKey { key })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> Fallible<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_KEY])?;
         writer.write_vlq(self.key.len())?;
         writer.write_all(&self.key)?;
@@ -1213,17 +1285,29 @@ impl MemKey {
 }
 
 impl MemExtKey {
-    fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
+    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<Self> {
         let buf = index.buf();
         let offset = offset as usize;
         check_type(&index, offset, TYPE_EXT_KEY)?;
-        let (start, vlq_len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-        let (len, vlq_len2) = buf.read_vlq_at(offset + TYPE_BYTES + vlq_len1)?;
+        let (start, vlq_len1) = buf
+            .read_vlq_at(offset + TYPE_BYTES)
+            .context(
+                index.path(),
+                "cannot read ext_key_start in MemExtKey::read_from",
+            )
+            .corruption()?;
+        let (len, vlq_len2) = buf
+            .read_vlq_at(offset + TYPE_BYTES + vlq_len1)
+            .context(
+                index.path(),
+                "cannot read ext_key_len in MemExtKey::read_from",
+            )
+            .corruption()?;
         index.verify_checksum(offset as u64, (TYPE_BYTES + vlq_len1 + vlq_len2) as u64)?;
         Ok(MemExtKey { start, len })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> Fallible<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_EXT_KEY])?;
         writer.write_vlq(self.start)?;
         writer.write_vlq(self.len)?;
@@ -1242,19 +1326,27 @@ impl MemExtKey {
 }
 
 impl MemRoot {
-    fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
+    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<Self> {
         let offset = offset as usize;
         let mut cur = offset;
         check_type(&index, offset, TYPE_ROOT)?;
         cur += TYPE_BYTES;
 
-        let (radix_offset, vlq_len) = index.buf().read_vlq_at(cur)?;
+        let (radix_offset, vlq_len) = index
+            .buf()
+            .read_vlq_at(cur)
+            .context(index.path(), "cannot read radix_offset")
+            .corruption()?;
         cur += vlq_len;
 
         let radix_offset =
             RadixOffset::from_offset(Offset::from_disk(&index, radix_offset)?, &index)?;
 
-        let (meta_len, vlq_len): (usize, _) = index.buf().read_vlq_at(cur)?;
+        let (meta_len, vlq_len): (usize, _) = index
+            .buf()
+            .read_vlq_at(cur)
+            .context(index.path(), "cannot read meta_len")
+            .corruption()?;
         cur += vlq_len;
 
         let meta = index
@@ -1270,10 +1362,15 @@ impl MemRoot {
         })
     }
 
-    fn read_from_end(index: impl IndexBuf, end: u64) -> Fallible<Self> {
+    fn read_from_end(index: impl IndexBuf, end: u64) -> crate::Result<Self> {
         let buf = index.buf();
         if end > 1 {
-            let (root_size, vlq_size) = read_vlq_reverse(buf, end as usize)?;
+            let (root_size, vlq_size) = read_vlq_reverse(buf, end as usize)
+                .context(
+                    index.path(),
+                    "cannot read root_size in MemRoot::read_from_end",
+                )
+                .corruption()?;
             let vlq_size = vlq_size as u64;
             index.verify_checksum(end - vlq_size, vlq_size)?;
             Self::read_from(index, end - vlq_size - root_size)
@@ -1287,7 +1384,7 @@ impl MemRoot {
         }
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
         buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
@@ -1593,7 +1690,7 @@ impl OpenOptions {
     /// Driven by the "immutable by default" idea, together with append-only
     /// properties, [`OpenOptions::open`] returns a "snapshotted" view of the
     /// index. Changes to the filesystem won't change instantiated [`Index`]es.
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Fallible<Index> {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> crate::Result<Index> {
         let path = path.as_ref();
         let mut open_options = self.clone();
         let open_result = if self.write == Some(false) {
@@ -1607,12 +1704,22 @@ impl OpenOptions {
                 .open(path)
         };
         let mut file = match self.write {
-            Some(true) | Some(false) => open_result?,
+            Some(write) => open_result.context(
+                path,
+                if write {
+                    "cannot open Index with read-write mode"
+                } else {
+                    "cannot open Index with read-only mode"
+                },
+            )?,
             None => {
                 // Fall back to open the file as read-only, automatically.
                 if open_result.is_err() {
                     open_options.write = Some(false);
-                    fs::OpenOptions::new().read(true).open(path)?
+                    fs::OpenOptions::new()
+                        .read(true)
+                        .open(path)
+                        .context(path, "cannot open Index with read-only mode")?
                 } else {
                     open_result.unwrap()
                 }
@@ -1623,12 +1730,13 @@ impl OpenOptions {
             match self.len {
                 None => {
                     // Take the lock to read file length, since that decides root entry location.
-                    let lock = ScopedFileLock::new(&mut file, false)?;
-                    mmap_readonly(lock.as_ref(), None)?
+                    let lock = ScopedFileLock::new(&mut file, false)
+                        .context(path, "cannot lock Log to read file length")?;
+                    mmap_readonly(lock.as_ref(), None).context(path, "cannot mmap")?
                 }
                 Some(len) => {
                     // No need to lock for getting file length.
-                    mmap_readonly(&file, Some(len))?
+                    mmap_readonly(&file, Some(len)).context(path, "cannot mmap")?
                 }
             }
         };
@@ -1680,7 +1788,7 @@ impl OpenOptions {
 
     /// Create an in-memory [`Index`] that skips flushing to disk.
     /// Return an error if `checksum_chunk_size` is not 0.
-    pub fn create_in_memory(&self) -> Fallible<Index> {
+    pub fn create_in_memory(&self) -> crate::Result<Index> {
         if self.checksum_chunk_size != 0 {
             return Err(crate::Error::programming(
                 "checksum_chunk_size is not supported for in-memory Index",
@@ -1698,7 +1806,7 @@ impl OpenOptions {
 
         Ok(Index {
             file: None,
-            buf: mmap_empty()?,
+            buf: mmap_empty().infallible()?,
             path: PathBuf::new(),
             open_options: self.clone(),
             clean_root,
@@ -1780,7 +1888,7 @@ impl IndexBuf for Index {
 
 impl Index {
     /// Return a cloned [`Index`] with pending in-memory changes.
-    pub fn try_clone(&self) -> Fallible<Self> {
+    pub fn try_clone(&self) -> crate::Result<Self> {
         self.try_clone_internal(true)
     }
 
@@ -1788,16 +1896,21 @@ impl Index {
     ///
     /// This is logically equivalent to calling `clear_dirty` immediately
     /// on the result after `try_clone`, but potentially cheaper.
-    pub fn try_clone_without_dirty(&self) -> Fallible<Self> {
+    pub fn try_clone_without_dirty(&self) -> crate::Result<Self> {
         self.try_clone_internal(false)
     }
 
-    pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> Fallible<Index> {
+    pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Index> {
         let (file, mmap) = match &self.file {
-            Some(f) => (Some(f.duplicate()?), mmap_readonly(&f, Some(self.len))?.0),
+            Some(f) => (
+                Some(f.duplicate().context(self.path(), "cannot duplicate")?),
+                mmap_readonly(&f, Some(self.len))
+                    .context(self.path(), "cannot mmap")?
+                    .0,
+            ),
             None => {
                 assert_eq!(self.len, 0);
-                (None, mmap_empty()?)
+                (None, mmap_empty().infallible()?)
             }
         };
         let checksum = match self.checksum {
@@ -2066,7 +2179,7 @@ impl Index {
     ///
     /// To test if the key exists or not, use [Offset::is_null].
     /// To obtain all values, use [`LinkOffset::values`].
-    pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> Fallible<LinkOffset> {
+    pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> crate::Result<LinkOffset> {
         let mut offset: Offset = self.dirty_root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
 
@@ -3246,7 +3359,8 @@ mod tests {
         index.dirty_links[0].next_link_offset = LinkOffset(Offset(1000));
         // Note: `collect` can return `Fallible<Vec<u64>>`. But that does not exercises the
         // infinite loop avoidance logic since `collect` stops iteration at the first error.
-        let list_errored: Vec<Fallible<u64>> = index.get(&[]).unwrap().values(&index).collect();
+        let list_errored: Vec<crate::Result<u64>> =
+            index.get(&[]).unwrap().values(&index).collect();
         assert!(list_errored[list_errored.len() - 1].is_err());
     }
 
@@ -3357,13 +3471,13 @@ mod tests {
         let it_backward = iter.clone_with_index(index);
         let mut it_both_ends = iter.clone_with_index(index);
 
-        let extract = |v: Fallible<(Cow<'_, [u8]>, LinkOffset)>| -> Vec<u8> {
+        let extract = |v: crate::Result<(Cow<'_, [u8]>, LinkOffset)>| -> Vec<u8> {
             let (key, link_offset) = v.unwrap();
             let key = key.as_ref();
             // Verify link_offset is correct
             let ids: Vec<u64> = link_offset
                 .values(&index)
-                .collect::<Fallible<Vec<u64>>>()
+                .collect::<crate::Result<Vec<u64>>>()
                 .unwrap();
             assert!(ids.len() == 1);
             assert_eq!(keys[ids[0] as usize], key);
