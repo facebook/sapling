@@ -10,6 +10,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::utils::atomic_write;
 use bytes::Bytes;
+use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -115,90 +116,110 @@ impl OpenOptions {
     }
 
     /// Open [`RotateLog`] at given location.
-    pub fn open(self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
+    pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
         let dir = dir.as_ref();
+        let result: crate::Result<_> = (|| {
+            let latest_and_log = read_latest_and_logs(dir, &self);
 
-        let latest_and_log = read_latest_and_logs(dir, &self);
+            let (latest, logs) = match latest_and_log {
+                Ok((latest, logs)) => (latest, logs),
+                Err(e) => {
+                    if !self.log_open_options.create {
+                        return Err(e);
+                    } else {
+                        fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
+                        let _lock = ScopedDirLock::new(&dir)?;
 
-        let (latest, logs) = match latest_and_log {
-            Ok((latest, logs)) => (latest, logs),
-            Err(e) => {
-                if !self.log_open_options.create {
-                    return Err(e);
-                } else {
-                    fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
-                    let _lock = ScopedDirLock::new(&dir)?;
-
-                    match read_latest_raw(dir) {
-                        Ok(latest) => {
-                            match read_logs(dir, &self, latest) {
-                                Ok(logs) => {
-                                    // Both latest and logs are read properly.
-                                    (latest, logs)
-                                }
-                                Err(err) => {
-                                    // latest is fine, but logs cannot be read.
-                                    // Try auto recover by creating an empty log.
-                                    let latest = latest.wrapping_add(1);
-                                    match create_empty_log(Some(dir), &self, latest) {
-                                        Ok(new_log) => {
-                                            if let Ok(logs) = read_logs(dir, &self, latest) {
-                                                (latest, logs)
-                                            } else {
-                                                (latest, vec![new_log])
+                        match read_latest_raw(dir) {
+                            Ok(latest) => {
+                                match read_logs(dir, &self, latest) {
+                                    Ok(logs) => {
+                                        // Both latest and logs are read properly.
+                                        (latest, logs)
+                                    }
+                                    Err(err) => {
+                                        // latest is fine, but logs cannot be read.
+                                        // Try auto recover by creating an empty log.
+                                        let latest = latest.wrapping_add(1);
+                                        match create_empty_log(Some(dir), &self, latest) {
+                                            Ok(new_log) => {
+                                                if let Ok(logs) = read_logs(dir, &self, latest) {
+                                                    (latest, logs)
+                                                } else {
+                                                    (latest, vec![new_log])
+                                                }
                                             }
-                                        }
-                                        Err(new_log_err) => {
-                                            let msg = "cannot create new empty log after failing to read existing logs";
-                                            return Err(new_log_err.message(msg).source(err));
+                                            Err(new_log_err) => {
+                                                let msg = "cannot create new empty log after failing to read existing logs";
+                                                return Err(new_log_err.message(msg).source(err));
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        Err(err) => {
-                            if err.kind() == io::ErrorKind::NotFound {
-                                // latest does not exist.
-                                // Most likely, it is a new empty directory.
-                                // Create an empty log and update latest.
-                                let latest = 0;
-                                let log = create_empty_log(Some(dir), &self, latest)?;
-                                (latest, vec![log])
-                            } else {
-                                // latest cannot be read for other reasons.
-                                //
-                                // Mark as corrupted, if 'latest' contains a number that cannot be
-                                // parsed.
-                                let corrupted = err.kind() == io::ErrorKind::InvalidData;
-                                let mut result = Err(err).context(dir, "cannot read 'latest'");
-                                if corrupted {
-                                    result = result.corruption();
+                            Err(err) => {
+                                if err.kind() == io::ErrorKind::NotFound {
+                                    // latest does not exist.
+                                    // Most likely, it is a new empty directory.
+                                    // Create an empty log and update latest.
+                                    let latest = 0;
+                                    let log = create_empty_log(Some(dir), &self, latest)?;
+                                    (latest, vec![log])
+                                } else {
+                                    // latest cannot be read for other reasons.
+                                    //
+                                    // Mark as corrupted, if 'latest' contains a number that cannot be
+                                    // parsed.
+                                    let corrupted = err.kind() == io::ErrorKind::InvalidData;
+                                    let mut result = Err(err).context(dir, "cannot read 'latest'");
+                                    if corrupted {
+                                        result = result.corruption();
+                                    }
+                                    return result;
                                 }
-                                return result;
                             }
                         }
                     }
                 }
-            }
-        };
+            };
 
-        Ok(RotateLog {
-            dir: Some(dir.into()),
-            open_options: self,
-            logs,
-            latest,
-        })
+            Ok(RotateLog {
+                dir: Some(dir.into()),
+                open_options: self.clone(),
+                logs,
+                latest,
+            })
+        })();
+
+        result
+            .context(|| format!("in rotate::OpenOptions::open({:?})", dir))
+            .context(|| format!("  OpenOptions = {:?}", self))
     }
 
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
-    pub fn create_in_memory(self) -> crate::Result<RotateLog> {
-        let logs = vec![create_empty_log(None, &self, 0)?];
-        Ok(RotateLog {
-            dir: None,
-            open_options: self,
-            logs,
-            latest: 0,
-        })
+    pub fn create_in_memory(&self) -> crate::Result<RotateLog> {
+        let result: crate::Result<_> = (|| {
+            let logs = vec![create_empty_log(None, &self, 0)?];
+            Ok(RotateLog {
+                dir: None,
+                open_options: self.clone(),
+                logs,
+                latest: 0,
+            })
+        })();
+        result
+            .context("in rotate::OpenOptions::create_in_memory")
+            .context(|| format!("  OpenOptions = {:?}", self))
+    }
+}
+
+impl fmt::Debug for OpenOptions {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "OpenOptions {{ ")?;
+        write!(f, "max_bytes_per_log: {}, ", self.max_bytes_per_log,)?;
+        write!(f, "max_log_count: {}, ", self.max_log_count)?;
+        write!(f, "log_open_options: {:?} }}", &self.log_open_options)?;
+        Ok(())
     }
 }
 
@@ -217,14 +238,19 @@ impl RotateLog {
         key: impl Into<Bytes>,
     ) -> crate::Result<RotateLogLookupIter> {
         let key = key.into();
-        Ok(RotateLogLookupIter {
-            inner_iter: self.logs[0].lookup(index_id, &key)?,
-            end: false,
-            log_rotate: self,
-            log_index: 0,
-            index_id,
-            key,
-        })
+        let result: crate::Result<_> = (|| {
+            Ok(RotateLogLookupIter {
+                inner_iter: self.logs[0].lookup(index_id, &key)?,
+                end: false,
+                log_rotate: self,
+                log_index: 0,
+                index_id,
+                key: key.clone(),
+            })
+        })();
+        result
+            .context(|| format!("in RotateLog::lookup({}, {:?})", index_id, key.as_ref()))
+            .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -243,11 +269,15 @@ impl RotateLog {
         index_id: usize,
         key: impl AsRef<[u8]>,
     ) -> crate::Result<log::LogLookupIter> {
+        let key = key.as_ref();
         assert!(
             self.open_options.log_open_options.flush_filter.is_some(),
             "programming error: flush_filter should also be set"
         );
-        self.logs[0].lookup(index_id, key)
+        self.logs[0]
+            .lookup(index_id, key)
+            .context(|| format!("in RotateLog::lookup_latest({}, {:?})", index_id, key))
+            .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
     /// Read latest data from disk. Write in-memory entries to disk.
@@ -256,72 +286,78 @@ impl RotateLog {
     ///
     /// For in-memory [`RotateLog`], this function always returns 0.
     pub fn sync(&mut self) -> crate::Result<u8> {
-        if self.dir.is_none() {
-            return Ok(0);
-        }
-        let latest = read_latest(self.dir.as_ref().unwrap())?;
-
-        if self.writable_log().iter_dirty().nth(0).is_none() {
-            // Read-only path, no need to take directory lock.
-            if latest != self.latest {
-                // Latest changed. Re-load and write to the real latest Log.
-                // PERF(minor): This can be smarter by avoiding reloading some logs.
-                self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
-                self.latest = latest;
+        let result: crate::Result<_> = (|| {
+            if self.dir.is_none() {
+                return Ok(0);
             }
-            self.writable_log().sync()?;
-        } else {
-            // Read-write path. Take the directory lock.
-            let dir = self.dir.clone().unwrap();
-            let _lock = ScopedDirLock::new(&dir)?;
-
-            // Re-read latest, since it might have changed after taking the lock.
             let latest = read_latest(self.dir.as_ref().unwrap())?;
-            if latest != self.latest {
-                // Latest changed. Re-load and write to the real latest Log.
-                //
-                // This is needed because RotateLog assumes non-latest logs
-                // are read-only. Other processes using RotateLog won't reload
-                // non-latest logs automatically.
 
-                // PERF(minor): This can be smarter by avoiding reloading some logs.
-                let mut new_logs =
-                    read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
-                if let Some(filter) = self.open_options.log_open_options.flush_filter {
-                    let log = &mut new_logs[0];
-                    for entry in self.writable_log().iter_dirty() {
-                        let content = entry?;
-                        let context = FlushFilterContext { log };
-                        match filter(&context, content).map_err(|err| {
-                            crate::Error::wrap(err, "failed to run filter function")
-                        })? {
-                            FlushFilterOutput::Drop => (),
-                            FlushFilterOutput::Keep => log.append(content)?,
-                            FlushFilterOutput::Replace(content) => log.append(content)?,
+            if self.writable_log().iter_dirty().nth(0).is_none() {
+                // Read-only path, no need to take directory lock.
+                if latest != self.latest {
+                    // Latest changed. Re-load and write to the real latest Log.
+                    // PERF(minor): This can be smarter by avoiding reloading some logs.
+                    self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
+                    self.latest = latest;
+                }
+                self.writable_log().sync()?;
+            } else {
+                // Read-write path. Take the directory lock.
+                let dir = self.dir.clone().unwrap();
+                let _lock = ScopedDirLock::new(&dir)?;
+
+                // Re-read latest, since it might have changed after taking the lock.
+                let latest = read_latest(self.dir.as_ref().unwrap())?;
+                if latest != self.latest {
+                    // Latest changed. Re-load and write to the real latest Log.
+                    //
+                    // This is needed because RotateLog assumes non-latest logs
+                    // are read-only. Other processes using RotateLog won't reload
+                    // non-latest logs automatically.
+
+                    // PERF(minor): This can be smarter by avoiding reloading some logs.
+                    let mut new_logs =
+                        read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
+                    if let Some(filter) = self.open_options.log_open_options.flush_filter {
+                        let log = &mut new_logs[0];
+                        for entry in self.writable_log().iter_dirty() {
+                            let content = entry?;
+                            let context = FlushFilterContext { log };
+                            match filter(&context, content).map_err(|err| {
+                                crate::Error::wrap(err, "failed to run filter function")
+                            })? {
+                                FlushFilterOutput::Drop => (),
+                                FlushFilterOutput::Keep => log.append(content)?,
+                                FlushFilterOutput::Replace(content) => log.append(content)?,
+                            }
+                        }
+                    } else {
+                        // Copy entries to new Logs.
+                        for entry in self.writable_log().iter_dirty() {
+                            let bytes = entry?;
+                            new_logs[0].append(bytes)?;
                         }
                     }
-                } else {
-                    // Copy entries to new Logs.
-                    for entry in self.writable_log().iter_dirty() {
-                        let bytes = entry?;
-                        new_logs[0].append(bytes)?;
-                    }
+                    self.logs = new_logs;
+                    self.latest = latest;
                 }
-                self.logs = new_logs;
-                self.latest = latest;
+
+                let size = self.writable_log().flush()?;
+                if size >= self.open_options.max_bytes_per_log {
+                    // `self.writable_log()` will be rotated (i.e., becomes immutable).
+                    // Make sure indexes are up-to-date so reading it would not require
+                    // building missing indexes in-memory.
+                    self.writable_log().finalize_indexes()?;
+                    self.rotate_assume_locked()?;
+                }
             }
 
-            let size = self.writable_log().flush()?;
-            if size >= self.open_options.max_bytes_per_log {
-                // `self.writable_log()` will be rotated (i.e., becomes immutable).
-                // Make sure indexes are up-to-date so reading it would not require
-                // building missing indexes in-memory.
-                self.writable_log().finalize_indexes()?;
-                self.rotate_assume_locked()?;
-            }
-        }
+            Ok(self.latest)
+        })();
 
-        Ok(self.latest)
+        result
+            .context("in RotateLog::sync")
+            .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
     /// Force create a new [`Log`]. Bump latest.
