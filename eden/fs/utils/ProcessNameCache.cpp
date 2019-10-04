@@ -12,6 +12,7 @@
 #include "eden/fs/utils/Synchronized.h"
 #ifdef __APPLE__
 #include <libproc.h> // @manual
+#include <sys/sysctl.h> // @manual
 #endif
 
 using namespace std::literals;
@@ -26,19 +27,127 @@ ProcPidCmdLine getProcPidCmdLine(pid_t pid) {
   return path;
 }
 
+#ifdef __APPLE__
+// This returns 256kb on my system
+size_t queryKernArgMax() {
+  int mib[2] = {CTL_KERN, KERN_ARGMAX};
+  int argmax = 0;
+  size_t size = sizeof(argmax);
+  folly::checkUnixError(
+      sysctl(mib, std::size(mib), &argmax, &size, nullptr, 0),
+      "error retrieving KERN_ARGMAX via sysctl");
+  CHECK(argmax > 0) << "KERN_ARGMAX has a negative value!?";
+  return size_t(argmax);
+}
+#endif
+
+folly::StringPiece extractCommandLineFromProcArgs(
+    const char* procargs,
+    size_t len) {
+  /* The format of procargs2 is:
+     struct procargs2 {
+        int argc;
+        char [] executable image path;
+        char [] null byte padding out to the word size;
+        char [] argv0 with null terminator
+        char [] argvN with null terminator
+        char [] key=val of first env var (with null terminator)
+        char [] key=val of second env var (with null terminator)
+        ...
+  */
+
+  if (UNLIKELY(len < sizeof(int))) {
+    // Should be impossible!
+    return "<err:EUNDERFLOW>";
+  }
+
+  // Fetch the argc value for the target process
+  int argCount = 0;
+  memcpy(&argCount, procargs, sizeof(argCount));
+  if (argCount < 1) {
+    return "<err:BOGUS_ARGC>";
+  }
+
+  const char* end = procargs + len;
+  // Skip over the image path
+  const char* cmdline = procargs + sizeof(int);
+  // look for NUL byte
+  while (cmdline < end) {
+    if (*cmdline == 0) {
+      break;
+    }
+    ++cmdline;
+  }
+  // look for non-NUL byte
+  while (cmdline < end) {
+    if (*cmdline != 0) {
+      break;
+    }
+    ++cmdline;
+  }
+  // now cmdline points to the start of the command line
+
+  const char* ptr = cmdline;
+  while (argCount > 0 && ptr < end) {
+    if (*ptr == 0) {
+      if (--argCount == 0) {
+        return folly::StringPiece{cmdline, ptr};
+      }
+    }
+    ptr++;
+  }
+
+  return folly::StringPiece{cmdline, end};
+}
+
 std::string readPidName(pid_t pid) {
 #ifdef __APPLE__
-  char target[PROC_PIDPATHINFO_MAXSIZE];
-  // libproc is undocumented and unsupported, but the implementation is open
-  // source:
-  // https://opensource.apple.com/source/xnu/xnu-2782.40.9/libsyscall/wrappers/libproc/libproc.c
-  // The return value is 0 on error, otherwise is the length of the buffer.
-  // It takes care of overflow/truncation.
-  ssize_t rv = proc_pidpath(pid, target, sizeof(target));
-  if (rv == 0) {
+  // a Meyers Singleton to compute and cache this system parameter
+  static size_t argMax = queryKernArgMax();
+
+  std::vector<char> args;
+  args.resize(argMax);
+
+  char* procargs = args.data();
+  size_t len = args.size();
+
+  int mib[3] = {CTL_KERN, KERN_PROCARGS2, pid};
+  if (sysctl(mib, std::size(mib), procargs, &len, nullptr, 0) == -1) {
+    // AFAICT, the sysctl will only fail in situations where the calling
+    // process lacks privs to read the args from the target.
+    // The errno value is a bland EINVAL in that case.
+    // Regardless of the cause, we'd like to try to show something so we
+    // fallback to using libproc to retrieve the image filename.
+
+    // libproc is undocumented and unsupported, but the implementation is open
+    // source:
+    // https://opensource.apple.com/source/xnu/xnu-2782.40.9/libsyscall/wrappers/libproc/libproc.c
+    // The return value is 0 on error, otherwise is the length of the buffer.
+    // It takes care of overflow/truncation.
+
+    // The buffer must be exactly PROC_PIDPATHINFO_MAXSIZE in size otherwise
+    // an EOVERFLOW is generated (even if the buffer is larger!)
+    args.resize(PROC_PIDPATHINFO_MAXSIZE);
+    ssize_t rv = proc_pidpath(pid, args.data(), PROC_PIDPATHINFO_MAXSIZE);
+    if (rv != 0) {
+      return std::string{args.data(), args.data() + rv};
+    }
     return folly::to<std::string>("<err:", errno, ">");
   }
-  return std::string{target, target + rv};
+
+  // The sysctl won't fail if the buffer is too small, but should set the len
+  // value to approximately the used length on success.
+  // If the buffer is too small it leaves
+  // the value that was passed in as-is.  Therefore we can detect that our
+  // buffer was too small if the size is >= the available data space.
+  // The returned len in the success case seems to be smaller than the input
+  // length.  For example, a successful call with len returned as 1012 requires
+  // an input buffer of length 1029
+  if (len >= args.size()) {
+    return "<err:EOVERFLOW>";
+  }
+
+  return extractCommandLineFromProcArgs(procargs, len).str();
 #else
   char target[256];
   const auto fd =
