@@ -190,7 +190,7 @@ def _diff(orig, repo, *args, **kwargs):
     node2 = kwargs.get("node2") or args[1]
     if node2 is None:
         # this should be the snapshot node
-        raise StopIteration
+        return
     ctx2 = repo.unfiltered()[node2]
     date2 = util.datestr(ctx2.date())
     node1 = kwargs.get("node1") or args[0]
@@ -203,7 +203,7 @@ def _diff(orig, repo, *args, **kwargs):
     metadataid = ctx2.extra().get("snapshotmetadataid", "")
     if not metadataid:
         # node2 is not a snapshot
-        raise StopIteration
+        return
     snapmetadata = snapshotmetadata.getfromlocalstorage(repo, metadataid)
     store = repo.svfs.snapshotstore
     # print unknown files from snapshot
