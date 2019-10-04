@@ -208,7 +208,8 @@ impl OpenOptions {
 impl RotateLog {
     /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> Fallible<()> {
-        self.writable_log().append(data)
+        self.writable_log().append(data)?;
+        Ok(())
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -240,7 +241,7 @@ impl RotateLog {
         &self,
         index_id: usize,
         key: impl AsRef<[u8]>,
-    ) -> Fallible<log::LogLookupIter> {
+    ) -> crate::Result<log::LogLookupIter> {
         assert!(
             self.open_options.log_open_options.flush_filter.is_some(),
             "programming error: flush_filter should also be set"
@@ -290,7 +291,9 @@ impl RotateLog {
                     for entry in self.writable_log().iter_dirty() {
                         let content = entry?;
                         let context = FlushFilterContext { log };
-                        match filter(&context, content)? {
+                        match filter(&context, content).map_err(|err| {
+                            crate::Error::wrap(err, "failed to run filter function")
+                        })? {
                             FlushFilterOutput::Drop => (),
                             FlushFilterOutput::Keep => log.append(content)?,
                             FlushFilterOutput::Replace(content) => log.append(content)?,
@@ -377,7 +380,7 @@ impl RotateLog {
     /// Iterate over all the entries.
     ///
     /// The entries are returned in FIFO order.
-    pub fn iter(&self) -> impl Iterator<Item = Fallible<&[u8]>> {
+    pub fn iter(&self) -> impl Iterator<Item = crate::Result<&[u8]>> {
         self.logs.iter().rev().map(|log| log.iter()).flatten()
     }
 }
@@ -429,7 +432,7 @@ pub struct RotateLogLookupIter<'a> {
 }
 
 impl<'a> Iterator for RotateLogLookupIter<'a> {
-    type Item = Fallible<&'a [u8]>;
+    type Item = crate::Result<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.end {
@@ -525,8 +528,9 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
             }
             Err(err) => {
                 if logs.is_empty() {
-                    let high_level_error = errors::path_data_error(&dir, "no valid logs found");
-                    return Err(err.context(high_level_error).into());
+                    return Err(crate::Error::path(dir, "no valid logs found")
+                        .source(err)
+                        .into());
                 } else {
                     break;
                 }
@@ -568,7 +572,7 @@ mod tests {
         rotate
             .lookup(0, key)
             .unwrap()
-            .collect::<Fallible<Vec<&[u8]>>>()
+            .collect::<crate::Result<Vec<&[u8]>>>()
             .unwrap()
     }
 

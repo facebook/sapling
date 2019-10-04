@@ -369,7 +369,7 @@ impl Dag {
                     Ok(Segment(value))
                 })
                 .collect(),
-            Err(err) => vec![Err(err)],
+            Err(err) => vec![Err(err.into())],
         });
         Ok(iter)
     }

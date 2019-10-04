@@ -32,12 +32,11 @@
 // LittleEndian encoding.
 
 use crate::checksum_table::ChecksumTable;
-use crate::errors::{self, data_error, parameter_error, path_data_error};
+use crate::errors::{IoResultExt, ResultExt};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
 use crate::utils::{atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use failure::{self, Fallible, ResultExt};
 use memmap::Mmap;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -219,7 +218,11 @@ pub struct OpenOptions {
     fsync: bool,
 }
 
-pub(crate) type FlushFilterFunc = fn(&FlushFilterContext, &[u8]) -> Fallible<FlushFilterOutput>;
+pub(crate) type FlushFilterFunc =
+    fn(
+        &FlushFilterContext,
+        &[u8],
+    ) -> Result<FlushFilterOutput, Box<dyn std::error::Error + Send + Sync + 'static>>;
 
 /// Potentially useful context for the flush filter function.
 pub struct FlushFilterContext<'a> {
@@ -299,7 +302,7 @@ impl Log {
     /// Create the [`Log`] if it does not exist.
     ///
     /// See [`OpenOptions::open`] for details.
-    pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> Fallible<Self> {
+    pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> crate::Result<Self> {
         OpenOptions::new()
             .index_defs(index_defs)
             .create(true)
@@ -312,7 +315,7 @@ impl Log {
     /// the change immediately.
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::sync`].
-    pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> Fallible<()> {
+    pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> crate::Result<()> {
         let data = data.as_ref();
 
         let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
@@ -358,28 +361,32 @@ impl Log {
             ChecksumType::Auto => unreachable!(),
         };
 
-        self.mem_buf.write_vlq(entry_flags)?;
-        self.mem_buf.write_vlq(data.len())?;
+        self.mem_buf.write_vlq(entry_flags).infallible()?;
+        self.mem_buf.write_vlq(data.len()).infallible()?;
 
         match checksum_type {
             ChecksumType::Xxhash64 => {
-                self.mem_buf.write_u64::<LittleEndian>(xxhash(data))?;
+                self.mem_buf
+                    .write_u64::<LittleEndian>(xxhash(data))
+                    .infallible()?;
             }
             ChecksumType::Xxhash32 => {
-                self.mem_buf.write_u32::<LittleEndian>(xxhash32(data))?;
+                self.mem_buf
+                    .write_u32::<LittleEndian>(xxhash32(data))
+                    .infallible()?;
             }
             ChecksumType::Auto => unreachable!(),
         };
         let data_offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
-        self.mem_buf.write_all(data)?;
+        self.mem_buf.write_all(data).infallible()?;
         self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
         Ok(())
     }
 
     /// Remove dirty (in-memory) state. Restore the [`Log`] to the state as
     /// if it's just loaded from disk without modifications.
-    pub fn clear_dirty(&mut self) -> Fallible<()> {
+    pub fn clear_dirty(&mut self) -> crate::Result<()> {
         self.maybe_return_index_error()?;
         for index in self.indexes.iter_mut() {
             index.clear_dirty();
@@ -390,7 +397,7 @@ impl Log {
     }
 
     /// Return a cloned [`Log`] with pending in-memory changes.
-    pub fn try_clone(&self) -> Fallible<Self> {
+    pub fn try_clone(&self) -> crate::Result<Self> {
         self.try_clone_internal(true)
     }
 
@@ -398,11 +405,11 @@ impl Log {
     ///
     /// This is logically equivalent to calling `clear_dirty` immediately
     /// on the result after `try_clone`, but potentially cheaper.
-    pub fn try_clone_without_dirty(&self) -> Fallible<Self> {
+    pub fn try_clone_without_dirty(&self) -> crate::Result<Self> {
         self.try_clone_internal(false)
     }
 
-    fn try_clone_internal(&self, copy_dirty: bool) -> Fallible<Self> {
+    fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Self> {
         self.maybe_return_index_error()?;
 
         // Prepare cloned versions of things.
@@ -467,16 +474,16 @@ impl Log {
     /// Return the size of the updated primary log file in bytes.
     ///
     /// For in-memory-only Logs, this function does nothing, and returns 0.
-    pub fn sync(&mut self) -> Fallible<u64> {
+    pub fn sync(&mut self) -> crate::Result<u64> {
         if self.dir.is_none() {
             // See Index::flush for why this is not an Err.
             return Ok(0);
         }
 
-        fn check_append_only(this: &Log, new_meta: &LogMetadata) -> Fallible<()> {
+        fn check_append_only(this: &Log, new_meta: &LogMetadata) -> crate::Result<()> {
             let old_meta = &this.meta;
             if old_meta.primary_len > new_meta.primary_len {
-                Err(this.data_error(format!(
+                Err(crate::Error::path(this.dir.as_ref().unwrap(), format!(
                     "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     new_meta.primary_len, old_meta.primary_len
                 )))
@@ -523,7 +530,9 @@ impl Log {
                 let content = entry?;
                 let context = FlushFilterContext { log: &log };
                 // Re-insert entries to that clean log.
-                match filter(&context, content)? {
+                match filter(&context, content)
+                    .map_err(|err| crate::Error::wrap(err, "failed to run filter function"))?
+                {
                     FlushFilterOutput::Drop => (),
                     FlushFilterOutput::Keep => log.append(content)?,
                     FlushFilterOutput::Replace(content) => log.append(content)?,
@@ -539,7 +548,8 @@ impl Log {
         let mut primary_file = fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&primary_path)?;
+            .open(&primary_path)
+            .context(&primary_path, "cannot open for read-write")?;
 
         // It's possible that the previous write was interrupted. In that case,
         // the length of "log" can be longer than the length of "log" stored in
@@ -551,7 +561,11 @@ impl Log {
         // "meta" is append-only (i.e. "meta" is not rewritten to have a smaller
         // length, and all bytes in the specified length are immutable).
         // Note: file.set_len might easily fail on Windows due to mmap.
-        let pos = primary_file.seek(SeekFrom::Start(meta.primary_len))?;
+        let pos = primary_file
+            .seek(SeekFrom::Start(meta.primary_len))
+            .context(&primary_path, || {
+                format!("cannot seek to {}", meta.primary_len)
+            })?;
         if pos != meta.primary_len {
             let msg = format!(
                 "log file {} has {} bytes, expect at least {} bytes",
@@ -559,14 +573,24 @@ impl Log {
                 pos,
                 meta.primary_len
             );
-            return Err(self.data_error(msg));
+            // This might be another process re-creating the file.
+            // Do not consider this as a corruption (?).
+            // TODO: Review this decision.
+            let err = crate::Error::path(&primary_path, msg);
+            return Err(err);
         }
 
         // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
-        primary_file.write_all(&self.mem_buf)?;
+        primary_file
+            .write_all(&self.mem_buf)
+            .context(&primary_path, || {
+                format!("cannot write data ({} bytes)", self.mem_buf.len())
+            })?;
 
         if self.open_options.fsync {
-            primary_file.sync_all()?;
+            primary_file
+                .sync_all()
+                .context(&primary_path, "cannot fsync")?;
         }
 
         meta.primary_len += self.mem_buf.len() as u64;
@@ -623,16 +647,16 @@ impl Log {
         }
 
         // Step 5: Write the updated meta file.
-        self.meta.write_file(
-            self.dir.as_ref().unwrap().join(META_FILE),
-            self.open_options.fsync,
-        )?;
+        let meta_path = self.dir.as_ref().unwrap().join(META_FILE);
+        self.meta
+            .write_file(&meta_path, self.open_options.fsync)
+            .context(&meta_path, "cannot write Log metadata")?;
 
         Ok(self.meta.primary_len)
     }
 
     /// Renamed. Use [`Log::sync`] instead.
-    pub fn flush(&mut self) -> Fallible<u64> {
+    pub fn flush(&mut self) -> crate::Result<u64> {
         self.sync()
     }
 
@@ -641,24 +665,22 @@ impl Log {
     ///
     /// This is used internally by [`RotateLog`] to make sure a [`Log`] has
     /// complate indexes before rotating.
-    pub(crate) fn finalize_indexes(&mut self) -> Fallible<()> {
+    pub(crate) fn finalize_indexes(&mut self) -> crate::Result<()> {
         if let Some(ref dir) = self.dir {
             let dir = dir.clone();
             if !self.mem_buf.is_empty() {
-                return Err(errors::ProgrammingError(
-                    "sync() should be called before finalize_indexes()".into(),
-                )
-                .into());
+                return Err(crate::Error::programming(
+                    "sync() should be called before finalize_indexes()",
+                ));
             }
 
             let _lock = ScopedDirLock::new(&dir)?;
 
             let meta = Self::load_or_create_meta(&dir, false)?;
             if self.meta != meta {
-                return Err(errors::ProgrammingError(
-                    "callsite should use lock to prevent write race".into(),
-                )
-                .into());
+                return Err(crate::Error::programming(
+                        "race detected, callsite responsible for preventing races",
+                    ));
             }
 
             // Flush all indexes.
@@ -669,8 +691,13 @@ impl Log {
                 self.meta.indexes.insert(name, new_length);
             }
 
+            let meta_path = dir.join(META_FILE);
             self.meta
-                .write_file(dir.join(META_FILE), self.open_options.fsync)?;
+                .write_file(&meta_path, self.open_options.fsync)
+                .context(
+                    &meta_path,
+                    "cannot write Log metadata (with finalized indexes)",
+                )?;
         }
         Ok(())
     }
@@ -682,7 +709,7 @@ impl Log {
     ///
     /// The function consumes the [`Log`] object, since it is hard to recover
     /// from an error case.
-    pub fn rebuild_indexes(mut self) -> Fallible<()> {
+    pub fn rebuild_indexes(mut self) -> crate::Result<()> {
         if let Some(ref dir) = self.dir {
             let _lock = ScopedDirLock::new(&dir)?;
 
@@ -696,7 +723,9 @@ impl Log {
             for def in self.open_options.index_defs.iter() {
                 let name = def.name;
 
-                let tmp = tempfile::NamedTempFile::new_in(dir)?;
+                let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
+                    format!("cannot create tempfile for rebuilding index {:?}", name)
+                })?;
                 let index_len = {
                     let mut index = index::OpenOptions::new()
                         .key_buf(Some(key_buf.clone()))
@@ -713,12 +742,20 @@ impl Log {
 
                 // Before replacing the index, set its "logic length" to 0 so
                 // readers won't get inconsistent view about index length and data.
+                let meta_path = dir.join(META_FILE);
                 self.meta.indexes.insert(name.to_string(), 0);
                 self.meta
-                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
+                    .write_file(&meta_path, self.open_options.fsync)
+                    .context(&meta_path, || {
+                        format!("cannot update metadata (before replacing index {:?})", name)
+                    })?;
 
                 let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
-                tmp.persist(&path)?;
+                tmp.persist(&path).map_err(|e| {
+                    crate::Error::wrap(Box::new(e), || {
+                        format!("cannot persist tempfile to replace index {:?}", name)
+                    })
+                })?;
 
                 // Update checksum table.
                 let mut table = ChecksumTable::new(&path)?;
@@ -727,7 +764,10 @@ impl Log {
 
                 self.meta.indexes.insert(name.to_string(), index_len);
                 self.meta
-                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
+                    .write_file(&meta_path, self.open_options.fsync)
+                    .context(&meta_path, || {
+                        format!("cannot update metadata (after replacing index {:?})", name)
+                    })?;
             }
         }
 
@@ -742,7 +782,7 @@ impl Log {
     ///
     /// The function consumes the [`Log`] object, since it is hard to recover
     /// from an error case.
-    pub unsafe fn repair(mut self) -> Fallible<()> {
+    pub unsafe fn repair(mut self) -> crate::Result<()> {
         assert!(
             self.mem_buf.is_empty(),
             "programming error: calling 'repair' with dirty entries is unsupported"
@@ -763,13 +803,14 @@ impl Log {
                 // Truncate primary log to valid_len.
                 // Drop memory maps so file truncation can work on Windows.
                 self.indexes.clear();
-                self.disk_buf = Arc::new(mmap_empty()?);
+                self.disk_buf = Arc::new(mmap_empty().infallible()?);
 
                 let primary_path = dir.join(PRIMARY_FILE);
                 let mut primary_file = fs::OpenOptions::new()
                     .read(true)
                     .write(true)
-                    .open(&primary_path)?;
+                    .open(&primary_path)
+                    .context(&primary_path, "cannot open")?;
 
                 // Backup the part to be truncated.
                 {
@@ -777,30 +818,43 @@ impl Log {
                     let mut backup_file = fs::OpenOptions::new()
                         .create_new(true)
                         .write(true)
-                        .open(&backup_path)?;
+                        .open(&backup_path)
+                        .context(&backup_path, "cannot open")?;
 
-                    primary_file.seek(SeekFrom::Start(valid_len))?;
+                    primary_file
+                        .seek(SeekFrom::Start(valid_len))
+                        .context(&primary_path, "cannot seek")?;
 
                     let mut buf = Vec::with_capacity(1 << 22);
                     buf.set_len(buf.capacity());
                     loop {
-                        let size = primary_file.read(&mut buf[..])?;
+                        let size = primary_file
+                            .read(&mut buf[..])
+                            .context(&primary_path, "cannot read")?;
                         if size == 0 {
                             break;
                         }
-                        backup_file.write_all(&buf[..size])?;
+                        backup_file
+                            .write_all(&buf[..size])
+                            .context(&backup_path, "cannot write")?;
                     }
                 }
 
                 // Update metadata. Invalidate indexes.
                 self.meta.primary_len = valid_len;
                 self.meta.indexes.clear();
+                let meta_path = dir.join(META_FILE);
                 self.meta
-                    .write_file(dir.join(META_FILE), self.open_options.fsync)?;
+                    .write_file(&meta_path, self.open_options.fsync)
+                    .context(&meta_path, "cannot write")?;
 
                 // Truncate the file!
-                primary_file.seek(SeekFrom::Start(0))?;
-                primary_file.set_len(valid_len)?;
+                primary_file
+                    .seek(SeekFrom::Start(0))
+                    .context(&primary_path, "cannot seek")?;
+                primary_file
+                    .set_len(valid_len)
+                    .context(&primary_path, "cannot truncate")?;
             }
         }
 
@@ -811,7 +865,7 @@ impl Log {
     /// `index_defs` passed to [`Log::open`].
     ///
     /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
-    pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> Fallible<LogLookupIter> {
+    pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> crate::Result<LogLookupIter> {
         self.maybe_return_index_error()?;
         if let Some(index) = self.indexes.get(index_id) {
             assert!(key.as_ref().len() > 0);
@@ -823,8 +877,13 @@ impl Log {
                 log: self,
             })
         } else {
-            let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
-            Err(parameter_error(msg))
+            let msg = format!(
+                "invalid index_id {} (len={}, path={:?})",
+                index_id,
+                self.indexes.len(),
+                &self.dir
+            );
+            Err(crate::Error::programming(msg))
         }
     }
 
@@ -838,7 +897,7 @@ impl Log {
         &self,
         index_id: usize,
         prefix: K,
-    ) -> Fallible<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix(prefix)?;
         Ok(LogRangeIter {
@@ -861,7 +920,7 @@ impl Log {
         &self,
         index_id: usize,
         range: impl RangeBounds<&'a [u8]>,
-    ) -> Fallible<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.range(range)?;
         Ok(LogRangeIter {
@@ -882,7 +941,7 @@ impl Log {
         &self,
         index_id: usize,
         hex_prefix: K,
-    ) -> Fallible<LogRangeIter> {
+    ) -> crate::Result<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix_hex(hex_prefix)?;
         Ok(LogRangeIter {
@@ -914,14 +973,19 @@ impl Log {
     }
 
     /// Applies the given index function to the entry data and returns the index keys.
-    pub fn index_func<'a>(&self, index_id: usize, entry: &'a [u8]) -> Fallible<Vec<Cow<'a, [u8]>>> {
-        let index_def = self.open_options.index_defs.get(index_id).ok_or_else(|| {
-            let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
-            io::Error::new(io::ErrorKind::InvalidData, msg)
-        })?;
+    pub fn index_func<'a>(
+        &self,
+        index_id: usize,
+        entry: &'a [u8],
+    ) -> crate::Result<Vec<Cow<'a, [u8]>>> {
+        let index_def = self.get_index_def(index_id)?;
         let mut result = vec![];
         for output in (index_def.func)(entry).into_iter() {
-            result.push(output.into_cow(&entry)?);
+            result.push(
+                output
+                    .into_cow(&entry)
+                    .context(|| format!("index_id = {}", index_id))?,
+            );
         }
 
         Ok(result)
@@ -937,7 +1001,7 @@ impl Log {
         data: &[u8],
         offset: u64,
         data_offset: u64,
-    ) -> Fallible<()> {
+    ) -> crate::Result<()> {
         let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset, data_offset);
         self.maybe_set_index_error(result)
     }
@@ -947,7 +1011,7 @@ impl Log {
         data: &[u8],
         offset: u64,
         data_offset: u64,
-    ) -> Fallible<()> {
+    ) -> crate::Result<()> {
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
@@ -969,12 +1033,12 @@ impl Log {
     }
 
     /// Build in-memory index so they cover all entries stored in `self.disk_buf`.
-    fn update_indexes_for_on_disk_entries(&mut self) -> Fallible<()> {
+    fn update_indexes_for_on_disk_entries(&mut self) -> crate::Result<()> {
         let result = self.update_indexes_for_on_disk_entries_unchecked();
         self.maybe_set_index_error(result)
     }
 
-    fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> Fallible<()> {
+    fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> crate::Result<()> {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
@@ -995,12 +1059,12 @@ impl Log {
         def: &IndexDef,
         disk_buf: &Mmap,
         primary_len: u64,
-    ) -> Fallible<()> {
+    ) -> crate::Result<()> {
         // The index meta is used to store the next offset the index should be built.
         let mut offset = Self::get_index_log_len(index)?;
         // PERF: might be worthwhile to cache xxhash verification result.
         while let Some(entry_result) = Self::read_entry_from_buf(&path, disk_buf, offset)
-            .with_context(|_| "while updating indexes for on-disk entries")?
+            .context("while updating indexes for on-disk entries")?
         {
             let data = entry_result.data;
             for index_output in (def.func)(data) {
@@ -1032,26 +1096,29 @@ impl Log {
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_or_create_meta(dir: &Path, create: bool) -> Fallible<LogMetadata> {
+    fn load_or_create_meta(dir: &Path, create: bool) -> crate::Result<LogMetadata> {
         let meta_path = dir.join(META_FILE);
         match LogMetadata::read_file(&meta_path) {
             Err(err) => {
                 if err.kind() == io::ErrorKind::NotFound && create {
                     // Create (and truncate) the primary log and indexes.
-                    let mut primary_file = File::create(dir.join(PRIMARY_FILE))?;
-                    primary_file.write_all(PRIMARY_HEADER)?;
+                    let primary_path = dir.join(PRIMARY_FILE);
+                    let mut primary_file =
+                        File::create(&primary_path).context(&primary_path, "cannot create")?;
+                    primary_file
+                        .write_all(PRIMARY_HEADER)
+                        .context(&primary_path, "cannot write")?;
                     // Start from empty file and indexes.
                     let meta = LogMetadata {
                         primary_len: PRIMARY_START_OFFSET,
                         indexes: BTreeMap::new(),
                     };
                     // An empty meta file is easy to recreate. No need to use fsync.
-                    meta.write_file(&meta_path, false)?;
+                    meta.write_file(&meta_path, false)
+                        .context(&meta_path, "cannot write")?;
                     Ok(meta)
                 } else {
-                    Err(path_data_error(dir, "cannot read meta file")
-                        .context(err)
-                        .into())
+                    Err(err).context(&meta_path, "cannot read")
                 }
             }
             Ok(meta) => Ok(meta),
@@ -1070,10 +1137,10 @@ impl Log {
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
         fsync: bool,
-    ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
+    ) -> crate::Result<(Arc<Mmap>, Vec<Index>)> {
         let primary_buf = match dir {
             Some(dir) => Arc::new(mmap_len(&dir.join(PRIMARY_FILE), meta.primary_len)?),
-            None => Arc::new(mmap_empty()?),
+            None => Arc::new(mmap_empty().infallible()?),
         };
 
         let mem_buf: &Vec<u8> = &mem_buf;
@@ -1153,7 +1220,7 @@ impl Log {
     /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
     /// of the data, the real offset of the data, and the next offset. Raise errors if
     /// integrity-check failed.
-    fn read_entry(&self, offset: u64) -> Fallible<Option<EntryResult>> {
+    fn read_entry(&self, offset: u64) -> crate::Result<Option<EntryResult>> {
         let result = if offset < self.meta.primary_len {
             Self::read_entry_from_buf(&self.dir, &self.disk_buf, offset)?
         } else {
@@ -1174,11 +1241,11 @@ impl Log {
         path: &Option<PathBuf>,
         buf: &'a [u8],
         offset: u64,
-    ) -> Fallible<Option<EntryResult<'a>>> {
-        let data_error = |msg: String| -> failure::Error {
+    ) -> crate::Result<Option<EntryResult<'a>>> {
+        let data_error = |msg: String| -> crate::Error {
             match path {
-                Some(path) => path_data_error(path, msg),
-                None => errors::data_error(msg),
+                Some(path) => crate::Error::corruption(path, msg),
+                None => crate::Error::path(Path::new("<memory>"), msg),
             }
         };
 
@@ -1189,11 +1256,21 @@ impl Log {
             return Err(data_error(msg));
         }
 
-        let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize)?;
+        let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize).map_err(|e| {
+            crate::Error::wrap(Box::new(e), || {
+                format!("cannot read entry_flags at {}", offset)
+            })
+            .mark_corruption()
+        })?;
         let offset = offset + vlq_len as u64;
 
         // For now, data_len is the next field regardless of entry flags.
-        let (data_len, vlq_len): (u64, _) = buf.read_vlq_at(offset as usize)?;
+        let (data_len, vlq_len): (u64, _) = buf.read_vlq_at(offset as usize).map_err(|e| {
+            crate::Error::wrap(Box::new(e), || {
+                format!("cannot read data_len at {}", offset)
+            })
+            .mark_corruption()
+        })?;
         let offset = offset + vlq_len as u64;
 
         // Depends on entry_flags, some of them have a checksum field.
@@ -1253,7 +1330,7 @@ impl Log {
     /// Wrapper around a `Result` returned by an index write operation.
     /// Make sure all index write operations are wrapped by this method.
     #[inline]
-    fn maybe_set_index_error<T>(&mut self, result: Fallible<T>) -> Fallible<T> {
+    fn maybe_set_index_error<T>(&mut self, result: crate::Result<T>) -> crate::Result<T> {
         if result.is_err() && !self.index_corrupted {
             self.index_corrupted = true;
         }
@@ -1263,10 +1340,10 @@ impl Log {
     /// Wrapper to return an error if `index_corrupted` is set.
     /// Use this before doing index read operations.
     #[inline]
-    fn maybe_return_index_error(&self) -> Fallible<()> {
+    fn maybe_return_index_error(&self) -> crate::Result<()> {
         if self.index_corrupted {
             let msg = format!("index is corrupted");
-            Err(self.data_error(msg))
+            Err(self.corruption(msg))
         } else {
             Ok(())
         }
@@ -1276,13 +1353,21 @@ impl Log {
     ///
     /// This only makes sense at open() or sync() time, since the data won't be updated
     /// by append() for performance reasons.
-    fn get_index_log_len(index: &Index) -> Fallible<u64> {
+    fn get_index_log_len(index: &Index) -> crate::Result<u64> {
         let index_meta = index.get_meta();
         Ok(if index_meta.is_empty() {
             // New index. Start processing at the first entry.
             PRIMARY_START_OFFSET
         } else {
-            index_meta.read_vlq_at(0)?.0
+            index_meta
+                .read_vlq_at(0)
+                .context(&index.path, || {
+                    format!(
+                        "index metadata cannot be parsed as an integer: {:?}",
+                        &index_meta
+                    )
+                })?
+                .0
         })
     }
 
@@ -1296,14 +1381,43 @@ impl Log {
             index.set_meta(&index_meta);
         }
     }
+}
 
-    /// Raise [`errors::PathDataError`] with path of this log attached.
-    #[inline(never)]
-    fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
-        match self.dir {
-            Some(ref dir) => path_data_error(dir, message),
-            None => data_error(message),
-        }
+// Error-related utilities
+
+impl Log {
+    /// Get the specified index, with error handling.
+    fn get_index(&self, index_id: usize) -> crate::Result<&Index> {
+        self.indexes.get(index_id).ok_or_else(|| {
+            let msg = format!(
+                "index_id {} is out of bound (len={}, dir={:?})",
+                index_id,
+                self.indexes.len(),
+                &self.dir
+            );
+            crate::Error::programming(msg)
+        })
+    }
+
+    /// Get the specified index, with error handling.
+    fn get_index_def(&self, index_id: usize) -> crate::Result<&IndexDef> {
+        self.open_options.index_defs.get(index_id).ok_or_else(|| {
+            let msg = format!(
+                "index_id {} is out of bound (len={}, dir={:?})",
+                index_id,
+                self.indexes.len(),
+                &self.dir
+            );
+            crate::Error::programming(msg)
+        })
+    }
+
+    fn corruption(&self, message: String) -> crate::Error {
+        let path: &Path = match self.dir {
+            Some(ref path) => &path,
+            None => Path::new("<memory>"),
+        };
+        crate::Error::corruption(path, message)
     }
 }
 
@@ -1461,14 +1575,14 @@ impl OpenOptions {
     /// always bounded to a transaction. [`Log::sync`] is like committing the
     /// transaction. Dropping the [`Log`] instance is like abandoning a
     /// transaction.
-    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<Log> {
+    pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
         let dir = dir.as_ref();
         self.open_internal(dir, None)
     }
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
     /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
-    pub fn create_in_memory(self) -> Fallible<Log> {
+    pub fn create_in_memory(self) -> crate::Result<Log> {
         let meta = LogMetadata {
             primary_len: PRIMARY_START_OFFSET,
             indexes: BTreeMap::new(),
@@ -1491,21 +1605,20 @@ impl OpenOptions {
     // "Back-door" version of "open" that allows reusing indexes.
     // Used by [`Log::sync`]. See [`Log::load_log_and_indexes`] for when indexes
     // can be reused.
-    fn open_internal(self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> Fallible<Log> {
+    fn open_internal(self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> crate::Result<Log> {
         let create = self.create;
 
-        let meta = Log::load_or_create_meta(dir, false).or_else(|_| {
+        // Do a lock-less load_or_create_meta to avoid the flock overhead.
+        let meta = Log::load_or_create_meta(dir, false).or_else(|err| {
             if create {
-                fs::create_dir_all(dir)?;
+                fs::create_dir_all(dir)
+                    .context(&dir, "cannot mkdir after failing to read metadata")
+                    .source(err)?;
                 // Make sure check and write happens atomically.
                 let _lock = ScopedDirLock::new(&dir)?;
                 Log::load_or_create_meta(dir, true)
             } else {
-                Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("Log {:?} does not exist", &dir),
-                )
-                .into())
+                Err(err).context(|| format!("cannot open Log at {:?}", &dir))
             }
         })?;
 
@@ -1553,7 +1666,7 @@ impl<'a> EntryResult<'a> {
 }
 
 impl<'a> Iterator for LogLookupIter<'a> {
-    type Item = Fallible<&'a [u8]>;
+    type Item = crate::Result<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -1568,7 +1681,7 @@ impl<'a> Iterator for LogLookupIter<'a> {
             Some(Ok(offset)) => match self
                 .log
                 .read_entry(offset)
-                .with_context(|_| "in LogLookupIter::next")
+                .context("in LogLookupIter::next")
             {
                 Ok(Some(entry)) => Some(Ok(entry.data)),
                 Ok(None) => None,
@@ -1589,13 +1702,13 @@ impl<'a> Iterator for LogLookupIter<'a> {
 
 impl<'a> LogLookupIter<'a> {
     /// A convenient way to get data.
-    pub fn into_vec(self) -> Fallible<Vec<&'a [u8]>> {
+    pub fn into_vec(self) -> crate::Result<Vec<&'a [u8]>> {
         self.collect()
     }
 }
 
 impl<'a> Iterator for LogIter<'a> {
-    type Item = Fallible<&'a [u8]>;
+    type Item = crate::Result<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -1604,7 +1717,7 @@ impl<'a> Iterator for LogIter<'a> {
         match self
             .log
             .read_entry(self.next_offset)
-            .with_context(|_| "in LogIter::next")
+            .context("in LogIter::next")
         {
             Err(e) => {
                 self.errored = true;
@@ -1625,7 +1738,7 @@ impl<'a> LogRangeIter<'a> {
     fn wrap_inner_next_result(
         &mut self,
         item: Option<crate::Result<(Cow<'a, [u8]>, index::LinkOffset)>>,
-    ) -> Option<Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>> {
+    ) -> Option<crate::Result<(Cow<'a, [u8]>, LogLookupIter<'a>)>> {
         match item {
             None => None,
             Some(Err(err)) => {
@@ -1645,7 +1758,7 @@ impl<'a> LogRangeIter<'a> {
 }
 
 impl<'a> Iterator for LogRangeIter<'a> {
-    type Item = Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
+    type Item = crate::Result<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -1745,14 +1858,23 @@ impl LogMetadata {
 }
 
 impl IndexOutput {
-    fn into_cow(self, data: &[u8]) -> Fallible<Cow<[u8]>> {
+    fn into_cow(self, data: &[u8]) -> crate::Result<Cow<[u8]>> {
         Ok(match self {
             IndexOutput::Reference(range) => Cow::Borrowed(
                 &data
                     .get(range.start as usize..range.end as usize)
                     .ok_or_else(|| {
-                        let msg = format!("invalid range {:?} (len={})", range, data.len());
-                        io::Error::new(io::ErrorKind::InvalidData, msg)
+                        let msg = format!(
+                            "IndexFunc returned range {:?} but the data only has {} bytes",
+                            range,
+                            data.len()
+                        );
+                        let mut err = crate::Error::programming(msg);
+                        // If the data is short, add its content to error message.
+                        if data.len() < 128 {
+                            err = err.message(format!("Data = {:?}", data))
+                        }
+                        err
                     })?,
             ),
             IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
@@ -1796,6 +1918,17 @@ mod tests {
     use super::*;
     use quickcheck::quickcheck;
     use tempfile::tempdir;
+
+    #[derive(Debug)]
+    struct DummyError(&'static str);
+
+    impl fmt::Display for DummyError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
+    impl std::error::Error for DummyError {}
 
     #[test]
     fn test_empty_log() {
@@ -1931,34 +2064,34 @@ mod tests {
         log.append(b"3").unwrap();
 
         assert_eq!(
-            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter().collect::<crate::Result<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3"]
         );
         assert_eq!(
-            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
-            log.iter_dirty().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter().collect::<crate::Result<Vec<_>>>().unwrap(),
+            log.iter_dirty().collect::<crate::Result<Vec<_>>>().unwrap(),
         );
 
         log.sync().unwrap();
 
         assert!(log
             .iter_dirty()
-            .collect::<Fallible<Vec<_>>>()
+            .collect::<crate::Result<Vec<_>>>()
             .unwrap()
             .is_empty());
         assert_eq!(
-            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter().collect::<crate::Result<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3"]
         );
 
         log.append(b"5").unwrap();
         log.append(b"1").unwrap();
         assert_eq!(
-            log.iter_dirty().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter_dirty().collect::<crate::Result<Vec<_>>>().unwrap(),
             vec![b"5", b"1"]
         );
         assert_eq!(
-            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter().collect::<crate::Result<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3", b"5", b"1"]
         );
     }
@@ -2214,7 +2347,7 @@ mod tests {
                 Ok(match bytes.len() {
                     1 => FlushFilterOutput::Drop,
                     2 => FlushFilterOutput::Replace(b"cc".to_vec()),
-                    4 => return Err(data_error("length 4 is unsupported!")),
+                    4 => return Err(Box::new(DummyError("error"))),
                     _ => FlushFilterOutput::Keep,
                 })
             }))

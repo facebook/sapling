@@ -114,7 +114,7 @@ impl IdMap {
                 Ok(Some(&entry[8..]))
             }
             None => Ok(None),
-            Some(Err(err)) => Err(err),
+            Some(Err(err)) => Err(err.into()),
         }
     }
 
@@ -127,7 +127,7 @@ impl IdMap {
                 Ok(Some(entry.read_u64::<BigEndian>().unwrap()))
             }
             None => Ok(None),
-            Some(Err(err)) => Err(err),
+            Some(Err(err)) => Err(err.into()),
         }
     }
 

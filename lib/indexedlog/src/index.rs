@@ -1544,7 +1544,8 @@ pub struct Index {
     buf: Mmap,
 
     // For error messages.
-    path: PathBuf,
+    // Log uses this field for error messages.
+    pub(crate) path: PathBuf,
 
     // Logical length. Could be different from `buf.len()`.
     len: u64,
