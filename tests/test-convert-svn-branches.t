@@ -3,6 +3,8 @@
 #require svn svn-bindings
 
   $ cat >> $HGRCPATH <<EOF
+  > [treemanifest]
+  > rustmanifest = False
   > [extensions]
   > convert =
   > EOF
@@ -14,8 +16,6 @@ Convert trunk and branches
 
   $ cat > branchmap <<EOF
   > old3 newbranch
-  > 
-  > 
   > EOF
   $ hg convert --branchmap=branchmap --datesort -r 10 svn-repo A-hg
   initializing destination A-hg repository
@@ -84,6 +84,7 @@ Convert again
   o  branch= 0 init projA files:
   
 
+
   $ hg log -r 'all()' -T '{extras}\n' | sed 's/convert_revision=.*//' | sort -u
   branch=default
   branch=newbranch
@@ -102,8 +103,6 @@ Convert 'trunk' to branch other than 'default'
 
   $ cat > branchmap <<EOF
   > default hgtrunk
-  > 
-  > 
   > EOF
   $ hg convert --branchmap=branchmap --datesort -r 10 svn-repo C-hg
   initializing destination C-hg repository

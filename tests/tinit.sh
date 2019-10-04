@@ -43,6 +43,7 @@ server=True
 
 [treemanifest]
 flatcompat=False
+rustmanifest=True
 server=True
 treeonly=True
 EOF
@@ -84,6 +85,7 @@ reponame=$servername
 
 [treemanifest]
 flatcompat=False
+rustmanifest=True
 sendtrees=True
 treeonly=True
 

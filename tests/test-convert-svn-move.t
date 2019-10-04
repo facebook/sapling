@@ -109,42 +109,42 @@ Manifest before
 
   $ hg -v manifest -r 1
   644   a
-  644   d/b
-  644   d2/a
   644 @ dlink
   644 @ dlink2
   644   dlink3
+  644   d/b
+  644   d2/a
 
 Manifest after clobber1
 
   $ hg -v manifest -r 2
+  644 @ dlink2
+  644   dlink3
   644   a/b
   644   d/b
   644   d2/a
   644   dlink/b
-  644 @ dlink2
-  644   dlink3
 
 Manifest after clobber2
 
   $ hg -v manifest -r 3
+  644 @ dlink2
+  644 @ dlink3
   644   a/b
   644   d/b
   644   d2/a
   644   dlink/b
-  644 @ dlink2
-  644 @ dlink3
 
 Manifest after clobberdir
 
   $ hg -v manifest -r 6
+  644 @ dlink2
+  644 @ dlink3
   644   a/b
   644   d/b
   644   d2/a
   644   d2/c
   644   dlink/b
-  644 @ dlink2
-  644 @ dlink3
 
 Try updating
 

@@ -383,6 +383,7 @@ Test bundling
   
 Test pushing to a hybrid server w/ pushrebase w/ hooks
   $ cat >> $TESTTMP/filehook.sh <<EOF
+  > #!/bin/bash
   > set -xe
   > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'y' ]] && exit 1
   > echo \$(hg log -r \$HG_NODE -T '{file_adds}')
@@ -396,9 +397,9 @@ Test pushing to a hybrid server w/ pushrebase w/ hooks
   $ hg push -r 2 --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: +++ hg log -r 7ec3c5c54734448e59a0694af54c51578ee4d4de -T '{file_adds}'
-  remote: ++ [[ y == \y ]]
-  remote: ++ exit 1
+  remote: ++ hg log -r 7ec3c5c54734448e59a0694af54c51578ee4d4de -T '{file_adds}'
+  remote: + [[ y == \y ]]
+  remote: + exit 1
   remote: prepushrebase.fail hook exited with status 1
   abort: push failed on remote
   [255]
@@ -610,6 +611,7 @@ Test pulling to a treeonly client from a treeonly server
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
   treemanifest.flatcompat=False
+  treemanifest.rustmanifest=True
   treemanifest.treeonly=True
   treemanifest.sendtrees=True
   treemanifest.demanddownload=True

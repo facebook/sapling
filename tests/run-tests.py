@@ -1546,6 +1546,7 @@ class Test(unittest.TestCase):
             hgrc.write(b"treemanifest=\n")
             hgrc.write(b"[treemanifest]\n")
             hgrc.write(b"flatcompat=True\n")
+            hgrc.write(b"rustmanifest=True\n")
             hgrc.write(b"[remotefilelog]\n")
             hgrc.write(b"reponame=reponame-default\n")
             hgrc.write(b"cachepath=$TESTTMP/default-hgcache\n")

@@ -89,6 +89,7 @@ treemanifest=
 
 [treemanifest]
 flatcompat=True
+rustmanifest=True
 
 [remotefilelog]
 reponame=reponame-default
