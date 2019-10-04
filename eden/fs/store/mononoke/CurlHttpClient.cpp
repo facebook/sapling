@@ -140,7 +140,8 @@ std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest() {
   if (curl_easy_setopt(
           request.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS) !=
       CURLE_OK) {
-    throw std::runtime_error("curl failed to set http version");
+    XLOG(DBG4)
+        << "curl failed to enable HTTP/2; performance may not be optimal";
   }
   if (curl_easy_setopt(request.get(), CURLOPT_TIMEOUT_MS, timeout_) !=
       CURLE_OK) {

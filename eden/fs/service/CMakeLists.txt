@@ -104,7 +104,7 @@ if (CURL_FOUND)
   target_link_libraries(
     eden_service
     PUBLIC
-      curl
+      CURL::libcurl
   )
 endif()
 

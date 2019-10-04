@@ -41,6 +41,6 @@ if (CURL_FOUND)
   target_link_libraries(
     eden_store_mononoke
     PUBLIC
-      curl
+      CURL::libcurl
   )
 endif()
