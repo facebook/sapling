@@ -144,6 +144,8 @@ def match(
                           the same directory
     '<something>' - a pattern of the specified default type
     """
+    if auditor is None:
+        auditor = pathutil.pathauditor(root)
     normalize = _donormalize
     if icasefs:
         if exact:
