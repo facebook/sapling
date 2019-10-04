@@ -35,7 +35,7 @@ use crate::checksum_table::ChecksumTable;
 use crate::errors::{self, data_error, parameter_error, path_data_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
-use crate::utils::{atomic_write, mmap_empty, mmap_readonly, xxhash, xxhash32};
+use crate::utils::{atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use failure::{self, Fallible, ResultExt};
 use memmap::Mmap;
@@ -686,10 +686,7 @@ impl Log {
         if let Some(ref dir) = self.dir {
             let _lock = ScopedDirLock::new(&dir)?;
 
-            let primary_file = fs::OpenOptions::new()
-                .read(true)
-                .open(dir.join(PRIMARY_FILE))?;
-            let key_buf = Arc::new(mmap_readonly(&primary_file, self.meta.primary_len.into())?.0);
+            let key_buf = Arc::new(mmap_len(&dir.join(PRIMARY_FILE), self.meta.primary_len)?);
 
             // Drop indexes. This will munmap index files, which is required on
             // Windows to rewrite the index files. It's also the reason why it's
@@ -1075,12 +1072,7 @@ impl Log {
         fsync: bool,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_buf = match dir {
-            Some(dir) => {
-                let primary_file = fs::OpenOptions::new()
-                    .read(true)
-                    .open(dir.join(PRIMARY_FILE))?;
-                Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0)
-            }
+            Some(dir) => Arc::new(mmap_len(&dir.join(PRIMARY_FILE), meta.primary_len)?),
             None => Arc::new(mmap_empty()?),
         };
 

@@ -10,6 +10,7 @@ use std::{
     path::Path,
 };
 
+use crate::errors::IoResultExt;
 use memmap::{Mmap, MmapOptions};
 use twox_hash::{XxHash, XxHash32};
 
@@ -52,6 +53,24 @@ pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
 /// Return a [`Mmap`] that is expected to be empty.
 pub fn mmap_empty() -> io::Result<Mmap> {
     Ok(MmapOptions::new().len(1).map_anon()?.make_read_only()?)
+}
+
+/// Similar to [`mmap_readonly`], but accepts a [`Path`] directly so the
+/// callsite does not need to open a [`File`].
+///
+/// Return [`crate::Result`], whcih makes it easier to use for error handling.
+pub fn mmap_len(path: &Path, len: u64) -> crate::Result<Mmap> {
+    if len == 0 {
+        mmap_empty().infallible()
+    } else {
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .open(path)
+            .context(path, "cannot open for mmap")?;
+        mmap_readonly(&file, Some(len))
+            .context(path, "cannot mmap")
+            .map(|(mmap, _len)| mmap)
+    }
 }
 
 /// Open a path. Usually for locking purpose.
