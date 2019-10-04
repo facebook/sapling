@@ -34,8 +34,8 @@
 use crate::checksum_table::ChecksumTable;
 use crate::errors::{self, data_error, parameter_error, path_data_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
-use crate::lock::ScopedFileLock;
-use crate::utils::{atomic_write, mmap_empty, mmap_readonly, open_dir, xxhash, xxhash32};
+use crate::lock::ScopedDirLock;
+use crate::utils::{atomic_write, mmap_empty, mmap_readonly, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use failure::{self, Fallible, ResultExt};
 use memmap::Mmap;
@@ -505,8 +505,8 @@ impl Log {
 
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
-        let mut dir_file = open_dir(self.dir.as_ref().unwrap())?;
-        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+        let dir = self.dir.clone().unwrap();
+        let _lock = ScopedDirLock::new(&dir)?;
 
         // Step 1: Reload metadata to get the latest view of the files.
         let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
@@ -651,8 +651,7 @@ impl Log {
                 .into());
             }
 
-            let mut dir_file = open_dir(&dir)?;
-            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+            let _lock = ScopedDirLock::new(&dir)?;
 
             let meta = Self::load_or_create_meta(&dir, false)?;
             if self.meta != meta {
@@ -685,8 +684,7 @@ impl Log {
     /// from an error case.
     pub fn rebuild_indexes(mut self) -> Fallible<()> {
         if let Some(ref dir) = self.dir {
-            let mut dir_file = open_dir(dir)?;
-            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+            let _lock = ScopedDirLock::new(&dir)?;
 
             let primary_file = fs::OpenOptions::new()
                 .read(true)
@@ -754,8 +752,7 @@ impl Log {
         );
 
         if let Some(ref dir) = self.dir {
-            let mut dir_file = open_dir(dir)?;
-            let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+            let _lock = ScopedDirLock::new(&dir)?;
 
             let mut iter = self.iter();
 
@@ -1509,8 +1506,7 @@ impl OpenOptions {
             if create {
                 fs::create_dir_all(dir)?;
                 // Make sure check and write happens atomically.
-                let mut dir_file = open_dir(dir)?;
-                let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+                let _lock = ScopedDirLock::new(&dir)?;
                 Log::load_or_create_meta(dir, true)
             } else {
                 Err(io::Error::new(

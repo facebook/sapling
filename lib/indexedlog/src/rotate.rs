@@ -6,9 +6,9 @@
 //! Rotation support for a set of [`Log`]s.
 
 use crate::errors;
-use crate::lock::ScopedFileLock;
+use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
-use crate::utils::{atomic_write, open_dir};
+use crate::utils::atomic_write;
 use bytes::Bytes;
 use failure::Fallible;
 use std::fs;
@@ -128,8 +128,7 @@ impl OpenOptions {
                     return Err(e);
                 } else {
                     fs::create_dir_all(dir)?;
-                    let mut lock_file = open_dir(dir)?;
-                    let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+                    let _lock = ScopedDirLock::new(&dir)?;
 
                     match read_latest_raw(dir) {
                         Ok(latest) => {
@@ -271,8 +270,8 @@ impl RotateLog {
             self.writable_log().sync()?;
         } else {
             // Read-write path. Take the directory lock.
-            let mut lock_file = open_dir(self.dir.as_ref().unwrap())?;
-            let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+            let dir = self.dir.clone().unwrap();
+            let _lock = ScopedDirLock::new(&dir)?;
 
             // Re-read latest, since it might have changed after taking the lock.
             let latest = read_latest(self.dir.as_ref().unwrap())?;
@@ -410,8 +409,8 @@ impl RotateLowLevelExt for RotateLog {
             return Ok(());
         }
         // Read-write path. Take the directory lock.
-        let mut lock_file = open_dir(self.dir.as_ref().unwrap())?;
-        let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+        let dir = self.dir.clone().unwrap();
+        let _lock = ScopedDirLock::new(&dir)?;
         self.latest = read_latest(self.dir.as_ref().unwrap())?;
         self.rotate_assume_locked()?;
         self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, self.latest)?;
