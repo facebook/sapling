@@ -115,23 +115,6 @@ struct MemRoot {
 // Shorter alias to `Option<ChecksumTable>`
 type Checksum = Option<ChecksumTable>;
 
-// Helper method to do checksum.
-#[inline]
-fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> Fallible<()> {
-    // This method is used in hot code paths. Its instruction size matters.
-    // Be sure to run `cargo bench --bench index verified` when changing this
-    // function, or the inline attributes.
-    if let &Some(ref table) = checksum {
-        table.check_range(start, length)?
-    }
-    Ok(())
-}
-
-fn range_error(start: usize, length: usize) -> failure::Error {
-    let msg = format!("byte range {}..{} is unavailable", start, start + length);
-    data_error(msg)
-}
-
 /// Read reversed vlq at the given end offset (exclusive).
 /// Return the decoded integer and the bytes used by the VLQ integer.
 fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> Fallible<(u64, usize)> {
@@ -239,18 +222,17 @@ impl Offset {
     }
 
     /// Read the `type_int` value.
-    fn type_int(self, index: impl IndexBuf) -> Fallible<u8> {
+    fn type_int(self, index: impl IndexBuf) -> crate::Result<u8> {
         let buf = index.buf();
-        let checksum = index.checksum();
         if self.is_null() {
-            Err(data_error("illegal read from null"))
+            Err(index.corruption("invalid read from null"))
         } else if self.is_dirty() {
             Ok(((self.0 - DIRTY_OFFSET) & ((1 << TYPE_BITS) - 1)) as u8)
         } else {
-            verify_checksum(checksum, self.0, TYPE_BYTES as u64)?;
+            index.verify_checksum(self.0, TYPE_BYTES as u64)?;
             match buf.get(self.0 as usize) {
                 Some(x) => Ok(*x as u8),
-                _ => return Err(range_error(self.0 as usize, 1)),
+                _ => return Err(index.range_error(self.0 as usize, 1)),
             }
         }
     }
@@ -916,10 +898,13 @@ impl ExtKeyOffset {
 }
 
 /// Check type for an on-disk entry
-fn check_type(buf: &[u8], offset: usize, expected: u8) -> Fallible<()> {
-    let typeint = *(buf.get(offset).ok_or_else(|| range_error(offset, 1))?);
+fn check_type(index: impl IndexBuf, offset: usize, expected: u8) -> crate::Result<()> {
+    let typeint = *(index
+        .buf()
+        .get(offset)
+        .ok_or_else(|| index.range_error(offset, 1))?);
     if typeint != expected {
-        Err(data_error(format!("type mismatch at offset {}", offset)))
+        Err(index.corruption(format!("type mismatch at offset {}", offset)))
     } else {
         Ok(())
     }
@@ -932,7 +917,7 @@ impl MemRadix {
         let mut pos = 0;
 
         // Integrity check is done at the end to reduce overhead.
-        check_type(buf, offset, TYPE_RADIX)?;
+        check_type(index, offset, TYPE_RADIX)?;
         pos += TYPE_BYTES;
 
         let flag = *buf
@@ -965,7 +950,7 @@ impl MemRadix {
             LinkOffset::default()
         };
 
-        verify_checksum(index.checksum(), offset as u64, pos as u64)?;
+        index.verify_checksum(offset as u64, pos as u64)?;
 
         Ok(MemRadix {
             offsets,
@@ -1057,11 +1042,7 @@ impl MemLeaf {
                 let key_offset = Offset::from_disk(key_offset)?;
                 let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
                 let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, index)?;
-                verify_checksum(
-                    index.checksum(),
-                    offset as u64,
-                    (TYPE_BYTES + len1 + len2) as u64,
-                )?;
+                index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
                 Ok(MemLeaf {
                     key_offset,
                     link_offset,
@@ -1163,16 +1144,12 @@ impl MemLink {
     fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
         let buf = index.buf();
         let offset = offset as usize;
-        check_type(buf, offset, TYPE_LINK)?;
+        check_type(&index, offset, TYPE_LINK)?;
         let (value, len1) = buf.read_vlq_at(offset + 1)?;
         let (next_link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         let next_link_offset =
             LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, &index)?;
-        verify_checksum(
-            index.checksum(),
-            offset as u64,
-            (TYPE_BYTES + len1 + len2) as u64,
-        )?;
+        index.verify_checksum(offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLink {
             value,
             next_link_offset,
@@ -1202,18 +1179,14 @@ impl MemKey {
     fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
         let buf = index.buf();
         let offset = offset as usize;
-        check_type(buf, offset, TYPE_KEY)?;
+        check_type(&index, offset, TYPE_KEY)?;
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
         let key = Vec::from(
             buf.get(offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len)
-                .ok_or_else(|| range_error(offset + TYPE_BYTES + len, key_len))?,
+                .ok_or_else(|| index.range_error(offset + TYPE_BYTES + len, key_len))?,
         )
         .into_boxed_slice();
-        verify_checksum(
-            index.checksum(),
-            offset as u64,
-            (TYPE_BYTES + len + key_len) as u64,
-        )?;
+        index.verify_checksum(offset as u64, (TYPE_BYTES + len + key_len) as u64)?;
         Ok(MemKey { key })
     }
 
@@ -1239,14 +1212,10 @@ impl MemExtKey {
     fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
         let buf = index.buf();
         let offset = offset as usize;
-        check_type(buf, offset, TYPE_EXT_KEY)?;
+        check_type(&index, offset, TYPE_EXT_KEY)?;
         let (start, vlq_len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
         let (len, vlq_len2) = buf.read_vlq_at(offset + TYPE_BYTES + vlq_len1)?;
-        verify_checksum(
-            index.checksum(),
-            offset as u64,
-            (TYPE_BYTES + vlq_len1 + vlq_len2) as u64,
-        )?;
+        index.verify_checksum(offset as u64, (TYPE_BYTES + vlq_len1 + vlq_len2) as u64)?;
         Ok(MemExtKey { start, len })
     }
 
@@ -1272,7 +1241,7 @@ impl MemRoot {
     fn read_from(index: impl IndexBuf, offset: u64) -> Fallible<Self> {
         let offset = offset as usize;
         let mut cur = offset;
-        check_type(index.buf(), offset, TYPE_ROOT)?;
+        check_type(&index, offset, TYPE_ROOT)?;
         cur += TYPE_BYTES;
 
         let (radix_offset, vlq_len) = index.buf().read_vlq_at(cur)?;
@@ -1283,13 +1252,13 @@ impl MemRoot {
         let (meta_len, vlq_len): (usize, _) = index.buf().read_vlq_at(cur)?;
         cur += vlq_len;
 
-        let meta = match index.buf().get(cur..cur + meta_len) {
-            Some(meta) => meta,
-            None => return Err(range_error(cur, meta_len)),
-        };
+        let meta = index
+            .buf()
+            .get(cur..cur + meta_len)
+            .ok_or_else(|| index.range_error(cur, meta_len))?;
         cur += meta_len;
 
-        verify_checksum(index.checksum(), offset as u64, (cur - offset) as u64)?;
+        index.verify_checksum(offset as u64, (cur - offset) as u64)?;
         Ok(MemRoot {
             radix_offset,
             meta: meta.to_vec().into_boxed_slice(),
@@ -1298,11 +1267,10 @@ impl MemRoot {
 
     fn read_from_end(index: impl IndexBuf, end: u64) -> Fallible<Self> {
         let buf = index.buf();
-        let checksum = index.checksum();
         if end > 1 {
             let (root_size, vlq_size) = read_vlq_reverse(buf, end as usize)?;
             let vlq_size = vlq_size as u64;
-            verify_checksum(checksum, end - vlq_size, vlq_size)?;
+            index.verify_checksum(end - vlq_size, vlq_size)?;
             Self::read_from(index, end - vlq_size - root_size)
         } else {
             Err(parameter_error("end is too small"))
@@ -1672,11 +1640,11 @@ impl OpenOptions {
             let meta = Default::default();
             (vec![MemRadix::default()], MemRoot { radix_offset, meta })
         } else {
+            let buf = SimpleIndexBuf(&mmap, path, &checksum);
             // Verify the header byte.
-            check_type(&mmap, 0, TYPE_HEAD)?;
+            check_type(&buf, 0, TYPE_HEAD)?;
             // Load root entry from the end of the file (truncated at the logical length).
-            let naive = SimpleIndexBuf(&mmap, path, &checksum);
-            (vec![], MemRoot::read_from_end(naive, len)?)
+            (vec![], MemRoot::read_from_end(buf, len)?)
         };
 
         let key_buf = self.key_buf.clone();
@@ -1744,6 +1712,35 @@ trait IndexBuf {
     fn buf(&self) -> &[u8];
     fn checksum(&self) -> &Checksum;
     fn path(&self) -> &Path;
+
+    // Derived methods
+
+    /// Verify checksum for the given range. Internal API used by `*Offset` structs.
+    #[inline]
+    fn verify_checksum(&self, start: u64, length: u64) -> crate::Result<()> {
+        // This method is used in hot code paths. Its instruction size matters.
+        // Be sure to run `cargo bench --bench index verified` when changing this
+        // function, or the inline attributes.
+        if let &Some(ref table) = self.checksum() {
+            table.check_range(start, length)
+        } else {
+            Ok(())
+        }
+    }
+
+    #[inline(never)]
+    fn range_error(&self, start: usize, length: usize) -> crate::Error {
+        self.corruption(format!(
+            "byte range {}..{} is unavailable",
+            start,
+            start + length
+        ))
+    }
+
+    #[inline(never)]
+    fn corruption(&self, message: impl ToString) -> crate::Error {
+        crate::Error::corruption(self.path(), message)
+    }
 }
 
 impl<T: IndexBuf> IndexBuf for &T {
@@ -2494,24 +2491,10 @@ impl Index {
         }
     }
 
-    /// Verify checksum for the given range. Internal API used by `*Offset` structs.
-    #[inline]
-    fn verify_checksum(&self, start: u64, length: u64) -> Fallible<()> {
-        verify_checksum(&self.checksum, start, length)
-    }
-
     /// Raise [`errors::PathDataError`] with path of this index attached.
     #[inline(never)]
     fn data_error(&self, message: impl Into<Cow<'static, str>>) -> failure::Error {
         path_data_error(&self.path, message)
-    }
-
-    #[inline(never)]
-    fn range_error(&self, start: usize, length: usize) -> crate::Error {
-        crate::Error::corruption(
-            &self.path,
-            format!("byte range {}..{} is unavailable", start, start + length),
-        )
     }
 }
 
