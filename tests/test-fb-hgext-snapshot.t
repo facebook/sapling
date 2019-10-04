@@ -114,7 +114,7 @@
   
   $ OIDUNTRACKED="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ hg snapshot checkout "$OIDUNTRACKED"
-  will checkout on 17ea1568cba9731930a5dec3be5762b3620ddbb3
+  will checkout on 94254a2ba4f010ca2df8d770eac93f99b8caf546
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
@@ -167,12 +167,12 @@
 # Create the snapshot
   $ OID="$(hg snapshot create -m another | cut -f2 -d' ')"
   $ echo "$OID"
-  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
+  6f770bad8ca50f23f9a62a76c3f7add22772df50
 
 # Clean everything and checkout back
   $ hg update -q --clean . && rm mergefile.orig
   $ hg snapshot checkout "$OID"
-  will checkout on 6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
+  will checkout on 6f770bad8ca50f23f9a62a76c3f7add22772df50
   checkout complete
 
 # hg status/diff are unchanged
@@ -201,7 +201,7 @@
   $ rm foofile
   $ echo "another" > bazfile
   $ hg add bazfile
-  $ echo "fizz" > untrackedfile
+  $ echo "fizz some long content which has a length of at least 100 bytes............................................" > untrackedfile
   $ BEFORESTATUS="$(hg status --verbose)"
   $ echo "$BEFORESTATUS"
   M mergefile
@@ -245,10 +245,10 @@
 # Create the snapshot
   $ OID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ echo "$OID"
-  f890179e6e66eeb2a5a676efb96f150133a437c9
+  eae93e849afe8c057f1832a2266720c1c530400e
 
   $ hg snapshot checkout "$OID"
-  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  will checkout on eae93e849afe8c057f1832a2266720c1c530400e
   checkout complete
 
 # hg status/diff are unchanged
@@ -258,9 +258,9 @@
 # Check the metadata id and its contents
   $ METADATAID="$(hg log --hidden -r \"$OID\" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid | cut -d'=' -f2)"
   $ echo "$METADATAID"
-  7eb6f96f1f02eb9ab7102f4f2a9936e07bded02cd20ec6faad01285168b920c7
+  f37947cc08b744e8892654756add6f883e22616ac835f3da1745cdb6335126b8
   $ find .hg/store/snapshots/objects/"${METADATAID:0:2}"/"${METADATAID:2}"
-  .hg/store/snapshots/objects/7e/b6f96f1f02eb9ab7102f4f2a9936e07bded02cd20ec6faad01285168b920c7
+  .hg/store/snapshots/objects/f3/7947cc08b744e8892654756add6f883e22616ac835f3da1745cdb6335126b8
 
 
 # 6) List the snapshots
@@ -268,16 +268,16 @@
   $ cat .hg/store/snapshotlist
   v1
   bd8d77aecb3d474ec545981fe5b7aa9cd40f5df2
-  17ea1568cba9731930a5dec3be5762b3620ddbb3
-  6d8aaa4ab672f774a6cb19fa386b9c4a0cc06ccf
-  f890179e6e66eeb2a5a676efb96f150133a437c9
+  94254a2ba4f010ca2df8d770eac93f99b8caf546
+  6f770bad8ca50f23f9a62a76c3f7add22772df50
+  eae93e849afe8c057f1832a2266720c1c530400e
 
 # Use the list cmd
   $ hg snapshot list --verbose
   bd8d77aecb3d           None first snapshot
-  17ea1568cba9   9034098d7ea3 snapshot
-  6d8aaa4ab672   18a588cc0809 another
-  f890179e6e66   7eb6f96f1f02 snapshot
+  94254a2ba4f0   2c7e231a2ff5 snapshot
+  6f770bad8ca5   e654b3eb8739 another
+  eae93e849afe   f37947cc08b7 snapshot
 
 
 # Move back to BASEREV
@@ -289,7 +289,7 @@
 # Check out on the snapshot -- negative tests
 # Regular checkout
   $ hg checkout --hidden "$OID"
-  abort: f890179e6e66 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
+  abort: eae93e849afe is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
   
   [255]
 # Non-empty WC state
@@ -311,7 +311,7 @@
   [255]
 # Check out on the snapshot -- positive tests
   $ hg snapshot checkout "$OID"
-  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  will checkout on eae93e849afe8c057f1832a2266720c1c530400e
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
@@ -325,13 +325,13 @@
   .hg/merge/state
   .hg/merge/state2
   $ hg snapshot create --clean
-  snapshot f890179e6e66eeb2a5a676efb96f150133a437c9 created
+  snapshot eae93e849afe8c057f1832a2266720c1c530400e created
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]
   $ hg snapshot checkout "$OID"
-  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  will checkout on eae93e849afe8c057f1832a2266720c1c530400e
   checkout complete
 
 
@@ -346,7 +346,7 @@
   
   [255]
   $ hg snapshot checkout --force "$OID"
-  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  will checkout on eae93e849afe8c057f1832a2266720c1c530400e
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 
@@ -381,15 +381,15 @@
 # Delete all the related files from the local store
   $ find .hg/store/snapshots/objects/ -mindepth 1 ! -name "${BROKENMETADATAID:2}" -type f -delete
   $ hg snapshot checkout $BROKENSNAPSHOTID
-  will checkout on e0a2594adfc174e553568d3ec5e665993e8dd061
-  abort: file mergefile.orig with oid 0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f not found in local blobstorage
+  will checkout on d208b836260dfe6553aa21e569e5451a27e3e599
+  abort: file untrackedfile with oid 7c508c43b8899c7e35a808490880699447929ee5e7ee2f279bc22ef8a57dd9e1 not found in local blobstorage
   
   [255]
   $ hg status --verbose
 # Break the metadata itself
   $ echo "break the metadata" >> .hg/store/snapshots/objects/"${BROKENMETADATAID:0:2}"/"${BROKENMETADATAID:2}"
   $ hg snapshot checkout $BROKENSNAPSHOTID
-  will checkout on e0a2594adfc174e553568d3ec5e665993e8dd061
+  will checkout on d208b836260dfe6553aa21e569e5451a27e3e599
   abort: invalid metadata stream
   
   [255]

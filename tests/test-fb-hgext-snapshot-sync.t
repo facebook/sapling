@@ -72,9 +72,9 @@
   $ echo "snapshot1 data" > data1
   $ OID1="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ echo "$OID1"
-  dce5266c40f04289559afbb27e0686f5bb9d9c29
+  7917335ca0064e431e045fdebf0bd483fcc8e28d
   $ hg snapshot show --debug $OID1
-  changeset:   1:dce5266c40f04289559afbb27e0686f5bb9d9c29
+  changeset:   1:7917335ca0064e431e045fdebf0bd483fcc8e28d
   tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
@@ -83,7 +83,7 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
-  extra:       snapshotmetadataid=e3bafde7a5ebc3aeac0ef6637e909554fd55e5158a78326793857b021f99a9be
+  extra:       snapshotmetadataid=16839bd960d247256f387c52c79b0cf144a0209140eb07edf922c762564d7705
   description:
   snapshot
   
@@ -97,15 +97,15 @@
   +snapshot1 data
   
   $ hg snapshot list
-  dce5266c40f0 snapshot
+  7917335ca006 snapshot
 
   $ cd ../client2
   $ echo "snapshot2 data" > data2
   $ OID2="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ echo "$OID2"
-  509860fa520fa5374e798264daef3a817c9a0169
+  5e55990d984329c0cd0395dad5fcee6d6e8cc126
   $ hg snapshot show --debug $OID2
-  changeset:   1:509860fa520fa5374e798264daef3a817c9a0169
+  changeset:   1:5e55990d984329c0cd0395dad5fcee6d6e8cc126
   tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
@@ -114,7 +114,7 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
-  extra:       snapshotmetadataid=17e5538a342f5ebdf88397bf30923c67f211c7490c423fc53336d67e797af6f4
+  extra:       snapshotmetadataid=9351f31a425f4da1b0efc151e9f7876333aac5bff34d2d29b69ef196c3709467
   description:
   snapshot
   
@@ -128,7 +128,7 @@
   +snapshot2 data
   
   $ hg snapshot list
-  509860fa520f snapshot
+  5e55990d9843 snapshot
 
   $ cd ..
   $ testdb "$OID1" "$OID2"
@@ -140,17 +140,17 @@
   $ cd client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at dce5266c40f0
+  backing up stack rooted at 7917335ca006
   remote: pushing 1 commit:
-  remote:     dce5266c40f0  snapshot
+  remote:     7917335ca006  snapshot
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list
-  dce5266c40f0 snapshot
+  7917335ca006 snapshot
 
   $ cd ..
   $ testdb "$OID1" "$OID2"
-  dce5266c40f04289559afbb27e0686f5bb9d9c29
+  7917335ca0064e431e045fdebf0bd483fcc8e28d
   not found
 
 
@@ -158,24 +158,24 @@
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 509860fa520f
+  backing up stack rooted at 5e55990d9843
   remote: pushing 1 commit:
-  remote:     509860fa520f  snapshot
-  pulling dce5266c40f0
+  remote:     5e55990d9843  snapshot
+  pulling 7917335ca006
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
-  new changesets dce5266c40f0
+  new changesets 7917335ca006
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list
-  509860fa520f snapshot
-  dce5266c40f0 snapshot
+  5e55990d9843 snapshot
+  7917335ca006 snapshot
   $ hg snapshot show --debug "$OID1"
-  changeset:   2:dce5266c40f04289559afbb27e0686f5bb9d9c29
+  changeset:   2:7917335ca0064e431e045fdebf0bd483fcc8e28d
   tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
@@ -184,7 +184,7 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
-  extra:       snapshotmetadataid=e3bafde7a5ebc3aeac0ef6637e909554fd55e5158a78326793857b021f99a9be
+  extra:       snapshotmetadataid=16839bd960d247256f387c52c79b0cf144a0209140eb07edf922c762564d7705
   description:
   snapshot
   
@@ -200,8 +200,8 @@
 
   $ cd ..
   $ testdb "$OID1" "$OID2"
-  dce5266c40f04289559afbb27e0686f5bb9d9c29
-  509860fa520fa5374e798264daef3a817c9a0169
+  7917335ca0064e431e045fdebf0bd483fcc8e28d
+  5e55990d984329c0cd0395dad5fcee6d6e8cc126
 
 
 # 3.1) Remove snapshot ext from 2nd host and do the sync (expected: nothing changes);
@@ -213,13 +213,13 @@
   finished in 0.00 sec
   $ setconfig extensions.snapshot=
   $ hg snapshot list
-  509860fa520f snapshot
-  dce5266c40f0 snapshot
+  5e55990d9843 snapshot
+  7917335ca006 snapshot
 
   $ cd ..
   $ testdb "$OID1" "$OID2"
-  dce5266c40f04289559afbb27e0686f5bb9d9c29
-  509860fa520fa5374e798264daef3a817c9a0169
+  7917335ca0064e431e045fdebf0bd483fcc8e28d
+  5e55990d984329c0cd0395dad5fcee6d6e8cc126
 
 
 # 4) Remove s1 from the first host and do the sync (expected: h1 [s2], h2 [s1, s2], s [s2]);
@@ -229,21 +229,21 @@
   no snapshots created
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 509860fa520f
+  pulling 5e55990d9843
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
-  new changesets 509860fa520f
+  new changesets 5e55990d9843
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list
-  509860fa520f snapshot
+  5e55990d9843 snapshot
 
   $ hg snapshot show --debug "$OID2"
-  changeset:   2:509860fa520fa5374e798264daef3a817c9a0169
+  changeset:   2:5e55990d984329c0cd0395dad5fcee6d6e8cc126
   tag:         tip
   phase:       draft
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
@@ -252,7 +252,7 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
-  extra:       snapshotmetadataid=17e5538a342f5ebdf88397bf30923c67f211c7490c423fc53336d67e797af6f4
+  extra:       snapshotmetadataid=9351f31a425f4da1b0efc151e9f7876333aac5bff34d2d29b69ef196c3709467
   description:
   snapshot
   
@@ -269,14 +269,14 @@
   $ cd ..
   $ testdb "$OID1" "$OID2"
   not found
-  509860fa520fa5374e798264daef3a817c9a0169
+  5e55990d984329c0cd0395dad5fcee6d6e8cc126
 
 
 # 5) Remove s2 from the second host and do the sync (expected: h1 [s2], h2 [], s []);
   $ cd client2
   $ hg snapshot hide "$OID2"
   $ hg snapshot list
-  dce5266c40f0 snapshot
+  7917335ca006 snapshot
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
@@ -298,9 +298,9 @@
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list
-  dce5266c40f0 snapshot
+  7917335ca006 snapshot
 
   $ cd ..
   $ testdb "$OID1" "$OID2"
-  dce5266c40f04289559afbb27e0686f5bb9d9c29
+  7917335ca0064e431e045fdebf0bd483fcc8e28d
   not found

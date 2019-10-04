@@ -114,7 +114,7 @@ def createsnapshotcommit(ui, repo, opts):
     emptymetadata = snapmetadata.empty
     oid = ""  # this is better than None because of extra serialization rules
     if not emptymetadata:
-        oid, size = snapmetadata.storelocally(repo)
+        oid = snapmetadata.storelocally(repo)
     extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
     # TODO(alexeyqu): deal with unfinished merge state case
@@ -198,7 +198,7 @@ def _diff(orig, repo, *args, **kwargs):
     yield "\n===\nUntracked changes:\n===\n"
     for f in snapmetadata.unknown:
         yield "? %s\n" % f.path
-        yield snapshotdiff("", store.read(f.oid), f.path)
+        yield snapshotdiff("", f.getcontent(store), f.path)
     # print deleted files from snapshot
     # diff(prevcontent, "")
     for f in snapmetadata.deleted:
@@ -284,7 +284,7 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
             ui.note(_("skip adding %s, it exists\n") % file.path)
             return
         ui.note(_("will add %s\n") % file.path)
-        vfs.write(file.path, store.read(file.oid))
+        vfs.write(file.path, file.getcontent(store))
 
     # deleting files that should be missing
     for file in snapmetadata.deleted:

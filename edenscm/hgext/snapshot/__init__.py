@@ -32,6 +32,9 @@ Configs::
     # Sync snapshot metadata via bundle2
     enable-sync-bundle = False
 
+    # Size of a file to make it use a separate blob
+    threshold = 1K
+
     # The local directory to store blob file for sharing across local clones
     # If not set, the cache is disabled (default)
     usercache = /path/to/global/cache
@@ -63,6 +66,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("ui", "allow-checkout-snapshot", default=False)
 configitem("snapshot", "enable-sync-bundle", default=False)
+configitem("snapshot", "threshold", default="100B")
 configitem("snapshot", "usercache", default=None)
 
 
@@ -74,6 +78,10 @@ def reposetup(ui, repo):
     # Nothing to do with a remote repo
     if not repo.local():
         return
+
+    threshold = repo.ui.configbytes("snapshot", "threshold")
+
+    repo.svfs.options["snapshotthreshold"] = threshold
     repo.svfs.snapshotstore = blobstore.local(repo)
     if isinstance(repo, bundlerepo.bundlerepository):
         repo.svfs.snapshotstore = blobstoremod.unionstore(

@@ -19,20 +19,34 @@ class filewrapper(object):
     Also does serialization/deserialization for metadata.
     """
 
-    def __init__(self, path, oid=None, size=None):
+    def __init__(self, path, oid=None, content=None):
         self.path = path
-        # TODO(alexeyqu): add possible file content here
         self.oid = oid
-        self.size = size
+        self.content = content
+        self._check()
+
+    def _check(self):
+        if self.oid is not None and self.content is not None:
+            raise error.Abort("ambiguous file contents: %s" % self.path)
 
     def todict(self):
-        if self.oid is None and self.size is None:
-            return None
-        return {"oid": self.oid, "size": self.size}
+        self._check()
+        if self.content is not None:
+            return {"content": self.content}
+        if self.oid is not None:
+            return {"oid": self.oid}
+        return None
 
     @classmethod
     def fromdict(cls, path, data):
-        return cls(path, oid=data.get("oid"), size=data.get("size"))
+        return cls(path, oid=data.get("oid"), content=data.get("content"))
+
+    def getcontent(self, store):
+        if self.content is not None:
+            return self.content
+        if self.oid is not None:
+            return store.read(self.oid)
+        return None
 
 
 class snapshotmetadata(object):
@@ -172,29 +186,31 @@ class snapshotmetadata(object):
         return metadata
 
     def storelocally(self, repo):
-        def _dostore(store, data):
-            """
-            Util function which uploads data to the local blob storage.
-            Returns oid and size of data.
-            """
-            # TODO(alexeyqu): do we care about metadata?
+        def _dostore(data):
             oid = hashlib.sha256(data).hexdigest()
             store.write(oid, data)
-            return oid, str(len(data))
+            return oid
+
+        def _storefile(f, data):
+            if len(data) > threshold:
+                f.oid = _dostore(data)
+            else:
+                f.content = data
 
         wctx = repo[None]
         store = repo.svfs.snapshotstore
+        threshold = repo.svfs.options["snapshotthreshold"]
         for f in self.unknown:
-            f.oid, f.size = _dostore(store, wctx[f.path].data())
+            _storefile(f, wctx[f.path].data())
         for f in self.localvfsfiles:
-            f.oid, f.size = _dostore(store, repo.localvfs.open(path=f.path).read())
-        oid, size = _dostore(store, self.serialize())
-        return oid, size
+            _storefile(f, repo.localvfs.open(path=f.path).read())
+        oid = _dostore(self.serialize())
+        return oid
 
     def getauxfilesinfo(self):
         auxfilesinfo = set()
-        auxfilesinfo.update(f.oid for f in self.unknown)
-        auxfilesinfo.update(f.oid for f in self.localvfsfiles)
+        auxfilesinfo.update(f.oid for f in self.unknown if f.oid)
+        auxfilesinfo.update(f.oid for f in self.localvfsfiles if f.oid)
         return auxfilesinfo
 
     def files(self, showlocalvfs=False):

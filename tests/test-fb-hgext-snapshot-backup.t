@@ -110,10 +110,10 @@
 # Make a snapshot
   $ OID="$(hg snapshot create | cut -f2 -d' ')"
   $ echo "$OID"
-  f890179e6e66eeb2a5a676efb96f150133a437c9
+  751f5ef10bc73a8f549197b380773d4f680daa8c
 # Do it one more time to trigger rebundling on the server side
   $ hg snapshot create -m "second snapshot"
-  snapshot 1357825b79d89e00627c3c847951eebfd46b6356 created
+  snapshot ccf23db4d8f395e020a2b8bed6a19bfc2309b5ab created
 
 # Back it up
   $ hg cloud backup
@@ -121,14 +121,14 @@
   remote: pushing 4 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
-  remote:     f890179e6e66  snapshot
-  remote:     1357825b79d8  second snapshot
+  remote:     751f5ef10bc7  snapshot
+  remote:     ccf23db4d8f3  second snapshot
   backing up stack rooted at 6eb2552aed20
   remote: pushing 4 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
-  remote:     f890179e6e66  snapshot
-  remote:     1357825b79d8  second snapshot
+  remote:     751f5ef10bc7  snapshot
+  remote:     ccf23db4d8f3  second snapshot
   commitcloud: backed up 4 commits
 
 # Restore it on another client
@@ -143,9 +143,9 @@
   adding manifests
   adding file changes
   added 3 changesets with 4 changes to 2 files
-  new changesets 3490593cf53c:f890179e6e66
+  new changesets 3490593cf53c:751f5ef10bc7
   $ hg snapshot checkout "$OID"
-  will checkout on f890179e6e66eeb2a5a676efb96f150133a437c9
+  will checkout on 751f5ef10bc73a8f549197b380773d4f680daa8c
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete
 # hg status/diff are unchanged
@@ -153,6 +153,6 @@
   $ test "$BEFOREDIFF" = "$(hg diff)"
 # The snapshot commit is hidden
   $ hg show "$OID"
-  abort: hidden revision 'f890179e6e66eeb2a5a676efb96f150133a437c9'!
+  abort: hidden revision '751f5ef10bc73a8f549197b380773d4f680daa8c'!
   (use --hidden to access hidden revisions)
   [255]
