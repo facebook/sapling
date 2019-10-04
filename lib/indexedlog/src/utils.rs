@@ -66,7 +66,28 @@ pub fn mmap_len(path: &Path, len: u64) -> crate::Result<Mmap> {
         let file = std::fs::OpenOptions::new()
             .read(true)
             .open(path)
-            .context(path, "cannot open for mmap")?;
+            .or_else(|err| {
+                if err.kind() == io::ErrorKind::NotFound {
+                    // This is marked as a corruption because proper NotFound
+                    // handling are on non-mmapped files. For example,
+                    // - Log uses "meta" not found to detect if a log is
+                    //   empty/newly created. "meta" is not mmapped. If
+                    //   "meta" is missing, it might be not a corruption,
+                    //   but just need to create Log in-place.
+                    // - RotateLog uses "latest" to detect if it is empty/
+                    //   newly created. "latest" is not mmapped. If "latest"
+                    //   is missing, it might be not a corruption, but just
+                    //   need to create RotateLog in-place.
+                    // - Index uses std::fs::OpenOptions to create new files
+                    //   on demand.
+                    // So mmapped files are not used to detect "whether we
+                    // should create a new empty structure, or not", the
+                    // NotFound issues are most likely "data corruption".
+                    Err(err).context(path, "cannot open for mmap").corruption()
+                } else {
+                    Err(err).context(path, "cannot open for mmap")
+                }
+            })?;
         mmap_readonly(&file, Some(len))
             .context(path, "cannot mmap")
             .map(|(mmap, _len)| mmap)
