@@ -18,4 +18,5 @@ add_fb_python_unittest(
     "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
 )
 
+add_subdirectory(hg)
 add_subdirectory(lib)
