@@ -1692,134 +1692,160 @@ impl OpenOptions {
     /// index. Changes to the filesystem won't change instantiated [`Index`]es.
     pub fn open<P: AsRef<Path>>(&self, path: P) -> crate::Result<Index> {
         let path = path.as_ref();
-        let mut open_options = self.clone();
-        let open_result = if self.write == Some(false) {
-            fs::OpenOptions::new().read(true).open(path)
-        } else {
-            fs::OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .append(true)
-                .open(path)
-        };
-        let mut file = match self.write {
-            Some(write) => open_result.context(
-                path,
-                if write {
-                    "cannot open Index with read-write mode"
-                } else {
-                    "cannot open Index with read-only mode"
-                },
-            )?,
-            None => {
-                // Fall back to open the file as read-only, automatically.
-                if open_result.is_err() {
-                    open_options.write = Some(false);
-                    fs::OpenOptions::new()
-                        .read(true)
-                        .open(path)
-                        .context(path, "cannot open Index with read-only mode")?
-                } else {
-                    open_result.unwrap()
-                }
-            }
-        };
-
-        let (mmap, len) = {
-            match self.len {
+        let result: crate::Result<_> = (|| {
+            let mut open_options = self.clone();
+            let open_result = if self.write == Some(false) {
+                fs::OpenOptions::new().read(true).open(path)
+            } else {
+                fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .append(true)
+                    .open(path)
+            };
+            let mut file = match self.write {
+                Some(write) => open_result.context(
+                    path,
+                    if write {
+                        "cannot open Index with read-write mode"
+                    } else {
+                        "cannot open Index with read-only mode"
+                    },
+                )?,
                 None => {
-                    // Take the lock to read file length, since that decides root entry location.
-                    let lock = ScopedFileLock::new(&mut file, false)
-                        .context(path, "cannot lock Log to read file length")?;
-                    mmap_readonly(lock.as_ref(), None).context(path, "cannot mmap")?
+                    // Fall back to open the file as read-only, automatically.
+                    if open_result.is_err() {
+                        open_options.write = Some(false);
+                        fs::OpenOptions::new()
+                            .read(true)
+                            .open(path)
+                            .context(path, "cannot open Index with read-only mode")?
+                    } else {
+                        open_result.unwrap()
+                    }
                 }
-                Some(len) => {
-                    // No need to lock for getting file length.
-                    mmap_readonly(&file, Some(len)).context(path, "cannot mmap")?
+            };
+
+            let (mmap, len) = {
+                match self.len {
+                    None => {
+                        // Take the lock to read file length, since that decides root entry location.
+                        let lock = ScopedFileLock::new(&mut file, false)
+                            .context(path, "cannot lock Log to read file length")?;
+                        mmap_readonly(lock.as_ref(), None).context(path, "cannot mmap")?
+                    }
+                    Some(len) => {
+                        // No need to lock for getting file length.
+                        mmap_readonly(&file, Some(len)).context(path, "cannot mmap")?
+                    }
                 }
-            }
-        };
+            };
 
-        let checksum_chunk_size = self.checksum_chunk_size;
-        let mut checksum = if checksum_chunk_size > 0 {
-            Some(ChecksumTable::new(&path)?.fsync(self.fsync))
-        } else {
-            None
-        };
+            let checksum_chunk_size = self.checksum_chunk_size;
+            let mut checksum = if checksum_chunk_size > 0 {
+                Some(ChecksumTable::new(&path)?.fsync(self.fsync))
+            } else {
+                None
+            };
 
-        let (dirty_radixes, clean_root) = if len == 0 {
-            // Empty file. Create root radix entry as an dirty entry, and
-            // rebuild checksum table (in case it's corrupted).
-            let radix_offset = RadixOffset::from_dirty_index(0);
-            if let Some(ref mut table) = checksum {
-                table.clear();
-            }
-            let meta = Default::default();
-            (vec![MemRadix::default()], MemRoot { radix_offset, meta })
-        } else {
-            let buf = SimpleIndexBuf(&mmap, path, &checksum);
-            // Verify the header byte.
-            check_type(&buf, 0, TYPE_HEAD)?;
-            // Load root entry from the end of the file (truncated at the logical length).
-            (vec![], MemRoot::read_from_end(buf, len)?)
-        };
+            let (dirty_radixes, clean_root) = if len == 0 {
+                // Empty file. Create root radix entry as an dirty entry, and
+                // rebuild checksum table (in case it's corrupted).
+                let radix_offset = RadixOffset::from_dirty_index(0);
+                if let Some(ref mut table) = checksum {
+                    table.clear();
+                }
+                let meta = Default::default();
+                (vec![MemRadix::default()], MemRoot { radix_offset, meta })
+            } else {
+                let buf = SimpleIndexBuf(&mmap, path, &checksum);
+                // Verify the header byte.
+                check_type(&buf, 0, TYPE_HEAD)?;
+                // Load root entry from the end of the file (truncated at the logical length).
+                (vec![], MemRoot::read_from_end(buf, len)?)
+            };
 
-        let key_buf = self.key_buf.clone();
-        let dirty_root = clean_root.clone();
+            let key_buf = self.key_buf.clone();
+            let dirty_root = clean_root.clone();
 
-        Ok(Index {
-            file: Some(file),
-            buf: mmap,
-            path: path.to_path_buf(),
-            open_options,
-            clean_root,
-            dirty_root,
-            dirty_radixes,
-            dirty_links: vec![],
-            dirty_leafs: vec![],
-            dirty_keys: vec![],
-            dirty_ext_keys: vec![],
-            checksum,
-            key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
-            len,
-        })
+            Ok(Index {
+                file: Some(file),
+                buf: mmap,
+                path: path.to_path_buf(),
+                open_options,
+                clean_root,
+                dirty_root,
+                dirty_radixes,
+                dirty_links: vec![],
+                dirty_leafs: vec![],
+                dirty_keys: vec![],
+                dirty_ext_keys: vec![],
+                checksum,
+                key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
+                len,
+            })
+        })();
+        result
+            .context(|| format!("in index::OpenOptions::open({:?})", path))
+            .context(|| format!("  OpenOptions = {:?}", self))
     }
 
     /// Create an in-memory [`Index`] that skips flushing to disk.
     /// Return an error if `checksum_chunk_size` is not 0.
     pub fn create_in_memory(&self) -> crate::Result<Index> {
-        if self.checksum_chunk_size != 0 {
-            return Err(crate::Error::programming(
-                "checksum_chunk_size is not supported for in-memory Index",
-            )
-            .into());
-        }
-        let dirty_radixes = vec![MemRadix::default()];
-        let clean_root = {
-            let radix_offset = RadixOffset::from_dirty_index(0);
-            let meta = Default::default();
-            MemRoot { radix_offset, meta }
-        };
-        let key_buf = self.key_buf.clone();
-        let dirty_root = clean_root.clone();
+        let result: crate::Result<_> = (|| {
+            if self.checksum_chunk_size != 0 {
+                return Err(crate::Error::programming(
+                    "checksum_chunk_size is not supported for in-memory Index",
+                )
+                .into());
+            }
+            let dirty_radixes = vec![MemRadix::default()];
+            let clean_root = {
+                let radix_offset = RadixOffset::from_dirty_index(0);
+                let meta = Default::default();
+                MemRoot { radix_offset, meta }
+            };
+            let key_buf = self.key_buf.clone();
+            let dirty_root = clean_root.clone();
 
-        Ok(Index {
-            file: None,
-            buf: mmap_empty().infallible()?,
-            path: PathBuf::new(),
-            open_options: self.clone(),
-            clean_root,
-            dirty_root,
-            dirty_radixes,
-            dirty_links: vec![],
-            dirty_leafs: vec![],
-            dirty_keys: vec![],
-            dirty_ext_keys: vec![],
-            checksum: None,
-            key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
-            len: 0,
-        })
+            Ok(Index {
+                file: None,
+                buf: mmap_empty().infallible()?,
+                path: PathBuf::new(),
+                open_options: self.clone(),
+                clean_root,
+                dirty_root,
+                dirty_radixes,
+                dirty_links: vec![],
+                dirty_leafs: vec![],
+                dirty_keys: vec![],
+                dirty_ext_keys: vec![],
+                checksum: None,
+                key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
+                len: 0,
+            })
+        })();
+        result
+            .context("in index::OpenOptions::create_in_memory")
+            .context(|| format!("  OpenOptions = {:?}", self))
+    }
+}
+
+impl fmt::Debug for OpenOptions {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "OpenOptions {{ ")?;
+        write!(f, "checksum_chunk_size: {}, ", self.checksum_chunk_size)?;
+        write!(f, "fsync: {}, ", self.fsync)?;
+        write!(f, "len: {:?}, ", self.len)?;
+        write!(f, "write: {:?}, ", self.write)?;
+        let key_buf_desc = match self.key_buf {
+            Some(ref _buf) => "Some(_)",
+            None => "None",
+        };
+        write!(f, "key_buf: {} }}", key_buf_desc)?;
+        Ok(())
     }
 }
 
@@ -1890,6 +1916,8 @@ impl Index {
     /// Return a cloned [`Index`] with pending in-memory changes.
     pub fn try_clone(&self) -> crate::Result<Self> {
         self.try_clone_internal(true)
+            .context("in Index::try_clone")
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Return a cloned [`Index`] without pending in-memory changes.
@@ -1898,6 +1926,8 @@ impl Index {
     /// on the result after `try_clone`, but potentially cheaper.
     pub fn try_clone_without_dirty(&self) -> crate::Result<Self> {
         self.try_clone_internal(false)
+            .context("in Index::try_clone_without_dirty")
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Index> {
@@ -2023,172 +2053,177 @@ impl Index {
     /// For in-memory-only indexes, this function does nothing and returns 0,
     /// unless read-only was set at open time.
     pub fn flush(&mut self) -> crate::Result<u64> {
-        if self.open_options.write == Some(false) {
-            return Err(crate::Error::path(
-                self.path(),
-                "cannot flush: Index opened with read-only mode",
-            ));
-        }
-        if self.file.is_none() {
-            // Why is this Ok, not Err?
-            //
-            // An in-memory Index does not share data with anybody else,
-            // therefore no need to flush. In other words, whether flush
-            // happens or not does not change the result of other APIs on
-            // this Index instance.
-            //
-            // Another way to think about it, an in-memory Index is similar
-            // to a private anonymous mmap, and msync on that mmap would
-            // succeed.
-            return Ok(0);
-        }
+        let result: crate::Result<_> = (|| {
+            if self.open_options.write == Some(false) {
+                return Err(crate::Error::path(
+                    self.path(),
+                    "cannot flush: Index opened with read-only mode",
+                ));
+            }
+            if self.file.is_none() {
+                // Why is this Ok, not Err?
+                //
+                // An in-memory Index does not share data with anybody else,
+                // therefore no need to flush. In other words, whether flush
+                // happens or not does not change the result of other APIs on
+                // this Index instance.
+                //
+                // Another way to think about it, an in-memory Index is similar
+                // to a private anonymous mmap, and msync on that mmap would
+                // succeed.
+                return Ok(0);
+            }
 
-        let old_len = self.len;
-        let mut new_len = self.len;
-        if !self.dirty_root.radix_offset.is_dirty() {
-            // Nothing changed
-            return Ok(new_len);
-        }
+            let old_len = self.len;
+            let mut new_len = self.len;
+            if !self.dirty_root.radix_offset.is_dirty() {
+                // Nothing changed
+                return Ok(new_len);
+            }
 
-        // Critical section: need write lock
-        {
-            let mut offset_map = OffsetMap::empty_for_index(self);
-            let estimated_dirty_bytes = self.dirty_links.len() * 50;
-            let path = self.path.clone(); // for error messages; and make the borrowck happy.
-            let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)
-                .context(&path, "cannot lock")?;
-            let len = lock
-                .as_mut()
-                .seek(SeekFrom::End(0))
-                .context(&path, "cannot seek to end")?;
-            if len < old_len {
-                let message = format!(
+            // Critical section: need write lock
+            {
+                let mut offset_map = OffsetMap::empty_for_index(self);
+                let estimated_dirty_bytes = self.dirty_links.len() * 50;
+                let path = self.path.clone(); // for error messages; and make the borrowck happy.
+                let mut lock = ScopedFileLock::new(self.file.as_mut().unwrap(), true)
+                    .context(&path, "cannot lock")?;
+                let len = lock
+                    .as_mut()
+                    .seek(SeekFrom::End(0))
+                    .context(&path, "cannot seek to end")?;
+                if len < old_len {
+                    let message = format!(
                     "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
                     len, old_len
                 );
-                // This is not a "corruption" - something has truncated the
-                // file, potentially recreating it. We haven't checked the
-                // new content, so it's not considered as "data corruption".
-                // TODO: Review this decision.
-                let err = crate::Error::path(&path, message);
-                return Err(err.into());
-            }
+                    // This is not a "corruption" - something has truncated the
+                    // file, potentially recreating it. We haven't checked the
+                    // new content, so it's not considered as "data corruption".
+                    // TODO: Review this decision.
+                    let err = crate::Error::path(&path, message);
+                    return Err(err.into());
+                }
 
-            let mut buf = Vec::with_capacity(estimated_dirty_bytes);
+                let mut buf = Vec::with_capacity(estimated_dirty_bytes);
 
-            // Write in the following order:
-            // header, keys, links, leafs, radixes, root.
-            // Latter entries depend on former entries.
+                // Write in the following order:
+                // header, keys, links, leafs, radixes, root.
+                // Latter entries depend on former entries.
 
-            if len == 0 {
-                buf.write_all(&[TYPE_HEAD]).infallible()?;
-            }
+                if len == 0 {
+                    buf.write_all(&[TYPE_HEAD]).infallible()?;
+                }
 
-            for (i, entry) in self.dirty_keys.iter().enumerate() {
-                if !entry.is_unused() {
+                for (i, entry) in self.dirty_keys.iter().enumerate() {
+                    if !entry.is_unused() {
+                        let offset = buf.len() as u64 + len;
+                        offset_map.key_map[i] = offset;
+                        entry.write_to(&mut buf, &offset_map).infallible()?;
+                    };
+                }
+
+                // Inlined leafs. They might affect ExtKeys and Links. Need to write first.
+                for i in 0..self.dirty_leafs.len() {
+                    let entry = self.dirty_leafs.get_mut(i).unwrap();
                     let offset = buf.len() as u64 + len;
-                    offset_map.key_map[i] = offset;
+                    if !entry.is_unused()
+                        && entry.maybe_write_inline_to(
+                            &mut buf,
+                            &self.buf,
+                            len,
+                            &mut self.dirty_ext_keys,
+                            &mut self.dirty_links,
+                            &mut offset_map,
+                        )?
+                    {
+                        offset_map.leaf_map[i] = offset;
+                        entry.mark_unused();
+                    }
+                }
+
+                for (i, entry) in self.dirty_ext_keys.iter().enumerate() {
+                    if !entry.is_unused() {
+                        let offset = buf.len() as u64 + len;
+                        offset_map.ext_key_map[i] = offset;
+                        entry.write_to(&mut buf, &offset_map).infallible()?;
+                    }
+                }
+
+                for (i, entry) in self.dirty_links.iter().enumerate() {
+                    if !entry.is_unused() {
+                        let offset = buf.len() as u64 + len;
+                        offset_map.link_map[i] = offset;
+                        entry.write_to(&mut buf, &offset_map).infallible()?;
+                    }
+                }
+
+                // Non-inlined leafs.
+                for (i, entry) in self.dirty_leafs.iter().enumerate() {
+                    if !entry.is_unused() {
+                        let offset = buf.len() as u64 + len;
+                        offset_map.leaf_map[i] = offset;
+                        entry
+                            .write_noninline_to(&mut buf, &offset_map)
+                            .infallible()?;
+                    }
+                }
+
+                // Write Radix entries in reversed order since former ones might refer to latter ones.
+                for (i, entry) in self.dirty_radixes.iter().rev().enumerate() {
+                    let offset = buf.len() as u64 + len;
                     entry.write_to(&mut buf, &offset_map).infallible()?;
-                };
-            }
-
-            // Inlined leafs. They might affect ExtKeys and Links. Need to write first.
-            for i in 0..self.dirty_leafs.len() {
-                let entry = self.dirty_leafs.get_mut(i).unwrap();
-                let offset = buf.len() as u64 + len;
-                if !entry.is_unused()
-                    && entry.maybe_write_inline_to(
-                        &mut buf,
-                        &self.buf,
-                        len,
-                        &mut self.dirty_ext_keys,
-                        &mut self.dirty_links,
-                        &mut offset_map,
-                    )?
-                {
-                    offset_map.leaf_map[i] = offset;
-                    entry.mark_unused();
+                    offset_map.radix_map[i] = offset;
                 }
-            }
 
-            for (i, entry) in self.dirty_ext_keys.iter().enumerate() {
-                if !entry.is_unused() {
-                    let offset = buf.len() as u64 + len;
-                    offset_map.ext_key_map[i] = offset;
-                    entry.write_to(&mut buf, &offset_map).infallible()?;
+                self.dirty_root
+                    .write_to(&mut buf, &offset_map)
+                    .infallible()?;
+                new_len = buf.len() as u64 + len;
+                lock.as_mut()
+                    .write_all(&buf)
+                    .context(&path, "cannot write new data to index")?;
+
+                if self.open_options.fsync {
+                    lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
-            }
 
-            for (i, entry) in self.dirty_links.iter().enumerate() {
-                if !entry.is_unused() {
-                    let offset = buf.len() as u64 + len;
-                    offset_map.link_map[i] = offset;
-                    entry.write_to(&mut buf, &offset_map).infallible()?;
+                // Remap and update root since length has changed
+                let (mmap, mmap_len) =
+                    mmap_readonly(lock.as_ref(), None).context(&path, "cannot mmap")?;
+                self.buf = mmap;
+
+                // 'path' should not have changed.
+                debug_assert_eq!(&self.path, &path);
+
+                // This is to workaround the borrow checker.
+                let this = SimpleIndexBuf(&self.buf, &path, &None);
+
+                // Sanity check - the length should be expected. Otherwise, the lock
+                // is somehow ineffective.
+                if mmap_len != new_len {
+                    return Err(this.corruption("file changed unexpectedly").into());
                 }
-            }
 
-            // Non-inlined leafs.
-            for (i, entry) in self.dirty_leafs.iter().enumerate() {
-                if !entry.is_unused() {
-                    let offset = buf.len() as u64 + len;
-                    offset_map.leaf_map[i] = offset;
-                    entry
-                        .write_noninline_to(&mut buf, &offset_map)
-                        .infallible()?;
+                if let Some(ref mut table) = self.checksum {
+                    debug_assert!(self.open_options.checksum_chunk_size > 0);
+                    let chunk_size_log =
+                        63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
+                    table.update(chunk_size_log.into())?;
                 }
+
+                self.clean_root = MemRoot::read_from_end(this, new_len)?;
             }
 
-            // Write Radix entries in reversed order since former ones might refer to latter ones.
-            for (i, entry) in self.dirty_radixes.iter().rev().enumerate() {
-                let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map).infallible()?;
-                offset_map.radix_map[i] = offset;
-            }
+            // Outside critical section
+            self.len = new_len;
+            self.clear_dirty();
 
-            self.dirty_root
-                .write_to(&mut buf, &offset_map)
-                .infallible()?;
-            new_len = buf.len() as u64 + len;
-            lock.as_mut()
-                .write_all(&buf)
-                .context(&path, "cannot write new data to index")?;
-
-            if self.open_options.fsync {
-                lock.as_mut().sync_all().context(&path, "cannot sync")?;
-            }
-
-            // Remap and update root since length has changed
-            let (mmap, mmap_len) =
-                mmap_readonly(lock.as_ref(), None).context(&path, "cannot mmap")?;
-            self.buf = mmap;
-
-            // 'path' should not have changed.
-            debug_assert_eq!(&self.path, &path);
-
-            // This is to workaround the borrow checker.
-            let this = SimpleIndexBuf(&self.buf, &path, &None);
-
-            // Sanity check - the length should be expected. Otherwise, the lock
-            // is somehow ineffective.
-            if mmap_len != new_len {
-                return Err(this.corruption("file changed unexpectedly").into());
-            }
-
-            if let Some(ref mut table) = self.checksum {
-                debug_assert!(self.open_options.checksum_chunk_size > 0);
-                let chunk_size_log =
-                    63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
-                table.update(chunk_size_log.into())?;
-            }
-
-            self.clean_root = MemRoot::read_from_end(this, new_len)?;
-        }
-
-        // Outside critical section
-        self.len = new_len;
-        self.clear_dirty();
-
-        Ok(new_len)
+            Ok(new_len)
+        })();
+        result
+            .context("in Index::flush")
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Lookup by `key`. Return [`LinkOffset`].
@@ -2196,39 +2231,45 @@ impl Index {
     /// To test if the key exists or not, use [Offset::is_null].
     /// To obtain all values, use [`LinkOffset::values`].
     pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> crate::Result<LinkOffset> {
-        let mut offset: Offset = self.dirty_root.radix_offset.into();
-        let mut iter = Base16Iter::from_base256(key);
+        let result: crate::Result<_> = (|| {
+            let mut offset: Offset = self.dirty_root.radix_offset.into();
+            let mut iter = Base16Iter::from_base256(key);
 
-        while !offset.is_null() {
-            // Read the entry at "offset"
-            match offset.to_typed(self)? {
-                TypedOffset::Radix(radix) => {
-                    match iter.next() {
-                        None => {
-                            // The key ends at this Radix entry.
-                            return radix.link_offset(self);
-                        }
-                        Some(x) => {
-                            // Follow the `x`-th child in the Radix entry.
-                            offset = radix.child(self, x)?;
+            while !offset.is_null() {
+                // Read the entry at "offset"
+                match offset.to_typed(self)? {
+                    TypedOffset::Radix(radix) => {
+                        match iter.next() {
+                            None => {
+                                // The key ends at this Radix entry.
+                                return radix.link_offset(self);
+                            }
+                            Some(x) => {
+                                // Follow the `x`-th child in the Radix entry.
+                                offset = radix.child(self, x)?;
+                            }
                         }
                     }
-                }
-                TypedOffset::Leaf(leaf) => {
-                    // Meet a leaf. If key matches, return the link offset.
-                    let (stored_key, link_offset) = leaf.key_and_link_offset(self)?;
-                    if stored_key == key.as_ref() {
-                        return Ok(link_offset);
-                    } else {
-                        return Ok(LinkOffset::default());
+                    TypedOffset::Leaf(leaf) => {
+                        // Meet a leaf. If key matches, return the link offset.
+                        let (stored_key, link_offset) = leaf.key_and_link_offset(self)?;
+                        if stored_key == key.as_ref() {
+                            return Ok(link_offset);
+                        } else {
+                            return Ok(LinkOffset::default());
+                        }
                     }
+                    _ => return Err(self.corruption("unexpected type during key lookup").into()),
                 }
-                _ => return Err(self.corruption("unexpected type during key lookup").into()),
             }
-        }
 
-        // Not found
-        Ok(LinkOffset::default())
+            // Not found
+            Ok(LinkOffset::default())
+        })();
+
+        result
+            .context(|| format!("in Index::get({:?})", key.as_ref()))
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Scan entries which match the given prefix in base16 form.
@@ -2294,6 +2335,8 @@ impl Index {
     /// Return [`RangeIter`] which allows accesses to keys and values.
     pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> crate::Result<RangeIter> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
+            .context(|| format!("in Index::scan_prefix({:?})", prefix.as_ref()))
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Scan entries which match the given prefix in hex form.
@@ -2302,6 +2345,8 @@ impl Index {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
         self.scan_prefix_base16(base16)
+            .context(|| format!("in Index::scan_prefix_hex({:?})", prefix.as_ref()))
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Scans entries whose keys are within the given range.
@@ -2322,9 +2367,21 @@ impl Index {
             panic!("range start is greater than range end");
         }
 
-        let front_stack = self.iter_stack_by_bound(range.start_bound(), Front)?;
-        let back_stack = self.iter_stack_by_bound(range.end_bound(), Back)?;
-        Ok(RangeIter::new(self, front_stack, back_stack))
+        let result: crate::Result<_> = (|| {
+            let front_stack = self.iter_stack_by_bound(range.start_bound(), Front)?;
+            let back_stack = self.iter_stack_by_bound(range.end_bound(), Back)?;
+            Ok(RangeIter::new(self, front_stack, back_stack))
+        })();
+
+        result
+            .context(|| {
+                format!(
+                    "in Index::range({:?} to {:?})",
+                    range.start_bound(),
+                    range.end_bound()
+                )
+            })
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Insert a key-value pair. The value will be the head of the linked list.
@@ -2332,6 +2389,8 @@ impl Index {
     /// value.
     pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> crate::Result<()> {
         self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
+            .context(|| format!("in Index::insert(key={:?}, value={})", key.as_ref(), value))
+            .context(|| format!("  Index.path = {:?}", self.path))
     }
 
     /// Update the linked list for a given key.
