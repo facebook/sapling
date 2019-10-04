@@ -14,6 +14,7 @@ twox-hash = "*"
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
+libc = "0.2"
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
 rand = "0.4"
