@@ -2509,6 +2509,11 @@ impl Index {
         }
     }
 
+    /// Verify checksum for the entire on-disk buffer.
+    pub fn verify(&self) -> crate::Result<()> {
+        self.verify_checksum(0, self.len)
+    }
+
     // Internal function used by [`Index::range`].
     // Calculate the [`IterState`] stack used by [`RangeIter`].
     // `side` is the side of the `bound`, starting side of the iteration,
