@@ -63,7 +63,8 @@
   revlogv1
   store
   treestate
-  $ ls .hg/store/data
+  $ [ -d .hg/store/data ]
+  [1]
 
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

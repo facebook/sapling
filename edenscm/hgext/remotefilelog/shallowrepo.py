@@ -236,11 +236,6 @@ def wraprepo(repo):
 
     repo.numtransactioncommits = 0
 
-    # Force fileslog to be instantiated, so it populates all the stores on repo.
-    # This is temporary until all paths that access file contents go through
-    # fileslog.
-    repo.fileslog
-
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
 

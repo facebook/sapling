@@ -368,6 +368,19 @@ def _getfiles_threaded(remote, receivemissing, progresstick, missed, idmap, step
     pipeo.flush()
 
 
+class lazyfield(object):
+    """Fields that are populated lazily"""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __get__(self, obj, type=None):
+        # Accessing fileslog triggers fileserverclient.setstore
+        # which populates the field.
+        obj.repo.fileslog
+        return obj.__dict__[self.name]
+
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -395,11 +408,18 @@ class fileserverclient(object):
 
         self.remotecache = cacheconnection(repo)
 
+    datastore = lazyfield("datastore")
+    historystore = lazyfield("historystore")
+    writedata = lazyfield("writedata")
+    writehistory = lazyfield("writehistory")
+
     def setstore(self, datastore, historystore, writedata, writehistory):
-        self.datastore = datastore
-        self.historystore = historystore
-        self.writedata = writedata
-        self.writehistory = writehistory
+        # obj.__dict__['x'] access bypasses obj.x (property)
+        d = self.__dict__
+        d["datastore"] = datastore
+        d["historystore"] = historystore
+        d["writedata"] = writedata
+        d["writehistory"] = writehistory
 
     def _connect(self):
         return self.repo.connectionpool.get(self.repo.fallbackpath)
