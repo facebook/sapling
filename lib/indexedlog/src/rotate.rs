@@ -215,6 +215,59 @@ impl OpenOptions {
             .context("in rotate::OpenOptions::create_in_memory")
             .context(|| format!("  OpenOptions = {:?}", self))
     }
+
+    /// Try repair all logs in the specified directory.
+    ///
+    /// This just calls into [`log::OpenOptions::repair`] recursively.
+    pub fn repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
+        let dir = dir.as_ref();
+        (|| -> crate::Result<_> {
+            let _lock = ScopedDirLock::new(&dir)?;
+
+            let mut message = String::new();
+            let read_dir = dir.read_dir().context(dir, "cannot readdir")?;
+            let mut ids = Vec::new();
+
+            for entry in read_dir {
+                let entry = entry.context(dir, "cannot readdir")?;
+                let name = entry.file_name();
+                if let Some(name) = name.to_str() {
+                    if let Ok(id) = name.parse::<u8>() {
+                        ids.push(id);
+                    }
+                }
+            }
+
+            ids.sort_unstable();
+            for &id in ids.iter() {
+                let name = id.to_string();
+                message += &format!("Attempt to repair log {:?}\n", name);
+                match self.log_open_options.repair(&dir.join(name)) {
+                    Ok(log) => message += &log,
+                    Err(err) => message += &format!("Failed: {}\n", err),
+                }
+            }
+
+            let latest_path = dir.join(LATEST_FILE);
+            match read_latest_raw(dir) {
+                Ok(latest) => message += &format!("Latest = {}\n", latest),
+                Err(err) => match err.kind() {
+                    io::ErrorKind::NotFound
+                    | io::ErrorKind::InvalidData
+                    | io::ErrorKind::UnexpectedEof => {
+                        let latest = guess_latest(ids);
+                        let content = format!("{}", latest);
+                        fs::write(&latest_path, content).context(&latest_path, "cannot write")?;
+                        message += &format!("Reset latest to {}\n", latest);
+                    }
+                    _ => return Err(err).context(&latest_path, "cannot read or parse"),
+                },
+            };
+
+            Ok(message)
+        })()
+        .context(|| format!("in rotate::OpenOptions::repair({:?})", dir))
+    }
 }
 
 impl fmt::Debug for OpenOptions {
@@ -646,6 +699,38 @@ fn read_latest_and_logs(
     Ok((latest, read_logs(dir, open_options, latest)?))
 }
 
+/// Given a list of ids, guess a `latest`.
+fn guess_latest(mut ids: Vec<u8>) -> u8 {
+    // Guess a sensible `latest` from `ids`.
+    ids.sort_unstable();
+
+    let mut id_to_ignore = 255;
+    loop {
+        match ids.pop() {
+            Some(id) => {
+                // Remove 255, 254, at the end, since they might have been wrapped.
+                // For example, guess([0, 1, 2, 254, 255]) is 2.
+                if id == id_to_ignore {
+                    id_to_ignore -= 1;
+                    if id_to_ignore == 0 {
+                        // All 255 logs exist - rare.
+                        break 0;
+                    }
+                    continue;
+                } else {
+                    // This is probably the desirable id.
+                    // For example, guess([3, 4, 5]) is 5.
+                    break id;
+                }
+            }
+            None => {
+                // For example, guess([]) is 0.
+                break 0;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1048,6 +1133,57 @@ mod tests {
         // index has some bytes in it).
         assert_eq!(size("2/index-idx"), 10);
         assert!(size("2/log") < 100);
+    }
+
+    #[test]
+    fn test_repair_latest() {
+        assert_eq!(guess_latest(vec![]), 0);
+        assert_eq!(guess_latest(vec![3, 4, 5]), 5);
+        assert_eq!(guess_latest(vec![0, 1, 2, 254, 255]), 2);
+        assert_eq!(guess_latest((0..=255).collect::<Vec<_>>()), 0);
+
+        let dir = tempdir().unwrap();
+        let opts = OpenOptions::new().max_bytes_per_log(100).max_log_count(10);
+        let mut rotate = opts.clone().create(true).open(&dir).unwrap();
+        for i in 1..=2 {
+            rotate.append(vec![b'x'; 200]).unwrap();
+            assert_eq!(rotate.sync().unwrap(), i);
+        }
+
+        // Corrupt "latest".
+        let latest_path = dir.path().join(LATEST_FILE);
+        fs::write(&latest_path, "NaN").unwrap();
+        assert!(opts.open(&dir).is_err());
+        assert_eq!(
+            opts.repair(&dir).unwrap(),
+            r#"Attempt to repair log "0"
+Verified 1 entries, 223 bytes in log
+Attempt to repair log "1"
+Verified 1 entries, 223 bytes in log
+Attempt to repair log "2"
+Verified 0 entries, 12 bytes in log
+Reset latest to 2
+"#
+        );
+        opts.open(&dir).unwrap();
+
+        // Delete "latest".
+        fs::remove_file(dir.path().join(LATEST_FILE)).unwrap();
+        assert!(opts.open(&dir).is_err());
+
+        // Repair can fix it.
+        assert_eq!(
+            opts.repair(&dir).unwrap(),
+            r#"Attempt to repair log "0"
+Verified 1 entries, 223 bytes in log
+Attempt to repair log "1"
+Verified 1 entries, 223 bytes in log
+Attempt to repair log "2"
+Verified 0 entries, 12 bytes in log
+Reset latest to 2
+"#
+        );
+        opts.open(&dir).unwrap();
     }
 
     #[test]
