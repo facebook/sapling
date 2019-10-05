@@ -9,7 +9,6 @@ mod edenapi;
 mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
-mod indexedlogutil;
 mod sliceext;
 mod unionstore;
 

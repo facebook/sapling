@@ -25,7 +25,6 @@ use types::{
 use crate::{
     ancestors::{AncestorIterator, AncestorTraversal},
     historystore::{Ancestors, HistoryStore, MutableHistoryStore},
-    indexedlogutil,
     localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
@@ -185,22 +184,9 @@ impl Entry {
 
 impl IndexedLogHistoryStore {
     /// Create or open an `IndexedLogHistoryStore`.
-    ///
-    /// It is configured to use 4 logs of 500MB each. On data corruption, the entire
-    /// `IndexedLogHistoryStore` is being recreated, losing all data that was previously stored in
-    /// it.
     pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
         let open_options = Self::default_open_options();
-        let log = match open_options.open(&path) {
-            Ok(log) => log,
-            Err(err) => {
-                // XXX: This removes or renames path, which can break various
-                // "append-only" assumption made by indexedlog. Other processes
-                // might break during "sync()".
-                indexedlogutil::debug_backup_error(path.as_ref(), err.into())?;
-                open_options.open(&path)?
-            }
-        };
+        let log = open_options.open(&path)?;
         Ok(IndexedLogHistoryStore {
             inner: Arc::new(RwLock::new(IndexedLogHistoryStoreInner { log })),
         })
