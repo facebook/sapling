@@ -312,7 +312,7 @@ def setconfig(*args):
     for config in args:
         section, namevalue = config.split(".", 1)
         content = "\n[%s]\n%s\n" % (section, namevalue)
-    util.appendfile(hgrcpath, content)
+        util.appendfile(hgrcpath, content)
 
 
 _newrepoid = 0
