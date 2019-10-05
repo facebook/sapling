@@ -1653,7 +1653,7 @@ impl OpenOptions {
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
     /// filesystem. The in-memory [`Log`] cannot be [`sync`]ed.
-    pub fn create_in_memory(self) -> crate::Result<Log> {
+    pub fn create_in_memory(&self) -> crate::Result<Log> {
         let result: crate::Result<_> = (|| {
             let meta = LogMetadata {
                 primary_len: PRIMARY_START_OFFSET,
