@@ -7,15 +7,15 @@
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
+use cmdlib::helpers;
 use context::CoreContext;
-use failure_ext::{err_msg, format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::future::{self, Future};
 use futures_ext::FutureExt;
 use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
-use std::str::FromStr;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
@@ -24,21 +24,10 @@ pub fn fetch_bonsai_changeset(
     rev: &str,
     repo: &BlobRepo,
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
-    let hg_changeset_id = resolve_hg_rev(ctx.clone(), repo, rev);
-
-    hg_changeset_id
-        .and_then({
-            cloned!(ctx, repo);
-            move |hg_cs| repo.get_bonsai_from_hg(ctx, hg_cs)
-        })
-        .and_then({
-            let rev = rev.to_string();
-            move |maybe_bonsai| maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", rev)))
-        })
-        .and_then({
-            cloned!(ctx, repo);
-            move |bonsai| repo.get_bonsai_changeset(ctx, bonsai)
-        })
+    helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
+        cloned!(ctx, repo);
+        move |bcs_id| repo.get_bonsai_changeset(ctx, bcs_id)
+    })
 }
 
 pub fn format_bookmark_log_entry(
@@ -71,22 +60,6 @@ pub fn format_bookmark_log_entry(
             None => format!("({}) {} {} {}", bookmark, changeset_id, reason, dts),
         }
     }
-}
-
-pub fn resolve_hg_rev(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    rev: &str,
-) -> impl Future<Item = HgChangesetId, Error = Error> {
-    let book = BookmarkName::new(&rev).unwrap();
-    let hash = HgChangesetId::from_str(rev);
-
-    repo.get_bookmark(ctx, &book).and_then({
-        move |r| match r {
-            Some(cs) => Ok(cs),
-            None => hash,
-        }
-    })
 }
 
 // The function retrieves the HgFileNodeId of a file, based on path and rev.

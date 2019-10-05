@@ -24,10 +24,7 @@ pub fn subcommand_bonsai_fetch(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), SubcommandError> {
-    let rev = sub_m
-        .value_of("HG_CHANGESET_OR_BOOKMARK")
-        .unwrap()
-        .to_string();
+    let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
 
     args::init_cachelib(fb, &matches);
 

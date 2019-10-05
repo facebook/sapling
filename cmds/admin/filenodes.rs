@@ -9,6 +9,7 @@ use cmdlib::args;
 
 use blobrepo::BlobRepo;
 use cloned::cloned;
+use cmdlib::helpers;
 use context::CoreContext;
 use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
@@ -20,7 +21,7 @@ use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
 
-use crate::common::{get_file_nodes, resolve_hg_rev};
+use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
 
 const COMMAND_REVISION: &str = "by-revision";
@@ -28,7 +29,7 @@ const COMMAND_ID: &str = "by-id";
 
 const ARG_ENVELOPE: &str = "envelope";
 
-const ARG_REVISION: &str = "hg-changeset-or-bookmark";
+const ARG_REVISION: &str = "changeset-id";
 const ARG_PATHS: &str = "paths";
 
 const ARG_ID: &str = "id";
@@ -50,7 +51,7 @@ pub fn build_subcommand(name: &str) -> App {
                     Arg::with_name(ARG_REVISION)
                         .required(true)
                         .takes_value(true)
-                        .help("hg changeset to lookup filenodes for"),
+                        .help("hg/bonsai changeset id or bookmark to lookup filenodes for"),
                 )
                 .arg(
                     Arg::with_name(ARG_PATHS)
@@ -114,7 +115,11 @@ fn handle_filenodes_at_revision(
     paths: Vec<MPath>,
     log_envelope: bool,
 ) -> impl Future<Item = (), Error = Error> {
-    resolve_hg_rev(ctx.clone(), &blobrepo, revision)
+    helpers::csid_resolve(ctx.clone(), blobrepo.clone(), revision.to_string())
+        .and_then({
+            cloned!(ctx, blobrepo);
+            move |cs_id| blobrepo.get_hg_from_bonsai_changeset(ctx, cs_id)
+        })
         .map(|cs_id| (blobrepo, cs_id))
         .and_then({
             cloned!(ctx);

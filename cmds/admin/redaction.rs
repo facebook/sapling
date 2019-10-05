@@ -6,10 +6,10 @@
 
 use blobrepo::BlobRepo;
 use clap::ArgMatches;
-use cmdlib::args;
+use cmdlib::{args, helpers};
 
 use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
-use crate::common::{get_file_nodes, resolve_hg_rev};
+use crate::common::get_file_nodes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, FutureFailureErrorExt};
@@ -193,11 +193,18 @@ fn get_ctx_blobrepo_redacted_blobs_cs_id(
         .and_then({
             cloned!(ctx);
             move |blobrepo| {
-                resolve_hg_rev(ctx.clone(), &blobrepo, &rev).map(|cs_id| (blobrepo, cs_id))
+                helpers::csid_resolve(ctx.clone(), blobrepo.clone(), rev.to_string())
+                    .and_then({
+                        cloned!(ctx, blobrepo);
+                        move |cs_id| blobrepo.get_hg_from_bonsai_changeset(ctx, cs_id)
+                    })
+                    .map(|hg_cs_id| (blobrepo, hg_cs_id))
             }
         })
         .join(redacted_blobs)
-        .map(move |((blobrepo, cs_id), redacted_blobs)| (ctx, blobrepo, redacted_blobs, cs_id))
+        .map(move |((blobrepo, hg_cs_id), redacted_blobs)| {
+            (ctx, blobrepo, redacted_blobs, hg_cs_id)
+        })
         .from_err()
         .boxify()
 }

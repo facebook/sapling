@@ -7,7 +7,7 @@
 use blobrepo::BlobRepo;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::{format_err, Error};
 use fbinit::FacebookInit;
@@ -19,7 +19,6 @@ use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset, HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
-use crate::common::resolve_hg_rev;
 use crate::error::SubcommandError;
 
 pub fn subcommand_content_fetch(
@@ -104,9 +103,13 @@ fn fetch_content(
     path: &str,
 ) -> BoxFuture<Content, Error> {
     let path = try_boxfuture!(MPath::new(path));
-    let resolved_cs_id = resolve_hg_rev(ctx.clone(), repo, rev);
+    let resolved_hg_cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string())
+        .and_then({
+            cloned!(ctx, repo);
+            move |bcs_id| repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
+        });
 
-    let mf = resolved_cs_id
+    let mf = resolved_hg_cs_id
         .and_then({
             cloned!(ctx, repo);
             move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)

@@ -64,6 +64,7 @@ start mononoke
 Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
   $ mononoke_admin redaction add my_task 14961831bd3af3a6331fef7e63367d61cb6c9f6b b
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: * (glob)
 
 Restart mononoke
   $ kill $MONONOKE_PID

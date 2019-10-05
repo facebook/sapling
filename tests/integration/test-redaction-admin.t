@@ -61,6 +61,7 @@ Push files
 Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
@@ -68,6 +69,7 @@ Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
 Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
@@ -76,6 +78,7 @@ Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763
 Censor multiple files
   $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
@@ -86,12 +89,14 @@ Censor multiple files
 Expect error when censoring tree
   $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir\")]" } (glob)
   [1]
 
 Expect error when trying to censor nonexisting file
   $ mononoke_admin redaction add "[TASK]Censor nofile" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir/nofile
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * ErrorMessage { msg: "failed to identify the files associated with the file paths [MPath(\"dir/dirdir/nofile\")]" } (glob)
   [1]
 
@@ -105,6 +110,7 @@ No new entry in the table
 Uncensor some of the stuff
   $ mononoke_admin redaction remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
 Fewer entries in the table
   $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
@@ -114,10 +120,12 @@ Fewer entries in the table
 Let's make sure multiple files can be blacklisted under the same task
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
 List blacklisted files:
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(2cc2702dde1d7133c30a1ed763ee82c04befb237))) (glob)
   * Please be patient. (glob)
   * [TASK]Censor b      : b (glob)
@@ -127,6 +135,7 @@ List blacklisted files:
 List blacklisted files for a commit without any
   $ mononoke_admin redaction list ac82d8b1f7c418c61a493ed229ffaa981bda8e90
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
   * Please be patient. (glob)
   * No files are blacklisted at this commit (glob)

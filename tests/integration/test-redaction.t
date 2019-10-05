@@ -163,6 +163,7 @@ Update blacklisted blob
 Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
   $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: * (glob)
 
 Restart mononoke
   $ kill $MONONOKE_PID
