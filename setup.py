@@ -2088,7 +2088,6 @@ rustextbinaries = [
         features=hgmainfeatures,
     ),
     RustBinary("indexedlog_dump", manifest="exec/utils/Cargo.toml"),
-    RustBinary("indexedlog_repair", manifest="exec/utils/Cargo.toml"),
     RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
 ]
 
