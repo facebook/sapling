@@ -200,6 +200,8 @@ pub(crate) trait IoResultExt<T> {
     /// Wrap [`io::Result`] in [`Result`] with extra context about filesystem
     /// path and the operation name.
     ///
+    /// Mark InvalidData and UnexpectedEof as data corruption automatically.
+    ///
     /// Consider using [`ResultExt::corruption`] to mark the error as data
     /// corruption if appropriate.
     fn context<TS: LazyToString>(self, path: &Path, message: TS) -> Result<T>;
@@ -211,11 +213,23 @@ pub(crate) trait IoResultExt<T> {
 impl<T> IoResultExt<T> for std::io::Result<T> {
     fn context<TS: LazyToString>(self, path: &Path, message: TS) -> Result<T> {
         self.map_err(|err| {
-            Error::blank().source(err).message(format!(
+            use std::io::ErrorKind;
+            let corruption = match err.kind() {
+                // For example, try to mmap 200 bytes, but the file
+                // only has 100 bytes. This is unlikely caused by
+                // non-data-corruption issues.
+                ErrorKind::UnexpectedEof | ErrorKind::InvalidData => true,
+                _ => false,
+            };
+            let mut err = Error::blank().source(err).message(format!(
                 "{:?}: {}",
                 path,
                 message.to_string_costly()
-            ))
+            ));
+            if corruption {
+                err = err.mark_corruption();
+            }
+            err
         })
     }
 
