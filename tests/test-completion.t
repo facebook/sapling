@@ -19,6 +19,7 @@ Show all commands except debug commands
   config
   copy
   diff
+  doctor
   export
   files
   forget
@@ -75,6 +76,7 @@ Show all commands that start with "a"
 Do not show debug commands if there are other candidates
   $ hg debugcomplete d
   d
+  doctor
 
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
@@ -358,6 +360,7 @@ Show all commands + options
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
+  doctor: 
   files: rev, print0, include, exclude, template
   fs: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run

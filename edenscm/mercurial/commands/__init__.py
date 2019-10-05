@@ -73,6 +73,7 @@ with hgdemandimport.disabled():
         debugrunshell,
         debugstatus,
         debugstrip,
+        doctor,
         eden,
         fs,
         uncommit,
