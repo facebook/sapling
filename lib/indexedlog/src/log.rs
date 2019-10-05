@@ -737,32 +737,90 @@ impl Log {
 
     /// Rebuild indexes.
     ///
-    /// This is an expensive operation. It can be useful for repairing a broken
-    /// index, or deleting unused indexes, or making indexes smaller.
+    /// If `force` is `false`, then indexes that pass the checksum check
+    /// will not be rebuilt. Otherwise, they will be rebuilt regardless.
+    ///
+    /// Setting `force` to `true` might reduce the size used by the index
+    /// files. But that is more expensive.
     ///
     /// The function consumes the [`Log`] object, since it is hard to recover
     /// from an error case.
-    pub fn rebuild_indexes(mut self) -> crate::Result<()> {
-        let result: crate::Result<_> = (|| {
-            if let Some(ref dir) = self.dir {
+    ///
+    /// Return message useful for human consumption.
+    pub fn rebuild_indexes(self, force: bool) -> crate::Result<String> {
+        let dir = self.dir.clone();
+        let result: crate::Result<_> = (|this: Log| {
+            if let Some(dir) = this.dir.clone() {
                 let _lock = ScopedDirLock::new(&dir)?;
+                this.rebuild_indexes_assume_locked(force)
+            } else {
+                Ok(String::new())
+            }
+        })(self);
 
-                let key_buf = Arc::new(mmap_len(&dir.join(PRIMARY_FILE), self.meta.primary_len)?);
+        result
+            .context(|| format!("in Log::rebuild_indexes(force={})", force))
+            .context(|| format!("  Log.dir = {:?}", dir))
+    }
 
-                // Drop indexes. This will munmap index files, which is required on
-                // Windows to rewrite the index files. It's also the reason why it's
-                // hard to recover from an error state.
-                self.indexes.clear();
-
-                for def in self.open_options.index_defs.iter() {
+    fn rebuild_indexes_assume_locked(mut self, force: bool) -> crate::Result<String> {
+        let mut message = String::new();
+        {
+            if let Some(ref dir) = self.dir {
+                for (i, def) in self.open_options.index_defs.iter().enumerate() {
                     let name = def.name;
+
+                    if let Some(index) = &self.indexes.get(i) {
+                        let should_skip = if force {
+                            false
+                        } else {
+                            match Self::get_index_log_len(index) {
+                                Err(_) => false,
+                                Ok(len) => {
+                                    if len > self.meta.primary_len {
+                                        message += &format!(
+                                            "Index {:?} is incompatible with (truncated) log\n",
+                                            name
+                                        );
+                                        false
+                                    } else {
+                                        if index.verify().is_ok() {
+                                            message += &format!(
+                                                "Index {:?} passed integrity check\n",
+                                                name
+                                            );
+                                            true
+                                        } else {
+                                            message += &format!(
+                                                "Index {:?} failed integrity check\n",
+                                                name
+                                            );
+                                            false
+                                        }
+                                    }
+                                }
+                            }
+                        };
+                        if should_skip {
+                            continue;
+                        } else {
+                            // Replace the index with a dummy, empty one.
+                            //
+                            // This will munmap index files, which is required on
+                            // Windows to rewrite the index files. It's also the reason
+                            // why it's hard to recover from an error state.
+                            //
+                            // This is also why this function consumes the Log object.
+                            self.indexes[i] = index::OpenOptions::new().create_in_memory()?;
+                        }
+                    }
 
                     let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
                         format!("cannot create tempfile for rebuilding index {:?}", name)
                     })?;
                     let index_len = {
                         let mut index = index::OpenOptions::new()
-                            .key_buf(Some(key_buf.clone()))
+                            .key_buf(Some(self.disk_buf.clone()))
                             .open(&tmp.path())?;
                         Self::update_index_for_on_disk_entry_unchecked(
                             &self.dir,
@@ -789,24 +847,27 @@ impl Log {
                         })
                     })?;
 
+                    // At this point, other processes might see an updated index
+                    // with an outdated checksum table. That's okay because the
+                    // index metadata says index len is 0. That disables checksum
+                    // check.
+
                     // Update checksum table.
-                    let mut table = ChecksumTable::new(&path)?;
-                    table.clear();
-                    table.update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))?;
+                    let mut table = ChecksumTable::new_empty(&path)?;
+                    table
+                        .update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))
+                        .context("while trying to update checksum for rebuilt index")?;
 
                     self.meta.indexes.insert(name.to_string(), index_len);
                     self.meta
                         .write_file(&meta_path, self.open_options.fsync)
                         .context(|| format!("  after replacing index {:?}", name))?;
+                    message += &format!("Rebuilt index {:?}\n", name);
                 }
             }
+        }
 
-            Ok(())
-        })();
-
-        result
-            .context("in Log::rebuild_indexes")
-            .context(|| format!("  Log.dir = {:?}", self.dir))
+        Ok(message)
     }
 
     /// Try to repair the [`Log`] by truncating entries.
@@ -2603,8 +2664,9 @@ mod tests {
             format!("{:?}", index)
         };
 
+        let dump1 = dump_index();
         assert_eq!(
-            dump_index(),
+            dump1,
             "Index { len: 53, root: Disk[40] }\n\
              Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
              Disk[2]: ExtKey { start: 18, len: 3 }\n\
@@ -2619,7 +2681,14 @@ mod tests {
              Disk[48]: Root { radix: Disk[40], meta: [30] }\n"
         );
 
-        log.rebuild_indexes().unwrap();
+        // If force is false, it is a no-op since the index passes the
+        // checksum check.
+        log.try_clone().unwrap().rebuild_indexes(false).unwrap();
+        assert_eq!(dump_index(), dump1);
+
+        // Setting force to true to rebuild the index.
+        log.rebuild_indexes(true).unwrap();
+
         // The rebuilt index only contains one Root.
         assert_eq!(
             dump_index(),
