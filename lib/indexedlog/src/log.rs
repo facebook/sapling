@@ -42,7 +42,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
-use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::{Range, RangeBounds};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -899,97 +899,6 @@ impl Log {
         Ok(message)
     }
 
-    /// Try to repair the [`Log`] by truncating entries.
-    ///
-    /// This is a destructive operation and should only be used as a last resort.
-    ///
-    /// Other [`Log`] instances backed by the same file might *crash* with SIGBUS.
-    ///
-    /// The function consumes the [`Log`] object, since it is hard to recover
-    /// from an error case.
-    pub unsafe fn repair(mut self) -> crate::Result<()> {
-        assert!(
-            self.mem_buf.is_empty(),
-            "programming error: calling 'repair' with dirty entries is unsupported"
-        );
-
-        let result: crate::Result<_> = (|| {
-            if let Some(ref dir) = self.dir {
-                let _lock = ScopedDirLock::new(&dir)?;
-
-                let mut iter = self.iter();
-
-                // Read entries until hitting a (checksum) error.
-                while let Some(Ok(_)) = iter.next() {}
-
-                let valid_len = iter.next_offset;
-                if valid_len != self.meta.primary_len {
-                    assert!(valid_len < self.meta.primary_len);
-
-                    // Truncate primary log to valid_len.
-                    // Drop memory maps so file truncation can work on Windows.
-                    self.indexes.clear();
-                    self.disk_buf = Arc::new(mmap_empty().infallible()?);
-
-                    let primary_path = dir.join(PRIMARY_FILE);
-                    let mut primary_file = fs::OpenOptions::new()
-                        .read(true)
-                        .write(true)
-                        .open(&primary_path)
-                        .context(&primary_path, "cannot open")?;
-
-                    // Backup the part to be truncated.
-                    {
-                        let backup_path = dir.join(format!("log.truncate-{}", valid_len));
-                        let mut backup_file = fs::OpenOptions::new()
-                            .create_new(true)
-                            .write(true)
-                            .open(&backup_path)
-                            .context(&backup_path, "cannot open")?;
-
-                        primary_file
-                            .seek(SeekFrom::Start(valid_len))
-                            .context(&primary_path, "cannot seek")?;
-
-                        let mut buf = Vec::with_capacity(1 << 22);
-                        buf.set_len(buf.capacity());
-                        loop {
-                            let size = primary_file
-                                .read(&mut buf[..])
-                                .context(&primary_path, "cannot read")?;
-                            if size == 0 {
-                                break;
-                            }
-                            backup_file
-                                .write_all(&buf[..size])
-                                .context(&backup_path, "cannot write")?;
-                        }
-                    }
-
-                    // Update metadata. Invalidate indexes.
-                    self.meta.primary_len = valid_len;
-                    self.meta.indexes.clear();
-                    let meta_path = dir.join(META_FILE);
-                    self.meta.write_file(&meta_path, self.open_options.fsync)?;
-
-                    // Truncate the file!
-                    primary_file
-                        .seek(SeekFrom::Start(0))
-                        .context(&primary_path, "cannot seek")?;
-                    primary_file
-                        .set_len(valid_len)
-                        .context(&primary_path, "cannot truncate")?;
-                }
-            }
-
-            Ok(())
-        })();
-
-        result
-            .context("in Log::repair")
-            .context(|| format!("  Log.dir = {:?}", self.dir))
-    }
-
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` passed to [`Log::open`].
     ///
@@ -1836,6 +1745,190 @@ impl OpenOptions {
     }
 }
 
+// Repair
+impl OpenOptions {
+    /// Attempt to repair a broken [`Log`] at the given directory.
+    ///
+    /// This is done by truncating entries in the primary log, and rebuilding
+    /// corrupted indexes.
+    ///
+    /// Backup files are written for further investigation.
+    ///
+    /// Return message useful for human consumption.
+    pub fn repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
+        let dir = dir.as_ref();
+        let mut message = String::new();
+        let result: crate::Result<_> = (|| {
+            let _lock = ScopedDirLock::new(dir)?;
+
+            let primary_path = dir.join(PRIMARY_FILE);
+            let meta_path = dir.join(META_FILE);
+
+            // Make sure the header of the primary log file is okay.
+            (|| -> crate::Result<()> {
+                let header_corrupted = loop {
+                    if let Err(e) = primary_path.metadata() {
+                        if e.kind() == io::ErrorKind::NotFound {
+                            break true;
+                        }
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .read(true)
+                        .open(&primary_path)
+                        .context(&primary_path, "cannot open for read")?;
+                    let mut buf = [0; PRIMARY_START_OFFSET as usize];
+                    break match file.read_exact(&mut buf) {
+                        Ok(_) => buf != PRIMARY_HEADER,
+                        Err(_) => true,
+                    };
+                };
+                if header_corrupted {
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open(&primary_path)
+                        .context(&primary_path, "cannot open for write")?;
+                    file.write_all(PRIMARY_HEADER)
+                        .context(&primary_path, "cannot re-write header")?;
+                    message += "Fixed header in log\n";
+                }
+                Ok(())
+            })()
+            .context("while making sure log has the right header")?;
+
+            // Make sure the "primary_len" is large enough.
+            (|| -> crate::Result<()> {
+                let primary_len = primary_path
+                    .metadata()
+                    .context(&primary_path, "cannot read fs metadata")?
+                    .len();
+                let meta = LogMetadata::read_file(&meta_path)
+                    .context(&meta_path, "cannot read log metadata")
+                    .context("repair cannot fix metadata corruption")?;
+                if meta.primary_len > primary_len {
+                    use fs2::FileExt;
+                    // Log was truncated for some reason...
+                    // (This should be relatively rare)
+                    // Fill Log with 0s.
+                    let file = fs::OpenOptions::new()
+                        .write(true)
+                        .open(&primary_path)
+                        .context(&primary_path, "cannot open for write")?;
+                    file.allocate(meta.primary_len)
+                        .context(&primary_path, "cannot fallocate")?;
+                    message += &format!(
+                        "Extended log to {:?} bytes required by meta\n",
+                        meta.primary_len
+                    );
+                }
+                Ok(())
+            })()
+            .context("while making sure log.length >= meta.log_length")?;
+
+            // Reload the latest log without indexes.
+            //
+            // At this time log is likely open-able.
+            //
+            // Try to open it with indexes so we might reuse them. If that
+            // fails, retry with all indexes disabled.
+            let mut log = self
+                .open_assume_locked(dir)
+                .or_else(|_| self.clone().index_defs(Vec::new()).open(dir))
+                .context("cannot open log for repair")?;
+
+            let mut iter = log.iter();
+
+            // Read entries until hitting a checksum error.
+            let mut entry_count = 0;
+            while let Some(Ok(_)) = iter.next() {
+                entry_count += 1;
+            }
+
+            let valid_len = iter.next_offset;
+            assert!(valid_len >= PRIMARY_START_OFFSET);
+            assert!(valid_len <= log.meta.primary_len);
+
+            if valid_len == log.meta.primary_len {
+                message += &format!(
+                    "Verified {} entries, {} bytes in log\n",
+                    entry_count, valid_len
+                );
+            } else {
+                message += &format!(
+                    "Verified first {} entries, {} of {} bytes in log\n",
+                    entry_count, valid_len, log.meta.primary_len
+                );
+
+                // Backup the part to be truncated.
+                (|| -> crate::Result<()> {
+                    let mut primary_file = fs::OpenOptions::new()
+                        .read(true)
+                        .open(&primary_path)
+                        .context(&primary_path, "cannot open for read")?;
+                    let backup_path = dir.join(format!(
+                        "log.bak.epoch{}.offset{}",
+                        log.meta.epoch, valid_len
+                    ));
+                    let mut backup_file = fs::OpenOptions::new()
+                        .create_new(true)
+                        .write(true)
+                        .open(&backup_path)
+                        .context(&backup_path, "cannot open")?;
+
+                    primary_file
+                        .seek(SeekFrom::Start(valid_len))
+                        .context(&primary_path, "cannot seek")?;
+
+                    let mut reader = io::BufReader::new(primary_file);
+                    loop {
+                        let len = {
+                            let buf = reader.fill_buf().context(&primary_path, "cannot read")?;
+                            if buf.is_empty() {
+                                break;
+                            }
+                            backup_file
+                                .write_all(buf)
+                                .context(&backup_path, "cannot write")?;
+                            buf.len()
+                        };
+                        reader.consume(len);
+                    }
+                    message += &format!("Backed up corrupted log to {:?}\n", backup_path);
+                    Ok(())
+                })()
+                .context("while trying to backup corrupted log")?;
+
+                // Update metadata. Invalidate indexes.
+                // Bump epoch since this is a non-append-only change.
+                // Reload disk buffer.
+                log.meta.primary_len = valid_len;
+                log.meta.indexes.clear();
+                log.meta.epoch = log.meta.epoch.wrapping_add(1);
+                log.disk_buf = Arc::new(mmap_len(&primary_path, valid_len)?);
+
+                log.meta
+                    .write_file(&meta_path, log.open_options.fsync)
+                    .context("while trying to update metadata with verified log length")?;
+                message += &format!("Reset log size to {}\n", valid_len);
+            }
+
+            // Also rebuild corrupted indexes.
+            // Without this, indexes are empty until the next `sync`, which
+            // can lead to bad performance.
+            log.open_options.index_defs = self.index_defs.clone();
+            message += &log
+                .rebuild_indexes_assume_locked(false)
+                .context("while trying to update indexes with reapired log")?;
+
+            Ok(message)
+        })();
+
+        result
+            .context(|| format!("in log::OpenOptions::repair({:?})", dir))
+            .context(|| format!("  OpenOptions = {:?}", self))
+    }
+}
+
 /// "Pointer" to an entry. Used internally.
 struct EntryResult<'a> {
     data: &'a [u8],
@@ -2134,6 +2227,7 @@ impl fmt::Debug for OpenOptions {
 mod tests {
     use super::*;
     use quickcheck::quickcheck;
+    use std::cell::RefCell;
     use tempfile::tempdir;
 
     #[derive(Debug)]
@@ -2740,6 +2834,20 @@ mod tests {
         assert_eq!(log.lookup(0, b"xyz").unwrap().count(), 0);
     }
 
+    fn pwrite(path: &Path, offset: i64, data: &[u8]) {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(path)
+            .unwrap();
+        if offset < 0 {
+            file.seek(SeekFrom::End(offset)).unwrap();
+        } else {
+            file.seek(SeekFrom::Start(offset as u64)).unwrap();
+        }
+        file.write_all(data).unwrap();
+    }
+
     #[test]
     fn test_repair() {
         let dir = tempdir().unwrap();
@@ -2770,8 +2878,7 @@ mod tests {
 
         // Repair.
         {
-            let log = Log::open(dir.path(), Vec::new()).unwrap();
-            unsafe { log.repair() }.unwrap();
+            OpenOptions::new().repair(dir.path()).unwrap();
         }
 
         // Reading entries is recovered. But we lost one entry.
@@ -2803,9 +2910,280 @@ mod tests {
         log.flush().unwrap();
 
         let meta_before = LogMetadata::read_file(dir.path().join(META_FILE)).unwrap();
-        unsafe { log.repair() }.unwrap();
+        OpenOptions::new().repair(dir.path()).unwrap();
         let meta_after = LogMetadata::read_file(dir.path().join(META_FILE)).unwrap();
         assert_eq!(meta_before, meta_after);
+    }
+
+    #[test]
+    fn test_repair_complex() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .index("c", |_| vec![IndexOutput::Reference(0..1)]);
+
+        let long_lived_log = RefCell::new(open_opts.create_in_memory().unwrap());
+        let open = || open_opts.open(&path);
+        let corrupt = |name: &str, offset: i64| pwrite(&path.join(name), offset, b"cc");
+        let truncate = |name: &str| fs::write(path.join(name), "garbage").unwrap();
+        let delete = |name: &str| fs::remove_file(path.join(name)).unwrap();
+        let index_file = format!("{}c", INDEX_FILE_PREFIX);
+        let checksum_file = format!("{}c.sum", INDEX_FILE_PREFIX);
+        let append = || {
+            let mut log = open().unwrap();
+            log.append(&[b'x'; 50_000][..]).unwrap();
+            log.append(&[b'y'; 50_000][..]).unwrap();
+            log.append(&[b'z'; 50_000][..]).unwrap();
+            log.sync().unwrap();
+        };
+        let count = || -> crate::Result<(usize, usize)> {
+            let log = open()?;
+            let log_len = log.iter().collect::<Result<Vec<_>, _>>()?.len();
+            let mut index_len = 0;
+            for key in [b"x", b"y", b"z"].iter() {
+                let iter = log.lookup(0, key)?;
+                index_len += iter.into_vec()?.len();
+            }
+            Ok((log_len, index_len))
+        };
+        let verify_len = |len: usize| {
+            let (log_len, index_len) = count().unwrap();
+            assert_eq!(log_len, len);
+            assert_eq!(index_len, len);
+        };
+        let verify_corrupted = || {
+            let err = count().unwrap_err();
+            assert!(err.is_corruption(), "not a corruption:\n {:?}", err);
+        };
+        let try_trigger_sigbus = || {
+            // Check no SIGBUS
+            let log = long_lived_log.borrow();
+            match log.lookup(0, "z") {
+                Err(_) => (), // okay - not SIGBUS
+                Ok(iter) => match iter.into_vec() {
+                    Err(_) => (), // okay - not SIGBUS
+                    Ok(_) => (),  // okay - not SIGBUS
+                },
+            }
+            // Check 'sync' on a long-lived log will load the right data and
+            // resolve errors.
+            let mut cloned_log = log.try_clone().unwrap();
+            cloned_log.sync().unwrap();
+            let _ = cloned_log.lookup(0, "z").unwrap().into_vec().unwrap();
+        };
+        let repair = || {
+            let message = open_opts.repair(&path).unwrap();
+            try_trigger_sigbus();
+            message
+                .lines()
+                // Remove 'Backed up' lines since they have dynamic file names.
+                .filter(|l| !l.contains("Backed up"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let cannot_repair = || open_opts.repair(&path).unwrap_err();
+
+        // Repair is a no-op if log and indexes pass integirty check.
+        append();
+        verify_len(3);
+        assert_eq!(
+            repair(),
+            r#"Verified 3 entries, 150048 bytes in log
+Index "c" passed integrity check"#
+        );
+
+        append();
+        verify_len(6);
+        assert_eq!(
+            repair(),
+            r#"Verified 6 entries, 300084 bytes in log
+Index "c" passed integrity check"#
+        );
+
+        // Prepare long-lived log for SIGBUS check
+        // (skip on Windows, since mmap makes it impossible to replace files)
+        if cfg!(unix) {
+            long_lived_log.replace(open().unwrap());
+        }
+
+        // Corrupt the end of log
+        corrupt(PRIMARY_FILE, -1);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified first 5 entries, 250072 of 300084 bytes in log
+Reset log size to 250072
+Index "c" is incompatible with (truncated) log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Corrupt the middle of log
+        corrupt(PRIMARY_FILE, 125000);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified first 2 entries, 100036 of 250072 bytes in log
+Reset log size to 100036
+Index "c" is incompatible with (truncated) log
+Rebuilt index "c""#
+        );
+        verify_len(2);
+
+        append();
+        verify_len(5);
+
+        // Change the beginning of log
+        corrupt(PRIMARY_FILE, 1);
+        verify_len(5);
+        assert_eq!(
+            repair(),
+            r#"Fixed header in log
+Verified 5 entries, 250072 bytes in log
+Index "c" passed integrity check"#
+        );
+
+        // Corrupt the end of index
+        corrupt(&index_file, -1);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 5 entries, 250072 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Corrupt the beginning of index
+        corrupt(&index_file, 1);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 5 entries, 250072 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Corrupt index checksum
+        corrupt(&checksum_file, -2);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 5 entries, 250072 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Replace index with garbage
+        truncate(&index_file);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 5 entries, 250072 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Replace index checksum with garbage
+        truncate(&checksum_file);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 5 entries, 250072 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(5);
+
+        // Replace log with garbage
+        truncate(PRIMARY_FILE);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Fixed header in log
+Extended log to 250072 bytes required by meta
+Verified first 0 entries, 12 of 250072 bytes in log
+Reset log size to 12
+Index "c" is incompatible with (truncated) log
+Rebuilt index "c""#
+        );
+        verify_len(0);
+
+        append();
+        verify_len(3);
+
+        // Delete index
+        delete(&index_file);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 3 entries, 150048 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(3);
+
+        // Delete checksum
+        delete(&checksum_file);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 3 entries, 150048 bytes in log
+Rebuilt index "c""#
+        );
+        verify_len(3);
+
+        // Delete log
+        delete(PRIMARY_FILE);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Fixed header in log
+Extended log to 150048 bytes required by meta
+Verified first 0 entries, 12 of 150048 bytes in log
+Reset log size to 12
+Index "c" is incompatible with (truncated) log
+Rebuilt index "c""#
+        );
+        verify_len(0);
+
+        // Corrupt the middle of index. This test wants to be able
+        // to make it okay to open Index, but not okay to use it at
+        // some random place. The index checksum chunk size is 1MB
+        // so the index has to be a few MBs to be able to pass checksum
+        // check at Index open time.
+        // To do that, insert a lot entries to the log.
+        //
+        // Practically, this should show "Index .. failed integrity check".
+        let append_many_entries = || {
+            let mut log = open().unwrap();
+            for _ in 0..200_000 {
+                log.append(&[b'z'; 1][..]).unwrap();
+            }
+            log.sync().unwrap();
+        };
+        append_many_entries();
+        corrupt(&index_file, -1000_000);
+        verify_corrupted();
+        assert_eq!(
+            repair(),
+            r#"Verified 200000 entries, 1400012 bytes in log
+Index "c" failed integrity check
+Rebuilt index "c""#
+        );
+        verify_len(200000);
+
+        // Corrupt meta - cannot repair
+        corrupt(META_FILE, -1);
+        verify_corrupted();
+        cannot_repair();
+
+        truncate(META_FILE);
+        verify_corrupted();
+        cannot_repair();
+
+        // Delete meta - as if the log directory does not exist.
+        delete(META_FILE);
+        cannot_repair();
+        verify_len(0);
     }
 
     #[test]
