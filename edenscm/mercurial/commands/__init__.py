@@ -12,7 +12,6 @@ import errno
 import os
 import re
 import shlex
-import stat
 import subprocess
 import sys
 import time
