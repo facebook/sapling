@@ -234,6 +234,33 @@ impl ChecksumTable {
         result.map_err(|err| err.message("in ChecksumTable::new"))
     }
 
+    /// Construct an empty [`ChecksumTable`] for checking the given path.
+    ///
+    /// This is similar to calling `clear` after `new`, but does not
+    /// error out if the checksum file was corrupted.
+    pub fn new_empty<P: AsRef<Path>>(path: &P) -> crate::Result<Self> {
+        let path = path.as_ref();
+        (|| -> crate::Result<Self> {
+            let checksum_path = path_appendext(path, "sum");
+            let file = OpenOptions::new()
+                .read(true)
+                .open(path)
+                .context(path, "cannot open checksummed file")?;
+            Ok(ChecksumTable {
+                file,
+                buf: mmap_empty().infallible()?,
+                path: path.to_path_buf(),
+                fsync: false,
+                chunk_size_log: DEFAULT_CHUNK_SIZE_LOG,
+                end: 0,
+                checksum_path,
+                checksums: Vec::new(),
+                checked: Vec::new(),
+            })
+        })()
+        .context("in ChecksumTable::new_empty")
+    }
+
     /// Set fsync behavior.
     ///
     /// If true, then [`ChecksumTable::update`] will use `fsync` to make
