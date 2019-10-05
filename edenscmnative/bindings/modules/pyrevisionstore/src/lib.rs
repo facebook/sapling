@@ -11,6 +11,8 @@ use std::{
 use cpython::*;
 use failure::{format_err, Error, Fallible};
 
+use cpython_ext::Bytes;
+use cpython_failure::ResultPyErrExt;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     Ancestors, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta,
@@ -422,6 +424,12 @@ py_class!(class indexedlogdatastore |py| {
         )
     }
 
+    @staticmethod
+    def repair(path: &PyBytes) -> PyResult<Bytes> {
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
+        IndexedLogDataStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| Bytes::from(s))
+    }
+
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, name, node)
@@ -471,6 +479,12 @@ py_class!(class indexedloghistorystore |py| {
                 Err(e) => return Err(to_pyerr(py, &e)),
             }),
         )
+    }
+
+    @staticmethod
+    def repair(path: &PyBytes) -> PyResult<Bytes> {
+        let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
+        IndexedLogHistoryStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| Bytes::from(s))
     }
 
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
