@@ -11,7 +11,6 @@ setup configuration
   > EOF
 
   $ LFS_THRESHOLD="20" setup_common_config blob:files
-  $ cp "${TEST_FIXTURES}/pushrebase_replay.bundle" "$TESTTMP/handle"
   $ cd $TESTTMP
 
 setup repo
