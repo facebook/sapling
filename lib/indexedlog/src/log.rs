@@ -528,10 +528,11 @@ impl Log {
                     // Indexes can be reused, since they do not have new in-memory
                     // entries, and the on-disk primary log is append-only (so data
                     // already present in the indexes is valid).
-                    *self = self
-                        .open_options
-                        .clone()
-                        .open_internal(self.dir.as_ref().unwrap(), Some(&self.indexes))?;
+                    *self = self.open_options.clone().open_internal(
+                        self.dir.as_ref().unwrap(),
+                        Some(&self.indexes),
+                        false, // assume_locked=false
+                    )?;
                 }
                 return Ok(self.meta.primary_len);
             }
@@ -550,7 +551,10 @@ impl Log {
                 let filter = self.open_options.flush_filter.unwrap();
 
                 // Start with a clean log that does not have dirty entries.
-                let mut log = self.open_options.clone().open(self.dir.as_ref().unwrap())?;
+                let mut log = self
+                    .open_options
+                    .clone()
+                    .open_assume_locked(self.dir.as_ref().unwrap())?;
 
                 for entry in self.iter_dirty() {
                     let content = entry?;
@@ -1646,7 +1650,7 @@ impl OpenOptions {
     /// transaction.
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
         let dir = dir.as_ref();
-        self.open_internal(dir, None)
+        self.open_internal(dir, None, false)
             .context(|| format!("in log::OpenOptions::open({:?})", dir))
             .context(|| format!("  OpenOptions = {:?}", self))
     }
@@ -1686,10 +1690,19 @@ impl OpenOptions {
             .context(|| format!("  OpenOptions = {:?}", self))
     }
 
+    fn open_assume_locked(&self, dir: &Path) -> crate::Result<Log> {
+        self.open_internal(dir, None, true)
+    }
+
     // "Back-door" version of "open" that allows reusing indexes.
     // Used by [`Log::sync`]. See [`Log::load_log_and_indexes`] for when indexes
     // can be reused.
-    fn open_internal(&self, dir: &Path, reuse_indexes: Option<&Vec<Index>>) -> crate::Result<Log> {
+    fn open_internal(
+        &self,
+        dir: &Path,
+        reuse_indexes: Option<&Vec<Index>>,
+        assume_locked: bool,
+    ) -> crate::Result<Log> {
         let create = self.create;
 
         // Do a lock-less load_or_create_meta to avoid the flock overhead.
@@ -1699,8 +1712,12 @@ impl OpenOptions {
                     .context(&dir, "cannot mkdir after failing to read metadata")
                     .source(err)?;
                 // Make sure check and write happens atomically.
-                let _lock = ScopedDirLock::new(&dir)?;
-                Log::load_or_create_meta(dir, true)
+                if assume_locked {
+                    Log::load_or_create_meta(dir, true)
+                } else {
+                    let _lock = ScopedDirLock::new(&dir)?;
+                    Log::load_or_create_meta(dir, true)
+                }
             } else {
                 Err(err).context(|| format!("cannot open Log at {:?}", &dir))
             }
