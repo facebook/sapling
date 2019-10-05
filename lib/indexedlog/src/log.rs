@@ -1127,8 +1127,13 @@ impl Log {
         // The index meta is used to store the next offset the index should be built.
         let mut offset = Self::get_index_log_len(index)?;
         // PERF: might be worthwhile to cache xxhash verification result.
-        while let Some(entry_result) = Self::read_entry_from_buf(&path, disk_buf, offset)
-            .context("while updating indexes for on-disk entries")?
+        while let Some(entry_result) =
+            Self::read_entry_from_buf(&path, disk_buf, offset).context(|| {
+                format!(
+                    "while updating index {:?} for on-disk entry at {}",
+                    def.name, offset
+                )
+            })?
         {
             let data = entry_result.data;
             for index_output in (def.func)(data) {
