@@ -581,11 +581,9 @@ fn create_empty_log(
             let latest_path = dir.join(LATEST_FILE);
             let latest_str = format!("{}", latest);
             let log_path = dir.join(&latest_str);
-            let log = open_options
-                .log_open_options
-                .clone()
-                .create(true)
-                .open(log_path)?;
+            let opts = open_options.log_open_options.clone().create(true);
+            opts.delete_content(&log_path)?;
+            let log = opts.open(&log_path)?;
             atomic_write(&latest_path, latest_str.as_bytes(), false)?;
             log
         }
@@ -981,6 +979,41 @@ mod tests {
     }
 
     #[test]
+    fn test_recover_from_occupied_logs() {
+        let dir = tempdir().unwrap();
+
+        // Take the "1" spot.
+        // Note: Cannot use "2" - it will be deleted by rotate -> try_remove_old_logs.
+        {
+            let mut log = log::OpenOptions::new()
+                .create(true)
+                .open(&dir.path().join("1"))
+                .unwrap();
+            log.append(&[b'b'; 100][..]).unwrap();
+            log.append(&[b'c'; 100][..]).unwrap();
+            log.sync().unwrap();
+        }
+
+        // Rotate to "1" and "2".
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .max_log_count(3)
+            .open(&dir)
+            .unwrap();
+        for &i in [1, 2].iter() {
+            rotate.append(vec![b'a'; 101]).unwrap();
+            assert_eq!(rotate.sync().unwrap(), i); // trigger rotate
+        }
+
+        // Content in the old "1" log should not appear here.
+        assert_eq!(
+            rotate.iter().map(|b| b.unwrap()[0]).collect::<Vec<_>>(),
+            vec![b'a'; 2]
+        );
+    }
+
+    #[test]
     fn test_index_lag() {
         let dir = tempdir().unwrap();
         let opts = OpenOptions::new()
@@ -1011,8 +1044,9 @@ mod tests {
         assert!(size("1/log") > 100);
 
         // The "current" log is still mutable. Its index respects lag_threshold,
-        // and is empty.
-        assert!(size("2/index-idx") == 0);
+        // and is logically empty (because side effect of delete_content, the
+        // index has some bytes in it).
+        assert_eq!(size("2/index-idx"), 10);
         assert!(size("2/log") < 100);
     }
 

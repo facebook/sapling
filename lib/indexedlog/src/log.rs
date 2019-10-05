@@ -663,7 +663,7 @@ impl Log {
                 .enumerate()
                 .filter(|&(_i, def)| {
                     let indexed = self.meta.indexes.get(def.name).cloned().unwrap_or(0);
-                    indexed + def.lag_threshold < meta.primary_len
+                    indexed.saturating_add(def.lag_threshold) < meta.primary_len
                 })
                 .map(|(i, _def)| i)
                 .collect();
