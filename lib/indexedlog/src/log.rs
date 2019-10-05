@@ -35,7 +35,7 @@ use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
-use crate::utils::{atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
+use crate::utils::{self, atomic_write, mmap_empty, mmap_len, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use memmap::Mmap;
 use std::borrow::Cow;
@@ -206,6 +206,10 @@ pub struct LogMetadata {
 
     /// Lengths of index files. Name => Length.
     indexes: BTreeMap<String, u64>,
+
+    /// Used to detect non-append-only changes.
+    /// Conceptually similar to "create time".
+    epoch: u64,
 }
 
 /// Options used to configured how an [`Log`] is opened.
@@ -1172,6 +1176,7 @@ impl Log {
                     let meta = LogMetadata {
                         primary_len: PRIMARY_START_OFFSET,
                         indexes: BTreeMap::new(),
+                        epoch: utils::epoch(),
                     };
                     // An empty meta file is easy to recreate. No need to use fsync.
                     meta.write_file(&meta_path, false)?;
@@ -1648,6 +1653,7 @@ impl OpenOptions {
             let meta = LogMetadata {
                 primary_len: PRIMARY_START_OFFSET,
                 indexes: BTreeMap::new(),
+                epoch: utils::epoch(),
             };
             let mem_buf = Box::pin(Vec::new());
             let (disk_buf, indexes) = Log::load_log_and_indexes(
@@ -1890,9 +1896,14 @@ impl LogMetadata {
             indexes.insert(name, len);
         }
 
+        // 'epoch' is optional - it does not exist in a previous serialization
+        // format. So not being able to read it (because EOF) is not fatal.
+        let epoch = reader.read_vlq().unwrap_or_default();
+
         Ok(Self {
             primary_len,
             indexes,
+            epoch,
         })
     }
 
@@ -1906,6 +1917,7 @@ impl LogMetadata {
             buf.write_all(name)?;
             buf.write_vlq(*len)?;
         }
+        buf.write_vlq(self.epoch)?;
         writer.write_all(Self::HEADER)?;
         writer.write_vlq(xxhash(&buf))?;
         writer.write_vlq(buf.len())?;
@@ -2824,18 +2836,18 @@ mod tests {
     }
 
     quickcheck! {
-        fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
+        fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
             let mut buf = Vec::new();
-            let meta = LogMetadata { primary_len, indexes };
+            let meta = LogMetadata { primary_len, indexes, epoch };
             meta.write(&mut buf).expect("write");
             let mut cur = Cursor::new(buf);
             let meta_read = LogMetadata::read(&mut cur).expect("read");
             meta_read == meta
         }
 
-        fn test_roundtrip_meta_file(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
+        fn test_roundtrip_meta_file(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
             let dir = tempdir().unwrap();
-            let meta = LogMetadata { primary_len, indexes };
+            let meta = LogMetadata { primary_len, indexes, epoch };
             let path = dir.path().join("meta");
             meta.write_file(&path, false).expect("write_file");
             let meta_read = LogMetadata::read_file(&path).expect("read_file");

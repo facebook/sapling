@@ -8,6 +8,7 @@ byteorder = "1.2.7"
 bytes = "0.4.10"
 fs2 = "0.4.3"
 memmap = "0.7.0"
+rand = "0.4"
 tempfile = "3.0.7"
 twox-hash = "*"
 vlqencoding = { path = "../vlqencoding" }
@@ -16,7 +17,6 @@ vlqencoding = { path = "../vlqencoding" }
 libc = "0.2"
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
-rand = "0.4"
 
 [[bench]]
 name = "index"

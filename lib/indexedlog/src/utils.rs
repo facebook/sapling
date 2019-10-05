@@ -182,3 +182,9 @@ pub fn atomic_write(
         )
     })
 }
+
+/// Return a value that is likely changing over time.
+/// This is used to detect non-append-only cases.
+pub(crate) fn epoch() -> u64 {
+    rand::random()
+}
