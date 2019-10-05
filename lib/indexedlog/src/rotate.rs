@@ -10,6 +10,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::utils::atomic_write;
 use bytes::Bytes;
+use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -22,7 +23,7 @@ use std::path::{Path, PathBuf};
 pub struct RotateLog {
     dir: Option<PathBuf>,
     open_options: OpenOptions,
-    logs: Vec<Log>,
+    logs: Vec<OnceCell<Log>>,
     latest: u8,
 }
 
@@ -125,7 +126,8 @@ impl OpenOptions {
                 Ok((latest, logs)) => (latest, logs),
                 Err(e) => {
                     if !self.log_open_options.create {
-                        return Err(e);
+                        return Err(e)
+                            .context("not creating new logs since OpenOption::create is not set");
                     } else {
                         fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
                         let _lock = ScopedDirLock::new(&dir)?;
@@ -146,7 +148,7 @@ impl OpenOptions {
                                                 if let Ok(logs) = read_logs(dir, &self, latest) {
                                                     (latest, logs)
                                                 } else {
-                                                    (latest, vec![new_log])
+                                                    (latest, vec![create_log_cell(new_log)])
                                                 }
                                             }
                                             Err(new_log_err) => {
@@ -163,8 +165,8 @@ impl OpenOptions {
                                     // Most likely, it is a new empty directory.
                                     // Create an empty log and update latest.
                                     let latest = 0;
-                                    let log = create_empty_log(Some(dir), &self, latest)?;
-                                    (latest, vec![log])
+                                    let new_log = create_empty_log(Some(dir), &self, latest)?;
+                                    (latest, vec![create_log_cell(new_log)])
                                 } else {
                                     // latest cannot be read for other reasons.
                                     //
@@ -199,7 +201,9 @@ impl OpenOptions {
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
     pub fn create_in_memory(&self) -> crate::Result<RotateLog> {
         let result: crate::Result<_> = (|| {
-            let logs = vec![create_empty_log(None, &self, 0)?];
+            let cell = create_log_cell(self.log_open_options.create_in_memory()?);
+            let mut logs = Vec::with_capacity(1);
+            logs.push(cell);
             Ok(RotateLog {
                 dir: None,
                 open_options: self.clone(),
@@ -240,7 +244,7 @@ impl RotateLog {
         let key = key.into();
         let result: crate::Result<_> = (|| {
             Ok(RotateLogLookupIter {
-                inner_iter: self.logs[0].lookup(index_id, &key)?,
+                inner_iter: self.logs[0].get().unwrap().lookup(index_id, &key)?,
                 end: false,
                 log_rotate: self,
                 log_index: 0,
@@ -275,6 +279,8 @@ impl RotateLog {
             "programming error: flush_filter should also be set"
         );
         self.logs[0]
+            .get()
+            .unwrap()
             .lookup(index_id, key)
             .context(|| format!("in RotateLog::lookup_latest({}, {:?})", index_id, key))
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
@@ -319,7 +325,7 @@ impl RotateLog {
                     let mut new_logs =
                         read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
                     if let Some(filter) = self.open_options.log_open_options.flush_filter {
-                        let log = &mut new_logs[0];
+                        let log = new_logs[0].get_mut().unwrap();
                         for entry in self.writable_log().iter_dirty() {
                             let content = entry?;
                             let context = FlushFilterContext { log };
@@ -332,10 +338,11 @@ impl RotateLog {
                             }
                         }
                     } else {
+                        let log = new_logs[0].get_mut().unwrap();
                         // Copy entries to new Logs.
                         for entry in self.writable_log().iter_dirty() {
                             let bytes = entry?;
-                            new_logs[0].append(bytes)?;
+                            log.append(bytes)?;
                         }
                     }
                     self.logs = new_logs;
@@ -372,7 +379,7 @@ impl RotateLog {
         if self.logs.len() >= self.open_options.max_log_count as usize {
             self.logs.pop();
         }
-        self.logs.insert(0, log);
+        self.logs.insert(0, create_log_cell(log));
         self.latest = next;
         self.try_remove_old_logs();
         Ok(())
@@ -411,15 +418,52 @@ impl RotateLog {
 
     /// Get the writable [`Log`].
     fn writable_log(&mut self) -> &mut Log {
-        &mut self.logs[0]
+        self.logs[0].get_mut().unwrap()
+    }
+
+    /// Lazily load a log. The 'latest' (or 'writable') log has index 0.
+    fn load_log(&self, index: usize) -> crate::Result<Option<&Log>> {
+        match self.logs.get(index) {
+            Some(cell) => {
+                let id = self.latest.wrapping_sub(index as u8);
+                if let Some(dir) = &self.dir {
+                    Ok(Some(cell.get_or_try_init(|| {
+                        load_log(&dir, id, &self.open_options)
+                    })?))
+                } else {
+                    Ok(cell.get())
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     /// Iterate over all the entries.
     ///
     /// The entries are returned in FIFO order.
     pub fn iter(&self) -> impl Iterator<Item = crate::Result<&[u8]>> {
-        self.logs.iter().rev().map(|log| log.iter()).flatten()
+        let logs = self.logs();
+        logs.into_iter().rev().flat_map(|log| log.iter())
     }
+}
+
+/// Wrap `Log` in a `OnceCell`.
+fn create_log_cell(log: Log) -> OnceCell<Log> {
+    let cell = OnceCell::new();
+    cell.set(log)
+        .expect("cell is empty so cell.set cannot fail");
+    cell
+}
+
+/// Load a single log at the given location.
+fn load_log(dir: &Path, id: u8, open_options: &OpenOptions) -> crate::Result<Log> {
+    let name = format!("{}", id);
+    let log_path = dir.join(&name);
+    open_options
+        .log_open_options
+        .clone()
+        .create(false)
+        .open(&log_path)
 }
 
 /// Get access to internals of [`RotateLog`].
@@ -429,7 +473,7 @@ impl RotateLog {
 /// - Rotate logs manually.
 pub trait RotateLowLevelExt {
     /// Get a view of all individual logs. Newest first.
-    fn logs(&self) -> &[Log];
+    fn logs(&self) -> Vec<&Log>;
 
     /// Forced rotate. This can be useful as a quick way to ensure new
     /// data can be written when data corruption happens.
@@ -439,8 +483,15 @@ pub trait RotateLowLevelExt {
 }
 
 impl RotateLowLevelExt for RotateLog {
-    fn logs(&self) -> &[Log] {
-        &self.logs
+    fn logs(&self) -> Vec<&Log> {
+        (0..)
+            .map(|i| self.load_log(i))
+            .take_while(|res| match res {
+                Ok(Some(_)) => true,
+                _ => false,
+            })
+            .map(|res| res.unwrap().unwrap())
+            .collect()
     }
 
     fn force_rotate(&mut self) -> crate::Result<()> {
@@ -483,15 +534,31 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
                 } else {
                     // Try the next log
                     self.log_index += 1;
-                    self.inner_iter = match self.log_rotate.logs[self.log_index]
-                        .lookup(self.index_id, &self.key)
-                    {
+                    match self.log_rotate.load_log(self.log_index) {
+                        Ok(None) => {
+                            self.end = true;
+                            return None;
+                        }
                         Err(err) => {
                             self.end = true;
-                            return Some(Err(err));
+                            if err.is_corruption() {
+                                // Surface data corruption errors.
+                                return Some(Err(err));
+                            } else {
+                                // ex. "NotFound" - not fatal
+                                return None;
+                            }
                         }
-                        Ok(iter) => iter,
-                    };
+                        Ok(Some(log)) => {
+                            self.inner_iter = match log.lookup(self.index_id, &self.key) {
+                                Err(err) => {
+                                    self.end = true;
+                                    return Some(Err(err));
+                                }
+                                Ok(iter) => iter,
+                            }
+                        }
+                    }
                     self.next()
                 }
             }
@@ -546,39 +613,37 @@ fn read_latest_raw(dir: &Path) -> io::Result<u8> {
     Ok(id)
 }
 
-fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> crate::Result<Vec<Log>> {
-    let mut logs = Vec::new();
-    let mut current = latest;
-    let mut remaining = open_options.max_log_count;
-    while remaining > 0 {
-        let log_path = dir.join(format!("{}", current));
-        match open_options
-            .log_open_options
-            .clone()
-            .create(false)
-            .open(&log_path)
-        {
-            Ok(log) => {
-                logs.push(log);
-                current = current.wrapping_sub(1);
-                remaining -= 1;
-            }
-            Err(err) => {
-                if logs.is_empty() {
-                    return Err(crate::Error::path(dir, "no valid logs found")
-                        .source(err)
-                        .into());
-                } else {
-                    break;
-                }
-            }
+fn read_logs(
+    dir: &Path,
+    open_options: &OpenOptions,
+    latest: u8,
+) -> crate::Result<Vec<OnceCell<Log>>> {
+    let mut logs = Vec::with_capacity(open_options.max_log_count as usize);
+
+    // Make sure the first log (latest) can be loaded.
+    let log = load_log(dir, latest, open_options)?;
+    logs.push(create_log_cell(log));
+
+    // Lazily load the rest of logs.
+    for index in 1..open_options.max_log_count {
+        let id = latest.wrapping_sub(index);
+        // Do a quick check about whether the log exists or not so we
+        // can avoid unnecessary `Log::open`.
+        let name = format!("{}", id);
+        let log_path = dir.join(&name);
+        if !log_path.is_dir() {
+            break;
         }
+        logs.push(OnceCell::new());
     }
 
     Ok(logs)
 }
 
-fn read_latest_and_logs(dir: &Path, open_options: &OpenOptions) -> crate::Result<(u8, Vec<Log>)> {
+fn read_latest_and_logs(
+    dir: &Path,
+    open_options: &OpenOptions,
+) -> crate::Result<(u8, Vec<OnceCell<Log>>)> {
     let latest = read_latest(dir)?;
     Ok((latest, read_logs(dir, open_options, latest)?))
 }
