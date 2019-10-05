@@ -1927,6 +1927,48 @@ impl OpenOptions {
             .context(|| format!("in log::OpenOptions::repair({:?})", dir))
             .context(|| format!("  OpenOptions = {:?}", self))
     }
+
+    /// Attempt to change a [`Log`] at the given directory so it becomes
+    /// empty and hopefully recovers from some corrupted state.
+    ///
+    /// Warning: This deletes data, and there is no backup!
+    pub fn delete_content(&self, dir: impl AsRef<Path>) -> crate::Result<()> {
+        let dir = dir.as_ref();
+        let result: crate::Result<()> = (|| {
+            // Ensure the directory exist.
+            fs::create_dir_all(dir).context(&dir, "cannot mkdir")?;
+
+            // Prevent other writers.
+            let _lock = ScopedDirLock::new(dir)?;
+
+            // Replace the metadata to an empty state.
+            let meta = LogMetadata {
+                primary_len: PRIMARY_START_OFFSET,
+                indexes: BTreeMap::new(),
+                epoch: utils::epoch(),
+            };
+            let meta_path = dir.join(META_FILE);
+            meta.write_file(&meta_path, self.fsync)?;
+
+            // Replace the primary log.
+            let primary_path = dir.join(PRIMARY_FILE);
+            atomic_write(primary_path, PRIMARY_HEADER, self.fsync)?;
+
+            // Replace indexes so they become empty.
+            let log = self
+                .clone()
+                .create(true)
+                .open_assume_locked(dir)
+                .context("cannot open")?;
+            log.rebuild_indexes_assume_locked(true)?;
+
+            Ok(())
+        })();
+
+        result
+            .context(|| format!("in log::OpenOptions::delete_content({:?})", dir))
+            .context(|| format!("  OpenOptions = {:?}", self))
+    }
 }
 
 /// "Pointer" to an entry. Used internally.
@@ -2916,7 +2958,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repair_complex() {
+    fn test_repair_and_delete_content() {
         let dir = tempdir().unwrap();
         let path = dir.path();
         let open_opts = OpenOptions::new()
@@ -3184,6 +3226,74 @@ Rebuilt index "c""#
         delete(META_FILE);
         cannot_repair();
         verify_len(0);
+
+        let len = |name: &str| path.join(name).metadata().unwrap().len();
+        let append = || {
+            let mut log = open().unwrap();
+            log.append(&[b'x'; 50_000][..]).unwrap();
+            log.append(&[b'y'; 50_000][..]).unwrap();
+            log.append(&[b'z'; 50_000][..]).unwrap();
+            log.sync().unwrap();
+            assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET + 150036);
+            assert_eq!(len(&index_file), 70);
+        };
+        let delete_content = || {
+            open_opts.delete_content(&path).unwrap();
+            assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET);
+            assert_eq!(len(&index_file), 10);
+            // Check SIGBUS
+            try_trigger_sigbus();
+            // Check log is empty
+            verify_len(0);
+        };
+
+        // 'dir' does not exist - delete_content creates the log
+        fs::remove_dir_all(&path).unwrap();
+        delete_content();
+
+        // Empty log
+        delete_content();
+
+        // Normal log
+        append();
+        if cfg!(unix) {
+            long_lived_log.replace(open().unwrap());
+        }
+        delete_content();
+
+        // Corrupt log
+        append();
+        corrupt(PRIMARY_FILE, -75_000);
+        delete_content();
+
+        // Corrupt index
+        append();
+        corrupt(&index_file, -10);
+        delete_content();
+
+        // Corrupt checksum
+        append();
+        corrupt(&checksum_file, -10);
+        delete_content();
+
+        // Corrupt log and index
+        append();
+        corrupt(PRIMARY_FILE, -25_000);
+        corrupt(&index_file, -10);
+        delete_content();
+
+        // Deleted various files
+        delete(&checksum_file);
+        delete_content();
+
+        delete(&index_file);
+        delete_content();
+
+        delete(PRIMARY_FILE);
+        delete_content();
+
+        delete(META_FILE);
+        delete_content();
     }
 
     #[test]
