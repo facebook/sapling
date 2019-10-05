@@ -158,15 +158,8 @@ impl IndexedLogDataStore {
     /// `IndexedLogDataStore` is being recreated, losing all data that was previously stored in
     /// it.
     pub fn new(path: impl AsRef<Path>) -> Fallible<Self> {
-        let open_options = OpenOptions::new()
-            .max_log_count(4)
-            .max_bytes_per_log(2500 * 1000 * 1000)
-            .create(true)
-            .index("node", |_| {
-                vec![IndexOutput::Reference(0..Node::len() as u64)]
-            });
-
-        let log = match open_options.clone().open(&path) {
+        let open_options = Self::default_open_options();
+        let log = match open_options.open(&path) {
             Ok(log) => log,
             Err(err) => {
                 // XXX: This removes or renames path, which can break various
@@ -179,6 +172,25 @@ impl IndexedLogDataStore {
         Ok(IndexedLogDataStore {
             inner: Arc::new(RwLock::new(IndexedLogDataStoreInner { log })),
         })
+    }
+
+    /// Attempt to repair data at the given path.
+    /// Return human-readable repair logs.
+    pub fn repair(path: impl AsRef<Path>) -> Fallible<String> {
+        let path = path.as_ref();
+        let open_options = Self::default_open_options();
+        Ok(open_options.repair(path)?)
+    }
+
+    /// Default configuration: 4 x 2.5GB.
+    fn default_open_options() -> OpenOptions {
+        OpenOptions::new()
+            .max_log_count(4)
+            .max_bytes_per_log(2500 * 1000 * 1000)
+            .create(true)
+            .index("node", |_| {
+                vec![IndexOutput::Reference(0..Node::len() as u64)]
+            })
     }
 }
 
