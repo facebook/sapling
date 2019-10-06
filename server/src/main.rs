@@ -15,12 +15,15 @@ use fbinit::FacebookInit;
 use futures::Future;
 use lazy_static::lazy_static;
 use metaconfig_parser::RepoConfigs;
-use slog::{crit, info, o, Drain, Level, Logger};
+use slog::{crit, info, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use std::io;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tokio::runtime::Runtime;
 
 mod errors {
@@ -66,22 +69,24 @@ fn setup_logger<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
         Level::Info
     };
 
-    let drain = {
-        let drain = {
-            // TODO: switch to TermDecorator, which supports color
-            let decorator = slog_term::PlainSyncDecorator::new(io::stderr());
-            let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
-            // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-            // since logview is sampled anyway.
-            let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke").ignore_res();
-            slog::Duplicate::new(stderr_drain, logview_drain)
-        };
-        let drain = slog_stats::StatsDrain::new(drain);
-        drain.filter_level(level)
-    };
+    let decorator = slog_term::PlainSyncDecorator::new(io::stderr());
+    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
 
+    let drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
+        if matches.is_present("test-instance") {
+            Arc::new(stderr_drain.ignore_res())
+        } else {
+            // // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+            // // since logview is sampled anyway.
+            let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke").ignore_res();
+            let drain = slog::Duplicate::new(stderr_drain, logview_drain);
+            Arc::new(drain.ignore_res())
+        };
+
+    let drain = slog_stats::StatsDrain::new(drain);
+    let drain = drain.filter_level(level).ignore_res();
     Logger::root(
-        drain.ignore_res(),
+        drain,
         o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
 }
