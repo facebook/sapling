@@ -1300,7 +1300,7 @@ class GitHandler(object):
                 ret = localclient.fetch_pack(
                     path, determine_wants, graphwalker, f.write, gitprogress.progress
                 )
-                if f.pos != 0:
+                if f.tell() != 0:
                     f.seek(0)
                     self.git.object_store.add_thin_pack(f.read, None)
 
