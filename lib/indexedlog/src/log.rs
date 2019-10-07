@@ -520,23 +520,32 @@ impl Log {
 
             // Read-only fast path - no need to take directory lock.
             if self.mem_buf.is_empty() {
-                let meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
-                let changed = self.meta != meta;
-                let truncated = self.meta.epoch != meta.epoch;
-                if !truncated {
-                    check_append_only(self, &meta)?;
-                }
-                // No need to reload anything if metadata hasn't changed.
-                if changed {
-                    // Indexes cannot be reused, if epoch has changed. Otherwise,
-                    // Indexes can be reused, since they do not have new in-memory
-                    // entries, and the on-disk primary log is append-only (so data
-                    // already present in the indexes is valid).
-                    *self = self.open_options.clone().open_internal(
-                        self.dir.as_ref().unwrap(),
-                        if truncated { None } else { Some(&self.indexes) },
-                        false, // assume_locked=false
-                    )?;
+                if let Ok(meta) = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false) {
+                    let changed = self.meta != meta;
+                    let truncated = self.meta.epoch != meta.epoch;
+                    if !truncated {
+                        check_append_only(self, &meta)?;
+                    }
+                    // No need to reload anything if metadata hasn't changed.
+                    if changed {
+                        // Indexes cannot be reused, if epoch has changed. Otherwise,
+                        // Indexes can be reused, since they do not have new in-memory
+                        // entries, and the on-disk primary log is append-only (so data
+                        // already present in the indexes is valid).
+                        *self = self.open_options.clone().open_internal(
+                            self.dir.as_ref().unwrap(),
+                            if truncated { None } else { Some(&self.indexes) },
+                            false, // assume_locked=false
+                        )?;
+                    }
+                } else {
+                    // If meta can not be read, do not error out.
+                    // This Log can still be used to answer queries.
+                    //
+                    // This behavior makes Log more friendly for cases where an
+                    // external process does a `rm -rf` and the current process
+                    // does a `sync()` just for loading new data. Not erroring
+                    // out and pretend that nothing happended.
                 }
                 return Ok(self.meta.primary_len);
             }
@@ -2804,6 +2813,22 @@ mod tests {
                 assert_eq!(log2.iter().count(), count, "log2 log is incomplete {}", s);
             }
         }
+    }
+
+    #[test]
+    fn test_sync_missing_meta() {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new().create(true);
+        let mut log = open_opts.open(&dir).unwrap();
+        log.append(vec![b'a'; 100]).unwrap();
+        log.sync().unwrap();
+
+        let mut log2 = open_opts.open(&dir.path()).unwrap();
+        fs::remove_file(&dir.path().join(META_FILE)).unwrap();
+        log2.sync().unwrap(); // pretend to be a no-op
+
+        log2.append(vec![b'b'; 100]).unwrap();
+        log2.sync().unwrap_err(); // an error
     }
 
     fn test_rebuild_indexes() {
