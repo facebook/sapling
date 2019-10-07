@@ -167,7 +167,7 @@ def fastdiscovery(ui, local, remote):
     srvheadhashes, yesnoknownbookmarks, yesnopublicheads = batch.results()
 
     if knownbookmarksvalues and not any(yesnoknownbookmarks):
-        ui.status(_("No known server bookmarks"))
+        ui.status(_("No known server bookmarks\n"))
         # Server doesn't known any remote bookmark. That's odd and it's better
         # to fallback to normal discovery process. Otherwise we might request
         # too many commits from the server
