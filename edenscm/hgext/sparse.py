@@ -1966,8 +1966,8 @@ def disableprofilesubcmd(ui, repo, *pats, **opts):
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts):
     """enable a sparse profile"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
     _checknonexistingprofiles(ui, repo, pats)
+    _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
 
 
 @subcmd("switch|switchprofile", _common_config_opts, "[PROFILE]...")
@@ -1977,6 +1977,7 @@ def switchprofilesubcmd(ui, repo, *pats, **opts):
     Disables all other profiles and stops including and excluding any additional
     files you have previously included or excluded.
     """
+    _checknonexistingprofiles(ui, repo, pats)
     _config(
         ui, repo, pats, opts, force=opts.get("force"), reset=True, enableprofile=True
     )
