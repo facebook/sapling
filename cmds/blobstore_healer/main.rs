@@ -27,6 +27,7 @@ use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use healer::Healer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
+use mysql_async::error::Error as MysqlAsyncError;
 use prefixblob::PrefixBlobstore;
 use slog::{error, info, o, Logger};
 use sql::{myrouter, Connection};
@@ -192,14 +193,30 @@ fn ensure_small_db_replication_lag(
             .iter()
             .map(|(region, conn)| {
                 cloned!(region);
-                conn.show_replica_lag_secs().and_then(|maybe_secs| {
-                    maybe_secs
-                        .ok_or(format_err!(
-                    "Could not fetch db replication lag for {}. Failing to avoid overloading db",
-                    region
-                ))
-                        .map(|lag_secs| (region, lag_secs))
-                })
+
+                conn.show_replica_lag_secs()
+                    .or_else(|err| match err.downcast_ref::<MysqlAsyncError>() {
+                        Some(MysqlAsyncError::Server(inner)) => {
+                            // 1918 is discovery failed (i.e. there is no server matching the
+                            // constraints). This is fine, that means we don't need to monitor it.
+                            if inner.code == 1918 {
+                                Ok(Some(0))
+                            } else {
+                                Err(err)
+                            }
+                        },
+                        _ => Err(err),
+                    })
+                    .and_then(|maybe_secs| {
+                        let err = format_err!(
+                            "Could not fetch db replication lag for {}. Failing to avoid overloading db",
+                            region
+                        );
+
+                        maybe_secs
+                            .ok_or(err)
+                            .map(|lag_secs| (region, lag_secs))
+                    })
             })
             .collect();
 
