@@ -547,16 +547,17 @@ class basestore(object):
 
         with progress.bar(ui, _("removing unnecessary files"), _("files")) as prog:
             for root, dirs, files in os.walk(cachepath):
+                # Don't delete pack files or indexedlog data.
+                if os.path.basename(root).lower() in {
+                    "packs",
+                    "indexedlogdatastore",
+                    "indexedloghistorystore",
+                }:
+                    dirs[:] = []
+                    continue
+
                 for file in files:
                     if file == "repos" or file == "filename":
-                        continue
-
-                    # Don't delete pack files or indexedlog data.
-                    if (
-                        "/packs/" in root
-                        or "/indexedlogdatastore/" in root
-                        or "/indexedloghistorystore/" in root
-                    ):
                         continue
 
                     count += 1

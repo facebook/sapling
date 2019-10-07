@@ -283,7 +283,7 @@ Test hg gc with multiple repositories
   > usecache=False
   > EOF
   $ hg gc
-  finished: removed 0 of 2 files (0.00 GB to 0.00 GB)
+  finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
   $ cd ..
 
 
