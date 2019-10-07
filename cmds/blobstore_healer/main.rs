@@ -15,6 +15,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstru
 use clap::{value_t, App};
 use cloned::cloned;
 use cmdlib::{args, monitoring};
+use configerator::ConfigeratorAPI;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use failure_ext::{bail_msg, err_msg, format_err, prelude::*};
@@ -38,6 +39,7 @@ use std::time::{Duration, Instant};
 use tokio_timer::Delay;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
+const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 
 fn maybe_schedule_healer_for_storage(
     fb: FacebookInit,
@@ -250,6 +252,7 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
         hide_advanced_args: false,
     };
 
+    // TODO: (torozco) T55173657 Remove db-regions once deployed and remove from TW.
     let app = app_template.build(app_name)
         .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
@@ -258,7 +261,7 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
             --drain-only 'drain the queue without healing.  Use with caution.'
-            --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
+            --db-regions=[REGIONS] '[DEPRECATED]'
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
@@ -291,6 +294,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     }
     info!(logger, "Using storage_config {:#?}", storage_config);
 
+    let cfgr = ConfigeratorAPI::new(fb)?;
+    let regions = cfgr
+        .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
+        .contents;
+    let regions: Vec<String> = serde_json::from_str(&regions)?;
+    info!(logger, "Monitoring regions: {:?}", regions);
+
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
             fb,
@@ -300,12 +310,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             logger.clone(),
             storage_config,
             myrouter_port,
-            matches
-                .value_of("db-regions")
-                .unwrap_or("")
-                .split(',')
-                .map(|s| s.to_string())
-                .collect(),
+            regions,
             source_blobstore_key.map(|s| s.to_string()),
         );
 
