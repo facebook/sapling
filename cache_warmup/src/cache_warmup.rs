@@ -6,13 +6,13 @@
 
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, FutureExt};
-use mercurial_types::manifest::{HgEntry, Type};
-use mercurial_types::manifest_utils::recursive_entry_stream;
-use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath, RepoPath};
+use manifest::{Entry, ManifestOps};
+use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, RepoPath};
 use metaconfig_types::CacheWarmupParams;
 use revset::AncestorsNodeStream;
 use slog::{debug, info, Logger};
@@ -45,41 +45,44 @@ fn blobstore_and_filenodes_warmup(
     let buffer_size = 100;
     repo.get_changeset_by_changesetid(ctx.clone(), revision)
         .map({
-            let repo = repo.clone();
-            move |cs| repo.get_root_entry(cs.manifestid())
-        })
-        .and_then({
-            let ctx = ctx.clone();
-            move |root_entry| {
-                info!(logger, "starting precaching");
-                let rootpath = None;
-                let mut i = 0;
-                recursive_entry_stream(ctx.clone(), rootpath, Box::new(root_entry))
-                    .filter(|&(ref _path, ref entry)| entry.get_type() == Type::Tree)
-                    .map(move |(path, entry)| {
-                        let hash = HgFileNodeId::new(entry.get_hash().into_nodehash());
-                        let path = MPath::join_element_opt(path.as_ref(), entry.get_name());
-                        let path = match path {
-                            Some(path) => RepoPath::DirectoryPath(path),
-                            None => RepoPath::RootPath,
-                        };
-                        repo.get_linknode(ctx.clone(), &path, hash)
-                    })
-                    .buffered(buffer_size)
-                    .for_each({
-                        let logger = logger.clone();
-                        move |_| {
-                            i += 1;
-                            if i % 10000 == 0 {
-                                debug!(logger, "manifests warmup: fetched {}th entry", i);
-                            }
-                            Ok(())
-                        }
-                    })
-                    .map(move |()| {
-                        debug!(logger, "finished manifests warmup");
-                    })
+            cloned!(ctx, repo);
+            move |cs| {
+                cs.manifestid()
+                    .list_all_entries(ctx.clone(), repo.get_blobstore())
             }
+        })
+        .flatten_stream()
+        .filter_map({
+            cloned!(ctx, repo);
+            move |(path, entry)| match entry {
+                Entry::Leaf(_) => None,
+                Entry::Tree(hash) => {
+                    let hash = HgFileNodeId::new(hash.into_nodehash());
+
+                    let path = match path {
+                        Some(path) => RepoPath::DirectoryPath(path),
+                        None => RepoPath::RootPath,
+                    };
+
+                    let fut = repo.get_linknode(ctx.clone(), &path, hash);
+                    Some(fut)
+                }
+            }
+        })
+        .buffered(buffer_size)
+        .for_each({
+            cloned!(logger);
+            let mut i = 0;
+            move |_| {
+                i += 1;
+                if i % 10000 == 0 {
+                    debug!(logger, "manifests warmup: fetched {}th entry", i);
+                }
+                Ok(())
+            }
+        })
+        .map(move |()| {
+            debug!(logger, "finished manifests warmup");
         })
         .traced(
             &ctx.trace(),

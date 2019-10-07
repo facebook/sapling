@@ -15,17 +15,17 @@ use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
-use maplit::{btreemap, hashset};
+use maplit::btreemap;
 use mercurial_types::{
     blobs::{filenode_lookup::FileNodeIdPointer, File, LFSContent, META_MARKER, META_SZ},
     manifest::{Content, HgEmptyManifest},
     manifest_utils::{
-        changed_entry_stream_with_pruner, diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
-        DeletedPruner, EntryStatus, FilePruner, NoopPruner, Pruner,
+        changed_entry_stream_with_pruner, diff_sorted_vecs, ChangedEntry, DeletedPruner,
+        EntryStatus, FilePruner, NoopPruner, Pruner,
     },
     nodehash::{HgChangesetId, HgNodeHash},
-    Changeset, FileBytes, FileType, HgEntry, HgFileNodeId, HgManifest, MPath, MPathElement,
-    RepoPath, Type, NULL_HASH,
+    Changeset, FileBytes, FileType, HgEntry, HgFileNodeId, HgManifest, MPath, RepoPath, Type,
+    NULL_HASH,
 };
 use mercurial_types_mocks::{
     manifest::{ContentFactory, MockEntry, MockManifest},
@@ -421,84 +421,6 @@ fn test_recursive_changed_entry_stream_simple(fb: FacebookInit) {
             vec![],
             vec![],
         );
-        Ok(())
-    })
-    .expect("test failed")
-}
-
-#[fbinit::test]
-fn test_recursive_entry_stream(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || -> Result<_, !> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(many_files_dirs::getrepo(fb));
-        let changesetid = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
-
-        // hg up 2f866e7e549760934e31bf0420a873f65100ad63
-        // $ hg files
-        // 1
-        // 2
-        // dir1/file_1_in_dir1
-        // dir1/file_2_in_dir1
-        // dir1/subdir1/file_1
-        // dir2/file_1_in_dir2
-
-        let cs = repo
-            .get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(changesetid))
-            .wait()
-            .unwrap();
-        let manifestid = cs.manifestid();
-
-        let root_entry = repo.get_root_entry(manifestid);
-        let fut = recursive_entry_stream(ctx.clone(), None, Box::new(root_entry)).collect();
-        let res = fut.wait().unwrap();
-
-        let mut actual = hashset![];
-        for r in res {
-            let path = MPath::join_element_opt(r.0.as_ref(), r.1.get_name());
-            actual.insert(path);
-        }
-        let expected = hashset![
-            None,
-            Some(MPath::new("1").unwrap()),
-            Some(MPath::new("2").unwrap()),
-            Some(MPath::new("dir1").unwrap()),
-            Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
-            Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
-            Some(MPath::new("dir1/subdir1").unwrap()),
-            Some(MPath::new("dir1/subdir1/file_1").unwrap()),
-            Some(MPath::new("dir2").unwrap()),
-            Some(MPath::new("dir2/file_1_in_dir2").unwrap()),
-        ];
-
-        assert_eq!(actual, expected);
-
-        let root_mf = repo
-            .get_manifest_by_nodeid(ctx.clone(), manifestid)
-            .wait()
-            .unwrap();
-
-        let path_element = MPathElement::new(Vec::from("dir1".as_bytes())).unwrap();
-        let subentry = root_mf.lookup(&path_element).unwrap();
-
-        let res = recursive_entry_stream(ctx.clone(), None, subentry)
-            .collect()
-            .wait()
-            .unwrap();
-        let mut actual = hashset![];
-        for r in res {
-            let path = MPath::join_element_opt(r.0.as_ref(), r.1.get_name());
-            actual.insert(path);
-        }
-        let expected = hashset![
-            Some(MPath::new("dir1").unwrap()),
-            Some(MPath::new("dir1/file_1_in_dir1").unwrap()),
-            Some(MPath::new("dir1/file_2_in_dir1").unwrap()),
-            Some(MPath::new("dir1/subdir1").unwrap()),
-            Some(MPath::new("dir1/subdir1/file_1").unwrap()),
-        ];
-
-        assert_eq!(actual, expected);
-
         Ok(())
     })
     .expect("test failed")

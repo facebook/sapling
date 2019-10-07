@@ -14,7 +14,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
-use super::manifest::{Content, HgEmptyManifest, Type};
+use super::manifest::{Content, HgEmptyManifest};
 use super::{HgEntry, HgManifest, MPath, MPathElement};
 use crate::errors::*;
 
@@ -472,36 +472,6 @@ fn recursive_changed_entry_stream(
         .flatten_stream();
 
     once(Ok(changed_entry)).chain(substream).boxify()
-}
-
-/// Given an entry and path from the root of the repo to this entry, returns all subentries with
-/// their path from the root of the repo.
-/// For a non-tree entry returns a stream with a single (entry, path) pair.
-pub fn recursive_entry_stream(
-    ctx: CoreContext,
-    rootpath: Option<MPath>,
-    entry: Box<dyn HgEntry + Sync>,
-) -> BoxStream<(Option<MPath>, Box<dyn HgEntry + Sync>), Error> {
-    let subentries =
-        match entry.get_type() {
-            Type::File(_) => empty().boxify(),
-            Type::Tree => {
-                let entry_basename = entry.get_name();
-                let path = MPath::join_opt(rootpath.as_ref(), entry_basename);
-
-                entry
-                    .get_content(ctx.clone())
-                    .map(|content| {
-                        select_all(get_tree_content(content).list().map(move |entry| {
-                            recursive_entry_stream(ctx.clone(), path.clone(), entry)
-                        }))
-                    })
-                    .flatten_stream()
-                    .boxify()
-            }
-        };
-
-    once(Ok((rootpath, entry))).chain(subentries).boxify()
 }
 
 /// Difference between manifests, non-recursive.
