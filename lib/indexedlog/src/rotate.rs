@@ -349,17 +349,22 @@ impl RotateLog {
             if self.dir.is_none() {
                 return Ok(0);
             }
-            let latest = read_latest(self.dir.as_ref().unwrap())?;
 
             if self.writable_log().iter_dirty().nth(0).is_none() {
                 // Read-only path, no need to take directory lock.
-                if latest != self.latest {
-                    // Latest changed. Re-load and write to the real latest Log.
-                    // PERF(minor): This can be smarter by avoiding reloading some logs.
-                    self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
-                    self.latest = latest;
+                if let Ok(latest) = read_latest(self.dir.as_ref().unwrap()) {
+                    if latest != self.latest {
+                        // Latest changed. Re-load and write to the real latest Log.
+                        // PERF(minor): This can be smarter by avoiding reloading some logs.
+                        self.logs =
+                            read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
+                        self.latest = latest;
+                    }
+                    self.writable_log().sync()?;
+                } else {
+                    // If latest can not be read, do not error out.
+                    // This RotateLog can still be used to answer queries.
                 }
-                self.writable_log().sync()?;
             } else {
                 // Read-write path. Take the directory lock.
                 let dir = self.dir.clone().unwrap();
@@ -1133,6 +1138,23 @@ mod tests {
         // index has some bytes in it).
         assert_eq!(size("2/index-idx"), 10);
         assert!(size("2/log") < 100);
+    }
+
+    #[test]
+    fn test_sync_missing_latest() {
+        let dir = tempdir().unwrap();
+        let opts = OpenOptions::new()
+            .max_bytes_per_log(10000)
+            .max_log_count(10);
+        let mut rotate = opts.clone().create(true).open(&dir).unwrap();
+        rotate.append(vec![b'x'; 200]).unwrap();
+        rotate.sync().unwrap();
+
+        let mut rotate2 = opts.clone().open(&dir).unwrap();
+        fs::remove_file(dir.path().join(LATEST_FILE)).unwrap();
+        rotate2.sync().unwrap(); // not a failure
+        rotate2.append(vec![b'y'; 200]).unwrap();
+        rotate2.sync().unwrap_err(); // a failure
     }
 
     #[test]
