@@ -46,7 +46,9 @@ class BackupState(object):
                     )
                     self.initfromserver()
                     return
-                self.heads = set(nodemod.bin(head.strip()) for head in lines[2:])
+                heads = (nodemod.bin(head.strip()) for head in lines[2:])
+                hasnode = repo.unfiltered().changelog.hasnode
+                self.heads = {h for h in heads if hasnode(h)}
         else:
             self.initfromserver()
 
