@@ -43,21 +43,20 @@ impl<'a> Drop for ScopedFileLock<'a> {
     }
 }
 
-pub struct ScopedDirLock<'a> {
-    path: &'a Path,
+pub struct ScopedDirLock {
     file: File,
 }
 
-impl<'a> ScopedDirLock<'a> {
-    pub fn new(path: &'a Path) -> crate::Result<Self> {
+impl ScopedDirLock {
+    pub fn new(path: &Path) -> crate::Result<Self> {
         let file = crate::utils::open_dir(path).context(path, "cannot open for locking")?;
         file.lock_exclusive().context(path, "cannot lock")?;
-        let result = Self { path, file };
+        let result = Self { file };
         Ok(result)
     }
 }
 
-impl<'a> Drop for ScopedDirLock<'a> {
+impl Drop for ScopedDirLock {
     fn drop(&mut self) {
         self.file.unlock().expect("unlock");
     }
