@@ -37,6 +37,40 @@ struct Inner {
 }
 
 impl Error {
+    /// Return `true` if the error is considered as (filesystem) data
+    /// corruption.
+    ///
+    /// Application can use this information to decide whether to try the
+    /// expensive `repair` API.
+    ///
+    /// Data corruption is in general when the data can be confidently read,
+    /// but does not meet integrity expectation. Note: a "file not found" error
+    /// is a piece of information that is "confidently read", because it's
+    /// unexpected to get a different error by using different users, or
+    /// process settings. So "file not found" is not always a corruption.
+    ///
+    /// For example, those are data corruption errors:
+    /// - XxHash checksum does not match the data
+    /// - Some data says "read this file in 100..200 byte range", but logically,
+    ///   the file only has 150 bytes.
+    /// - A byte is expected to only be 1 or 2. But it turns out to be 0.
+    /// - Both file "a" and "b" are expected to exist in a directory, but "a"
+    ///   can be found, while "b" does not exist.
+    ///
+    /// Those are not data corruption:
+    /// - Cannot open a file due to permission issues or exceeding the file
+    ///   descriptor limit.
+    /// - Programming errors and API misuse. For example, a user-provided
+    ///   index function says `data[5..10] is the index key` while `data`
+    /// - Both file "a" and "b" are expected to exist in a directory, but "a"
+    ///   can be found, while "b" cannot be opened due to permission issues.
+    ///
+    /// It's expected that data corruption can *only* happen when the managed
+    /// files or directories are changed without using this crate.  For example,
+    /// a hard reboot, deleting lock files while multiple processes are
+    /// attempting to write, deleting or changing files in some ways. Issues
+    /// like "disk is full", "permission errors", "process killed at random
+    /// time" are expected to not cause data corruption (but only data loss).
     pub fn is_corruption(&self) -> bool {
         self.inner.is_corruption
     }
