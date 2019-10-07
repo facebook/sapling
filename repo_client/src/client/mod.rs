@@ -1096,7 +1096,7 @@ impl HgCommands for RepoClient {
             "listkeys": format_utf8_bytes_list(&args.listkeys),
         });
         let value = json!(vec![value]);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, Some(value));
+        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, None);
         cloned!(self.ctx);
 
         let s = match self.create_bundle(args) {
@@ -1108,6 +1108,7 @@ impl HgCommands for RepoClient {
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+            wireproto_logger.set_args(Some(value));
             wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
             wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
             Ok(())
