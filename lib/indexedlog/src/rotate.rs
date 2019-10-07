@@ -368,7 +368,7 @@ impl RotateLog {
             } else {
                 // Read-write path. Take the directory lock.
                 let dir = self.dir.clone().unwrap();
-                let _lock = ScopedDirLock::new(&dir)?;
+                let lock = ScopedDirLock::new(&dir)?;
 
                 // Re-read latest, since it might have changed after taking the lock.
                 let latest = read_latest(self.dir.as_ref().unwrap())?;
@@ -413,7 +413,7 @@ impl RotateLog {
                     // Make sure indexes are up-to-date so reading it would not require
                     // building missing indexes in-memory.
                     self.writable_log().finalize_indexes()?;
-                    self.rotate_assume_locked()?;
+                    self.rotate_internal(&lock)?;
                 }
             }
 
@@ -427,10 +427,10 @@ impl RotateLog {
 
     /// Force create a new [`Log`]. Bump latest.
     ///
-    /// This function assumes it's protected by a directory lock, and the
+    /// This function requires it's protected by a directory lock, and the
     /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
     /// and do not have dirty entries in non-writable logs).
-    fn rotate_assume_locked(&mut self) -> crate::Result<()> {
+    fn rotate_internal(&mut self, _lock: &ScopedDirLock) -> crate::Result<()> {
         // Create a new Log. Bump latest.
         let next = self.latest.wrapping_add(1);
         let log = create_empty_log(Some(self.dir.as_ref().unwrap()), &self.open_options, next)?;
@@ -559,9 +559,9 @@ impl RotateLowLevelExt for RotateLog {
         }
         // Read-write path. Take the directory lock.
         let dir = self.dir.clone().unwrap();
-        let _lock = ScopedDirLock::new(&dir)?;
+        let lock = ScopedDirLock::new(&dir)?;
         self.latest = read_latest(self.dir.as_ref().unwrap())?;
-        self.rotate_assume_locked()?;
+        self.rotate_internal(&lock)?;
         self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, self.latest)?;
         Ok(())
     }

@@ -535,7 +535,7 @@ impl Log {
                         *self = self.open_options.clone().open_internal(
                             self.dir.as_ref().unwrap(),
                             if truncated { None } else { Some(&self.indexes) },
-                            false, // assume_locked=false
+                            None,
                         )?;
                     }
                 } else {
@@ -553,7 +553,7 @@ impl Log {
             // Take the lock so no other `flush` runs for this directory. Then reload meta, append
             // log, then update indexes.
             let dir = self.dir.clone().unwrap();
-            let _lock = ScopedDirLock::new(&dir)?;
+            let lock = ScopedDirLock::new(&dir)?;
 
             // Step 1: Reload metadata to get the latest view of the files.
             let mut meta = Self::load_or_create_meta(&self.dir.as_ref().unwrap(), false)?;
@@ -571,7 +571,7 @@ impl Log {
                 let mut log = self
                     .open_options
                     .clone()
-                    .open_assume_locked(self.dir.as_ref().unwrap())
+                    .open_with_lock(self.dir.as_ref().unwrap(), &lock)
                     .context("re-open to run flush_filter")?;
 
                 for entry in self.iter_dirty() {
@@ -594,7 +594,7 @@ impl Log {
                 let mut log = self
                     .open_options
                     .clone()
-                    .open_assume_locked(self.dir.as_ref().unwrap())
+                    .open_with_lock(self.dir.as_ref().unwrap(), &lock)
                     .context(|| {
                         format!(
                             "re-open since epoch has changed ({} to {})",
@@ -789,8 +789,8 @@ impl Log {
         let dir = self.dir.clone();
         let result: crate::Result<_> = (|this: Log| {
             if let Some(dir) = this.dir.clone() {
-                let _lock = ScopedDirLock::new(&dir)?;
-                this.rebuild_indexes_assume_locked(force)
+                let lock = ScopedDirLock::new(&dir)?;
+                this.rebuild_indexes_with_lock(force, &lock)
             } else {
                 Ok(String::new())
             }
@@ -801,7 +801,11 @@ impl Log {
             .context(|| format!("  Log.dir = {:?}", dir))
     }
 
-    fn rebuild_indexes_assume_locked(mut self, force: bool) -> crate::Result<String> {
+    fn rebuild_indexes_with_lock(
+        mut self,
+        force: bool,
+        _lock: &ScopedDirLock,
+    ) -> crate::Result<String> {
         let mut message = String::new();
         {
             if let Some(ref dir) = self.dir {
@@ -1658,7 +1662,7 @@ impl OpenOptions {
     /// transaction.
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
         let dir = dir.as_ref();
-        self.open_internal(dir, None, false)
+        self.open_internal(dir, None, None)
             .context(|| format!("in log::OpenOptions::open({:?})", dir))
             .context(|| format!("  OpenOptions = {:?}", self))
     }
@@ -1698,8 +1702,8 @@ impl OpenOptions {
             .context(|| format!("  OpenOptions = {:?}", self))
     }
 
-    fn open_assume_locked(&self, dir: &Path) -> crate::Result<Log> {
-        self.open_internal(dir, None, true)
+    fn open_with_lock(&self, dir: &Path, lock: &ScopedDirLock) -> crate::Result<Log> {
+        self.open_internal(dir, None, Some(lock))
     }
 
     // "Back-door" version of "open" that allows reusing indexes.
@@ -1709,7 +1713,7 @@ impl OpenOptions {
         &self,
         dir: &Path,
         reuse_indexes: Option<&Vec<Index>>,
-        assume_locked: bool,
+        lock: Option<&ScopedDirLock>,
     ) -> crate::Result<Log> {
         let create = self.create;
 
@@ -1720,7 +1724,7 @@ impl OpenOptions {
                     .context(&dir, "cannot mkdir after failing to read metadata")
                     .source(err)?;
                 // Make sure check and write happens atomically.
-                if assume_locked {
+                if lock.is_some() {
                     Log::load_or_create_meta(dir, true)
                 } else {
                     let _lock = ScopedDirLock::new(&dir)?;
@@ -1768,7 +1772,7 @@ impl OpenOptions {
         let dir = dir.as_ref();
         let mut message = String::new();
         let result: crate::Result<_> = (|| {
-            let _lock = ScopedDirLock::new(dir)?;
+            let lock = ScopedDirLock::new(dir)?;
 
             let primary_path = dir.join(PRIMARY_FILE);
             let meta_path = dir.join(META_FILE);
@@ -1841,7 +1845,7 @@ impl OpenOptions {
             // Try to open it with indexes so we might reuse them. If that
             // fails, retry with all indexes disabled.
             let mut log = self
-                .open_assume_locked(dir)
+                .open_with_lock(dir, &lock)
                 .or_else(|_| self.clone().index_defs(Vec::new()).open(dir))
                 .context("cannot open log for repair")?;
 
@@ -1926,7 +1930,7 @@ impl OpenOptions {
             // can lead to bad performance.
             log.open_options.index_defs = self.index_defs.clone();
             message += &log
-                .rebuild_indexes_assume_locked(false)
+                .rebuild_indexes_with_lock(false, &lock)
                 .context("while trying to update indexes with reapired log")?;
 
             Ok(message)
@@ -1948,7 +1952,7 @@ impl OpenOptions {
             fs::create_dir_all(dir).context(&dir, "cannot mkdir")?;
 
             // Prevent other writers.
-            let _lock = ScopedDirLock::new(dir)?;
+            let lock = ScopedDirLock::new(dir)?;
 
             // Replace the metadata to an empty state.
             let meta = LogMetadata {
@@ -1967,9 +1971,9 @@ impl OpenOptions {
             let log = self
                 .clone()
                 .create(true)
-                .open_assume_locked(dir)
+                .open_with_lock(dir, &lock)
                 .context("cannot open")?;
-            log.rebuild_indexes_assume_locked(true)?;
+            log.rebuild_indexes_with_lock(true, &lock)?;
 
             Ok(())
         })();
