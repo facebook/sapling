@@ -6402,6 +6402,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         ("d", "date", "", _("tipmost revision matching date (ADVANCED)"), _("DATE")),
         ("r", "rev", "", _("revision"), _("REV")),
         ("", "inactive", None, _("update without activating bookmarks")),
+        ("", "continue", None, _("resume interrupted update --merge (ADVANCED)")),
     ]
     + mergetoolopts,
     _("[-C|-c|-m] [[-r] REV]"),
@@ -6417,6 +6418,7 @@ def update(
     merge=None,
     tool=None,
     inactive=None,
+    **opts
 ):
     """check out a specific commit
 
@@ -6451,6 +6453,24 @@ def update(
 
     Returns 0 on success, 1 if there are unresolved files.
     """
+
+    if opts.get("continue"):
+        with repo.wlock():
+            if repo.localvfs.exists("updatemergestate"):
+                ms = mergemod.mergestate.read(repo)
+                if list(ms.unresolved()):
+                    raise error.Abort(
+                        _("outstanding merge conflicts"),
+                        hint=_(
+                            "use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved"
+                        ),
+                    )
+                repo.localvfs.unlink("updatemergestate")
+                ms.reset()
+                return 0
+            else:
+                raise error.Abort(_("not in an interrupted update --merge state"))
+
     if rev is not None and rev != "" and node is not None:
         raise error.Abort(_("please specify just one revision"))
 

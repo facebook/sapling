@@ -388,7 +388,7 @@ Show all commands + options
   tip: patch, git, style, template
   unbundle: update
   uncommit: keep, include, exclude
-  update: clean, check, merge, date, rev, inactive, tool
+  update: clean, check, merge, date, rev, inactive, continue, tool
   verify: rev
   version: template
 

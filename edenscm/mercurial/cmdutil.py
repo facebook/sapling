@@ -4278,7 +4278,10 @@ def clearunfinished(repo):
             util.unlink(repo.localvfs.join(f))
 
 
-afterresolvedstates = [("graftstate", _("hg graft --continue"))]
+afterresolvedstates = [
+    ("graftstate", _("hg graft --continue")),
+    ("updatemergestate", _("hg update --continue")),
+]
 
 
 def howtocontinue(repo):

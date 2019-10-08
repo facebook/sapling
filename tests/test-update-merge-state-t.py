@@ -45,9 +45,17 @@ sh % "hg status" == r"""
     #  (trailing space)
     # To mark files as resolved:  hg resolve --mark FILE"""
 
+# Cannot --continue right now
+sh % "hg update --continue" == r"""
+    abort: outstanding merge conflicts
+    (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
+    [255]"""
+
 # 'morestatus' message after resolve
 # BAD: The unfinished merge state is confusing and there is no clear way to get out.
-sh % "hg resolve -m A" == "(no more unresolved files)"
+sh % "hg resolve -m A" == r"""
+    (no more unresolved files)
+    continue: hg update --continue"""
 sh % "hg status" == r"""
     M A
 
@@ -55,4 +63,5 @@ sh % "hg status" == r"""
     # No unresolved merge conflicts."""
 
 # To get rid of the state
-# BAD: No clean way to get rid of it without losing changes.
+sh % "hg update --continue"
+sh % "hg status" == "M A"
