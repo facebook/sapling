@@ -53,7 +53,7 @@ use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 pub(crate) const PRIMARY_FILE: &str = "log";
 const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
 const PRIMARY_START_OFFSET: u64 = 12; // PRIMARY_HEADER.len() as u64;
-const META_FILE: &str = "meta";
+pub(crate) const META_FILE: &str = "meta";
 const INDEX_FILE_PREFIX: &str = "index-";
 
 const ENTRY_FLAG_HAS_XXHASH64: u32 = 1;

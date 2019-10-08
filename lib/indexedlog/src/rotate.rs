@@ -445,7 +445,7 @@ impl RotateLog {
         }
         self.logs.insert(0, create_log_cell(log));
         self.latest = next;
-        self.try_remove_old_logs();
+        self.try_remove_old_logs(lock);
         Ok(())
     }
 
@@ -454,7 +454,7 @@ impl RotateLog {
         self.sync()
     }
 
-    fn try_remove_old_logs(&self) {
+    fn try_remove_old_logs(&self, _lock: &ScopedDirLock) {
         if let Ok(read_dir) = self.dir.as_ref().unwrap().read_dir() {
             let latest = self.latest;
             let earliest = latest.wrapping_sub(self.open_options.max_log_count - 1);
@@ -466,12 +466,16 @@ impl RotateLog {
                             if (latest >= earliest && (id > latest || id < earliest))
                                 || (latest < earliest && (id > latest && id < earliest))
                             {
+                                // Explicitly delete the `meta` file first. This marks
+                                // the log as "deleted" in an atomic way.
+                                //
                                 // Errors are not fatal. On Windows, this can fail if
                                 // other processes have files in entry.path() mmap-ed.
                                 // Newly opened or flushed RotateLog will unmap files.
                                 // New rotation would trigger remove_dir_all to try
                                 // remove old logs again.
-                                let _ = fs::remove_dir_all(entry.path());
+                                let _ = fs::remove_file(entry.path().join(log::META_FILE))
+                                    .and_then(|_| fs::remove_dir_all(entry.path()));
                             }
                         }
                     }
