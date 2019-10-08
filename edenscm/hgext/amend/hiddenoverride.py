@@ -30,7 +30,7 @@ def uisetup(ui):
 
 def pinnedrevs(orig, repo):
     revs = orig(repo)
-    if not visibility.enabled(repo):
+    if "visibleheads" not in repo.storerequirements and not visibility.enabled(repo):
         nodemap = repo.changelog.nodemap
         pinnednodes = set(loadpinnednodes(repo))
         tounpin = getattr(repo, "_tounpinnodes", set())
@@ -98,7 +98,7 @@ def savepinnednodes(repo, newpin, newunpin, fullargs):
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
     # return directly for non-repo command
-    if not repo:
+    if not repo or "visibleheads" in repo.storerequirements:
         return orig(lui, repo, cmd, fullargs, *args)
 
     shouldpinbefore = shouldpinnodes(repo) | set(loadpinnednodes(repo))
@@ -123,22 +123,24 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
 def createmarkers(orig, repo, rels, *args, **kwargs):
     # this is a way to unpin revs - precursors are unpinned
     # note: hg debugobsolete does not call this function
-    unfi = repo.unfiltered()
-    tounpin = getattr(unfi, "_tounpinnodes", set())
-    for r in rels:
-        try:
-            tounpin.add(r[0].node())
-        except error.RepoLookupError:
-            pass
-    unfi._tounpinnodes = tounpin
+    if "visibleheads" not in repo.storerequirements:
+        unfi = repo.unfiltered()
+        tounpin = getattr(unfi, "_tounpinnodes", set())
+        for r in rels:
+            try:
+                tounpin.add(r[0].node())
+            except error.RepoLookupError:
+                pass
+        unfi._tounpinnodes = tounpin
     return orig(repo, rels, *args, **kwargs)
 
 
 def cleanupnodes(orig, repo, mapping, *args, **kwargs):
     # this catches cases where cleanupnodes is called but createmarkers is not
     # called. unpin nodes from mapping
-    unfi = repo.unfiltered()
-    tounpin = getattr(unfi, "_tounpinnodes", set())
-    tounpin.update(mapping)
-    unfi._tounpinnodes = tounpin
+    if "visibleheads" not in repo.storerequirements:
+        unfi = repo.unfiltered()
+        tounpin = getattr(unfi, "_tounpinnodes", set())
+        tounpin.update(mapping)
+        unfi._tounpinnodes = tounpin
     return orig(repo, mapping, *args, **kwargs)

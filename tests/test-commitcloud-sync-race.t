@@ -27,12 +27,11 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
-  visibility: read 1 heads: df4f53cec30a
   setting authentication token
   authentication successful
   $ hg cloud join
-  visibility: read 1 heads: df4f53cec30a
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
+  visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   commitcloud: commits synchronized
@@ -48,12 +47,11 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
-  visibility: read 1 heads: df4f53cec30a
   updating authentication token
   authentication successful
   $ hg cloud join
-  visibility: read 1 heads: df4f53cec30a
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
+  visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   commitcloud: commits synchronized
@@ -135,7 +133,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
 Wait for the background backup to finish and check its output.
 
   $ hg debugwaitbackup
-  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   $ cat $TESTTMP/bgsync.out
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
