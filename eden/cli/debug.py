@@ -406,9 +406,6 @@ class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the eden mount point")
 
-        # TODO: remove after updating Sandcastle code to stop using this flag
-        parser.add_argument("--sizes", action="store_true", help="Compute file sizes")
-
     def make_file_entries(
         self, paths_and_sizes: List[Tuple[str, int]]
     ) -> List[Dict[str, Union[str, int]]]:
