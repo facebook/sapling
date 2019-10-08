@@ -83,6 +83,13 @@ impl HgTime {
                 Self::from(Local::today().and_hms(0, 0, 0) - Duration::days(1))
                     .use_default_offset(),
             ),
+            date if date.ends_with(" ago") => {
+                let duration_str = &date[..date.len() - 4];
+                duration_str
+                    .parse::<humantime::Duration>()
+                    .ok()
+                    .map(|duration| Self::now() - duration.as_secs())
+            }
             _ => Self::parse_absolute(date),
         }
     }
@@ -304,6 +311,17 @@ mod tests {
 
         assert_eq!(t("Fri, 20 Sep 2019 12:15:13 -0700"), "1569006913 25200"); // date --rfc-2822
         assert_eq!(t("Fri, 20 Sep 2019 12:15:13"), "1568988913 7200");
+    }
+
+    #[test]
+    fn test_parse_ago() {
+        set_default_offset(7200);
+        assert_eq!(d("10m ago", Duration::hours(1)), "0");
+        assert_eq!(d("10 min ago", Duration::hours(1)), "0");
+        assert_eq!(d("10 minutes ago", Duration::hours(1)), "0");
+        assert_eq!(d("10 hours ago", Duration::days(1)), "0");
+        assert_eq!(d("10 h ago", Duration::days(1)), "0");
+        assert_eq!(t("9999999 years ago"), "0 7200");
     }
 
     /// String representation of parse result.

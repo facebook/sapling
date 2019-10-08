@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4"
+humantime = "1.3"
