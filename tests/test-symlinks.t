@@ -71,7 +71,7 @@ it should show a.c, dir/a.o and dir/b.o deleted
   ! dir/a.o
   ? .gitignore
   $ hg status a.c
-  a.c: unsupported file type (type is fifo)
+  a.c: unsupported file type (type is fifo) (no-fsmonitor !)
   ! a.c
   $ cd ..
 

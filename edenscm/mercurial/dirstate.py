@@ -1095,7 +1095,7 @@ class dirstate(object):
                 # performance.
                 freshinstance = False
                 try:
-                    freshinstance = self._repo.dirstate._fsmonitorstate._lastisfresh
+                    freshinstance = self._fs._fsmonitorstate._lastisfresh
                 except Exception:
                     pass
                 if freshinstance:

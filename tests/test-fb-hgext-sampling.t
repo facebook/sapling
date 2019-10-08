@@ -72,16 +72,17 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...     elif parsedrecord['category'] == 'measuredtimes':
   ...         print('atexit_measured: ', repr(sorted(parsedrecord['data'])))
   atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
   match filter commit_table
   message string commit_table
   atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
   atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (fsmonitor !)
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
   match filter commit_table
   message string commit_table
   atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
+  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
 
 Test topdir logging:
   $ setconfig sampling.logtopdir=True

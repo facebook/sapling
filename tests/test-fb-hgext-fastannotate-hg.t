@@ -560,7 +560,6 @@ annotate modified file
   20 b6bedd5477e7+: foofoo
 
   $ hg annotate --debug -ncr "wdir()" foo
-  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
   11 472b18db256d1e8282064eab4bfdaf48cbfe83cd : foo
   20 b6bedd5477e797f25e568a6402d4697f3f895a72+: foofoo
 

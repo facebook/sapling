@@ -121,7 +121,6 @@ After the first repack, the old trees are kept around by the transaction undo ba
 
 After the second repack, the old trees are still kept around.
   $ hg forget file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
-  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
   removing file
   auto-repacking treedirstate
   $ ls .hg/dirstate.tree.*
@@ -141,7 +140,6 @@ On the third repack, the original tree is removed.
 
 On the fourth repack, the second tree is removed.
   $ hg forget file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
-  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
   removing file
   auto-repacking treedirstate
   removing old unreferenced dirstate tree * (glob)

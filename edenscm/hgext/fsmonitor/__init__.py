@@ -255,11 +255,11 @@ def _watchmantofsencoding(path):
     return encoded
 
 
-def _finddirs(dirstate):
+def _finddirs(fs):
     """Query watchman for all directories in the working copy"""
-    state = dirstate._fsmonitorstate
-    dirstate._watchmanclient.settimeout(state.timeout + 0.1)
-    result = dirstate._watchmanclient.command(
+    state = fs._fsmonitorstate
+    fs._watchmanclient.settimeout(state.timeout + 0.1)
+    result = fs._watchmanclient.command(
         "query",
         {
             "fields": ["name"],
@@ -286,7 +286,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     usefastdirs = True
     if finddirs:
         try:
-            fastdirs = _finddirs(dirstate)
+            fastdirs = _finddirs(dirstate._fs)
         except Exception:
             ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
             usefastdirs = False
@@ -309,19 +309,6 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     return files, dirs
 
 
-@util.timefunction("fsmonitorwalk", 1, "_ui")
-def overridewalk(orig, self, match, unknown, ignored, full=True):
-    fsmonitorevent = {}
-    try:
-        return _walk(orig, self, match, unknown, ignored, full, event=fsmonitorevent)
-    finally:
-        try:
-            blackbox.log({"fsmonitor": fsmonitorevent})
-        except UnicodeDecodeError:
-            # test-adding-invalid-utf8.t hits this path
-            pass
-
-
 def _watchmanpid(clock):
     """Get watchman pid from a watchman clock value.
 
@@ -338,123 +325,76 @@ def _watchmanpid(clock):
         return None
 
 
-def _walk(orig, self, match, unknown, ignored, full, event):
-    """Replacement for dirstate.walk, hooking into Watchman.
+def _walk(self, match, event):
+    """Replacement for filesystem._walk, hooking into Watchman.
 
-    Whenever full is False, ignored is False, and the Watchman client is
-    available, use Watchman combined with saved state to possibly return only a
-    subset of files."""
+    Whenever listignored is False and the Watchman client is available, use
+    Watchman combined with saved state to possibly return only a subset of
+    files."""
 
-    def bail(reason):
-        self._ui.debug("fsmonitor: fallback to core status, %s\n" % reason)
-        return orig(match, unknown, ignored, full=True)
-
-    if full:
-        return bail("full rewalk requested")
-    if ignored:
-        return bail("listing ignored files")
-    if not self._watchmanclient.available():
-        return bail("client unavailable")
     state = self._fsmonitorstate
     clock, ignorehash, notefiles = state.get()
     if not clock:
         if state.walk_on_invalidate:
-            return bail("no clock")
+            raise fsmonitorfallback("no clock")
         # Initial NULL clock value, see
         # https://facebook.github.io/watchman/docs/clockspec.html
         clock = "c:0:0"
         notefiles = []
 
-    def fwarn(f, msg):
-        self._ui.warn("%s: %s\n" % (self.pathto(f), msg))
-        return False
+    ignore = self.dirstate._ignore
 
-    def badtype(mode):
-        kind = _("unknown")
-        if stat.S_ISCHR(mode):
-            kind = _("character device")
-        elif stat.S_ISBLK(mode):
-            kind = _("block device")
-        elif stat.S_ISFIFO(mode):
-            kind = _("fifo")
-        elif stat.S_ISSOCK(mode):
-            kind = _("socket")
-        elif stat.S_ISDIR(mode):
-            kind = _("directory")
-        return _("unsupported file type (type is %s)") % kind
-
-    ignore = self._ignore
-    dirignore = self._dirignore
-    if unknown:
-        # experimental config: experimental.fsmonitor.skipignore
-        if not self._ui.configbool("experimental", "fsmonitor.skipignore"):
-            if ignorehash and _hashignore(ignore) != ignorehash and clock != "c:0:0":
-                # ignore list changed -- can't rely on Watchman state any more
-                if state.walk_on_invalidate:
-                    return bail("ignore rules changed")
-                notefiles = []
-                clock = "c:0:0"
-    else:
-        # always ignore
-        ignore = util.always
-        dirignore = util.always
+    # experimental config: experimental.fsmonitor.skipignore
+    if not self._ui.configbool("experimental", "fsmonitor.skipignore"):
+        if ignorehash and _hashignore(ignore) != ignorehash and clock != "c:0:0":
+            # ignore list changed -- can't rely on Watchman state any more
+            if state.walk_on_invalidate:
+                raise fsmonitorfallback("ignore rules changed")
+            notefiles = []
+            clock = "c:0:0"
 
     matchfn = match.matchfn
     matchalways = match.always()
-    dmap = self._map
+    dmap = self.dirstate._map
     if util.safehasattr(dmap, "_map"):
         # for better performance, directly access the inner dirstate map if the
         # standard dirstate implementation is in use.
         dmap = dmap._map
     if "treestate" in self._repo.requirements:
         # treestate has a fast path to filter out ignored directories.
-        ignorevisitdir = self._ignore.visitdir
+        ignorevisitdir = self.dirstate._ignore.visitdir
 
         def dirfilter(path):
             result = ignorevisitdir(path)
             return result == "all"
 
-        nonnormalset = self._map.nonnormalsetfiltered(dirfilter)
+        nonnormalset = self.dirstate._map.nonnormalsetfiltered(dirfilter)
     else:
-        nonnormalset = self._map.nonnormalset
+        nonnormalset = self.dirstate._map.nonnormalset
 
     event["old_clock"] = clock
     event["old_files"] = blackbox.shortlist(nonnormalset)
 
-    copymap = self._map.copymap
+    copymap = self.dirstate._map.copymap
     getkind = stat.S_IFMT
     dirkind = stat.S_IFDIR
     regkind = stat.S_IFREG
     lnkkind = stat.S_IFLNK
-    join = self._join
+    join = self.dirstate._join
     normcase = util.normcase
     fresh_instance = False
 
-    exact = skipstep3 = False
+    exact = False
     if match.isexact():  # match.exact
         exact = True
-        dirignore = util.always  # skip step 2
-    elif match.prefix():  # match.match, no patterns
-        skipstep3 = True
 
-    if not exact and self._checkcase:
+    if not exact and self.dirstate._checkcase:
         # note that even though we could receive directory entries, we're only
         # interested in checking if a file with the same name exists. So only
         # normalize files if possible.
-        normalize = self._normalizefile
-        skipstep3 = False
+        normalize = self.dirstate._normalizefile
     else:
         normalize = None
-
-    # step 1: find all explicit files
-    results, work, dirsnotfound = self._walkexplicit(match)
-
-    skipstep3 = skipstep3 and not (work or dirsnotfound)
-    work = [d for d in work if not dirignore(d[0])]
-
-    if not work and (exact or skipstep3):
-        del results[".hg"]
-        return results
 
     # step 2: query Watchman
     try:
@@ -482,7 +422,7 @@ def _walk(orig, self, match, unknown, ignored, full, event):
         # XXX: Legacy scuba logging. Remove this once the source of truth
         # is moved to the Rust Event.
         self._ui.log("fsmonitor_status", fsmonitor_status="exception")
-        return bail("exception during run")
+        raise fsmonitorfallback("exception during run")
     else:
         # We need to propagate the last observed clock up so that we
         # can use it for our next query
@@ -519,7 +459,7 @@ def _walk(orig, self, match, unknown, ignored, full, event):
 
             if state.walk_on_invalidate:
                 state.invalidate(reason="fresh_instance")
-                return bail("fresh instance")
+                raise fsmonitorfallback("fresh instance")
             fresh_instance = True
             # Ignore any prior noteable files from the state info
             notefiles = []
@@ -535,6 +475,8 @@ def _walk(orig, self, match, unknown, ignored, full, event):
             self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
         else:
             self._ui.log("fsmonitor_status", fsmonitor_status="normal")
+
+    results = {}
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
@@ -591,6 +533,8 @@ def _walk(orig, self, match, unknown, ignored, full, event):
                     results[fname] = entry
         elif fname in dmap and (matchalways or matchfn(fname)):
             results[fname] = None
+        elif fname in match.files():
+            match.bad(fname, filesystem.badtype(kind))
 
     # step 3: query notable files we don't already know about
     # XXX try not to iterate over the entire dmap
@@ -625,7 +569,7 @@ def _walk(orig, self, match, unknown, ignored, full, event):
 
     # audit returns False for paths with one of its parent directories being a
     # symlink.
-    audit = pathutil.pathauditor(self._root, cached=True).check
+    audit = pathutil.pathauditor(self.dirstate._root, cached=True).check
     auditpass = [f for f in visit if audit(f)]
     auditpass.sort()
     auditfail = visit.difference(auditpass)
@@ -663,8 +607,8 @@ def _walk(orig, self, match, unknown, ignored, full, event):
     state.setdroplist(droplist)
     state.setignorelist(ignorelist)
 
-    del results[".hg"]
-    return results
+    results.pop(".hg", None)
+    return results.iteritems()
 
 
 def overridestatus(
@@ -886,30 +830,77 @@ class poststatus(object):
 def makedirstate(repo, dirstate):
     class fsmonitordirstate(dirstate.__class__):
         def _fsmonitorinit(self, repo):
-            # _fsmonitordisable is used in paranoid mode
-            self._fsmonitordisable = False
-            self._fsmonitorstate = repo._fsmonitorstate
-            self._watchmanclient = watchmanclient.getclientforrepo(repo)
-            self._repo = weakref.proxy(repo)
-
-        def walk(self, *args, **kwargs):
-            orig = super(fsmonitordirstate, self).walk
-            if self._fsmonitordisable:
-                return orig(*args, **kwargs)
-            with progress.spinner(self._ui, "scanning working copy"):
-                return overridewalk(orig, self, *args, **kwargs)
+            self._fs = fsmonitorfilesystem(self._root, self, repo)
 
         def rebuild(self, *args, **kwargs):
             if not kwargs.get("exact"):
-                self._fsmonitorstate.invalidate()
+                self._fs._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).rebuild(*args, **kwargs)
 
         def invalidate(self, *args, **kwargs):
-            self._fsmonitorstate.invalidate()
+            self._fs._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
 
     dirstate.__class__ = fsmonitordirstate
     dirstate._fsmonitorinit(repo)
+
+
+class fsmonitorfallback(Exception):
+    pass
+
+
+class fsmonitorfilesystem(filesystem.physicalfilesystem):
+    def __init__(self, root, dirstate, repo):
+        super(fsmonitorfilesystem, self).__init__(root, dirstate)
+
+        # _fsmonitordisable is used in paranoid mode
+        self._fsmonitordisable = False
+        self._fsmonitorstate = repo._fsmonitorstate
+        self._watchmanclient = watchmanclient.getclientforrepo(repo)
+        self._repo = weakref.proxy(repo)
+        self._ui = repo.ui
+
+    def pendingchanges(self, match=None, listignored=False):
+        def bail(reason):
+            self._ui.debug("fsmonitor: fallback to core status, %s\n" % reason)
+            return super(fsmonitorfilesystem, self).pendingchanges(
+                match, listignored=listignored
+            )
+
+        if self._fsmonitordisable:
+            return bail("fsmonitor disabled")
+        if listignored:
+            return bail("listing ignored files")
+        if not self._watchmanclient.available():
+            return bail("client unavailable")
+
+        with progress.spinner(self._ui, "scanning working copy"):
+            try:
+                return self._pendingchanges(match)
+            except fsmonitorfallback as ex:
+                return bail(ex.message)
+
+    def _pendingchanges(self, match=None):
+        if match is None:
+            match = util.always
+
+        self.dirstate._map.preload()
+        for fn, st in self._fsmonitorwalk(match):
+            changed = self._ischanged(fn, st)
+            if changed:
+                yield changed
+
+    @util.timefunction("fsmonitorwalk", 0, "_ui")
+    def _fsmonitorwalk(self, match):
+        fsmonitorevent = {}
+        try:
+            return _walk(self, match, fsmonitorevent)
+        finally:
+            try:
+                blackbox.log({"fsmonitor": fsmonitorevent})
+            except UnicodeDecodeError:
+                # test-adding-invalid-utf8.t hits this path
+                pass
 
 
 def wrapdirstate(orig, self):
@@ -925,17 +916,17 @@ def _racedetect(orig, self, other, s, match, listignored, listclean, listunknown
     detectrace = repo.ui.configbool("fsmonitor", "detectrace") or util.parsebool(
         encoding.environ.get("HGDETECTRACE", "")
     )
-    if detectrace and util.safehasattr(repo.dirstate, "_watchmanclient"):
-        state = repo.dirstate._fsmonitorstate
+    if detectrace and util.safehasattr(repo.dirstate._fs, "_watchmanclient"):
+        state = repo.dirstate._fs._fsmonitorstate
         try:
-            startclock = repo.dirstate._watchmanclient.command(
+            startclock = repo.dirstate._fs._watchmanclient.command(
                 "clock", {"sync_timeout": int(state.timeout * 1000)}
             )["clock"]
         except Exception as ex:
             repo.ui.warn(_("cannot detect status race: %s\n") % ex)
             detectrace = False
     result = orig(self, other, s, match, listignored, listclean, listunknown)
-    if detectrace and util.safehasattr(repo.dirstate, "_fsmonitorstate"):
+    if detectrace and util.safehasattr(repo.dirstate._fs, "_fsmonitorstate"):
         raceresult = repo._watchmanclient.command(
             "query",
             {
@@ -1082,11 +1073,11 @@ def debugrefreshwatchmanclock(ui, repo):
         # Make sure watchman is watching the repo. This might trigger a
         # filesystem crawl.
         try:
-            repo.dirstate._watchmanclient.command("watch")
+            repo.dirstate._fs._watchmanclient.command("watch")
         except Exception as ex:
             raise error.Abort(_("cannot watch repo: %s") % ex)
         try:
-            clock = repo.dirstate._watchmanclient.command(
+            clock = repo.dirstate._fs._watchmanclient.command(
                 "clock", {"sync_timeout": 10 * 1000}
             )["clock"]
         except Exception as ex:

@@ -34,6 +34,9 @@ class physicalfilesystem(object):
         except KeyError:
             t = ("?", 0, 0, 0)
 
+        if st is None:
+            return (fn, False, False)
+
         state = t[0]
         if state in "a?":
             return (fn, True, False)
