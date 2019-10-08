@@ -6509,9 +6509,24 @@ def update(
 
         repo.ui.setconfig("ui", "forcemerge", tool, "update")
 
-        return hg.updatetotally(
+        if merge:
+            # Write down a state so we know how to continue after resolving
+            # conflicts.
+            repo.localvfs.write("updatemergestate", "")
+
+        result = hg.updatetotally(
             ui, repo, rev, brev, clean=clean, updatecheck=updatecheck
         )
+
+        if merge:
+            ms = mergemod.mergestate.read(repo)
+            # Are conflicts resolved?
+            # If so, exit the updatemergestate.
+            if not ms.active() or ms.unresolvedcount() == 0:
+                ms.reset()
+                repo.localvfs.tryunlink("updatemergestate")
+
+        return result
 
 
 @command(

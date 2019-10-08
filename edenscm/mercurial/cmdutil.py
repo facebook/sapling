@@ -4238,6 +4238,13 @@ unfinishedstates = [
         _("use 'hg graft --continue' or 'hg graft --abort' to abort"),
     ),
     (
+        "updatemergestate",
+        True,
+        True,
+        _("update --merge in progress"),
+        _("use 'hg update --continue' to continue"),
+    ),
+    (
         "updatestate",
         True,
         False,
