@@ -301,7 +301,7 @@ sh % "hg graft 1 5 4 3 'merge()' 2" == r"""
 
 # Continue without resolve should fail:
 
-sh % "hg graft -c" == r"""
+sh % "hg continue" == r"""
     grafting 4:9c233e8e184d "4"
     abort: unresolved merge conflicts (see 'hg help resolve')
     [255]"""

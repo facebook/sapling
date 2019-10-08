@@ -1137,7 +1137,7 @@ sh % "hg unshelve" == r"""
 sh % "echo somethingsomething" > ".hg/shelvedstate"
 
 # Unshelve --continue fails with appropriate message if shelvedstate is corrupted
-sh % "hg unshelve --continue" == r"""
+sh % "hg continue" == r"""
     abort: corrupted shelved state file
     (please run hg unshelve --abort to abort unshelve operation)
     [255]"""

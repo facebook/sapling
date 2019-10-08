@@ -16,6 +16,8 @@ import subprocess
 import sys
 import time
 
+import bindings
+
 from ... import hgdemandimport
 from .. import (
     archival,
@@ -1880,6 +1882,17 @@ def config(ui, repo, *values, **opts):
     if matched:
         return 0
     return 1
+
+
+@command("continue|cont")
+def continuecmd(ui, repo):
+    """resume operation after resolving conflicts"""
+    for name, cmd in cmdutil.afterresolvedstates:
+        if repo.localvfs.exists(name):
+            args = shlex.split(cmd)
+            return bindings.commands.run(args, ui.fin, ui.fout, ui.ferr)
+    else:
+        raise error.Abort(_("nothing to continue"))
 
 
 @command(

@@ -17,6 +17,7 @@ Show all commands except debug commands
   clone
   commit
   config
+  continue
   copy
   diff
   doctor
@@ -273,6 +274,7 @@ Show all commands + options
   clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   config: untrusted, edit, local, global, template
+  continue: 
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugapplystreamclonebundle: 

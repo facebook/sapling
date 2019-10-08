@@ -74,3 +74,20 @@ sh % "hg status" == "M A"
 createstate()
 sh % "hg update --clean . -q"
 sh % "hg status"
+
+# Test 'hg continue'
+sh % "hg continue" == r"""
+    abort: nothing to continue
+    [255]"""
+
+createstate()
+sh % "hg continue" == r"""
+    abort: outstanding merge conflicts
+    (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
+    [255]"""
+
+sh % "hg resolve -m A" == r"""
+    (no more unresolved files)
+    continue: hg update --continue"""
+
+sh % "hg continue"
