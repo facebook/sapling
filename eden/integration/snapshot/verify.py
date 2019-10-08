@@ -8,12 +8,11 @@
 # pyre-strict
 
 import abc
-import collections.abc
 import os
 import stat as stat_mod
 import typing
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, TypeVar, Union
+from typing import Dict, Iterator, List, Mapping, Optional, TypeVar, Union
 
 from eden.integration.lib import hgrepo
 
@@ -103,8 +102,7 @@ class ExpectedSocket(ExpectedFileBase):
 _ExpectedFile = TypeVar("_ExpectedFile", bound=ExpectedFileBase)
 
 
-# pyre-fixme[24]: Generic type `typing.Mapping` expects 2 type parameters.
-class ExpectedFileSet(collections.abc.Mapping):
+class ExpectedFileSet(Mapping[Path, ExpectedFileBase]):
     """
     ExpectedFileSet is basically a container of ExpectedFileBase objects,
     but also provides some helper methods for accessing and updating entries by path.
@@ -116,8 +114,8 @@ class ExpectedFileSet(collections.abc.Mapping):
     def __len__(self) -> int:
         return len(self._entries)
 
-    def __iter__(self) -> Iterator[ExpectedFileBase]:
-        return iter(self._entries.values())
+    def __iter__(self) -> Iterator[Path]:
+        return iter(self._entries.keys())
 
     def __getitem__(self, path: _AnyPath) -> ExpectedFileBase:
         key = Path(path)
@@ -209,7 +207,7 @@ class SnapshotVerifier:
     def verify_directory(self, path: Path, expected: ExpectedFileSet) -> None:
         """Confirm that the contents of a directory match the expected file state."""
         found_files = enumerate_directory(path)
-        for expected_entry in expected:
+        for expected_entry in expected.values():
             file_stat = found_files.pop(expected_entry.path, None)
             if file_stat is None:
                 self.error(f"{expected_entry.path}: file not present in snapshot")
