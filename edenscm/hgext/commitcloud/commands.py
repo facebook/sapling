@@ -382,25 +382,9 @@ def cloudbackup(ui, repo, *revs, **opts):
     except KeyError:
         pass
 
-    remotepath = ccutil.getremotepath(repo, dest)
-    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
-
-    with backuplock.lock(repo):
-        # Load the backup state under the repo lock to ensure a consistent view.
-        with repo.lock():
-            state = backupstate.BackupState(repo, remotepath)
-        backedup, failed = backup.backup(
-            repo,
-            state,
-            remotepath,
-            getconnection,
-            revs,
-            backupsnapshots=backupsnapshots,
-        )
-
-        if revs is None:
-            # For a full backup, also update the backup bookmarks.
-            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
+    backedup, failed = backup.backup(
+        repo, revs, dest=dest, connect_opts=opts, backupsnapshots=backupsnapshots
+    )
 
     if backedup:
         repo.ui.status(
@@ -687,11 +671,7 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                 _("error: argument 'workspace-version' should be a number")
             )
 
-    remotepath = ccutil.getremotepath(repo, dest)
-    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
-
-    with backuplock.lock(repo):
-        ret = sync.sync(repo, remotepath, getconnection, cloudrefs, full, version)
+    ret = sync.sync(repo, cloudrefs, full, version, dest=dest, connect_opts=opts)
     background.backgroundbackupother(repo, dest=dest)
     return ret
 

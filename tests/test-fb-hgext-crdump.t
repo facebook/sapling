@@ -63,6 +63,7 @@ Test obsolete markers
                   }
               ],
               "bookmarks": [],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -129,6 +130,7 @@ Test basic dump of two commits
                   }
               ],
               "bookmarks": [],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -162,6 +164,7 @@ Test basic dump of two commits
                   }
               ],
               "bookmarks": [],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -198,6 +201,7 @@ Test basic dump of two commits
               "bookmarks": [
                   "bookmark1"
               ],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -367,6 +371,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -397,6 +402,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -427,6 +433,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "commit_cloud": false,
               "date": [
                   0,
                   0
@@ -457,6 +464,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "commit_cloud": false,
               "date": [
                   0,
                   0

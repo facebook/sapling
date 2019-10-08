@@ -89,11 +89,19 @@ def _getsnapshots(repo, lastsyncstate):
 
 
 @perftrace.tracefunc("Cloud Sync")
-def sync(
-    repo, remotepath, getconnection, cloudrefs=None, full=False, cloudversion=None
+def sync(repo, *args, **kwargs):
+    with backuplock.lock(repo):
+        return _sync(repo, *args, **kwargs)
+
+
+def _sync(
+    repo, cloudrefs=None, full=False, cloudversion=None, connect_opts=None, dest=None
 ):
     ui = repo.ui
     start = util.timer()
+
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
 
     startnode = repo["."].node()
 
@@ -148,7 +156,7 @@ def sync(
     # Load the backup state under the repo lock to ensure a consistent view.
     with repo.lock():
         state = backupstate.BackupState(repo, remotepath)
-    backedup, failed = backup.backup(
+    backedup, failed = backup._backup(
         repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
     )
 

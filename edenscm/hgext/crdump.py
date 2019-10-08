@@ -25,6 +25,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
+from . import commitcloud
+
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
@@ -63,6 +65,7 @@ def crdump(ui, repo, *revs, **opts):
             "desc": commit message,
             "patch_file": path to file containing patch in unified diff format
                           relative to output_directory,
+            "commit_cloud": true if the commit is in commit cloud,
             "files": list of files touched by commit,
             "binary_files": [
               {
@@ -123,6 +126,12 @@ def crdump(ui, repo, *revs, **opts):
                 lfs = extensions.find("lfs")
             except KeyError:
                 pass  # lfs extension is not enabled
+
+        try:
+            notbackedup = commitcloud.backup.backup(repo, revs)[1]
+        except Exception:
+            notbackedup = set(repo[rev].node() for rev in revs)
+
         for rev in revs:
             ctx = repo[rev]
             rdata = {
@@ -133,6 +142,7 @@ def crdump(ui, repo, *revs, **opts):
                 "p1": {"node": ctx.parents()[0].hex()},
                 "user": encoding.fromlocal(ctx.user()),
                 "bookmarks": map(encoding.fromlocal, ctx.bookmarks()),
+                "commit_cloud": False if ctx.node() in notbackedup else True,
             }
             if ctx.parents()[0].phase() != phases.public:
                 # we need this only if parent is in the same draft stack

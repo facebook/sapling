@@ -8,11 +8,35 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, perftrace, smartset
 from edenscm.mercurial.i18n import _, _n
 
-from . import backuplock, dependencies
+from . import backupbookmarks, backuplock, backupstate, dependencies, util as ccutil
+
+
+def backup(repo, revs, connect_opts=None, dest=None, backupsnapshots=False):
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
+
+    with backuplock.lock(repo):
+        # Load the backup state under the repo lock to ensure a consistent view.
+        with repo.lock():
+            state = backupstate.BackupState(repo, remotepath)
+        backedup, failed = _backup(
+            repo,
+            state,
+            remotepath,
+            getconnection,
+            revs,
+            backupsnapshots=backupsnapshots,
+        )
+
+        if revs is None:
+            # For a full backup, also update the backup bookmarks.
+            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
+
+    return backedup, failed
 
 
 @perftrace.tracefunc("Backup Draft Commits to Commit Cloud")
-def backup(
+def _backup(
     repo, backupstate, remotepath, getconnection, revs=None, backupsnapshots=False
 ):
     """backs up the given revisions to commit cloud
