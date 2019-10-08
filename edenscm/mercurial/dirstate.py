@@ -17,6 +17,7 @@ import weakref
 from . import (
     encoding,
     error,
+    filesystem,
     hintutil,
     match as matchmod,
     pathutil,
@@ -116,6 +117,7 @@ class dirstate(object):
             self._mapcls = treedirstate.treedirstatemap
         else:
             self._mapcls = dirstatemap
+        self._fs = filesystem.physicalfilesystem(root, self)
 
     @contextlib.contextmanager
     def parentchange(self):

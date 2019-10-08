@@ -167,6 +167,7 @@ from edenscm.mercurial import (
     encoding,
     error,
     extensions,
+    filesystem,
     localrepo,
     match as matchmod,
     pathutil,
@@ -274,32 +275,34 @@ def _finddirs(dirstate):
     return result["files"]
 
 
-def wrappurge(orig, repo, match, findfiles, finddirs, includeignored):
+def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     # If includeignored is set, we always need to do a full rewalk.
     if includeignored:
-        return orig(repo, match, findfiles, finddirs, includeignored)
+        return orig(dirstate, match, findfiles, finddirs, includeignored)
 
+    ui = dirstate._ui
     files = []
     dirs = []
     usefastdirs = True
     if finddirs:
         try:
-            fastdirs = _finddirs(repo.dirstate)
+            fastdirs = _finddirs(dirstate)
         except Exception:
-            repo.ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
+            ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
             usefastdirs = False
 
     if findfiles or not usefastdirs:
-        files, dirs = orig(repo, match, findfiles, finddirs and not usefastdirs, False)
+        files, dirs = orig(
+            dirstate, match, findfiles, finddirs and not usefastdirs, False
+        )
 
     if finddirs and usefastdirs:
+        wvfs = dirstate._repo.wvfs
         dirs = (
             f
             for f in sorted(fastdirs, reverse=True)
             if (
-                match(f)
-                and not os.listdir(repo.wjoin(f))
-                and not repo.dirstate._dirignore(f)
+                match(f) and not os.listdir(wvfs.join(f)) and not dirstate._dirignore(f)
             )
         )
 
@@ -974,13 +977,7 @@ def extsetup(ui):
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, "symlink", wrapsymlink)
 
-    def purgeloaded(loaded=False):
-        if not loaded:
-            return
-        purge = extensions.find("purge")
-        extensions.wrapfunction(purge, "findthingstopurge", wrappurge)
-
-    extensions.afterloaded("purge", purgeloaded)
+    extensions.wrapfunction(filesystem, "findthingstopurge", wrappurge)
     extensions.wrapfunction(context.workingctx, "_buildstatus", _racedetect)
 
 

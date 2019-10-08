@@ -40,39 +40,6 @@ command = registrar.command(cmdtable)
 testedwith = "ships-with-hg-core"
 
 
-def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
-    """Find files and/or directories that should be purged.
-
-    Returns a pair (files, dirs), where files is an iterable of files to
-    remove, and dirs is an iterable of directories to remove.
-    """
-    if finddirs:
-        directories = [f for f in match.files() if repo.wvfs.isdir(f)]
-        match.traversedir = directories.append
-
-    status = repo.status(match=match, ignored=includeignored, unknown=True)
-
-    if findfiles:
-        files = sorted(status.unknown + status.ignored)
-    else:
-        files = []
-
-    if finddirs:
-        # Use a generator expression to lazily test for directory contents,
-        # otherwise nested directories that are being removed would be counted
-        # when in reality they'd be removed already by the time the parent
-        # directory is to be removed.
-        dirs = (
-            f
-            for f in sorted(directories, reverse=True)
-            if (match(f) and not os.listdir(repo.wjoin(f)))
-        )
-    else:
-        dirs = []
-
-    return files, dirs
-
-
 @command(
     "purge|clean",
     [
@@ -126,27 +93,26 @@ def purge(ui, repo, *dirs, **opts):
         removefiles = True
         removedirs = True
 
-    def remove(remove_func, name):
-        if act:
-            try:
-                remove_func(repo.wjoin(name))
-            except OSError:
-                m = _("%s cannot be removed") % name
-                if opts.get("abort_on_err"):
-                    raise error.Abort(m)
-                ui.warn(_("warning: %s\n") % m)
-        else:
-            ui.write("%s%s" % (name, eol))
-
     match = scmutil.match(repo[None], dirs, opts)
-    files, dirs = findthingstopurge(repo, match, removefiles, removedirs, removeignored)
 
-    for f in files:
-        if act:
+    status = repo.dirstate.status(match, removeignored, False, True)
+    keepfiles = status.added + status.modified
+    files, dirs, errors = repo.dirstate._fs.purge(
+        match, keepfiles, removefiles, removedirs, removeignored, not act
+    )
+    if act:
+        for f in files:
             ui.note(_("removing file %s\n") % f)
-        remove(util.unlink, f)
 
-    for f in dirs:
-        if act:
+        for f in dirs:
             ui.note(_("removing directory %s\n") % f)
-        remove(os.rmdir, f)
+    else:
+        for f in files:
+            ui.write("%s%s" % (f, eol))
+        for f in dirs:
+            ui.write("%s%s" % (f, eol))
+
+    for m in errors:
+        if opts.get("abort_on_err"):
+            raise error.Abort(m)
+        ui.warn(_("warning: %s\n") % m)
