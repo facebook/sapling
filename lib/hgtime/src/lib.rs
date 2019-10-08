@@ -112,18 +112,58 @@ impl HgTime {
         } else {
             date.to_string()
         };
+        let mut now = None; // cached, lazily calculated "now"
 
         // Try all formats!
         for naive_format in DEFAULT_FORMATS.iter() {
+            // Fill out default fields.  See mercurial.util.strdate.
+            // This makes it possible to parse partial dates like "month/day",
+            // or "hour:minute", since the missing fields will be filled.
+            let mut default_format = String::new();
+            let mut date_with_defaults = date.clone();
+            let mut use_now = false;
+            for part in ["S", "M", "HI", "d", "mb", "Yy"].iter() {
+                if part
+                    .chars()
+                    .any(|ch| naive_format.contains(&format!("%{}", ch)))
+                {
+                    // For example, if the user specified "d" (day), but
+                    // not other things, we should use 0 for "H:M:S", and
+                    // "now" for "Y-m" (year, month).
+                    use_now = true;
+                } else {
+                    let format_char = part.chars().nth(0).unwrap();
+                    default_format += &format!(" @%{}", format_char);
+                    if use_now {
+                        // For example, if the user only specified "month/day",
+                        // then we should use the current "year", instead of
+                        // year 0.
+                        let now = now.get_or_insert_with(|| Local::now());
+                        date_with_defaults +=
+                            &format!(" @{}", now.format(&format!("%{}", format_char)));
+                    } else {
+                        // For example, if the user only specified
+                        // "hour:minute", then we should use "second 0", instead
+                        // of the current second.
+                        match format_char {
+                            'H' | 'M' | 'S' => date_with_defaults += " @00",
+                            'Y' | 'm' | 'd' => date_with_defaults += " @1",
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+            }
+
             // Try parse with timezone.
             // See https://docs.rs/chrono/0.4.9/chrono/format/strftime/index.html#specifiers
-            let format = format!("{}%#z", naive_format);
-            if let Ok(parsed) = DateTime::parse_from_str(&date, &format) {
+            let format = format!("{}%#z{}", naive_format, default_format);
+            if let Ok(parsed) = DateTime::parse_from_str(&date_with_defaults, &format) {
                 return Some(parsed.into());
             }
 
             // Without timezone.
-            if let Ok(parsed) = NaiveDateTime::parse_from_str(&date, naive_format) {
+            let format = format!("{}{}", naive_format, default_format);
+            if let Ok(parsed) = NaiveDateTime::parse_from_str(&date_with_defaults, &format) {
                 return Some(parsed.into());
             }
         }
@@ -221,8 +261,8 @@ mod tests {
         assert_eq!(t("1000000000 -16200"), "1000000000 -16200");
         assert_eq!(t("2006-02-01 1:00:30PM +0000"), "1138798830 0");
 
-        assert_eq!(d("1:00:30PM +0000", Duration::days(1)), "fail");
-        assert_eq!(d("02/01", Duration::weeks(52)), "fail");
+        assert_eq!(d("1:00:30PM +0000", Duration::days(1)), "0");
+        assert_eq!(d("02/01", Duration::weeks(52)), "0");
         assert_eq!(d("today", Duration::days(1)), "0");
         assert_eq!(d("yesterday", Duration::days(2)), "0");
 
@@ -237,29 +277,29 @@ mod tests {
         assert_eq!(t("2016-07-27 121021Z"), "1469621421 0");
 
         // Months
-        assert_eq!(t("Jan 2018"), "fail");
-        assert_eq!(t("Feb 2018"), "fail");
-        assert_eq!(t("Mar 2018"), "fail");
-        assert_eq!(t("Apr 2018"), "fail");
-        assert_eq!(t("May 2018"), "fail");
-        assert_eq!(t("Jun 2018"), "fail");
-        assert_eq!(t("Jul 2018"), "fail");
-        assert_eq!(t("Sep 2018"), "fail");
-        assert_eq!(t("Oct 2018"), "fail");
-        assert_eq!(t("Nov 2018"), "fail");
-        assert_eq!(t("Dec 2018"), "fail");
+        assert_eq!(t("Jan 2018"), "1514772000 7200");
+        assert_eq!(t("Feb 2018"), "1517450400 7200");
+        assert_eq!(t("Mar 2018"), "1519869600 7200");
+        assert_eq!(t("Apr 2018"), "1522548000 7200");
+        assert_eq!(t("May 2018"), "1525140000 7200");
+        assert_eq!(t("Jun 2018"), "1527818400 7200");
+        assert_eq!(t("Jul 2018"), "1530410400 7200");
+        assert_eq!(t("Sep 2018"), "1535767200 7200");
+        assert_eq!(t("Oct 2018"), "1538359200 7200");
+        assert_eq!(t("Nov 2018"), "1541037600 7200");
+        assert_eq!(t("Dec 2018"), "1543629600 7200");
         assert_eq!(t("Foo 2018"), "fail");
 
         // Extra tests not in test-parse-date.t
-        assert_eq!(d("Jan", Duration::weeks(52)), "fail");
-        assert_eq!(d("Jan 1", Duration::weeks(52)), "fail"); // 1 is not considered as "year 1"
-        assert_eq!(d("4-26", Duration::weeks(52)), "fail");
-        assert_eq!(d("4/26", Duration::weeks(52)), "fail");
-        assert_eq!(t("4/26/2000"), "fail");
-        assert_eq!(t("Apr 26 2000"), "fail");
-        assert_eq!(t("2020"), "fail"); // 2020 is considered as a "year"
-        assert_eq!(t("2020 GMT"), "fail");
-        assert_eq!(t("2020-12"), "fail");
+        assert_eq!(d("Jan", Duration::weeks(52)), "0");
+        assert_eq!(d("Jan 1", Duration::weeks(52)), "0"); // 1 is not considered as "year 1"
+        assert_eq!(d("4-26", Duration::weeks(52)), "0");
+        assert_eq!(d("4/26", Duration::weeks(52)), "0");
+        assert_eq!(t("4/26/2000"), "956714400 7200");
+        assert_eq!(t("Apr 26 2000"), "956714400 7200");
+        assert_eq!(t("2020"), "1577844000 7200"); // 2020 is considered as a "year"
+        assert_eq!(t("2020 GMT"), "1577836800 0");
+        assert_eq!(t("2020-12"), "1606788000 7200");
         assert_eq!(t("2020-13"), "fail");
 
         assert_eq!(t("Fri, 20 Sep 2019 12:15:13 -0700"), "1569006913 25200"); // date --rfc-2822
