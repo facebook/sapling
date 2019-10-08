@@ -766,6 +766,13 @@ mod tests {
             .unwrap()
     }
 
+    fn iter(rotate: &RotateLog) -> Vec<&[u8]> {
+        rotate
+            .iter()
+            .collect::<crate::Result<Vec<&[u8]>>>()
+            .unwrap()
+    }
+
     #[test]
     fn test_trivial_append_lookup() {
         let dir = tempdir().unwrap();
@@ -888,6 +895,46 @@ mod tests {
         assert_eq!(rotate.logs().len(), 3);
         rotate.force_rotate().unwrap();
         assert_eq!(rotate.logs().len(), 3);
+    }
+
+    #[test]
+    fn test_lookup_rotated() {
+        // Look up or iteration should work with rotated logs.
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(1)
+            .max_log_count(3)
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)]);
+
+        // Prepare test data
+        let mut rotate1 = open_opts.open(&dir).unwrap();
+        rotate1.append(b"a1").unwrap();
+        assert_eq!(rotate1.sync().unwrap(), 1);
+        rotate1.append(b"a2").unwrap();
+        assert_eq!(rotate1.sync().unwrap(), 2);
+
+        // Warm up rotate1.
+        assert_eq!(lookup(&rotate1, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(iter(&rotate1), vec![b"a1", b"a2"]);
+
+        // rotate2 has lazy logs
+        let rotate2 = open_opts.open(&dir).unwrap();
+
+        // Trigger rotate from another RotateLog
+        let mut rotate3 = open_opts.open(&dir).unwrap();
+        rotate3.append(b"a3").unwrap();
+        assert_eq!(rotate3.sync().unwrap(), 3);
+
+        // rotate1 can still use its existing indexes even if "a1"
+        // might have been deleted (on Unix).
+        assert_eq!(lookup(&rotate1, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(iter(&rotate1), vec![b"a1", b"a2"]);
+
+        // rotate2 does not have access to the deleted "a1".
+        // (on Windows, 'meta' can be deleted, while mmap-ed files cannot)
+        assert_eq!(lookup(&rotate2, b"a"), vec![b"a2"]);
+        assert_eq!(iter(&rotate2), vec![b"a2"]);
     }
 
     #[test]
