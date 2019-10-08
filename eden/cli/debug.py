@@ -20,6 +20,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    DefaultDict,
     Dict,
     Iterator,
     List,
@@ -414,17 +415,46 @@ class FileStatsCMD(Subcmd):
         ]
 
     def make_summary(self, paths_and_sizes: List[Tuple[str, int]]) -> Dict[str, Any]:
+        # large files larger than 10mb are processed differently by mercurial
         large_paths_and_sizes = [
             (path, size) for path, size in paths_and_sizes if size > 10 * MB
         ]
         summary = {
             "file_count": len(paths_and_sizes),
             "total_bytes": sum(size for _, size in paths_and_sizes),
-            "large_file_count (> 10MB)": len(large_paths_and_sizes),
+            "large_file_count": len(large_paths_and_sizes),
             "large_files": self.make_file_entries(large_paths_and_sizes),
+            "largest_directories_by_file_count": self.get_largest_directories_by_count(
+                paths_and_sizes
+            ),
         }
 
         return summary
+
+    @staticmethod
+    def get_largest_directories_by_count(
+        paths_and_sizes: List[Tuple[str, int]], min_file_count: int = 1000
+    ) -> List[Dict[str, Union[int, str]]]:
+        """
+        Returns a list of directories that contain more than min_file_count
+        files.
+        """
+        directories: DefaultDict[str, int] = collections.defaultdict(int)
+        directories["."] = 0
+        for filepath, _ in paths_and_sizes:
+            for parent in Path(filepath).parents:
+                directories[str(parent)] += 1
+
+        directory_list: List[Dict[str, Union[int, str]]] = sorted(
+            (
+                {"path": path, "file_count": file_count}
+                for path, file_count in directories.items()
+                if file_count >= min_file_count
+            ),
+            key=lambda d: d["path"],
+        )
+
+        return directory_list
 
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
