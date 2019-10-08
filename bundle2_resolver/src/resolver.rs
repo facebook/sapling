@@ -37,7 +37,7 @@ use mercurial_types::{
     HgChangesetId, HgNodeKey, RepoPath,
 };
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams, RepoReadOnly};
-use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
+use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use phases::{self, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
@@ -53,6 +53,7 @@ type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
+type UploadedHgBonsaiMap = HashMap<HgChangesetId, BonsaiChangeset>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
 // Mercurial substitutes the `onto` parameter with this bookmark name when
@@ -284,7 +285,7 @@ fn resolve_push(
                     let changegroup_id = Some(cg_push.part_id);
                     resolver
                         .upload_changesets(ctx, cg_push, manifests, false)
-                        .map(move |()| (changegroup_id, bookmark_push, bundle2))
+                        .map(move |_| (changegroup_id, bookmark_push, bundle2))
                         .boxify()
                 } else {
                     ok((None, bookmark_push, bundle2)).boxify()
@@ -431,7 +432,7 @@ fn resolve_pushrebase(
                         manifests,
                         will_rebase,
                     )
-                    .map(move |()| (changesets, onto_params, bundle2)).right_future()
+                    .map(move |_| (changesets, onto_params, bundle2)).right_future()
             }
         })
         .and_then({
@@ -1166,7 +1167,7 @@ impl Bundle2Resolver {
         cg_push: ChangegroupPush,
         manifests: Manifests,
         force_draft: bool,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<UploadedHgBonsaiMap, Error> {
         let changesets = try_boxfuture!(toposort_changesets(cg_push.changesets));
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
@@ -1224,9 +1225,9 @@ impl Bundle2Resolver {
         // of their parents and so on. However that might cause stackoverflow on very large pushes
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
-        stream::iter_ok(changesets)
+        let res: BoxFuture<UploadedHgBonsaiMap, Error> = stream::iter_ok::<_, Error>(changesets)
             .chunks(chunk_size)
-            .for_each(move |chunk| {
+            .fold(UploadedHgBonsaiMap::new(), move |mut mapping, chunk| {
                 stream::iter_ok(chunk)
                     .fold(HashMap::new(), {
                         cloned!(upload_changeset_fun);
@@ -1236,20 +1237,29 @@ impl Bundle2Resolver {
                     })
                     .and_then({
                         move |uploaded_changesets| {
-                            stream::iter_ok(
-                                uploaded_changesets
-                                    .into_iter()
-                                    .map(move |(_, handle)| handle.get_completed_changeset()),
-                            )
+                            stream::iter_ok(uploaded_changesets.into_iter().map(
+                                move |(hg_cs_id, handle)| {
+                                    handle.get_completed_changeset().map(move |shared_item| {
+                                        let bcs = shared_item.0.clone();
+                                        (hg_cs_id, bcs)
+                                    })
+                                },
+                            ))
                             .buffered(chunk_size)
                             .map_err(Error::from)
-                            .for_each(|_| Ok(()))
+                            .collect()
                         }
                     })
+                    .map(move |uploaded| {
+                        mapping.extend(uploaded.into_iter());
+                        mapping
+                    })
+                    .boxify()
             })
             .chain_err(ErrorKind::WhileUploadingData(changesets_hashes))
             .from_err()
-            .boxify()
+            .boxify();
+        res
     }
 
     fn log_commits_to_scribe(
