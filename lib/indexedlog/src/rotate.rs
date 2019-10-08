@@ -130,7 +130,7 @@ impl OpenOptions {
                             .context("not creating new logs since OpenOption::create is not set");
                     } else {
                         fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
-                        let _lock = ScopedDirLock::new(&dir)?;
+                        let lock = ScopedDirLock::new(&dir)?;
 
                         match read_latest_raw(dir) {
                             Ok(latest) => {
@@ -143,7 +143,7 @@ impl OpenOptions {
                                         // latest is fine, but logs cannot be read.
                                         // Try auto recover by creating an empty log.
                                         let latest = latest.wrapping_add(1);
-                                        match create_empty_log(Some(dir), &self, latest) {
+                                        match create_empty_log(Some(dir), &self, latest, &lock) {
                                             Ok(new_log) => {
                                                 if let Ok(logs) = read_logs(dir, &self, latest) {
                                                     (latest, logs)
@@ -165,7 +165,8 @@ impl OpenOptions {
                                     // Most likely, it is a new empty directory.
                                     // Create an empty log and update latest.
                                     let latest = 0;
-                                    let new_log = create_empty_log(Some(dir), &self, latest)?;
+                                    let new_log =
+                                        create_empty_log(Some(dir), &self, latest, &lock)?;
                                     (latest, vec![create_log_cell(new_log)])
                                 } else {
                                     // latest cannot be read for other reasons.
@@ -430,10 +431,15 @@ impl RotateLog {
     /// This function requires it's protected by a directory lock, and the
     /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
     /// and do not have dirty entries in non-writable logs).
-    fn rotate_internal(&mut self, _lock: &ScopedDirLock) -> crate::Result<()> {
+    fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
         // Create a new Log. Bump latest.
         let next = self.latest.wrapping_add(1);
-        let log = create_empty_log(Some(self.dir.as_ref().unwrap()), &self.open_options, next)?;
+        let log = create_empty_log(
+            Some(self.dir.as_ref().unwrap()),
+            &self.open_options,
+            next,
+            &lock,
+        )?;
         if self.logs.len() >= self.open_options.max_log_count as usize {
             self.logs.pop();
         }
@@ -633,6 +639,7 @@ fn create_empty_log(
     dir: Option<&Path>,
     open_options: &OpenOptions,
     latest: u8,
+    _lock: &ScopedDirLock,
 ) -> crate::Result<Log> {
     Ok(match dir {
         Some(dir) => {
