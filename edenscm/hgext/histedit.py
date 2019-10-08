@@ -1807,4 +1807,4 @@ def extsetup(ui):
             _("use 'hg histedit --continue' or 'hg histedit --abort'"),
         ]
     )
-    cmdutil.afterresolvedstates.append(["histedit-state", _("hg histedit --continue")])
+    cmdutil.afterresolvedstates.append(("histedit-state", "hg histedit --continue"))

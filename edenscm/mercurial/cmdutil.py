@@ -4279,8 +4279,8 @@ def clearunfinished(repo):
 
 
 afterresolvedstates = [
-    ("graftstate", _("hg graft --continue")),
-    ("updatemergestate", _("hg update --continue")),
+    ("graftstate", "hg graft --continue"),
+    ("updatemergestate", "hg update --continue"),
 ]
 
 

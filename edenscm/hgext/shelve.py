@@ -1291,7 +1291,7 @@ def extsetup(ui):
         ]
     )
     cmdutil.afterresolvedstates.append(
-        [shelvedstate._filename, _("hg unshelve --continue")]
+        (shelvedstate._filename, "hg unshelve --continue")
     )
 
 

@@ -2231,4 +2231,4 @@ def uisetup(ui):
             _("use 'hg rebase --continue' or 'hg rebase --abort'"),
         ]
     )
-    cmdutil.afterresolvedstates.append(["rebasestate", _("hg rebase --continue")])
+    cmdutil.afterresolvedstates.append(("rebasestate", "hg rebase --continue"))
