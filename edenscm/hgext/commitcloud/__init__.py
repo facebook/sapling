@@ -333,7 +333,7 @@ def missingcloudrevspull(repo, nodes):
 
     nodes = [node for node in nodes if node not in unfi and obscontains(node)]
     if nodes:
-        pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
+        pullcmd, pullopts = ccutil.getcommandandoptions("pull|pul")
         pullopts["rev"] = [nodemod.hex(node) for node in nodes]
         pullcmd(repo.ui, unfi, **pullopts)
 

@@ -2038,7 +2038,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
 
 # recover must be a norepo command because loading the repo fails
 @command(
-    "^sqlrecover",
+    "sqlrecover",
     [
         ("f", "force", "", _("strips as far back as necessary"), ""),
         ("", "no-backup", None, _("does not produce backup bundles for strips")),
@@ -2342,7 +2342,7 @@ def sqlrefill(ui, startrev, **opts):
 
 
 @command(
-    "^sqlstrip",
+    "sqlstrip",
     [
         (
             "",
@@ -2447,7 +2447,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
 
 @command(
-    "^sqlreplay",
+    "sqlreplay",
     [
         ("", "start", "", _("the rev to start with"), ""),
         ("", "end", "", _("the rev to end with"), ""),
@@ -2516,7 +2516,7 @@ def _sqlreplay(repo, startrev, endrev):
 
 
 @command(
-    "^sqlverify",
+    "sqlverify",
     [("", "earliest-rev", "", _("the earliest rev to process"), "")],
     _("hg sqlverify"),
 )

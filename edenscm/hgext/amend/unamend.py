@@ -30,7 +30,7 @@ def predecessormarkers(ctx):
         yield obsutil.marker(ctx.repo(), data)
 
 
-@command("^unamend", [])
+@command("unamend|una|unam|uname|unamen", [])
 def unamend(ui, repo, **opts):
     """undo the last amend operation on the current commit
 

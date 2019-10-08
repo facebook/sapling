@@ -13,10 +13,10 @@
   $ echo "[ui]" >> $HGRCPATH
   $ echo "strict=True" >> $HGRCPATH
 
+No difference - "an" is an alias
+
   $ hg an a
-  unknown command 'an'
-  (use 'hg help' to get help)
-  [255]
+  0: a
   $ hg annotate a
   0: a
 

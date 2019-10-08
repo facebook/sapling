@@ -70,7 +70,7 @@ def editmessages(repo, revs):
 
 
 @command(
-    "^metaedit",
+    "metaedit|met|meta|metae|metaed|metaedi",
     [
         ("r", "rev", [], _("revision to edit")),
         ("", "fold", False, _("fold specified revisions into one")),

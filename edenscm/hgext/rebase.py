@@ -817,7 +817,7 @@ class rebaseruntime(object):
 
 
 @command(
-    "rebase",
+    "rebase|reb|reba|rebas",
     [
         (
             "s",

@@ -998,7 +998,7 @@ def _hidenodes(repo, nodes):
 
 
 @command(
-    "unshelve",
+    "unshelve|unshe|unshel|unshelv",
     [
         ("a", "abort", None, _("abort an incomplete unshelve operation")),
         ("c", "continue", None, _("continue an incomplete unshelve operation")),
@@ -1179,7 +1179,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
 
 @command(
-    "shelve",
+    "shelve|she|shel|shelv",
     [
         (
             "A",

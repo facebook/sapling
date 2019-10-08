@@ -165,7 +165,7 @@ debugrevlogopts = cmdutil.debugrevlogopts
 # Commands start here, listed alphabetically
 
 
-@command("^add", walkopts + dryrunopts, _("[OPTION]... [FILE]..."), inferrepo=True)
+@command("add", walkopts + dryrunopts, _("[OPTION]... [FILE]..."), inferrepo=True)
 def add(ui, repo, *pats, **opts):
     """start tracking the specified files
 
@@ -215,7 +215,7 @@ def add(ui, repo, *pats, **opts):
 
 
 @command(
-    "addremove",
+    "addremove|addr|addre|addrem|addremo|addremov",
     similarityopts + walkopts + dryrunopts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
@@ -294,7 +294,7 @@ def addremove(ui, repo, *pats, **opts):
 
 
 @command(
-    "^annotate|blame",
+    "annotate|blame|blam|an|ann|anno|annot|annota|annotat",
     [
         ("r", "rev", "", _("annotate the specified revision"), _("REV")),
         ("", "no-follow", False, _("don't follow copies and renames")),
@@ -495,7 +495,7 @@ def annotate(ui, repo, *pats, **opts):
 
 
 @command(
-    "archive",
+    "archive|ar|arc|arch|archi|archiv",
     [
         ("", "no-decode", None, _("do not pass files through decoders")),
         ("p", "prefix", "", _("directory prefix for files in archive"), _("PREFIX")),
@@ -571,7 +571,7 @@ def archive(ui, repo, dest, **opts):
 
 
 @command(
-    "backout",
+    "backout|backo|backou",
     [
         ("", "merge", None, _("merge with old dirstate parent after backout")),
         ("", "no-commit", False, _("do not commit")),
@@ -765,7 +765,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
 
 
 @command(
-    "bisect",
+    "bisect|bi|bis|bise|bisec",
     [
         ("r", "reset", False, _("reset bisect state")),
         ("g", "good", False, _("mark changeset good")),
@@ -1105,7 +1105,7 @@ the sparse profile from the known %s changeset %d:%s\n"
 
 
 @command(
-    "bookmarks|bookmark",
+    "bookmarks|bookmark|bo|boo|book|bookm|bookma|bookmar",
     [
         ("f", "force", False, _("force")),
         ("r", "rev", "", _("revision for bookmark action"), _("REV")),
@@ -1227,7 +1227,7 @@ def bookmark(ui, repo, *names, **opts):
 
 
 @command(
-    "branch",
+    "branch|br|bra|bran|branc",
     [
         ("f", "force", None, _("do nothing (DEPRECATED)")),
         ("C", "clean", None, _("raise an exception (DEPRECATED)")),
@@ -1256,7 +1256,7 @@ def branch(ui, repo, label=None, **opts):
 
 
 @command(
-    "bundle",
+    "bundle|bu|bun|bund|bundl",
     [
         ("f", "force", None, _("run even when the destination is unrelated")),
         (
@@ -1460,7 +1460,7 @@ def cat(ui, repo, file1, *pats, **opts):
 
 
 @command(
-    "^clone",
+    "clone",
     [
         (
             "U",
@@ -1612,7 +1612,7 @@ def clone(ui, source, dest=None, **opts):
 
 
 @command(
-    "^commit|ci",
+    "commit|ci|com|comm|commi",
     [
         (
             "A",
@@ -1768,7 +1768,7 @@ def _docommit(ui, repo, *pats, **opts):
 
 
 @command(
-    "config|showconfig|debugconfig",
+    "config|showconfig|debugconfig|conf|confi",
     [
         ("u", "untrusted", None, _("show untrusted configuration options")),
         ("e", "edit", None, _("edit user config")),
@@ -1883,7 +1883,7 @@ def config(ui, repo, *values, **opts):
 
 
 @command(
-    "copy|cp",
+    "copy|cp|cop",
     [
         ("A", "after", None, _("record a copy that has already occurred")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
@@ -1954,7 +1954,7 @@ def debugcomplete(ui, cmd="", **opts):
 
 
 @command(
-    "diff|d",
+    "diff|d|di|dif",
     [
         ("r", "rev", [], _("revision"), _("REV")),
         ("c", "change", "", _("change made by revision"), _("REV")),
@@ -2052,7 +2052,7 @@ def diff(ui, repo, *pats, **opts):
 
 
 @command(
-    "^export",
+    "export|e|ex|exp|expo|expor",
     [
         ("o", "output", "", _("print output to file with formatted name"), _("FORMAT")),
         ("", "switch-parent", None, _("diff against the second parent")),
@@ -2144,7 +2144,7 @@ def export(ui, repo, *changesets, **opts):
 
 
 @command(
-    "files",
+    "files|fi|fil|file",
     [
         ("r", "rev", "", _("search the repository as it is in REV"), _("REV")),
         ("0", "print0", None, _("end filenames with NUL, for use with xargs")),
@@ -2213,7 +2213,7 @@ def files(ui, repo, *pats, **opts):
         return cmdutil.files(ui, ctx, m, fm, fmt)
 
 
-@command("^forget", walkopts, _("[OPTION]... FILE..."), inferrepo=True)
+@command("forget|for|forg|forge", walkopts, _("[OPTION]... FILE..."), inferrepo=True)
 def forget(ui, repo, *pats, **opts):
     """stop tracking the specified files
 
@@ -2253,7 +2253,7 @@ def forget(ui, repo, *pats, **opts):
 
 
 @command(
-    "graft",
+    "graft|gra|graf",
     [
         ("r", "rev", [], _("revisions to graft"), _("REV")),
         ("c", "continue", False, _("resume interrupted graft")),
@@ -2547,7 +2547,7 @@ def _dograft(ui, repo, *revs, **opts):
 
 
 @command(
-    "grep",
+    "grep|gre",
     [
         ("A", "after-context", "", "print NUM lines of trailing context", "NUM"),
         ("B", "before-context", "", "print NUM lines of leading context", "NUM"),
@@ -2883,7 +2883,7 @@ def _rungrep(cmd, files, match):
 
 
 @command(
-    "heads",
+    "heads|hea|head",
     [
         (
             "r",
@@ -2967,7 +2967,7 @@ def heads(ui, repo, *branchrevs, **opts):
 
 
 @command(
-    "help",
+    "help|hel",
     [
         ("e", "extension", None, _("show help for extensions")),
         ("c", "command", None, _("show help for commands")),
@@ -3011,7 +3011,7 @@ def help_(ui, *names, **opts):
 
 
 @command(
-    "hint",
+    "hint|hin",
     [("", "ack", False, _("acknowledge and silence hints"))],
     _("[--ack] NAME ..."),
     norepo=True,
@@ -3315,7 +3315,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
 
 
 @command(
-    "identify|id",
+    "identify|id|ide|iden|ident|identi|identif",
     [
         ("r", "rev", "", _("identify the specified revision"), _("REV")),
         ("n", "num", None, _("show local revision number")),
@@ -3506,7 +3506,7 @@ def identify(
 
 
 @command(
-    "import|patch",
+    "import|patch|im|imp|impo|impor|patc",
     [
         (
             "p",
@@ -3829,7 +3829,7 @@ def incoming(ui, repo, source="default", **opts):
         del repo._subtoppath
 
 
-@command("^init", remoteopts, _("[-e CMD] [--remotecmd CMD] [DEST]"), norepo=True)
+@command("init|ini", remoteopts, _("[-e CMD] [--remotecmd CMD] [DEST]"), norepo=True)
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
@@ -3848,7 +3848,7 @@ def init(ui, dest=".", **opts):
 
 
 @command(
-    "locate",
+    "locate|loc|loca|locat",
     [
         ("r", "rev", "", _("search the repository as it is in REV"), _("REV")),
         ("0", "print0", None, _("end filenames with NUL, for use with xargs")),
@@ -3902,7 +3902,7 @@ def locate(ui, repo, *pats, **opts):
 
 
 @command(
-    "^log|history",
+    "log|history",
     [
         (
             "f",
@@ -4229,7 +4229,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
 
 @command(
-    "^merge",
+    "merge|mer|merg",
     [
         (
             "f",
@@ -4406,7 +4406,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
 
 @command(
-    "parents",
+    "parents|par|pare|paren|parent",
     [("r", "rev", "", _("show parents of the specified revision"), _("REV"))]
     + templateopts,
     _("[-r REV] [FILE]"),
@@ -4465,7 +4465,7 @@ def parents(ui, repo, file_=None, **opts):
     displayer.close()
 
 
-@command("paths", formatteropts, _("[NAME]"), optionalrepo=True, cmdtype=readonly)
+@command("paths|path", formatteropts, _("[NAME]"), optionalrepo=True, cmdtype=readonly)
 def paths(ui, repo, search=None, **opts):
     """show aliases for remote repositories
 
@@ -4539,7 +4539,7 @@ def paths(ui, repo, search=None, **opts):
 
 
 @command(
-    "phase",
+    "phase|ph|pha|phas",
     [
         ("p", "public", False, _("set changeset phase to public")),
         ("d", "draft", False, _("set changeset phase to draft")),
@@ -4655,7 +4655,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
 
 
 @command(
-    "^pull",
+    "pull|pul",
     [
         (
             "u",
@@ -4776,7 +4776,7 @@ def pull(ui, repo, source="default", **opts):
 
 
 @command(
-    "^push",
+    "push",
     [
         ("f", "force", None, _("force push")),
         (
@@ -4935,7 +4935,7 @@ def push(ui, repo, dest=None, **opts):
 
 
 @command(
-    "^record",
+    "record",
     [
         (
             "A",
@@ -5009,7 +5009,7 @@ def recover(ui, repo):
 
 
 @command(
-    "^remove|rm",
+    "remove|rm|rem|remo|remov",
     [
         ("A", "after", None, _("record delete for missing files")),
         ("f", "force", None, _("forget added files, delete modified files")),
@@ -5068,7 +5068,7 @@ def remove(ui, repo, *pats, **opts):
 
 
 @command(
-    "rename|move|mv",
+    "rename|move|mv|ren|rena|renam|mo|mov",
     [
         ("A", "after", None, _("record a rename that has already occurred")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
@@ -5099,7 +5099,7 @@ def rename(ui, repo, *pats, **opts):
 
 
 @command(
-    "resolve",
+    "resolve|reso|resol|resolv",
     [
         ("a", "all", None, _("select all unresolved files")),
         ("l", "list", None, _("list state of files needing merge")),
@@ -5355,7 +5355,7 @@ def resolve(ui, repo, *pats, **opts):
 
 
 @command(
-    "revert",
+    "revert|rev|reve|rever",
     [
         ("a", "all", None, _("revert all changes when no arguments given")),
         ("d", "date", "", _("tipmost revision matching date"), _("DATE")),
@@ -5506,7 +5506,7 @@ def rollback(ui, repo, **opts):
 
 
 @command(
-    "^serve",
+    "serve",
     [
         ("A", "accesslog", "", _("name of access log file to write to"), _("FILE")),
         ("d", "daemon", None, _("run server in background")),
@@ -5615,7 +5615,7 @@ def serve(ui, repo, **opts):
 
 
 @command(
-    "^show",
+    "show",
     [
         (
             "",
@@ -5679,7 +5679,7 @@ def show(ui, repo, *args, **opts):
 
 
 @command(
-    "^status|st",
+    "status|st|sta|stat|statu",
     [
         ("A", "all", None, _("show status of all files")),
         ("m", "modified", None, _("show only modified files")),
@@ -5876,7 +5876,7 @@ def status(ui, repo, *pats, **opts):
 
 
 @command(
-    "^summary|sum",
+    "summary|sum|su|summ|summa|summar",
     [("", "remote", None, _("check for push and pull"))],
     "[--remote]",
     cmdtype=readonly,
@@ -6312,7 +6312,7 @@ def tags(ui, repo, **opts):
 
 
 @command(
-    "tip",
+    "tip|ti",
     [
         ("p", "patch", None, _("show patch")),
         ("g", "git", None, _("use git extended diff format")),
@@ -6343,7 +6343,7 @@ def tip(ui, repo, **opts):
 
 
 @command(
-    "unbundle",
+    "unbundle|unb|unbu|unbun|unbund|unbundl",
     [
         (
             "u",
@@ -6394,7 +6394,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
 
 @command(
-    "^update|up|checkout|co",
+    "update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working directory")),
@@ -6548,7 +6548,7 @@ def verify(ui, repo, **opts):
     return hg.verify(repo, revs)
 
 
-@command("version", [] + formatteropts, norepo=True, cmdtype=readonly)
+@command("version|vers|versi|versio", [] + formatteropts, norepo=True, cmdtype=readonly)
 def version_(ui, **opts):
     """output version and copyright information"""
     opts = pycompat.byteskwargs(opts)

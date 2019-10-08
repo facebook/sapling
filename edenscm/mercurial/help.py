@@ -484,8 +484,24 @@ class _helpdispatch(object):
         else:
             rst.append("%s %s\n" % (identity.prog, cmd))
         # aliases
-        if self.full and not self.ui.quiet and len(aliases) > 1:
-            rst.append(_("\naliases: %s\n") % ", ".join(aliases[1:]))
+        # try to simplify aliases, ex. compress ['ab', 'abc', 'abcd', 'abcde']
+        # to ['ab', 'abcde']
+        slimaliases = []
+        sortedaliases = sorted(aliases)
+        for i, alias in enumerate(sortedaliases):
+            if slimaliases and i + 1 < len(aliases):
+                nextalias = sortedaliases[i + 1]
+                if nextalias.startswith(alias) and alias.startswith(slimaliases[-1]):
+                    # Skip this alias
+                    continue
+            slimaliases.append(alias)
+        slimaliases = set(slimaliases)
+
+        if self.full and not self.ui.quiet and len(slimaliases) > 1:
+            rst.append(
+                _("\naliases: %s\n")
+                % ", ".join(a for a in aliases[1:] if a in slimaliases)
+            )
         rst.append("\n")
 
         # description

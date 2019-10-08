@@ -31,7 +31,7 @@ command = registrar.command(cmdtable)
 
 
 @command(
-    "^hide|strip",
+    "hide|strip|hid|str|stri",
     [
         ("r", "rev", [], _("revisions to hide")),
         (
@@ -172,7 +172,7 @@ def hide(ui, repo, *revs, **opts):
 
 
 @command(
-    "^unhide",
+    "unhide|unh|unhi|unhid",
     [("r", "rev", [], _("revisions to unhide"))],
     _("[OPTION]... [-r] REV..."),
 )

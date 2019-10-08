@@ -322,7 +322,7 @@ def _maybeupdateworkingcopy(repo, currentnode):
 
 @perftrace.tracefunc("Apply Cloud Changes")
 def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr):
-    pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
+    pullcmd, pullopts = ccutil.getcommandandoptions("pull|pul")
 
     try:
         remotenames = extensions.find("remotenames")

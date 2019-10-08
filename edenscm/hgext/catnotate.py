@@ -15,7 +15,7 @@ testedwith = "ships-with-fb-hgext"
 
 
 @command(
-    "^catnotate",
+    "catnotate",
     [
         ("r", "rev", "", _("print the given revision"), _("REV")),
         ("a", "text", None, _("treat all files as text")),

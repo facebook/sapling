@@ -87,7 +87,7 @@ def capturelogs(ui, remote, logfile):
 
 
 @command(
-    "^sendunbundlereplaybatch",
+    "sendunbundlereplaybatch",
     [
         ("", "path", "", _("hg server remotepath (ssh)"), ""),
         ("", "reports", "", _("a file for unbundereplay progress reports"), ""),
@@ -156,7 +156,7 @@ def sendunbundlereplaybatch(ui, **opts):
 
 
 @command(
-    "^sendunbundlereplay",
+    "sendunbundlereplay",
     [
         ("", "file", "", _("file to read bundle from"), ""),
         ("", "path", "", _("hg server remotepath (ssh)"), ""),

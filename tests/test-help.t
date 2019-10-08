@@ -807,7 +807,7 @@ Test for aliases
   
   hg summary [--remote]
   
-  aliases: sum
+  aliases: su
   
   summarize working directory state
   

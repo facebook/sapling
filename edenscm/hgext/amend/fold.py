@@ -23,7 +23,7 @@ hex = node.hex
 
 
 @command(
-    "^fold|squash",
+    "fold|squash",
     [
         ("r", "rev", [], _("revision to fold")),
         ("", "exact", None, _("only fold specified revisions")),

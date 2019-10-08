@@ -430,7 +430,7 @@ def _makerage(ui, repo, **opts):
     return msg
 
 
-@command("^rage", rageopts, _("hg rage"))
+@command("rage", rageopts, _("hg rage"))
 def rage(ui, repo, *pats, **opts):
     """collect troubleshooting diagnostics
 

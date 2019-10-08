@@ -35,7 +35,7 @@ from .cmdtable import command
 
 
 @command(
-    "uncommit",
+    "uncommit|unc|unco|uncom|uncomm|uncommi",
     [("", "keep", False, _("allow an empty commit after uncommiting"))]
     + cmdutil.walkopts,
     _("[OPTION]... [FILE]..."),

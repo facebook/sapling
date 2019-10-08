@@ -17,6 +17,8 @@ Help for uncommit
   $ hg help uncommit
   hg uncommit [OPTION]... [FILE]...
   
+  aliases: unc
+  
   uncommit part or all of the current commit
   
       Reverse the effects of an 'hg commit' operation. When run with no

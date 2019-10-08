@@ -14,6 +14,8 @@ Check help text for new options and removal of unsupported options.
   $ hg previous --help
   hg previous [OPTIONS]... [STEPS]
   
+  aliases: prev
+  
   check out the parent commit
   
   Options:

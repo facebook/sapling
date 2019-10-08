@@ -466,7 +466,7 @@ _ignoreopts = ("no-merges", "graph")
 
 
 @command(
-    "journal",
+    "journal|j|jo|jou|jour|journ|journa",
     [
         ("", "all", None, "show history for all names"),
         ("c", "commits", None, "show commit metadata"),

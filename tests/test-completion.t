@@ -260,25 +260,8 @@ Show an error if we use --options with an ambiguous abbreviation
 Show all commands + options
   $ hg debugcommands
   add: include, exclude, dry-run
-  annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
-  clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
-  commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
-  export: output, switch-parent, rev, text, git, binary, nodates
-  forget: include, exclude
-  githelp: 
-  init: ssh, remotecmd, insecure
-  log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
-  merge: force, rev, preview, tool
-  pull: update, force, rev, bookmark, ssh, remotecmd, insecure
-  push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
-  record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
-  remove: after, force, include, exclude
-  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
-  show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
-  status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, template
-  summary: remote
-  update: clean, check, merge, date, rev, inactive, tool
   addremove: similarity, include, exclude, dry-run
+  annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
   archive: no-decode, prefix, rev, type, include, exclude
   backout: merge, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
@@ -287,6 +270,8 @@ Show all commands + options
   branch: force, clean, new
   bundle: force, rev, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude, template
+  clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
+  commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   config: untrusted, edit, local, global, template
   copy: after, force, include, exclude, dry-run
   debugancestor: 
@@ -361,8 +346,11 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   doctor: 
+  export: output, switch-parent, rev, text, git, binary, nodates
   files: rev, print0, include, exclude, template
+  forget: include, exclude
   fs: 
+  githelp: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: after-context, before-context, context, ignore-case, files-with-matches, line-number, invert-match, word-regexp, extended-regexp, fixed-strings, perl-regexp, include, exclude
   heads: rev, topo, active, closed, style, template
@@ -372,23 +360,35 @@ Show all commands + options
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
+  init: ssh, remotecmd, insecure
   locate: rev, print0, fullpath, include, exclude
+  log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   manifest: rev, all, template
+  merge: force, rev, preview, tool
   outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev
+  pull: update, force, rev, bookmark, ssh, remotecmd, insecure
+  push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
+  record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
   recover: 
+  remove: after, force, include, exclude
   rename: after, force, include, exclude, dry-run
   resolve: all, list, mark, unmark, no-status, root-relative, tool, include, exclude, template, skip
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
   root: shared
+  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
+  show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
+  status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, template
+  summary: remote
   tag: force, local, rev, remove, edit, message, date, user
   tags: template
   tip: patch, git, style, template
   unbundle: update
   uncommit: keep, include, exclude
+  update: clean, check, merge, date, rev, inactive, tool
   verify: rev
   version: template
 

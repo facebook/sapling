@@ -136,7 +136,9 @@ def uisetup(ui):
     tweakorder()
     # if we want to replace command's docstring (not just add stuff to it),
     # we need to do it in uisetup, not extsetup
-    commands.table["^annotate|blame"][0].__doc__ = blame.__doc__
+    commands.table["annotate|blame|blam|an|ann|anno|annot|annota|annotat"][
+        0
+    ].__doc__ = blame.__doc__
 
 
 def extsetup(ui):

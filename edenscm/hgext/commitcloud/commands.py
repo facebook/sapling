@@ -506,7 +506,7 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
         % (sourceusername, restorereporoot, restorehostname)
     )
 
-    pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
+    pullcmd, pullopts = ccutil.getcommandandoptions("pull|pul")
     # Pull the heads and the nodes that were pointed to by the bookmarks.
     # Note that we are avoiding the use of set() because we want to pull
     # revisions in the same order

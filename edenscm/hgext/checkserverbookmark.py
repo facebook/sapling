@@ -60,7 +60,7 @@ def verifydeleted(ui, remote, name):
 
 
 @command(
-    "^checkserverbookmark",
+    "checkserverbookmark",
     [
         ("", "path", "", _("hg server remotepath (ssh)"), ""),
         ("", "name", "", _("bookmark name to check"), ""),

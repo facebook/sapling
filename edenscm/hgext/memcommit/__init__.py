@@ -38,7 +38,7 @@ command = registrar.command(cmdtable)
 
 
 @command(
-    "^debugserializecommit",
+    "debugserializecommit",
     [
         ("r", "rev", "", _("revision to serialize"), _("REV")),
         ("d", "dest", "", _("destination bookmark"), _("DEST")),
@@ -95,7 +95,7 @@ def debugserializecommit(ui, repo, *args, **opts):
     ui.write(serialization.serialize(params.todict()))
 
 
-@command("^memcommit", [], _("hg memcommit"))
+@command("memcommit", [], _("hg memcommit"))
 def memcommit(ui, repo, *args, **opts):
     """make commits without a working copy
 

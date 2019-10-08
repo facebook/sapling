@@ -970,7 +970,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
 
 
 @command(
-    "histedit",
+    "histedit|histe|histed|histedi",
     [
         (
             "",

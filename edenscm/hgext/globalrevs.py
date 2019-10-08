@@ -420,7 +420,7 @@ def _getsvnrev(commitextra):
         return convertrev.rsplit("@", 1)[-1]
 
 
-@command("^updateglobalrevmeta", [], _("hg updateglobalrevmeta"))
+@command("updateglobalrevmeta", [], _("hg updateglobalrevmeta"))
 def updateglobalrevmeta(ui, repo, *args, **opts):
     """Reads globalrevs from the latest hg commits and adds them to the
     globalrev-hg mapping."""
@@ -456,7 +456,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
         globalrevmap.save()
 
 
-@command("^globalrev", [], _("hg globalrev"))
+@command("globalrev", [], _("hg globalrev"))
 def globalrev(ui, repo, *args, **opts):
     """prints out the next global revision number for a particular repository by
     reading it from the database.
@@ -472,7 +472,7 @@ def globalrev(ui, repo, *args, **opts):
 
 
 @command(
-    "^initglobalrev",
+    "initglobalrev",
     [
         (
             "",

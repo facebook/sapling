@@ -975,7 +975,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
 
 
 @command(
-    "^absorb|sf",
+    "absorb|ab|abs|abso|absor|sf",
     [
         (
             "a",

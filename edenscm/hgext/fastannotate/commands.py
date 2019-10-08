@@ -246,7 +246,7 @@ def _annotatewrapper(orig, ui, repo, *pats, **opts):
 
 def registercommand():
     """register the fastannotate command"""
-    name = "^fastannotate|fastblame|fa"
+    name = "fastannotate|fastblame|fa"
     command(name, **fastannotatecommandargs)(fastannotate)
 
 

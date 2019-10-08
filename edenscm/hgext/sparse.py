@@ -400,7 +400,7 @@ def _setupcommit(ui):
 
 
 def _setuplog(ui):
-    entry = commands.table["^log|history"]
+    entry = commands.table["log|history"]
     entry[1].append(
         ("", "sparse", None, "limit to changesets affecting the sparse checkout")
     )
@@ -504,7 +504,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
 
 
 def _setupclone(ui):
-    entry = commands.table["^clone"]
+    entry = commands.table["clone"]
     entry[1].append(("", "enable-profile", [], "enable a sparse profile"))
     entry[1].append(("", "include", [], "include sparse pattern"))
     entry[1].append(("", "exclude", [], "exclude sparse pattern"))
@@ -512,7 +512,7 @@ def _setupclone(ui):
 
 
 def _setupadd(ui):
-    entry = commands.table["^add"]
+    entry = commands.table["add"]
     entry[1].append(
         (
             "s",
@@ -631,7 +631,7 @@ def _setupdirstate(ui):
 
 
 def _setupdiff(ui):
-    entry = commands.table["diff|d"]
+    entry = commands.table["diff|d|di|dif"]
     entry[1].append(
         ("s", "sparse", None, "only show changes in files in the sparse config")
     )
@@ -1366,7 +1366,7 @@ _deprecate = (
 
 
 @command(
-    "^sparse",
+    "sparse",
     [
         (
             "f",

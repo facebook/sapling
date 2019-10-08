@@ -36,7 +36,7 @@ command = registrar.command(cmdtable)
 
 
 @command(
-    "^split",
+    "split|spl|spli",
     [
         ("r", "rev", [], _("revision to split")),
         ("", "no-rebase", False, _("don't rebase descendants after split")),
