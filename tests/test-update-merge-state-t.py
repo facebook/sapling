@@ -38,12 +38,14 @@ sh % 'hg parents -T "{desc}\\n"' == "B"
 sh % "hg status" == r"""
     M A
 
-    # The repository is in an unfinished *merge* state.
+    # The repository is in an unfinished *update* state.
     # Unresolved merge conflicts:
     #  (trailing space)
     #     A
     #  (trailing space)
-    # To mark files as resolved:  hg resolve --mark FILE"""
+    # To mark files as resolved:  hg resolve --mark FILE
+    # To continue:                hg update --continue
+    # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)"""
 
 # Cannot --continue right now
 sh % "hg update --continue" == r"""
@@ -59,9 +61,16 @@ sh % "hg resolve -m A" == r"""
 sh % "hg status" == r"""
     M A
 
-    # The repository is in an unfinished *merge* state.
-    # No unresolved merge conflicts."""
+    # The repository is in an unfinished *update* state.
+    # No unresolved merge conflicts.
+    # To continue:                hg update --continue
+    # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)"""
 
 # To get rid of the state
 sh % "hg update --continue"
 sh % "hg status" == "M A"
+
+# Test abort flow
+createstate()
+sh % "hg update --clean . -q"
+sh % "hg status"

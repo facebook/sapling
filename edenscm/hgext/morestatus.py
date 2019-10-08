@@ -103,6 +103,10 @@ def updatemsg(repo, ui):
     helpmessage(ui, continuecmd, abortcmd)
 
 
+def updatemergemsg(repo, ui):
+    helpmessage(ui, "hg update --continue", updatecleanmsg())
+
+
 def mergemsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
     helpmessage(ui, "hg commit", updatecleanmsg())
@@ -132,6 +136,9 @@ STATES = (
     ("graft", fileexistspredicate("graftstate"), graftmsg),
     ("unshelve", fileexistspredicate("unshelverebasestate"), unshelvemsg),
     ("rebase", fileexistspredicate("rebasestate"), rebasemsg),
+    # 'update --merge'. Unlike the 'update' state below, this can be
+    # continued.
+    ("update", fileexistspredicate("updatemergestate"), updatemergemsg),
     # The merge and update states are part of a list that will be iterated over.
     # They need to be last because some of the other unfinished states may also
     # be in a merge or update state (eg. rebase, histedit, graft, etc).
