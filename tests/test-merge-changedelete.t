@@ -804,8 +804,8 @@ Choose local versions of files
   1 files updated, 2 files merged, 0 files removed, 0 files unresolved
   $ status 2>&1 | tee $TESTTMP/local.status
   --- status ---
-  file2: * (glob)
   A file1
+  C file2
   C file3
   --- resolve --list ---
   R file1

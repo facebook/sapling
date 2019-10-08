@@ -819,275 +819,6 @@ class dirstate(object):
                 files.append(fullpath)
         return files
 
-    def _walkexplicit(self, match):
-        """Get stat data about the files explicitly specified by match.
-
-        Return a triple (results, dirsfound, dirsnotfound).
-        - results is a mapping from filename to stat result.
-        - dirsfound is a list of files found to be directories.
-        - dirsnotfound is a list of files that the dirstate thinks are
-          directories and that were not found."""
-
-        def badtype(mode):
-            kind = _("unknown")
-            if stat.S_ISCHR(mode):
-                kind = _("character device")
-            elif stat.S_ISBLK(mode):
-                kind = _("block device")
-            elif stat.S_ISFIFO(mode):
-                kind = _("fifo")
-            elif stat.S_ISSOCK(mode):
-                kind = _("socket")
-            elif stat.S_ISDIR(mode):
-                kind = _("directory")
-            return _("unsupported file type (type is %s)") % kind
-
-        badfn = match.bad
-        dmap = self._map
-        lstat = os.lstat
-        getkind = stat.S_IFMT
-        dirkind = stat.S_IFDIR
-        regkind = stat.S_IFREG
-        lnkkind = stat.S_IFLNK
-        join = self._join
-        dirsfound = []
-        foundadd = dirsfound.append
-        dirsnotfound = []
-        notfoundadd = dirsnotfound.append
-
-        if not match.isexact() and self._checkcase:
-            normalize = self._normalize
-        else:
-            normalize = None
-
-        files = sorted(match.files())
-        if not files or "" in files:
-            files = [""]
-            # constructing the foldmap is expensive, so don't do it for the
-            # common case where files is ['']
-            normalize = None
-        results = {".hg": None}
-
-        for ff in files:
-            if normalize:
-                nf = normalize(ff, False, True)
-            else:
-                nf = ff
-            if nf in results:
-                continue
-
-            try:
-                st = lstat(join(nf))
-                kind = getkind(st.st_mode)
-                if kind == dirkind:
-                    if nf in dmap:
-                        # file replaced by dir on disk but still in dirstate
-                        results[nf] = None
-                    foundadd((nf, ff))
-                elif kind == regkind or kind == lnkkind:
-                    results[nf] = st
-                else:
-                    badfn(ff, badtype(kind))
-                    if nf in dmap:
-                        results[nf] = None
-            except OSError as inst:  # nf not found on disk - it is dirstate only
-                if nf in dmap:  # does it exactly match a missing file?
-                    results[nf] = None
-                else:  # does it match a missing directory?
-                    if self._map.hasdir(nf):
-                        notfoundadd(nf)
-                    else:
-                        badfn(ff, encoding.strtolocal(inst.strerror))
-
-        # Case insensitive filesystems cannot rely on lstat() failing to detect
-        # a case-only rename.  Prune the stat object for any file that does not
-        # match the case in the filesystem, if there are multiple files that
-        # normalize to the same path.
-        if match.isexact() and self._checkcase:
-            normed = {}
-
-            for f, st in results.iteritems():
-                if st is None:
-                    continue
-
-                nc = util.normcase(f)
-                paths = normed.get(nc)
-
-                if paths is None:
-                    paths = set()
-                    normed[nc] = paths
-
-                paths.add(f)
-
-            for norm, paths in normed.iteritems():
-                if len(paths) > 1:
-                    for path in paths:
-                        folded = self._discoverpath(
-                            path, norm, True, None, self._map.dirfoldmap
-                        )
-                        if path != folded:
-                            results[path] = None
-
-        return results, dirsfound, dirsnotfound
-
-    @util.timefunction("dirstatewalk", 0, "_ui")
-    def walk(self, match, unknown, ignored, full=True):
-        """
-        Walk recursively through the directory tree, finding all files
-        matched by match.
-
-        If full is False, maybe skip some known-clean files.
-
-        Return a dict mapping filename to stat-like object (either
-        mercurial.osutil.stat instance or return value of os.stat()).
-
-        """
-        # full is a flag that extensions that hook into walk can use -- this
-        # implementation doesn't use it at all. This satisfies the contract
-        # because we only guarantee a "maybe".
-
-        if ignored:
-            ignore = util.never
-            dirignore = util.never
-        elif unknown:
-            ignore = self._ignore
-            dirignore = self._dirignore
-        else:
-            # if not unknown and not ignored, drop dir recursion and step 2
-            ignore = util.always
-            dirignore = util.always
-
-        matchfn = match.matchfn
-        matchalways = match.always()
-        matchtdir = match.traversedir
-        dmap = self._map
-        listdir = util.listdir
-        lstat = os.lstat
-        dirkind = stat.S_IFDIR
-        regkind = stat.S_IFREG
-        lnkkind = stat.S_IFLNK
-        join = self._join
-
-        exact = skipstep3 = False
-        if match.isexact():  # match.exact
-            exact = True
-            dirignore = util.always  # skip step 2
-        elif match.prefix():  # match.match, no patterns
-            skipstep3 = True
-
-        if not exact and self._checkcase:
-            normalize = self._normalize
-            normalizefile = self._normalizefile
-            skipstep3 = False
-        else:
-            normalize = self._normalize
-            normalizefile = None
-
-        # step 1: find all explicit files
-        results, work, dirsnotfound = self._walkexplicit(match)
-
-        skipstep3 = skipstep3 and not (work or dirsnotfound)
-        work = [d for d in work if not dirignore(d[0])]
-
-        # step 2: visit subdirectories
-        def traverse(work, alreadynormed):
-            wadd = work.append
-            while work:
-                nd = work.pop()
-                if not match.visitdir(nd):
-                    continue
-                skip = None
-                if nd != "":
-                    skip = ".hg"
-                try:
-                    entries = listdir(join(nd), stat=True, skip=skip)
-                except OSError as inst:
-                    if inst.errno in (errno.EACCES, errno.ENOENT):
-                        match.bad(self.pathto(nd), encoding.strtolocal(inst.strerror))
-                        continue
-                    raise
-                for f, kind, st in entries:
-                    if normalizefile:
-                        # even though f might be a directory, we're only
-                        # interested in comparing it to files currently in the
-                        # dmap -- therefore normalizefile is enough
-                        nf = normalizefile(nd and (nd + "/" + f) or f, True, True)
-                    else:
-                        nf = nd and (nd + "/" + f) or f
-                    if nf not in results:
-                        if kind == dirkind:
-                            if not dirignore(nf):
-                                if matchtdir:
-                                    matchtdir(nf)
-                                wadd(nf)
-                            if nf in dmap and (matchalways or matchfn(nf)):
-                                results[nf] = None
-                        elif kind == regkind or kind == lnkkind:
-                            if nf in dmap:
-                                if matchalways or matchfn(nf):
-                                    results[nf] = st
-                            elif (matchalways or matchfn(nf)) and not ignore(nf):
-                                # unknown file -- normalize if necessary
-                                if not alreadynormed:
-                                    nf = normalize(nf, False, True)
-                                results[nf] = st
-                        elif nf in dmap and (matchalways or matchfn(nf)):
-                            results[nf] = None
-
-        for nd, d in work:
-            # alreadynormed means that processwork doesn't have to do any
-            # expensive directory normalization
-            alreadynormed = not normalize or nd == d
-            traverse([d], alreadynormed)
-
-        del results[".hg"]
-
-        # step 3: visit remaining files from dmap
-        if not skipstep3 and not exact:
-            # If a dmap file is not in results yet, it was either
-            # a) not matching matchfn b) ignored, c) missing, or d) under a
-            # symlink directory.
-            if not results and matchalways:
-                visit = [f for f in dmap]
-            else:
-                visit = [f for f in dmap if f not in results and matchfn(f)]
-            visit.sort()
-
-            if unknown:
-                # unknown == True means we walked all dirs under the roots
-                # that wasn't ignored, and everything that matched was stat'ed
-                # and is already in results.
-                # The rest must thus be ignored or under a symlink.
-                audit_path = pathutil.pathauditor(self._root, cached=True)
-
-                for nf in iter(visit):
-                    # If a stat for the same file was already added with a
-                    # different case, don't add one for this, since that would
-                    # make it appear as if the file exists under both names
-                    # on disk.
-                    if normalizefile and normalizefile(nf, True, True) in results:
-                        results[nf] = None
-                    # Report ignored items in the dmap as long as they are not
-                    # under a symlink directory.
-                    elif audit_path.check(nf):
-                        try:
-                            results[nf] = lstat(join(nf))
-                            # file was just ignored, no links, and exists
-                        except OSError:
-                            # file doesn't exist
-                            results[nf] = None
-                    else:
-                        # It's either missing or under a symlink directory
-                        # which we in this case report as missing
-                        results[nf] = None
-            else:
-                # We may not have walked the full directory tree above,
-                # so stat and check everything we missed.
-                iv = iter(visit)
-                for st in util.statfiles([join(i) for i in visit]):
-                    results[next(iv)] = st
-        return results
-
     @perftrace.tracefunc("Status")
     def status(self, match, ignored, clean, unknown):
         """Determine the status of the working copy relative to the
@@ -1108,16 +839,16 @@ class dirstate(object):
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from
         # under us if a checkout happens in another process.
-        wctx.parents()
+        pctx = wctx.parents()[0]
 
         listignored, listclean, listunknown = ignored, clean, unknown
-        lookup, modified, added, unknown, ignored = [], [], [], [], []
+        lookup, modified, added, unknown, ignored = set(), [], [], [], []
         removed, deleted, clean = [], [], []
 
         dmap = self._map
         dmap.preload()
         dget = dmap.__getitem__
-        ladd = lookup.append  # aka "unsure"
+        ladd = lookup.add  # aka "unsure"
         madd = modified.append
         aadd = added.append
         uadd = unknown.append
@@ -1125,28 +856,21 @@ class dirstate(object):
         radd = removed.append
         dadd = deleted.append
         cadd = clean.append
-        mexact = match.exact
         ignore = self._ignore
-        checkexec = self._checkexec
         copymap = self._map.copymap
-        lastnormaltime = self._lastnormaltime
-        cleanmarked = False
-        if self._istreestate:
-            markclean = self._map.clearneedcheck
-        else:
-            markclean = lambda path: False
 
         # We have seen some rare issues that a few "M" or "R" files show up
         # while the files are expected to be clean. Log the reason of first few
         # "M" files.
-        mtolog = ltolog = self._ui.configint("experimental", "samplestatus")
+        mtolog = self._ui.configint("experimental", "samplestatus")
 
-        # We need to do full walks when either
-        # - we're listing all clean files, or
-        # - match.traversedir does something, because match.traversedir should
-        #   be called for every dir in the working dir
-        full = listclean or match.traversedir is not None
-        for fn, st in self.walk(match, listunknown, listignored, full=full).iteritems():
+        nonnormalset = dmap.nonnormalset
+        otherparentset = dmap.otherparentset
+
+        # Step 1: Get the files that are different from the clean checkedout p1 tree.
+        pendingchanges = self._fs.pendingchanges(match, listignored=listignored)
+
+        for fn, exists, needslookup in pendingchanges:
             try:
                 t = dget(fn)
                 # This "?" state is only tracked by treestate, emulate the old
@@ -1154,97 +878,107 @@ class dirstate(object):
                 if t[0] == "?":
                     raise KeyError
             except KeyError:
-                if (listignored or mexact(fn)) and ignore(fn):
-                    if listignored:
-                        iadd(fn)
-                else:
+                isignored = ignore(fn)
+                if listignored and isignored:
+                    iadd(fn)
+                elif listunknown and not isignored:
                     uadd(fn)
                 continue
 
-            # This is equivalent to 'state, mode, size, time = dmap[fn]' but not
-            # written like that for performance reasons. dmap[fn] is not a
-            # Python tuple in compiled builds. The CPython UNPACK_SEQUENCE
-            # opcode has fast paths when the value to be unpacked is a tuple or
-            # a list, but falls back to creating a full-fledged iterator in
-            # general. That is much slower than simply accessing and storing the
-            # tuple members one by one.
             state = t[0]
-            mode = t[1]
-            size = t[2]
-            time = t[3]
-
-            if not st and state in "nma":
+            if not exists and state in "nma":
                 dadd(fn)
             elif state == "n":
-                if (
-                    size >= 0
-                    and (
-                        (size != st.st_size and size != st.st_size & _rangemask)
-                        or ((mode ^ st.st_mode) & 0o100 and checkexec)
-                    )
-                    or size == -2  # other parent
-                    or fn in copymap
-                ):
-                    madd(fn)
-                    if mtolog > 0:
-                        mtolog -= 1
-                        reasons = []
-                        if size == -2:
-                            reasons.append("exists in p2")
-                        elif size != st.st_size:
-                            reasons.append(
-                                "size changed (%s -> %s)" % (size, st.st_size)
-                            )
-                            # See T39234759. Sometimes watchman returns 0 size
-                            # (st.st_size) and we suspect it's incorrect.
-                            # Do a double check with os.stat and log it.
-                            if st.st_size == 0:
-                                path = self._join(fn)
-                                try:
-                                    reasons.append(
-                                        "os.stat size = %s" % os.stat(path).st_size
-                                    )
-                                except Exception as ex:
-                                    reasons.append("os.stat failed (%s)" % ex)
-                        if mode != st.st_mode:
-                            reasons.append(
-                                "mode changed (%s -> %s)" % (mode, st.st_mode)
-                            )
-                        if fn in copymap:
-                            reasons.append("has copy information")
-                        self._ui.log("status", "M %s: %s" % (fn, ", ".join(reasons)))
-
-                elif time != st.st_mtime and time != st.st_mtime & _rangemask:
-                    if ltolog:
-                        ltolog -= 1
-                        reason = "mtime changed (%s -> %s)" % (time, st.st_mtime)
-                        self._ui.log("status", "L %s: %s" % (fn, reason))
-                    ladd(fn)
-                elif st.st_mtime == lastnormaltime:
-                    # fn may have just been marked as normal and it may have
-                    # changed in the same second without changing its size.
-                    # This can happen if we quickly do multiple commits.
-                    # Force lookup, so we don't miss such a racy file change.
-                    if ltolog:
-                        ltolog -= 1
-                        reason = "mtime untrusted (%s)" % (st.st_mtime)
-                        self._ui.log("status", "L %s: %s" % (fn, reason))
+                # Lookup handling is temporary until fs.pendingchanges can
+                # handle it.
+                if needslookup:
                     ladd(fn)
                 else:
-                    cleanmarked |= markclean(fn)
-                    if listclean:
-                        cadd(fn)
-            elif state == "m":
+                    madd(fn)
+            else:
+                # All other states will be handled by the logic below, and we
+                # don't care that it's a pending change.
+                pass
+
+        # The seen set is used to prevent steps 2 and 3 from processing things
+        # we saw in step 1. We explicitly do not add lookup to the seen set,
+        # because that would prevent them from being processed in Step 2. It's
+        # possible step 2 would classify something as modified, while lookup
+        # would classify it as clean, so let's give step 2 a chance, then remove
+        # things from lookup that were processed in step 2.
+        seenset = set(deleted + modified)
+
+        # Step 2: Handle status results that are not simply pending filesystem
+        # changes on top of the pristine tree.
+        for fn in otherparentset:
+            if not match(fn) or fn in seenset:
+                continue
+            t = dget(fn)
+            state = t[0]
+            # We only need to handle 'n' here, since all other states will be
+            # covered by the nonnormal loop below.
+            if state in "n":
+                try:
+                    # pendingchanges() above only checks for changes against p1.
+                    # For things from p2, we need to manually check for
+                    # existence. We don't have to check if they're modified,
+                    # since them coming from p2 indicates they are considered
+                    # modified.
+                    os.lstat(self._join(fn))
+                    if mtolog > 0:
+                        mtolog -= 1
+                        self._ui.log("status", "M %s: exists in p2" % fn)
+                    madd(fn)
+                except OSError:
+                    dadd(fn)
+                seenset.add(fn)
+
+        for fn in nonnormalset:
+            if not match(fn) or fn in seenset:
+                continue
+            t = dget(fn)
+            state = t[0]
+            if state == "m":
                 madd(fn)
+                seenset.add(fn)
                 if mtolog > 0:
                     mtolog -= 1
                     self._ui.log("status", "M %s: state is 'm' (merge)" % fn)
             elif state == "a":
                 aadd(fn)
+                seenset.add(fn)
             elif state == "r":
                 radd(fn)
-        if cleanmarked:
-            self._dirty = True
+                seenset.add(fn)
+            elif state == "n":
+                # This can happen if the file is in a lookup state, but all 'n'
+                # files should've been checked in fs.pendingchanges, so we can
+                # ignore it here.
+                pass
+            elif state == "?":
+                # I'm pretty sure this is a bug if nonnormalset contains unknown
+                # files, but the tests say it can happen so let's just ignore
+                # it.
+                pass
+            else:
+                raise error.ProgrammingError(
+                    "unexpected nonnormal state '%s' " "for '%s'" % (t, fn)
+                )
+
+        # Most copies should be handled above, as modifies or adds, but there
+        # can be cases where a file is clean and already committed and a commit
+        # is just retroactively marking it as copied. In that case we need to
+        # mark is as modified.
+        for fn in copymap:
+            if not match(fn) or fn in seenset:
+                continue
+            # It seems like a bug, but the tests show that copymap can contain
+            # files that aren't in the dirstate. I believe this is caused by
+            # using treestate, which leaves the copymap as partially maintained.
+            if fn not in dmap:
+                continue
+            madd(fn)
+            seenset.add(fn)
 
         status = scmutil.status(
             modified, added, removed, deleted, unknown, ignored, clean
@@ -1252,12 +986,34 @@ class dirstate(object):
 
         fixup = []
         if lookup:
+            lookup = lookup - seenset
             modified2, deleted2, fixup = self._checklookup(wctx, lookup)
             status.modified.extend(modified2)
             status.deleted.extend(deleted2)
 
             if fixup and listclean:
                 status.clean.extend(fixup)
+
+        # Step 3: If clean files were requested, add those to the results
+        seenset = set()
+        for files in status:
+            seenset.update(files)
+            seenset.update(util.dirs(files))
+
+        if listclean:
+            for fn in pctx.manifest().matches(match):
+                if fn not in seenset:
+                    cadd(fn)
+            seenset.update(clean)
+
+        # Step 4: Report any explicitly requested files that don't exist
+        for path in sorted(match.files()):
+            try:
+                if path in seenset:
+                    continue
+                os.lstat(os.path.join(self._root, path))
+            except OSError as ex:
+                match.bad(path, encoding.strtolocal(ex.strerror))
 
         if not getattr(self._repo, "_insidepoststatusfixup", False):
             self._poststatusfixup(status, fixup, wctx)

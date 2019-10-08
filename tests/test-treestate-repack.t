@@ -36,7 +36,7 @@ Make some commits
   $ touch -t 200001010000 a
   $ hg ci -m modify
   $ hg debugtreestate
-  dirstate v2 (using treestate/00000000-0000-0000-0000-000000000000, offset 300, 5 files tracked)
+  dirstate v2 (using treestate/00000000-0000-0000-0000-000000000000, offset 359, 5 files tracked)
 
 Repack makes the file smaller
 
@@ -54,16 +54,19 @@ Auto repack happens when treestate exceeds size threshold
   >   hg ci -m modify -q --debug | grep treestate
   > done
   .
-  treestate repack threshold set to 657
-  .
-  .
-  .
+  treestate repack threshold set to 441
   .
   .
   creating treestate/00000000-0000-0000-0000-000000000002
   removing old unreferenced treestate/00000000-0000-0000-0000-000000000000
+  treestate repack threshold set to 657
+  .
+  .
+  .
+  creating treestate/00000000-0000-0000-0000-000000000003
+  removing old unreferenced treestate/00000000-0000-0000-0000-000000000001
   $ hg debugtreestate
-  dirstate v2 (using treestate/00000000-0000-0000-0000-000000000002, offset 88, 5 files tracked)
+  dirstate v2 (using treestate/00000000-0000-0000-0000-000000000003, offset 88, 5 files tracked)
 
 Cleanup removes the leftover files
 
