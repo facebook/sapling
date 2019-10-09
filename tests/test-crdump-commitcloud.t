@@ -5,6 +5,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > crdump=
+  > remotenames=
   > EOF
 
 Setup server

@@ -156,6 +156,8 @@ def crdump(ui, repo, *revs, **opts):
                 if obsolete:
                     rdata["obsolete"] = obsolete
 
+            rdata["branch"] = ""
+
             pbctx = publicbase(repo, ctx)
             if pbctx:
                 rdata["public_base"] = {"node": hex(pbctx.node())}
@@ -165,6 +167,21 @@ def crdump(ui, repo, *revs, **opts):
                     rdata["public_base"]["svnrev"] = globalrev
                 except KeyError:
                     pass
+
+                downstreams = repo.revs("%n:: & remotebookmark()", pbctx.node())
+                downstreambookmarks = set()
+                for r in downstreams:
+                    downstreambookmarks.update(
+                        repo.names["hoistednames"].names(repo, repo[r].node())
+                    )
+
+                # If there's a single downstream remotebookmark, or master is a
+                # downstream remotebookmark, report it as the current branch.
+                if downstreambookmarks:
+                    if "master" in downstreambookmarks:
+                        rdata["branch"] = "master"
+                    elif len(downstreambookmarks) == 1:
+                        rdata["branch"] = downstreambookmarks[0]
 
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
             if not opts["nobinary"]:

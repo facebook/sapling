@@ -2,23 +2,28 @@
   > [extensions]
   > amend=
   > crdump=
+  > remotenames=
   > [experimental]
   > evolution.createmarkers=True
+  > [ui]
+  > ssh=python "$TESTDIR/dummyssh"
   > EOF
   $ showgraph() {
   >   hg log --graph --hidden -T "{rev} {desc|firstline}" | sed \$d
   > }
 
 Create repo
-  $ mkdir repo
+  $ mkdir server
+  $ hg init server
+  $ hg clone -q ssh://user@dummy/server repo
   $ cd repo
-  $ hg init
   $ echo A > a
   $ printf "A\0\n" > bin1
   $ hg addremove
   adding a
   adding bin1
   $ hg commit -m a
+  $ hg push -q -r . --to master --create
   $ hg phase -p .
 
   $ printf "A\nB\nC\nD\nE\nF\n" > a
@@ -63,6 +68,7 @@ Test obsolete markers
                   }
               ],
               "bookmarks": [],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -130,6 +136,7 @@ Test basic dump of two commits
                   }
               ],
               "bookmarks": [],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -164,6 +171,7 @@ Test basic dump of two commits
                   }
               ],
               "bookmarks": [],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -201,6 +209,7 @@ Test basic dump of two commits
               "bookmarks": [
                   "bookmark1"
               ],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -371,6 +380,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -402,6 +412,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -433,6 +444,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
@@ -464,6 +476,7 @@ Test non-ASCII characters
               "bookmarks": [
                   "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
               ],
+              "branch": "master",
               "commit_cloud": false,
               "date": [
                   0,
