@@ -607,15 +607,11 @@ impl<'a> Iterator for RotateLogLookupIter<'a> {
                             self.end = true;
                             return None;
                         }
-                        Err(err) => {
+                        Err(_err) => {
                             self.end = true;
-                            if err.is_corruption() {
-                                // Surface data corruption errors.
-                                return Some(Err(err));
-                            } else {
-                                // ex. "NotFound" - not fatal
-                                return None;
-                            }
+                            // Not fatal (since RotateLog is designed to be able
+                            // to drop data).
+                            return None;
                         }
                         Ok(Some(log)) => {
                             self.inner_iter = match log.lookup(self.index_id, &self.key) {
@@ -944,6 +940,43 @@ mod tests {
 
         // rotate2 does not have access to the deleted "a1".
         // (on Windows, 'meta' can be deleted, while mmap-ed files cannot)
+        assert_eq!(lookup(&rotate2, b"a"), vec![b"a2"]);
+        assert_eq!(iter(&rotate2), vec![b"a2"]);
+    }
+
+    #[test]
+    fn test_lookup_truncated_meta() {
+        // Look up or iteration should work with rotated logs.
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(1)
+            .max_log_count(3)
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)]);
+
+        // Prepare test data
+        let mut rotate1 = open_opts.open(&dir).unwrap();
+        rotate1.append(b"a1").unwrap();
+        assert_eq!(rotate1.sync().unwrap(), 1);
+        rotate1.append(b"a2").unwrap();
+        assert_eq!(rotate1.sync().unwrap(), 2);
+
+        // Warm up rotate1
+        assert_eq!(lookup(&rotate1, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(iter(&rotate1), vec![b"a1", b"a2"]);
+
+        // rotate2 has lazy logs
+        let rotate2 = open_opts.open(&dir).unwrap();
+
+        // Break logs by truncating "meta".
+        fs::write(dir.path().join("0").join(log::META_FILE), "").unwrap();
+
+        // rotate1 can still use its existing indexes even if "a1"
+        // might have been deleted (on Unix).
+        assert_eq!(lookup(&rotate1, b"a"), vec![b"a2", b"a1"]);
+        assert_eq!(iter(&rotate1), vec![b"a1", b"a2"]);
+
+        // rotate2 does not have access to the deleted "a1".
         assert_eq!(lookup(&rotate2, b"a"), vec![b"a2"]);
         assert_eq!(iter(&rotate2), vec![b"a2"]);
     }
