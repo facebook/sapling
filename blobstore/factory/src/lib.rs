@@ -265,5 +265,20 @@ pub fn make_blobstore<T: SqlFactory>(
                 })
                 .boxify()
         }
+
+        ManifoldWithTtl {
+            bucket,
+            prefix,
+            ttl,
+        } => ThriftManifoldBlob::new_with_ttl(fb, bucket.clone(), *ttl)
+            .map({
+                cloned!(prefix);
+                move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
+            })
+            .chain_err(ErrorKind::StateOpen)
+            .map_err(Error::from)
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+            .into_future()
+            .boxify(),
     }
 }

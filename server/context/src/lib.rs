@@ -314,9 +314,6 @@ struct Inner {
     session: Uuid,
     logger: Logger,
     scuba: ScubaSampleBuilder,
-    // Logging some prod wireproto requests to scribe so that they can be later replayed on
-    // shadow tier.
-    wireproto_scribe_category: Option<String>,
     trace: TraceContext,
     perf_counters: PerfCounters,
     user_unix_name: Option<String>,
@@ -330,14 +327,12 @@ impl ::std::fmt::Debug for Inner {
             f,
             "CoreContext::Inner
             session: {:?}
-            wireproto scribe category: {:?}
             perf counters: {:?}
             user unix name: {:?}
             ssh_env_vars: {:?}
             load_limiter: {:?}
             ",
             self.session,
-            self.wireproto_scribe_category,
             self.perf_counters,
             self.user_unix_name,
             self.ssh_env_vars,
@@ -352,7 +347,6 @@ impl CoreContext {
         session: Uuid,
         logger: Logger,
         scuba: ScubaSampleBuilder,
-        wireproto_scribe_category: Option<String>,
         trace: TraceContext,
         user_unix_name: Option<String>,
         ssh_env_vars: SshEnvVars,
@@ -364,7 +358,6 @@ impl CoreContext {
                 session,
                 logger,
                 scuba,
-                wireproto_scribe_category,
                 trace,
                 perf_counters: PerfCounters::new(),
                 user_unix_name,
@@ -384,7 +377,6 @@ impl CoreContext {
             Uuid::new_v4(),
             logger,
             ScubaSampleBuilder::with_discard(),
-            None,
             trace,
             None,
             SshEnvVars::default(),
@@ -402,7 +394,6 @@ impl CoreContext {
                 session: self.inner.session.clone(),
                 logger: self.inner.logger.new(values),
                 scuba: self.inner.scuba.clone(),
-                wireproto_scribe_category: self.inner.wireproto_scribe_category.clone(),
                 trace: self.inner.trace.clone(),
                 perf_counters: self.inner.perf_counters.clone(),
                 user_unix_name: self.inner.user_unix_name.clone(),
@@ -422,7 +413,6 @@ impl CoreContext {
                 session: self.inner.session.clone(),
                 logger: self.inner.logger.clone(),
                 scuba: init(self.inner.scuba.clone()),
-                wireproto_scribe_category: self.inner.wireproto_scribe_category.clone(),
                 trace: self.inner.trace.clone(),
                 perf_counters: self.inner.perf_counters.clone(),
                 user_unix_name: self.inner.user_unix_name.clone(),
@@ -438,7 +428,6 @@ impl CoreContext {
             Uuid::new_v4(),
             Logger::root(::slog::Discard, o!()),
             ScubaSampleBuilder::with_discard(),
-            None,
             TraceContext::default(),
             None,
             SshEnvVars::default(),
@@ -454,9 +443,6 @@ impl CoreContext {
     }
     pub fn scuba(&self) -> &ScubaSampleBuilder {
         &self.inner.scuba
-    }
-    pub fn wireproto_scribe_category(&self) -> &Option<String> {
-        &self.inner.wireproto_scribe_category
     }
     pub fn trace(&self) -> &TraceContext {
         &self.inner.trace

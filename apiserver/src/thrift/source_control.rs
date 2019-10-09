@@ -231,7 +231,6 @@ impl SourceControlServiceImpl {
             uuid,
             self.logger.clone(),
             scuba,
-            None,
             TraceContext::default(),
             None,
             SshEnvVars::default(),

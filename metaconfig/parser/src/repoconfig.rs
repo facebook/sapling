@@ -10,7 +10,7 @@
 use serde_derive::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fs,
     num::NonZeroUsize,
     path::{Path, PathBuf},
@@ -30,6 +30,7 @@ use metaconfig_types::{
     HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
     MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
     ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
+    WireprotoLogging,
 };
 use mononoke_types::MPath;
 use regex::Regex;
@@ -526,23 +527,42 @@ impl RepoConfigs {
         commit_sync: HashMap<String, CommitSyncConfig>,
         hooks: Vec<HookParams>,
     ) -> Result<RepoConfig> {
-        let mut common_storage = common_storage;
-        let raw_storage_config = this
-            .storage
-            .get(&this.storage_config)
-            .cloned()
-            .or_else(|| common_storage.remove(&this.storage_config))
-            .ok_or_else(|| {
-                ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", this.storage_config))
-            })?;
+        let storage = this.storage.clone();
+        let get_storage = move |name: &str| -> Result<StorageConfig> {
+            let raw_storage_config = storage
+                .get(name)
+                .or_else(|| common_storage.get(name))
+                .cloned()
+                .ok_or_else(|| {
+                    ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", name))
+                })?;
 
-        let storage_config = StorageConfig::try_from(raw_storage_config)?;
+            raw_storage_config.try_into()
+        };
 
+        let storage_config = get_storage(&this.storage_config)?;
         let enabled = this.enabled;
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
-        let wireproto_scribe_category = this.wireproto_scribe_category;
+
+        let wireproto_logging = this
+            .wireproto_logging
+            .map(|raw| -> Result<WireprotoLogging> {
+                let RawWireprotoLogging {
+                    scribe_category,
+                    storage_config,
+                } = raw;
+
+                let storage_config = get_storage(&storage_config)?;
+
+                Ok(WireprotoLogging {
+                    scribe_category,
+                    storage_config,
+                })
+            })
+            .transpose()?;
+
         let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
             bookmark: BookmarkName::new(cache_warmup.bookmark)
                 .expect("bookmark name must be ascii"),
@@ -703,7 +723,7 @@ impl RepoConfigs {
             push,
             pushrebase,
             lfs,
-            wireproto_scribe_category,
+            wireproto_logging,
             hash_validation_percentage,
             readonly,
             redaction,
@@ -799,7 +819,7 @@ struct RawRepoConfig {
     push: Option<RawPushParams>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
-    wireproto_scribe_category: Option<String>,
+    wireproto_logging: Option<RawWireprotoLogging>,
     hash_validation_percentage: Option<usize>,
     skiplist_index_blobstore_key: Option<String>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
@@ -947,6 +967,13 @@ enum RawBlobstoreConfig {
         scuba_table: Option<String>,
         components: Vec<RawBlobstoreIdConfig>,
     },
+    #[serde(rename = "manifold_with_ttl")]
+    ManifoldWithTtl {
+        manifold_bucket: String,
+        #[serde(default)]
+        manifold_prefix: String,
+        ttl_secs: u64,
+    },
 }
 
 impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
@@ -986,6 +1013,18 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                     .map(|comp| Ok((comp.id, BlobConfig::try_from(&comp.blobstore)?)))
                     .collect::<Result<Vec<_>>>()?,
             },
+            RawBlobstoreConfig::ManifoldWithTtl {
+                manifold_bucket,
+                manifold_prefix,
+                ttl_secs,
+            } => {
+                let ttl = Duration::from_secs(*ttl_secs);
+                BlobConfig::ManifoldWithTtl {
+                    bucket: manifold_bucket.clone(),
+                    prefix: manifold_prefix.clone(),
+                    ttl,
+                }
+            }
         };
         Ok(res)
     }
@@ -1099,10 +1138,21 @@ pub struct RawCommitSyncConfig {
     small_repos: Vec<RawCommitSyncSmallRepoConfig>,
 }
 
+/// Raw Wireproto logging configuration
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RawWireprotoLogging {
+    /// Scribe category to log requests to
+    pub scribe_category: String,
+    /// Storage where to store arguments for replay
+    pub storage_config: String,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use maplit::{btreemap, hashmap};
+    use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
 
@@ -1263,7 +1313,6 @@ mod test {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
-            wireproto_scribe_category="category"
             storage_config="files"
 
             [storage.files]
@@ -1307,6 +1356,10 @@ mod test {
             bookmarks_cache_ttl=5000
             storage_config="main"
             list_keys_patterns_max=123
+
+            [wireproto_logging]
+            scribe_category="category"
+            storage_config="main"
 
             [cache_warmup]
             bookmark="master"
@@ -1394,7 +1447,6 @@ mod test {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
-            wireproto_scribe_category="category"
             storage_config="files"
 
             [storage.files]
@@ -1445,22 +1497,23 @@ mod test {
                 ),
             ],
         };
+        let main_storage_config = StorageConfig {
+            blobstore: multiplex,
+            dbconfig: MetadataDBConfig::Mysql {
+                db_address: "db_address".into(),
+                sharded_filenodes: Some(ShardedFilenodesParams {
+                    shard_map: "db_address_shards".into(),
+                    shard_num: NonZeroUsize::new(123).unwrap(),
+                }),
+            },
+        };
 
         let mut repos = HashMap::new();
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
                 enabled: true,
-                storage_config: StorageConfig {
-                    blobstore: multiplex,
-                    dbconfig: MetadataDBConfig::Mysql {
-                        db_address: "db_address".into(),
-                        sharded_filenodes: Some(ShardedFilenodesParams {
-                            shard_map: "db_address_shards".into(),
-                            shard_num: NonZeroUsize::new(123).unwrap(),
-                        }),
-                    },
-                },
+                storage_config: main_storage_config.clone(),
                 write_lock_db_address: Some("write_lock_db_address".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
@@ -1550,7 +1603,10 @@ mod test {
                 lfs: LfsParams {
                     threshold: Some(1000),
                 },
-                wireproto_scribe_category: None,
+                wireproto_logging: Some(WireprotoLogging {
+                    scribe_category: "category".to_string(),
+                    storage_config: main_storage_config,
+                }),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
@@ -1570,6 +1626,7 @@ mod test {
                 commit_sync_config: None,
             },
         );
+
         repos.insert(
             "www".to_string(),
             RepoConfig {
@@ -1594,7 +1651,7 @@ mod test {
                 push: Default::default(),
                 pushrebase: Default::default(),
                 lfs: Default::default(),
-                wireproto_scribe_category: Some("category".to_string()),
+                wireproto_logging: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,

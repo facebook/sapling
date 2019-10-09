@@ -19,7 +19,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
-use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
+use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLogging};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
@@ -35,7 +35,7 @@ use sql_ext::SqlConstructors;
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
-    pub wireproto_scribe_category: Option<String>,
+    pub wireproto_logging: Option<WireprotoLogging>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
@@ -118,7 +118,7 @@ pub fn repo_handlers(
                     list_keys_patterns_max,
                     scuba_table,
                     hash_validation_percentage,
-                    wireproto_scribe_category,
+                    wireproto_logging,
                     bundle2_replay_params,
                     push,
                     ..
@@ -198,7 +198,6 @@ pub fn repo_handlers(
                                 ScubaSampleBuilder::with_opt_table(fb, scuba_table);
                             scuba_logger.add_common_server_data();
                             let hash_validation_percentage = hash_validation_percentage;
-                            let wireproto_scribe_category = wireproto_scribe_category;
                             let preserve_raw_bundle2 = bundle2_replay_params.preserve_raw_bundle2;
                             let pure_push_allowed = push.pure_push_allowed;
 
@@ -256,7 +255,7 @@ pub fn repo_handlers(
                                             RepoHandler {
                                                 logger: listen_log,
                                                 scuba: scuba_logger,
-                                                wireproto_scribe_category,
+                                                wireproto_logging,
                                                 repo,
                                                 hash_validation_percentage,
                                                 lca_hint,

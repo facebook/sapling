@@ -36,7 +36,7 @@ use mercurial_types::{
     HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
     NULL_CSID, NULL_HASH,
 };
-use metaconfig_types::RepoReadOnly;
+use metaconfig_types::{RepoReadOnly, WireprotoLogging};
 use phases::Phases;
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -228,6 +228,7 @@ pub struct RepoClient {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
+    wireproto_logging: Option<WireprotoLogging>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -239,7 +240,7 @@ struct WireprotoLogger {
     scribe_client: Arc<ScribeClientImplementation>,
     // This scribe category main purpose is to tail the prod requests and replay them
     // on shadow tier.
-    wireproto_scribe_category: Option<String>,
+    wireproto_logging: Option<WireprotoLogging>,
     wireproto_command: &'static str,
     reponame: String,
 }
@@ -249,13 +250,13 @@ impl WireprotoLogger {
         fb: FacebookInit,
         scuba_logger: ScubaSampleBuilder,
         wireproto_command: &'static str,
-        wireproto_scribe_category: Option<String>,
+        wireproto_logging: Option<WireprotoLogging>,
         reponame: String,
     ) -> Self {
         let mut logger = Self {
             scuba_logger,
             scribe_client: Arc::new(ScribeClientImplementation::new(fb)),
-            wireproto_scribe_category,
+            wireproto_logging,
             wireproto_command,
             reponame,
         };
@@ -292,7 +293,11 @@ impl WireprotoLogger {
             .add_stream_stats(&stats)
             .log_with_msg("Command processed", None);
 
-        if let Some(ref wireproto_scribe_category) = self.wireproto_scribe_category {
+        if let Some(WireprotoLogging {
+            ref scribe_category,
+            ..
+        }) = self.wireproto_logging
+        {
             let mut builder = ScubaSampleBuilder::with_discard();
             builder.add_common_server_data();
             match args {
@@ -314,7 +319,7 @@ impl WireprotoLogger {
             if let Ok(sample_json) = sample.to_json() {
                 let _ = self
                     .scribe_client
-                    .offer(&wireproto_scribe_category, &sample_json.to_string());
+                    .offer(&scribe_category, &sample_json.to_string());
             }
         }
     }
@@ -331,6 +336,7 @@ impl RepoClient {
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
+        wireproto_logging: Option<WireprotoLogging>,
     ) -> Self {
         RepoClient {
             repo,
@@ -343,6 +349,7 @@ impl RepoClient {
             hook_manager,
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             support_bundle2_listkeys,
+            wireproto_logging,
         }
     }
 
@@ -696,7 +703,7 @@ impl RepoClient {
             self.ctx.fb,
             self.ctx.scuba().clone(),
             wireproto_command,
-            self.ctx.wireproto_scribe_category().clone(),
+            self.wireproto_logging.clone(),
             self.repo.reponame().clone(),
         )
     }

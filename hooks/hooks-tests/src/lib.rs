@@ -1241,7 +1241,7 @@ fn default_repo_config() -> RepoConfig {
         push: Default::default(),
         pushrebase: Default::default(),
         lfs: Default::default(),
-        wireproto_scribe_category: None,
+        wireproto_logging: None,
         hash_validation_percentage: 0,
         readonly: RepoReadOnly::ReadWrite,
         redaction: Redaction::Enabled,

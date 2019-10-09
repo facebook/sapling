@@ -83,9 +83,9 @@ pub struct RepoConfig {
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
     pub lfs: LfsParams,
-    /// Scribe category to log all wireproto requests with full arguments.
+    /// Configuration for logging all wireproto requests with full arguments.
     /// Used for replay on shadow tier.
-    pub wireproto_scribe_category: Option<String>,
+    pub wireproto_logging: Option<WireprotoLogging>,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
@@ -521,6 +521,15 @@ pub enum BlobConfig {
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
     },
+    /// Store in a manifold bucket, but every object will have an expiration
+    ManifoldWithTtl {
+        /// Bucket of the backing Manifold blobstore to connect to
+        bucket: String,
+        /// Prefix to be prepended to all the keys. In prod it should be ""
+        prefix: String,
+        /// TTL for each object we put in Manifold
+        ttl: Duration,
+    },
 }
 
 impl BlobConfig {
@@ -531,7 +540,7 @@ impl BlobConfig {
 
         match self {
             Disabled | Files { .. } | Rocks { .. } | Sqlite { .. } => true,
-            Manifold { .. } | Mysql { .. } => false,
+            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } => false,
             Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, config)| config)
@@ -744,4 +753,15 @@ pub struct CommitSyncConfig {
     pub common_pushrebase_bookmarks: Vec<BookmarkName>,
     /// Corresponding small repo configs
     pub small_repos: HashMap<i32, SmallRepoCommitSyncConfig>,
+}
+
+/// Configuration for logging wireproto commands and arguments
+/// This is used by traffic replay script to replay on prod traffic on shadow tier
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct WireprotoLogging {
+    /// Scribe category to log to
+    pub scribe_category: String,
+    /// Storage config to store wireproto arguments. The arguments can be quite big,
+    /// so storing separately would make sense.
+    pub storage_config: StorageConfig,
 }

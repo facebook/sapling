@@ -113,7 +113,6 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             session_uuid,
             self.logger.clone(),
             scuba,
-            None,
             TraceContext::default(),
             None,
             SshEnvVars::default(),
