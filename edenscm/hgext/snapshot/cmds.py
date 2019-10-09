@@ -131,11 +131,7 @@ def createsnapshotcommit(ui, repo, opts):
         return repo.commitctx(cctx, error=True), snapmetadata
 
 
-@subcmd("show", cmdutil.logopts, _("REV"), cmdtype=registrar.command.readonly)
-def snapshotshow(ui, repo, *args, **opts):
-    """show the snapshot contents, given its revision id
-    """
-    opts = pycompat.byteskwargs(opts)
+def getsnapshotctx(ui, repo, args):
     if not args or len(args) != 1:
         raise error.Abort(_("you must specify a snapshot revision id\n"))
     node = args[0]
@@ -146,6 +142,15 @@ def snapshotshow(ui, repo, *args, **opts):
         raise
     if "snapshotmetadataid" not in cctx.extra():
         raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    return cctx
+
+
+@subcmd("show", cmdutil.logopts, _("REV"), cmdtype=registrar.command.readonly)
+def snapshotshow(ui, repo, *args, **opts):
+    """show the snapshot contents, given its revision id
+    """
+    opts = pycompat.byteskwargs(opts)
+    cctx = getsnapshotctx(ui, repo, args)
     rev = cctx.hex()
     opts["rev"] = [rev]
     opts["patch"] = True
@@ -238,17 +243,8 @@ def _show(orig, self, ctx, *args):
 def snapshotcheckout(ui, repo, *args, **opts):
     """checks out the working copy to the snapshot state, given its revision id
     """
-    if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a snapshot revision id\n"))
+    cctx = getsnapshotctx(ui, repo, args)
     force = opts.get("force")
-    node = args[0]
-    try:
-        cctx = repo.unfiltered()[node]
-    except error.RepoLookupError:
-        ui.status(_("%s is not a valid revision id\n") % node)
-        raise
-    if "snapshotmetadataid" not in cctx.extra():
-        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
     # This is a temporary safety check that WC is clean.
     if sum(map(len, repo.status(unknown=True))) != 0 and not force:
         raise error.Abort(
@@ -265,7 +261,7 @@ def snapshotcheckout(ui, repo, *args, **opts):
         # Then we update snapshot files in the working copy
         # Here the dirstate is not updated because of the matcher
         matcher = scmutil.matchfiles(repo, cctx.files(), opts)
-        mergemod.update(repo.unfiltered(), node, False, False, matcher=matcher)
+        mergemod.update(repo.unfiltered(), cctx.hex(), False, False, matcher=matcher)
         # Finally, we mark the modified files in the dirstate
         scmutil.addremove(repo, matcher, "", opts)
         # Tie the state to the 2nd parent if needed
@@ -314,16 +310,7 @@ def snapshotlistcmd(ui, repo, *args, **opts):
 def snapshothide(ui, repo, *args, **opts):
     """hide a snapshot: remove it from the snapshot list
     """
-    if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a snapshot revision id\n"))
-    node = args[0]
-    try:
-        cctx = repo.unfiltered()[node]
-    except error.RepoLookupError:
-        ui.status(_("%s is not a valid revision id\n") % node)
-        raise
-    if "snapshotmetadataid" not in cctx.extra():
-        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    cctx = getsnapshotctx(ui, repo, args)
     with repo.lock(), repo.transaction("hide-snapshot") as tr:
         repo.snapshotlist.update(tr, removenodes=[cctx.hex()])
 
@@ -332,15 +319,6 @@ def snapshothide(ui, repo, *args, **opts):
 def snapshotunhide(ui, repo, *args, **opts):
     """unhide a snapshot: add it to the snapshot list
     """
-    if not args or len(args) != 1:
-        raise error.Abort(_("you must specify a snapshot revision id\n"))
-    node = args[0]
-    try:
-        cctx = repo.unfiltered()[node]
-    except error.RepoLookupError:
-        ui.status(_("%s is not a valid revision id\n") % node)
-        raise
-    if "snapshotmetadataid" not in cctx.extra():
-        raise error.Abort(_("%s is not a valid snapshot id\n") % node)
+    cctx = getsnapshotctx(ui, repo, args)
     with repo.lock(), repo.transaction("unhide-snapshot") as tr:
         repo.snapshotlist.update(tr, addnodes=[cctx.hex()])
