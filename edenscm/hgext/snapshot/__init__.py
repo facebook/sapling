@@ -53,6 +53,7 @@ from edenscm.mercurial import (
     revsetlang,
     smartset,
     templatekw,
+    util,
     visibility,
 )
 from edenscm.mercurial.i18n import _
@@ -83,7 +84,7 @@ def reposetup(ui, repo):
 
     repo.svfs.options["snapshotthreshold"] = threshold
     repo.svfs.snapshotstore = blobstore.local(repo)
-    if isinstance(repo, bundlerepo.bundlerepository):
+    if util.safehasattr(repo, "_snapshotbundlestore"):
         repo.svfs.snapshotstore = blobstoremod.unionstore(
             repo.svfs.snapshotstore, repo._snapshotbundlestore
         )
