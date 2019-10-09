@@ -4,18 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Fail};
+use failure::{err_msg, Error, Fail};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,
-    future::{ok, try_join, FutureExt, TryFutureExt},
+    future::{try_join, FutureExt, TryFutureExt},
     stream::{futures_unordered::FuturesUnordered, TryStreamExt},
 };
 use metaconfig_types::PushrebaseParams;
@@ -43,6 +43,7 @@ pub enum ErrorKind {
 async fn identity<T>(res: T) -> Result<T, Error> {
     Ok(res)
 }
+
 /// Applies `rewrite_path` to all paths in `cs`, dropping any entry whose path rewrites to `None`
 /// E.g. adding a prefix can be done by a `rewrite` that adds the prefix and returns `Some(path)`.
 /// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
@@ -57,122 +58,88 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
     mapping: &M,
     rewrite_path: Mover,
 ) -> Result<Option<(BonsaiChangesetMut, Vec<ChangesetId>)>, Error> {
-    let mut changesets: Vec<ChangesetId> = Vec::new();
-    // Empty commits should always sync as-is; there is no path rewriting involved here.
-    if !cs.file_changes.is_empty() {
-        let mut copyfrom_remap = FuturesUnordered::new();
-        // Update the changelist
-        let mut new_changes = BTreeMap::new();
-
-        let path_rewritten_changes = cs.file_changes.into_iter().filter_map(|(path, change)| {
-            // Just rewrite copy_from information, when we have it
-            fn rewrite_copy_from(
-                copy_from: &(MPath, ChangesetId),
-                rewrite_path: Mover,
-            ) -> Result<Option<(MPath, ChangesetId)>, Error> {
-                let (path, cs) = copy_from;
-                let new_path = rewrite_path(&path)?;
-                Ok(new_path.map(|new_path| (new_path, *cs)))
-            }
-
-            // Extract any copy_from information, and use rewrite_copy_from on it
-            fn rewrite_file_change(
-                change: FileChange,
-                rewrite_path: Mover,
-            ) -> Result<(FileChange, Option<(MPath, ChangesetId)>), Error> {
-                let new_copy_from = change
-                    .copy_from()
-                    .and_then(|copy_from| rewrite_copy_from(copy_from, rewrite_path).transpose())
-                    .transpose()?;
-                Ok((change, new_copy_from))
-            }
-
-            // Rewrite both path and changes
-            fn do_rewrite(
-                path: MPath,
-                change: Option<FileChange>,
-                rewrite_path: Mover,
-            ) -> Result<Option<(MPath, Option<(FileChange, Option<(MPath, ChangesetId)>)>)>, Error>
-            {
-                let new_path = rewrite_path(&path)?;
-                let change = change
-                    .map(|change| rewrite_file_change(change, rewrite_path.clone()))
-                    .transpose()?;
-                Ok(new_path.map(|new_path| (new_path, change)))
-            }
-            do_rewrite(path, change, rewrite_path.clone()).transpose()
-        });
-
-        for rewritten_change in path_rewritten_changes {
-            // Now rewrite copy_from hashes. Any hash that can't remap is kept as-is
-            // This is to aid with syncing to/from imported repos. We assume that
-            // commits that don't remap were from before the merge, and rely on the caller
-            // verifying that all commits are actually in the destination repo.
-            match rewritten_change {
-                Err(e) => return Err(e),
-                Ok((path, change)) => match change {
-                    None => {
-                        new_changes.insert(path, None);
-                    }
-                    Some((old_change, None)) => {
-                        new_changes.insert(path, Some(old_change));
-                    }
-                    Some((old_change, Some((copy_path, commit)))) => {
-                        cloned!(ctx);
-                        let remap_fut = async move {
-                            let remapped_commit = mapping
-                                .get(ctx, source_repo_id, commit, target_repo_id)
-                                .compat()
-                                .await?;
-                            // If it doesn't remap, we will optimistically assume that the
-                            // target is already in the repo - this is passed out
-                            // to the caller to validate, as Mercurial has trouble if it's not true
-                            let new_changeset = remapped_commit.unwrap_or(commit);
-                            let new_change = FileChange::with_new_copy_from(
-                                old_change,
-                                Some((copy_path, new_changeset)),
-                            );
-                            let res: Result<_, Error> = Ok((path, new_change));
-                            res
-                        };
-                        copyfrom_remap.push(remap_fut)
-                    }
-                },
-            }
-        }
-
-        copyfrom_remap
-            .try_for_each_concurrent(100, {
-                |(path, change)| {
-                    if let Some((_, changeset)) = change.copy_from() {
-                        changesets.push(changeset.clone());
-                    }
-                    new_changes.insert(path, Some(change));
-                    ok(())
-                }
-            })
-            .await?;
-        // Empty change after rewriting, but not before, so we filtered everything out. Just return
-        if new_changes.is_empty() {
-            return Ok(None);
-        }
-        cs.file_changes = new_changes;
-    }
-
-    // Update hashes
+    let mut changesets_to_check: Vec<ChangesetId> = Vec::new();
+    let mut remapped_parents = HashMap::new();
     for commit in cs.parents.iter_mut() {
         let remapped_commit = mapping
             .get(ctx.clone(), source_repo_id, *commit, target_repo_id)
             .compat()
             .await?;
-        // This will be passed out to the caller to validate, as Mercurial has trouble if
-        // the parent is missing in the repo
-        // TODO(T54125963): Walk backwards when this happens, to find a valid parent in the child repo
-        let changeset = remapped_commit.unwrap_or(*commit);
-        changesets.push(changeset);
-        *commit = changeset;
+        // If it doesn't remap, we will optimistically assume that the
+        // target is already in the repo - this is passed out
+        // to the caller to validate, as Mercurial has trouble if it's not true
+        let remapped_commit = remapped_commit.unwrap_or(*commit);
+        changesets_to_check.push(remapped_commit.clone());
+        remapped_parents.insert(commit.clone(), remapped_commit);
+        *commit = remapped_commit;
     }
-    Ok(Some((cs, changesets)))
+
+    if !cs.file_changes.is_empty() {
+        let path_rewritten_changes: Result<BTreeMap<_, _>, _> = cs
+            .file_changes
+            .into_iter()
+            .filter_map(|(path, change)| {
+                // Just rewrite copy_from information, when we have it
+                fn rewrite_copy_from(
+                    copy_from: &(MPath, ChangesetId),
+                    remapped_parents: &HashMap<ChangesetId, ChangesetId>,
+                    rewrite_path: Mover,
+                ) -> Result<Option<(MPath, ChangesetId)>, Error> {
+                    let (path, copy_from_commit) = copy_from;
+                    let new_path = rewrite_path(&path)?;
+                    let copy_from_commit =
+                        remapped_parents
+                            .get(copy_from_commit)
+                            .ok_or(err_msg(format!(
+                                "Copy from commit not found: {}",
+                                copy_from_commit
+                            )))?;
+                    Ok(new_path.map(|new_path| (new_path, *copy_from_commit)))
+                }
+
+                // Extract any copy_from information, and use rewrite_copy_from on it
+                fn rewrite_file_change(
+                    change: FileChange,
+                    remapped_parents: &HashMap<ChangesetId, ChangesetId>,
+                    rewrite_path: Mover,
+                ) -> Result<FileChange, Error> {
+                    let new_copy_from = change
+                        .copy_from()
+                        .and_then(|copy_from| {
+                            rewrite_copy_from(copy_from, remapped_parents, rewrite_path).transpose()
+                        })
+                        .transpose()?;
+
+                    Ok(FileChange::with_new_copy_from(change, new_copy_from))
+                }
+
+                // Rewrite both path and changes
+                fn do_rewrite(
+                    path: MPath,
+                    change: Option<FileChange>,
+                    remapped_parents: &HashMap<ChangesetId, ChangesetId>,
+                    rewrite_path: Mover,
+                ) -> Result<Option<(MPath, Option<FileChange>)>, Error> {
+                    let new_path = rewrite_path(&path)?;
+                    let change = change
+                        .map(|change| {
+                            rewrite_file_change(change, remapped_parents, rewrite_path.clone())
+                        })
+                        .transpose()?;
+                    Ok(new_path.map(|new_path| (new_path, change)))
+                }
+                do_rewrite(path, change, &remapped_parents, rewrite_path.clone()).transpose()
+            })
+            .collect();
+        let path_rewritten_changes = path_rewritten_changes?;
+        if !path_rewritten_changes.is_empty() {
+            cs.file_changes = path_rewritten_changes;
+        } else {
+            return Ok(None);
+        }
+    }
+
+    Ok(Some((cs, changesets_to_check)))
 }
 
 #[derive(Clone)]
