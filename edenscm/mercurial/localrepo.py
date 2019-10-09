@@ -582,6 +582,7 @@ class localrepository(object):
         if (
             not self.ui.configbool("visibility", "enabled")
             or self.ui.config("extensions", "remotenames") == "!"
+            or "visibleheads" not in self.storerequirements
         ):
             narrowheadsdesired = False
         narrowheadscurrent = "narrowheads" in self.storerequirements
