@@ -882,6 +882,16 @@ impl Log {
                         .write_file(&meta_path, self.open_options.fsync)
                         .context(|| format!("  before replacing index {:?})", name))?;
 
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        // https://github.com/Stebalien/tempfile/pull/61
+                        let permissions = PermissionsExt::from_mode(0o664);
+                        tmp.as_file()
+                            .set_permissions(permissions)
+                            .context(&tmp.path(), "cannot chmod")?;
+                    }
+
                     let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                     tmp.persist(&path).map_err(|e| {
                         crate::Error::wrap(Box::new(e), || {
