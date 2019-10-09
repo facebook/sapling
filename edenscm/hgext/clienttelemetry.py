@@ -16,7 +16,15 @@ from __future__ import absolute_import
 import socket
 import string
 
-from edenscm.mercurial import dispatch, extensions, hg, perftrace, util, wireproto
+from edenscm.mercurial import (
+    blackbox,
+    dispatch,
+    extensions,
+    hg,
+    perftrace,
+    util,
+    wireproto,
+)
 from edenscm.mercurial.i18n import _
 
 
@@ -95,6 +103,7 @@ def _peersetup(ui, peer):
         logargs.update(_clienttelemetrydata)
         peername = peer._call("clienttelemetry", **logargs)
         ui.log("clienttelemetry", server_realhostname=peername)
+        blackbox.log({"clienttelemetry": {"peername": peername}})
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)

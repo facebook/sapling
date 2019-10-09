@@ -46,3 +46,8 @@ check telemetry
   command: pull
   fullcommand: pull --config 'clienttelemetry.announceremotehostname=False'
 
+check blackbox
+  $ hg blackbox --pattern '{"clienttelemetry": "_"}'
+  * [clienttelemetry] peer name: * (glob)
+  * [clienttelemetry] peer name: * (glob)
+  * [clienttelemetry] peer name: * (glob)

@@ -107,6 +107,13 @@ pub enum Event {
         items: BTreeMap<String, String>,
     },
 
+    /// Client Telemetry Data
+    #[serde(rename = "CT", alias = "clienttelemetry")]
+    ClientTelemetry {
+        #[serde(rename = "P", alias = "peername")]
+        peer_name: String,
+    },
+
     /// Free-form debug message.
     #[serde(rename = "D", alias = "debug")]
     Debug {
@@ -553,6 +560,9 @@ impl fmt::Display for Event {
                         .collect::<Vec<_>>()
                         .join(" ")
                 )?;
+            }
+            ClientTelemetry { peer_name } => {
+                write!(f, "[clienttelemetry] peer name: {}", peer_name)?
             }
             Debug { value } => write!(f, "[debug] {}", json_to_string(value))?,
             Exception { msg } => write!(f, "[command_exception] {}", msg)?,
