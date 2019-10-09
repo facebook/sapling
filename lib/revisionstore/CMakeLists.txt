@@ -23,6 +23,19 @@ target_link_libraries(
   Folly::folly
 )
 
+# curl used in the Rust crate has its own copy of curl compiled and it uses
+# Crypt32 and Secur32 on Windows. We need to declare the link dependencies here
+# to avoid linker errors.
+if (WIN32)
+  target_link_libraries(
+    revisionstore
+    PRIVATE
+    Crypt32
+    Secur32
+    Ncrypt
+  )
+endif()
+
 install(
   TARGETS revisionstore
   EXPORT mercurial

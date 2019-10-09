@@ -51,7 +51,7 @@ function(rust_static_library TARGET)
     # our CI runs a build.
     set(pre_cargo_cmd ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/CMake/facebook/setup_cargo_vendor.py)
   else()
-    set(pre_cargo_cmd "${CMAKE_COMMAND} -E echo NOP")
+    set(pre_cargo_cmd "${CMAKE_COMMAND}" -E echo NOP)
   endif()
 
   if(WIN32)
