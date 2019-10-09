@@ -1825,24 +1825,41 @@ impl OpenOptions {
                     .metadata()
                     .context(&primary_path, "cannot read fs metadata")?
                     .len();
-                let meta = LogMetadata::read_file(&meta_path)
+                match LogMetadata::read_file(&meta_path)
                     .context(&meta_path, "cannot read log metadata")
-                    .context("repair cannot fix metadata corruption")?;
-                if meta.primary_len > primary_len {
-                    use fs2::FileExt;
-                    // Log was truncated for some reason...
-                    // (This should be relatively rare)
-                    // Fill Log with 0s.
-                    let file = fs::OpenOptions::new()
-                        .write(true)
-                        .open(&primary_path)
-                        .context(&primary_path, "cannot open for write")?;
-                    file.allocate(meta.primary_len)
-                        .context(&primary_path, "cannot fallocate")?;
-                    message += &format!(
-                        "Extended log to {:?} bytes required by meta\n",
-                        meta.primary_len
-                    );
+                    .context("repair cannot fix metadata corruption")
+                {
+                    Ok(meta) => {
+                        // If metadata can be read, trust it.
+                        if meta.primary_len > primary_len {
+                            use fs2::FileExt;
+                            // Log was truncated for some reason...
+                            // (This should be relatively rare)
+                            // Fill Log with 0s.
+                            let file = fs::OpenOptions::new()
+                                .write(true)
+                                .open(&primary_path)
+                                .context(&primary_path, "cannot open for write")?;
+                            file.allocate(meta.primary_len)
+                                .context(&primary_path, "cannot fallocate")?;
+                            message += &format!(
+                                "Extended log to {:?} bytes required by meta\n",
+                                meta.primary_len
+                            );
+                        }
+                    }
+                    Err(meta_err) => {
+                        // Attempt to rebuild metadata.
+                        let meta = LogMetadata {
+                            primary_len,
+                            indexes: BTreeMap::new(),
+                            epoch: utils::epoch(),
+                        };
+                        meta.write_file(&meta_path, self.fsync)
+                            .context("while recreating meta")
+                            .source(meta_err)?;
+                        message += "Rebuilt metadata\n";
+                    }
                 }
                 Ok(())
             })()
@@ -3063,7 +3080,6 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n")
         };
-        let cannot_repair = || open_opts.repair(&path).unwrap_err();
 
         // Repair is a no-op if log and indexes pass integirty check.
         append();
@@ -3252,19 +3268,40 @@ Rebuilt index "c""#
         );
         verify_len(200000);
 
-        // Corrupt meta - cannot repair
+        // Corrupt meta
         corrupt(META_FILE, -1);
+        corrupt(PRIMARY_FILE, 1000);
         verify_corrupted();
-        cannot_repair();
+        assert_eq!(
+            repair(),
+            r#"Rebuilt metadata
+Verified first 141 entries, 999 of 1400012 bytes in log
+Reset log size to 999
+Rebuilt index "c""#
+        );
+        verify_len(141);
 
         truncate(META_FILE);
         verify_corrupted();
-        cannot_repair();
+        assert_eq!(
+            repair(),
+            r#"Rebuilt metadata
+Verified first 141 entries, 999 of 1400012 bytes in log
+Reset log size to 999
+Rebuilt index "c""#
+        );
+        verify_len(141);
 
         // Delete meta - as if the log directory does not exist.
         delete(META_FILE);
-        cannot_repair();
-        verify_len(0);
+        assert_eq!(
+            repair(),
+            r#"Rebuilt metadata
+Verified first 141 entries, 999 of 1400012 bytes in log
+Reset log size to 999
+Rebuilt index "c""#
+        );
+        verify_len(141);
 
         let len = |name: &str| path.join(name).metadata().unwrap().len();
         let append = || {
