@@ -21,9 +21,10 @@ def mkcommit(name):
 shlib.mkcommit = mkcommit
 
 
-sh % "enable amend rebase"
+sh % "enable amend rebase remotenames"
 sh % "setconfig experimental.evolution.allowdivergence=True"
 sh % 'setconfig "experimental.evolution=createmarkers, allowunstable"'
+sh % "setconfig visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date='0 0' experimental.evolution= remotenames.rename.default=remote"
 sh % "hg init restack"
 sh % "cd restack"
 
@@ -63,7 +64,7 @@ sh % "hg amend" == r"""
     hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "showgraph" == r"""
-    @  4 c54ee8acf83d add b
+    @  4 743396f58c5c add b
     |
     | o  3 47d2a3944de8 add d
     | |
@@ -76,11 +77,11 @@ sh % "hg rebase --restack" == r'''
     rebasing 2:4538525df7e2 "add c"
     rebasing 3:47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    o  6 a5821d37b1b7 add d
+    o  6 228a9d754739 add d
     |
-    o  5 1764a93dcfdf add c
+    o  5 6d61804ea72c add c
     |
-    @  4 c54ee8acf83d add b
+    @  4 743396f58c5c add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -104,7 +105,7 @@ sh % "hg amend" == r"""
 sh % "echo b" >> "b"
 sh % "hg amend"
 sh % "showgraph" == r"""
-    @  4 c4c2e155d8e8 add b
+    @  4 af408d76932d add b
     |
     | o  2 4538525df7e2 add c
     | |
@@ -113,9 +114,9 @@ sh % "showgraph" == r"""
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == 'rebasing 2:4538525df7e2 "add c"'
 sh % "showgraph" == r"""
-    o  5 81909827477c add c
+    o  5 e5f1b912c5fa add c
     |
-    @  4 c4c2e155d8e8 add b
+    @  4 af408d76932d add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -133,7 +134,7 @@ sh % "hg amend" == r"""
     hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "showgraph" == r"""
-    @  5 f19e51f4d5ab add b
+    @  5 e067a66b3532 add b
     |
     | o  4 9d206ffc875e add e
     | |
@@ -160,17 +161,17 @@ sh % "hg resolve --mark d" == r"""
     (no more unresolved files)
     continue: hg rebase --continue"""
 sh % "hg rebase --continue" == r'''
-    already rebased 2:4538525df7e2 "add c" as 5532778357fd
+    already rebased 2:4538525df7e2 "add c" as 217450801891
     rebasing 3:47d2a3944de8 "add d"
     rebasing 4:9d206ffc875e "add e"'''
 sh % "showgraph" == r"""
-    o  8 661cf3d06b05 add e
+    o  8 b706583c96e3 add e
     |
-    o  7 fa39a0ff8b82 add d
+    o  7 e247890f1a49 add d
     |
-    o  6 5532778357fd add c
+    o  6 217450801891 add c
     |
-    @  5 f19e51f4d5ab add b
+    @  5 e067a66b3532 add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -187,7 +188,7 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 3" == "3 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  4 c54ee8acf83d add b
+    o  4 743396f58c5c add b
     |
     | @  3 47d2a3944de8 add d
     | |
@@ -200,11 +201,11 @@ sh % "hg rebase --restack" == r'''
     rebasing 2:4538525df7e2 "add c"
     rebasing 3:47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    @  6 a5821d37b1b7 add d
+    @  6 228a9d754739 add d
     |
-    o  5 1764a93dcfdf add c
+    o  5 6d61804ea72c add c
     |
-    o  4 c54ee8acf83d add b
+    o  4 743396f58c5c add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -221,9 +222,9 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "mkcommit e"
 sh % "showgraph" == r"""
-    @  5 c1992d8998fa add e
+    @  5 58e16e5d23eb add e
     |
-    o  4 c54ee8acf83d add b
+    o  4 743396f58c5c add b
     |
     | o  3 47d2a3944de8 add d
     | |
@@ -236,13 +237,13 @@ sh % "hg rebase --restack" == r'''
     rebasing 2:4538525df7e2 "add c"
     rebasing 3:47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    o  7 a5821d37b1b7 add d
+    o  7 228a9d754739 add d
     |
-    o  6 1764a93dcfdf add c
+    o  6 6d61804ea72c add c
     |
-    | @  5 c1992d8998fa add e
+    | @  5 58e16e5d23eb add e
     |/
-    o  4 c54ee8acf83d add b
+    o  4 743396f58c5c add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -264,15 +265,15 @@ sh % "hg prev" == r"""
     [*] add b (glob)"""
 sh % "echo b" >> "b"
 sh % "hg amend" == r"""
-    hint[amend-restack]: descendants of c54ee8acf83d are left behind - use 'hg restack' to rebase them
+    hint[amend-restack]: descendants of 743396f58c5c are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 5" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  6 c4c2e155d8e8 add b
+    o  6 af408d76932d add b
     |
-    | @  5 c1992d8998fa add e
+    | @  5 58e16e5d23eb add e
     | |
-    | x  4 c54ee8acf83d add b
+    | x  4 743396f58c5c add b
     |/
     | o  3 47d2a3944de8 add d
     | |
@@ -284,15 +285,15 @@ sh % "showgraph" == r"""
 sh % "hg rebase --restack" == r'''
     rebasing 2:4538525df7e2 "add c"
     rebasing 3:47d2a3944de8 "add d"
-    rebasing 5:c1992d8998fa "add e"'''
+    rebasing 5:58e16e5d23eb "add e"'''
 sh % "showgraph" == r"""
-    @  9 d52a0251f17f add e
+    @  9 2220f78c83d8 add e
     |
-    | o  8 98270af1e2d8 add d
+    | o  8 d61d8c7f922c add d
     | |
-    | o  7 81909827477c add c
+    | o  7 e5f1b912c5fa add c
     |/
-    o  6 c4c2e155d8e8 add b
+    o  6 af408d76932d add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -316,9 +317,9 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 3" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  5 a43fcd08f41f add c
+    o  5 dd2a887139a3 add c
     |
-    | o  4 c54ee8acf83d add b
+    | o  4 743396f58c5c add b
     | |
     | | @  3 47d2a3944de8 add d
     | | |
@@ -328,14 +329,14 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
-    rebasing 5:a43fcd08f41f "add c" (tip)
+    rebasing 5:dd2a887139a3 "add c" (tip)
     rebasing 3:47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    @  7 eb17ba71882a add d
+    @  7 4e2bc7d6cfea add d
     |
-    o  6 036064f96b60 add c
+    o  6 afa76d04eaa3 add c
     |
-    o  4 c54ee8acf83d add b
+    o  4 743396f58c5c add b
     |
     o  0 1f0dee641bb7 add a"""
 
@@ -359,7 +360,7 @@ sh % "hg up 1" == "1 files updated, 0 files merged, 1 files removed, 0 files unr
 sh % "showgraph" == r"""
     o  6 79bfbab36011 add f
     |
-    | o  5 c5b31a43cdc5 add d
+    | o  5 f2bf14e1d387 add d
     | |
     | | o  4 9d206ffc875e add e
     | | |
@@ -372,11 +373,11 @@ sh % "showgraph" == r"""
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == 'rebasing 4:9d206ffc875e "add e"'
 sh % "showgraph" == r"""
-    o  7 2f4697538c37 add e
+    o  7 a660256c6d2a add e
     |
     | o  6 79bfbab36011 add f
     | |
-    o |  5 c5b31a43cdc5 add d
+    o |  5 f2bf14e1d387 add d
     | |
     o |  2 4538525df7e2 add c
     | |
@@ -401,7 +402,7 @@ sh % "hg amend -m Unamended"
 sh % "hg unamend"
 sh % "hg up -C 1" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  3 a5c6a6c11eb6 Amended
+    o  3 173e12a9f067 Amended
     |
     | o  2 4538525df7e2 add c
     | |
@@ -409,20 +410,24 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
-    rebasing 2:4538525df7e2 "add c"
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+    abort: hidden revision '4'!
+    (use --hidden to access hidden revisions)
+    [255]"""
 sh % "showgraph" == r"""
-    o  5 34b2b8ed2689 add c
+    o  3 173e12a9f067 Amended
     |
-    @  3 a5c6a6c11eb6 Amended
-    |
-    | x  1 7c3bad9141dc add b
+    | o  2 4538525df7e2 add c
+    | |
+    | @  1 7c3bad9141dc add b
     |/
     o  0 1f0dee641bb7 add a"""
 
 # Revision 2 "add c" is already stable (not orphaned) so restack does nothing:
 
-sh % "hg rebase --restack" == "nothing to rebase - empty destination"
+sh % "hg rebase --restack" == r"""
+    abort: hidden revision '4'!
+    (use --hidden to access hidden revisions)
+    [255]"""
 
 # Test recursive restacking -- basic case.
 sh % "newrepo"
@@ -442,9 +447,9 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 1" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  5 a43fcd08f41f add c
+    o  5 dd2a887139a3 add c
     |
-    | o  4 c54ee8acf83d add b
+    | o  4 743396f58c5c add b
     | |
     | | o  3 47d2a3944de8 add d
     | | |
@@ -454,18 +459,16 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
-    rebasing 5:a43fcd08f41f "add c" (tip)
+    rebasing 5:dd2a887139a3 "add c" (tip)
     rebasing 3:47d2a3944de8 "add d"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  7 eb17ba71882a add d
+    o  7 4e2bc7d6cfea add d
     |
-    o  6 036064f96b60 add c
+    o  6 afa76d04eaa3 add c
     |
-    @  4 c54ee8acf83d add b
+    @  4 743396f58c5c add b
     |
-    | x  1 7c3bad9141dc add b
-    |/
     o  0 1f0dee641bb7 add a"""
 
 # Test recursive restacking -- more complex case. This test is designed to
@@ -489,7 +492,7 @@ sh % "hg prev" == r"""
     [*] add e (glob)"""
 sh % "echo e" >> "e"
 sh % "hg amend" == r"""
-    hint[amend-restack]: descendants of c1992d8998fa are left behind - use 'hg restack' to rebase them
+    hint[amend-restack]: descendants of 58e16e5d23eb are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 2" == "2 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "echo c" >> "c"
@@ -503,25 +506,25 @@ sh % "hg prev" == r"""
     [*] add g (glob)"""
 sh % "echo g" >> "g"
 sh % "hg amend" == r"""
-    hint[amend-restack]: descendants of 0261378a5dc1 are left behind - use 'hg restack' to rebase them
+    hint[amend-restack]: descendants of a063c2736716 are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 1" == "0 files updated, 0 files merged, 2 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  11 604f34a1983d add g
+    o  11 8282a17a7483 add g
     |
-    | o  10 9f2a7cefd4b4 add h
+    | o  10 e86422ad5d0e add h
     | |
-    | x  9 0261378a5dc1 add g
+    | x  9 a063c2736716 add g
     |/
-    o  8 a43fcd08f41f add c
+    o  8 dd2a887139a3 add c
     |
-    | o  7 581ab389e415 add e
+    | o  7 e429b2ca5d8b add e
     | |
-    | | o  6 2a79e3a98cd6 add f
+    | | o  6 849d5cce0019 add f
     | | |
-    | | x  5 c1992d8998fa add e
+    | | x  5 58e16e5d23eb add e
     | |/
-    | o  4 c54ee8acf83d add b
+    | o  4 743396f58c5c add b
     | |
     | | o  3 47d2a3944de8 add d
     | | |
@@ -531,27 +534,25 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
-    rebasing 6:2a79e3a98cd6 "add f"
-    rebasing 8:a43fcd08f41f "add c"
-    rebasing 11:604f34a1983d "add g" (tip)
+    rebasing 6:849d5cce0019 "add f"
+    rebasing 8:dd2a887139a3 "add c"
+    rebasing 11:8282a17a7483 "add g" (tip)
     rebasing 3:47d2a3944de8 "add d"
-    rebasing 10:9f2a7cefd4b4 "add h"
+    rebasing 10:e86422ad5d0e "add h"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  16 02e6213e1c27 add h
+    o  16 5bc29b84815f add h
     |
-    | o  15 eb17ba71882a add d
+    | o  15 4e2bc7d6cfea add d
     | |
-    o |  14 cc14f12b1775 add g
+    o |  14 c7fc06907e30 add g
     |/
-    o  13 036064f96b60 add c
+    o  13 afa76d04eaa3 add c
     |
-    | o  12 d27ae4ec354c add f
+    | o  12 6aaca8e17a00 add f
     | |
-    | o  7 581ab389e415 add e
+    | o  7 e429b2ca5d8b add e
     |/
-    @  4 c54ee8acf83d add b
+    @  4 743396f58c5c add b
     |
-    | x  1 7c3bad9141dc add b
-    |/
     o  0 1f0dee641bb7 add a"""
