@@ -22,7 +22,7 @@ shlib.mkcommit = mkcommit
 
 
 sh % "enable amend rebase remotenames"
-sh % "setconfig experimental.evolution.allowdivergence=True"
+sh % "setconfig experimental.evolution.allowdivergence=True experimental.narrow-heads=True"
 sh % 'setconfig "experimental.evolution=createmarkers, allowunstable"'
 sh % "setconfig visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date='0 0' experimental.evolution= remotenames.rename.default=remote"
 sh % "hg init restack"
@@ -410,24 +410,20 @@ sh % "showgraph" == r"""
     |/
     o  0 1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
-    abort: hidden revision '4'!
-    (use --hidden to access hidden revisions)
-    [255]"""
+    rebasing 2:4538525df7e2 "add c"
+    1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  3 173e12a9f067 Amended
+    o  5 b7aa69de00bb add c
     |
-    | o  2 4538525df7e2 add c
-    | |
-    | @  1 7c3bad9141dc add b
+    @  4 4d1e27c9f82b Unamended
+    |
+    | x  3 173e12a9f067 Amended
     |/
     o  0 1f0dee641bb7 add a"""
 
 # Revision 2 "add c" is already stable (not orphaned) so restack does nothing:
 
-sh % "hg rebase --restack" == r"""
-    abort: hidden revision '4'!
-    (use --hidden to access hidden revisions)
-    [255]"""
+sh % "hg rebase --restack" == "nothing to rebase - empty destination"
 
 # Test recursive restacking -- basic case.
 sh % "newrepo"
