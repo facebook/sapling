@@ -135,6 +135,7 @@ lazy_static! {
     // getfiles requests can be rather long. Let's bump the timeout
     static ref GETFILES_TIMEOUT: Duration = Duration::from_secs(90 * 60);
     static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
+    static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
 }
 
 fn process_timeout_error(err: TimeoutError<Error>) -> Error {
@@ -240,7 +241,6 @@ struct WireprotoLogger {
     // on shadow tier.
     wireproto_scribe_category: Option<String>,
     wireproto_command: &'static str,
-    args: Option<serde_json::Value>,
     reponame: String,
 }
 
@@ -249,7 +249,6 @@ impl WireprotoLogger {
         fb: FacebookInit,
         scuba_logger: ScubaSampleBuilder,
         wireproto_command: &'static str,
-        args: Option<serde_json::Value>,
         wireproto_scribe_category: Option<String>,
         reponame: String,
     ) -> Self {
@@ -258,24 +257,18 @@ impl WireprotoLogger {
             scribe_client: Arc::new(ScribeClientImplementation::new(fb)),
             wireproto_scribe_category,
             wireproto_command,
-            args: args.clone(),
             reponame,
         };
         logger.scuba_logger.add("command", logger.wireproto_command);
-
-        if let Some(args) = args.clone() {
-            if let Ok(args) = serde_json::to_string(&args) {
-                logger.add_trimmed_scuba_field("command_args", args);
-            }
-        }
-        logger.args = args;
 
         logger.scuba_logger.log_with_msg("Start processing", None);
         logger
     }
 
-    fn set_args(&mut self, args: Option<serde_json::Value>) {
-        self.args = args;
+    fn add_command_args_to_scuba(&mut self, args: serde_json::Value) {
+        if let Ok(args) = serde_json::to_string(&args) {
+            self.add_trimmed_scuba_field("command_args", args);
+        }
     }
 
     fn add_trimmed_scuba_field(&mut self, args_name: &str, args: String) {
@@ -289,7 +282,12 @@ impl WireprotoLogger {
             .insert_perf_counters(&mut self.scuba_logger);
     }
 
-    fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats, ctx: CoreContext) {
+    fn finish_stream_wireproto_processing(
+        &mut self,
+        stats: &StreamStats,
+        ctx: CoreContext,
+        args: Option<serde_json::Value>,
+    ) {
         self.scuba_logger
             .add_stream_stats(&stats)
             .log_with_msg("Command processed", None);
@@ -297,7 +295,7 @@ impl WireprotoLogger {
         if let Some(ref wireproto_scribe_category) = self.wireproto_scribe_category {
             let mut builder = ScubaSampleBuilder::with_discard();
             builder.add_common_server_data();
-            match self.args {
+            match args {
                 Some(ref args) => {
                     builder.add("args", args.to_string());
                 }
@@ -674,9 +672,12 @@ impl RepoClient {
                             encoded_params.len() as i64,
                         );
 
-                        wireproto_logger.set_args(Some(json! {encoded_params}));
                         wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                        wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                        wireproto_logger.finish_stream_wireproto_processing(
+                            &stats,
+                            ctx,
+                            Some(json! {encoded_params}),
+                        );
                         Ok(())
                     }
                 })
@@ -690,16 +691,11 @@ impl RepoClient {
         )
     }
 
-    fn wireproto_logger(
-        &self,
-        wireproto_command: &'static str,
-        args: Option<serde_json::Value>,
-    ) -> WireprotoLogger {
+    fn wireproto_logger(&self, wireproto_command: &'static str) -> WireprotoLogger {
         WireprotoLogger::new(
             self.ctx.fb,
             self.ctx.scuba().clone(),
             wireproto_command,
-            args,
             self.ctx.wireproto_scribe_category().clone(),
             self.repo.reponame().clone(),
         )
@@ -1096,7 +1092,7 @@ impl HgCommands for RepoClient {
             "listkeys": format_utf8_bytes_list(&args.listkeys),
         });
         let value = json!(vec![value]);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, None);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE);
         cloned!(self.ctx);
 
         let s = match self.create_bundle(args) {
@@ -1108,9 +1104,8 @@ impl HgCommands for RepoClient {
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            wireproto_logger.set_args(Some(value));
             wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-            wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+            wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, Some(value));
             Ok(())
         })
         .boxify();
@@ -1346,7 +1341,7 @@ impl HgCommands for RepoClient {
             "directories": format_utf8_bytes_list(&params.directories),
         });
         let args = json!(vec![args]);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
+        let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK);
 
         let s = self
             .gettreepack_untimed(params)
@@ -1369,10 +1364,14 @@ impl HgCommands for RepoClient {
             .timed({
                 cloned!(self.ctx);
                 move |stats, _| {
+                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
+                        // Log parameters to scuba only if a request was too slow
+                        wireproto_logger.add_command_args_to_scuba(args.clone());
+                    }
                     STATS::gettreepack_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
                     wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, Some(args));
                     Ok(())
                 }
             });
@@ -1389,7 +1388,7 @@ impl HgCommands for RepoClient {
     fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "getfiles");
 
-        let mut wireproto_logger = self.wireproto_logger(ops::GETFILES, None);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETFILES);
         let this = self.clone();
         // TODO(stash): make it configurable
         let getfiles_buffer_size = 100;
@@ -1479,9 +1478,12 @@ impl HgCommands for RepoClient {
                         ctx.perf_counters()
                             .add_to_counter(PerfCounterType::GetfilesNumFiles, stats.count as i64);
 
-                        wireproto_logger.set_args(Some(json! {encoded_params}));
                         wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                        wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                        wireproto_logger.finish_stream_wireproto_processing(
+                            &stats,
+                            ctx,
+                            Some(json! {encoded_params}),
+                        );
                         Ok(())
                     }
                 })
@@ -1499,7 +1501,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "{}", ops::STREAMOUTSHALLOW);
-        let mut wireproto_logger = self.wireproto_logger(ops::STREAMOUTSHALLOW, None);
+        let mut wireproto_logger = self.wireproto_logger(ops::STREAMOUTSHALLOW);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
             Some(SqlStreamingCloneConfig {
@@ -1608,7 +1610,7 @@ impl HgCommands for RepoClient {
                 let ctx = self.ctx.clone();
                 move |stats, _| {
                     wireproto_logger.add_perf_counters_from_ctx(ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx, None);
                     Ok(())
                 }
             })
@@ -1621,7 +1623,7 @@ impl HgCommands for RepoClient {
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "{}", ops::GETPACKV1);
-        let wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
+        let wireproto_logger = self.wireproto_logger(ops::GETPACKV1);
 
         self.getpack(
             params,
@@ -1643,7 +1645,7 @@ impl HgCommands for RepoClient {
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "{}", ops::GETPACKV2);
-        let wireproto_logger = self.wireproto_logger(ops::GETPACKV2, None);
+        let wireproto_logger = self.wireproto_logger(ops::GETPACKV2);
 
         self.getpack(
             params,
