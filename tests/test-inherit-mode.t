@@ -79,7 +79,7 @@ new directories are setgid
   00660 ./.hg/store/00changelog.d
   00660 ./.hg/store/00changelog.i
   00660 ./.hg/store/00manifest.i
-  00700 ./.hg/store/allheads/
+  02775 ./.hg/store/allheads/
   00600 ./.hg/store/allheads/index-node
   00600 ./.hg/store/allheads/log
   00664 ./.hg/store/allheads/meta
@@ -133,7 +133,7 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/00changelog.d
   00660 ../push/.hg/store/00changelog.i
   00660 ../push/.hg/store/00manifest.i
-  00700 ../push/.hg/store/allheads/
+  02775 ../push/.hg/store/allheads/
   00600 ../push/.hg/store/allheads/index-node
   00600 ../push/.hg/store/allheads/log
   00664 ../push/.hg/store/allheads/meta

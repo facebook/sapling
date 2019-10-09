@@ -210,18 +210,6 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   $ hg cat -r tip subdir/a
   my change
   my other change
-  $ ls_l .hg/store
-  -rw-r--r--     200 00changelog.d
-  -rw-r--r--     192 00changelog.i
-  -rw-r--r--     108 00manifesttree.i
-  drwxr-xr-x         allheads
-  drwxr-xr-x         data
-  drwxrwxr-x         packs
-  -rw-r--r--      43 phaseroots
-  -rw-r--r--       0 requires
-  -rw-r--r--       0 undo
-  -rw-r--r--      21 undo.backupfiles
-  -rw-r--r--      43 undo.phaseroots
 
 Pull just part of a normal scratch branch (this causes rebundling on the server)
 

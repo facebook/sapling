@@ -304,15 +304,6 @@ Test peer-to-peer push/pull of tree only commits
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client2
-  $ ls_l .hg/store
-  -rw-r--r--     149 00changelog.d
-  -rw-r--r--     128 00changelog.i
-  drwxr-xr-x         allheads
-  drwxr-xr-x         data
-  -rw-r--r--       0 requires
-  -rw-r--r--       0 undo
-  -rw-r--r--       2 undo.backupfiles
-  -rw-r--r--       0 undo.phaseroots
   $ rm -rf $CACHEDIR
   $ cp ../client/.hg/hgrc .hg/hgrc
 

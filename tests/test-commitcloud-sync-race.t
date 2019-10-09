@@ -137,7 +137,6 @@ Wait for the background backup to finish and check its output.
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
-  visibility: read 1 heads: 1292cc1f1c17
   abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
   (please retry 'hg cloud sync')
   (please contact the Source Control Team if this error persists)
