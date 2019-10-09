@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    fs::File,
+    fs::{self, File},
     hash::Hasher,
     io::{self, Write},
     path::Path,
@@ -181,6 +181,20 @@ pub fn atomic_write(
             path, content_desc
         )
     })
+}
+
+/// Similar to `fs::create_dir_all`, but also attempts to chmod it on Unix.
+pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
+    let dir = dir.as_ref();
+    fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
+    #[cfg(unix)]
+    {
+        // u: rwx g:rws o:r-x
+        let perm = std::os::unix::fs::PermissionsExt::from_mode(0o2775);
+        // chmod errors are not fatal
+        let _ = fs::set_permissions(dir, perm);
+    }
+    Ok(())
 }
 
 /// Return a value that is likely changing over time.

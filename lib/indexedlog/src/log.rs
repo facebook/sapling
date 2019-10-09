@@ -1730,8 +1730,8 @@ impl OpenOptions {
         // Do a lock-less load_or_create_meta to avoid the flock overhead.
         let meta = Log::load_or_create_meta(dir, false).or_else(|err| {
             if create {
-                fs::create_dir_all(dir)
-                    .context(&dir, "cannot mkdir after failing to read metadata")
+                utils::mkdir_p(dir)
+                    .context("cannot mkdir after failing to read metadata")
                     .source(err)?;
                 // Make sure check and write happens atomically.
                 if lock.is_some() {
@@ -1959,7 +1959,7 @@ impl OpenOptions {
         let dir = dir.as_ref();
         let result: crate::Result<()> = (|| {
             // Ensure the directory exist.
-            fs::create_dir_all(dir).context(&dir, "cannot mkdir")?;
+            utils::mkdir_p(dir)?;
 
             // Prevent other writers.
             let lock = ScopedDirLock::new(dir)?;

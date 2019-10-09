@@ -8,7 +8,7 @@
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedDirLock;
 use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
-use crate::utils::atomic_write;
+use crate::utils;
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
 use std::fmt;
@@ -129,7 +129,7 @@ impl OpenOptions {
                         return Err(e)
                             .context("not creating new logs since OpenOption::create is not set");
                     } else {
-                        fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
+                        utils::mkdir_p(dir)?;
                         let lock = ScopedDirLock::new(&dir)?;
 
                         match read_latest_raw(dir) {
@@ -653,7 +653,7 @@ fn create_empty_log(
             let opts = open_options.log_open_options.clone().create(true);
             opts.delete_content(&log_path)?;
             let log = opts.open(&log_path)?;
-            atomic_write(&latest_path, latest_str.as_bytes(), false)?;
+            utils::atomic_write(&latest_path, latest_str.as_bytes(), false)?;
             log
         }
         None => open_options.log_open_options.clone().create_in_memory()?,
