@@ -216,7 +216,7 @@ fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
 impl Blobstore for MultiplexedBlobstoreBase {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobstoreGets);
+            .increment_counter(PerfCounterType::BlobGets);
 
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
         let requests = self.get_from_all(&ctx, &key, "get", should_log);
@@ -266,7 +266,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         })
         .timed(move |stats, _| {
             ctx.perf_counters().set_max_counter(
-                PerfCounterType::BlobstoreGetsMaxLatency,
+                PerfCounterType::BlobGetsMaxLatency,
                 stats.completion_time.as_millis_unchecked() as i64,
             );
             Ok(())
@@ -276,7 +276,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobstorePuts);
+            .increment_counter(PerfCounterType::BlobPuts);
         let size = value.len();
         let write_order = Arc::new(AtomicUsize::new(0));
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
@@ -332,7 +332,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         multiplexed_put(ctx.clone(), self.handler.clone(), key, puts)
             .timed(move |stats, _| {
                 ctx.perf_counters().set_max_counter(
-                    PerfCounterType::BlobstorePutsMaxLatency,
+                    PerfCounterType::BlobPutsMaxLatency,
                     stats.completion_time.as_millis_unchecked() as i64,
                 );
                 Ok(())
@@ -342,7 +342,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobstorePresenceChecks);
+            .increment_counter(PerfCounterType::BlobPresenceChecks);
         let requests = self
             .blobstores
             .iter()
@@ -387,7 +387,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         })
         .timed(move |stats, _| {
             ctx.perf_counters().set_max_counter(
-                PerfCounterType::BlobstorePresenceChecksMaxLatency,
+                PerfCounterType::BlobPresenceChecksMaxLatency,
                 stats.completion_time.as_millis_unchecked() as i64,
             );
             Ok(())

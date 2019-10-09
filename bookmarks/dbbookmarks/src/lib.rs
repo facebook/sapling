@@ -315,12 +315,12 @@ impl Bookmarks for SqlBookmarks {
             Freshness::MaybeStale => {
                 STATS::list_publishing_by_prefix_maybe_stale.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsReplica);
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
             }
             Freshness::MostRecent => {
                 STATS::list_publishing_by_prefix.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsMaster);
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
             }
         };
 
@@ -340,12 +340,12 @@ impl Bookmarks for SqlBookmarks {
             Freshness::MaybeStale => {
                 STATS::list_pull_default_by_prefix_maybe_stale.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsReplica);
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
             }
             Freshness::MostRecent => {
                 STATS::list_pull_default_by_prefix.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsMaster);
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
             }
         };
 
@@ -366,12 +366,12 @@ impl Bookmarks for SqlBookmarks {
             Freshness::MaybeStale => {
                 STATS::list_all_by_prefix_maybe_stale.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsReplica);
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
             }
             Freshness::MostRecent => {
                 STATS::list_all_by_prefix.add_value(1);
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlGetsMaster);
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
             }
         };
 
@@ -388,7 +388,7 @@ impl Bookmarks for SqlBookmarks {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsMaster);
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
             .map(|rows| rows.into_iter().next().map(|row| row.0))
             .boxify()
@@ -402,7 +402,7 @@ impl Bookmarks for SqlBookmarks {
         max_rec: u32,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsMaster);
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         SelectBookmarkLogs::query(&self.read_master_connection, &repo_id, &name, &max_rec)
             .map(|rows| stream::iter_ok(rows))
             .flatten_stream()
@@ -425,7 +425,7 @@ impl Bookmarks for SqlBookmarks {
         maybe_exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<u64, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let query = match maybe_exclude_reason {
             Some(ref r) => CountFurtherBookmarkLogEntriesWithoutReason::query(
                 &self.read_connection,
@@ -464,7 +464,7 @@ impl Bookmarks for SqlBookmarks {
         repoid: RepositoryId,
     ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         CountFurtherBookmarkLogEntriesByReason::query(&self.read_connection, &id, &repoid)
             .map(|entries| entries.into_iter().collect())
             .boxify()
@@ -478,7 +478,7 @@ impl Bookmarks for SqlBookmarks {
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<Option<u64>, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         SkipOverBookmarkLogEntriesWithReason::query(&self.read_connection, &id, &repoid, &reason)
             .map(|entries| entries.first().map(|entry| entry.0))
             .boxify()
@@ -492,7 +492,7 @@ impl Bookmarks for SqlBookmarks {
         limit: u64,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
             .map(|entries| {
                 let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
@@ -552,7 +552,7 @@ impl Bookmarks for SqlBookmarks {
         limit: u64,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
             .map(|entries| {
                 stream::iter_ok(entries.into_iter()).and_then(|entry| {
@@ -1053,7 +1053,7 @@ impl Transaction for SqlBookmarksTransaction {
             ctx,
         } = this;
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlInserts);
+            .increment_counter(PerfCounterType::SqlWrites);
 
         let mut log_rows: HashMap<_, (Option<ChangesetId>, Option<ChangesetId>, _)> =
             HashMap::new();

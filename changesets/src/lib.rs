@@ -226,7 +226,7 @@ impl Changesets for SqlChangesets {
     fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlInserts);
+            .increment_counter(PerfCounterType::SqlWrites);
 
         cloned!(self.write_connection);
 
@@ -284,7 +284,7 @@ impl Changesets for SqlChangesets {
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         cloned!(self.read_master_connection);
 
         select_changeset(&self.read_connection, repo_id, cs_id)
@@ -293,7 +293,7 @@ impl Changesets for SqlChangesets {
                 None => {
                     STATS::gets_master.add_value(1);
                     ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlGetsMaster);
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
                     select_changeset(&read_master_connection, repo_id, cs_id)
                 }
             })
@@ -313,7 +313,7 @@ impl Changesets for SqlChangesets {
         } else {
             STATS::get_many.add_value(1);
             ctx.perf_counters()
-                .increment_counter(PerfCounterType::SqlGetsReplica);
+                .increment_counter(PerfCounterType::SqlReadsReplica);
 
             select_many_changesets(&self.read_connection, repo_id, &cs_ids)
                 .and_then(move |fetched_cs| {
@@ -332,7 +332,7 @@ impl Changesets for SqlChangesets {
                     } else {
                         STATS::get_many.add_value(1);
                         ctx.perf_counters()
-                            .increment_counter(PerfCounterType::SqlGetsMaster);
+                            .increment_counter(PerfCounterType::SqlReadsMaster);
                         select_many_changesets(&read_master_connection, repo_id, &notfetched_cs_ids)
                             .map(move |mut master_fetched_cs| {
                                 master_fetched_cs.extend(fetched_cs);

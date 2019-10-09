@@ -256,7 +256,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlInserts);
+            .increment_counter(PerfCounterType::SqlWrites);
 
         let BonsaiHgMappingEntry {
             repo_id,
@@ -286,7 +286,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         cloned!(self.read_master_connection);
 
         select_mapping(&self.read_connection, repo_id, &ids)
@@ -298,7 +298,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                 } else {
                     STATS::gets_master.add_value(1);
                     ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlGetsMaster);
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
                     select_mapping(&read_master_connection, repo_id, &left_to_fetch)
                         .map(move |mut master_mappings| {
                             mappings.append(&mut master_mappings);

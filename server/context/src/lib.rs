@@ -158,7 +158,7 @@ macro_rules! enum_str {
     (enum $name:ident {
         $($variant:ident),*,
     }) => {
-        #[derive(Debug, Clone, PartialEq, Hash)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum $name {
             $($variant),*
         }
@@ -170,17 +170,24 @@ macro_rules! enum_str {
                 }
             }
         }
+
+        fn init_counters() -> HashMap<$name, i64> {
+            let mut counters = HashMap::new();
+            $(counters.insert($name::$variant, 0);)*
+
+            counters
+        }
     };
 }
 
 enum_str! {
     enum PerfCounterType {
-        BlobstoreGets,
-        BlobstoreGetsMaxLatency,
-        BlobstorePresenceChecks,
-        BlobstorePresenceChecksMaxLatency,
-        BlobstorePuts,
-        BlobstorePutsMaxLatency,
+        BlobGets,
+        BlobGetsMaxLatency,
+        BlobPresenceChecks,
+        BlobPresenceChecksMaxLatency,
+        BlobPuts,
+        BlobPutsMaxLatency,
         GetbundleNumCommits,
         GetfilesMaxFileSize,
         GetfilesMaxLatency,
@@ -197,9 +204,9 @@ enum_str! {
         SkiplistSkipIterations,
         SkiplistSkippedGenerations,
         SumManifoldPollTime,
-        SqlGetsReplica,
-        SqlGetsMaster,
-        SqlInserts,
+        SqlReadsReplica,
+        SqlReadsMaster,
+        SqlWrites,
     }
 }
 
@@ -208,15 +215,15 @@ impl PerfCounterType {
         use PerfCounterType::*;
 
         match self {
-            BlobstoreGets
-            | BlobstoreGetsMaxLatency
-            | BlobstorePresenceChecks
-            | BlobstorePresenceChecksMaxLatency
-            | BlobstorePuts
-            | BlobstorePutsMaxLatency
-            | SqlGetsReplica
-            | SqlGetsMaster
-            | SqlInserts => true,
+            BlobGets
+            | BlobGetsMaxLatency
+            | BlobPresenceChecks
+            | BlobPresenceChecksMaxLatency
+            | BlobPuts
+            | BlobPutsMaxLatency
+            | SqlReadsReplica
+            | SqlReadsMaster
+            | SqlWrites => true,
             _ => false,
         }
     }
@@ -272,12 +279,23 @@ impl PerfCounters {
     }
 
     pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
-        let mut extra = HashMap::new();
+        let mut counters = init_counters();
         for (key, value) in self.counters.clone().into_iter() {
+            counters.insert(key, value);
+        }
+
+        let mut extra = HashMap::new();
+        // NOTE: we log 0 to separate scuba columns mainly so that we can distinguish
+        // nulls i.e. "not logged" and 0 as in "zero calls to blobstore". Logging 0 allows
+        // counting avg, p50 etc statistic.
+        // However we do not log 0 in extras to save space
+        for (key, value) in counters {
             if key.log_in_separate_column() {
-                builder.add(key.name(), format!("{}", value));
+                builder.add(key.name(), value);
             } else {
-                extra.insert(key.name(), value);
+                if value != 0 {
+                    extra.insert(key.name(), value);
+                }
             }
         }
 

@@ -329,7 +329,7 @@ impl Filenodes for SqlFilenodes {
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlInserts);
+            .increment_counter(PerfCounterType::SqlWrites);
         self.do_insert(filenodes, repo_id, false)
     }
 
@@ -340,7 +340,7 @@ impl Filenodes for SqlFilenodes {
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlInserts);
+            .increment_counter(PerfCounterType::SqlWrites);
         self.do_insert(filenodes, repo_id, true)
     }
 
@@ -353,7 +353,7 @@ impl Filenodes for SqlFilenodes {
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         cloned!(self.read_master_connection, path, filenode, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
@@ -363,7 +363,7 @@ impl Filenodes for SqlFilenodes {
                 None => {
                     STATS::gets_master.add_value(1);
                     ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlGetsMaster);
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
                     select_filenode(
                         read_master_connection.clone(),
                         &path,
@@ -384,7 +384,7 @@ impl Filenodes for SqlFilenodes {
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::range_gets.add_value(1);
         ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlGetsReplica);
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         cloned!(self.read_connection, path, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
