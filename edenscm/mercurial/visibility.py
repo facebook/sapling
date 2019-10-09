@@ -123,7 +123,12 @@ class visibleheads(object):
         # Remove heads that are not actually heads, and preserve the ordering
         # in self.heads for heads that have not changed.
         unfi = repo.unfiltered()
-        realnewheads = list(unfi.nodes("heads(%ln::%ln)", newheads, newheads))
+        realnewheads = list(
+            unfi.nodes(
+                "%ld",
+                unfi.changelog.index2.headsancestors(list(unfi.revs("%ln", newheads))),
+            )
+        )
         realnewheadsset = set(realnewheads)
         newheads = util.removeduplicates(
             [head for head in self.heads if head in realnewheadsset] + realnewheads
