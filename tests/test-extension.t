@@ -547,57 +547,19 @@ hide outer repo
   $ echo "debugextension = $debugpath" >> $HGRCPATH
 
   $ hg help debugextension
-  alias for: debugextensions
+  debugextension extension - only debugcommands
   
-  hg debugextensions
+  Commands:
   
-  show information about active extensions
-  
-  Options:
-  
-    --excludedefault exclude extensions marked as default-on
-  
-  (some details hidden, use --verbose to show complete help)
+   foo           yet another foo command
 
 
   $ hg --verbose help debugextension
-  alias for: debugextensions
+  debugextension extension - only debugcommands
   
-  hg debugextensions
+  Commands:
   
-  show information about active extensions
-  
-  Options:
-  
-      --excludedefault    exclude extensions marked as default-on
-   -T --template TEMPLATE display with template (EXPERIMENTAL)
-  
-  Global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: utf-8)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
+   foo           yet another foo command
 
 
 
@@ -605,43 +567,12 @@ hide outer repo
 
 
   $ hg --debug help debugextension
-  alias for: debugextensions
+  debugextension extension - only debugcommands
   
-  hg debugextensions
+  Commands:
   
-  show information about active extensions
-  
-  Options:
-  
-      --excludedefault    exclude extensions marked as default-on
-   -T --template TEMPLATE display with template (EXPERIMENTAL)
-  
-  Global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: utf-8)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
+   debugfoobar   yet another debug command
+   foo           yet another foo command
 
 
 
@@ -654,6 +585,8 @@ Extension module help vs command help:
   $ echo 'extdiff =' >> $HGRCPATH
   $ hg help extdiff
   hg extdiff [OPT]... [FILE]...
+  
+  aliases: extd
   
   use external program to diff repository (or selected files)
   

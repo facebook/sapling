@@ -584,7 +584,7 @@ def smartdate(context, mapping, args):
 
 
 @command(
-    "smartlog|slog|sm|sma|smar|smart|smartl|smartlo",
+    "smartlog|sl|slog|sm|sma|smar|smart|smartl|smartlo",
     [
         ("", "master", "", _("master bookmark"), _("BOOKMARK")),
         ("r", "rev", [], _("show the specified revisions or range"), _("REV")),

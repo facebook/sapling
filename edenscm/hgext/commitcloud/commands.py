@@ -180,7 +180,7 @@ def cloudleave(ui, repo, **opts):
         )
 
 
-@subcmd("authenticate", [("t", "token", "", _("set or update token"))])
+@subcmd("authenticate|auth", [("t", "token", "", _("set or update token"))])
 def cloudauth(ui, repo, **opts):
     """authenticate this host with the commit cloud service
     """
@@ -442,7 +442,7 @@ def cloudlistbackups(ui, repo, dest=None, **opts):
 
 
 @subcmd(
-    "restorebackup",
+    "restorebackup|restore",
     [
         ("", "reporoot", "", "root of the repo to restore"),
         ("", "user", "", "user who ran the backup"),

@@ -1700,7 +1700,7 @@ def perfloadmarkers(ui, repo):
 
 
 @command(
-    "perflrucachedict",
+    "perflrucachedict|perflrucache",
     formatteropts
     + [
         ("", "size", 4, "size of cache"),

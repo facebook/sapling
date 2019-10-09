@@ -90,7 +90,9 @@
 
 
   $ hg tes o
-  test subcommand one called
+  unknown command 'tes'
+  (use 'hg help' to get help)
+  [255]
 
   $ hg xt
   hg test: subcommand required

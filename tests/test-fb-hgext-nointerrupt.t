@@ -47,7 +47,7 @@ Test ctrl-c
   $ cat >> $HGRCPATH << EOF
   > nointerrupt=
   > [alias]
-  > slumber = sleep
+  > slum = sleep
   > [nointerrupt]
   > attend-sleep = True
   > attend-update = True

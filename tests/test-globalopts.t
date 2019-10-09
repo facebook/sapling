@@ -127,13 +127,7 @@ earlygetopt with illegal abbreviations:
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg -qR a tip
-  hg: command 'a' is ambiguous:
-       absorb
-       add
-       addremove
-       amend
-       annotate
-       archive
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
   [255]
   $ hg -qRa tip
   abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!

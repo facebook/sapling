@@ -42,6 +42,9 @@ Check that remotename changes trigger caching
   summary:     add b
   
   $ hg debugcache -a
+  unknown command 'debugcache'
+  (use 'hg help' to get help)
+  [255]
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)

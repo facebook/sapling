@@ -1551,11 +1551,6 @@ class Test(unittest.TestCase):
             hgrc.write(b"reponame=reponame-default\n")
             hgrc.write(b"cachepath=$TESTTMP/default-hgcache\n")
 
-            hgrc.write(b"[commands]\n")
-            hgrc.write(
-                b"names = absorb|sf add addremove amend annotate|blame archive backfillmanifestrevlog backfilltree backout backupdelete backupdisable backupenable bisect blackbox bookmarks|bookmark bottom branch bundle cachemanifest cat cherry-pick chistedit clone cloud commit|ci config|showconfig|debugconfig copy|cp crecord diff export files fold|squash foo forget fs fsl fssl gc getavailablebackups githelp|git graft grep heads help hide|strip hint histedit histgrep identify|id import|patch incoming|in init isbackedup journal locate log|history manifest merge metaedit metaedit next odiff outgoing|out parents pasterage paths phase prefetch previous prune pull pullbackup purge|clean push pushbackup rage rebase record recover redo reflog remove|rm rename|move|mv repack reset resolve restack revert rollback root sb sba serve share shelve shortlog show sl smartlog|slog sparse split ssl stash status|st summary|sum svn tag tags tip top unamend unbundle uncommit undo unhide unshare unshelve update|up|checkout|co verify verifyremotefilelog version wgrep\n"
-            )
-
             for opt in self._extraconfigopts:
                 section, key = opt.encode("utf-8").split(b".", 1)
                 assert b"=" in key, (

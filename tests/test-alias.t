@@ -77,22 +77,15 @@ unknown
 ambiguous
 
   $ hg ambiguous
-  hg: command 's' is ambiguous:
-  	serve
-  	show
-  	showconfig
-  	status
-  	summary
+  unknown command 's'
+  (use 'hg help' to get help)
   [255]
   $ hg help ambiguous
   alias for: s
   
-  Commands:
-  
-   serve         start stand-alone webserver
-   show          show commit in detail
-   status        list files with pending changes
-   summary       summarize working directory state
+  abort: no such help topic: ambiguous
+  (try 'hg help --keyword ambiguous')
+  [255]
 
 
 recursive
@@ -127,20 +120,24 @@ disabled
 no definition
 
   $ hg nodef
-  abort: alias definition nodefinition = "" cannot be parsed
+  unknown command 'nodef'
+  (use 'hg help' to get help)
   [255]
   $ hg help nodef
-  abort: alias definition nodefinition = "" cannot be parsed
+  abort: no such help topic: nodef
+  (try 'hg help --keyword nodef')
   [255]
 
 
 no closing quotation
 
   $ hg noclosing
-  abort: alias definition noclosingquotation = "\'" cannot be parsed
+  unknown command 'noclosing'
+  (use 'hg help' to get help)
   [255]
   $ hg help noclosing
-  abort: alias definition noclosingquotation = "\'" cannot be parsed
+  abort: no such help topic: noclosing
+  (try 'hg help --keyword noclosing')
   [255]
 
 "--" in alias definition should be preserved
@@ -478,7 +475,9 @@ infer repository
 with opts
 
   $ hg cleanst
-  C foo
+  unknown command 'cleanst'
+  (use 'hg help' to get help)
+  [255]
 
 
 with opts and whitespace
@@ -582,34 +581,28 @@ simple shell aliases
 shadowing
 
   $ hg i
-  hg: command 'i' is ambiguous:
-       id or identify
-       idalias
-       idaliaslong
-       idaliasshell
-       import
-       in or incoming
-       init
-       isbackedup
+  unknown command 'i'
+  (use 'hg help' to get help)
   [255]
   $ hg id
   c0c7cf58edc5 tip
   $ hg ida
-  hg: command 'ida' is ambiguous:
-       idalias
-       idaliaslong
-       idaliasshell
+  unknown command 'ida'
+  (use 'hg help' to get help)
   [255]
   $ hg idalias
   c0c7cf58edc5 tip
   $ hg idaliasl
-  c0c7cf58edc5 tip
+  unknown command 'idaliasl'
+  (use 'hg help' to get help)
+  [255]
   $ hg idaliass
-  test
+  unknown command 'idaliass'
+  (use 'hg help' to get help)
+  [255]
   $ hg parentsshell
-  hg: command 'parentsshell' is ambiguous:
-       parentsshell1
-       parentsshell2
+  unknown command 'parentsshell'
+  (use 'hg help' to get help)
   [255]
   $ hg parentsshell1
   one
@@ -710,15 +703,18 @@ command provided extension, should be aborted.
   > rebate = !echo this is rebate $@
   > EOF
   $ hg reba
-  hg: command 'reba' is ambiguous:
-       rebase
-       rebate
+  abort: unknown revision '-1'!
+  (if -1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg rebat
-  this is rebate
+  unknown command 'rebat'
+  (use 'hg help' to get help)
+  [255]
   $ hg rebat --foo-bar
-  this is rebate --foo-bar
+  unknown command 'rebat'
+  (use 'hg help' to get help)
+  [255]
 
 invalid arguments
 

@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use clidispatch::global_flags::HgGlobalOpts;
-use cliparser::alias::{expand_aliases, expand_prefix};
+use cliparser::alias::expand_aliases;
 use cliparser::parser::*;
 use cpython::*;
 use cpython_ext::Bytes;
@@ -116,7 +116,7 @@ fn expand_args(
     py: Python,
     config: config,
     command_names: Vec<String>,
-    mut args: Vec<String>,
+    args: Vec<String>,
     strict: bool,
 ) -> PyResult<(Vec<PyBytes>, Vec<PyBytes>)> {
     let cfg = &config.get_cfg(py);
@@ -145,9 +145,6 @@ fn expand_args(
                 command_map.insert(name, if is_debug { -i } else { i });
             }
         }
-
-        args[0] =
-            expand_prefix(&command_map, args[0].clone()).map_err(|e| map_to_python_err(py, e))?;
     }
 
     let lookup = move |name: &str| {

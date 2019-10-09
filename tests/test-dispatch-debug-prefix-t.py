@@ -11,16 +11,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "newrepo"
 sh % "hg d" == ""
 
-sh % "hg di --config alias.did=root" == r"""
-    hg: command 'di' is ambiguous:
-         did
-         diff
-    [255]"""
+sh % "hg di --config alias.did=root" == ""
 
 sh % "hg debugf" == r"""
-    hg: command 'debugf' is ambiguous:
-    	debugfilerevision
-    	debugfileset
-    	debugformat
-    	debugfsinfo
+    unknown command 'debugf'
+    (use 'hg help' to get help)
     [255]"""

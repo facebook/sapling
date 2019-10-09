@@ -44,7 +44,7 @@ def _assignobjects(objects, repo):
 
 
 @command(
-    "debugshell|dbsh",
+    "debugshell|dbsh|debugsh",
     [("c", "command", "", _("program passed in as string"), _("CMD"))],
     optionalrepo=True,
 )

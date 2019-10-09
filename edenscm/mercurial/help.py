@@ -431,6 +431,8 @@ class _helpdispatch(object):
             resolvedargs = cliparser.expandargs(
                 ui._rcfg, list(self.commands.table), name.split(), False
             )[0]
+            if name == "debug":
+                raise cliparser.AmbiguousCommand()
         except cliparser.AmbiguousCommand:
             select = lambda c: c.lstrip("^").partition("|")[0].startswith(name)
             rst = self.helplist(name, select)
@@ -448,7 +450,7 @@ class _helpdispatch(object):
 
         try:
             cmd, args, aliases, entry, _level = cmdutil.findsubcmd(
-                name.split(), self.commands.table, strict=self.unknowncmd, partial=True
+                name.split(), self.commands.table, partial=True
             )
         except error.AmbiguousCommand as inst:
             # py3k fix: except vars can't be used outside the scope of the
@@ -752,9 +754,7 @@ class _helpdispatch(object):
         return rst
 
     def helpextcmd(self, name, subtopic=None):
-        cmd, ext, mod = extensions.disabledcmd(
-            self.ui, name, self.ui.configbool("ui", "strict")
-        )
+        cmd, ext, mod = extensions.disabledcmd(self.ui, name)
         doc = gettext(pycompat.getdoc(mod))
         if doc is None:
             doc = _("(no help text available)")

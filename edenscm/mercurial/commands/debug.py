@@ -1037,7 +1037,7 @@ def debugextensions(ui, **opts):
 
 
 @command(
-    "debugfilerevision",
+    "debugfilerevision|debugfilerev",
     [("r", "rev", [], _("examine specified REV"))] + cmdutil.walkopts,
     _("[-r REV] FILE"),
 )
@@ -1623,7 +1623,7 @@ def debuglabelcomplete(ui, repo, *args):
 
 
 @command(
-    "debuglocks",
+    "debuglocks|debuglock",
     [
         ("L", "force-lock", None, _("free the store lock (DANGEROUS)")),
         ("W", "force-wlock", None, _("free the working state lock (DANGEROUS)")),
@@ -2234,7 +2234,7 @@ def debugpickmergetool(ui, repo, *pats, **opts):
             ui.write(("%s = %s\n") % (path, tool))
 
 
-@command(b"debugprocesstree", [], _("[PID] [PID] ..."), norepo=True)
+@command(b"debugprocesstree|debugproc", [], _("[PID] [PID] ..."), norepo=True)
 def debugprocesstree(ui, *pids, **opts):
     """show process tree related to hg
 
@@ -3343,7 +3343,7 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts):
 
 
 @command(
-    "debugtreestate|debugtreedirstate",
+    "debugtreestate|debugtreedirstate|debugtree",
     [],
     "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",
 )

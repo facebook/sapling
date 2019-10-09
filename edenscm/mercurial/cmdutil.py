@@ -714,7 +714,7 @@ def morestatus(repo, fm):
             fm.write("helpmsg", "%s\n", helpmsg, label=label)
 
 
-def findpossible(cmd, table, strict=False):
+def findpossible(cmd, table):
     """
     Return cmd -> (aliases, command table entry)
     for each matching command.
@@ -736,11 +736,6 @@ def findpossible(cmd, table, strict=False):
         found = None
         if cmd in aliases:
             found = cmd
-        elif not strict:
-            for a in aliases:
-                if a.startswith(cmd):
-                    found = a
-                    break
         if found is not None:
             if aliases[0].startswith("debug") or found.startswith("debug"):
                 debugchoice[found] = (aliases, table[e])
@@ -781,9 +776,9 @@ def getcmdanddefaultopts(cmdname, table):
     return (cmd, opts)
 
 
-def findcmd(cmd, table, strict=True):
+def findcmd(cmd, table):
     """Return (aliases, command table entry) for command string."""
-    choice, allcmds = findpossible(cmd, table, strict)
+    choice, allcmds = findpossible(cmd, table)
 
     if cmd in choice:
         return choice[cmd]
@@ -798,13 +793,13 @@ def findcmd(cmd, table, strict=True):
     raise error.UnknownCommand(cmd, allcmds)
 
 
-def findsubcmd(args, table, strict=True, partial=False):
+def findsubcmd(args, table, partial=False):
     cmd, args, level = args[0], args[1:], 1
-    aliases, entry = findcmd(cmd, table, strict)
+    aliases, entry = findcmd(cmd, table)
     cmd = aliases[0]
     while args and entry[0] and util.safehasattr(entry[0], "subcommands"):
         try:
-            subaliases, subentry = findcmd(args[0], entry[0].subcommands, strict)
+            subaliases, subentry = findcmd(args[0], entry[0].subcommands)
         except error.UnknownCommand as e:
             if entry[0].subonly:
                 raise error.UnknownSubcommand(cmd, *e.args)

@@ -322,7 +322,7 @@ extdiffopts = [
 
 
 @command(
-    "extdiff",
+    "extdiff|extd|extdi|extdif",
     [("p", "program", "", _("comparison program to run"), _("CMD"))] + extdiffopts,
     _("hg extdiff [OPT]... [FILE]..."),
     inferrepo=True,

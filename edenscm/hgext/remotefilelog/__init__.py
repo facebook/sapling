@@ -1340,7 +1340,7 @@ def debughttp(ui, repo, **opts):
     return debugcommands.debughttp(ui, repo, **opts)
 
 
-@command("debuggetfiles", [], _("hg debuggetfiles"))
+@command("debuggetfiles|debuggetfile", [], _("hg debuggetfiles"))
 def debuggetfiles(ui, repo, **opts):
     """download file content from the API server
     Read filenode/path pairs from stdin, fetch the content of each file

@@ -1948,7 +1948,7 @@ def debugcomplete(ui, cmd="", **opts):
         options = []
         otables = [globalopts]
         if cmd:
-            aliases, entry = cmdutil.findcmd(cmd, table, False)
+            aliases, entry = cmdutil.findcmd(cmd, table)
             otables.append(entry[1])
         for t in otables:
             for o in t:
@@ -1960,7 +1960,16 @@ def debugcomplete(ui, cmd="", **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    cmdlist, unused_allcmds = cmdutil.findpossible(cmd, table)
+    cmdlist = []
+    includedebug = "debug" in cmd
+    for name, entry in table.items():
+        if not includedebug and "debug" in name:
+            continue
+        aliases = name.split("|")
+        for alias in aliases:
+            if alias.startswith(cmd):
+                cmdlist.append(alias)
+                break
     if ui.verbose:
         cmdlist = [" ".join(c[0]) for c in cmdlist.values()]
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
@@ -4174,7 +4183,7 @@ def log(ui, repo, *pats, **opts):
 
 
 @command(
-    "manifest",
+    "manifest|mani",
     [
         ("r", "rev", "", _("revision to display"), _("REV")),
         ("", "all", False, _("list files from all revisions")),

@@ -539,7 +539,7 @@ def _runcatch(req):
         try:
             cmdargs = cliparser.parseargs(req.args[:])
             cmd = cmdargs[0]
-            aliases, entry = cmdutil.findcmd(cmd, commands.table, False)
+            aliases, entry = cmdutil.findcmd(cmd, commands.table)
             realcmd = aliases[0]
         except (
             error.UnknownCommand,
@@ -819,9 +819,7 @@ def _parse(ui, args):
         )
 
         # Only need to figure out the command name. Parse result is dropped.
-        cmd, _args, a, entry, level = cmdutil.findsubcmd(
-            replacement, commands.table, strict
-        )
+        cmd, _args, a, entry, level = cmdutil.findsubcmd(replacement, commands.table)
         c = list(entry[1])
     else:
         aliases = []

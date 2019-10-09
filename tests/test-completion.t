@@ -16,7 +16,6 @@ Show all commands except debug commands
   cat
   clone
   commit
-  config
   continue
   copy
   diff
@@ -76,7 +75,7 @@ Show all commands that start with "a"
 
 Do not show debug commands if there are other candidates
   $ hg debugcomplete d
-  d
+  diff
   doctor
 
 Show debug commands if there are no other candidates
@@ -250,12 +249,8 @@ Show the options for the "serve" command
 
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
-  hg: command 's' is ambiguous:
-  	serve
-  	show
-  	showconfig
-  	status
-  	summary
+  unknown command 's'
+  (use 'hg help' to get help)
   [255]
 
 Show all commands + options

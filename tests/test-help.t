@@ -567,10 +567,9 @@ Test help option with version option
 Test ambiguous command help
 
   $ hg help ad
-  Commands:
-  
-   add           start tracking the specified files
-   addremove     add all new files, delete all missing files
+  abort: no such help topic: ad
+  (try 'hg help --keyword ad')
+  [255]
 
 Test command without options
 

@@ -8,13 +8,13 @@ use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::repo::OptionalRepo;
 use bytes::Bytes;
-use cliparser::alias::{expand_aliases, expand_prefix};
+use cliparser::alias::expand_aliases;
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
-use configparser::hg::{parse_list, ConfigSetHgExt};
+use configparser::hg::ConfigSetHgExt;
 use failure::Fallible;
 use std::convert::TryInto;
-use std::{collections::BTreeMap, env, path::Path};
+use std::{env, path::Path};
 
 /// Similar to `env::args()`. But does not panic.
 pub fn args() -> Fallible<Vec<String>> {
@@ -107,49 +107,6 @@ fn early_parse(args: &Vec<String>) -> Result<ParseOutput, ParseError> {
         .parse_args(args)
 }
 
-fn command_map<'a>(
-    definitions: impl IntoIterator<Item = &'a CommandDefinition>,
-    cfg: &ConfigSet,
-) -> BTreeMap<String, isize> {
-    let mut command_map = BTreeMap::new();
-    let mut i = 1;
-
-    for command in definitions {
-        let name = command.name();
-        let is_debug = name.starts_with("debug");
-        command_map.insert(name.to_string(), if is_debug { -i } else { i });
-        i = i + 1;
-    }
-    // adding aliases into the command map is what Python does, so copying this behavior
-    // allows alias expansion to not behave differently for Rust or Python.
-    for name in cfg.keys("alias") {
-        if let Ok(name) = String::from_utf8(name.to_vec()) {
-            if name.contains(":") {
-                // Not a real command.
-                continue;
-            }
-            let is_debug = name.starts_with("debug");
-            command_map.insert(name, if is_debug { -i } else { i });
-            i = i + 1;
-        }
-    }
-
-    // Names from `commands.name` config.
-    // This is a fast (but inaccurate) way to know Python command names.
-    let config_commands = parse_list(cfg.get("commands", "names").unwrap_or_default());
-    for b_name in config_commands {
-        if let Ok(name) = String::from_utf8(b_name.to_vec()) {
-            let is_debug = name.split("|").any(|name| name.starts_with("debug"));
-            for name in name.split("|") {
-                command_map.insert(name.to_string(), if is_debug { -i } else { i });
-            }
-            i = i + 1;
-        }
-    }
-
-    command_map
-}
-
 fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutput, ParseError> {
     let flags = definition
         .flags()
@@ -184,7 +141,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Fallible<()> {
     Ok(())
 }
 
-pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO) -> Fallible<u8> {
+pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) -> Fallible<u8> {
     let early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
 
@@ -234,8 +191,6 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
         }
     };
 
-    let command_map = command_map(command_table.values(), &config);
-
     let early_args = early_result.args();
     let first_arg = early_args
         .get(0)
@@ -249,8 +204,7 @@ pub fn dispatch(command_table: &CommandTable, mut args: Vec<String>, io: &mut IO
     debug_assert!(first_arg_index < args.len());
     debug_assert_eq!(&args[first_arg_index], first_arg);
 
-    let command_name = expand_prefix(&command_map, first_arg)?;
-    args[first_arg_index] = command_name.clone();
+    let command_name = first_arg.to_string();
 
     let (expanded, _first_arg_indexd) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
 
