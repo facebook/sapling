@@ -19,7 +19,7 @@
 #include <memory>
 #include <optional>
 
-#if EDEN_HAVE_RUST_DATAPACK
+#ifdef EDEN_HAVE_RUST_DATAPACK
 #include "eden/fs/store/hg/HgDatapackStore.h" // @manual
 #endif
 
@@ -201,7 +201,7 @@ class HgBackingStore : public BackingStore {
 
   std::string repoName_;
   folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;
-#if EDEN_HAVE_RUST_DATAPACK
+#ifdef EDEN_HAVE_RUST_DATAPACK
   std::optional<HgDatapackStore> datapackStore_;
 #endif
 };

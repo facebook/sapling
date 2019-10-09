@@ -36,7 +36,7 @@
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
 
-#if EDEN_HAVE_RUST_DATAPACK
+#ifdef EDEN_HAVE_RUST_DATAPACK
 #include "eden/fs/store/hg/HgDatapackStore.h" // @manual
 #endif
 
@@ -222,7 +222,7 @@ HgBackingStore::HgBackingStore(
               stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
-#if EDEN_HAVE_RUST_DATAPACK
+#ifdef EDEN_HAVE_RUST_DATAPACK
   datapackStore_ = makeHgDatapackStore(repository, config_);
 #endif
   HgImporter importer(
@@ -670,7 +670,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
-#if EDEN_HAVE_RUST_DATAPACK
+#ifdef EDEN_HAVE_RUST_DATAPACK
   if (edenConfig->getUseDatapack() && datapackStore_) {
     if (auto content = datapackStore_->getBlob(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "

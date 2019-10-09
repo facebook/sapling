@@ -98,7 +98,12 @@ set(EDEN_HAVE_CURL ${CURL_FOUND})
 if (WIN32)
   find_package(Prjfs MODULE REQUIRED)
 endif()
-set(EDEN_HAVE_RUST_DATAPACK OFF)
+
+if (NOT WIN32)
+  find_package(mercurial CONFIG QUIET)
+  set(EDEN_HAVE_RUST_DATAPACK ${mercurial_FOUND})
+endif()
+
 set(EDEN_HAVE_MONONOKE OFF)
 
 # TODO(strager): Support systemd in the opensource build.
