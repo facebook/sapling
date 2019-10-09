@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 # Translate run-tests.py tests to Python standard unittests
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import contextlib
 import glob
