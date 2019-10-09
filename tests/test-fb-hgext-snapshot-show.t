@@ -329,7 +329,6 @@
 
 
 # If we don't have a snapshot extension
-# TODO(alexeyqu): figure out why we show 3 here
   $ setconfig extensions.snapshot=!
   $ hg smartlog -T default
   o  changeset:   8:fdf2c0326bba

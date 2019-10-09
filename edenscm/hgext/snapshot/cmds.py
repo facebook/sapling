@@ -130,7 +130,6 @@ def createsnapshotcommit(ui, repo, opts):
         oid = snapmetadata.storelocally(repo)
     extra = {"snapshotmetadataid": oid}
     ui.debug("snapshot extra %s\n" % extra)
-    # TODO(alexeyqu): deal with unfinished merge state case
     text = opts.get("message") or "snapshot"
     cctx = context.workingcommitctx(
         repo, status, text, opts.get("user"), opts.get("date"), extra=extra
@@ -221,7 +220,6 @@ def _diff(orig, repo, *args, **kwargs):
 
 
 def _getsnapshotrepostate(ctx):
-    # TODO(alexeyqu): check this via snapshotlist
     metadataid = ctx.extra().get("snapshotmetadataid", "")
     if not metadataid:
         return None
@@ -270,7 +268,6 @@ def snapshotcheckout(ui, repo, *args, **opts):
         )
     ui.status(_("will checkout on %s\n") % cctx.hex())
     with repo.wlock():
-        # TODO(alexeyqu): support EdenFS and possibly make it more efficient
         parents = [p.node() for p in cctx.parents()]
         # First we check out on the 1st parent of the snapshot state
         hg.update(repo.unfiltered(), parents[0], quietempty=True)
