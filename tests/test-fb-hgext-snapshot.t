@@ -105,16 +105,19 @@
 # 3) Snapshot with metadata (untracked changes only);
   $ hg update -q --clean "$BASEREV" && rm bazfile
   $ cd bar
+  $ mkdir baz
   $ echo 'a' > untrackedfile
+  $ echo 'b' > baz/file
   $ BEFORESTATUS="$(hg status --verbose)"
   $ echo "$BEFORESTATUS"
+  ? bar/baz/file
   ? bar/untrackedfile
   $ BEFOREDIFF="$(hg diff)"
   $ echo "$BEFOREDIFF"
   
   $ OIDUNTRACKED="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"
   $ hg snapshot checkout "$OIDUNTRACKED"
-  will checkout on 94254a2ba4f010ca2df8d770eac93f99b8caf546
+  will checkout on e6ce6b866bac5d4f9eaa19abb957c31c0a8957dc
   checkout complete
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
@@ -122,7 +125,7 @@
 
 
 # 4) Snapshot with metadata (merge state only);
-  $ hg update -q --clean "$BASEREV" && rm bar/untrackedfile
+  $ hg update -q --clean "$BASEREV" && rm bar/untrackedfile bar/baz/file
   $ hg status --verbose
   $ echo "a" > mergefile
   $ hg add mergefile
@@ -268,14 +271,14 @@
   $ cat .hg/store/snapshotlist
   v1
   bd8d77aecb3d474ec545981fe5b7aa9cd40f5df2
-  94254a2ba4f010ca2df8d770eac93f99b8caf546
+  e6ce6b866bac5d4f9eaa19abb957c31c0a8957dc
   6f770bad8ca50f23f9a62a76c3f7add22772df50
   eae93e849afe8c057f1832a2266720c1c530400e
 
 # Use the list cmd
   $ hg snapshot list --verbose
   bd8d77aecb3d           None first snapshot
-  94254a2ba4f0   2c7e231a2ff5 snapshot
+  e6ce6b866bac   937ff3506fea snapshot
   6f770bad8ca5   e654b3eb8739 another
   eae93e849afe   f37947cc08b7 snapshot
 

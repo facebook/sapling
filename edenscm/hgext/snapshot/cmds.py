@@ -75,22 +75,13 @@ def snapshotcreate(ui, repo, *args, **opts):
     """creates a snapshot of the working copy
     """
 
-    def removeuntrackedfiles(ui, repo):
-        """removes all untracked files from the repo
-        """
-        # the same behavior is implemented better in the purge extension
-        # more corner cases are handled there
-        # e.g. directories that became empty during purge get deleted too
-        # TODO(alexeyqu): use code from purge, probable move it to core code
-        status = repo.status(unknown=True)
-        for file in status.unknown:
-            try:
-                util.tryunlink(repo.wjoin(file))
-            except OSError:
-                ui.warn(_("%s cannot be removed") % file)
-
     def removesnapshotfiles(ui, repo, metadata):
-        removeuntrackedfiles(ui, repo)
+        match = scmutil.match(repo[None])
+        files, dirs, error = repo.dirstate._fs.purge(
+            match, [], True, True, False, False
+        )
+        for m in error:
+            ui.warn(_("warning: %s\n") % m)
         tr = repo.currenttransaction()
         if tr:
             for f in metadata.localvfsfiles:
