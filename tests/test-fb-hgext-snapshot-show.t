@@ -152,13 +152,19 @@
   +b
   
   The snapshot is in an unfinished *rebase* state.
-  $ hg snapshot show "$OID"
+  $ hg snapshot show "$OID" --template status
   changeset:   10:be6e4139c42c
   parent:      8:fdf2c0326bba
   parent:      7:9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
+  files:
+  M mergefile
+  A bazfile
+  A draft1
+  A draft2
+  R bar/file
   
   diff -r fdf2c0326bba -r be6e4139c42c bar/file
   --- a/bar/file	Thu Jan 01 00:00:00 1970 +0000

@@ -165,7 +165,7 @@ def snapshotshow(ui, repo, *args, **opts):
     displayer = cmdutil.show_changeset(ui, repo.unfiltered(), opts, buffered=True)
     with extensions.wrappedfunction(patch, "diff", _diff), extensions.wrappedfunction(
         cmdutil.changeset_printer, "_show", _show
-    ):
+    ), extensions.wrappedfunction(cmdutil.changeset_templater, "_show", _show):
         displayer.show(cctx, matchfn=revmatchfn)
         displayer.flush(cctx)
     displayer.close()
