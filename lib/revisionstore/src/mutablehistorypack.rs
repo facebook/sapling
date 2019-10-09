@@ -240,15 +240,15 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
 
     for (key, info) in node_map.iter() {
         let mut parent_count = 0;
-        for i in 0..2 {
-            let parent = &info.parents[i];
-
+        for parent in &info.parents {
             // Only record the relationship if the parent is also in the provided node_map.
             // This also filters out null parents.
             if node_map.contains_key(parent) {
-                parent_count += 1;
                 let children = child_map.entry(parent).or_default();
-                children.insert(key);
+                if !children.contains(key) {
+                    children.insert(key);
+                    parent_count += 1;
+                }
             }
         }
 
