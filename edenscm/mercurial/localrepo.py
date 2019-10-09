@@ -1757,6 +1757,9 @@ class localrepository(object):
         self.filteredrevcache.clear()
         obsolete.clearobscaches(self)
         mutation.clearobsoletecache(self)
+        unfi = self.unfiltered()
+        if "_phasecache" in unfi._filecache and "_phasecache" in unfi.__dict__:
+            unfi._phasecache.invalidate()
 
     def invalidatedirstate(self):
         """Invalidates the dirstate, causing the next call to dirstate

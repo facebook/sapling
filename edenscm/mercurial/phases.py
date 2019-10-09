@@ -337,6 +337,8 @@ class phasecache(object):
         self._phasesets = None
 
     def phase(self, repo, rev):
+        if self._headbased:
+            self.loadphaserevs(repo)  # ensure phase's sets are loaded
         # We need a repo argument here to be able to build _phasesets
         # if necessary. The repository instance is not stored in
         # phasecache to avoid reference cycles. The changelog instance
