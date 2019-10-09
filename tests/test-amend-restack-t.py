@@ -5,22 +5,25 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % ". helpers-usechg.sh"
 
 # Set up test environment.
 
+
+def mkcommit(name):
+    open(name, "wb").write("%s\n" % name)
+    sh.hg("ci", "-m", "add %s" % name, "-A", name)
+
+
+shlib.mkcommit = mkcommit
+
+
 sh % "enable amend rebase"
 sh % "setconfig experimental.evolution.allowdivergence=True"
 sh % 'setconfig "experimental.evolution=createmarkers, allowunstable"'
-sh % '"mkcommit()" "{"' == r"""
-    >   echo "$1" > "$1"
-    >   hg add "$1"
-    >   hg ci -m "add $1"
-    > }"""
 sh % "hg init restack"
 sh % "cd restack"
 
