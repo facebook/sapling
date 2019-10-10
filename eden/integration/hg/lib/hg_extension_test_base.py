@@ -235,7 +235,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         # unfortunately do not check the same list of states.
         state_files = {
             "update": "updatestate",
-            "rebase": "rebasestate",
+            "updatemerge": "updatemergestate",
             "graft": "graftstate",
             "rebase": "rebasestate",
             "histedit": "histedit-state",
@@ -261,7 +261,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         in_merge = os.path.exists(merge_state_path)
         if in_merge and op is None:
             self.fail("repository is in the middle of an unfinished merge")
-        elif op == "merge" and not in_merge:
+        elif op in {"updatemerge", "merge"} and not in_merge:
             self.fail(
                 "expected repository to be in the middle of an "
                 "unfinished merge, but it is not"

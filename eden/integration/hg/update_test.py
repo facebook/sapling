@@ -186,7 +186,7 @@ class UpdateTest(EdenHgTestCase):
             b"(edit, then use 'hg resolve --mark')",
             context.exception.stderr,
         )
-        self.assert_status({"foo/bar.txt": "M"}, op="merge")
+        self.assert_status({"foo/bar.txt": "M"}, op="updatemerge")
         self.assert_file_regex(
             "foo/bar.txt",
             """\
@@ -231,10 +231,7 @@ class UpdateTest(EdenHgTestCase):
 
         # Now do the update with --merge specified.
         self.repo.update(new_commit, merge=True)
-        # The repository will have no file changes, but will still report
-        # as being in the middle of a merge, even though everything was
-        # automatically resolved.
-        self.assert_status_empty(op="merge")
+        self.assert_status_empty()
         self.assertEqual(
             new_commit,
             self.repo.get_head_hash(),
@@ -290,7 +287,7 @@ class UpdateTest(EdenHgTestCase):
             "we should still be at the new commit.",
         )
         self.assert_dirstate_empty()
-        self.assert_status({"some_new_file.txt": "M"}, op="merge")
+        self.assert_status({"some_new_file.txt": "M"}, op="updatemerge")
         merge_contents = dedent(
             """\
         <<<<<<< working copy: .*
@@ -312,9 +309,10 @@ class UpdateTest(EdenHgTestCase):
         self.write_file("some_new_file.txt", resolved_contents)
         self.hg("resolve", "--mark", "some_new_file.txt")
         self.assert_dirstate_empty()
-        self.assert_status({"some_new_file.txt": "M"}, op="merge")
+        self.assert_status({"some_new_file.txt": "M"}, op="updatemerge")
         self.repo.commit("Resolved file changes.")
         self.assert_dirstate_empty()
+        self.hg("update", "--continue")
         self.assert_status_empty()
         self.assertEqual(resolved_contents, self.read_file("some_new_file.txt"))
 
@@ -343,7 +341,7 @@ class UpdateTest(EdenHgTestCase):
 
         self.hg("update", ".^", "--merge", "--tool", ":local")
         self.assertEqual(new_contents, self.read_file("some_new_file.txt"))
-        self.assert_status({"some_new_file.txt": "A"}, op="merge")
+        self.assert_status({"some_new_file.txt": "A"})
 
     def test_update_untracked_added_conflict(self) -> None:
         # Create a commit with a newly-created file foo/new_file.txt
