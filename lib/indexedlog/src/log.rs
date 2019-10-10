@@ -220,6 +220,7 @@ pub struct OpenOptions {
     checksum_type: ChecksumType,
     pub(crate) flush_filter: Option<FlushFilterFunc>,
     fsync: bool,
+    auto_sync_threshold: Option<u64>,
 }
 
 pub(crate) type FlushFilterFunc =
@@ -386,6 +387,14 @@ impl Log {
 
             self.mem_buf.write_all(data).infallible()?;
             self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
+
+            if let Some(threshold) = self.open_options.auto_sync_threshold {
+                if self.mem_buf.len() as u64 >= threshold {
+                    self.sync()
+                        .context("sync triggered by auto_sync_threshold")?;
+                }
+            }
+
             Ok(())
         })();
 
@@ -1582,6 +1591,7 @@ impl OpenOptions {
     /// `create` is initially `false`.
     /// `fsync` is initially `false`.
     /// `index_defs` is initially empty.
+    /// `auto_sync_threshold` is initially `None`.
     pub fn new() -> Self {
         Self {
             create: false,
@@ -1589,6 +1599,7 @@ impl OpenOptions {
             checksum_type: ChecksumType::Auto,
             flush_filter: None,
             fsync: false,
+            auto_sync_threshold: None,
         }
     }
 
@@ -1625,6 +1636,16 @@ impl OpenOptions {
     /// fail if the log does not exist.
     pub fn create(mut self, create: bool) -> Self {
         self.create = create;
+        self
+    }
+
+    /// Sets whether to call [`Log::sync`] automatically when the in-memory
+    /// buffer exceeds some size threshold.
+    /// - `None`: Do not call `sync` automatically.
+    /// - `Some(size)`: Call `sync` when the in-memory buffer exceeds `size`.
+    /// - `Some(0)`: Call `sync` after every `append` automatically.
+    pub fn auto_sync_threshold(mut self, threshold: impl Into<Option<u64>>) -> Self {
+        self.auto_sync_threshold = threshold.into();
         self
     }
 
@@ -2296,6 +2317,7 @@ impl fmt::Debug for OpenOptions {
         write!(f, "fsync: {}, ", self.fsync)?;
         write!(f, "create: {}, ", self.create)?;
         write!(f, "checksum_type: {:?}, ", self.checksum_type)?;
+        write!(f, "auto_sync_threshold: {:?}, ", self.auto_sync_threshold)?;
         let flush_filter_desc = match self.flush_filter {
             Some(ref _buf) => "Some(_)",
             None => "None",
@@ -2844,6 +2866,18 @@ mod tests {
                 assert_eq!(log2.iter().count(), count, "log2 log is incomplete {}", s);
             }
         }
+    }
+
+    #[test]
+    fn test_auto_sync_threshold() {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new().create(true).auto_sync_threshold(100);
+        let mut log = open_opts.open(&dir).unwrap();
+        log.append(vec![b'a'; 50]).unwrap();
+        assert_eq!(log.iter_dirty().count(), 1);
+
+        log.append(vec![b'b'; 50]).unwrap(); // trigger auto-sync
+        assert_eq!(log.iter_dirty().count(), 0);
     }
 
     #[test]
