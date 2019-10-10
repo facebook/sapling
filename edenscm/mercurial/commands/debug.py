@@ -1168,7 +1168,7 @@ def debugformat(ui, repo, **opts):
     fm.end()
 
 
-@command("debugfsinfo", [], _("[PATH]"), norepo=True)
+@command("debugfsinfo|debugfs", [], _("[PATH]"), norepo=True)
 def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""
     ui.write(("exec: %s\n") % (util.checkexec(path) and "yes" or "no"))
