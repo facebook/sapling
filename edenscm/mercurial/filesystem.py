@@ -164,7 +164,7 @@ class physicalfilesystem(object):
             # We might not've seen a path because it's in a directory that's
             # ignored and the walk didn't go down that path. So let's double
             # check for the existence of that file.
-            st = util.statfiles([self.opener.join(fn)])[0]
+            st = list(util.statfiles([self.opener.join(fn)]))[0]
 
             # auditpath checks to see if the file is under a symlink directory.
             # If it is, we treat it the same as if it didn't exist.
