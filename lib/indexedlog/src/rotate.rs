@@ -39,6 +39,7 @@ pub struct OpenOptions {
     max_bytes_per_log: u64,
     max_log_count: u8,
     log_open_options: log::OpenOptions,
+    auto_sync_threshold: Option<u64>,
 }
 
 impl OpenOptions {
@@ -49,6 +50,7 @@ impl OpenOptions {
     /// - A log gets rotated when it exceeds 2GB.
     /// - No indexes.
     /// - Do not create on demand.
+    /// - Do not sync automatically on append().
     pub fn new() -> Self {
         // Some "seemingly reasonable" default values. Not scientifically chosen.
         let max_log_count = 2;
@@ -57,6 +59,7 @@ impl OpenOptions {
             max_bytes_per_log,
             max_log_count,
             log_open_options: log::OpenOptions::new(),
+            auto_sync_threshold: None,
         }
     }
 
@@ -113,6 +116,15 @@ impl OpenOptions {
     /// exists in the latest [`Log`], or rewrite content as needed.
     pub fn flush_filter(mut self, flush_filter: Option<FlushFilterFunc>) -> Self {
         self.log_open_options = self.log_open_options.flush_filter(flush_filter);
+        self
+    }
+
+    /// Call `sync` automatically if the in-memory buffer size has exceeded
+    /// the given size threshold.
+    ///
+    /// This is useful to make in-memory buffer size bounded.
+    pub fn auto_sync_threshold(mut self, threshold: impl Into<Option<u64>>) -> Self {
+        self.auto_sync_threshold = threshold.into();
         self
     }
 
@@ -274,8 +286,9 @@ impl OpenOptions {
 impl fmt::Debug for OpenOptions {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "OpenOptions {{ ")?;
-        write!(f, "max_bytes_per_log: {}, ", self.max_bytes_per_log,)?;
+        write!(f, "max_bytes_per_log: {}, ", self.max_bytes_per_log)?;
         write!(f, "max_log_count: {}, ", self.max_log_count)?;
+        write!(f, "auto_sync_threshold: {:?}, ", self.auto_sync_threshold)?;
         write!(f, "log_open_options: {:?} }}", &self.log_open_options)?;
         Ok(())
     }
@@ -284,8 +297,19 @@ impl fmt::Debug for OpenOptions {
 impl RotateLog {
     /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> crate::Result<()> {
-        self.writable_log().append(data)?;
-        Ok(())
+        (|| -> crate::Result<_> {
+            let threshold = self.open_options.auto_sync_threshold.clone();
+            let log = self.writable_log();
+            log.append(data)?;
+            if let Some(threshold) = threshold {
+                if log.mem_buf.len() as u64 >= threshold {
+                    self.sync()
+                        .context("sync triggered by auto_sync_threshold")?;
+                }
+            }
+            Ok(())
+        })()
+        .context("in RotateLog::append")
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -1246,6 +1270,18 @@ mod tests {
         rotate2.sync().unwrap(); // not a failure
         rotate2.append(vec![b'y'; 200]).unwrap();
         rotate2.sync().unwrap_err(); // a failure
+    }
+
+    #[test]
+    fn test_auto_sync_threshold() {
+        let dir = tempdir().unwrap();
+        let opts = OpenOptions::new().auto_sync_threshold(100).create(true);
+
+        let mut rotate = opts.clone().create(true).open(&dir).unwrap();
+        rotate.append(vec![b'x'; 50]).unwrap();
+        assert_eq!(rotate.logs()[0].iter_dirty().count(), 1);
+        rotate.append(vec![b'x'; 50]).unwrap(); // trigger sync
+        assert_eq!(rotate.logs()[0].iter_dirty().count(), 0);
     }
 
     #[test]

@@ -83,7 +83,7 @@ const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 1u64 << INDEX_CHECKSUM_CHUNK_SIZE_LOG;
 pub struct Log {
     pub dir: Option<PathBuf>,
     disk_buf: Arc<Mmap>,
-    mem_buf: Pin<Box<Vec<u8>>>,
+    pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
     indexes: Vec<Index>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
