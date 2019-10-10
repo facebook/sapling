@@ -1,6 +1,6 @@
 #require icasefs
 
-  $ hg debugfs | grep 'case-sensitive:'
+  $ hg debugfsinfo | grep 'case-sensitive:'
   case-sensitive: no
 
 test file addition with bad case
