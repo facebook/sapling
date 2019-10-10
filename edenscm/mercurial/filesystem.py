@@ -7,7 +7,7 @@ import errno
 import os
 import stat
 
-from . import encoding, error, util, vfs as vfsmod
+from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
 
 
@@ -136,6 +136,8 @@ class physicalfilesystem(object):
             if changed:
                 yield changed
 
+        auditpath = pathutil.pathauditor(self.root, cached=True)
+
         # Identify files that should exist but were not seen in the walk and
         # report them as changed.
         dget = dmap.__getitem__
@@ -159,7 +161,19 @@ class physicalfilesystem(object):
                 if fn not in parentmf:
                     continue
 
-            yield (fn, False, False)
+            # We might not've seen a path because it's in a directory that's
+            # ignored and the walk didn't go down that path. So let's double
+            # check for the existence of that file.
+            st = util.statfiles([self.opener.join(fn)])[0]
+
+            # auditpath checks to see if the file is under a symlink directory.
+            # If it is, we treat it the same as if it didn't exist.
+            if st is None or not auditpath.check(fn):
+                yield (fn, False, False)
+            else:
+                changed = self._ischanged(fn, st)
+                if changed:
+                    yield changed
 
     @util.timefunction("fswalk", 0, "ui")
     def _walk(self, match, listignored=False):
