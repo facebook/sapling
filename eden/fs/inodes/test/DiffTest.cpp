@@ -580,6 +580,104 @@ TEST(DiffTest, ignoreToplevelOnly) {
               "src/foo/abc/xyz/ignore.txt", ScmFileStatus::IGNORED)));
 }
 
+// Test with a file that matches a .gitignore pattern but also is already in the
+// Tree (so we should report the modification)
+TEST(DiffTest, ignoredFileInMountAndInTree) {
+  DiffTest test({
+      {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\nxyz\n"},
+      {"a/b.txt", "test\n"},
+      {"src/x.txt", "test\n"},
+      {"src/y.txt", "test\n"},
+      {"src/z.txt", "test\n"},
+      {"src/foo/abc/xyz/ignore.txt", "test\n"},
+      {"src/foo/bar.txt", "test\n"},
+  });
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("1.txt", "new\n");
+  test.getMount().addFile("ignore.txt", "new\n");
+  test.getMount().addFile("src/1.txt", "new\n");
+  test.getMount().addFile("src/foo/ignore.txt", "new\n");
+  test.getMount().mkdir("junk");
+  test.getMount().addFile("junk/stuff.txt", "new\n");
+
+  // overwrite a file that already exists and matches the ignore pattern
+  test.getMount().overwriteFile("src/foo/abc/xyz/ignore.txt", "modified\n");
+
+  // Even though important.txt matches an include rule, the fact that it
+  // is inside an excluded directory takes precedence.
+  test.getMount().addFile("junk/important.txt", "new\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::ADDED),
+          std::make_pair(
+              "src/foo/abc/xyz/ignore.txt", ScmFileStatus::MODIFIED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::MODIFIED),
+          std::make_pair("1.txt", ScmFileStatus::IGNORED),
+          std::make_pair("ignore.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/stuff.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/important.txt", ScmFileStatus::IGNORED),
+          std::make_pair("src/foo/ignore.txt", ScmFileStatus::IGNORED)));
+}
+
+// Test with a file that matches a .gitignore pattern but also is already in the
+// Tree but removed from mount (so we should report the file removal)
+TEST(DiffTest, ignoredFileNotInMountButInTree) {
+  DiffTest test({
+      {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\nxyz\n"},
+      {"a/b.txt", "test\n"},
+      {"src/x.txt", "test\n"},
+      {"src/y.txt", "test\n"},
+      {"src/z.txt", "test\n"},
+      {"src/foo/abc/xyz/ignore.txt", "test\n"},
+      {"src/foo/bar.txt", "test\n"},
+  });
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("1.txt", "new\n");
+  test.getMount().addFile("ignore.txt", "new\n");
+  test.getMount().addFile("src/1.txt", "new\n");
+  test.getMount().addFile("src/foo/ignore.txt", "new\n");
+  test.getMount().mkdir("junk");
+  test.getMount().addFile("junk/stuff.txt", "new\n");
+
+  // remove a file that already exists and matches the ignore pattern
+  test.getMount().deleteFile("src/foo/abc/xyz/ignore.txt");
+
+  // Even though important.txt matches an include rule, the fact that it
+  // is inside an excluded directory takes precedence.
+  test.getMount().addFile("junk/important.txt", "new\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::ADDED),
+          std::make_pair(
+              "src/foo/abc/xyz/ignore.txt", ScmFileStatus::REMOVED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/1.txt", ScmFileStatus::ADDED),
+          std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::REMOVED),
+          std::make_pair("1.txt", ScmFileStatus::IGNORED),
+          std::make_pair("ignore.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/stuff.txt", ScmFileStatus::IGNORED),
+          std::make_pair("junk/important.txt", ScmFileStatus::IGNORED),
+          std::make_pair("src/foo/ignore.txt", ScmFileStatus::IGNORED)));
+}
+
 // Test with a .gitignore file in the top-level directory
 // and the presence of none, either, or both of system level
 // and user specific ignore files
@@ -730,6 +828,160 @@ TEST(DiffTest, ignoreInSubdirectories) {
            std::make_pair("a/b/c/d.txt", ScmFileStatus::IGNORED),
            // Ignored by "*.log" rule in abc/def/.gitignore
            std::make_pair("abc/def/test.log", ScmFileStatus::IGNORED),
+           std::make_pair("abc/def/another.log", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("abc/foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/test/1.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/2.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/3/4.txt", ScmFileStatus::IGNORED),
+           // Also ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/foo/test", ScmFileStatus::IGNORED)}));
+}
+
+// Test with a .gitignore in subdirectories and file exists both in mount and in
+// the Tree (so we should report the file modificiation)
+TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
+  DiffTest test({{".gitignore", "**/foo/bar.txt\n"},
+                 {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
+                 {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
+                 {"abc/def/.gitignore", "*.log\n"},
+                 {"abc/def/other.txt", "test\n"},
+                 {"a/.gitignore", "b/c/d.txt\n"},
+                 {"a/b/c/x.txt", "test\n"},
+                 {"b/c/x.txt", "test\n"},
+                 {"abc/def/test.log", "test\n"}});
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("foo/bar.txt", "new\n");
+  test.getMount().addFile("foo/foo/bar.txt", "new\n");
+  test.getMount().mkdir("foo/test");
+  test.getMount().addFile("foo/test/1.txt", "new\n");
+  test.getMount().addFile("foo/test/2.txt", "new\n");
+  test.getMount().mkdir("foo/test/3");
+  test.getMount().addFile("foo/test/3/4.txt", "new\n");
+  test.getMount().addFile("foo/foo/test", "new\n");
+  test.getMount().addFile("test", "test\n");
+  test.getMount().addFile("abc/def/test", "test\n");
+  test.getMount().addFile("abc/def/another.log", "test\n");
+  test.getMount().addFile("abc/test.log", "test\n");
+  test.getMount().mkdir("abc/foo");
+  test.getMount().addFile("abc/foo/bar.txt", "test\n");
+  test.getMount().mkdir("other");
+  test.getMount().addFile("other/bar.txt", "test\n");
+  test.getMount().addFile("a/b/c/d.txt", "test\n");
+  test.getMount().addFile("b/c/d.txt", "test\n");
+
+  // Overwrite a file that matches a .gitignore rule
+  // Ignored by "*.log" rule in abc/def/.gitignore
+  test.getMount().overwriteFile("abc/def/test.log", "changed\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+          std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+          std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
+          // Matches exlude rule in top-level .gitignore, but explicitly
+          // included by "!bar.txt" rule in foo/foo/.gitignore
+          std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("test", ScmFileStatus::ADDED),
+          std::make_pair("abc/def/test.log", ScmFileStatus::MODIFIED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAreArray(
+          {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
+           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("test", ScmFileStatus::ADDED),
+           std::make_pair("abc/def/test.log", ScmFileStatus::MODIFIED),
+           std::make_pair("a/b/c/d.txt", ScmFileStatus::IGNORED),
+           // Ignored by "*.log" rule in abc/def/.gitignore
+           std::make_pair("abc/def/another.log", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("abc/foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+           std::make_pair("foo/bar.txt", ScmFileStatus::IGNORED),
+           // Ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/test/1.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/2.txt", ScmFileStatus::IGNORED),
+           std::make_pair("foo/test/3/4.txt", ScmFileStatus::IGNORED),
+           // Also ignored by "test" rule in foo/.gitignore
+           std::make_pair("foo/foo/test", ScmFileStatus::IGNORED)}));
+}
+
+// Test with a .gitignore in subdirectories and file exists not in mount but
+// exists in the Tree (so we should report the file deletion)
+TEST(DiffTest, ignoreInSubdirectoriesNotInMountButInTree) {
+  DiffTest test({{".gitignore", "**/foo/bar.txt\n"},
+                 {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
+                 {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
+                 {"abc/def/.gitignore", "*.log\n"},
+                 {"abc/def/other.txt", "test\n"},
+                 {"a/.gitignore", "b/c/d.txt\n"},
+                 {"a/b/c/x.txt", "test\n"},
+                 {"b/c/x.txt", "test\n"},
+                 {"abc/def/test.log", "test\n"}});
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("foo/bar.txt", "new\n");
+  test.getMount().addFile("foo/foo/bar.txt", "new\n");
+  test.getMount().mkdir("foo/test");
+  test.getMount().addFile("foo/test/1.txt", "new\n");
+  test.getMount().addFile("foo/test/2.txt", "new\n");
+  test.getMount().mkdir("foo/test/3");
+  test.getMount().addFile("foo/test/3/4.txt", "new\n");
+  test.getMount().addFile("foo/foo/test", "new\n");
+  test.getMount().addFile("test", "test\n");
+  test.getMount().addFile("abc/def/test", "test\n");
+  test.getMount().addFile("abc/def/another.log", "test\n");
+  test.getMount().addFile("abc/test.log", "test\n");
+  test.getMount().mkdir("abc/foo");
+  test.getMount().addFile("abc/foo/bar.txt", "test\n");
+  test.getMount().mkdir("other");
+  test.getMount().addFile("other/bar.txt", "test\n");
+  test.getMount().addFile("a/b/c/d.txt", "test\n");
+  test.getMount().addFile("b/c/d.txt", "test\n");
+
+  // Remove a file that matches a .gitignore rule
+  // Ignored by "*.log" rule in abc/def/.gitignore
+  test.getMount().deleteFile("abc/def/test.log");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+          std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+          std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
+          // Matches exlude rule in top-level .gitignore, but explicitly
+          // included by "!bar.txt" rule in foo/foo/.gitignore
+          std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+          std::make_pair("test", ScmFileStatus::ADDED),
+          std::make_pair("abc/def/test.log", ScmFileStatus::REMOVED)));
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAreArray(
+          {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
+           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
+           std::make_pair("b/c/d.txt", ScmFileStatus::ADDED),
+           std::make_pair("foo/foo/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("other/bar.txt", ScmFileStatus::ADDED),
+           std::make_pair("test", ScmFileStatus::ADDED),
+           std::make_pair("abc/def/test.log", ScmFileStatus::REMOVED),
+           std::make_pair("a/b/c/d.txt", ScmFileStatus::IGNORED),
+           // Ignored by "*.log" rule in abc/def/.gitignore
            std::make_pair("abc/def/another.log", ScmFileStatus::IGNORED),
            // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
            std::make_pair("abc/foo/bar.txt", ScmFileStatus::IGNORED),
