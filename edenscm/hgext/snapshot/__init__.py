@@ -45,6 +45,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import (
     blobstore as blobstoremod,
     bundlerepo,
+    commands,
     error,
     extensions,
     graphmod,
@@ -72,7 +73,19 @@ configitem("snapshot", "usercache", default=None)
 
 
 def uisetup(ui):
+    tweakorder()
     bundleparts.uisetup(ui)
+
+
+def tweakorder():
+    """Snapshot extension should be loaded as soon as possible
+    to prevent other extensions (e.g. infinitepush)
+    from accessing snapshots as if they were normal commits.
+    """
+    order = extensions._order
+    order.remove("snapshot")
+    order.insert(0, "snapshot")
+    extensions._order = order
 
 
 def reposetup(ui, repo):
@@ -100,6 +113,7 @@ def extsetup(ui):
     extensions.wrapfunction(
         bundlerepo.bundlerepository, "_handlebundle2part", _handlebundle2part
     )
+    extensions.wrapcommand(commands.table, "update", _update)
 
     def wrapamend(loaded):
         if not loaded:
@@ -161,6 +175,24 @@ def _showgraphnode(orig, repo, ctx, **args):
     if "snapshotmetadataid" in ctx.extra():
         return "s"
     return orig(repo, ctx, **args)
+
+
+def _update(orig, ui, repo, node=None, rev=None, **opts):
+    allowsnapshots = repo.ui.configbool("ui", "allow-checkout-snapshot")
+    unfi = repo.unfiltered()
+    if not allowsnapshots and node in unfi:
+        ctx = unfi[node]
+        if "snapshotmetadataid" in ctx.extra():
+            ui.warn(
+                _(
+                    "%s is a snapshot, set ui.allow-checkout-snapshot"
+                    " config to True to checkout on it directly\n"
+                    "Executing `hg snapshot checkout %s`.\n"
+                )
+                % (ctx, ctx)
+            )
+            return snapshotcommands.snapshotcheckout(ui, repo, node, **opts)
+    return orig(ui, repo, node=node, rev=rev, **opts)
 
 
 def _handlebundle2part(orig, self, bundle, part):

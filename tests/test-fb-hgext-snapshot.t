@@ -37,7 +37,7 @@
 # 5) Snapshot with metadata (merge state + mixed changes);
 # 6) List the snapshots;
 # 7) Same as 3 but test the --clean flag on creation;
-# 8) Same as 3 but test the --force flag on restore;
+# 8) Same as 3 but test the --clean flag on restore;
 # 9) Resolve the merge conflict after restoring the snapshot;
 # 10) Negative tests.
 
@@ -291,13 +291,11 @@
 
 # Check out on the snapshot -- negative tests
 # Regular checkout
-  $ hg checkout --hidden "$OID"
-  abort: eae93e849afe is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
-  
-  [255]
 # Non-empty WC state
-  $ hg snapshot checkout "$OID"
-  abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
+  $ hg checkout "$OID"
+  eae93e849afe is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it directly
+  Executing `hg snapshot checkout eae93e849afe`.
+  abort: You must have a clean working copy to checkout on a snapshot. Use --clean to bypass that.
   
   [255]
 # Bad id
@@ -338,17 +336,17 @@
   checkout complete
 
 
-# 8) Test the --force flag on checkout;
+# 8) Test the --clean flag on checkout;
   $ hg update -q --clean "$BASEREV"
   $ hg status --verbose
   ? bazfile
   ? mergefile.orig
   ? untrackedfile
   $ hg snapshot checkout "$OID"
-  abort: You must have a clean working copy to checkout on a snapshot. Use --force to bypass that.
+  abort: You must have a clean working copy to checkout on a snapshot. Use --clean to bypass that.
   
   [255]
-  $ hg snapshot checkout --force "$OID"
+  $ hg snapshot checkout --clean "$OID"
   will checkout on eae93e849afe8c057f1832a2266720c1c530400e
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete

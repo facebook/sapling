@@ -238,19 +238,22 @@ def _show(orig, self, ctx, *args):
 
 
 @subcmd(
-    "checkout", [("f", "force", False, _("force checkout"))], _("REV"), inferrepo=True
+    "checkout",
+    [("C", "clean", False, _("discard uncommitted changes (no backup)"))],
+    _("REV"),
+    inferrepo=True,
 )
 def snapshotcheckout(ui, repo, *args, **opts):
     """checks out the working copy to the snapshot state, given its revision id
     """
     cctx = getsnapshotctx(ui, repo, args)
-    force = opts.get("force")
+    clean = opts.get("clean")
     # This is a temporary safety check that WC is clean.
-    if sum(map(len, repo.status(unknown=True))) != 0 and not force:
+    if sum(map(len, repo.status(unknown=True))) != 0 and not clean:
         raise error.Abort(
             _(
                 "You must have a clean working copy to checkout on a snapshot. "
-                "Use --force to bypass that.\n"
+                "Use --clean to bypass that.\n"
             )
         )
     ui.status(_("will checkout on %s\n") % cctx.hex())
@@ -271,13 +274,13 @@ def snapshotcheckout(ui, repo, *args, **opts):
     snapshotmetadataid = cctx.extra().get("snapshotmetadataid")
     if snapshotmetadataid:
         snapmetadata = snapshotmetadata.getfromlocalstorage(repo, snapshotmetadataid)
-        checkouttosnapshotmetadata(ui, repo, snapmetadata, force)
+        checkouttosnapshotmetadata(ui, repo, snapmetadata, clean)
     ui.status(_("checkout complete\n"))
 
 
-def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
-    def checkaddfile(store, file, vfs, force):
-        if not force and vfs.exists(file.path):
+def checkouttosnapshotmetadata(ui, repo, snapmetadata, clean=True):
+    def checkaddfile(store, file, vfs, clean):
+        if not clean and vfs.exists(file.path):
             ui.note(_("skip adding %s, it exists\n") % file.path)
             return
         ui.note(_("will add %s\n") % file.path)
@@ -292,11 +295,11 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, force=True):
             ui.warn(_("%s cannot be removed\n") % file.path)
     # populating the untracked files
     for file in snapmetadata.unknown:
-        checkaddfile(repo.svfs.snapshotstore, file, repo.wvfs, force)
+        checkaddfile(repo.svfs.snapshotstore, file, repo.wvfs, clean)
     # restoring the merge state
     with repo.wlock():
         for file in snapmetadata.localvfsfiles:
-            checkaddfile(repo.svfs.snapshotstore, file, repo.localvfs, force)
+            checkaddfile(repo.svfs.snapshotstore, file, repo.localvfs, clean)
 
 
 @subcmd("list", cmdutil.formatteropts)
