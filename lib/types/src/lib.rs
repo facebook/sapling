@@ -15,7 +15,7 @@ pub mod nodeinfo;
 pub mod parents;
 pub mod path;
 
-pub use crate::dataentry::DataEntry;
+pub use crate::dataentry::{DataEntry, Validity};
 pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
 pub use crate::key::Key;
 pub use crate::node::Node;

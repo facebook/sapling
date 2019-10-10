@@ -8,7 +8,7 @@ use curl::{
     easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
-use failure::{format_err, ResultExt};
+use failure::{format_err, Fallible, ResultExt};
 use itertools::Itertools;
 use parking_lot::{Mutex, MutexGuard};
 use serde::{de::DeserializeOwned, Serialize};
@@ -19,7 +19,7 @@ use driver::MultiDriver;
 use handler::Collector;
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
-    DataEntry, HistoryEntry, Key, Node, RepoPathBuf, WireHistoryEntry,
+    DataEntry, HistoryEntry, Key, Node, RepoPathBuf, Validity, WireHistoryEntry,
 };
 
 use crate::api::EdenApi;
@@ -293,8 +293,7 @@ impl EdenApi for EdenApiCurlClient {
             .into_iter()
             .flatten()
             .map(|entry| {
-                entry
-                    .data(self.validate)
+                check_data(&entry, self.validate)
                     .context(ApiErrorKind::BadResponse)
                     .map_err(|e| e.into())
                     .map(|data| (entry.key().clone(), data))
@@ -380,8 +379,7 @@ impl EdenApiCurlClient {
             .into_iter()
             .flatten()
             .map(|entry| {
-                entry
-                    .data(self.validate)
+                check_data(&entry, self.validate)
                     .context(ApiErrorKind::BadResponse)
                     .map_err(|e| e.into())
                     .map(|data| (entry.key().clone(), data))
@@ -548,4 +546,35 @@ fn prepare_cbor_post<H, R: Serialize>(
     easy.http_headers(headers)?;
 
     Ok(())
+}
+
+/// Check the integrity of the data in this entry and either return
+/// the data or an integrity check failure depending on the validation
+/// result and the user's configuration.
+fn check_data(entry: &DataEntry, validate: bool) -> Fallible<Bytes> {
+    log::trace!("Validating data for: {}", entry.key());
+
+    let (data, validity) = entry.data();
+
+    match (validity, validate) {
+        (Validity::Valid, _) => Ok(data),
+        (Validity::Redacted, _) => {
+            log::debug!("Skipping validation for redacted content: {}", entry.key());
+            Ok(data)
+        }
+        (Validity::InvalidEmptyPath(_), _) => {
+            log::warn!("Ignoring validation failure for: {}", entry.key());
+            log::warn!("This failure may be expected for legacy reasons");
+            Ok(data)
+        }
+        (Validity::Invalid(e), true) => {
+            log::debug!("Data validation failed for: {}", entry.key());
+            Err(e)
+        }
+        (Validity::Invalid(_), false) => {
+            log::warn!("Ignoring validation failure for: {}", entry.key());
+            log::warn!("(Failure ignored because data validation is disabled)");
+            Ok(data)
+        }
+    }
 }

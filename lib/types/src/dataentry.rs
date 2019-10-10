@@ -2,14 +2,14 @@
 
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
-use failure::{ensure, Fallible};
+use failure::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node, parents::Parents};
 
 /// Tombstone string to replace the content of blacklisted files with
 /// TODO(T48685378): Handle redacted content in a less hacky way
-const CENSORED_CONTENT: &str =
+const REDACTED_TOMBSTONE: &str =
     "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oHAF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNoUI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQV3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
 
 /// Structure representing source control data (typically
@@ -35,6 +35,30 @@ pub struct DataEntry {
     parents: Parents,
 }
 
+/// Enum representing the results of attempting to validate a DataEntry
+/// by computing the expected filenode hash of its content. Due to various
+/// corner cases, the result of such a validation is more complex than
+/// a simple boolean.
+pub enum Validity {
+    /// Filenode hash successfully validated.
+    Valid,
+    /// Data entry was redacted by the server. The received content
+    /// did not validate but matches the known tombstone content for
+    /// redacted data.
+    Redacted,
+    /// Validation failed, but the path associated with this data is
+    /// empty. If this DataEntry represents a tree manifest node, this
+    /// situation is sometimes expected in legacy situations involving
+    /// hybrid tree manifests. The filenode hash represents is that of
+    /// a flat manifest while the data is the content of a root tree
+    /// manifest. Given that this situation does occur in practice,
+    /// this is a separate variant that higher-level code can choose
+    /// to treat as a special case.
+    InvalidEmptyPath(Error),
+    /// Validation failed.
+    Invalid(Error),
+}
+
 impl DataEntry {
     pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
         Self { key, data, parents }
@@ -44,22 +68,19 @@ impl DataEntry {
         &self.key
     }
 
-    /// Get this entry's data content. If validate is set to true, this method
-    /// will recompute the entry's node hash and verify that it matches the
-    /// expected node hash in the entry's key, returning an error otherwise.
-    pub fn data(&self, validate: bool) -> Fallible<Bytes> {
-        // TODO(T48685378): Handle redacted content in a less hacky way
-        if validate && !(self.data.len() == CENSORED_CONTENT.len() && self.data == CENSORED_CONTENT)
-        {
-            self.validate()?;
-        }
-        Ok(self.data.clone())
+    /// Get this entry's data content. This method checks the validity of the
+    /// data and return the validation result along with the data iself.
+    pub fn data(&self) -> (Bytes, Validity) {
+        (self.data.clone(), self.validate())
     }
 
     /// Compute the filenode hash of this `DataEntry` using its parents and
     /// content, and compare it with the known node hash from the entry's `Key`.
-    fn validate(&self) -> Fallible<()> {
-        log::trace!("Validating data for: {}", &self.key);
+    fn validate(&self) -> Validity {
+        // TODO(T48685378): Handle redacted content in a less hacky ways
+        if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
+            return Validity::Redacted;
+        }
 
         // Mercurial hashes the parent nodes in sorted order
         // when computing the node hash.
@@ -78,15 +99,21 @@ impl DataEntry {
         let computed = Node::from_byte_array(hash);
         let expected = &self.key.node;
 
-        ensure!(
-            &computed == expected,
-            "Content hash validation failed. Expected: {}; Computed: {}; Parents: (p1: {}, p2: {})",
-            expected.to_hex(),
-            computed.to_hex(),
-            p1.to_hex(),
-            p2.to_hex(),
-        );
+        if &computed != expected {
+            let err = format_err!(
+                "Content hash validation failed. Expected: {}; Computed: {}; Parents: (p1: {}, p2: {})",
+                expected.to_hex(),
+                computed.to_hex(),
+                p1.to_hex(),
+                p2.to_hex(),
+            );
+            if self.key.path.is_empty() {
+                return Validity::InvalidEmptyPath(err);
+            } else {
+                return Validity::Invalid(err);
+            }
+        }
 
-        Ok(())
+        Validity::Valid
     }
 }
