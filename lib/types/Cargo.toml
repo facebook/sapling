@@ -16,7 +16,7 @@ log = "0.4.6"
 quickcheck = { version = "0.6.2", optional = true }
 rand = { version = "0.5.5", optional = true }
 rust-crypto = "0.2.36"
-serde = "1.0.84"
+serde = "1.0.101"
 serde_derive = "1.0.84"
 
 [dev-dependencies]

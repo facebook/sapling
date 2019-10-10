@@ -819,6 +819,8 @@ class basetreemanifestlog(object):
             repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
         )
         self.recentlinknode = None
+        cachesize = 4
+        self._treemanifestcache = util.lrucachedict(cachesize)
 
     def add(
         self,
@@ -978,6 +980,8 @@ class basetreemanifestlog(object):
             )
         if node == nullid:
             return treemanifestctx(self, dir, node)
+        if node in self._treemanifestcache:
+            return self._treemanifestcache[node]
 
         store = self.datastore
 
@@ -986,7 +990,9 @@ class basetreemanifestlog(object):
         except KeyError:
             raise shallowutil.MissingNodesError([(dir, node)])
 
-        return treemanifestctx(self, dir, node)
+        m = treemanifestctx(self, dir, node)
+        self._treemanifestcache[node] = m
+        return m
 
 
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
