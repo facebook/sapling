@@ -307,8 +307,8 @@ EdenServiceHandler::EdenServiceHandler(
 std::unique_ptr<apache::thrift::AsyncProcessor>
 EdenServiceHandler::getProcessor() {
   auto processor = StreamingEdenServiceSvIf::getProcessor();
-  processor->addEventHandler(std::make_shared<ThriftPermissionChecker>(
-      server_->getServerState()->getUserInfo()));
+  processor->addEventHandler(
+      std::make_shared<ThriftPermissionChecker>(server_->getServerState()));
   return processor;
 }
 

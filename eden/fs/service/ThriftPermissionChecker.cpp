@@ -7,7 +7,7 @@
 #include "eden/fs/service/ThriftPermissionChecker.h"
 
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
-#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/inodes/ServerState.h"
 
 namespace {
 /**
@@ -42,13 +42,9 @@ bool isWhitelisted(folly::StringPiece methodName) {
 namespace facebook {
 namespace eden {
 
-ThriftPermissionChecker::ThriftPermissionChecker(const UserInfo& userInfo)
-#ifndef _WIN32
-    : processOwner_ {
-  userInfo.getUid()
-}
-#endif
-{}
+ThriftPermissionChecker::ThriftPermissionChecker(
+    std::shared_ptr<ServerState> serverState)
+    : serverState_{std::move(serverState)} {}
 
 void* ThriftPermissionChecker::getContext(
     const char* /*fn_name*/,
@@ -102,7 +98,9 @@ void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
   }
   uid_t uid = *maybeUid;
 
-  if (uid == 0 || uid == processOwner_) {
+  uid_t processOwner = serverState_->getUserInfo().getUid();
+
+  if (uid == 0 || uid == processOwner) {
     return;
   }
 

@@ -12,7 +12,7 @@
 namespace facebook {
 namespace eden {
 
-class UserInfo;
+class ServerState;
 
 class NotAuthorized : public std::runtime_error {
  public:
@@ -25,7 +25,7 @@ class NotAuthorized : public std::runtime_error {
  */
 class ThriftPermissionChecker : public apache::thrift::TProcessorEventHandler {
  public:
-  explicit ThriftPermissionChecker(const UserInfo& userInfo);
+  explicit ThriftPermissionChecker(std::shared_ptr<ServerState> serverState);
 
   void* getContext(
       const char* fn_name,
@@ -35,9 +35,7 @@ class ThriftPermissionChecker : public apache::thrift::TProcessorEventHandler {
   void preRead(void* ctx, const char* fn_name) override;
 
  private:
-#ifndef _WIN32
-  const uid_t processOwner_;
-#endif
+  std::shared_ptr<ServerState> serverState_;
 };
 
 } // namespace eden
