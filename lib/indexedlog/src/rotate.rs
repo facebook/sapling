@@ -206,9 +206,7 @@ impl OpenOptions {
             })
         })();
 
-        result
-            .context(|| format!("in rotate::OpenOptions::open({:?})", dir))
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context(|| format!("in rotate::OpenOptions::open({:?})", dir))
     }
 
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`sync`].
@@ -224,9 +222,7 @@ impl OpenOptions {
                 latest: 0,
             })
         })();
-        result
-            .context("in rotate::OpenOptions::create_in_memory")
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context("in rotate::OpenOptions::create_in_memory")
     }
 
     /// Try repair all logs in the specified directory.

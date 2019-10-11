@@ -1695,7 +1695,6 @@ impl OpenOptions {
         let dir = dir.as_ref();
         self.open_internal(dir, None, None)
             .context(|| format!("in log::OpenOptions::open({:?})", dir))
-            .context(|| format!("  OpenOptions = {:?}", self))
     }
 
     /// Construct an empty in-memory [`Log`] without side-effects on the
@@ -1728,9 +1727,7 @@ impl OpenOptions {
             })
         })();
 
-        result
-            .context("in log::OpenOptions::create_in_memory")
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context("in log::OpenOptions::create_in_memory")
     }
 
     fn open_with_lock(&self, dir: &Path, lock: &ScopedDirLock) -> crate::Result<Log> {
@@ -1984,9 +1981,7 @@ impl OpenOptions {
             Ok(message)
         })();
 
-        result
-            .context(|| format!("in log::OpenOptions::repair({:?})", dir))
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context(|| format!("in log::OpenOptions::repair({:?})", dir))
     }
 
     /// Attempt to change a [`Log`] at the given directory so it becomes
@@ -2026,9 +2021,7 @@ impl OpenOptions {
             Ok(())
         })();
 
-        result
-            .context(|| format!("in log::OpenOptions::delete_content({:?})", dir))
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context(|| format!("in log::OpenOptions::delete_content({:?})", dir))
     }
 }
 

@@ -1786,9 +1786,7 @@ impl OpenOptions {
                 len,
             })
         })();
-        result
-            .context(|| format!("in index::OpenOptions::open({:?})", path))
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context(|| format!("in index::OpenOptions::open({:?})", path))
     }
 
     /// Create an in-memory [`Index`] that skips flushing to disk.
@@ -1827,9 +1825,7 @@ impl OpenOptions {
                 len: 0,
             })
         })();
-        result
-            .context("in index::OpenOptions::create_in_memory")
-            .context(|| format!("  OpenOptions = {:?}", self))
+        result.context("in index::OpenOptions::create_in_memory")
     }
 }
 
