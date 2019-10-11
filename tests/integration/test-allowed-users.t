@@ -57,7 +57,7 @@ push new bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     bundle2_resolver error
+  remote:     push error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`",
@@ -83,7 +83,7 @@ push updates existing bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     bundle2_resolver error
+  remote:     push error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`",

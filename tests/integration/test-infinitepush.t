@@ -139,7 +139,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     bundle2_resolver error
+  remote:     push error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Unknown bookmark: scratch/123. Use --create to create one.",
@@ -170,7 +170,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     bundle2_resolver error
+  remote:     push error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Non fastforward bookmark move (try --force?)",
@@ -200,7 +200,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     bundle2_resolver error
+  remote:     push error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$",

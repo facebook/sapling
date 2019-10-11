@@ -130,7 +130,7 @@ fn run_push(
     .and_then(move |(changegroup_id, bookmark_ids)| {
         prepare_push_response(changegroup_id, bookmark_ids)
     })
-    .context("bundle2_resolver error")
+    .context("push error")
     .from_err()
     .boxify()
 }
