@@ -891,15 +891,7 @@ impl Log {
                         .write_file(&meta_path, self.open_options.fsync)
                         .context(|| format!("  before replacing index {:?})", name))?;
 
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
-                        // https://github.com/Stebalien/tempfile/pull/61
-                        let permissions = PermissionsExt::from_mode(0o664);
-                        tmp.as_file()
-                            .set_permissions(permissions)
-                            .context(&tmp.path(), "cannot chmod")?;
-                    }
+                    let _ = utils::fix_perm_file(tmp.as_file(), false);
 
                     let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
                     tmp.persist(&path).map_err(|e| {
@@ -1212,6 +1204,7 @@ impl Log {
                     primary_file
                         .write_all(PRIMARY_HEADER)
                         .context(&primary_path, "cannot write")?;
+                    let _ = utils::fix_perm_file(&primary_file, false);
                     // Start from empty file and indexes.
                     let meta = LogMetadata {
                         primary_len: PRIMARY_START_OFFSET,
@@ -1831,6 +1824,7 @@ impl OpenOptions {
                         .context(&primary_path, "cannot open for write")?;
                     file.write_all(PRIMARY_HEADER)
                         .context(&primary_path, "cannot re-write header")?;
+                    let _ = utils::fix_perm_file(&file, false);
                     message += "Fixed header in log\n";
                 }
                 Ok(())

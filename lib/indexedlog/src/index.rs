@@ -66,7 +66,7 @@ use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedFileLock;
-use crate::utils::{mmap_empty, mmap_readonly};
+use crate::utils::{self, mmap_empty, mmap_readonly};
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use fs2::FileExt;
@@ -1756,6 +1756,7 @@ impl OpenOptions {
                 if let Some(ref mut table) = checksum {
                     table.clear();
                 }
+                let _ = utils::fix_perm_file(&file, false);
                 let meta = Default::default();
                 (vec![MemRadix::default()], MemRoot { radix_offset, meta })
             } else {

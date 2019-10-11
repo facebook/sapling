@@ -152,17 +152,8 @@ pub fn atomic_write(
                 .sync_data()
                 .context(&file.path(), "cannot fdatasync")?;
         }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            // The tempfile crate is working on adding a way to do this automatically, until then, we
-            // need to do that by hand.
-            // https://github.com/Stebalien/tempfile/pull/61
-            let permissions = PermissionsExt::from_mode(0o664);
-            file.as_file()
-                .set_permissions(permissions)
-                .context(&file.path(), "cannot chmod")?;
-        }
+        // fix_perm issues are not fatal
+        let _ = fix_perm_file(file.as_file(), false);
         let file = file
             .persist(path)
             .map_err(|e| crate::Error::wrap(Box::new(e), "cannot persist"))?;
