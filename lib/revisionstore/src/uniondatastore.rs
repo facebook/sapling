@@ -173,7 +173,7 @@ mod tests {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(BadDataStore);
             match unionstore.get(&key) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
@@ -198,7 +198,7 @@ mod tests {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(BadDataStore);
             match unionstore.get_delta_chain(&key) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
@@ -223,7 +223,7 @@ mod tests {
             let mut unionstore = UnionDataStore::new();
             unionstore.add(BadDataStore);
             match unionstore.get_meta(&key) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
@@ -243,7 +243,7 @@ mod tests {
             unionstore.add(BadDataStore);
             match unionstore.get_missing(&keys) {
                 Ok(_) => false,
-                Err(e) => true,
+                Err(_) => true,
             }
         }
     }

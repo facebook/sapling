@@ -115,7 +115,7 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_ancestors(&key) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
@@ -140,7 +140,7 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_node_info(&key) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
@@ -159,7 +159,7 @@ mod tests {
             let mut unionstore = UnionHistoryStore::new();
             unionstore.add(BadHistoryStore);
             match unionstore.get_missing(&keys) {
-                Err(e) => true,
+                Err(_) => true,
                 _ => false,
             }
         }
