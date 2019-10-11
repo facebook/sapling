@@ -121,6 +121,9 @@ def wrapwithoutwarning(orig, ui, repo, *args, **kwargs):
 def uisetup(ui):
     """ Change ordering of extensions to ensure that directaccess extsetup comes
     after the one of the extensions in the loadsafter list """
+    # No need to enable directaccess if narrow-heads is enabled.
+    if ui.configbool("experimental", "narrow-heads"):
+        return
     # internal config: directaccess.loadsafter
     loadsafter = ui.configlist("directaccess", "loadsafter")
     order = list(extensions._order)
@@ -148,6 +151,9 @@ def _repository(orig, *args, **kwargs):
 
 
 def extsetup(ui):
+    # No need to enable directaccess if narrow-heads is enabled.
+    if ui.configbool("experimental", "narrow-heads"):
+        return
     extensions.wrapfunction(revset, "posttreebuilthook", _posttreebuilthook)
     extensions.wrapfunction(hg, "repository", _repository)
     setupdirectaccess()
