@@ -9,15 +9,13 @@
 
 mod changegroup;
 pub mod errors;
-mod getbundle_response;
 mod resolver;
 mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
-pub use getbundle_response::create_getbundle_response;
 pub use resolver::{
-    resolve, BookmarkPush, BundleResolverError, PostResolveAction,
-    PostResolveBookmarkOnlyPushRebase, PostResolvePush, PostResolvePushRebase,
-    PushrebaseBookmarkSpec,
+    resolve, BookmarkPush, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
+    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolvePush,
+    PostResolvePushRebase, PushrebaseBookmarkSpec,
 };

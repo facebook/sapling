@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
+use crate::getbundle_response;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use crate::unbundle::run_post_resolve_action;
 
@@ -433,7 +434,7 @@ impl RepoClient {
             }
         }
 
-        bundle2_parts.append(&mut bundle2_resolver::create_getbundle_response(
+        bundle2_parts.append(&mut getbundle_response::create_getbundle_response(
             self.ctx.clone(),
             blobrepo.clone(),
             args.common,
@@ -1274,23 +1275,35 @@ impl HgCommands for RepoClient {
             .and_then(move |read_write| {
                 let ctx = client.prepared_ctx(ops::UNBUNDLE, None);
                 let mut scuba_logger = ctx.scuba().clone();
+                let blobrepo = client.repo.blobrepo().clone();
+                let bookmark_attrs = client.repo.bookmark_attrs();
+                let lca_hint = client.lca_hint.clone();
+                let phases_hint = client.phases_hint.clone();
+                let infinitepush_params = client.repo.infinitepush().clone();
+                let infinitepush_writes_allowed = infinitepush_params.allow_writes;
+                let pushrebase_params = client.repo.pushrebase_params().clone();
 
                 let res = bundle2_resolver::resolve(
                     ctx.with_logger_kv(o!("command" => "unbundle")),
                     client.repo.blobrepo().clone(),
-                    client.repo.pushrebase_params().clone(),
-                    client.repo.bookmark_attrs(),
-                    client.repo.infinitepush().clone(),
+                    infinitepush_writes_allowed,
                     stream,
-                    hook_manager,
-                    client.lca_hint.clone(),
-                    client.phases_hint.clone(),
                     read_write,
                     maybe_full_content,
                     pure_push_allowed,
                 ).and_then({
                     cloned!(ctx);
-                    move |action| run_post_resolve_action(ctx, action)
+                    move |action| run_post_resolve_action(
+                        ctx,
+                        blobrepo,
+                        hook_manager,
+                        bookmark_attrs,
+                        lca_hint,
+                        phases_hint,
+                        infinitepush_params,
+                        pushrebase_params,
+                        action,
+                    )
                 });
 
                 res
