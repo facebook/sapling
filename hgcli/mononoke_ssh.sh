@@ -1,4 +1,9 @@
 #!/bin/bash
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
 
 # This is a script that should be used instead of default ui.ssh when performing
 # pull/push/clone on Mononoke deployed in tupperware.

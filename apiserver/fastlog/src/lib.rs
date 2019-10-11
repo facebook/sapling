@@ -1,8 +1,10 @@
-// Copyright (c) 2018-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 /// This library is used to efficiently store file and directory history.
 /// For each unode we store a FastlogBatch - thrift structure that stores latest commits and their

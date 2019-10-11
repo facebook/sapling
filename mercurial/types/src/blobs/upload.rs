@@ -1,8 +1,10 @@
-// Copyright (c) 2004-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 use super::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
 use super::{errors::ErrorKind, File, HgBlobEntry, META_SZ};

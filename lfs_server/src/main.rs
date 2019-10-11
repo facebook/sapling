@@ -1,8 +1,10 @@
-// Copyright (c) 2004-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 #![recursion_limit = "256"]
 #![feature(async_await, async_closure, option_flattening, never_type)]

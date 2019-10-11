@@ -1,8 +1,10 @@
-// Copyright (c) 2017-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 // The ancestors of the current node are itself, plus the union of all ancestors of all parents.
 // Have a Vec of current generation nodes - as they're output, push their parents onto the next

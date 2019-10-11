@@ -1,8 +1,10 @@
-// Copyright (c) 2004-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 //! Packing obsmarkers to be sent after e.g. a pushrebase
 //! Format documentation: https://www.mercurial-scm.org/repo/hg/file/tip/mercurial/obsolete.py

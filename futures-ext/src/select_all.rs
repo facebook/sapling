@@ -1,8 +1,10 @@
-// Copyright (c) 2018-present, Facebook, Inc.
-// All Rights Reserved.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License found in the LICENSE file in the root
+ * directory of this source tree.
+ */
 
 //! Note: this code is from https://docs.rs/futures-util/0.2.0-beta/src/futures_util/stream/select_all.rs.html#23-25
 //! with a couple of modifications to make it work with futures 0.1.*.
