@@ -108,6 +108,15 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertEqual(st.st_size, 8)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
+    def test_create_using_mknod(self) -> None:
+        filename = os.path.join(self.mount, "notinrepo")
+        os.mknod(filename, stat.S_IFREG | 0o600)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"notinrepo"})
+
+        st = os.lstat(filename)
+        self.assertEqual(st.st_size, 0)
+        self.assertTrue(stat.S_ISREG(st.st_mode))
+
     def test_overwrite(self) -> None:
         hello = os.path.join(self.mount, "hello")
         with open(hello, "w") as f:

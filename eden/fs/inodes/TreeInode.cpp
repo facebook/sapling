@@ -980,12 +980,12 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   RelativePath targetName;
   FileInodePtr inode;
 
-  if (!S_ISSOCK(mode)) {
+  if (!S_ISSOCK(mode) && !S_ISREG(mode)) {
     throw InodeError(
         EPERM,
         inodePtrFromThis(),
         name,
-        "only unix domain sockets are supported by mknod");
+        "only unix domain sockets and regular files are supported by mknod");
   }
 
   // The dev parameter to mknod only applies to block and character devices,
