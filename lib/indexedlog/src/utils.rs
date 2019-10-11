@@ -186,15 +186,49 @@ pub fn atomic_write(
 /// Similar to `fs::create_dir_all`, but also attempts to chmod it on Unix.
 pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
     let dir = dir.as_ref();
-    fs::create_dir_all(dir).context(dir, "cannot mkdir")?;
-    #[cfg(unix)]
-    {
-        // u: rwx g:rws o:r-x
-        let perm = std::os::unix::fs::PermissionsExt::from_mode(0o2775);
-        // chmod errors are not fatal
-        let _ = fs::set_permissions(dir, perm);
-    }
-    Ok(())
+    let chmod = |path: &Path| -> io::Result<()> {
+        #[cfg(unix)]
+        {
+            // u: rwx g:rws o:r-x
+            let perm = std::os::unix::fs::PermissionsExt::from_mode(0o2775);
+            // chmod errors are not fatal
+            return fs::set_permissions(path, perm);
+        }
+        #[allow(unreachable_code)]
+        Ok(())
+    };
+    let try_mkdir_once = || -> io::Result<()> { fs::create_dir(dir).and_then(|_| chmod(dir)) };
+    (|| -> crate::Result<()> {
+        try_mkdir_once().or_else(|err| {
+            match err.kind() {
+                io::ErrorKind::AlreadyExists => return Ok(()),
+                io::ErrorKind::NotFound => {
+                    // Try to create the parent directory first.
+                    if let Some(parent) = dir.parent() {
+                        mkdir_p(parent)
+                            .context(|| format!("while trying to mkdir_p({:?})", dir))?;
+                        return try_mkdir_once()
+                            .context(&dir, "cannot mkdir after mkdir its parent");
+                    }
+                }
+                io::ErrorKind::PermissionDenied => {
+                    // Try to fix permission aggressively.
+                    if let Some(parent) = dir.parent() {
+                        if let Ok(_) = chmod(&parent) {
+                            return try_mkdir_once().context(&dir, "cannot mkdir").context(|| {
+                                format!(
+                                    "while trying to mkdir {:?} after chmod {:?}",
+                                    &dir, &parent
+                                )
+                            });
+                        }
+                    }
+                }
+                _ => (),
+            }
+            return Err(err).context(dir, "cannot mkdir");
+        })
+    })()
 }
 
 /// Return a value that is likely changing over time.
