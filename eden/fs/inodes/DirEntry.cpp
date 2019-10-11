@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"

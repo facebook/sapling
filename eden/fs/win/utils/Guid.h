@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
 #pragma once
 #include <combaseapi.h>
 #include "eden/fs/win/utils/WinError.h"

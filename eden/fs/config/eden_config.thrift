@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
 namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
 namespace py facebook.eden.eden_config

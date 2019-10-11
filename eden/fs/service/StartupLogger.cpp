@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/Systemd.h"
