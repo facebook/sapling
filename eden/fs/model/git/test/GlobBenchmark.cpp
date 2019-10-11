@@ -13,8 +13,6 @@
 #include "watchman/thirdparty/wildmatch/wildmatch.h"
 
 using namespace facebook::eden;
-using folly::StringPiece;
-using std::string;
 
 std::vector<folly::StringPiece> basenameCorpus = {
     "README",

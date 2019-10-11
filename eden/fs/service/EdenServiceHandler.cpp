@@ -9,7 +9,6 @@
 
 #include <fb303/ServiceData.h>
 #include <folly/Conv.h>
-#include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
 #include <folly/String.h>
@@ -63,12 +62,9 @@
 
 using folly::Future;
 using folly::makeFuture;
-using folly::SemiFuture;
 using folly::StringPiece;
 using folly::Try;
 using folly::Unit;
-using std::make_unique;
-using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 using std::vector;

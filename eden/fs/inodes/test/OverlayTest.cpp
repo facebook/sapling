@@ -33,12 +33,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace folly::string_piece_literals;
-using folly::Future;
-using folly::makeFuture;
-using folly::StringPiece;
 using folly::Subprocess;
-using folly::test::TemporaryDirectory;
-using std::string;
 
 namespace facebook {
 namespace eden {

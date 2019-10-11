@@ -32,7 +32,6 @@ using folly::File;
 using folly::Future;
 using folly::StringPiece;
 using folly::Unit;
-using folly::unit;
 using folly::io::Cursor;
 using std::make_unique;
 using std::string;

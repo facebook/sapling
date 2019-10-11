@@ -10,7 +10,6 @@
 #include <folly/portability/GTest.h>
 
 using folly::StringPiece;
-using std::make_pair;
 
 namespace {
 std::pair<intmax_t, intmax_t> doLookup(StringPiece name) {

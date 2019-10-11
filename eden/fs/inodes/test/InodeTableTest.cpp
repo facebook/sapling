@@ -13,7 +13,6 @@
 #include <gtest/gtest.h>
 
 using namespace facebook::eden;
-using std::chrono::system_clock;
 
 namespace {
 struct InodeTableTest : public ::testing::Test {

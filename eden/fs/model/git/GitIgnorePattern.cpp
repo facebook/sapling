@@ -9,7 +9,6 @@
 
 using folly::StringPiece;
 using std::optional;
-using std::string;
 
 namespace facebook {
 namespace eden {

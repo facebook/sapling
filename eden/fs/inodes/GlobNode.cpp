@@ -11,9 +11,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
-using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;

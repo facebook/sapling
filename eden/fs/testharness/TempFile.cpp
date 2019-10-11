@@ -8,7 +8,6 @@
 #include "eden/fs/testharness/TempFile.h"
 
 #include <unistd.h>
-#include <cstdlib>
 #include "eden/fs/utils/SystemError.h"
 
 using folly::StringPiece;

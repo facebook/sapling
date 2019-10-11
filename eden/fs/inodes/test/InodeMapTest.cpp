@@ -23,7 +23,6 @@
 
 using namespace std::chrono_literals;
 using namespace facebook::eden;
-using folly::StringPiece;
 
 TEST(InodeMap, invalidInodeNumber) {
   FakeTreeBuilder builder;

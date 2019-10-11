@@ -50,7 +50,6 @@
 #include "eden/fs/store/mononoke/MononokeCurlBackingStore.h" // @manual
 #endif
 
-using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;

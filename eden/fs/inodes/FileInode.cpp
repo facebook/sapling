@@ -28,14 +28,9 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/XAttr.h"
 
-using folly::ByteRange;
-using folly::checkUnixError;
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
-using folly::Synchronized;
-using folly::Unit;
-using std::shared_ptr;
 using std::string;
 using std::vector;
 

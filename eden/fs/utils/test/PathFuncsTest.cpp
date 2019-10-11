@@ -12,7 +12,6 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
-#include <folly/folly-config.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

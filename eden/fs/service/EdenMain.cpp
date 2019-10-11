@@ -47,7 +47,6 @@ DEFINE_bool(
     "Report successful startup without waiting for all configured mounts "
     "to be remounted.");
 
-using namespace facebook::eden;
 
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log

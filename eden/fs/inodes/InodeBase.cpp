@@ -17,7 +17,6 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/Clock.h"
 
-using namespace folly;
 
 namespace facebook {
 namespace eden {

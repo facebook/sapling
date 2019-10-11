@@ -24,10 +24,8 @@
 #include "eden/fs/store/mononoke/MononokeAPIUtils.h"
 #include "eden/fs/utils/ServiceAddress.h"
 
-using folly::Future;
 using folly::IOBuf;
 using folly::make_exception_wrapper;
-using folly::makeFuture;
 using proxygen::ErrorCode;
 using proxygen::HTTPException;
 using proxygen::HTTPHeaders;

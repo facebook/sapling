@@ -17,8 +17,6 @@
 #include "eden/fs/model/TreeEntry.h"
 
 using folly::IOBuf;
-using folly::StringPiece;
-using std::array;
 using std::invalid_argument;
 using std::string;
 using std::vector;

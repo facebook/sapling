@@ -24,7 +24,6 @@ DEFINE_uint64(threads, 1, "The number of concurrent open/close threads");
 DEFINE_uint64(iterations, 100000, "Number of open/close iterations per thread");
 
 using namespace facebook::eden;
-using folly::test::Barrier;
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);

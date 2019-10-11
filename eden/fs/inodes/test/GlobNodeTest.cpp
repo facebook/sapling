@@ -23,7 +23,6 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 
-using namespace facebook;
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;

@@ -10,7 +10,6 @@
 #include <algorithm>
 #include "GitIgnorePattern.h"
 
-using folly::ByteRange;
 using folly::StringPiece;
 using std::string;
 

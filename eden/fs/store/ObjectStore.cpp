@@ -24,7 +24,6 @@
 #include "eden/fs/tracing/EdenStats.h"
 
 using folly::Future;
-using folly::IOBuf;
 using folly::makeFuture;
 using std::shared_ptr;
 using std::string;

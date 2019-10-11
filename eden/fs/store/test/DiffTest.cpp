@@ -24,7 +24,6 @@ using namespace std::chrono_literals;
 using folly::Future;
 using folly::StringPiece;
 using std::make_shared;
-using std::make_unique;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 

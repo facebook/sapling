@@ -24,18 +24,14 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
-using namespace std::chrono_literals;
 
 using apache::thrift::CompactSerializer;
 using folly::AsyncServerSocket;
-using folly::checkUnixError;
 using folly::exceptionStr;
 using folly::Future;
 using folly::makeFuture;
 using folly::SocketAddress;
-using folly::StringPiece;
 using folly::Unit;
-using std::make_unique;
 
 namespace facebook {
 namespace eden {

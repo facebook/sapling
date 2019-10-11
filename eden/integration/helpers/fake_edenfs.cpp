@@ -33,7 +33,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace std::literals::chrono_literals;
-using namespace folly::literals::string_piece_literals;
 using apache::thrift::ThriftServer;
 using facebook::fb303::cpp2::fb303_status;
 using folly::EventBase;

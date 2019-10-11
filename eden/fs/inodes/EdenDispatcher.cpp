@@ -24,9 +24,6 @@
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
-using facebook::eden::PathComponent;
-using facebook::eden::PathComponentPiece;
-using facebook::eden::RelativePath;
 using std::string;
 using std::vector;
 

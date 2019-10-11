@@ -25,8 +25,6 @@ using folly::Promise;
 using folly::throwSystemErrorExplicit;
 using folly::Unit;
 using std::optional;
-using std::string;
-using namespace std::chrono_literals;
 
 namespace facebook {
 namespace eden {

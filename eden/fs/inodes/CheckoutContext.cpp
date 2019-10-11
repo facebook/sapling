@@ -14,7 +14,6 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 using folly::Future;
-using folly::Unit;
 using std::vector;
 
 namespace facebook {

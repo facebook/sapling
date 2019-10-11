@@ -16,7 +16,6 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 
-using namespace facebook;
 using namespace facebook::eden;
 
 TEST(InodeLoader, load) {

@@ -20,7 +20,6 @@
 
 #include "eden/fs/utils/ChronoUnit.h"
 
-using facebook::eden::ChronoUnit;
 using folly::ConversionCode;
 using folly::Expected;
 using folly::makeUnexpected;

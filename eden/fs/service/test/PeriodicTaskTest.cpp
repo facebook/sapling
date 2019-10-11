@@ -24,7 +24,6 @@ using folly::StringPiece;
 using folly::TimePoint;
 using std::make_shared;
 using std::string;
-using std::chrono::steady_clock;
 using testing::ElementsAre;
 using testing::MatchesRegex;
 using namespace facebook::eden;

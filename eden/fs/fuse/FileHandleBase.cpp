@@ -7,7 +7,6 @@
 
 #include "eden/fs/fuse/FileHandleBase.h"
 
-using namespace folly;
 
 namespace facebook {
 namespace eden {

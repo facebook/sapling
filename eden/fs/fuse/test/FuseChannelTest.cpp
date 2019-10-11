@@ -22,11 +22,7 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::ByteRange;
-using folly::Future;
-using folly::Promise;
 using folly::Random;
-using folly::Unit;
-using std::make_unique;
 using std::unique_ptr;
 
 namespace {

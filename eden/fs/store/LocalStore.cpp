@@ -24,14 +24,12 @@
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
-using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Cursor;
 using std::optional;
 using std::string;
-using std::unique_ptr;
 
 namespace facebook {
 namespace eden {

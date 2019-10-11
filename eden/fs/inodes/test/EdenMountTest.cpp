@@ -34,7 +34,6 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace std::chrono_literals;
-using std::optional;
 using namespace facebook::eden;
 
 namespace {

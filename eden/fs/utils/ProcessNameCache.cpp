@@ -16,7 +16,6 @@
 #include <sys/sysctl.h> // @manual
 #endif
 
-using namespace std::literals;
 
 namespace facebook::eden::detail {
 

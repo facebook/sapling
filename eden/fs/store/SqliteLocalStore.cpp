@@ -20,8 +20,6 @@ namespace eden {
 
 using folly::ByteRange;
 using folly::StringPiece;
-using folly::Synchronized;
-using folly::to;
 using std::string;
 
 namespace {

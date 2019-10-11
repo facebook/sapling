@@ -15,12 +15,8 @@ using folly::StringPiece;
 using rocksdb::ColumnFamilyDescriptor;
 using rocksdb::ColumnFamilyHandle;
 using rocksdb::DB;
-using rocksdb::DBOptions;
 using rocksdb::Options;
-using rocksdb::ReadOptions;
 using rocksdb::Status;
-using std::string;
-using std::unique_ptr;
 
 namespace facebook {
 namespace eden {

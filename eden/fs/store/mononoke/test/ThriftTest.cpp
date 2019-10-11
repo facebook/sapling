@@ -20,9 +20,6 @@
 using namespace std::chrono_literals;
 using facebook::eden::Hash;
 using facebook::eden::MononokeThriftBackingStore;
-using ::testing::Field;
-using ::testing::Invoke;
-using ::testing::Return;
 
 using namespace scm::mononoke::apiserver::thrift;
 

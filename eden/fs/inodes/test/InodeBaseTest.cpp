@@ -14,7 +14,6 @@
 
 using namespace facebook::eden;
 using folly::StringPiece;
-using std::dynamic_pointer_cast;
 
 TEST(InodeBase, getPath) {
   FakeTreeBuilder builder;

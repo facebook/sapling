@@ -22,7 +22,6 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::Future;
-using folly::ScopedEventBaseThread;
 using folly::Unit;
 using std::make_shared;
 

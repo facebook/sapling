@@ -13,10 +13,7 @@
 using folly::Future;
 using folly::makeFuture;
 using std::make_shared;
-using std::make_unique;
 using std::shared_ptr;
-using std::unique_ptr;
-using std::unordered_map;
 
 namespace facebook {
 namespace eden {

@@ -19,7 +19,6 @@
 using std::make_shared;
 using std::make_unique;
 using std::unique_ptr;
-using namespace facebook::eden::path_literals;
 
 namespace facebook {
 namespace eden {

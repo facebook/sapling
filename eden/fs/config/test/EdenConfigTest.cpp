@@ -14,7 +14,6 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using std::optional;
 using namespace folly::literals::string_piece_literals;

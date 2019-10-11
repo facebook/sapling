@@ -32,7 +32,6 @@
 
 #include <mutex>
 
-#include "eden/fs/eden-config.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -46,7 +45,6 @@
 // Needed for MissingKeyError
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 
-using folly::ByteRange;
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
@@ -61,7 +59,6 @@ using folly::io::Cursor;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
-using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 DEFINE_string(
     hgImportHelper,

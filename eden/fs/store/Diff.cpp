@@ -23,7 +23,6 @@
 
 using folly::Future;
 using folly::makeFuture;
-using folly::Synchronized;
 using folly::Try;
 using folly::Unit;
 using std::make_unique;

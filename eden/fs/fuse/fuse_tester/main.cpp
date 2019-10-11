@@ -27,7 +27,6 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::exceptionStr;
-using folly::makeFuture;
 using std::string;
 
 DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");

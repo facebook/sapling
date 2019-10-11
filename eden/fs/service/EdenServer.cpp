@@ -28,7 +28,6 @@
 #include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
-#include "eden/fs/eden-config.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
@@ -130,8 +129,6 @@ DEFINE_uint64(
     "The minimum number of recent blobs to keep cached. Trumps maximumBlobCacheSize");
 
 using apache::thrift::ThriftServer;
-using facebook::eden::FuseChannelData;
-using folly::File;
 using folly::Future;
 using folly::makeFuture;
 using folly::makeFutureWith;
@@ -141,7 +138,6 @@ using std::make_shared;
 using std::optional;
 using std::shared_ptr;
 using std::string;
-using std::unique_ptr;
 using namespace std::chrono_literals;
 
 namespace {

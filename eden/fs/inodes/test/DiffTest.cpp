@@ -24,7 +24,6 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
-using folly::StringPiece;
 using namespace std::chrono_literals;
 using std::string;
 using ::testing::UnorderedElementsAre;

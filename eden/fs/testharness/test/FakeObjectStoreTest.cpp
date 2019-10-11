@@ -15,8 +15,6 @@
 
 using namespace facebook::eden;
 using folly::IOBuf;
-using std::unique_ptr;
-using std::unordered_map;
 using std::vector;
 
 namespace {

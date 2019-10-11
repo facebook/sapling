@@ -17,7 +17,6 @@
 using namespace std::chrono_literals;
 using folly::ByteRange;
 using folly::StringPiece;
-using std::string;
 
 namespace facebook {
 namespace eden {

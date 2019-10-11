@@ -27,17 +27,8 @@
 namespace facebook {
 namespace eden {
 
-using apache::thrift::CompactSerializer;
-using folly::ByteRange;
-using folly::fbvector;
-using folly::File;
-using folly::IOBuf;
-using folly::MutableStringPiece;
-using folly::StringPiece;
 using folly::Unit;
 using std::optional;
-using folly::literals::string_piece_literals::operator""_sp;
-using std::string;
 
 Overlay::Overlay(AbsolutePathPiece localDir) : fsOverlay_{localDir} {}
 

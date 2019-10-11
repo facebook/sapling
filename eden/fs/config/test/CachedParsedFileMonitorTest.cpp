@@ -19,9 +19,7 @@
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::CachedParsedFileMonitor;
-using facebook::eden::GitIgnore;
 using facebook::eden::GitIgnoreFileParser;
-using facebook::eden::RelativePath;
 using folly::test::TemporaryDirectory;
 using namespace std::chrono_literals;
 

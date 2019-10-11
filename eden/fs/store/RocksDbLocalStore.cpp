@@ -30,20 +30,13 @@
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/FaultInjector.h"
 
-using facebook::eden::Hash;
 using folly::ByteRange;
-using folly::IOBuf;
-using folly::StringPiece;
 using folly::Synchronized;
-using folly::io::Cursor;
-using rocksdb::FlushOptions;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
 using rocksdb::SliceParts;
-using rocksdb::WriteBatch;
 using rocksdb::WriteOptions;
 using std::string;
-using std::unique_ptr;
 
 namespace {
 using namespace facebook::eden;

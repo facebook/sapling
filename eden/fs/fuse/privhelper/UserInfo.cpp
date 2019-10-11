@@ -9,14 +9,12 @@
 
 #include <folly/Exception.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/Stdlib.h>
 #include <grp.h>
 #include <pwd.h>
 #ifdef __linux__
 #include <sys/prctl.h>
 #endif
 #include <vector>
-#include "eden/fs/eden-config.h"
 
 #ifdef EDEN_HAVE_SELINUX
 #include <selinux/selinux.h> // @manual

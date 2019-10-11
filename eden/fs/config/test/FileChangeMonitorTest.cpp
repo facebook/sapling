@@ -16,7 +16,6 @@
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::AbsolutePathPiece;
-using facebook::eden::RelativePath;
 using namespace std::chrono_literals;
 
 namespace {

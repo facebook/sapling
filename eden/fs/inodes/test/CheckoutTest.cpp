@@ -29,13 +29,9 @@
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
-using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
-using folly::Unit;
 using std::optional;
 using std::string;
-using std::chrono::system_clock;
 using testing::UnorderedElementsAre;
 
 namespace std {

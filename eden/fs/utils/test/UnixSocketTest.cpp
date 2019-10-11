@@ -31,9 +31,7 @@ using folly::errnoStr;
 using folly::EventBase;
 using folly::File;
 using folly::IOBuf;
-using folly::makeFuture;
 using folly::StringPiece;
-using folly::test::TemporaryFile;
 using std::make_unique;
 using namespace std::chrono_literals;
 

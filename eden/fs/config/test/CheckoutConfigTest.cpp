@@ -18,7 +18,6 @@ using facebook::eden::AbsolutePath;
 using facebook::eden::BindMount;
 using facebook::eden::CheckoutConfig;
 using facebook::eden::Hash;
-using facebook::eden::RelativePath;
 using folly::StringPiece;
 
 namespace {

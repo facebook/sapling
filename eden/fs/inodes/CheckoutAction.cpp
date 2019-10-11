@@ -21,10 +21,6 @@
 
 using folly::exception_wrapper;
 using folly::Future;
-using folly::makeFuture;
-using folly::Unit;
-using std::make_shared;
-using std::vector;
 
 namespace facebook {
 namespace eden {

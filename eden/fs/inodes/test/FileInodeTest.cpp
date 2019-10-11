@@ -24,7 +24,6 @@
 using namespace facebook::eden;
 using folly::StringPiece;
 using folly::literals::string_piece_literals::operator""_sp;
-using std::chrono::duration_cast;
 using namespace std::chrono_literals;
 
 std::ostream& operator<<(std::ostream& os, const timespec& ts) {

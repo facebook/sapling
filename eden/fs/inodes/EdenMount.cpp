@@ -26,7 +26,6 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenMountError.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -54,17 +53,10 @@
 using apache::thrift::ResponseChannelRequest;
 using folly::Future;
 using folly::makeFuture;
-using folly::setThreadName;
-using folly::StringPiece;
-using folly::to;
 using folly::Try;
 using folly::Unit;
-using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
-using std::unique_ptr;
-using std::vector;
-using std::chrono::system_clock;
 
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 DEFINE_string(

@@ -7,14 +7,10 @@
 
 #include "eden/fs/tracing/EdenStats.h"
 
-#include <folly/container/Array.h>
 #include <chrono>
 #include <memory>
 
-#include "eden/fs/eden-config.h"
 
-using namespace folly;
-using namespace std::chrono;
 
 namespace {
 constexpr std::chrono::microseconds kMinValue{0};

@@ -43,18 +43,14 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-using folly::ByteRange;
 using folly::Future;
 using folly::makeFuture;
-using folly::StringPiece;
 using folly::Unit;
 using namespace std::chrono_literals;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
 using std::string;
-using std::unique_ptr;
-using std::vector;
 
 DEFINE_int32(
     num_eden_test_threads,

@@ -16,7 +16,6 @@
 #include "eden/fs/utils/FutureUnixSocket.h"
 
 using apache::thrift::CompactSerializer;
-using folly::IOBuf;
 using std::string;
 
 /**

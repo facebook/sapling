@@ -24,9 +24,7 @@ using namespace facebook::eden;
 using folly::ByteRange;
 using folly::StringPiece;
 using std::make_shared;
-using std::make_unique;
 using std::string;
-using ::testing::ContainsRegex;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAre;
 

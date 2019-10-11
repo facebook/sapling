@@ -17,9 +17,7 @@
 
 using folly::ByteRange;
 using folly::range;
-using folly::StringPiece;
 using folly::ssl::OpenSSLHash;
-using std::string;
 
 namespace facebook {
 namespace eden {

@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 
 using namespace facebook::eden;
-using ::testing::UnorderedElementsAre;
 
 TEST(Journal, accumulate_range_all_changes) {
   Journal journal(std::make_shared<EdenStats>());

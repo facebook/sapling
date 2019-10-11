@@ -24,11 +24,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
-using namespace std::chrono_literals;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
-using std::vector;
-using testing::ElementsAre;
 
 namespace {
 

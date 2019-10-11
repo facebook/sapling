@@ -26,7 +26,6 @@ using apache::thrift::CompactSerializer;
 using folly::ByteRange;
 using folly::MutableStringPiece;
 using folly::StringPiece;
-using std::make_unique;
 using std::optional;
 using std::string;
 using std::unique_ptr;
