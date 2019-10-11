@@ -575,7 +575,7 @@ def archive(ui, repo, dest, **opts):
 @command(
     "backout|backo|backou",
     [
-        ("", "merge", None, _("merge with old dirstate parent after backout")),
+        ("", "merge", None, _("combine existing pending changes with backout changes")),
         ("", "no-commit", False, _("do not commit")),
         (
             "",
@@ -584,8 +584,8 @@ def archive(ui, repo, dest, **opts):
             _("parent to choose when backing out merge (DEPRECATED)"),
             _("REV"),
         ),
-        ("r", "rev", "", _("revision to backout"), _("REV")),
-        ("e", "edit", False, _("invoke editor on commit messages")),
+        ("r", "rev", "", _("revision to back out"), _("REV")),
+        ("e", "edit", False, _("open editor to specify custom commit message")),
     ]
     + mergetoolopts
     + walkopts
@@ -594,19 +594,22 @@ def archive(ui, repo, dest, **opts):
     _("[OPTION]... [-r] REV"),
 )
 def backout(ui, repo, node=None, rev=None, **opts):
-    """reverse effect of earlier changeset
+    """reverse the effects of an earlier commit
 
-    Prepare a new changeset with the effect of REV undone in the
-    current working directory. If no conflicts were encountered,
-    it will be committed immediately.
+    Create an inverse commit for the specified commit. This command is commonly
+    used to undo the effects of a public commit.
 
-    If REV is the parent of the working directory, then this new changeset
-    is committed automatically (unless --no-commit is specified).
+    By default, :hg:`backout` creates a new commit on top of the current commit.
+    Specify --no-commit to only change the working copy rather than
+    automatically creating a new commit.
 
-    .. note::
+    If merge conflicts are encountered during the backout, changes will be
+    left in the working copy with conflict markers inserted. When this occurs,
+    resolve the conflicts and then run :hg:`commit`.
 
-       :hg:`backout` cannot be used to fix either an unwanted or
-       incorrect merge.
+    By default, :hg:`backout` will abort if pending changes are present in the
+    working copy. Specify --merge to combine changes from the backout with
+    your pending changes.
 
     .. container:: verbose
 
