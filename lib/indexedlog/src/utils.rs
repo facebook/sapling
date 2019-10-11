@@ -8,6 +8,7 @@ use std::{
     hash::Hasher,
     io::{self, Write},
     path::Path,
+    sync::atomic::{self, AtomicI64},
 };
 
 use crate::errors::{IoResultExt, ResultExt};
@@ -183,21 +184,31 @@ pub fn atomic_write(
     })
 }
 
-/// Similar to `fs::create_dir_all`, but also attempts to chmod it on Unix.
+/// `uid` and `gid` to `chown` for `mkdir_p`.
+/// - x (x < 0): do not chown
+/// - x (x >= 0): try to chown to `x`, do nothing if failed
+pub static CHOWN_UID: AtomicI64 = AtomicI64::new(-1);
+pub static CHOWN_GID: AtomicI64 = AtomicI64::new(-1);
+
+/// Default chmod mode for directories.
+/// u: rwx g:rws o:r-x
+pub static CHMOD_DIR: AtomicI64 = AtomicI64::new(0o2775);
+
+// XXX: This works around https://github.com/Stebalien/tempfile/pull/61.
+/// Default chmod mode for atomic_write files.
+pub static CHMOD_FILE: AtomicI64 = AtomicI64::new(0o664);
+
+/// Similar to `fs::create_dir_all`, but also attempts to chmod and chown
+/// newly created directories on Unix.
 pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
     let dir = dir.as_ref();
-    let chmod = |path: &Path| -> io::Result<()> {
-        #[cfg(unix)]
-        {
-            // u: rwx g:rws o:r-x
-            let perm = std::os::unix::fs::PermissionsExt::from_mode(0o2775);
-            // chmod errors are not fatal
-            return fs::set_permissions(path, perm);
-        }
-        #[allow(unreachable_code)]
-        Ok(())
+    let try_mkdir_once = || -> io::Result<()> {
+        fs::create_dir(dir).and_then(|_| {
+            // fix_perm_path issues are not fatal
+            let _ = fix_perm_path(dir, true);
+            Ok(())
+        })
     };
-    let try_mkdir_once = || -> io::Result<()> { fs::create_dir(dir).and_then(|_| chmod(dir)) };
     (|| -> crate::Result<()> {
         try_mkdir_once().or_else(|err| {
             match err.kind() {
@@ -214,10 +225,10 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                 io::ErrorKind::PermissionDenied => {
                     // Try to fix permission aggressively.
                     if let Some(parent) = dir.parent() {
-                        if let Ok(_) = chmod(&parent) {
+                        if let Ok(_) = fix_perm_path(&parent, true) {
                             return try_mkdir_once().context(&dir, "cannot mkdir").context(|| {
                                 format!(
-                                    "while trying to mkdir {:?} after chmod {:?}",
+                                    "while trying to mkdir {:?} after fix_perm {:?}",
                                     &dir, &parent
                                 )
                             });
@@ -229,6 +240,50 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
             return Err(err).context(dir, "cannot mkdir");
         })
     })()
+}
+
+/// Attempt to chmod and chown path.
+pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        let file = fs::OpenOptions::new().read(true).open(path)?;
+        fix_perm_file(&file, is_dir)?;
+    }
+    Ok(())
+}
+
+/// Attempt to chmod and chown a file.
+pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        // chown
+        let mut uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
+        let mut gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
+        if gid >= 0 || uid >= 0 {
+            let fd = std::os::unix::io::AsRawFd::as_raw_fd(file);
+            if let Ok(meta) = file.metadata() {
+                if uid < 0 {
+                    uid = std::os::unix::fs::MetadataExt::uid(&meta) as i64;
+                }
+                if gid < 0 {
+                    gid = std::os::unix::fs::MetadataExt::gid(&meta) as i64;
+                }
+                unsafe { libc::fchown(fd, uid as libc::uid_t, gid as libc::gid_t) };
+            }
+        }
+        // chmod
+        let mode = if is_dir {
+            CHMOD_DIR.load(atomic::Ordering::SeqCst)
+        } else {
+            CHMOD_FILE.load(atomic::Ordering::SeqCst)
+        };
+        if mode >= 0 {
+            let perm = std::os::unix::fs::PermissionsExt::from_mode(mode as u32);
+            file.set_permissions(perm)?;
+        }
+    }
+    #[allow(unreachable_code)]
+    Ok(())
 }
 
 /// Return a value that is likely changing over time.
