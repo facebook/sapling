@@ -12,6 +12,7 @@ use std::{
 };
 
 use failure::Fallible;
+use parking_lot::Mutex;
 
 use types::{Key, NodeInfo};
 
@@ -99,15 +100,19 @@ pub enum CorruptionPolicy {
     REMOVE,
 }
 
-/// A `PackStore` automatically keeps track of packfiles in a given directory. New on-disk
-/// packfiles will be periodically scanned and opened accordingly.
-pub struct PackStore<T> {
+struct PackStoreInner<T> {
     pack_dir: PathBuf,
     extension: &'static str,
     corruption_policy: CorruptionPolicy,
     scan_frequency: Duration,
     last_scanned: RefCell<Instant>,
     packs: RefCell<LruStore<T>>,
+}
+
+/// A `PackStore` automatically keeps track of packfiles in a given directory. New on-disk
+/// packfiles will be periodically scanned and opened accordingly.
+pub struct PackStore<T> {
+    inner: Arc<Mutex<PackStoreInner<T>>>,
 }
 
 pub type DataPackStore = PackStore<DataPack>;
@@ -158,12 +163,14 @@ impl PackStoreOptions {
         let force_rescan = now - self.scan_frequency;
 
         PackStore {
-            pack_dir: self.pack_dir,
-            scan_frequency: self.scan_frequency,
-            extension: self.extension,
-            corruption_policy: self.corruption_policy,
-            last_scanned: RefCell::new(force_rescan),
-            packs: RefCell::new(LruStore::new()),
+            inner: Arc::new(Mutex::new(PackStoreInner {
+                pack_dir: self.pack_dir,
+                scan_frequency: self.scan_frequency,
+                extension: self.extension,
+                corruption_policy: self.corruption_policy,
+                last_scanned: RefCell::new(force_rescan),
+                packs: RefCell::new(LruStore::new()),
+            })),
         }
     }
 }
@@ -172,13 +179,15 @@ impl<T> PackStore<T> {
     /// Force a rescan to be performed. Since rescan are expensive, this should only be called for
     /// out-of-process created packfiles.
     pub fn force_rescan(&self) {
-        self.last_scanned
-            .replace(Instant::now() - self.scan_frequency);
+        let packstore = self.inner.lock();
+        packstore
+            .last_scanned
+            .replace(Instant::now() - packstore.scan_frequency);
     }
 
     /// Add a packfile to this store.
     fn add_pack(&self, pack: T) {
-        self.packs.borrow_mut().add(pack);
+        self.inner.lock().packs.borrow_mut().add(pack);
     }
 }
 
@@ -210,7 +219,7 @@ impl HistoryPackStore {
     }
 }
 
-impl<T: LocalStore + Repackable> PackStore<T> {
+impl<T: LocalStore + Repackable> PackStoreInner<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Fallible<()> {
         let mut new_packs = Vec::new();
@@ -314,11 +323,12 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over
         // all the known packs.
-        self.try_scan()?;
+        let packstore = self.inner.lock();
+        packstore.try_scan()?;
 
         let initial_keys = Ok(keys.iter().cloned().collect());
-        self.packs
-            .try_borrow()?
+        let packs = packstore.packs.try_borrow()?;
+        packs
             .into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
                 Ok(missing_keys) => store.get_missing(&missing_keys),
@@ -329,29 +339,29 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
 
 impl DataStore for DataPackStore {
     fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
-        self.run(|store| store.get(key))
+        self.inner.lock().run(|store| store.get(key))
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
-        self.run(|store| store.get_delta(key))
+        self.inner.lock().run(|store| store.get_delta(key))
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
-        self.run(|store| store.get_delta_chain(key))
+        self.inner.lock().run(|store| store.get_delta_chain(key))
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
-        self.run(|store| store.get_meta(key))
+        self.inner.lock().run(|store| store.get_meta(key))
     }
 }
 
 impl HistoryStore for HistoryPackStore {
     fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        self.run(|store| store.get_ancestors(key))
+        self.inner.lock().run(|store| store.get_ancestors(key))
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
-        self.run(|store| store.get_node_info(key))
+        self.inner.lock().run(|store| store.get_node_info(key))
     }
 }
 
@@ -686,10 +696,14 @@ mod tests {
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
         let _ = packstore.get_delta(&k2)?;
-        assert!(packstore.packs.borrow().stores[0].get_delta(&k2).is_ok());
+        assert!(packstore.inner.lock().packs.borrow().stores[0]
+            .get_delta(&k2)
+            .is_ok());
 
         let _ = packstore.get_delta(&k1)?;
-        assert!(packstore.packs.borrow().stores[0].get_delta(&k1).is_ok());
+        assert!(packstore.inner.lock().packs.borrow().stores[0]
+            .get_delta(&k1)
+            .is_ok());
 
         Ok(())
     }
@@ -701,6 +715,7 @@ mod tests {
         non_present_tempdir.push("non_present");
         let store = HistoryPackStore::new(&non_present_tempdir, CorruptionPolicy::REMOVE);
 
+        let store = store.inner.lock();
         store.rescan()
     }
 
