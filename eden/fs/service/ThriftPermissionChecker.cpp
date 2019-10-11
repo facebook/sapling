@@ -85,8 +85,8 @@ void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
   // AF_UNIX connections are okay.
   return;
 #else
-  folly::Optional<uid_t> maybeUid = connectionContext->getPeerEffectiveUid();
-  if (!maybeUid) {
+  auto maybePeerCreds = connectionContext->getPeerEffectiveCreds();
+  if (!maybePeerCreds) {
     if (auto error = connectionContext->getPeerCredError()) {
       throw NotAuthorized{folly::to<std::string>(
           "error retrieving unix domain socket peer: ", *error)};
@@ -96,16 +96,16 @@ void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
       throw NotAuthorized{"unknown peer user for unix domain socket"};
     }
   }
-  uid_t uid = *maybeUid;
+  const auto& peerCreds = *maybePeerCreds;
 
   uid_t processOwner = serverState_->getUserInfo().getUid();
 
-  if (uid == 0 || uid == processOwner) {
+  if (peerCreds.uid == 0 || peerCreds.uid == processOwner) {
     return;
   }
 
   throw NotAuthorized{folly::to<std::string>(
-      "user ", uid, " not authorized to invoke method ", fn_name)};
+      "user ", peerCreds.uid, " not authorized to invoke method ", fn_name)};
 #endif
 }
 
