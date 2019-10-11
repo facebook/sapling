@@ -15,8 +15,11 @@ mod unix_tests {
 
     #[test]
     fn test_low_fileno_limit() {
+        let verbose = std::env::var("VERBOSE").is_ok();
         for i in 10..30 {
-            eprintln!("Testing RLIMIT_NOFILE = {}", i);
+            if verbose {
+                eprintln!("Testing RLIMIT_NOFILE = {}", i);
+            }
             set_rlimit_nofile(i);
             test_multithread_sync()
         }
@@ -26,6 +29,7 @@ mod unix_tests {
     // out, the resulting on-disk state is still consistent - data can be opened and
     // read if fileno limit is lifted.
     fn test_multithread_sync() {
+        let verbose = std::env::var("VERBOSE").is_ok();
         let dir = tempdir().unwrap();
 
         // Release mode runs much faster.
@@ -79,13 +83,17 @@ mod unix_tests {
                     };
                     match run() {
                         Ok(_) => (),
-                        Err(err) => eprintln!(
-                            " thread {}: {}",
-                            i,
-                            format!("{:?}", err)
-                                .replace("\n\n", "\n")
-                                .replace("\n", "\n  ")
-                        ),
+                        Err(err) => {
+                            if verbose {
+                                eprintln!(
+                                    " thread {}: {}",
+                                    i,
+                                    format!("{:?}", err)
+                                        .replace("\n\n", "\n")
+                                        .replace("\n", "\n  ")
+                                )
+                            }
+                        }
                     }
                 })
             })
