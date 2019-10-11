@@ -298,6 +298,11 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 
 
 def expull(orig, repo, remote, heads=None, force=False, **kwargs):
+    with repo.wlock(), repo.lock(), repo.transaction("expull"):
+        return _expull(orig, repo, remote, heads, force, **kwargs)
+
+
+def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
     path = activepath(repo.ui, remote)
 
     isselectivepull = _isselectivepull(repo.ui)
