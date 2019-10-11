@@ -16,4 +16,8 @@ mod upload_blobs;
 mod upload_changesets;
 
 pub use getbundle_response::create_getbundle_response;
-pub use resolver::{resolve, BundleResolverError};
+pub use resolver::{
+    resolve, BookmarkPush, BundleResolverError, PostResolveAction,
+    PostResolveBookmarkOnlyPushRebase, PostResolvePush, PostResolvePushRebase,
+    PushrebaseBookmarkSpec,
+};

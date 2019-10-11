@@ -6,6 +6,8 @@
 
 use crate::errors::*;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
+use crate::unbundle::run_post_resolve_action;
+
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
@@ -1286,7 +1288,10 @@ impl HgCommands for RepoClient {
                     read_write,
                     maybe_full_content,
                     pure_push_allowed,
-                );
+                ).and_then({
+                    cloned!(ctx);
+                    move |action| run_post_resolve_action(ctx, action)
+                });
 
                 res
                     .inspect_err({

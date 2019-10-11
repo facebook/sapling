@@ -18,7 +18,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transactio
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, format_err, Compat};
+use core::fmt::{Debug, Display};
+use failure::{err_msg, format_err, Compat, Context};
 use failure_ext::{ensure_msg, FutureFailureErrorExt};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
@@ -81,6 +82,12 @@ impl From<Error> for BundleResolverError {
     }
 }
 
+impl<D: Display + Send + Sync + 'static> From<Context<D>> for BundleResolverError {
+    fn from(context: Context<D>) -> Self {
+        Self::Error(context.into())
+    }
+}
+
 impl From<BundleResolverError> for Error {
     fn from(error: BundleResolverError) -> Error {
         // DO NOT CHANGE FORMATTING WITHOUT UPDATING https://fburl.com/diffusion/bs9fys78 first!!
@@ -114,6 +121,49 @@ impl From<BundleResolverError> for Error {
     }
 }
 
+/// Data, needed to perform post-resolve `Push` action
+pub struct PostResolvePush {
+    pub resolver: Bundle2Resolver,
+    // Below this line is copied from code
+    pub changegroup_id: Option<PartId>,
+    pub bookmark_push: Vec<BookmarkPush<HgChangesetId>>,
+    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    pub allow_non_fast_forward: bool,
+}
+
+/// Data, needed to perform post-resolve `PushRebase` action
+pub struct PostResolvePushRebase {
+    pub resolver: Bundle2Resolver,
+    pub changesets: Changesets,
+    pub bookmark_push_part_id: Option<PartId>,
+    pub bookmark_spec: PushrebaseBookmarkSpec,
+    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    pub maybe_pushvars: Option<HashMap<String, Bytes>>,
+    pub commonheads: CommonHeads,
+    pub phases_hint: Arc<dyn Phases>,
+}
+
+/// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
+pub struct PostResolveBookmarkOnlyPushRebase {
+    pub resolver: Bundle2Resolver,
+    pub bookmark_push: PlainBookmarkPush<HgChangesetId>,
+    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    pub allow_non_fast_forward: bool,
+}
+
+/// An action to take after the `unbundle` bundle2 was completely resolved
+/// "Completely resolved" here means:
+/// - parsed
+/// - all received changesets and blobs uploaded
+pub enum PostResolveAction {
+    Push(PostResolvePush),
+    PushRebase(PostResolvePushRebase),
+    BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase),
+}
+
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
@@ -130,7 +180,7 @@ pub fn resolve(
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     pure_push_allowed: bool,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),
         repo,
@@ -244,7 +294,7 @@ fn resolve_push(
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> BoxFuture<Bytes, Error> {
+) -> BoxFuture<PostResolveAction, Error> {
     resolver
         .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
         .and_then({
@@ -285,62 +335,58 @@ fn resolve_push(
                     let changegroup_id = Some(cg_push.part_id);
                     resolver
                         .upload_changesets(ctx, cg_push, manifests, false)
-                        .map(move |_| (changegroup_id, bookmark_push, bundle2))
+                        .map(move |uploaded_map| {
+                            (changegroup_id, bookmark_push, bundle2, Some(uploaded_map))
+                        })
                         .boxify()
                 } else {
-                    ok((None, bookmark_push, bundle2)).boxify()
+                    ok((None, bookmark_push, bundle2, None)).boxify()
                 }
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2)| {
+            move |(changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)| {
                 resolver
                     .maybe_resolve_infinitepush_bookmarks(bundle2)
-                    .map(move |((), bundle2)| (changegroup_id, bookmark_push, bundle2))
-            }
-        })
-        .and_then({
-            cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2)| {
-                resolver
-                    .ensure_stream_finished(bundle2, maybe_full_content)
-                    .map(move |maybe_raw_bundle2_id| {
-                        (changegroup_id, bookmark_push, maybe_raw_bundle2_id)
+                    .map(move |((), bundle2)| {
+                        (changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)
                     })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id)| {
-                (move || {
-                    let bookmark_ids: Vec<_> = bookmark_push
-                        .iter()
-                        .filter_map(|bp| match bp {
-                            BookmarkPush::PlainPush(bp) => Some(bp.part_id),
-                            BookmarkPush::Infinitepush(..) => None,
-                        })
-                        .collect();
-                    let reason = BookmarkUpdateReason::Push {
-                        bundle_replay_data: maybe_raw_bundle2_id
-                            .map(|id| BundleReplayData::new(id)),
-                    };
-                    resolver
-                        .resolve_bookmark_pushes(
+            move |(changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)| {
+                resolver
+                    .ensure_stream_finished(bundle2, maybe_full_content)
+                    .map(move |maybe_raw_bundle2_id| {
+                        (
+                            changegroup_id,
                             bookmark_push,
-                            reason,
-                            lca_hint,
-                            allow_non_fast_forward,
+                            maybe_raw_bundle2_id,
+                            maybe_uploaded_map,
                         )
-                        .map(move |()| (changegroup_id, bookmark_ids))
-                        .boxify()
-                })()
-                .context("While updating Bookmarks")
-                .from_err()
+                    })
             }
         })
-        .and_then(move |(changegroup_id, bookmark_ids)| {
-            resolver.prepare_push_response(changegroup_id, bookmark_ids)
+        .map({
+            cloned!(resolver);
+            move |(
+                changegroup_id,
+                bookmark_push,
+                maybe_raw_bundle2_id,
+                _maybe_uploaded_hg_bonsai_map,
+            )| {
+                // TODO(ikostia): split into push and infinitepush parts
+                PostResolveAction::Push(PostResolvePush {
+                    resolver,
+                    changegroup_id,
+                    bookmark_push,
+                    maybe_raw_bundle2_id,
+                    lca_hint,
+                    allow_non_fast_forward,
+                })
+            }
         })
         .context("bundle2_resolver error")
         .from_err()
@@ -352,13 +398,13 @@ fn resolve_push(
 // stack of) commit(s) and rebase it on top of a given bookmark.
 // Force pushrebase is basically a push, which for logging
 // and respondin purposes is treated like a pushrebase
-enum PushrebaseBookmarkSpec {
+pub enum PushrebaseBookmarkSpec {
     NormalPushrebase(pushrebase::OntoBookmarkParams),
     ForcePushrebase(PlainBookmarkPush<HgChangesetId>),
 }
 
 impl PushrebaseBookmarkSpec {
-    fn get_bookmark_name(&self) -> BookmarkName {
+    pub fn get_bookmark_name(&self) -> BookmarkName {
         match self {
             PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params.bookmark.clone(),
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => plain_push.name.clone(),
@@ -376,7 +422,7 @@ fn resolve_pushrebase(
     phases_hint: Arc<dyn Phases>,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<PostResolveAction, BundleResolverError> {
     resolver
         .resolve_b2xtreegroup2(ctx.clone(), bundle2)
         .and_then({
@@ -501,63 +547,35 @@ fn resolve_pushrebase(
                     })
             }
         })
-        .from_err()
-        .and_then({
-            cloned!(ctx, resolver, lca_hint);
+        .map({
+            cloned!(resolver, lca_hint);
             move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id)| {
-                let bookmark = bookmark_spec.get_bookmark_name();
-                resolver
-                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &bookmark)
-                    .and_then(move |()| {
-                        match bookmark_spec {
-                            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => resolver
-                                .pushrebase(ctx, changesets, &onto_params, maybe_raw_bundle2_id)
-                                .left_future(),
-                            PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => resolver
-                                .force_pushrebase(ctx, lca_hint, plain_push, maybe_raw_bundle2_id)
-                                .from_err()
-                                .right_future(),
-                        }
-                        .map(move |pushrebased_rev| {
-                            (pushrebased_rev, bookmark, bookmark_push_part_id)
-                        })
-                    })
+                PostResolveAction::PushRebase(PostResolvePushRebase {
+                    resolver,
+                    changesets,
+                    bookmark_push_part_id,
+                    bookmark_spec,
+                    maybe_raw_bundle2_id,
+                    lca_hint,
+                    maybe_pushvars,
+                    commonheads,
+                    phases_hint,
+                })
             }
         })
-        .and_then(
-            move |((pushrebased_rev, pushrebased_changesets), bookmark, bookmark_push_part_id)| {
-                // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
-                let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
-
-                resolver
-                    .log_commits_to_scribe(ctx.clone(), new_commits)
-                    .and_then(move |_| {
-                        resolver.prepare_pushrebase_response(
-                            ctx,
-                            commonheads,
-                            pushrebased_rev,
-                            pushrebased_changesets,
-                            bookmark,
-                            lca_hint,
-                            phases_hint,
-                            bookmark_push_part_id,
-                        )
-                    })
-                    .from_err()
-            },
-        )
+        .from_err()
         .boxify()
 }
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
 fn resolve_bookmark_only_pushrebase(
-    ctx: CoreContext,
+    _ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-) -> BoxFuture<Bytes, Error> {
+) -> BoxFuture<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
     resolver
@@ -589,24 +607,16 @@ fn resolve_bookmark_only_pushrebase(
                     .boxify()
             }
         })
-        .and_then({
+        .map({
             cloned!(resolver);
             move |(bookmark_push, maybe_raw_bundle2_id)| {
-                let part_id = bookmark_push.part_id;
-                let pushes = vec![BookmarkPush::PlainPush(bookmark_push)];
-                let reason = BookmarkUpdateReason::Pushrebase {
-                    // Since this a bookmark-only pushrebase, there are no changeset timestamps
-                    bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-                };
-                resolver
-                    .resolve_bookmark_pushes(pushes, reason, lca_hint, allow_non_fast_forward)
-                    .and_then(move |_| ok(part_id).boxify())
-            }
-        })
-        .and_then({
-            cloned!(resolver, ctx);
-            move |bookmark_push_part_id| {
-                resolver.prepare_push_bookmark_response(ctx, bookmark_push_part_id, true)
+                PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
+                    resolver,
+                    bookmark_push,
+                    maybe_raw_bundle2_id,
+                    lca_hint,
+                    allow_non_fast_forward,
+                })
             }
         })
         .boxify()
@@ -618,21 +628,21 @@ fn next_item(
     bundle2.into_future().map_err(|(err, _)| err).boxify()
 }
 
-enum BookmarkPush<T: Copy> {
+pub enum BookmarkPush<T: Copy> {
     PlainPush(PlainBookmarkPush<T>),
     Infinitepush(InfiniteBookmarkPush<T>),
 }
 
 #[derive(Debug, Clone)]
-struct PlainBookmarkPush<T: Copy> {
-    part_id: PartId,
+pub struct PlainBookmarkPush<T: Copy> {
+    pub part_id: PartId,
     name: BookmarkName,
     old: Option<T>,
     new: Option<T>,
 }
 
 #[derive(Debug, Clone)]
-struct InfiniteBookmarkPush<T> {
+pub struct InfiniteBookmarkPush<T> {
     name: BookmarkName,
     create: bool,
     force: bool,
@@ -658,7 +668,7 @@ struct ChangegroupPush {
     infinitepush_payload: Option<InfinitepushPayload>,
 }
 
-struct CommonHeads {
+pub struct CommonHeads {
     heads: Vec<HgChangesetId>,
 }
 
@@ -735,7 +745,7 @@ fn hg_bookmark_push_to_bonsai(
 
 /// Holds repo and logger for convienience access from it's methods
 #[derive(Clone)]
-struct Bundle2Resolver {
+pub struct Bundle2Resolver {
     ctx: CoreContext,
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
@@ -773,7 +783,7 @@ impl Bundle2Resolver {
     }
 
     /// Produce a future that creates a transaction with potentitally multiple bookmark pushes
-    fn resolve_bookmark_pushes(
+    pub fn resolve_bookmark_pushes(
         &self,
         bookmark_pushes: Vec<BookmarkPush<HgChangesetId>>,
         reason: BookmarkUpdateReason,
@@ -1262,7 +1272,7 @@ impl Bundle2Resolver {
         res
     }
 
-    fn log_commits_to_scribe(
+    pub fn log_commits_to_scribe(
         &self,
         ctx: CoreContext,
         changesets: Vec<ChangesetId>,
@@ -1318,7 +1328,7 @@ impl Bundle2Resolver {
 
     /// Takes a changegroup id and prepares a Bytes response containing Bundle2 with reply to
     /// changegroup part saying that the push was successful
-    fn prepare_push_response(
+    pub fn prepare_push_response(
         &self,
         changegroup_id: Option<PartId>,
         bookmark_ids: Vec<PartId>,
@@ -1346,7 +1356,7 @@ impl Bundle2Resolver {
             .boxify()
     }
 
-    fn prepare_pushrebase_response(
+    pub fn prepare_pushrebase_response(
         &self,
         ctx: CoreContext,
         commonheads: CommonHeads,
@@ -1439,7 +1449,7 @@ impl Bundle2Resolver {
             })
     }
 
-    fn prepare_push_bookmark_response(
+    pub fn prepare_push_bookmark_response(
         &self,
         _ctx: CoreContext,
         bookmark_push_part_id: PartId,
@@ -1494,7 +1504,7 @@ impl Bundle2Resolver {
         .boxify()
     }
 
-    fn force_pushrebase(
+    pub fn force_pushrebase(
         &self,
         ctx: CoreContext,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
@@ -1521,7 +1531,7 @@ impl Bundle2Resolver {
         )
     }
 
-    fn pushrebase(
+    pub fn pushrebase(
         &self,
         ctx: CoreContext,
         changesets: Changesets,
@@ -1605,7 +1615,7 @@ impl Bundle2Resolver {
         .boxify()
     }
 
-    fn run_hooks(
+    pub fn run_hooks(
         &self,
         ctx: CoreContext,
         changesets: Changesets,

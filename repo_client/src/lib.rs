@@ -11,6 +11,7 @@
 mod client;
 mod errors;
 mod mononoke_repo;
+mod unbundle;
 
 pub use client::{gettreepack_entries, RepoClient};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
