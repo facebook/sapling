@@ -255,6 +255,8 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
                 ErrorKind::UnexpectedEof | ErrorKind::InvalidData => true,
                 _ => false,
             };
+            let is_eperm = err.kind() == ErrorKind::PermissionDenied;
+
             let mut err = Error::blank().source(err).message(format!(
                 "{:?}: {}",
                 path,
@@ -263,6 +265,37 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
             if corruption {
                 err = err.mark_corruption();
             }
+
+            // Provide more context for PermissionDenied
+            if is_eperm {
+                #[cfg(unix)]
+                {
+                    let add_stat_context = |path: &Path, err: Error| {
+                        use std::os::unix::fs::MetadataExt;
+                        if let Ok(meta) = path.metadata() {
+                            let msg = format!(
+                                "stat({:?}) = dev:{} ino:{} mode:0o{:o} uid:{} gid:{} mtime:{}",
+                                path,
+                                meta.dev(),
+                                meta.ino(),
+                                meta.mode(),
+                                meta.uid(),
+                                meta.gid(),
+                                meta.mtime()
+                            );
+                            err.message(msg)
+                        } else {
+                            err
+                        }
+                    };
+                    err = add_stat_context(path, err);
+                    // For EPERM on mkdir, parent directory stat is useful.
+                    if let Some(parent) = path.parent() {
+                        err = add_stat_context(&parent, err);
+                    }
+                }
+            }
+
             err
         })
     }
