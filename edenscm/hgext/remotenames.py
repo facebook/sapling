@@ -1885,6 +1885,10 @@ def saveremotenames(repo, remotebookmarks):
         if not svfs.exists("remotenames"):
             transition(repo, repo.ui)
 
+        tr = repo.currenttransaction()
+        if tr is not None:
+            tr.addbackup("remotenames")
+
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
         oldbooks = {}
