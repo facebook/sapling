@@ -29,6 +29,9 @@ class TopLevelIgnores;
  *
  * These parameters remain fixed across all subdirectories being diffed.
  * Primarily intent is to compound related diff attributes.
+ *
+ * The DiffContext must be alive for the duration of the async operation it is
+ * used in.
  */
 class DiffContext {
  public:
@@ -38,6 +41,7 @@ class DiffContext {
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
+  DiffContext(DiffCallback* cb, const ObjectStore* os);
 
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;

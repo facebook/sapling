@@ -11,6 +11,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
@@ -225,9 +226,9 @@ TEST_F(DiffTest, newDirectory) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr = callback.get();
 
+  auto diffContext = DiffContext(callbackPtr, store_.get());
   auto treeResult = diffTrees(
-                        store_.get(),
-                        callbackPtr,
+                        &diffContext,
                         builder.getRoot()->get().getHash(),
                         builder2.getRoot()->get().getHash())
                         .thenValue([callback = std::move(callback)](auto&&) {
@@ -240,16 +241,15 @@ TEST_F(DiffTest, newDirectory) {
   // Test calling diffTrees() with Tree objects
   auto callback2 = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr2 = callback2.get();
+  auto diffContext2 = DiffContext(callbackPtr2, store_.get());
 
-  auto treeResult2 = diffTrees(
-                         store_.get(),
-                         callbackPtr2,
-                         builder.getRoot()->get(),
-                         builder2.getRoot()->get())
-                         .thenValue([callback2 = std::move(callback2)](auto&&) {
-                           return callback2->extractStatus();
-                         })
-                         .get(100ms);
+  auto treeResult2 =
+      diffTrees(
+          &diffContext2, builder.getRoot()->get(), builder2.getRoot()->get())
+          .thenValue([callback2 = std::move(callback2)](auto&&) {
+            return callback2->extractStatus();
+          })
+          .get(100ms);
   EXPECT_THAT(treeResult2.errors, UnorderedElementsAre());
   EXPECT_THAT(treeResult2.entries, expectedResults);
 }

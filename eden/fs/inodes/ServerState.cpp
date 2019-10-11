@@ -14,7 +14,7 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #endif
-#include "eden/fs/inodes/TopLevelIgnores.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"

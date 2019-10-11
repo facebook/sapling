@@ -10,12 +10,12 @@
 #include <folly/Unit.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/DiffCallback.h"
+#include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 

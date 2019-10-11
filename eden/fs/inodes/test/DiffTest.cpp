@@ -11,10 +11,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

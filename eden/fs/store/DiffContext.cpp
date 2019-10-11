@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/DiffContext.h"
+#include "eden/fs/store/DiffContext.h"
 
 #include <thrift/lib/cpp2/async/ResponseChannel.h>
 
-#include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
 
 using apache::thrift::ResponseChannelRequest;
 
@@ -28,6 +28,13 @@ DiffContext::DiffContext(
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
       request_{request} {}
+
+DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
+    : callback{cb},
+      store{os},
+      listIgnored{true},
+      topLevelIgnores_{std::unique_ptr<TopLevelIgnores>()},
+      request_{nullptr} {};
 
 DiffContext::~DiffContext() = default;
 
