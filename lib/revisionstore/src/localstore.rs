@@ -7,7 +7,7 @@ use failure::Fallible;
 
 use types::Key;
 
-pub trait LocalStore {
+pub trait LocalStore: Send + Sync {
     /// Builds a Store from a filepath. The default implementation panics.
     fn from_path(_path: &Path) -> Fallible<Self>
     where
@@ -26,7 +26,7 @@ pub trait LocalStore {
 }
 
 /// All the types that can `Deref` into a `Store` implements `Store`.
-impl<T: LocalStore + ?Sized, U: Deref<Target = T>> LocalStore for U {
+impl<T: LocalStore + ?Sized, U: Deref<Target = T> + Send + Sync> LocalStore for U {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         T::get_missing(self, keys)
     }

@@ -31,7 +31,7 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
-pub trait DataStore: LocalStore {
+pub trait DataStore: LocalStore + Send + Sync {
     fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>>;
     fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>>;
@@ -41,7 +41,7 @@ pub trait DataStore: LocalStore {
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
 /// taken to avoid serially fetching data and instead data should be fetched in bulk via the
 /// `prefetch` API.
-pub trait RemoteDataStore {
+pub trait RemoteDataStore: Send + Sync {
     /// Attempt to bring the data corresponding to the passed in keys to a local store.
     ///
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
@@ -50,14 +50,14 @@ pub trait RemoteDataStore {
     fn prefetch(&self, keys: Vec<Key>) -> Fallible<()>;
 }
 
-pub trait MutableDeltaStore: DataStore {
+pub trait MutableDeltaStore: DataStore + Send + Sync {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
     fn flush(&self) -> Fallible<Option<PathBuf>>;
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
-impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
+impl<T: DataStore + ?Sized, U: Deref<Target = T> + Send + Sync> DataStore for U {
     fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
         T::get(self, key)
     }
@@ -74,13 +74,13 @@ impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
 
 /// Implement `RemoteDataStore` for all types that can be `Deref` into a `RemoteDataStore`. This
 /// includes all the smart pointers like `Box`, `Rc`, `Arc`.
-impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T>> RemoteDataStore for U {
+impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteDataStore for U {
     fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
         T::prefetch(self, keys)
     }
 }
 
-impl<T: MutableDeltaStore + ?Sized, U: Deref<Target = T>> MutableDeltaStore for U {
+impl<T: MutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> MutableDeltaStore for U {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         T::add(self, delta, metadata)
     }
