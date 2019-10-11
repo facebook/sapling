@@ -141,6 +141,42 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Fallible<()> {
     Ok(())
 }
 
+fn initialize_indexedlog(config: &ConfigSet) -> Fallible<()> {
+    #[cfg(unix)]
+    {
+        use std::sync::atomic::Ordering::SeqCst;
+        let chown_group = config.get_or("permissions", "chown-group", || String::new())?;
+        if !chown_group.is_empty() {
+            // Try to find the group from /etc/group
+            if let Ok(groups) = std::fs::read_to_string("/etc/group") {
+                let prefix = format!("{}:", chown_group);
+                for line in groups.lines() {
+                    // group_name:password:GID:user_list
+                    if line.starts_with(&prefix) {
+                        if let Some(gid_str) = line.split(":").nth(2) {
+                            if let Ok(gid) = gid_str.parse::<i64>() {
+                                indexedlog::utils::CHOWN_GID.store(gid, SeqCst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
+        if chmod_file >= 0 {
+            indexedlog::utils::CHMOD_FILE.store(chmod_file, SeqCst);
+        }
+
+        let chmod_dir = config.get_or("permissions", "chmod-dir", || -1)?;
+        if chmod_dir >= 0 {
+            indexedlog::utils::CHMOD_DIR.store(chmod_dir, SeqCst);
+        }
+    }
+
+    Ok(())
+}
+
 pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) -> Fallible<u8> {
     let early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
@@ -161,6 +197,8 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
         &global_opts.config,
     )?;
     let config = optional_repo.config();
+
+    initialize_indexedlog(&config)?;
 
     // Prepare alias handling.
     let alias_lookup = |name: &str| {

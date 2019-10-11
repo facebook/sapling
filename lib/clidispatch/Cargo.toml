@@ -10,6 +10,7 @@ blackbox = { path = "../blackbox" }
 configparser = { path = "../configparser" }
 cliparser = { path = "../cliparser" }
 failure = "0.1.3"
+indexedlog = { path = "../indexedlog" }
 util = { path = "../util" }
 
 [dev-dependencies]
