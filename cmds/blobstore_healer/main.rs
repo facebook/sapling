@@ -252,7 +252,6 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
         hide_advanced_args: false,
     };
 
-    // TODO: (torozco) T55173657 Remove db-regions once deployed and remove from TW.
     let app = app_template.build(app_name)
         .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
@@ -261,7 +260,6 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
             --drain-only 'drain the queue without healing.  Use with caution.'
-            --db-regions=[REGIONS] '[DEPRECATED]'
             --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
             --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
         "#,
