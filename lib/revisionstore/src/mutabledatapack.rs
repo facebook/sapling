@@ -173,8 +173,7 @@ impl MutableDeltaStore for MutableDataPack {
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
-        let path = old_inner.close_pack()?;
-        Ok(Some(path))
+        old_inner.close_pack()
     }
 }
 
@@ -442,7 +441,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
 
         let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        mutdatapack.flush().unwrap();
+        assert_eq!(mutdatapack.flush().unwrap(), None);
         drop(mutdatapack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }

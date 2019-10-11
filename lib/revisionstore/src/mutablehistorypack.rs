@@ -148,8 +148,7 @@ impl MutableHistoryStore for MutableHistoryPack {
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
-        let path = old_inner.close_pack()?;
-        Ok(Some(path))
+        old_inner.close_pack()
     }
 }
 
@@ -438,7 +437,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        muthistorypack.flush().unwrap();
+        assert_eq!(muthistorypack.flush().unwrap(), None);
         drop(muthistorypack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }

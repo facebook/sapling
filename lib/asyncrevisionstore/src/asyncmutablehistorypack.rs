@@ -45,8 +45,8 @@ mod tests {
         let work = mutablehistorypack.and_then(move |historypack| historypack.close());
         let mut runtime = Runtime::new().unwrap();
 
-        let historypackpath = runtime.block_on(work).unwrap().unwrap();
-        assert_eq!(historypackpath, PathBuf::new());
+        let historypackpath = runtime.block_on(work).unwrap();
+        assert_eq!(historypackpath, None);
     }
 
     #[test]

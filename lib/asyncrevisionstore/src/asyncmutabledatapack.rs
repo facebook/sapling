@@ -72,7 +72,7 @@ mod tests {
         let work = mutabledatapack.and_then(move |datapack| datapack.close());
         let mut runtime = Runtime::new().unwrap();
 
-        let datapackbase = runtime.block_on(work).unwrap().unwrap();
-        assert_eq!(datapackbase, PathBuf::new());
+        let datapackbase = runtime.block_on(work).unwrap();
+        assert_eq!(datapackbase, None);
     }
 }

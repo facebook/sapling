@@ -50,7 +50,7 @@ pub trait MutablePack {
 
     /// Close the packfile, returning the path of the final immutable pack on disk. The
     /// `MutablePack` is no longer usable after being closed.
-    fn close_pack(self) -> Fallible<PathBuf>
+    fn close_pack(self) -> Fallible<Option<PathBuf>>
     where
         Self: Sized,
     {
@@ -61,7 +61,7 @@ pub trait MutablePack {
         let (packfile, indexfile, base_filepath) = match self.build_files() {
             Err(err) => {
                 if err.downcast_ref::<EmptyMutablePack>().is_some() {
-                    return Ok(PathBuf::new());
+                    return Ok(None);
                 } else {
                     return Err(err);
                 }
@@ -81,6 +81,6 @@ pub trait MutablePack {
         persist(packfile, packfile_path)?;
         persist(indexfile, indexfile_path)?;
 
-        Ok(base_filepath)
+        Ok(Some(base_filepath))
     }
 }

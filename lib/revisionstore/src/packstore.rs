@@ -873,4 +873,20 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn test_datapack_flush_empty() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        packstore.flush()?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_histpack_flush_empty() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        packstore.flush()?;
+        Ok(())
+    }
 }

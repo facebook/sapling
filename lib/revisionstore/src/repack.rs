@@ -93,7 +93,7 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    let new_pack_path = mut_pack.close_pack()?;
+    let new_pack_path = mut_pack.close_pack()?.unwrap();
     let new_pack = U::from_path(&new_pack_path)?;
 
     let mut successfully_repacked = 0;
