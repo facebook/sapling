@@ -1915,6 +1915,11 @@ def saveremotenames(repo, remotebookmarks):
         # Old paths have been deleted, refresh remotenames
         repo._remotenames.clearnames()
 
+        # If narrowheads is enabled, updating remotenames can affect phases
+        # (and other revsets). Therefore invalidate them.
+        if "narrowheads" in repo.storerequirements:
+            repo.invalidatevolatilesets()
+
 
 def calculatedistance(repo, fromrev, torev):
     """
