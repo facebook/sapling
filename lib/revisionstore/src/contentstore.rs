@@ -1,6 +1,9 @@
 // Copyright Facebook, Inc. 2019
 
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use failure::{format_err, Fallible};
 
@@ -18,15 +21,20 @@ use crate::{
     uniondatastore::UnionDataStore,
 };
 
-/// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
-/// remote stores can be queried and accessed via the `DataStore` trait. The local store can also
-/// be written to via the `MutableDeltaStore` trait, this is intended to be used to store local
-/// commit data.
-pub struct ContentStore {
+struct ContentStoreInner {
     datastore: UnionDataStore<Box<dyn DataStore>>,
     local_mutabledatastore: Box<dyn MutableDeltaStore>,
     shared_mutabledatastore: Box<dyn MutableDeltaStore>,
     remote_store: Option<Box<dyn RemoteDataStore>>,
+}
+
+/// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
+/// remote stores can be queried and accessed via the `DataStore` trait. The local store can also
+/// be written to via the `MutableDeltaStore` trait, this is intended to be used to store local
+/// commit data.
+#[derive(Clone)]
+pub struct ContentStore {
+    inner: Arc<ContentStoreInner>,
 }
 
 fn get_repo_name(config: &ConfigSet) -> Fallible<String> {
@@ -106,35 +114,37 @@ impl ContentStore {
         let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
 
         Ok(Self {
-            datastore,
-            local_mutabledatastore,
-            shared_mutabledatastore,
-            remote_store,
+            inner: Arc::new(ContentStoreInner {
+                datastore,
+                local_mutabledatastore,
+                shared_mutabledatastore,
+                remote_store,
+            }),
         })
     }
 }
 
 impl DataStore for ContentStore {
     fn get(&self, key: &Key) -> Fallible<Option<Vec<u8>>> {
-        self.datastore.get(key)
+        self.inner.datastore.get(key)
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
-        self.datastore.get_delta(key)
+        self.inner.datastore.get_delta(key)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
-        self.datastore.get_delta_chain(key)
+        self.inner.datastore.get_delta_chain(key)
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
-        self.datastore.get_meta(key)
+        self.inner.datastore.get_meta(key)
     }
 }
 
 impl RemoteDataStore for ContentStore {
     fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
-        if let Some(remote_store) = self.remote_store.as_ref() {
+        if let Some(remote_store) = self.inner.remote_store.as_ref() {
             let missing = self.get_missing(&keys)?;
             if missing == vec![] {
                 Ok(())
@@ -150,7 +160,7 @@ impl RemoteDataStore for ContentStore {
 
 impl LocalStore for ContentStore {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        self.datastore.get_missing(keys)
+        self.inner.datastore.get_missing(keys)
     }
 }
 
@@ -158,7 +168,7 @@ impl Drop for ContentStore {
     /// The shared store is a cache, so let's flush all pending data when the `ContentStore` goes
     /// out of scope.
     fn drop(&mut self) {
-        let _ = self.shared_mutabledatastore.flush();
+        let _ = self.inner.shared_mutabledatastore.flush();
     }
 }
 
@@ -167,12 +177,12 @@ impl Drop for ContentStore {
 impl MutableDeltaStore for ContentStore {
     /// Add the data to the local store.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        self.local_mutabledatastore.add(delta, metadata)
+        self.inner.local_mutabledatastore.add(delta, metadata)
     }
 
     /// Commit the data written to the local store.
     fn flush(&self) -> Fallible<Option<PathBuf>> {
-        self.local_mutabledatastore.flush()
+        self.inner.local_mutabledatastore.flush()
     }
 }
 
@@ -381,8 +391,8 @@ mod tests {
 
         let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
         store.get(&k)?;
-        store.shared_mutabledatastore.get(&k)?;
-        assert!(store.local_mutabledatastore.get(&k)?.is_none());
+        store.inner.shared_mutabledatastore.get(&k)?;
+        assert!(store.inner.local_mutabledatastore.get(&k)?.is_none());
         Ok(())
     }
 }
