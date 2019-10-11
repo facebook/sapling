@@ -294,7 +294,7 @@ defaults = {
     "slowtimeout": ("HGTEST_SLOWTIMEOUT", 1000),
     "port": ("HGTEST_PORT", 20059),
     "shell": ("HGTEST_SHELL", "bash"),
-    "maxdifflines": ("HGTEST_MAXDIFFLINES", 30),
+    "maxdifflines": ("HGTEST_MAXDIFFLINES", 200),
 }
 
 
