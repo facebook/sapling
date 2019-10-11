@@ -41,11 +41,11 @@ class ReloadableConfig {
   struct ConfigState {
     explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
         : config{config} {}
-    std::chrono::steady_clock::time_point lastCheck;
     std::shared_ptr<const EdenConfig> config;
   };
 
   folly::Synchronized<ConfigState> state_;
+  std::atomic<std::chrono::steady_clock::time_point::rep> lastCheck_;
 };
 
 } // namespace eden
