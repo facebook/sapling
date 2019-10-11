@@ -12,6 +12,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <typeindex>
 
 #include <folly/Range.h>
 
@@ -43,8 +44,11 @@ class ConfigSettingManager {
  */
 class ConfigSettingBase {
  public:
-  ConfigSettingBase(folly::StringPiece key, ConfigSettingManager* csm)
-      : key_(key) {
+  ConfigSettingBase(
+      folly::StringPiece key,
+      const std::type_info& valueType,
+      ConfigSettingManager* csm)
+      : key_{key}, valueType_{valueType} {
     if (csm) {
       csm->registerConfiguration(this);
     }
@@ -93,12 +97,16 @@ class ConfigSettingBase {
    * Get the configuration key (used to identify) this setting. They key is
    * used to identify the entry in a configuration file. Example "core.edenDir"
    */
-  virtual const std::string& getConfigKey() const {
+  const std::string& getConfigKey() const {
     return key_;
+  }
+  std::type_index getValueType() const {
+    return valueType_;
   }
 
  protected:
   std::string key_;
+  std::type_index valueType_;
 };
 
 /**
@@ -108,35 +116,26 @@ class ConfigSettingBase {
  * values for the highest priority source.
  */
 template <typename T, typename Converter = FieldConverter<T>>
-class ConfigSetting : public ConfigSettingBase {
+class ConfigSetting final : private ConfigSettingBase {
+  static_assert(!std::is_reference_v<T>);
+
  public:
   ConfigSetting(
       folly::StringPiece key,
       T value,
       ConfigSettingManager* configSettingManager)
-      : ConfigSettingBase(key, configSettingManager) {
+      : ConfigSettingBase{key, typeid(T), configSettingManager} {
     getSlot(ConfigSource::Default).emplace(std::move(value));
   }
+
+  ConfigSetting(const ConfigSetting&) = delete;
+  ConfigSetting(ConfigSetting&&) = delete;
 
   /**
    * Delete the assignment operator. We support copying via 'copyFrom'.
    */
-  ConfigSetting<T>& operator=(const ConfigSetting<T>& rhs) = delete;
-
-  ConfigSetting<T>& operator=(const ConfigSetting<T>&& rhs) = delete;
-
-  /**
-   * Support copying of ConfigSetting. We limit this to instance of
-   * ConfigSetting.
-   */
-  void copyFrom(const ConfigSettingBase& rhs) override {
-    auto rhsConfigSetting = dynamic_cast<const ConfigSetting<T>*>(&rhs);
-    if (!rhsConfigSetting) {
-      throw std::runtime_error("ConfigSetting copyFrom unknown type");
-    }
-    key_ = rhsConfigSetting->key_;
-    configValueArray_ = rhsConfigSetting->configValueArray_;
-  }
+  ConfigSetting<T>& operator=(const ConfigSetting& rhs) = delete;
+  ConfigSetting<T>& operator=(ConfigSetting&& rhs) = delete;
 
   /** Get the highest priority ConfigSource (we ignore unpopulated values).*/
   ConfigSource getSource() const override {
@@ -189,9 +188,36 @@ class ConfigSetting : public ConfigSettingBase {
     }
   }
 
+  using ConfigSettingBase::getConfigKey;
+
+  /// Not a public API, but used in tests.
+  void copyFrom(const ConfigSetting& other) {
+    const ConfigSettingBase& base = other;
+    return copyFrom(base);
+  }
+
   virtual ~ConfigSetting() {}
 
  private:
+  /**
+   * Support copying of ConfigSetting. We limit this to instance of
+   * ConfigSetting.
+   */
+  void copyFrom(const ConfigSettingBase& rhs) override {
+    // Normally, dynamic_cast would be a better fit here, but private
+    // inheritance prevents its use. Instead, compare the value's typeid.
+    if (getValueType() != rhs.getValueType()) {
+      throw std::logic_error{folly::to<std::string>(
+          "ConfigSetting<",
+          getValueType().name(),
+          "> copyFrom unknown type: ",
+          rhs.getValueType().name())};
+    }
+    auto* rhsConfigSetting = static_cast<const ConfigSetting*>(&rhs);
+    key_ = rhsConfigSetting->key_;
+    configValueArray_ = rhsConfigSetting->configValueArray_;
+  }
+
   static constexpr size_t kConfigSourceLastIndex =
       static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSource>::max());
 

@@ -40,7 +40,7 @@ namespace eden {
  * this class. ConfigurationSettings require a key to identify the setting
  * in configuration files. For example, "core:edenDirectory".
  */
-class EdenConfig : public ConfigSettingManager {
+class EdenConfig : private ConfigSettingManager {
  public:
   /**
    * Manually construct a EdenConfig object. Users can subsequently use the
@@ -270,6 +270,9 @@ class EdenConfig : public ConfigSettingManager {
   AbsolutePath systemConfigPath_;
   AbsolutePath systemConfigDir_;
 
+  struct stat systemConfigFileStat_ = {};
+  struct stat userConfigFileStat_ = {};
+
   /** Initialization registers ConfigSetting with the EdenConfig object.
    * We make use of the registration to iterate over ConfigSettings generically
    * for parsing, copy, assingnment and move operations.
@@ -313,9 +316,6 @@ class EdenConfig : public ConfigSettingManager {
       "store:ephemeral-size-limit",
       20'000'000'000,
       this};
-
-  struct stat systemConfigFileStat_ = {};
-  struct stat userConfigFileStat_ = {};
 
   ConfigSetting<std::chrono::nanoseconds> fuseRequestTimeout_{
       "fuse:request-timeout",
