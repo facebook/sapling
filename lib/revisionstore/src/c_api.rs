@@ -13,9 +13,8 @@ use std::{
     fs,
     os::raw::c_char,
     path::{Path, PathBuf},
-    ptr,
-    rc::Rc,
-    slice,
+    ptr, slice,
+    sync::Arc,
 };
 
 use failure::Fallible;
@@ -28,8 +27,8 @@ use crate::uniondatastore::UnionDataStore;
 
 pub struct DataPackUnion {
     paths: Vec<PathBuf>,
-    packs: HashMap<PathBuf, Rc<DataPack>>,
-    store: UnionDataStore<Rc<DataPack>>,
+    packs: HashMap<PathBuf, Arc<DataPack>>,
+    store: UnionDataStore<Arc<DataPack>>,
 }
 
 /// Returns true if the supplied path has a .datapack extension
@@ -81,7 +80,7 @@ impl DataPackUnion {
 
         // Re-create the union portion; while we can add elements, there isn't
         // a way to remove them, so we build a new one and populate it.
-        // The UnionDataStore is just a Vec of Rc's to our packs, so this is
+        // The UnionDataStore is just a Vec of Arc's to our packs, so this is
         // relatively cheap.
         self.store = UnionDataStore::new();
 
@@ -92,14 +91,14 @@ impl DataPackUnion {
         ScanResult::ChangesDetected
     }
 
-    fn scan_dir(packs: &mut HashMap<PathBuf, Rc<DataPack>>, path: &Path) -> Fallible<usize> {
+    fn scan_dir(packs: &mut HashMap<PathBuf, Arc<DataPack>>, path: &Path) -> Fallible<usize> {
         let mut num_changed = 0;
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
             if is_datapack(&path) {
                 if !packs.contains_key(&path) {
-                    let pack = Rc::new(DataPack::new(&path)?);
+                    let pack = Arc::new(DataPack::new(&path)?);
                     packs.insert(path, pack);
                     num_changed += 1;
                 }
