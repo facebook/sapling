@@ -115,6 +115,9 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(filename)
         self.assertEqual(st.st_size, 0)
         self.assertTrue(stat.S_ISREG(st.st_mode))
+        self.assertEqual(st.st_uid, os.getuid())
+        self.assertEqual(st.st_gid, os.getgid())
+        self.assertEqual(st.st_mode & 0o600, 0o600)
 
     def test_overwrite(self) -> None:
         hello = os.path.join(self.mount, "hello")
