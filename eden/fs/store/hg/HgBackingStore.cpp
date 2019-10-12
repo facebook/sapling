@@ -282,12 +282,12 @@ std::unique_ptr<ServiceAddress> HgBackingStore::getMononokeServiceAddress() {
   auto hostname = edenConfig->getMononokeHostName();
 
   if (hostname) {
-    auto port = edenConfig->getMononokePort();
+    auto port = edenConfig->mononokePort.getValue();
     XLOG(DBG2) << "Using " << *hostname << ":" << port << " for Mononoke";
     return std::make_unique<ServiceAddress>(*hostname, port);
   }
 
-  const auto& tier = edenConfig->getMononokeTierName();
+  const auto& tier = edenConfig->mononokeTierName.getValue();
   XLOG(DBG2) << "Using SMC tier " << tier << " for Mononoke";
   return std::make_unique<ServiceAddress>(tier);
 }
@@ -319,7 +319,7 @@ HgBackingStore::initializeHttpMononokeBackingStore() {
 std::unique_ptr<MononokeThriftBackingStore>
 HgBackingStore::initializeThriftMononokeBackingStore() {
   auto edenConfig = config_->getEdenConfig();
-  auto tierName = edenConfig->getMononokeTierName();
+  auto tierName = edenConfig->mononokeTierName.getValue();
 
   XLOG(DBG2) << "Initializing thrift Mononoke backing store for repository "
              << repoName_ << ", using tier " << tierName;
@@ -351,7 +351,7 @@ HgBackingStore::initializeCurlMononokeBackingStore() {
 
 std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
   const auto& connectionType =
-      config_->getEdenConfig()->getMononokeConnectionType();
+      config_->getEdenConfig()->mononokeConnectionType.getValue();
 #if EDEN_HAVE_MONONOKE
   if (connectionType == "http") {
     return initializeHttpMononokeBackingStore();
@@ -519,7 +519,7 @@ std::shared_ptr<BackingStore> HgBackingStore::getMononoke() {
   }
 
   // Check to see if the user has disabled mononoke since starting the server.
-  auto useMononoke = config_->getEdenConfig()->getUseMononoke();
+  auto useMononoke = config_->getEdenConfig()->useMononoke.getValue();
 
   return lazyInitialize<BackingStore>(
       useMononoke, mononoke_, [this]() { return initializeMononoke(); });
@@ -671,7 +671,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
-  if (edenConfig->getUseDatapack() && datapackStore_) {
+  if (edenConfig->useDatapack.getValue() && datapackStore_) {
     if (auto content = datapackStore_->getBlob(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
                  << hgInfo.revHash().toString() << " from datapack store";
@@ -680,7 +680,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   } else
 #endif
       // Prefer using the above rust implementation over the C++ implementation
-      if (edenConfig->getUseDatapack() && unionStore_) {
+      if (edenConfig->useDatapack.getValue() && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
       return makeFuture(std::move(content));

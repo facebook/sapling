@@ -106,7 +106,7 @@ int __cdecl main(int argc, char** argv) {
   }
 
   try {
-    auto logPath = getLogPath(edenConfig->getEdenDir());
+    auto logPath = getLogPath(edenConfig->edenDir.getValue());
     if (!logPath.empty()) {
       redirectLogOutput(logPath.c_str());
     }

@@ -39,7 +39,8 @@ void findEdenDir(EdenConfig& config) {
   // We use the --edenDir flag if set, otherwise the value loaded from the
   // config file.
   boost::filesystem::path boostPath(
-      FLAGS_edenDir.empty() ? config.getEdenDir().value() : FLAGS_edenDir);
+      FLAGS_edenDir.empty() ? config.edenDir.getValue().value()
+                            : FLAGS_edenDir);
 
   try {
     // Ensure that the directory exists, and then canonicalize its name with
@@ -51,7 +52,7 @@ void findEdenDir(EdenConfig& config) {
     // makes sure that any future updates to the config file do not affect the
     // value we use.  Once we start we want to always use a fixed location for
     // the eden directory.
-    config.setEdenDir(resolvedDir, ConfigSource::CommandLine);
+    config.edenDir.setValue(resolvedDir, ConfigSource::CommandLine);
   } catch (const std::exception& ex) {
     throw ArgumentError(
         "error creating ", boostPath.string(), ": ", folly::exceptionStr(ex));

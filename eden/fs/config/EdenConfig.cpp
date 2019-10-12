@@ -130,13 +130,12 @@ EdenConfig::EdenConfig(
       systemConfigPath_(systemConfigPath),
       systemConfigDir_(systemConfigDir) {
   // Force set defaults that require passed arguments
-  edenDir_.setValue(
+  edenDir.setValue(
       userHomePath_ + kDefaultEdenDirectory, ConfigSource::Default, true);
-  userIgnoreFile_.setValue(
+  userIgnoreFile.setValue(
       userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
-  systemIgnoreFile_.setValue(
+  systemIgnoreFile.setValue(
       systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
-  clientCertificate_.setValue(kUnspecifiedDefault, ConfigSource::Default, true);
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -191,20 +190,8 @@ void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
   }
 }
 
-const AbsolutePath& EdenConfig::getEdenDir() const {
-  return edenDir_.getValue();
-}
-
-const AbsolutePath& EdenConfig::getSystemIgnoreFile() const {
-  return systemIgnoreFile_.getValue();
-}
-
-const AbsolutePath& EdenConfig::getUserIgnoreFile() const {
-  return userIgnoreFile_.getValue();
-}
-
 const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
-  auto value = clientCertificate_.getValue();
+  auto value = clientCertificate.getValue();
 
   if (value == kUnspecifiedDefault) {
     return std::nullopt;
@@ -212,28 +199,12 @@ const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   return value;
 }
 
-bool EdenConfig::getUseMononoke() const {
-  return useMononoke_.getValue();
-}
-
-const std::string& EdenConfig::getMononokeTierName() const {
-  return mononokeTierName_.getValue();
-}
-
 std::optional<std::string> EdenConfig::getMononokeHostName() const {
-  auto value = mononokeHostName_.getValue();
+  auto value = mononokeHostName.getValue();
   if (value.empty()) {
     return std::nullopt;
   }
   return value;
-}
-
-uint16_t EdenConfig::getMononokePort() const {
-  return mononokePort_.getValue();
-}
-
-const std::string& EdenConfig::getMononokeConnectionType() const {
-  return mononokeConnectionType_.getValue();
 }
 
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
@@ -244,32 +215,6 @@ void EdenConfig::setSystemConfigDir(AbsolutePath systemConfigDir) {
 }
 void EdenConfig::setSystemConfigPath(AbsolutePath systemConfigPath) {
   systemConfigPath_ = systemConfigPath;
-}
-
-void EdenConfig::setSystemIgnoreFile(
-    AbsolutePath systemIgnoreFile,
-    ConfigSource configSource) {
-  return systemIgnoreFile_.setValue(systemIgnoreFile, configSource);
-}
-
-void EdenConfig::setEdenDir(AbsolutePath edenDir, ConfigSource configSource) {
-  return edenDir_.setValue(edenDir, configSource);
-}
-
-void EdenConfig::setUserIgnoreFile(
-    AbsolutePath userIgnoreFile,
-    ConfigSource configSource) {
-  return userIgnoreFile_.setValue(userIgnoreFile, configSource);
-}
-
-void EdenConfig::setClientCertificate(
-    AbsolutePath clientCertificate,
-    ConfigSource configSource) {
-  return clientCertificate_.setValue(clientCertificate, configSource);
-}
-
-void EdenConfig::setUseMononoke(bool useMononoke, ConfigSource configSource) {
-  return useMononoke_.setValue(useMononoke, configSource);
 }
 
 bool hasConfigFileChanged(

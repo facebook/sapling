@@ -67,8 +67,8 @@ class Command {
       : userInfo_(UserInfo::lookup()),
         config_(getEdenConfig(userInfo_)),
         edenDir_([this]() {
-          XLOG(INFO) << "Using Eden directory: " << config_->getEdenDir();
-          return EdenStateDir(config_->getEdenDir());
+          XLOG(INFO) << "Using Eden directory: " << config_->edenDir.getValue();
+          return EdenStateDir(config_->edenDir.getValue());
         }()) {
     if (!edenDir_.acquireLock()) {
       throw ArgumentError(

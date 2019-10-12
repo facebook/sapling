@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "%s\n", ex.what());
     return EX_SOFTWARE;
   }
-  auto edenDir = edenConfig->getEdenDir();
+  auto edenDir = edenConfig->edenDir.getValue();
 
   auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
   auto startupLogger = daemonizeIfRequested(logPath.value());

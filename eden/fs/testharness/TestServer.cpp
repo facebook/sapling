@@ -65,7 +65,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       tmpDir + "etc"_pc,
       tmpDir + "etc/edenfs.rc"_relpath);
   auto privHelper = make_unique<FakePrivHelper>();
-  config->setEdenDir(edenDir, ConfigSource::CommandLine);
+  config->edenDir.setValue(edenDir, ConfigSource::CommandLine);
 
   return make_unique<EdenServer>(
       std::vector<std::string>{"edenfs_unit_test"},

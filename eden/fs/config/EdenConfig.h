@@ -109,117 +109,19 @@ class EdenConfig : private ConfigSettingManager {
   /** Get the system config path. Default "/etc/eden/edenfs.rc" */
   const AbsolutePath& getSystemConfigPath() const;
 
-  /** Get the system ignore file. Default "userHomePath/.eden" */
-  const AbsolutePath& getSystemIgnoreFile() const;
-
-  /** Get the eden directory. Default "/etc/eden/edenfs.rc" */
-  const AbsolutePath& getEdenDir() const;
-
-  /** Get the user ignore file. Default "userHomePath/ignore" */
-  const AbsolutePath& getUserIgnoreFile() const;
-
   /** Get the path to client certificate. */
   const std::optional<AbsolutePath> getClientCertificate() const;
 
-  /** Get the use mononoke flag. Default false */
-  bool getUseMononoke() const;
-
-  /** Which tier to use when talking to mononoke */
-  const std::string& getMononokeTierName() const;
   std::optional<std::string> getMononokeHostName() const;
-  uint16_t getMononokePort() const;
-
-  /** Type of connection used to talk to Mononoke */
-  const std::string& getMononokeConnectionType() const;
-
-  /**
-   * Get how often the on-disk config information should be checked for changes.
-   */
-  std::chrono::nanoseconds getConfigReloadInterval() const {
-    return configReloadInterval_.getValue();
-  }
-
-  /**
-   * Get how often to compute stats and perform garbage collection management
-   * for the LocalStore.
-   */
-  std::chrono::nanoseconds getLocalStoreManagementInterval() const {
-    return localStoreManagementInterval_.getValue();
-  }
-
-  /**
-   * Get the size limit for ephemeral sections of the local store.
-   *
-   * Automatic garbage collection will be triggered when the size exceeds this
-   * threshold.
-   */
-  size_t getLocalStoreEphemeralSizeLimit() const {
-    return localStoreEphemeralSizeLimit_.getValue();
-  }
-
-  /**
-   * Get the maximum time duration allowed for a fuse request.
-   * If a request exceeds this amount of time, an ETIMEDOUT
-   * error will be returned to the kernel to avoid blocking forever.
-   */
-  std::chrono::nanoseconds getFuseRequestTimeout() const {
-    return fuseRequestTimeout_.getValue();
-  }
-
-  /**
-   * Get the maximum time duration that the kernel should allow
-   * for a fuse request.
-   * If a request exceeds this amount of time, it may take aggressive
-   * measures to shut down the fuse channel.
-   * This value is only applicable to the macOS fuse implementation.
-   */
-  std::chrono::nanoseconds getFuseDaemonTimeout() const {
-    return fuseDaemonTimeout_.getValue();
-  }
-
-  /**
-   * Controls if Eden reads from Mercurial's datapack store.
-   */
-  bool getUseDatapack() const {
-    return useDatapack_.getValue();
-  }
 
   void setUserConfigPath(AbsolutePath userConfigPath);
-
   void setSystemConfigDir(AbsolutePath systemConfigDir);
-
   void setSystemConfigPath(AbsolutePath systemConfigDir);
 
   /**
    * Clear all configuration for the given config source.
    */
   void clearAll(ConfigSource);
-
-  /** Set the system ignore file for the provided source.
-   */
-  void setSystemIgnoreFile(
-      AbsolutePath systemIgnoreFile,
-      ConfigSource configSource);
-
-  /** Set the Eden directory for the provided source.
-   */
-  void setEdenDir(AbsolutePath edenDir, ConfigSource configSource);
-
-  /** Set the ignore file for the provided source.
-   */
-  void setUserIgnoreFile(
-      AbsolutePath userIgnoreFile,
-      ConfigSource configSource);
-
-  /** Set the client certificate file for the provided source.
-   */
-  void setClientCertificate(
-      AbsolutePath clientCertificate,
-      ConfigSource configSource);
-
-  /** Set the use mononoke flag for the provided source.
-   */
-  void setUseMononoke(bool useMononoke, ConfigSource configSource);
 
   /**
    *  Register the configuration setting. The fullKey is used to parse values
@@ -258,8 +160,9 @@ class EdenConfig : private ConfigSettingManager {
       AbsolutePathPiece configPath,
       ConfigSource configSource);
 
-  /** Mapping of section name : (map of attribute : config values). The
-   *  ConfigSetting constructor registration populates this map.
+  /**
+   * Mapping of section name : (map of attribute : config values). The
+   * ConfigSetting constructor registration populates this map.
    */
   std::map<std::string, std::map<std::string, ConfigSettingBase*>> configMap_;
 
@@ -273,60 +176,103 @@ class EdenConfig : private ConfigSettingManager {
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};
 
-  /** Initialization registers ConfigSetting with the EdenConfig object.
-   * We make use of the registration to iterate over ConfigSettings generically
-   * for parsing, copy, assingnment and move operations.
-   * We update the property value in the constructor (since we don't have the
-   * home directory here).
+  /*
+   * Settings follow. Their initialization registers themselves with the
+   * EdenConfig object. We make use of the registration to iterate over
+   * ConfigSettings generically for parsing, copy, assignment and move
+   * operations. We update the property value in the constructor (since we don't
+   * have the home directory here).
+   *
+   * The following fields must come after configMap_.
    */
-  ConfigSetting<AbsolutePath> edenDir_{"core:edenDirectory",
-                                       kUnspecifiedDefault,
-                                       this};
 
-  ConfigSetting<AbsolutePath> systemIgnoreFile_{"core:systemIgnoreFile",
+ public:
+  ConfigSetting<AbsolutePath> edenDir{"core:edenDirectory",
+                                      kUnspecifiedDefault,
+                                      this};
+
+  ConfigSetting<AbsolutePath> systemIgnoreFile{"core:systemIgnoreFile",
+                                               kUnspecifiedDefault,
+                                               this};
+
+  ConfigSetting<AbsolutePath> userIgnoreFile{"core:ignoreFile",
+                                             kUnspecifiedDefault,
+                                             this};
+
+  ConfigSetting<bool> allowUnixGroupRequests{"thrift:allow-unix-group-requests",
+                                             false,
+                                             this};
+
+  ConfigSetting<AbsolutePath> clientCertificate{"ssl:client-certificate",
                                                 kUnspecifiedDefault,
                                                 this};
+  ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
 
-  ConfigSetting<AbsolutePath> userIgnoreFile_{"core:ignoreFile",
-                                              kUnspecifiedDefault,
+  /**
+   * Which tier to use when talking to mononoke.
+   */
+  ConfigSetting<std::string> mononokeTierName{"mononoke:tier",
+                                              "mononoke-apiserver",
                                               this};
+  ConfigSetting<std::string> mononokeHostName{"mononoke:hostname", "", this};
+  ConfigSetting<uint16_t> mononokePort{"mononoke:port", 443, this};
+  ConfigSetting<std::string> mononokeConnectionType{"mononoke:connection-type",
+                                                    "http",
+                                                    this};
 
-  ConfigSetting<AbsolutePath> clientCertificate_{"ssl:client-certificate",
-                                                 kUnspecifiedDefault,
-                                                 this};
-  ConfigSetting<bool> useMononoke_{"mononoke:use-mononoke", false, this};
-  ConfigSetting<std::string> mononokeTierName_{"mononoke:tier",
-                                               "mononoke-apiserver",
-                                               this};
-  ConfigSetting<std::string> mononokeHostName_{"mononoke:hostname", "", this};
-  ConfigSetting<uint16_t> mononokePort_{"mononoke:port", 443, this};
-  ConfigSetting<std::string> mononokeConnectionType_{"mononoke:connection-type",
-                                                     "http",
-                                                     this};
-
-  ConfigSetting<std::chrono::nanoseconds> configReloadInterval_{
+  /**
+   * How often the on-disk config information should be checked for changes.
+   */
+  ConfigSetting<std::chrono::nanoseconds> configReloadInterval{
       "config:reload-interval",
       std::chrono::minutes(5),
       this};
-  ConfigSetting<std::chrono::nanoseconds> localStoreManagementInterval_{
+
+  /**
+   * How often to compute stats and perform garbage collection management
+   * for the LocalStore.
+   */
+  ConfigSetting<std::chrono::nanoseconds> localStoreManagementInterval{
       "store:stats-interval",
       std::chrono::minutes(1),
       this};
-  ConfigSetting<size_t> localStoreEphemeralSizeLimit_{
+
+  /**
+   * The size limit for ephemeral sections of the local store.
+   *
+   * Automatic garbage collection will be triggered when the size exceeds this
+   * threshold.
+   */
+  ConfigSetting<size_t> localStoreEphemeralSizeLimit{
       "store:ephemeral-size-limit",
       20'000'000'000,
       this};
 
-  ConfigSetting<std::chrono::nanoseconds> fuseRequestTimeout_{
+  /**
+   * The maximum time duration allowed for a fuse request. If a request exceeds
+   * this amount of time, an ETIMEDOUT error will be returned to the kernel to
+   * avoid blocking forever.
+   */
+  ConfigSetting<std::chrono::nanoseconds> fuseRequestTimeout{
       "fuse:request-timeout",
       std::chrono::minutes(1),
       this};
-  ConfigSetting<std::chrono::nanoseconds> fuseDaemonTimeout_{
+
+  /**
+   * The maximum time duration that the kernel should allow for a fuse request.
+   * If a request exceeds this amount of time, it may take aggressive
+   * measures to shut down the fuse channel.
+   * This value is only applicable to the macOS fuse implementation.
+   */
+  ConfigSetting<std::chrono::nanoseconds> fuseDaemonTimeout{
       "fuse:daemon-timeout",
       std::chrono::nanoseconds::max(),
       this};
 
-  ConfigSetting<bool> useDatapack_{"hg:use-datapack", false, this};
+  /**
+   * Controls whether Eden reads from Mercurial's datapack store.
+   */
+  ConfigSetting<bool> useDatapack{"hg:use-datapack", false, this};
 };
 } // namespace eden
 } // namespace facebook

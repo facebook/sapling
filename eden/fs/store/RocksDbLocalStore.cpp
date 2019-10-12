@@ -563,7 +563,7 @@ void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
 
   // If the ephemeral size is more than the configured limit,
   // trigger garbage collection.
-  auto ephemeralLimit = config.getLocalStoreEphemeralSizeLimit();
+  auto ephemeralLimit = config.localStoreEphemeralSizeLimit.getValue();
   if (ephemeralLimit > 0 && ephemeralSize > ephemeralLimit) {
     XLOG(INFO) << "scheduling automatic local store garbage collection: "
                << "ephemeral data size " << ephemeralSize

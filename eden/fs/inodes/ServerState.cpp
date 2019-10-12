@@ -53,10 +53,10 @@ ServerState::ServerState(
       faultInjector_{new FaultInjector(FLAGS_enable_fault_injection)},
       config_{edenConfig},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
-          edenConfig->getUserIgnoreFile(),
+          edenConfig->userIgnoreFile.getValue(),
           kUserIgnoreMinPollSeconds}},
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
-          edenConfig->getSystemIgnoreFile(),
+          edenConfig->systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}} {
   // It would be nice if we eventually built a more generic mechanism for
   // defining faults to be configured on start up.  (e.g., loading this from the
@@ -78,8 +78,8 @@ std::unique_ptr<TopLevelIgnores> ServerState::getTopLevelIgnores() {
   auto edenConfig = getEdenConfig();
 
   // Get the potentially changed system/user ignore files
-  auto userIgnoreFile = edenConfig->getUserIgnoreFile();
-  auto systemIgnoreFile = edenConfig->getSystemIgnoreFile();
+  auto userIgnoreFile = edenConfig->userIgnoreFile.getValue();
+  auto systemIgnoreFile = edenConfig->systemIgnoreFile.getValue();
 
   // Get the userIgnoreFile
   GitIgnore userGitIgnore{};

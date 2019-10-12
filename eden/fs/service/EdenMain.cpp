@@ -168,7 +168,7 @@ int EdenMain::main(int argc, char** argv) {
     return EX_SOFTWARE;
   }
 
-  auto logPath = getLogPath(edenConfig->getEdenDir());
+  auto logPath = getLogPath(edenConfig->edenDir.getValue());
   auto startupLogger =
       std::shared_ptr<StartupLogger>{daemonizeIfRequested(logPath)};
   XLOG(DBG3) << edenConfig->toString();
@@ -182,7 +182,8 @@ int EdenMain::main(int argc, char** argv) {
           folly::File(STDERR_FILENO, /*ownsFd=*/false));
     }
 
-    privHelper->setDaemonTimeoutBlocking(edenConfig->getFuseDaemonTimeout());
+    privHelper->setDaemonTimeoutBlocking(
+        edenConfig->fuseDaemonTimeout.getValue());
 
     // Since we are a daemon, and we don't ever want to be in a situation
     // where we hold any open descriptors through a fuse mount that points

@@ -215,7 +215,7 @@ EdenServer::EdenServer(
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig)
     : originalCommandLine_{std::move(originalCommandLine)},
-      edenDir_{edenConfig->getEdenDir()},
+      edenDir_{edenConfig->edenDir.getValue()},
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
@@ -374,11 +374,11 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
 
   reloadConfigTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
-          config.getConfigReloadInterval()));
+          config.configReloadInterval.getValue()));
 
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
-          config.getLocalStoreManagementInterval()));
+          config.localStoreManagementInterval.getValue()));
 }
 
 #ifndef _WIN32
