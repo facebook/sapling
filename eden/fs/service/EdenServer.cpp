@@ -165,9 +165,13 @@ class EdenServer::ThriftServerEventHandler
       : AsyncSignalHandler{nullptr}, edenServer_{edenServer} {}
 
   void preServe(const folly::SocketAddress* address) override {
-    if (auto path = getUnixDomainSocketPath(*address)) {
-      folly::checkUnixError(
-          chmod(path->c_str(), 0777), "failed to chmod ", *path, " to 777");
+    if (edenServer_->getServerState()
+            ->getEdenConfig()
+            ->thriftUseCustomPermissionChecking.getValue()) {
+      if (auto path = getUnixDomainSocketPath(*address)) {
+        folly::checkUnixError(
+            chmod(path->c_str(), 0777), "failed to chmod ", *path, " to 777");
+      }
     }
 
     // preServe() will be called from the thrift server thread once when it is

@@ -270,6 +270,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether Eden should implement its own unix domain socket permission checks
+   * or rely on filesystem permissions.
+   */
+  ConfigSetting<bool> thriftUseCustomPermissionChecking{
+      "thrift:use-custom-permission-checking",
+      true,
+      this};
+
+  /**
    * Controls whether Eden reads from Mercurial's datapack store.
    */
   ConfigSetting<bool> useDatapack{"hg:use-datapack", false, this};
