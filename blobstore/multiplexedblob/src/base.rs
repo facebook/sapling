@@ -129,7 +129,7 @@ impl MultiplexedBlobstoreBase {
                                         stats.completion_time.as_micros_unchecked(),
                                     );
 
-                                // log session uuid only for slow requests
+                                // log session id only for slow requests
                                 if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
                                     scuba.add("session", session.to_string());
                                 }

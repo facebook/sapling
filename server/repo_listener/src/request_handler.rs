@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use cloned::cloned;
 use configerator::ConfigeratorAPI;
+use context::{generate_session_id, SessionId};
 use failure_ext::{prelude::*, SlogKVError};
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
@@ -25,8 +26,7 @@ use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
 use stats::{define_stats, Histogram};
 use time_ext::DurationExt;
-use tracing::{trace_args, TraceContext, Traced};
-use uuid::Uuid;
+use tracing::{trace_args, TraceContext, TraceId, Traced};
 
 use hgproto::{sshproto, HgProtoHandler};
 use repo_client::RepoClient;
@@ -85,24 +85,24 @@ pub fn request_handler(
         mut preamble,
     } = stdio;
 
-    let session_uuid = match preamble
+    let session_id = match preamble
         .misc
         .get("session_uuid")
-        .and_then(|v| Uuid::parse_str(v).ok())
+        .map(SessionId::from_string)
     {
-        Some(session_uuid) => session_uuid,
+        Some(session_id) => session_id,
         None => {
-            let session_uuid = Uuid::new_v4();
+            let session_id = generate_session_id();
             preamble
                 .misc
-                .insert("session_uuid".to_owned(), format!("{}", session_uuid));
-            session_uuid
+                .insert("session_uuid".to_owned(), session_id.to_string());
+            session_id
         }
     };
 
     // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
-    let trace = TraceContext::new(session_uuid, Instant::now());
+    let trace = TraceContext::new(TraceId::from_string(session_id.to_string()), Instant::now());
 
     // Per-connection logging drain that forks output to normal log and back to client stderr
     let conn_log = {
@@ -127,7 +127,7 @@ pub fn request_handler(
 
         // Don't fail logging if the client goes away
         let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
-        Logger::root(drain, o!("session_uuid" => format!("{}", session_uuid)))
+        Logger::root(drain, o!("session_uuid" => format!("{}", session_id)))
     };
 
     scuba_logger.log_with_msg("Connection established", None);
@@ -148,7 +148,7 @@ pub fn request_handler(
 
     let ctx = CoreContext::new(
         fb,
-        session_uuid,
+        session_id,
         conn_log,
         scuba_logger.clone(),
         trace.clone(),

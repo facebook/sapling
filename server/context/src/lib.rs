@@ -23,12 +23,12 @@ use std::{
 
 use futures::{self, Future, IntoFuture};
 use futures_ext::FutureExt;
+use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, o, warn, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
 use sshrelay::SshEnvVars;
-use tracing::TraceContext;
+use tracing::{generate_trace_id, TraceContext};
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum Metric {
@@ -311,9 +311,32 @@ impl PerfCounters {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SessionId(String);
+
+impl SessionId {
+    pub fn from_string<T: ToString>(s: T) -> Self {
+        Self(s.to_string())
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl fmt::Display for SessionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub fn generate_session_id() -> SessionId {
+    SessionId(thread_rng().sample_iter(&Alphanumeric).take(16).collect())
+}
+
 #[derive(Clone)]
 struct Inner {
-    session: Uuid,
+    session: SessionId,
     logger: Logger,
     scuba: ScubaSampleBuilder,
     trace: TraceContext,
@@ -346,7 +369,7 @@ impl ::std::fmt::Debug for Inner {
 impl CoreContext {
     pub fn new(
         fb: FacebookInit,
-        session: Uuid,
+        session: SessionId,
         logger: Logger,
         scuba: ScubaSampleBuilder,
         trace: TraceContext,
@@ -371,12 +394,11 @@ impl CoreContext {
     }
 
     pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
-        let session_uuid = Uuid::new_v4();
-        let trace = TraceContext::new(session_uuid, Instant::now());
+        let trace = TraceContext::new(generate_trace_id(), Instant::now());
 
         Self::new(
             fb,
-            Uuid::new_v4(),
+            generate_session_id(),
             logger,
             ScubaSampleBuilder::with_discard(),
             trace,
@@ -427,7 +449,7 @@ impl CoreContext {
     pub fn test_mock(fb: FacebookInit) -> Self {
         Self::new(
             fb,
-            Uuid::new_v4(),
+            generate_session_id(),
             Logger::root(::slog::Discard, o!()),
             ScubaSampleBuilder::with_discard(),
             TraceContext::default(),
@@ -437,7 +459,7 @@ impl CoreContext {
         )
     }
 
-    pub fn session(&self) -> &Uuid {
+    pub fn session(&self) -> &SessionId {
         &self.inner.session
     }
     pub fn logger(&self) -> &Logger {

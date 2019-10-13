@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use bytes::BufMut;
+use context::generate_session_id;
 use faster_hex::hex_string;
 use fbinit::FacebookInit;
 use futures::stream::Stream;
@@ -33,7 +34,6 @@ use source_control::services::source_control_service as service;
 use source_control::types as thrift;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
-use uuid::Uuid;
 
 const MAX_LIMIT: i64 = 1000;
 const MAX_CHUNK_SIZE: i64 = 16 * 1024 * 1024;
@@ -226,11 +226,11 @@ impl SourceControlServiceImpl {
                 scuba.add("path", path);
             }
         }
-        let uuid = Uuid::new_v4();
-        scuba.add("session_uuid", uuid.to_string());
+        let session = generate_session_id();
+        scuba.add("session_uuid", session.to_string());
         CoreContext::new(
             self.fb,
-            uuid,
+            session,
             self.logger.clone(),
             scuba,
             TraceContext::default(),

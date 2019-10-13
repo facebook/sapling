@@ -14,13 +14,12 @@ use actix_web::{
     middleware::{Finished, Middleware, Response, Started},
     HttpRequest, HttpResponse,
 };
-use context::CoreContext;
+use context::{generate_session_id, CoreContext};
 use fbinit::FacebookInit;
 use openssl::x509::X509;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
 use sshrelay::SshEnvVars;
-use uuid::Uuid;
 use x509::identity;
 
 use tracing::TraceContext;
@@ -100,7 +99,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             }
         }
 
-        let session_uuid = Uuid::new_v4();
+        let session_id = generate_session_id();
         let repo_name = req.path().split("/").nth(1).unwrap_or("unknown");
 
         scuba
@@ -108,11 +107,11 @@ impl<S> Middleware<S> for CoreContextMiddleware {
             .add("method", req.method().to_string())
             .add("path", req.path())
             .add("reponame", repo_name)
-            .add("session_uuid", session_uuid.to_string());
+            .add("session_uuid", session_id.to_string());
 
         let ctx = CoreContext::new(
             self.fb,
-            session_uuid,
+            session_id,
             self.logger.clone(),
             scuba,
             TraceContext::default(),
