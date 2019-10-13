@@ -17,15 +17,9 @@ use fbinit::FacebookInit;
 use futures::Future;
 use lazy_static::lazy_static;
 use metaconfig_parser::RepoConfigs;
-use slog::{crit, info, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
-use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
-use slog_logview::LogViewDrain;
-use std::io;
+use slog::{crit, info, Logger};
 use std::path::PathBuf;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::runtime::Runtime;
 
 mod errors {
@@ -61,40 +55,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = cmdlib::args::add_myrouter_args(app);
     let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
     let app = cmdlib::args::add_disabled_hooks_args(app);
+    let app = cmdlib::args::add_logger_args(app);
     app
 }
 
-fn setup_logger<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
-    let level = if matches.is_present("debug") {
-        Level::Debug
-    } else {
-        Level::Info
-    };
-
-    let decorator = slog_term::PlainSyncDecorator::new(io::stderr());
-    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
-
-    let drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
-        if matches.is_present("test-instance") {
-            Arc::new(stderr_drain.ignore_res())
-        } else {
-            // // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-            // // since logview is sampled anyway.
-            let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke").ignore_res();
-            let drain = slog::Duplicate::new(stderr_drain, logview_drain);
-            Arc::new(drain.ignore_res())
-        };
-
-    let drain = slog_stats::StatsDrain::new(drain);
-    let drain = drain.filter_level(level).ignore_res();
-    Logger::root(
-        drain,
-        o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
-    )
-}
-
 fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    // TODO: This needs to cope with blob repos, too
     let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
     RepoConfigs::read_configs(cpath)
 }
@@ -102,7 +67,7 @@ fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
 #[fbinit::main]
 fn main(fb: FacebookInit) {
     let matches = setup_app().get_matches();
-    let root_log = setup_logger(fb, &matches);
+    let root_log = cmdlib::args::init_logging(fb, &matches);
 
     panichandler::set_panichandler(panichandler::Fate::Abort);
 

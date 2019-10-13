@@ -339,7 +339,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     args::init_cachelib(fb, &matches);

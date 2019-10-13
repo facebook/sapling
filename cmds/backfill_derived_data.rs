@@ -148,7 +148,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);
 
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let mut runtime = tokio::runtime::Runtime::new()?;
 

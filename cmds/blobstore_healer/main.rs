@@ -277,7 +277,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let storage_id = matches
         .value_of("storage-id")
         .ok_or(err_msg("Missing storage-id"))?;
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
     let storage_config = args::read_storage_configs(&matches)?

@@ -271,7 +271,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let fut = File::open(input)

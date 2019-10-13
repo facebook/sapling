@@ -376,7 +376,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main(fb: FacebookInit) -> ExitCode {
     let matches = setup_app().get_matches();
 
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let error_logger = logger.clone();
 
     let future = match matches.subcommand() {

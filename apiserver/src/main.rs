@@ -29,9 +29,7 @@ use panichandler::Fate;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
 use serde_derive::Deserialize;
-use slog::{info, o, Drain, Level, Logger};
-use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
-use slog_logview::LogViewDrain;
+use slog::{info, Logger};
 use stats::schedule_stats_aggregation;
 
 mod actor;
@@ -421,24 +419,6 @@ fn eden_prefetch_trees(
     }
 }
 
-fn setup_logger(fb: FacebookInit, debug: bool) -> Logger {
-    let level = if debug { Level::Debug } else { Level::Info };
-
-    let decorator = slog_term::TermDecorator::new().build();
-    let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer).ignore_res();
-    let stderr_drain = slog_async::Async::new(stderr_drain).build().ignore_res();
-    let logview_drain = LogViewDrain::new(fb, "errorlog_mononoke_apiserver");
-
-    let drain = slog::Duplicate::new(stderr_drain, logview_drain);
-    let drain = slog_stats::StatsDrain::new(drain);
-    let drain = drain.filter_level(level);
-
-    Logger::root(
-        drain.ignore_res(),
-        o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
-    )
-}
-
 #[derive(Clone)]
 struct HttpServerState {
     fb: FacebookInit,
@@ -481,11 +461,8 @@ fn main(fb: FacebookInit) -> Fallible<()> {
         .arg(Arg::with_name("with-scuba").long("with-scuba"))
         .arg(Arg::with_name("debug").short("p").long("debug"))
         .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
-        .arg(
-            Arg::with_name("stdlog")
-                .long("stdlog")
-                .help("print logs from third-party crates"),
-        )
+        // T55640932 - remove unused --stdlog parameter
+        .arg(Arg::with_name("stdlog").long("stdlog").help("Unused"))
         .arg(
             Arg::with_name("mononoke-config-path")
                 .long("mononoke-config-path")
@@ -520,6 +497,7 @@ fn main(fb: FacebookInit) -> Fallible<()> {
         );
 
     let app = cmdlib::args::add_myrouter_args(app);
+    let app = cmdlib::args::add_logger_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
     let with_cachelib = cmdlib::args::init_cachelib(fb, &matches);
@@ -527,8 +505,6 @@ fn main(fb: FacebookInit) -> Fallible<()> {
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
     let thrift_port = value_t!(matches.value_of("thrift-port"), u16);
-    let debug = matches.is_present("debug");
-    let stdlog = matches.is_present("stdlog");
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("must set config path");
@@ -538,22 +514,10 @@ fn main(fb: FacebookInit) -> Fallible<()> {
 
     let address = format!("{}:{}", host, port);
 
-    let root_logger = setup_logger(fb, debug);
+    let root_logger = cmdlib::args::init_logging(fb, &matches);
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
     let thrift_logger = root_logger.clone();
-
-    // These guards have to be placed in main or they would be destoried once the function ends
-    let global_logger = root_logger.clone();
-
-    let (_scope_guard, _log_guard) = if stdlog {
-        (
-            Some(slog_scope::set_global_logger(global_logger)),
-            slog_stdlog::init().ok(),
-        )
-    } else {
-        (None, None)
-    };
 
     let stats_aggregation =
         schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");

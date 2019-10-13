@@ -438,7 +438,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     args::init_cachelib(fb, &matches);
 
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let bookmark = match matches.value_of("bookmark") {
         Some(name) => name.to_string(),

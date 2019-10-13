@@ -150,7 +150,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let caching = args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(&matches);
+    let logger = args::init_logging(fb, &matches);
     let myrouter_port = args::parse_myrouter_port(&matches);
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();

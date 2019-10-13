@@ -15,10 +15,11 @@ use fbinit::FacebookInit;
 use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
-use slog::{debug, info, o, warn, Drain, Level, Logger};
+use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
+use slog_term::TermDecorator;
 use std::collections::HashSet;
 
-use slog_glog_fmt::default_drain as glog_drain;
+use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, Caching};
@@ -27,6 +28,7 @@ use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
+use slog_logview::LogViewDrain;
 
 use crate::helpers::{
     init_cachelib_from_settings, open_sql_with_config_and_myrouter_port, setup_repo_dir,
@@ -62,6 +64,16 @@ pub struct MononokeApp {
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
     pub hide_advanced_args: bool,
+}
+
+/// Create a default root logger for Facebook services
+pub fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
+    let decorator = TermDecorator::new().build();
+    // FacebookCategorizer is used for slog KV arguments.
+    // At the time of writing this code FacebookCategorizer and FacebookKV
+    // that was added below was mainly useful for logview logging and had no effect on GlogFormat
+    let drain = GlogFormat::new(decorator, FacebookCategorizer).ignore_res();
+    ::std::sync::Mutex::new(drain).ignore_res()
 }
 
 impl MononokeApp {
@@ -105,14 +117,6 @@ impl MononokeApp {
 
 pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
-        Arg::with_name("log-style")
-            .short("l")
-            .long("log-style")
-            .value_name("STYLE")
-            .help("DEPRECATED - log style to use for output (doesn't do anything)")
-            .hidden(true),
-    )
-    .arg(
         Arg::with_name("panic-fate")
             .long("panic-fate")
             .value_name("PANIC_FATE")
@@ -120,9 +124,15 @@ pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .default_value("abort")
             .help("fate of the process when a panic happens"),
     )
+    .arg(
+        Arg::with_name("logview-category")
+            .long("logview-category")
+            .takes_value(true)
+            .help("logview category to log to. Logview is not used if not set"),
+    )
 }
 
-pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
+pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -148,17 +158,31 @@ pub fn init_logging<'a>(matches: &ArgMatches<'a>) -> Logger {
     };
 
     let glog_drain = Arc::new(glog_drain());
+    let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
+        match matches.value_of("logview-category") {
+            Some(category) => {
+                // // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+                // // since logview is sampled anyway.
+                let logview_drain = LogViewDrain::new(fb, category).ignore_res();
+                let drain = slog::Duplicate::new(glog_drain, logview_drain);
+                Arc::new(drain.ignore_res())
+            }
+            None => Arc::new(glog_drain.ignore_res()),
+        };
 
     // NOTE: We pass an unfitlered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
-    let stdlog_level = log::init_stdlog_once(Logger::root(glog_drain.clone(), o![]), stdlog_env);
+    let stdlog_level =
+        log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
 
-    let glog_drain = glog_drain.filter_level(level).ignore_res();
+    let root_log_drain = root_log_drain.filter_level(level).ignore_res();
+
+    let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
 
     let logger = if matches.is_present("fb303-thrift-port") {
-        Logger::root(slog_stats::StatsDrain::new(glog_drain), o![])
+        Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
     } else {
-        Logger::root(glog_drain, o![])
+        Logger::root(root_log_drain, o![kv])
     };
 
     debug!(
