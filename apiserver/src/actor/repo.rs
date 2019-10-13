@@ -57,6 +57,11 @@ use mononoke_types::{
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
+// Purely so that we can build new-style API objects from old style
+use futures_preview::future::{FutureExt as _, TryFutureExt};
+use mononoke_api::repo::open_synced_commit_mapping;
+use synced_commit_mapping::SyncedCommitMapping;
+
 use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 use crate::from_string as FS;
@@ -94,6 +99,8 @@ pub struct MononokeRepo {
     // (normally just a few seconds).
     // These bookmarks are updated when derived data is generated for them.
     cached_publishing_bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    // Needed for the current way to create a new Mononoke object
+    pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
 }
 
 impl MononokeRepo {
@@ -115,51 +122,61 @@ impl MononokeRepo {
 
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
 
-        open_blobrepo(
-            fb,
-            config.storage_config.clone(),
-            repoid,
-            myrouter_port,
-            with_cachelib,
-            config.bookmarks_cache_ttl,
-            config.redaction,
-            common_config.scuba_censored_table,
-            config.filestore,
-            logger.clone(),
-        )
-        .map(move |repo| {
-            // Spawn a task that keeps cached bookmarks updated
-            spawn_bookmarks_updater(bookmarks.clone(), ctx.clone(), logger.clone(), repo.clone());
+        // This is hacky, for the benefit of the new Mononoke object type
+        open_synced_commit_mapping(config.clone(), myrouter_port)
+            .boxed()
+            .compat()
+            .join(open_blobrepo(
+                fb,
+                config.storage_config.clone(),
+                repoid,
+                myrouter_port,
+                with_cachelib,
+                config.bookmarks_cache_ttl,
+                config.redaction,
+                common_config.scuba_censored_table,
+                config.filestore,
+                logger.clone(),
+            ))
+            .map(move |(synced_commit_mapping, repo)| {
+                // Spawn a task that keeps cached bookmarks updated
+                spawn_bookmarks_updater(
+                    bookmarks.clone(),
+                    ctx.clone(),
+                    logger.clone(),
+                    repo.clone(),
+                );
 
-            let skiplist_index = {
-                if !with_skiplist {
-                    ok(Arc::new(SkiplistIndex::new())).right_future()
-                } else {
-                    fetch_skiplist_index(
-                        ctx.clone(),
-                        skiplist_index_blobstore_key,
-                        repo.get_blobstore().boxed(),
-                    )
-                    .left_future()
-                }
-            };
+                let skiplist_index = {
+                    if !with_skiplist {
+                        ok(Arc::new(SkiplistIndex::new())).right_future()
+                    } else {
+                        fetch_skiplist_index(
+                            ctx.clone(),
+                            skiplist_index_blobstore_key,
+                            repo.get_blobstore().boxed(),
+                        )
+                        .left_future()
+                    }
+                };
 
-            // Make sure bookmarks are not empty
-            let f = update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone());
-            skiplist_index.join(f).map(move |(skiplist_index, ())| {
-                let unodes_derived_mapping =
-                    Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-                Self {
-                    repo,
-                    logger,
-                    skiplist_index,
-                    cache,
-                    unodes_derived_mapping,
-                    cached_publishing_bookmarks: bookmarks,
-                }
+                // Make sure bookmarks are not empty
+                let f = update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone());
+                skiplist_index.join(f).map(move |(skiplist_index, ())| {
+                    let unodes_derived_mapping =
+                        Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
+                    Self {
+                        repo,
+                        logger,
+                        skiplist_index,
+                        cache,
+                        unodes_derived_mapping,
+                        cached_publishing_bookmarks: bookmarks,
+                        synced_commit_mapping: Arc::new(synced_commit_mapping),
+                    }
+                })
             })
-        })
-        .flatten()
+            .flatten()
     }
 
     fn get_hgchangesetid_from_revision(

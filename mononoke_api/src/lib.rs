@@ -21,6 +21,7 @@ use fsnodes::RootFsnodeMapping;
 use futures_preview::future;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
+use synced_commit_mapping::SyncedCommitMapping;
 use unodes::RootUnodeManifestMapping;
 
 use metaconfig_parser::RepoConfigs;
@@ -116,6 +117,7 @@ impl Mononoke {
                 BlobRepo,
                 Arc<SkiplistIndex>,
                 Arc<RootUnodeManifestMapping>,
+                Arc<dyn SyncedCommitMapping>,
             ),
         >,
     ) -> Self {
@@ -123,7 +125,13 @@ impl Mononoke {
             repos: repos
                 .into_iter()
                 .map(
-                    |(name, blob_repo, skiplist_index, unodes_derived_mapping)| {
+                    |(
+                        name,
+                        blob_repo,
+                        skiplist_index,
+                        unodes_derived_mapping,
+                        synced_commit_mapping,
+                    )| {
                         let fsnodes_derived_mapping =
                             Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
                         (
@@ -133,6 +141,7 @@ impl Mononoke {
                                 skiplist_index,
                                 fsnodes_derived_mapping,
                                 unodes_derived_mapping,
+                                synced_commit_mapping,
                             )),
                         )
                     },

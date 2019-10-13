@@ -19,11 +19,12 @@ use fsnodes::RootFsnodeMapping;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
-use metaconfig_types::{CommonConfig, RepoConfig};
+use metaconfig_types::{CommonConfig, MetadataDBConfig, RepoConfig};
 use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::RepositoryId;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::Logger;
+use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 use unodes::RootUnodeManifestMapping;
 
 use crate::changeset::ChangesetContext;
@@ -37,12 +38,31 @@ pub(crate) struct Repo {
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
     pub(crate) fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
     pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    // This doesn't really belong here, but until we have production mappings, we can't do a better job
+    pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
 }
 
 #[derive(Clone)]
 pub struct RepoContext {
     ctx: CoreContext,
     repo: Arc<Repo>,
+}
+
+pub async fn open_synced_commit_mapping(
+    config: RepoConfig,
+    myrouter_port: Option<u16>,
+) -> Result<SqlSyncedCommitMapping, Error> {
+    let name = SqlSyncedCommitMapping::LABEL;
+    match config.storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => {
+            SqlSyncedCommitMapping::with_sqlite_path(path.join(name))
+        }
+        MetadataDBConfig::Mysql { db_address, .. } => {
+            SqlSyncedCommitMapping::with_xdb(db_address, myrouter_port)
+                .compat()
+                .await
+        }
+    }
 }
 
 impl Repo {
@@ -57,6 +77,9 @@ impl Repo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = RepositoryId::new(config.repoid);
+
+        let synced_commit_mapping =
+            Arc::new(open_synced_commit_mapping(config.clone(), myrouter_port).await?);
 
         let blob_repo = open_blobrepo(
             fb,
@@ -91,6 +114,7 @@ impl Repo {
             skiplist_index,
             unodes_derived_mapping,
             fsnodes_derived_mapping,
+            synced_commit_mapping,
         })
     }
 
@@ -100,12 +124,14 @@ impl Repo {
         skiplist_index: Arc<SkiplistIndex>,
         fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
         unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Self {
         Self {
             blob_repo,
             skiplist_index,
             fsnodes_derived_mapping,
             unodes_derived_mapping,
+            synced_commit_mapping,
         }
     }
 
@@ -115,11 +141,14 @@ impl Repo {
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
+        let synced_commit_mapping =
+            Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap());
         Self {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
             unodes_derived_mapping,
             fsnodes_derived_mapping,
+            synced_commit_mapping,
         }
     }
 }
@@ -153,6 +182,11 @@ impl RepoContext {
     /// The unodes mapping for the referenced repository.
     pub(crate) fn unodes_derived_mapping(&self) -> &Arc<RootUnodeManifestMapping> {
         &self.repo.unodes_derived_mapping
+    }
+
+    /// The commit sync mapping for the referenced repository
+    pub(crate) fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+        &self.repo.synced_commit_mapping
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
@@ -317,5 +351,34 @@ impl RepoContext {
         hash: Sha256,
     ) -> Result<Option<FileContext>, MononokeError> {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
+    }
+
+    /// Get the equivalent changeset from another repo, if synced
+    pub async fn xrepo_commit_lookup(
+        &self,
+        other: &Self,
+        specifier: ChangesetSpecifier,
+    ) -> Result<Option<ChangesetContext>, MononokeError> {
+        let changeset = self.resolve_specifier(specifier).await?;
+
+        let remapped_changeset_id = match changeset {
+            Some(changeset) => {
+                self.synced_commit_mapping()
+                    .get(
+                        self.ctx().clone(),
+                        self.blob_repo().get_repoid(),
+                        changeset,
+                        other.blob_repo().get_repoid(),
+                    )
+                    .compat()
+                    .await?
+            }
+            None => None,
+        };
+        let changeset = changeset.map(|changeset| remapped_changeset_id.unwrap_or(changeset));
+        match changeset {
+            Some(changeset) => other.changeset(ChangesetSpecifier::Bonsai(changeset)).await,
+            None => Ok(None),
+        }
     }
 }

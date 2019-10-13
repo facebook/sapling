@@ -23,6 +23,7 @@ use crate::{
     Mononoke, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{GitSha1, Sha1, Sha256};
+use synced_commit_mapping::SyncedCommitMappingEntry;
 
 #[fbinit::test]
 fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
@@ -485,6 +486,59 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 
             let content_range = file.content_range(3, 4).await.concat2().compat().await?;
             assert_eq!(content_range, Bytes::from("tent"));
+
+            Ok(())
+        }
+            .boxed()
+            .compat(),
+    )
+}
+
+#[fbinit::test]
+fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(
+        async move {
+            let mononoke = Mononoke::new_test(vec![
+                ("test".to_string(), linear::getrepo(fb)),
+                ("test2".to_string(), many_files_dirs::getrepo(fb)),
+            ]);
+            let ctx = CoreContext::test_mock(fb);
+            let repo1 = mononoke.repo(ctx.clone(), "test")?.expect("repo exists");
+            let repo2 = mononoke.repo(ctx.clone(), "test2")?.expect("repo exists");
+
+            let hash1 = ChangesetId::from_str(
+                "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48",
+            )?;
+
+            // Confirm that a cross-repo lookup for an unsynced commit just fails
+            let cs = repo1
+                .xrepo_commit_lookup(&repo2, ChangesetSpecifier::Bonsai(hash1))
+                .await?;
+            assert!(cs.is_none());
+
+            // Now insert a remapping to a commit that exists, and see that work
+            let hash2 = ChangesetId::from_str(
+                "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e",
+            )?;
+            let entry = SyncedCommitMappingEntry::new(
+                repo1.blob_repo().get_repoid(),
+                hash1,
+                repo2.blob_repo().get_repoid(),
+                hash2,
+            );
+            assert!(
+                repo1
+                    .synced_commit_mapping()
+                    .add(ctx.clone(), entry)
+                    .compat()
+                    .await?
+            );
+            let cs = repo1
+                .xrepo_commit_lookup(&repo2, ChangesetSpecifier::Bonsai(hash1))
+                .await?
+                .expect("changeset exists");
+            assert_eq!(cs.id(), hash2);
 
             Ok(())
         }
