@@ -21,7 +21,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
-use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLogging};
+use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
@@ -37,7 +37,7 @@ use sql_ext::SqlConstructors;
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
-    pub wireproto_logging: Option<WireprotoLogging>,
+    pub wireproto_logging: Option<WireprotoLoggingConfig>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,

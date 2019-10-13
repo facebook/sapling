@@ -87,7 +87,7 @@ pub struct RepoConfig {
     pub lfs: LfsParams,
     /// Configuration for logging all wireproto requests with full arguments.
     /// Used for replay on shadow tier.
-    pub wireproto_logging: Option<WireprotoLogging>,
+    pub wireproto_logging: Option<WireprotoLoggingConfig>,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
@@ -760,7 +760,7 @@ pub struct CommitSyncConfig {
 /// Configuration for logging wireproto commands and arguments
 /// This is used by traffic replay script to replay on prod traffic on shadow tier
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct WireprotoLogging {
+pub struct WireprotoLoggingConfig {
     /// Scribe category to log to
     pub scribe_category: String,
     /// Storage config to store wireproto arguments. The arguments can be quite big,

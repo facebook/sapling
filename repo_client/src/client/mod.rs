@@ -41,7 +41,7 @@ use mercurial_types::{
     HgBlobNode, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId, MPath, RepoPath, Type,
     NULL_CSID, NULL_HASH,
 };
-use metaconfig_types::{RepoReadOnly, WireprotoLogging};
+use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
 use phases::Phases;
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -233,7 +233,7 @@ pub struct RepoClient {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
-    wireproto_logging: Option<WireprotoLogging>,
+    wireproto_logging: Option<WireprotoLoggingConfig>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -245,7 +245,7 @@ struct WireprotoLogger {
     scribe_client: Arc<ScribeClientImplementation>,
     // This scribe category main purpose is to tail the prod requests and replay them
     // on shadow tier.
-    wireproto_logging: Option<WireprotoLogging>,
+    wireproto_logging: Option<WireprotoLoggingConfig>,
     wireproto_command: &'static str,
     reponame: String,
 }
@@ -255,7 +255,7 @@ impl WireprotoLogger {
         fb: FacebookInit,
         scuba_logger: ScubaSampleBuilder,
         wireproto_command: &'static str,
-        wireproto_logging: Option<WireprotoLogging>,
+        wireproto_logging: Option<WireprotoLoggingConfig>,
         reponame: String,
     ) -> Self {
         let mut logger = Self {
@@ -298,7 +298,7 @@ impl WireprotoLogger {
             .add_stream_stats(&stats)
             .log_with_msg("Command processed", None);
 
-        if let Some(WireprotoLogging {
+        if let Some(WireprotoLoggingConfig {
             ref scribe_category,
             ..
         }) = self.wireproto_logging
@@ -341,7 +341,7 @@ impl RepoClient {
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
-        wireproto_logging: Option<WireprotoLogging>,
+        wireproto_logging: Option<WireprotoLoggingConfig>,
     ) -> Self {
         RepoClient {
             repo,

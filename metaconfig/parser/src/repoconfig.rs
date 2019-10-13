@@ -32,7 +32,7 @@ use metaconfig_types::{
     HookManagerParams, HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams,
     MetadataDBConfig, PushParams, PushrebaseParams, Redaction, RepoConfig, RepoReadOnly,
     ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
-    WireprotoLogging,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::MPath;
 use regex::Regex;
@@ -550,15 +550,15 @@ impl RepoConfigs {
 
         let wireproto_logging = this
             .wireproto_logging
-            .map(|raw| -> Result<WireprotoLogging> {
-                let RawWireprotoLogging {
+            .map(|raw| -> Result<WireprotoLoggingConfig> {
+                let RawWireprotoLoggingConfig {
                     scribe_category,
                     storage_config,
                 } = raw;
 
                 let storage_config = get_storage(&storage_config)?;
 
-                Ok(WireprotoLogging {
+                Ok(WireprotoLoggingConfig {
                     scribe_category,
                     storage_config,
                 })
@@ -821,7 +821,7 @@ struct RawRepoConfig {
     push: Option<RawPushParams>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
-    wireproto_logging: Option<RawWireprotoLogging>,
+    wireproto_logging: Option<RawWireprotoLoggingConfig>,
     hash_validation_percentage: Option<usize>,
     skiplist_index_blobstore_key: Option<String>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
@@ -1143,7 +1143,7 @@ pub struct RawCommitSyncConfig {
 /// Raw Wireproto logging configuration
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct RawWireprotoLogging {
+pub struct RawWireprotoLoggingConfig {
     /// Scribe category to log requests to
     pub scribe_category: String,
     /// Storage where to store arguments for replay
@@ -1605,7 +1605,7 @@ mod test {
                 lfs: LfsParams {
                     threshold: Some(1000),
                 },
-                wireproto_logging: Some(WireprotoLogging {
+                wireproto_logging: Some(WireprotoLoggingConfig {
                     scribe_category: "category".to_string(),
                     storage_config: main_storage_config,
                 }),
