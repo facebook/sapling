@@ -10,6 +10,7 @@
 
 #include <ProjectedFSLib.h>
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/win/utils/Guid.h"
 
 namespace facebook {
 namespace eden {
@@ -69,7 +70,7 @@ class FsChannel {
   //
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
   const EdenMount* mount_;
-  GUID mountId_;
+  Guid mountId_;
   std::wstring winPath_;
   bool isRunning_{false};
 };

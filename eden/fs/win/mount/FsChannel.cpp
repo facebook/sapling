@@ -49,7 +49,7 @@ FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
 
   // Setup mount root folder
   HRESULT result = PrjMarkDirectoryAsPlaceholder(
-      winPath_.c_str(), nullptr, nullptr, &mountId_);
+      winPath_.c_str(), nullptr, nullptr, mountId_);
 
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
