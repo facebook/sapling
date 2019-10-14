@@ -10,7 +10,7 @@
 
 use bytes::{BufMut, BytesMut};
 
-use bytes_ext::SizeCounter;
+use bufsize::SizeCounter;
 use failure_ext::bail_err;
 use mercurial_types::delta::{Delta, Fragment};
 
