@@ -316,6 +316,11 @@ class phasecache(object):
 
                 publicheadrevs = cl.headrevs(includepublic=True, includedraft=False)
                 draftheadrevs = cl.headrevs(includepublic=False, includedraft=True)
+
+                # Also consider "." as a draft. This prevents "." from being
+                # hidden (secret).
+                draftheadrevs += list(repo.revs("parents()"))
+
                 self._publicrevs, self._draftrevs = cl.index2.phasesets(
                     publicheadrevs, draftheadrevs
                 )
