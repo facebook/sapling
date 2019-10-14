@@ -128,9 +128,14 @@ def crdump(ui, repo, *revs, **opts):
                 pass  # lfs extension is not enabled
 
         try:
+            oldquiet = repo.ui.quiet
+            # Silence any output from commitcloud
+            repo.ui.quiet = True
             notbackedup = commitcloud.backup.backup(repo, revs)[1]
         except Exception:
             notbackedup = set(repo[rev].node() for rev in revs)
+        finally:
+            repo.ui.quiet = oldquiet
 
         for rev in revs:
             ctx = repo[rev]
