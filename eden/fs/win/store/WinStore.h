@@ -39,10 +39,29 @@ struct FileMetadata {
   //
   size_t size{0};
 
+  //
+  // This is the hash we use to fetch Tree and Blob. When working
+  // with mercurial it is hg proxy hash.
+  //
+  Hash hash{};
+
   FileMetadata(std::wstring name, bool isDir, size_t size)
       : name(name), isDirectory(isDir), size(size) {}
 
+  FileMetadata(std::wstring name, bool isDir, size_t size, const Hash& hash)
+      : name(name), isDirectory(isDir), size(size), hash{hash} {}
+
   FileMetadata() {}
+
+  bool operator==(const FileMetadata& other) const {
+    return (
+        (name == other.name) && (isDirectory == other.isDirectory) &&
+        (size == other.size) && (hash == other.hash));
+  }
+
+  bool operator!=(const FileMetadata& other) const {
+    return !(*this == other);
+  }
 };
 
 class WinStore {
@@ -68,9 +87,9 @@ class WinStore {
  private:
   std::shared_ptr<const Tree> getTree(const RelativePathPiece& relPath) const;
 
-  // Store a pointer to EdenMount. WinStore doesn't own or maintain the lifetime
-  // of Mount. Instead, at this point, WinStore will be owned by the mount in
-  // some direct or indirect way.
+  // Store a pointer to EdenMount. WinStore doesn't own or maintain the
+  // lifetime of Mount. Instead, at this point, WinStore will be owned by the
+  // mount in some direct or indirect way.
   const EdenMount& mount_;
 
   const EdenMount& getMount() const {

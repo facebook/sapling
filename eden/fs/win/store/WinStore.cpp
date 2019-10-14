@@ -116,6 +116,7 @@ bool WinStore::getFileMetadata(
     if (entry) {
       fileMetadata.name = edenToWinName(entry->getName().value().toStdString());
       fileMetadata.isDirectory = entry->isTree();
+      fileMetadata.hash = entry->getHash();
 
       if (!fileMetadata.isDirectory) {
         const std::optional<uint64_t>& size = entry->getSize();
