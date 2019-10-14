@@ -7,11 +7,18 @@ import errno
 import os
 import stat
 
+from bindings import workingcopy
+from edenscm.mercurial import registrar
+
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
 
 
 _rangemask = 0x7FFFFFFF
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("workingcopy", "enablerustwalker", default=False)
 
 
 class physicalfilesystem(object):
@@ -130,7 +137,12 @@ class physicalfilesystem(object):
             match = util.always
 
         seen = set()
-        for fn, st in self._walk(match, listignored):
+
+        walkfn = self._walk
+        if self.ui.configbool("workingcopy", "enablerustwalker"):
+            walkfn = self._rustwalk
+
+        for fn, st in walkfn(match, listignored):
             seen.add(fn)
             changed = self._ischanged(fn, st)
             if changed:
@@ -174,6 +186,14 @@ class physicalfilesystem(object):
                 changed = self._ischanged(fn, st)
                 if changed:
                     yield changed
+
+    @util.timefunction("fswalk", 0, "ui")
+    def _rustwalk(self, match, listignored=False):
+        join = self.opener.join
+        walker = workingcopy.walker(join(""), match)
+        for fn in walker:
+            st = os.lstat(join(fn))
+            yield fn, st
 
     @util.timefunction("fswalk", 0, "ui")
     def _walk(self, match, listignored=False):

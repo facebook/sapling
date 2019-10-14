@@ -157,3 +157,4 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.verifyautocreate (bool)
   undocumented: ui.editor.chunkselector (str)
+  undocumented: workingcopy.enablerustwalker (bool)
