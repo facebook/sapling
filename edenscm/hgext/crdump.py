@@ -186,7 +186,7 @@ def crdump(ui, repo, *revs, **opts):
                     if "master" in downstreambookmarks:
                         rdata["branch"] = "master"
                     elif len(downstreambookmarks) == 1:
-                        rdata["branch"] = downstreambookmarks[0]
+                        rdata["branch"] = list(downstreambookmarks)[0]
 
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
             if not opts["nobinary"]:

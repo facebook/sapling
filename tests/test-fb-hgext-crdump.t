@@ -23,7 +23,7 @@ Create repo
   adding a
   adding bin1
   $ hg commit -m a
-  $ hg push -q -r . --to master --create
+  $ hg push -q -r . --to releasebranch --create
   $ hg phase -p .
 
   $ printf "A\nB\nC\nD\nE\nF\n" > a
@@ -68,7 +68,7 @@ Test obsolete markers
                   }
               ],
               "bookmarks": [],
-              "branch": "master",
+              "branch": "releasebranch",
               "commit_cloud": false,
               "date": [
                   0,
@@ -121,6 +121,11 @@ Test obsolete markers
   adding c
   $ hg commit -m c
   $ hg bookmark bookmark1 -i
+
+Add a master bookmark and verify it becomes the remote branch
+- The [1] exit code is because no commits are pushed
+  $ hg push -q -r releasebranch --to master --create
+  [1]
 
 Test basic dump of two commits
 
