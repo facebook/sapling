@@ -16,7 +16,7 @@ use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::{
     deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, SqlChangesets,
 };
-use clap::{Arg, SubCommand};
+use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers, monitoring::start_fb303_and_stats_agg};
 use context::CoreContext;
@@ -34,7 +34,7 @@ use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{ChangesetId, MononokeId, RepositoryId};
 use phases::SqlPhases;
-use slog::info;
+use slog::{info, Logger};
 use std::{
     fs,
     path::Path,
@@ -66,6 +66,33 @@ const POSSIBLE_TYPES: &[&str] = &[
     MappedHgChangesetId::NAME,
     RootFsnodeId::NAME,
 ];
+
+/// Derived data types that are permitted to access redacted files. This list
+/// should be limited to those data types that need access to the content of
+/// redacted files in order to compute their data, and will not leak redacted
+/// data; for example, derived data types that compute hashes of file
+/// contents that form part of a Merkle tree, and thus need to have correct
+/// hashes for file content.
+const UNREDACTED_TYPES: &[&str] = &[
+    // Fsnodes need access to redacted file contents to compute SHA-1 and
+    // SHA-256 hashes of the file content, which form part of the fsnode
+    // tree hashes. Redacted content is only hashed, and so cannot be
+    // discovered via the fsnode tree.
+    RootFsnodeId::NAME,
+];
+
+fn open_repo_maybe_unredacted<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+    data_type: &str,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    if UNREDACTED_TYPES.contains(&data_type) {
+        args::open_repo_unredacted(fb, logger, matches).left_future()
+    } else {
+        args::open_repo(fb, logger, matches).right_future()
+    }
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -175,7 +202,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .from_err();
             let regenerate = sub_m.is_present(ARG_REGENERATE);
 
-            (args::open_repo(fb, &logger, &matches), skip)
+            (
+                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type),
+                skip,
+            )
                 .into_future()
                 .and_then(move |(repo, skip)| {
                     subcommand_backfill(
@@ -200,11 +230,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             start_fb303_and_stats_agg(fb, &mut runtime, &service_name, &logger, &matches)?;
             (
                 args::open_repo(fb, &logger, &matches),
+                args::open_repo_unredacted(fb, &logger, &matches),
                 args::open_sql::<SqlBookmarks>(&matches),
             )
                 .into_future()
-                .and_then(move |(repo, bookmarks)| {
-                    subcommand_tail(ctx, repo, bookmarks, derived_data_types)
+                .and_then(move |(repo, unredacted_repo, bookmarks)| {
+                    subcommand_tail(ctx, repo, unredacted_repo, bookmarks, derived_data_types)
                 })
                 .boxify()
         }
@@ -239,7 +270,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
                 .to_string();
-            args::open_repo(fb, &logger, &matches)
+            open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
                 .and_then(move |repo| {
                     helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                         .and_then(move |csid| subcommand_single(ctx, repo, csid, derived_data_type))
@@ -531,12 +562,21 @@ fn subcommand_backfill<P: AsRef<Path>>(
 fn subcommand_tail(
     ctx: CoreContext,
     repo: BlobRepo,
+    unredacted_repo: BlobRepo,
     bookmarks: SqlBookmarks,
     derived_data_types: Vec<String>,
 ) -> impl Future<Item = (), Error = Error> {
     let derive_utils: Result<Vec<_>, Error> = derived_data_types
         .into_iter()
-        .map(|name| derived_data_utils(ctx.clone(), repo.clone(), name))
+        .map(|name| {
+            let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
+                unredacted_repo.clone()
+            } else {
+                repo.clone()
+            };
+            let derive = derived_data_utils(ctx.clone(), repo.clone(), name)?;
+            Ok((derive, maybe_unredacted_repo))
+        })
         .collect();
     derive_utils.into_future().and_then(move |derive_utils| {
         let derive_utils = Arc::new(derive_utils);
@@ -552,29 +592,33 @@ fn subcommand_tail(
                     .map(|(_name, csid)| csid)
                     .collect()
                     .and_then({
-                        cloned!(ctx, repo, derive_utils);
+                        cloned!(ctx, derive_utils);
                         move |heads| {
                             let pending: Vec<_> = derive_utils
                                 .iter()
                                 .map({
-                                    cloned!(ctx, repo);
-                                    move |derive| {
+                                    cloned!(ctx);
+                                    move |(derive, maybe_unredacted_repo)| {
                                         // create new context so each derivation would have its own trace
                                         let ctx = CoreContext::new_with_logger(
                                             ctx.fb,
                                             ctx.logger().clone(),
                                         );
                                         derive
-                                            .pending(ctx.clone(), repo.clone(), heads.clone())
+                                            .pending(
+                                                ctx.clone(),
+                                                maybe_unredacted_repo.clone(),
+                                                heads.clone(),
+                                            )
                                             .map({
-                                                cloned!(ctx, repo, derive);
+                                                cloned!(ctx, maybe_unredacted_repo, derive);
                                                 move |pending| {
                                                     pending
                                                         .into_iter()
                                                         .map(|csid| {
                                                             derive.derive(
                                                                 ctx.clone(),
-                                                                repo.clone(),
+                                                                maybe_unredacted_repo.clone(),
                                                                 csid,
                                                             )
                                                         })
