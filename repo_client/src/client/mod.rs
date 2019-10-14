@@ -42,9 +42,7 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
-use phases::Phases;
 use rand::{self, Rng};
-use reachabilityindex::LeastCommonAncestorsHint;
 use remotefilelog::{
     create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
     get_unordered_file_history_for_multiple_nodes,
@@ -218,8 +216,6 @@ pub struct RepoClient {
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Arc<dyn Phases>,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
     // Whether to allow non-pushrebase pushes
@@ -335,8 +331,6 @@ impl RepoClient {
         repo: MononokeRepo,
         ctx: CoreContext,
         hash_validation_percentage: usize,
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        phases_hint: Arc<dyn Phases>,
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
@@ -347,8 +341,6 @@ impl RepoClient {
             repo,
             ctx,
             hash_validation_percentage,
-            lca_hint,
-            phases_hint,
             preserve_raw_bundle2,
             pure_push_allowed,
             hook_manager,
@@ -441,9 +433,9 @@ impl RepoClient {
             blobrepo.clone(),
             args.common,
             args.heads,
-            self.lca_hint.clone(),
+            self.repo.lca_hint().clone(),
             if use_phases {
-                Some(self.phases_hint.clone())
+                Some(self.repo.phases_hint().clone())
             } else {
                 None
             },
@@ -1002,7 +994,7 @@ impl HgCommands for RepoClient {
 
         let nodes_len = nodes.len();
 
-        let phases_hint = self.phases_hint.clone();
+        let phases_hint = self.repo.phases_hint().clone();
 
         cloned!(self.ctx);
         blobrepo
@@ -1279,8 +1271,8 @@ impl HgCommands for RepoClient {
                 let mut scuba_logger = ctx.scuba().clone();
                 let blobrepo = client.repo.blobrepo().clone();
                 let bookmark_attrs = client.repo.bookmark_attrs();
-                let lca_hint = client.lca_hint.clone();
-                let phases_hint = client.phases_hint.clone();
+                let lca_hint = client.repo.lca_hint().clone();
+                let phases_hint = client.repo.phases_hint().clone();
                 let infinitepush_params = client.repo.infinitepush().clone();
                 let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                 let pushrebase_params = client.repo.pushrebase_params().clone();

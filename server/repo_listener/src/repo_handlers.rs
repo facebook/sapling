@@ -40,8 +40,6 @@ pub struct RepoHandler {
     pub wireproto_logging: Option<WireprotoLoggingConfig>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
-    pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    pub phases_hint: Arc<dyn Phases>,
     pub preserve_raw_bundle2: bool,
     pub pure_push_allowed: bool,
     pub support_bundle2_listkeys: bool,
@@ -182,19 +180,6 @@ pub fn repo_handlers(
                                 reponame.clone(),
                             );
 
-                            let repo = MononokeRepo::new(
-                                blobrepo,
-                                &pushrebase,
-                                bookmarks.clone(),
-                                Arc::new(hook_manager),
-                                streaming_clone,
-                                lfs,
-                                reponame.clone(),
-                                read_write_fetcher,
-                                infinitepush,
-                                list_keys_patterns_max,
-                            );
-
                             let listen_log = root_log.new(o!("repo" => reponame.clone()));
                             let mut scuba_logger =
                                 ScubaSampleBuilder::with_opt_table(fb, scuba_table);
@@ -206,12 +191,12 @@ pub fn repo_handlers(
                             let skip_index = fetch_skiplist_index(
                                 ctx.clone(),
                                 config.skiplist_index_blobstore_key,
-                                repo.blobrepo().get_blobstore().boxed(),
+                                blobrepo.get_blobstore().boxed(),
                             );
 
                             let initial_warmup = cache_warmup(
                                 ctx.clone(),
-                                repo.blobrepo().clone(),
+                                blobrepo.clone(),
                                 cache_warmup_params,
                                 listen_log.clone(),
                             )
@@ -222,7 +207,7 @@ pub fn repo_handlers(
                             let support_bundle2_listkeys = sql_mutable_counters
                                 .get_counter(
                                     ctx.clone(),
-                                    repo.blobrepo().get_repoid(),
+                                    blobrepo.get_repoid(),
                                     "support_bundle2_listkeys",
                                 )
                                 .map(|val| val.unwrap_or(1) != 0);
@@ -252,6 +237,21 @@ pub fn repo_handlers(
                                         let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
                                             skip_index;
 
+                                        let repo = MononokeRepo::new(
+                                            blobrepo,
+                                            &pushrebase,
+                                            bookmarks.clone(),
+                                            Arc::new(hook_manager),
+                                            streaming_clone,
+                                            lfs,
+                                            reponame.clone(),
+                                            read_write_fetcher,
+                                            infinitepush,
+                                            list_keys_patterns_max,
+                                            lca_hint,
+                                            phases_hint,
+                                        );
+
                                         (
                                             reponame,
                                             RepoHandler {
@@ -260,8 +260,6 @@ pub fn repo_handlers(
                                                 wireproto_logging,
                                                 repo,
                                                 hash_validation_percentage,
-                                                lca_hint,
-                                                phases_hint,
                                                 preserve_raw_bundle2,
                                                 pure_push_allowed,
                                                 support_bundle2_listkeys,

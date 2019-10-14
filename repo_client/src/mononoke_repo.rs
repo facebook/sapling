@@ -15,6 +15,8 @@ use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
 };
 use mononoke_types::RepositoryId;
+use phases::Phases;
+use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql_ext::SqlConstructors;
@@ -41,6 +43,8 @@ pub struct MononokeRepo {
     bookmark_attrs: BookmarkAttrs,
     infinitepush: InfinitepushParams,
     list_keys_patterns_max: u64,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases_hint: Arc<dyn Phases>,
 }
 
 impl MononokeRepo {
@@ -56,6 +60,8 @@ impl MononokeRepo {
         readonly_fetcher: RepoReadWriteFetcher,
         infinitepush: InfinitepushParams,
         list_keys_patterns_max: u64,
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        phases_hint: Arc<dyn Phases>,
     ) -> Self {
         MononokeRepo {
             blobrepo,
@@ -68,6 +74,8 @@ impl MononokeRepo {
             bookmark_attrs: BookmarkAttrs::new(bookmark_params),
             infinitepush,
             list_keys_patterns_max,
+            lca_hint,
+            phases_hint,
         }
     }
 
@@ -110,6 +118,14 @@ impl MononokeRepo {
 
     pub fn list_keys_patterns_max(&self) -> u64 {
         self.list_keys_patterns_max
+    }
+
+    pub fn lca_hint(&self) -> Arc<dyn LeastCommonAncestorsHint> {
+        self.lca_hint.clone()
+    }
+
+    pub fn phases_hint(&self) -> Arc<dyn Phases> {
+        self.phases_hint.clone()
     }
 }
 
