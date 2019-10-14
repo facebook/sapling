@@ -611,13 +611,14 @@ def foreground(repo, nodes):
     and successors of the commit.
     """
     unfi = repo.unfiltered()
-    foreground = set()
-    newctxs = set(unfi.set("%ln::", nodes))
-    while newctxs:
-        newnodes = set(c.node() for c in newctxs) - foreground
-        newnodes.update(allsuccessors(repo, newnodes))
-        foreground = foreground | newnodes
-        newctxs = set(unfi.set("(%ln::) - (%ln)", newnodes, newnodes))
+    nm = unfi.changelog.nodemap
+    foreground = set(nodes)
+    newnodes = set(nodes)
+    while newnodes:
+        newnodes.update(n for n in allsuccessors(repo, newnodes) if n in nm)
+        newnodes.update(unfi.nodes("%ln::", newnodes))
+        newnodes.difference_update(foreground)
+        foreground.update(newnodes)
     return foreground
 
 
