@@ -17,7 +17,7 @@ use slog::{info, Logger};
 use std::{path::Path, time::Duration};
 use tokio_timer::sleep;
 
-use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
+use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection, Transaction};
 
 pub struct SqlConnections {
     pub write_connection: Connection,
@@ -50,6 +50,12 @@ impl PoolSizeConfig {
             read_master_pool_size: 1,
         }
     }
+}
+
+#[must_use]
+pub enum TransactionResult {
+    Succeeded(Transaction),
+    Failed,
 }
 
 pub fn create_myrouter_connections(

@@ -14,7 +14,8 @@ use crate::repo_commit::*;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
-    self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
+    self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
+    Bookmarks, Freshness,
 };
 use bytes::Bytes;
 use cacheblob::{LeaseOps, MemWritesBlobstore};
@@ -561,6 +562,16 @@ impl BlobRepo {
     {
         self.bookmarks
             .list_bookmark_log_entries(ctx.clone(), name, self.repoid, max_rec)
+    }
+
+    pub fn read_next_bookmark_log_entries(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        limit: u64,
+    ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
+        self.bookmarks
+            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit)
     }
 
     /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
