@@ -111,8 +111,7 @@ class physicalfilesystem(object):
                 return (fn, True, True)
             else:
                 if self.dirstate._istreestate:
-                    self.dirstate._map.clearneedcheck(fn)
-                    self.dirstate._dirty = True
+                    self.dirstate.clearneedcheck(fn)
                 return None
         else:
             raise error.ProgrammingError(
