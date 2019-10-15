@@ -28,20 +28,41 @@ using folly::StringPiece;
 using std::optional;
 using std::string;
 
-const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
+namespace {
 const facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{".edenignore"};
 const facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
-const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
-namespace {
 template <typename String>
 void toAppend(facebook::eden::EdenConfig& ec, String* result) {
   folly::toAppend(ec.toString(), result);
+}
+
+void getConfigStat(
+    facebook::eden::AbsolutePathPiece configPath,
+    int configFd,
+    struct stat* configStat) {
+  int statRslt{-1};
+  if (configFd >= 0) {
+    statRslt = fstat(configFd, configStat);
+    // Report failure that is not due to ENOENT
+    if (statRslt != 0) {
+      XLOG(WARN) << "error accessing config file " << configPath << ": "
+                 << folly::errnoStr(errno);
+    }
+  }
+
+  // We use all 0's to check if a file is created/deleted
+  if (statRslt != 0) {
+    memset(configStat, 0, sizeof(struct stat));
+  }
 }
 } // namespace
 
 namespace facebook {
 namespace eden {
+
+const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
+const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
 std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
   switch (cs) {
@@ -220,7 +241,6 @@ void EdenConfig::setSystemConfigPath(AbsolutePath systemConfigPath) {
 bool hasConfigFileChanged(
     AbsolutePath configFileName,
     const struct stat* oldStat) {
-  bool fileChangeDetected{false};
   struct stat currentStat;
 
   // We are using stat to check for file deltas. Since we don't open file,
@@ -237,10 +257,8 @@ bool hasConfigFileChanged(
     // We use all 0's to check if a file is created/deleted
     memset(&currentStat, 0, sizeof(currentStat));
   }
-  if (!equalStats(currentStat, *oldStat)) {
-    fileChangeDetected = true;
-  }
-  return fileChangeDetected;
+
+  return !equalStats(currentStat, *oldStat);
 }
 
 bool EdenConfig::hasUserConfigFileChanged() const {
@@ -268,26 +286,6 @@ void EdenConfig::clearAll(ConfigSource configSource) {
     for (auto& keyEntry : sectionEntry.second) {
       keyEntry.second->clearValue(configSource);
     }
-  }
-}
-
-static void getConfigStat(
-    AbsolutePathPiece configPath,
-    int configFd,
-    struct stat* configStat) {
-  int statRslt{-1};
-  if (configFd >= 0) {
-    statRslt = fstat(configFd, configStat);
-    // Report failure that is not due to ENOENT
-    if (statRslt != 0) {
-      XLOG(WARN) << "error accessing config file " << configPath << ": "
-                 << folly::errnoStr(errno);
-    }
-  }
-
-  // We use all 0's to check if a file is created/deleted
-  if (statRslt != 0) {
-    memset(configStat, 0, sizeof(struct stat));
   }
 }
 

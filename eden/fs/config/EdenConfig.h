@@ -23,12 +23,11 @@
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
-extern const facebook::eden::RelativePathPiece kDefaultEdenDirectory;
-extern const facebook::eden::RelativePathPiece kDefaultIgnoreFile;
-extern const facebook::eden::AbsolutePath kUnspecifiedDefault;
-
 namespace facebook {
 namespace eden {
+
+extern const facebook::eden::RelativePathPiece kDefaultEdenDirectory;
+extern const facebook::eden::AbsolutePath kUnspecifiedDefault;
 
 /**
  * EdenConfig holds the Eden configuration settings. It is constructed from
