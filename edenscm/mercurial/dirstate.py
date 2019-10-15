@@ -908,6 +908,18 @@ class dirstate(object):
         # things from lookup that were processed in step 2.
         seenset = set(deleted + modified)
 
+        # audit_path is used to verify that nonnormal files still exist and are
+        # not behind symlinks.
+        auditpath = pathutil.pathauditor(self._root, cached=True)
+
+        def fileexists(fn):
+            # So let's double check for the existence of that file.
+            st = list(util.statfiles([self._join(fn)]))[0]
+
+            # auditpath checks to see if the file is under a symlink directory.
+            # If it is, we treat it the same as if it didn't exist.
+            return st is not None and auditpath.check(fn)
+
         # Step 2: Handle status results that are not simply pending filesystem
         # changes on top of the pristine tree.
         for fn in otherparentset:
@@ -918,18 +930,17 @@ class dirstate(object):
             # We only need to handle 'n' here, since all other states will be
             # covered by the nonnormal loop below.
             if state in "n":
-                try:
-                    # pendingchanges() above only checks for changes against p1.
-                    # For things from p2, we need to manually check for
-                    # existence. We don't have to check if they're modified,
-                    # since them coming from p2 indicates they are considered
-                    # modified.
-                    os.lstat(self._join(fn))
+                # pendingchanges() above only checks for changes against p1.
+                # For things from p2, we need to manually check for
+                # existence. We don't have to check if they're modified,
+                # since them coming from p2 indicates they are considered
+                # modified.
+                if fileexists(fn):
                     if mtolog > 0:
                         mtolog -= 1
                         self._ui.log("status", "M %s: exists in p2" % fn)
                     madd(fn)
-                except OSError:
+                else:
                     dadd(fn)
                 seenset.add(fn)
 
@@ -945,7 +956,11 @@ class dirstate(object):
                     mtolog -= 1
                     self._ui.log("status", "M %s: state is 'm' (merge)" % fn)
             elif state == "a":
-                aadd(fn)
+                if fileexists(fn):
+                    aadd(fn)
+                else:
+                    # If an added file is deleted, report it as missing
+                    dadd(fn)
                 seenset.add(fn)
             elif state == "r":
                 radd(fn)

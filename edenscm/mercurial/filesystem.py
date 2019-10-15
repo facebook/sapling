@@ -157,6 +157,7 @@ class physicalfilesystem(object):
             if fn in seen or not match(fn):
                 continue
             t = dget(fn)
+            state = t[0]
             size = t[2]
 
             # If it came from the other parent and it doesn't exist in p1,
@@ -180,6 +181,12 @@ class physicalfilesystem(object):
             # auditpath checks to see if the file is under a symlink directory.
             # If it is, we treat it the same as if it didn't exist.
             if st is None or not auditpath.check(fn):
+                # Don't report it as deleted if it wasn't in the original tree,
+                # because pendingchanges is only supposed to report differences
+                # from the original tree. The higher level dirstate code will
+                # handle testing if added files are still there.
+                if state in "a":
+                    continue
                 yield (fn, False, False)
             else:
                 changed = self._ischanged(fn, st)

@@ -110,3 +110,11 @@ coherent (issue4353)
   1
   $ hg status
   ? a
+  $ rm .hg/hgrc
+
+Verify that status reports deleted files correctly
+  $ hg add a
+  $ rm a
+  $ hg status
+  ! a
+  $ hg diff
