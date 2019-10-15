@@ -15,8 +15,8 @@ use futures::{sink::Wait, sync::mpsc};
 use futures_ext::BoxStream;
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
+use session_id::SessionId;
 use tokio_io::codec::{Decoder, Encoder};
-use uuid::Uuid;
 
 use netstring::{NetstringDecoder, NetstringEncoder};
 
@@ -65,7 +65,7 @@ pub struct Preamble {
 impl Preamble {
     pub fn new(
         reponame: String,
-        session_uuid: Uuid,
+        session_uuid: SessionId,
         unix_username: Option<String>,
         source_hostname: Option<String>,
         ssh_env_vars: SshEnvVars,

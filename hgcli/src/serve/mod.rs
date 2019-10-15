@@ -11,6 +11,7 @@ use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
 
 use bytes::Bytes;
+use context::generate_session_id;
 use fbinit::FacebookInit;
 use futures::{future, stream, Future, Sink, Stream};
 use slog::{debug, error, o, Drain, Logger};
@@ -112,7 +113,7 @@ impl<'a> StdioRelay<'a> {
         let mut scuba_logger =
             ScubaSampleBuilder::with_opt_table(self.fb, self.scuba_table.map(|v| v.to_owned()));
 
-        let session_uuid = uuid::Uuid::new_v4();
+        let session_uuid = generate_session_id();
         let unix_username = if let Some(mock_username) = self.mock_username {
             Some(mock_username.to_string())
         } else {

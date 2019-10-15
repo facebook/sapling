@@ -25,6 +25,7 @@ use futures::{self, Future, IntoFuture};
 use futures_ext::FutureExt;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilder;
+pub use session_id::SessionId;
 use slog::{info, o, warn, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
 use sshrelay::SshEnvVars;
 use tracing::{generate_trace_id, TraceContext};
@@ -311,27 +312,9 @@ impl PerfCounters {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SessionId(String);
-
-impl SessionId {
-    pub fn from_string<T: ToString>(s: T) -> Self {
-        Self(s.to_string())
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
-impl fmt::Display for SessionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 pub fn generate_session_id() -> SessionId {
-    SessionId(thread_rng().sample_iter(&Alphanumeric).take(16).collect())
+    let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    SessionId::from_string(s)
 }
 
 #[derive(Clone)]
