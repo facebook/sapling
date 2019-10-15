@@ -16,14 +16,14 @@ use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, SqliteFactory, XdbFactory};
+use blobstore_factory::{make_blobstore, make_sql_factory};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use futures::future;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, Redaction, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
 use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
@@ -65,23 +65,14 @@ fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
+    myrouter_port: Option<u16>,
+    logger: Logger,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
 
-    match storage_config.dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
-            make_blobstore(fb, &blobconfig, &SqliteFactory::new(path), None)
-        }
-        MetadataDBConfig::Mysql {
-            db_address,
-            sharded_filenodes,
-        } => make_blobstore(
-            fb,
-            &blobconfig,
-            &XdbFactory::new(db_address, None, sharded_filenodes),
-            None,
-        ),
-    }
+    make_sql_factory(storage_config.dbconfig, myrouter_port, logger)
+        .and_then(move |sql_factory| make_blobstore(fb, &blobconfig, &sql_factory, myrouter_port))
+        .boxify()
 }
 
 pub fn subcommand_blobstore_fetch(
@@ -95,7 +86,14 @@ pub fn subcommand_blobstore_fetch(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let blobstore_fut = get_blobstore(fb, storage_config, inner_blobstore_id);
+    let myrouter_port = args::parse_myrouter_port(&matches);
+    let blobstore_fut = get_blobstore(
+        fb,
+        storage_config,
+        inner_blobstore_id,
+        myrouter_port,
+        logger.clone(),
+    );
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;

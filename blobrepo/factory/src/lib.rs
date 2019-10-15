@@ -9,7 +9,7 @@
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
+use blobstore_factory::{make_blobstore, make_sql_factory, SqlFactory};
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
@@ -27,15 +27,12 @@ use filestore::FilestoreConfig;
 use futures::{future::IntoFuture, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use memblob::EagerMemblob;
-use metaconfig_types::{
-    self, BlobConfig, FilestoreParams, MetadataDBConfig, Redaction, StorageConfig,
-};
+use metaconfig_types::{self, FilestoreParams, Redaction, StorageConfig};
 use mononoke_types::RepositoryId;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
-use sql_ext::myrouter_ready;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 
@@ -48,11 +45,6 @@ pub enum Caching {
 
 const BLOBSTORE_BLOBS_CACHE_POOL: &'static str = "blobstore-blobs";
 const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
-
-pub enum BlobsVia {
-    Config(BlobConfig),
-    Store(BoxFuture<Arc<dyn Blobstore>, Error>),
-}
 
 /// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
 /// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
@@ -73,90 +65,34 @@ pub fn open_blobrepo(
     filestore_params: Option<FilestoreParams>,
     logger: Logger,
 ) -> BoxFuture<BlobRepo, Error> {
-    // Usual case is to use the config
-    open_blobrepo_with_blobstore(
+    let sql_fut = make_sql_factory(storage_config.dbconfig, myrouter_port, logger.clone());
+    let blobconfig = storage_config.blobstore;
+    let datasources = sql_fut
+        .map(move |sql_factory| {
+            (
+                make_blobstore(fb, &blobconfig, &sql_factory, myrouter_port),
+                sql_factory,
+            )
+        })
+        .boxify();
+
+    open_blobrepo_given_datasources(
         fb,
-        storage_config.dbconfig,
-        BlobsVia::Config(storage_config.blobstore),
+        datasources,
         repoid,
-        myrouter_port,
         caching,
         bookmarks_cache_ttl,
         redaction,
         scuba_censored_table,
         filestore_params,
-        logger,
     )
+    .boxify()
 }
 
-/// Expose for graph walker that has already opened blobstore
-pub fn open_blobrepo_with_blobstore(
+/// Expose for graph walker that has storage open already
+pub fn open_blobrepo_given_datasources(
     fb: FacebookInit,
-    dbconfig: MetadataDBConfig,
-    blobs_via: BlobsVia,
-    repoid: RepositoryId,
-    myrouter_port: Option<u16>,
-    caching: Caching,
-    bookmarks_cache_ttl: Option<Duration>,
-    redaction: Redaction,
-    scuba_censored_table: Option<String>,
-    filestore_params: Option<FilestoreParams>,
-    logger: Logger,
-) -> BoxFuture<BlobRepo, Error> {
-    match dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
-            let sql_factory = SqliteFactory::new(path.to_path_buf());
-            let unredacted_blobstore = match blobs_via {
-                BlobsVia::Config(config) => make_blobstore(fb, &config, &sql_factory, None),
-                BlobsVia::Store(blobstore) => blobstore,
-            };
-            open_blobrepo_given_datasources(
-                fb,
-                sql_factory,
-                unredacted_blobstore,
-                repoid,
-                caching,
-                bookmarks_cache_ttl,
-                redaction,
-                scuba_censored_table,
-                filestore_params,
-            )
-            .boxify()
-        }
-        MetadataDBConfig::Mysql {
-            db_address,
-            sharded_filenodes,
-        } => {
-            let sql_factory = XdbFactory::new(db_address.clone(), myrouter_port, sharded_filenodes);
-            myrouter_ready(Some(db_address), myrouter_port, logger)
-                .and_then(move |_| {
-                    let unredacted_blobstore = match blobs_via {
-                        BlobsVia::Config(config) => {
-                            make_blobstore(fb, &config, &sql_factory, myrouter_port)
-                        }
-                        BlobsVia::Store(blobstore) => blobstore,
-                    };
-                    open_blobrepo_given_datasources(
-                        fb,
-                        sql_factory,
-                        unredacted_blobstore,
-                        repoid,
-                        caching,
-                        bookmarks_cache_ttl,
-                        redaction,
-                        scuba_censored_table,
-                        filestore_params,
-                    )
-                })
-                .boxify()
-        }
-    }
-}
-
-fn open_blobrepo_given_datasources<T: SqlFactory>(
-    fb: FacebookInit,
-    sql_factory: T,
-    unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
+    datasources: BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error>,
     repoid: RepositoryId,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
@@ -164,76 +100,79 @@ fn open_blobrepo_given_datasources<T: SqlFactory>(
     scuba_censored_table: Option<String>,
     filestore_params: Option<FilestoreParams>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let filestore_config = filestore_params
-        .map(|params| {
-            let FilestoreParams {
-                chunk_size,
-                concurrency,
-            } = params;
+    datasources.and_then(move |(unredacted_blobstore, sql_factory)| {
+        let redacted_blobs = match redaction {
+            Redaction::Enabled => sql_factory
+                .open::<SqlRedactedContentStore>()
+                .and_then(move |redacted_store| {
+                    let redacted_blobs = redacted_store
+                        .get_all_redacted_blobs()
+                        .map_err(Error::from)
+                        .map(HashMap::from_iter);
+                    Some(redacted_blobs)
+                })
+                .left_future(),
+            Redaction::Disabled => Ok(None).into_future().right_future(),
+        }
+        .boxify();
 
-            FilestoreConfig {
-                chunk_size: Some(chunk_size),
-                concurrency,
-            }
-        })
-        .unwrap_or(FilestoreConfig::default());
+        let filestore_config = filestore_params
+            .map(|params| {
+                let FilestoreParams {
+                    chunk_size,
+                    concurrency,
+                } = params;
 
-    let redacted_blobs = match redaction {
-        Redaction::Enabled => sql_factory
-            .open::<SqlRedactedContentStore>()
-            .and_then(move |redacted_store| {
-                let redacted_blobs = redacted_store
-                    .get_all_redacted_blobs()
-                    .map_err(Error::from)
-                    .map(HashMap::from_iter);
-                Some(redacted_blobs)
+                FilestoreConfig {
+                    chunk_size: Some(chunk_size),
+                    concurrency,
+                }
             })
-            .left_future(),
-        Redaction::Disabled => Ok(None).into_future().right_future(),
-    }
-    .boxify();
+            .unwrap_or(FilestoreConfig::default());
 
-    match caching {
-        Caching::Disabled | Caching::CachelibOnlyBlobstore => {
-            let blobstore = if caching == Caching::CachelibOnlyBlobstore {
-                // Use cachelib
-                let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
-                let presence_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
+        match caching {
+            Caching::Disabled | Caching::CachelibOnlyBlobstore => {
+                let blobstore = if caching == Caching::CachelibOnlyBlobstore {
+                    // Use cachelib
+                    let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
+                    let presence_pool =
+                        try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
 
-                unredacted_blobstore
-                    .map(move |s| {
-                        let s: Arc<dyn Blobstore> = Arc::new(new_cachelib_blobstore_no_lease(
-                            s,
-                            Arc::new(blob_pool),
-                            Arc::new(presence_pool),
-                        ));
-                        s
-                    })
-                    .boxify()
-            } else {
-                unredacted_blobstore
-            };
-            new_development(
+                    unredacted_blobstore
+                        .map(move |s| {
+                            let s: Arc<dyn Blobstore> = Arc::new(new_cachelib_blobstore_no_lease(
+                                s,
+                                Arc::new(blob_pool),
+                                Arc::new(presence_pool),
+                            ));
+                            s
+                        })
+                        .boxify()
+                } else {
+                    unredacted_blobstore
+                };
+                new_development(
+                    fb,
+                    &sql_factory,
+                    blobstore,
+                    redacted_blobs,
+                    scuba_censored_table,
+                    repoid,
+                    filestore_config,
+                )
+            }
+            Caching::Enabled => new_production(
                 fb,
                 &sql_factory,
-                blobstore,
+                unredacted_blobstore,
                 redacted_blobs,
                 scuba_censored_table,
                 repoid,
+                bookmarks_cache_ttl,
                 filestore_config,
-            )
+            ),
         }
-        Caching::Enabled => new_production(
-            fb,
-            &sql_factory,
-            unredacted_blobstore,
-            redacted_blobs,
-            scuba_censored_table,
-            repoid,
-            bookmarks_cache_ttl,
-            filestore_config,
-        ),
-    }
+    })
 }
 
 /// Used by tests
@@ -273,9 +212,9 @@ pub fn new_memblob_empty_with_id(
     ))
 }
 
-fn new_development<T: SqlFactory>(
+fn new_development(
     fb: FacebookInit,
-    sql_factory: &T,
+    sql_factory: &SqlFactory,
     unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
     redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
     scuba_censored_table: Option<String>,
@@ -331,9 +270,9 @@ fn new_development<T: SqlFactory>(
 
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
-fn new_production<T: SqlFactory>(
+fn new_production(
     fb: FacebookInit,
-    sql_factory: &T,
+    sql_factory: &SqlFactory,
     blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
     redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
     scuba_censored_table: Option<String>,

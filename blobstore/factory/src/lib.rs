@@ -22,12 +22,15 @@ use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use fileblob::Fileblob;
+use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
-use metaconfig_types::{self, BlobConfig, ShardedFilenodesParams};
+use metaconfig_types::{self, BlobConfig, MetadataDBConfig, ShardedFilenodesParams};
 use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use scuba::ScubaSampleBuilder;
+use slog::Logger;
+use sql_ext::myrouter_ready;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
@@ -37,7 +40,7 @@ pub enum Scrubbing {
     Disabled,
 }
 
-pub trait SqlFactory: Send + Sync {
+trait SqlFactoryBase: Send + Sync {
     /// Open an arbitrary struct implementing SqlConstructors
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error>;
 
@@ -45,14 +48,14 @@ pub trait SqlFactory: Send + Sync {
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error>;
 }
 
-pub struct XdbFactory {
+struct XdbFactory {
     db_address: String,
     myrouter_port: Option<u16>,
     sharded_filenodes: Option<ShardedFilenodesParams>,
 }
 
 impl XdbFactory {
-    pub fn new(
+    fn new(
         db_address: String,
         myrouter_port: Option<u16>,
         sharded_filenodes: Option<ShardedFilenodesParams>,
@@ -65,7 +68,7 @@ impl XdbFactory {
     }
 }
 
-impl SqlFactory for XdbFactory {
+impl SqlFactoryBase for XdbFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
         T::with_xdb(self.db_address.clone(), self.myrouter_port)
             .map(|r| Arc::new(r))
@@ -107,17 +110,17 @@ impl SqlFactory for XdbFactory {
     }
 }
 
-pub struct SqliteFactory {
+struct SqliteFactory {
     path: PathBuf,
 }
 
 impl SqliteFactory {
-    pub fn new(path: PathBuf) -> Self {
+    fn new(path: PathBuf) -> Self {
         SqliteFactory { path }
     }
 }
 
-impl SqlFactory for SqliteFactory {
+impl SqlFactoryBase for SqliteFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
         let r = try_boxfuture!(T::with_sqlite_path(self.path.join(T::LABEL)));
         Ok(Arc::new(r)).into_future().boxify()
@@ -130,12 +133,55 @@ impl SqlFactory for SqliteFactory {
     }
 }
 
+pub struct SqlFactory {
+    underlying: Either<SqliteFactory, XdbFactory>,
+}
+
+impl SqlFactory {
+    pub fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+        self.underlying.as_ref().either(|l| l.open(), |r| r.open())
+    }
+
+    pub fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
+        self.underlying
+            .as_ref()
+            .either(|l| l.open_filenodes(), |r| r.open_filenodes())
+    }
+}
+
+pub fn make_sql_factory(
+    dbconfig: MetadataDBConfig,
+    myrouter_port: Option<u16>,
+    logger: Logger,
+) -> impl Future<Item = SqlFactory, Error = Error> {
+    match dbconfig {
+        MetadataDBConfig::LocalDB { path } => {
+            let sql_factory = SqliteFactory::new(path.to_path_buf());
+            future::ok(SqlFactory {
+                underlying: Either::Left(sql_factory),
+            })
+            .left_future()
+        }
+        MetadataDBConfig::Mysql {
+            db_address,
+            sharded_filenodes,
+        } => {
+            let sql_factory = XdbFactory::new(db_address.clone(), myrouter_port, sharded_filenodes);
+            myrouter_ready(Some(db_address), myrouter_port, logger)
+                .map(move |()| SqlFactory {
+                    underlying: Either::Right(sql_factory),
+                })
+                .right_future()
+        }
+    }
+}
+
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
-pub fn make_blobstore<T: SqlFactory>(
+pub fn make_blobstore(
     fb: FacebookInit,
     blobconfig: &BlobConfig,
-    sql_factory: &T,
+    sql_factory: &SqlFactory,
     myrouter_port: Option<u16>,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
