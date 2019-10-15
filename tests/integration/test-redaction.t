@@ -320,7 +320,7 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
 
 Should be successful
   $ hgmn rebase -s . -d bbb84cdc8ec0
-  rebasing 3:c6e4e7cae299 "update a" (master_bookmark)
+  rebasing c6e4e7cae299 "update a" (master_bookmark)
 
   $ tglogpnr
   @  d967612e0cc1 draft 'update a' master_bookmark
