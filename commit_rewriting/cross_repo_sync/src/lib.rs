@@ -17,9 +17,10 @@ use failure::{err_msg, Error, Fail};
 use futures::Future;
 use futures_preview::{
     compat::Future01CompatExt,
-    future::{try_join, FutureExt, TryFutureExt},
+    future::{FutureExt, TryFutureExt},
     stream::{futures_unordered::FuturesUnordered, TryStreamExt},
 };
+use maplit::hashmap;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
@@ -46,36 +47,11 @@ async fn identity<T>(res: T) -> Result<T, Error> {
     Ok(res)
 }
 
-/// Applies `rewrite_path` to all paths in `cs`, dropping any entry whose path rewrites to `None`
-/// E.g. adding a prefix can be done by a `rewrite` that adds the prefix and returns `Some(path)`.
-/// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
-/// Additionally, changeset IDs are rewritten, and the post-rewrite changeset IDs are returned for
-/// verification (e.g. to ensure that all changeset IDs have been correctly rewritten into IDs
-/// that will be present in the target repo after a cross-repo sync)
-async fn rewrite_commit<M: SyncedCommitMapping>(
-    ctx: CoreContext,
+pub fn rewrite_commit(
     mut cs: BonsaiChangesetMut,
-    source_repo_id: RepositoryId,
-    target_repo_id: RepositoryId,
-    mapping: &M,
+    remapped_parents: &HashMap<ChangesetId, ChangesetId>,
     rewrite_path: Mover,
-) -> Result<Option<(BonsaiChangesetMut, Vec<ChangesetId>)>, Error> {
-    let mut changesets_to_check: Vec<ChangesetId> = Vec::new();
-    let mut remapped_parents = HashMap::new();
-    for commit in cs.parents.iter_mut() {
-        let remapped_commit = mapping
-            .get(ctx.clone(), source_repo_id, *commit, target_repo_id)
-            .compat()
-            .await?;
-        // If it doesn't remap, we will optimistically assume that the
-        // target is already in the repo - this is passed out
-        // to the caller to validate, as Mercurial has trouble if it's not true
-        let remapped_commit = remapped_commit.unwrap_or(*commit);
-        changesets_to_check.push(remapped_commit.clone());
-        remapped_parents.insert(commit.clone(), remapped_commit);
-        *commit = remapped_commit;
-    }
-
+) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
         let path_rewritten_changes: Result<BTreeMap<_, _>, _> = cs
             .file_changes
@@ -141,7 +117,50 @@ async fn rewrite_commit<M: SyncedCommitMapping>(
         }
     }
 
-    Ok(Some((cs, changesets_to_check)))
+    // Update hashes
+    for commit in cs.parents.iter_mut() {
+        let remapped = remapped_parents.get(commit).ok_or(err_msg(format!(
+            "mapping for parent commit {} not found!",
+            commit
+        )))?;
+
+        *commit = *remapped;
+    }
+
+    Ok(Some(cs))
+}
+
+/// Applies `rewrite_path` to all paths in `cs`, dropping any entry whose path rewrites to `None`
+/// E.g. adding a prefix can be done by a `rewrite` that adds the prefix and returns `Some(path)`.
+/// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
+/// Additionally, changeset IDs are rewritten, and the post-rewrite changeset IDs are returned for
+/// verification (e.g. to ensure that all changeset IDs have been correctly rewritten into IDs
+/// that will be present in the target repo after a cross-repo sync)
+async fn remap_parents_and_rewrite_commit<M: SyncedCommitMapping>(
+    ctx: CoreContext,
+    mut cs: BonsaiChangesetMut,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+    mapping: &M,
+    rewrite_path: Mover,
+) -> Result<Option<(BonsaiChangesetMut, Vec<ChangesetId>)>, Error> {
+    let mut changesets_to_check: Vec<ChangesetId> = Vec::new();
+    let mut remapped_parents = HashMap::new();
+    for commit in cs.parents.iter_mut() {
+        let remapped_commit = mapping
+            .get(ctx.clone(), source_repo_id, *commit, target_repo_id)
+            .compat()
+            .await?;
+        // If it doesn't remap, we will optimistically assume that the
+        // target is already in the repo - this is passed out
+        // to the caller to validate, as Mercurial has trouble if it's not true
+        let remapped_commit = remapped_commit.unwrap_or(*commit);
+        changesets_to_check.push(remapped_commit.clone());
+        remapped_parents.insert(commit.clone(), remapped_commit);
+    }
+
+    let cs = rewrite_commit(cs, &remapped_parents, rewrite_path)?;
+    Ok(cs.map(|cs| (cs, changesets_to_check)))
 }
 
 #[derive(Clone)]
@@ -192,6 +211,98 @@ impl CommitSyncRepos {
     }
 }
 
+pub fn upload_rewritten_commits_compat(
+    ctx: CoreContext,
+    rewritten_list: Vec<BonsaiChangeset>,
+    source_repo: BlobRepo,
+    target_repo: BlobRepo,
+) -> impl Future<Item = (), Error = Error> {
+    upload_rewritten_commits(ctx, rewritten_list, source_repo, target_repo)
+        .boxed()
+        .compat()
+}
+
+pub async fn upload_rewritten_commits(
+    ctx: CoreContext,
+    rewritten_list: Vec<BonsaiChangeset>,
+    source_repo: BlobRepo,
+    target_repo: BlobRepo,
+) -> Result<(), Error> {
+    let mut files_to_sync = vec![];
+    for rewritten in &rewritten_list {
+        let rewritten_mut = rewritten.clone().into_mut();
+        let new_files_to_sync = rewritten_mut
+            .file_changes
+            .values()
+            .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()));
+        files_to_sync.extend(new_files_to_sync);
+    }
+
+    let source_blobstore = source_repo.get_blobstore();
+    let target_blobstore = target_repo.get_blobstore();
+    let target_filestore_config = target_repo.get_filestore_config();
+    let uploader: FuturesUnordered<_> = files_to_sync
+        .into_iter()
+        .map({
+            |content_id| {
+                copy_content(
+                    ctx.clone(),
+                    source_blobstore.clone(),
+                    target_blobstore.clone(),
+                    target_filestore_config.clone(),
+                    content_id,
+                )
+                .compat()
+            }
+        })
+        .collect();
+    uploader.try_for_each_concurrent(100, identity).await?;
+    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone())
+        .compat()
+        .await?;
+    Ok(())
+}
+
+pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: CoreContext,
+    mapped: HashMap<ChangesetId, ChangesetId>,
+    repos: CommitSyncRepos,
+    mapping: M,
+) -> impl Future<Item = (), Error = Error> {
+    update_mapping(ctx, mapped, repos, mapping).boxed().compat()
+}
+
+pub async fn update_mapping<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: CoreContext,
+    mapped: HashMap<ChangesetId, ChangesetId>,
+    repos: CommitSyncRepos,
+    mapping: M,
+) -> Result<(), Error> {
+    let (source_repo, target_repo, source_is_large) = match repos {
+        CommitSyncRepos::LargeToSmall {
+            large_repo,
+            small_repo,
+        } => (large_repo, small_repo, true),
+        CommitSyncRepos::SmallToLarge {
+            small_repo,
+            large_repo,
+        } => (small_repo, large_repo, false),
+    };
+
+    let source_repoid = source_repo.get_repoid();
+    let target_repoid = target_repo.get_repoid();
+
+    for (from, to) in mapped {
+        let entry = if source_is_large {
+            SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to)
+        } else {
+            SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from)
+        };
+        mapping.add(ctx.clone(), entry).compat().await?;
+    }
+    Ok(())
+}
+
 /// Syncs `cs` from `source_repo` to `target_repo`, using `mapping` to rewrite commit hashes, and `rewrite_paths` to rewrite paths in the commit
 /// Returns the ID of the resulting synced commit
 pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
@@ -203,20 +314,20 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
     rewrite_paths: Mover,
 ) -> Result<Option<ChangesetId>, Error> {
     let hash = cs.get_changeset_id();
-    let (source_repo, target_repo, source_is_large) = match repos {
+    let (source_repo, target_repo) = match repos.clone() {
         CommitSyncRepos::LargeToSmall {
             large_repo,
             small_repo,
-        } => (large_repo, small_repo, true),
+        } => (large_repo, small_repo),
         CommitSyncRepos::SmallToLarge {
             small_repo,
             large_repo,
-        } => (small_repo, large_repo, false),
+        } => (small_repo, large_repo),
     };
     let source_repoid = source_repo.get_repoid();
     let target_repoid = target_repo.get_repoid();
     // Rewrite the commit
-    match rewrite_commit(
+    match remap_parents_and_rewrite_commit(
         ctx.clone(),
         cs.into_mut(),
         source_repoid,
@@ -228,30 +339,6 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
     {
         None => Ok(None),
         Some((rewritten, changesets)) => {
-            // Upload files
-            let files_to_sync: Vec<_> = rewritten
-                .file_changes
-                .values()
-                .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()))
-                .collect();
-            let source_blobstore = source_repo.get_blobstore();
-            let target_blobstore = target_repo.get_blobstore();
-            let target_filestore_config = target_repo.get_filestore_config();
-            let uploader: FuturesUnordered<_> = files_to_sync
-                .into_iter()
-                .map({
-                    |content_id| {
-                        copy_content(
-                            ctx.clone(),
-                            source_blobstore.clone(),
-                            target_blobstore.clone(),
-                            target_filestore_config.clone(),
-                            content_id,
-                        )
-                        .compat()
-                    }
-                })
-                .collect();
             // And check changesets are all in target
             let changesets_check: FuturesUnordered<_> = changesets
                 .into_iter()
@@ -272,11 +359,9 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
                     }
                 })
                 .collect();
-            try_join(
-                uploader.try_for_each_concurrent(100, identity),
-                changesets_check.try_for_each_concurrent(100, identity),
-            )
-            .await?;
+            changesets_check
+                .try_for_each_concurrent(100, identity)
+                .await?;
 
             // Special case - commits with no parents (=> beginning of a repo) graft directly
             // to the bookmark, so that we can start a new sync with a fresh repo
@@ -298,9 +383,13 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
             // Sync commit
             let frozen = rewritten.freeze()?;
             let rewritten_list = vec![frozen];
-            save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone())
-                .compat()
-                .await?;
+            upload_rewritten_commits(
+                ctx.clone(),
+                rewritten_list.clone(),
+                source_repo.clone(),
+                target_repo.clone(),
+            )
+            .await?;
 
             let pushrebase_params = {
                 let mut params = PushrebaseParams::default();
@@ -322,14 +411,15 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
             .await;
             let pushrebase_res =
                 pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
-            let changeset = pushrebase_res.head;
-            let entry = if source_is_large {
-                SyncedCommitMappingEntry::new(source_repoid, hash, target_repoid, changeset)
-            } else {
-                SyncedCommitMappingEntry::new(target_repoid, changeset, source_repoid, hash)
-            };
-            mapping.add(ctx, entry).compat().await?;
-            Ok(Some(changeset))
+            let pushrebased_changeset = pushrebase_res.head;
+            update_mapping(
+                ctx.clone(),
+                hashmap! { hash => pushrebased_changeset },
+                repos,
+                mapping,
+            )
+            .await?;
+            Ok(Some(pushrebased_changeset))
         }
     }
 }
