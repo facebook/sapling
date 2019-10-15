@@ -23,7 +23,7 @@ Test invalid value for amend.autorestack
   $ hg update B -q
   $ hg amend -m "new message"
   invalid amend.autorestack config of "test"; falling back to only-trivial
-  rebasing 2:ca039b450ae0 "C" (C)
+  rebasing ca039b450ae0 "C" (C)
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
   hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
 
@@ -55,15 +55,15 @@ amend.autorestack=only-trivial, and simple changes (expect restack)
   > EOS
   $ hg update B -q
   $ hg amend -m 'Unchanged manifest for B'
-  rebasing 2:26805aba1e60 "C" (C)
+  rebasing 26805aba1e60 "C" (C)
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
   hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [426bad] A
   $ hg amend -m 'Unchanged manifest for A'
-  rebasing 3:5357953e3ea3 "Unchanged manifest for B"
-  rebasing 4:b635bd2cf20b "C"
+  rebasing 5357953e3ea3 "Unchanged manifest for B"
+  rebasing b635bd2cf20b "C"
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
   hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
 
@@ -147,7 +147,7 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   $ $TESTDIR/seq.py 0 2 > file
   $ hg amend
   custom autorestack message
-  rebasing 2:ca039b450ae0 "C" (C)
+  rebasing ca039b450ae0 "C" (C)
   merging file
   $ showgraph
   o  4 7ed7d67ad7bf C
@@ -219,8 +219,8 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   $ echo 'unmergeable!' > file
   $ hg amend
   restacking children automatically (unless they conflict)
-  rebasing 2:b6c0d35dc9e9 "C" (C)
-  rebasing 3:02cc3cc1d010 "D" (D)
+  rebasing b6c0d35dc9e9 "C" (C)
+  rebasing 02cc3cc1d010 "D" (D)
   merging file
   transaction abort!
   rollback completed
@@ -254,11 +254,11 @@ amend.autorestack=always, and conflicting changes (expect restack)
   $ hg update B -q
   $ echo 'unmergeable!' > file
   $ hg amend
-  rebasing 2:b6c0d35dc9e9 "C" (C)
-  rebasing 3:02cc3cc1d010 "D" (D)
+  rebasing b6c0d35dc9e9 "C" (C)
+  rebasing 02cc3cc1d010 "D" (D)
   merging file
   hit merge conflicts (in file); switching to on-disk merge
-  rebasing 3:02cc3cc1d010 "D" (D)
+  rebasing 02cc3cc1d010 "D" (D)
   merging file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -296,9 +296,9 @@ Test rebasing children with obsolete children themselves needing a restack.
   $ echo "new value" > A
   $ hg amend
   restacking children automatically (unless they conflict)
-  rebasing 2:917a077edb8d "B" (B)
-  rebasing 4:ff9eba5e2480 "C2" (C2)
-  rebasing 5:01f26f1a10b2 "D" (D)
+  rebasing 917a077edb8d "B" (B)
+  rebasing ff9eba5e2480 "C2" (C2)
+  rebasing 01f26f1a10b2 "D" (D)
   $ showgraph
   o  9 0a75af8fc6e3 D
   |
@@ -338,7 +338,7 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   $ hg up -q B2
   $ hg amend -m B3
   restacking children automatically (unless they conflict)
-  rebasing 5:afb1812f5f28 "D" (D)
+  rebasing afb1812f5f28 "D" (D)
   $ showgraph
   o  7 c9dfcf01df0b D
   |

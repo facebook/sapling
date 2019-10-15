@@ -15,7 +15,7 @@ Encountering a merge conflict prints the number of textual conflicts in each fil
   > a            # d/a = two
   > EOS
   $ hg rebase -r d -d e
-  rebasing 3:211accd27e10 "d" (d)
+  rebasing 211accd27e10 "d" (d)
   merging a
   merging b
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
@@ -70,7 +70,7 @@ A merge conflict prints the possible conflicting commits:
   > a            # d/a = two
   > EOS
   $ hg rebase -r d -d j
-  rebasing 3:211accd27e10 "d" (d)
+  rebasing 211accd27e10 "d" (d)
   merging a
   merging b
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')

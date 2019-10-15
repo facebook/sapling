@@ -89,11 +89,11 @@ we expect to see "generators version = NEW".
 
   $ hg rebase -d new_driver
   rebasing in-memory!
-  rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
+  rebasing 83615e50cada "prefix FILE with 0" (base_1 tip)
   generators version = BASE
   base's someFunction() called
   artifact rebuild required (in FILE); switching to on-disk merge
-  rebasing 2:* "prefix FILE with 0" (base_1 tip) (glob)
+  rebasing 83615e50cada "prefix FILE with 0" (base_1 tip)
   generators version = NEW
   new_required_arg = new_required
   note: rebase of 2:* created no changes to commit (glob)

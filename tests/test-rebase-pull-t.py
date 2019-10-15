@@ -63,7 +63,7 @@ sh % "hg pull --rebase" == r'''
     adding file changes
     added 1 changesets with 1 changes to 1 files (+1 heads)
     new changesets 77ae9631bcca
-    rebasing 2:ff8d69a621f9 "L1"'''
+    rebasing ff8d69a621f9 "L1"'''
 
 sh % "tglog" == r"""
     @  4: d80cc2da061e 'L1'
@@ -200,7 +200,7 @@ sh % "hg pull --rev tip --rebase" == r'''
     adding file changes
     added 2 changesets with 2 changes to 2 files
     new changesets 31cd3a05214e:770a61882ace
-    rebasing 3:ff8d69a621f9 "L1"'''
+    rebasing ff8d69a621f9 "L1"'''
 sh % "tglog" == r"""
     @  6: 518d153c0ba3 'L1'
     |
@@ -239,7 +239,7 @@ sh % "hg pull --rebase" == r'''
     adding file changes
     added 1 changesets with 1 changes to 1 files (+1 heads)
     new changesets 00e3b7781125
-    rebasing 6:518d153c0ba3 "L1"'''
+    rebasing 518d153c0ba3 "L1"'''
 sh % "tglog" == r"""
     @  8: 0d0727eb7ce0 'L1'
     |
@@ -286,8 +286,8 @@ sh % "hg pull --rebase" == r'''
     adding file changes
     added 1 changesets with 1 changes to 1 files (+1 heads)
     new changesets 88dd24261747
-    rebasing 8:0d0727eb7ce0 "L1"
-    rebasing 9:c1f58876e3bf "L2"'''
+    rebasing 0d0727eb7ce0 "L1"
+    rebasing c1f58876e3bf "L2"'''
 sh % "tglog" == r"""
     o  12: 6dc0ea5dcf55 'L2'
     |

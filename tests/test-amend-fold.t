@@ -65,7 +65,7 @@ Test rebasing of stack after fold.
   $ hg fold --from '.^'
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  rebasing 4:b762560d23fd "r4"
+  rebasing b762560d23fd "r4"
   merging mf
   $ showgraph
   o  10 c480ccdc36c0 r4
@@ -86,13 +86,13 @@ Test rebasing of multiple children
   $ hg fold --from '.^'
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  rebasing 5:* "r5" (glob)
+  rebasing 77d787dfa5b6 "r5"
   merging mf
-  rebasing 8:* "r6" (glob)
+  rebasing dd0541003d21 "r6"
   merging mf
-  rebasing 9:* "r2" (glob)
+  rebasing fac8d040c80b "r2"
   merging mf
-  rebasing 10:* "r4" (glob)
+  rebasing c480ccdc36c0 "r4"
   merging mf
   $ showgraph
   o  15 6b8dd87db039 r4
@@ -132,15 +132,15 @@ rebase is not on the topmost folded commit.
   $ hg fold --from 2
   3 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  rebasing 3:a422badec216 "r3"
+  rebasing a422badec216 "r3"
   merging mf
-  rebasing 4:b762560d23fd "r4"
+  rebasing b762560d23fd "r4"
   merging mf
-  rebasing 5:77d787dfa5b6 "r5"
+  rebasing 77d787dfa5b6 "r5"
   merging mf
-  rebasing 6:ec6d8e65acbe "r6"
+  rebasing ec6d8e65acbe "r6"
   merging mf
-  rebasing 7:9c9414e0356c "r7"
+  rebasing 9c9414e0356c "r7"
   merging mf
   $ showgraph
   o  13 69b8281910bd r7
@@ -174,9 +174,9 @@ Also test that using node hashes instead of rev numbers works.
 
   $ hg fold --exact 09bb8c f07e66 cb14eb
   3 changesets folded
-  rebasing 4:aa70f0fe546a "r4"
+  rebasing aa70f0fe546a "r4"
   merging mf
-  rebasing 5:f2987ebe5838 "r5"
+  rebasing f2987ebe5838 "r5"
   merging mf
   $ showgraph
   o  8 064f4cd2992f r5

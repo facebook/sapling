@@ -232,7 +232,7 @@ Test that rebasing and pushing works as expected
   @  0 a
   
   $ hg --config extensions.rebase= rebase -d default/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
-  rebasing 1:cc61aa6be3dc "c" (headc)
+  rebasing cc61aa6be3dc "c" (headc)
   merging a
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   $ echo "a" > a
@@ -241,7 +241,7 @@ Test that rebasing and pushing works as expected
   $ hg resolve --mark a
   (no more unresolved files)
   $ hg --config extensions.rebase= rebase --continue
-  rebasing 1:cc61aa6be3dc "c" (headc)
+  rebasing cc61aa6be3dc "c" (headc)
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/cc61aa6be3dc-73e4f2eb-*.hg (glob)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 c headc

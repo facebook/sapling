@@ -156,7 +156,7 @@ Split parent, selecting all changes at the end
   record this change to 'file3'? [Ynesfdaq?] y
   
   no more change to split
-  rebasing 23:0529c1ec7df6 "c6"
+  rebasing 0529c1ec7df6 "c6"
 
 Split leaves the checkout at the top of the split commits
 
@@ -170,7 +170,7 @@ Split leaves the checkout at the top of the split commits
 Amend with rebase afterwards (split info should not be propagated)
 
   $ hg amend --rebase -m "c5 (split)"
-  rebasing 26:0623f07d148d "c6"
+  rebasing 0623f07d148d "c6"
   $ hg debugmutation ".::tip"
    *  48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
       aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:

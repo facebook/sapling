@@ -24,7 +24,7 @@
 Testing on-failure=continue
   $ echo on-failure=continue >> $HGRCPATH
   $ hg rebase -s 1 -d 2 --tool false
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   merging a failed!
@@ -42,7 +42,7 @@ Testing on-failure=continue
 Testing on-failure=halt
   $ echo on-failure=halt >> $HGRCPATH
   $ hg rebase -s 1 -d 2 --tool false
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   merging a failed!
@@ -67,7 +67,7 @@ Testing on-failure=prompt
   > y
   > n
   > EOS
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   merging a failed!
@@ -87,7 +87,7 @@ Testing on-failure=prompt
   $ cat <<EOS | hg rebase -s 1 -d 2 --tool false
   > a
   > EOS
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   merging a failed!
@@ -113,7 +113,7 @@ Check that successful tool with failed post-check halts the merge
   > n
   > n
   > EOS
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
    output file a appears unchanged
@@ -141,7 +141,7 @@ Check that conflicts with conflict check also halts the merge
   > on-failure=halt
   > EOS
   $ hg rebase -s 1 -d 2 --tool true
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   merging a failed!
@@ -160,7 +160,7 @@ Check that always-prompt also can halt the merge
   > y
   > n
   > EOS
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   was merge of 'a' successful (yn)? y
@@ -178,7 +178,7 @@ Check that always-prompt also can halt the merge
 
 Check that successful tool otherwise allows the merge to continue
   $ hg rebase -s 1 -d 2 --tool echo --keep --config merge-tools.echo.premerge=keep
-  rebasing 1:1f28a51c3c9b "c"
+  rebasing 1f28a51c3c9b "c"
   merging a
   merging b
   $TESTTMP/repo/a *a~base* *a~other* (glob)

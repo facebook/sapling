@@ -214,7 +214,7 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   o  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 commit
   
   $ hg rebase -s f79c5017de -d 773a3ba2e7c2
-  rebasing 5:f79c5017def3 "newhead1"
+  rebasing f79c5017def3 "newhead1"
   $ hg cloud backup
   backing up stack rooted at 667453c0787e
   remote: pushing 3 commits:
@@ -500,8 +500,8 @@ Create logs directory and set correct permissions
   b18e25de2cf5fc4699a029ed635882849e53ef73 backed up
   26805aba1e600a82e93661149f2313866a221a7b backed up
   $ hg rebase -s B -d D --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
-  rebasing 2:112478962961 "B" (B)
-  rebasing 4:26805aba1e60 "C" (C tip)
+  rebasing 112478962961 "B" (B)
+  rebasing 26805aba1e60 "C" (C tip)
   $ waitbgbackup
   $ hg log -r ':' -G -T '{desc} {node}'
   o  C ffeec75ec60331057b875fc5356c57c3ff204500

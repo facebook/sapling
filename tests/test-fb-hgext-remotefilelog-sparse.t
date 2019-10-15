@@ -98,4 +98,4 @@ pulled
   $ hg prefetch -r '. + .^' -I x -I z
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
   $ hg rebase -d 2 --keep
-  rebasing 1:876b1317060d "x2" (foo)
+  rebasing 876b1317060d "x2" (foo)

@@ -28,7 +28,7 @@ Test amend copytrace
   hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
-  rebasing 2:ad25e018afa9 "mod a"
+  rebasing ad25e018afa9 "mod a"
   merging b and a to b
   $ ls
   b
@@ -70,11 +70,11 @@ Test amend copytrace with multiple stacked commits
   $ hg mv c c3
   $ hg amend
   $ hg rebase --restack
-  rebasing 2:797127d4e250 "mod a"
+  rebasing 797127d4e250 "mod a"
   merging a1 and a to a1
-  rebasing 3:e2aabbfe749a "mod b"
+  rebasing e2aabbfe749a "mod b"
   merging b2 and b to b2
-  rebasing 4:4f8d18558559 "mod c" (test-top)
+  rebasing 4f8d18558559 "mod c" (test-top)
   merging c3 and c to c3
   $ hg up test-top
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -106,7 +106,7 @@ Test amend copytrace with multiple renames of the same file
   $ hg mv b c
   $ hg amend
   $ hg rebase --restack
-  rebasing 2:ad25e018afa9 "mod a"
+  rebasing ad25e018afa9 "mod a"
   merging c and a to c
   $ hg update 5
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -141,8 +141,8 @@ Test amend copytrace with copies
   $ hg cp b c
   $ hg amend
   $ hg rebase --restack
-  rebasing 2:6938f0d82b23 "mod a"
-  rebasing 3:df8dfcb1d237 "mod i" (test-top)
+  rebasing 6938f0d82b23 "mod a"
+  rebasing df8dfcb1d237 "mod i" (test-top)
   $ hg up test-top
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark test-top)
@@ -175,7 +175,7 @@ Test rebase after amend deletion of copy
   $ hg rm b
   $ hg amend
   $ hg rebase --restack
-  rebasing 2:ad25e018afa9 "mod a"
+  rebasing ad25e018afa9 "mod a"
   $ cd ..
   $ rm -rf repo
 
@@ -199,9 +199,9 @@ Test failure to rebase deletion after rename
   hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
-  rebasing 2:ad25e018afa9 "mod a"
+  rebasing ad25e018afa9 "mod a"
   merging b and a to b
-  rebasing 3:ba0395f0e180 "delete a"
+  rebasing ba0395f0e180 "delete a"
   abort: a@ba0395f0e180: not found in manifest!
   [255]
   $ hg rebase --abort
@@ -231,7 +231,7 @@ Test amend copytrace can be disabled
   hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
-  rebasing 2:ad25e018afa9 "mod a"
+  rebasing ad25e018afa9 "mod a"
   other [source] changed a which local [dest] deleted
   hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u

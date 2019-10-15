@@ -56,8 +56,8 @@ TODO: Make this test compatibile with obsstore enabled.
 Conflicting rebase:
 
   $ hg rebase -s 3 -d 2
-  rebasing 3:3163e20567cc "L1"
-  rebasing 4:46f0b057b5c0 "L2" (tip)
+  rebasing 3163e20567cc "L1"
+  rebasing 46f0b057b5c0 "L2" (tip)
   merging common
   warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -131,8 +131,8 @@ forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
 earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
 
   $ hg rebase -s 3 -d 2
-  rebasing 3:3163e20567cc "L1"
-  rebasing 4:46f0b057b5c0 "L2" (tip)
+  rebasing 3163e20567cc "L1"
+  rebasing 46f0b057b5c0 "L2" (tip)
   merging common
   warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -199,9 +199,9 @@ Rebase and abort without generating new changesets:
   o  0: 1994f17a630e public 'A'
   
   $ hg rebase -b 4 -d 2
-  rebasing 3:a6484957d6b9 "B bis"
+  rebasing a6484957d6b9 "B bis"
   note: rebase of 3:a6484957d6b9 created no changes to commit
-  rebasing 4:145842775fec "C1" (tip)
+  rebasing 145842775fec "C1" (tip)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -260,7 +260,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   
 
   $ hg rebase -d master -r foo
-  rebasing 3:6c0f977a22d8 "C" (foo tip)
+  rebasing 6c0f977a22d8 "C" (foo tip)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -299,7 +299,7 @@ user has somehow managed to update to a different revision (issue4009)
   $ hg commit -m b2
 
   $ hg rebase -d @ -b foo --tool=internal:fail
-  rebasing 2:070cf4580bb5 "b2" (foo tip)
+  rebasing 070cf4580bb5 "b2" (foo tip)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -364,8 +364,8 @@ test aborting an interrupted series (issue5084)
   @  0 base
   
   $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 3 -d tip
-  rebasing 3:3a71550954f1 "b"
-  rebasing 4:e80b69427d80 "c"
+  rebasing 3a71550954f1 "b"
+  rebasing e80b69427d80 "c"
   abort: ^C
   [255]
   $ hg rebase --abort
@@ -413,7 +413,7 @@ during a rebase (issue4661)
   $ hg ci -m "conflicting 2"
 
   $ hg rebase -d 1 --tool 'internal:fail'
-  rebasing 2:e4ea5cdc9789 "conflicting 1"
+  rebasing e4ea5cdc9789 "conflicting 1"
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort

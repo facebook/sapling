@@ -106,8 +106,8 @@ Split in the middle of a stack.
   examine changes to 'c2'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  rebasing 4:* "add d1 and d2" (glob)
-  rebasing 5:* "add d1 and d2"* (glob)
+  rebasing 3c66f08f0fd3 "add d1 and d2"
+  rebasing 43b9beefca2e "add d1 and d2"
 
   $ showgraph
   o  9 bdb846f063c6 add d1 and d2
@@ -148,12 +148,12 @@ Split with multiple children and using hash.
   examine changes to 'a2'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  rebasing 1:* "add b1 and b2" (glob)
-  rebasing 6:* "add c1 and c2" (glob)
-  rebasing 7:* "add c1 and c2" (glob)
-  rebasing 8:* "add d1 and d2" (glob)
-  rebasing 9:* "add d1 and d2" (glob)
-  rebasing 10:* "add d1 and d2"* (glob)
+  rebasing b7fb8fde59b2 "add b1 and b2"
+  rebasing 6227053e403e "add c1 and c2"
+  rebasing bff303a2c228 "add c1 and c2"
+  rebasing acbc5d06143b "add d1 and d2"
+  rebasing bdb846f063c6 "add d1 and d2"
+  rebasing bd98a3c83a29 "add d1 and d2"
 
   $ showgraph
   o  18 5ad76779e999 add d1 and d2
@@ -197,10 +197,10 @@ Split using revset.
   examine changes to 'b2'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  rebasing 14:* "add c1 and c2" (glob)
-  rebasing 15:* "add c1 and c2" (glob)
-  rebasing 16:* "add d1 and d2" (glob)
-  rebasing 17:* "add d1 and d2"* (glob)
+  rebasing 7c57722f849b "add c1 and c2"
+  rebasing 7300aee81508 "add c1 and c2"
+  rebasing 7c766f705803 "add d1 and d2"
+  rebasing c2fa6cc56f60 "add d1 and d2"
 
   $ showgraph
   o  23 065a5bb834a6 add d1 and d2
@@ -232,10 +232,10 @@ Test that command aborts when given multiple commits.
 Test --no-rebase flag.
   $ mkcommit e
   $ hg rebase -s 20 -d .
-  rebasing 20:* "add c1 and c2" (glob)
-  rebasing 21:* "add c1 and c2" (glob)
-  rebasing 22:* "add d1 and d2" (glob)
-  rebasing 23:* "add d1 and d2" (glob)
+  rebasing 216c1cfd66ba "add c1 and c2"
+  rebasing 6b6c4cdbcb5c "add c1 and c2"
+  rebasing e3e63b66173e "add d1 and d2"
+  rebasing 065a5bb834a6 "add d1 and d2"
   $ showgraph
   o  28 5f8ed24aed8c add d1 and d2
   |

@@ -30,7 +30,7 @@ sh % "hg up 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unr
 sh % "hg mv 1 2"
 sh % "hg ci -m dest"
 sh % "hg rebase -s 1 -d ." == r"""
-    rebasing 1:812796267395 "2"
+    rebasing 812796267395 "2"
     other [source] changed 1 which local [dest] deleted
     hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
     use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
@@ -38,6 +38,6 @@ sh % "hg rebase -s 1 -d ." == r"""
     [1]"""
 sh % "hg rebase --abort" == "rebase aborted"
 sh % "hg rebase -s 1 -d . --config=experimental.copytrace=on" == r"""
-    rebasing 1:812796267395 "2"
+    rebasing 812796267395 "2"
     merging 2 and 1 to 2
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/812796267395-81e11405-rebase.hg (glob)"""
+    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/812796267395-81e11405-rebase.hg"""

@@ -73,7 +73,7 @@ Test deleting divergent bookmarks from dest (issue3685)
   o  0: 1994f17a630e 'A' Y@diverge
   
   $ hg rebase -s Y -d 3
-  rebasing 2:49cb3485fa0c "C" (Y Z)
+  rebasing 49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/49cb3485fa0c-126f3e97-rebase.hg
 
   $ tglog
@@ -95,7 +95,7 @@ Do not try to keep active but deleted divergent bookmark
   $ hg book W@diverge
 
   $ hg rebase -s W -d .
-  rebasing 3:41acb9dca9eb "D" (W tip)
+  rebasing 41acb9dca9eb "D" (W tip)
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/41acb9dca9eb-b35a6a63-rebase.hg
 
   $ hg bookmarks
@@ -113,8 +113,8 @@ Keep bookmarks to the correct rebased changeset
   $ hg up -q Z
 
   $ hg rebase -s 1 -d 3
-  rebasing 1:6c81ed0049f8 "B" (X)
-  rebasing 2:49cb3485fa0c "C" (Y Z)
+  rebasing 6c81ed0049f8 "B" (X)
+  rebasing 49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/6c81ed0049f8-a687065f-rebase.hg
 
   $ tglog
@@ -136,8 +136,8 @@ Keep active bookmark on the correct changeset
   $ hg up -q X
 
   $ hg rebase -d W
-  rebasing 1:6c81ed0049f8 "B" (X)
-  rebasing 2:49cb3485fa0c "C" (Y Z)
+  rebasing 6c81ed0049f8 "B" (X)
+  rebasing 49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/6c81ed0049f8-a687065f-rebase.hg
 
   $ tglog
@@ -166,7 +166,7 @@ rebase --continue with bookmarks present (issue3802)
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase --dest 4
-  rebasing 3:3d5fa227f4b5 "C" (Y Z)
+  rebasing 3d5fa227f4b5 "C" (Y Z)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -176,7 +176,7 @@ rebase --continue with bookmarks present (issue3802)
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 3:3d5fa227f4b5 "C" (Y Z)
+  rebasing 3d5fa227f4b5 "C" (Y Z)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/3d5fa227f4b5-c6ea2371-rebase.hg
   $ tglog
   @  4: 45c0f0ec1203 'C' Y Z
@@ -204,9 +204,9 @@ as --rev arguments (issue3950)
   $ hg book bisect
   $ hg update -q Y
   $ hg rebase -r '"bisect"^^::"bisect"^' -r bisect -d Z
-  rebasing 5:345c90f326a4 "bisect"
-  rebasing 6:f677a2907404 "bisect2"
-  rebasing 7:325c16001345 "bisect3" (bisect tip)
+  rebasing 345c90f326a4 "bisect"
+  rebasing f677a2907404 "bisect2"
+  rebasing 325c16001345 "bisect3" (bisect tip)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/345c90f326a4-b4840586-rebase.hg
 
 Bookmark and working parent get moved even if --keep is set (issue5682)
@@ -229,7 +229,7 @@ Bookmark and working parent get moved even if --keep is set (issue5682)
   o  0: 426bada5c675 'A' A
   
   $ hg rebase -r B -d C --keep
-  rebasing 1:112478962961 "B" (B)
+  rebasing 112478962961 "B" (B)
   $ tglog
   @  3: 9769fc65c4c5 'B' B
   |

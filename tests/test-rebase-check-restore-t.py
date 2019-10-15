@@ -71,8 +71,8 @@ sh % "tglogp" == r"""
     |/
     o  0: 4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 1 -d 4 --keep" == r"""
-    rebasing 1:27547f69f254 "B"
-    rebasing 2:965c486023db "C"
+    rebasing 27547f69f254 "B"
+    rebasing 965c486023db "C"
     merging A
     warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -86,8 +86,8 @@ sh % "hg resolve -m A" == r"""
     (no more unresolved files)
     continue: hg rebase --continue"""
 sh % "hg rebase --continue" == r'''
-    already rebased 1:27547f69f254 "B" as 45396c49d53b
-    rebasing 2:965c486023db "C"'''
+    already rebased 27547f69f254 "B" as 45396c49d53b
+    rebasing 965c486023db "C"'''
 
 sh % "tglogp" == r"""
     o  7: d2d25e26288e secret 'C'
@@ -127,7 +127,7 @@ sh % "tglogp" == r"""
     |/
     o  0: 4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 5 -d 4" == r"""
-    rebasing 5:3225f3ea730a "F" (tip)
+    rebasing 3225f3ea730a "F" (tip)
     merging A
     warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -141,7 +141,7 @@ sh % "hg resolve -m A" == r"""
     (no more unresolved files)
     continue: hg rebase --continue"""
 sh % "hg rebase --continue" == r"""
-    rebasing 5:3225f3ea730a "F" (tip)
+    rebasing 3225f3ea730a "F" (tip)
     saved backup bundle to $TESTTMP/a2/.hg/strip-backup/3225f3ea730a-289ce185-rebase.hg"""
 
 sh % "tglogp" == r"""

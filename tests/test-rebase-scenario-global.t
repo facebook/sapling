@@ -53,7 +53,7 @@ can abort or warn for colliding untracked files)
   A D
   $ echo collide > D
   $ HGEDITOR=cat hg rebase -s 3 -d 7 --edit --config merge.checkunknown=warn
-  rebasing 3:32af7686d403 "D"
+  rebasing 32af7686d403 "D"
   D: replacing untracked file
   D
   
@@ -98,7 +98,7 @@ that we can ignore for colliding untracked files)
   $ echo collide > D
 
   $ HGEDITOR=cat hg rebase -s 3 -d 5 --config merge.checkunknown=ignore
-  rebasing 3:32af7686d403 "D"
+  rebasing 32af7686d403 "D"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/32af7686d403-6f7dface-rebase.hg
   $ cat D.orig
   collide
@@ -134,8 +134,8 @@ if they have the same contents)
   E
 
   $ hg rebase -s 4 -d 7
-  rebasing 4:9520eea781bc "E"
-  rebasing 6:eea13746799a "G"
+  rebasing 9520eea781bc "E"
+  rebasing eea13746799a "G"
   note: rebase of 6:eea13746799a created no changes to commit
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/9520eea781bc-fcd8edd4-rebase.hg
   $ f E.orig
@@ -165,10 +165,10 @@ F onto E - rebase of a branching point (skip G):
   $ cd a4
 
   $ hg rebase -s 5 -d 4
-  rebasing 5:24b6387c8c8c "F"
-  rebasing 6:eea13746799a "G"
+  rebasing 24b6387c8c8c "F"
+  rebasing eea13746799a "G"
   note: rebase of 6:eea13746799a created no changes to commit
-  rebasing 7:02de42196ebe "H" (tip)
+  rebasing 02de42196ebe "H" (tip)
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
   $ tglog
@@ -195,7 +195,7 @@ G onto H - merged revision having a parent in ancestors of target:
   $ cd a5
 
   $ hg rebase -s 6 -d 7
-  rebasing 6:eea13746799a "G"
+  rebasing eea13746799a "G"
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/eea13746799a-883828ed-rebase.hg
 
   $ tglog
@@ -224,9 +224,9 @@ F onto B - G maintains E as parent:
   $ cd a6
 
   $ hg rebase -s 5 -d 1
-  rebasing 5:24b6387c8c8c "F"
-  rebasing 6:eea13746799a "G"
-  rebasing 7:02de42196ebe "H" (tip)
+  rebasing 24b6387c8c8c "F"
+  rebasing eea13746799a "G"
+  rebasing 02de42196ebe "H" (tip)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
   $ tglog
@@ -268,7 +268,7 @@ F onto G - rebase onto a descendant:
 G onto B - merge revision with both parents not in ancestors of target:
 
   $ hg rebase -s 6 -d 1
-  rebasing 6:eea13746799a "G"
+  rebasing eea13746799a "G"
   abort: cannot rebase 6:eea13746799a without moving at least one of its parents
   [255]
   $ hg rebase --abort
@@ -294,8 +294,8 @@ F onto G - rebase onto a descendant:
 C onto A - rebase onto an ancestor:
 
   $ hg rebase -d 0 -s 2
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg
   $ tglog
   o  7: c9659aac0000 'D'
@@ -330,39 +330,39 @@ Check rebasing public changeset
   [255]
 
   $ hg rebase -d 5 -b 6 --keep
-  rebasing 6:e1c4361dd923 "C"
-  rebasing 7:c9659aac0000 "D" (tip)
+  rebasing e1c4361dd923 "C"
+  rebasing c9659aac0000 "D" (tip)
 
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
   $ hg id -n
   5
   $ hg rebase -s9 -d0
-  rebasing 9:2b23e52411f4 "D" (tip)
+  rebasing 2b23e52411f4 "D" (tip)
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2b23e52411f4-f942decf-rebase.hg
   $ hg id -n # check we updated back to parent
   5
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg rebase -s9 -d1
-  rebasing 9:2cb10d0cfc6c "D" (tip)
+  rebasing 2cb10d0cfc6c "D" (tip)
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2cb10d0cfc6c-ddb0f256-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg phase --force --secret 9
   $ hg rebase -s9 -d0
-  rebasing 9:c5b12b67163a "D" (tip)
+  rebasing c5b12b67163a "D" (tip)
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c5b12b67163a-4e372053-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   secret
   $ hg rebase -s9 -d1
-  rebasing 9:2a0524f868ac "D" (tip)
+  rebasing 2a0524f868ac "D" (tip)
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2a0524f868ac-cefd8574-rebase.hg
   $ hg log --template "{phase}\n" -r 9
   secret
 Source phase lower than destination phase: new changeset get the phase of destination:
   $ hg rebase -s8 -d9
-  rebasing 8:6d4f22462821 "C"
+  rebasing 6d4f22462821 "C"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6d4f22462821-3441f70b-rebase.hg
   $ hg log --template "{phase}\n" -r 'rev(9)'
   secret
@@ -391,7 +391,7 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   o  0:cb9a public a
   
   $ hg rebase -s 1 -d 2
-  rebasing 1:d2ae7f538514 "b"
+  rebasing d2ae7f538514 "b"
   saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/d2ae7f538514-2953539b-rebase.hg
   $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
   o  2:c882 draft b
@@ -448,11 +448,11 @@ Source on have two descendant heads but ask for one
   (use --keep to keep original changesets)
   [255]
   $ hg rebase -r '2::8' -d 1 -k
-  rebasing 2:c9e50f6cdc55 "C"
-  rebasing 3:ffd453c31098 "D"
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
-  rebasing 8:479ddb54a924 "I" (tip)
+  rebasing c9e50f6cdc55 "C"
+  rebasing ffd453c31098 "D"
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
+  rebasing 479ddb54a924 "I" (tip)
   $ tglog
   o  13: 9bf1d9358a90 'I'
   |
@@ -494,10 +494,10 @@ Base on have one descendant heads we ask for but common ancestor have two
   (use --keep to keep original changesets)
   [255]
   $ hg rebase -r '3::8' -d 1 --keep
-  rebasing 3:ffd453c31098 "D"
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
-  rebasing 8:479ddb54a924 "I" (tip)
+  rebasing ffd453c31098 "D"
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
+  rebasing 479ddb54a924 "I" (tip)
   $ tglog
   o  12: 9d7da0053b1c 'I'
   |
@@ -537,9 +537,9 @@ rebase subset
   (use --keep to keep original changesets)
   [255]
   $ hg rebase -r '3::7' -d 1 --keep
-  rebasing 3:ffd453c31098 "D"
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
+  rebasing ffd453c31098 "D"
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
   $ tglog
   o  11: 8fbd00952cbc 'H'
   |
@@ -577,11 +577,11 @@ rebase subset with multiple head
   (use --keep to keep original changesets)
   [255]
   $ hg rebase -r '3::(7+5)' -d 1 --keep
-  rebasing 3:ffd453c31098 "D"
-  rebasing 4:c01897464e7f "E"
-  rebasing 5:41bfcc75ed73 "F"
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
+  rebasing ffd453c31098 "D"
+  rebasing c01897464e7f "E"
+  rebasing 41bfcc75ed73 "F"
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
   $ tglog
   o  13: 8fbd00952cbc 'H'
   |
@@ -621,9 +621,9 @@ rebase on ancestor with revset
   $ hg clone -q -u . ah ah5
   $ cd ah5
   $ hg rebase -r '6::' -d 2
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
-  rebasing 8:479ddb54a924 "I" (tip)
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
+  rebasing 479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-b4f73f31-rebase.hg
   $ tglog
   o  8: fcb52e68a694 'I'
@@ -654,11 +654,11 @@ We would expect heads are I, F if it was supported
   $ hg clone -q -u . ah ah6
   $ cd ah6
   $ hg rebase -r '(4+6)::' -d 1
-  rebasing 4:c01897464e7f "E"
-  rebasing 5:41bfcc75ed73 "F"
-  rebasing 6:3d8a618087a7 "G"
-  rebasing 7:72434a4e60b0 "H"
-  rebasing 8:479ddb54a924 "I" (tip)
+  rebasing c01897464e7f "E"
+  rebasing 41bfcc75ed73 "F"
+  rebasing 3d8a618087a7 "G"
+  rebasing 72434a4e60b0 "H"
+  rebasing 479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-aae93a24-rebase.hg
   $ tglog
   o  8: 9136df9a87cf 'I'
@@ -725,8 +725,8 @@ each root have a different common ancestor with the destination and this is a de
 (actual test)
 
   $ hg rebase --dest 'desc(G)' --rev 'desc(K) + desc(I)'
-  rebasing 8:e7ec4e813ba6 "I"
-  rebasing 10:23a4ace37988 "K" (tip)
+  rebasing e7ec4e813ba6 "I"
+  rebasing 23a4ace37988 "K" (tip)
   saved backup bundle to $TESTTMP/a8/.hg/strip-backup/23a4ace37988-b06984b3-rebase.hg
   $ hg log --rev 'children(desc(G))'
   changeset:   9:adb617877056
@@ -789,10 +789,10 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   $ hg commit -m 'second source with subdir'
 
   $ hg rebase -b . -d 1 --traceback
-  rebasing 2:779a07b1b7a0 "first source commit"
+  rebasing 779a07b1b7a0 "first source commit"
   current directory was removed (rmcwd !)
   (consider changing to repo root: $TESTTMP/cwd-vanish) (rmcwd !)
-  rebasing 3:a7d6f3a00bf3 "second source with subdir" (tip)
+  rebasing a7d6f3a00bf3 "second source with subdir" (tip)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-rebase.hg
 
 Get back to the root of cwd-vanish. Note that even though `cd ..`
@@ -837,11 +837,11 @@ Test that rebase is done in topo order (issue5370)
   
 
   $ hg rebase -s 1 -d 6
-  rebasing 1:76035bbd54bd "B"
-  rebasing 2:d84f5cfaaf14 "C"
-  rebasing 4:82ae8dc7a9b7 "E"
-  rebasing 3:ab709c9f7171 "D"
-  rebasing 5:412b391de760 "F"
+  rebasing 76035bbd54bd "B"
+  rebasing d84f5cfaaf14 "C"
+  rebasing 82ae8dc7a9b7 "E"
+  rebasing ab709c9f7171 "D"
+  rebasing 412b391de760 "F"
   saved backup bundle to $TESTTMP/order/.hg/strip-backup/76035bbd54bd-e341bc99-rebase.hg
 
   $ tglog
@@ -965,7 +965,7 @@ Testing rebase being called inside another transaction
   > EOS
 
   $ hg rebase -s C -d B
-  rebasing 2:dc0947a82db8 "C" (C tip)
+  rebasing dc0947a82db8 "C" (C tip)
 
   $ [ -f .hg/rebasestate ] && echo 'WRONG: rebasestate should not exist'
   [1]

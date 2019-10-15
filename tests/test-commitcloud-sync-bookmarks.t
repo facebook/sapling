@@ -104,7 +104,7 @@ Rebasing the bookmark will make the draft commit disappear.
 
   $ cd ../client1
   $ hg rebase -b foo -d 4
-  note: not rebasing 1:00422fad0026 "draft-commit" (foo), already in destination as 3:441f69264760 "landed-commit"
+  note: not rebasing 00422fad0026 "draft-commit" (foo), already in destination as 441f69264760 "landed-commit"
   $ tglogp
   o  4: 67d363c9001e public 'public-commit-2' foo
   |

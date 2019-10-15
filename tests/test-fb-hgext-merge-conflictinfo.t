@@ -228,7 +228,7 @@ Test case 1: Source deleted, dest changed
   
 
   $ hg rebase -d 1 -s 2
-  rebasing 2:25c2ef28f4c7 "source" (tip)
+  rebasing 25c2ef28f4c7 "source" (tip)
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -304,7 +304,7 @@ Test case 2: Source changed, dest deleted
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -342,7 +342,7 @@ Test case 3: Source changed, dest moved
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   merging file_newloc and file to file_newloc
   saved backup bundle to $TESTTMP/cornercases/foo/foo/foo/foo/.hg/strip-backup/ec87889f5f90-e39a76b8-rebase.hg (glob)
   $ hg up -q 2 # source
@@ -380,7 +380,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
   
 
   $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -418,7 +418,7 @@ Test case 5: Source moved, dest changed
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:e6e7483a8950 "source"
+  rebasing e6e7483a8950 "source"
   merging file and file_newloc to file_newloc
   saved backup bundle to $TESTTMP/cornercases/foo/foo/foo/foo/.hg/strip-backup/e6e7483a8950-8e128ac2-rebase.hg (glob)
   $ hg up 2
@@ -457,7 +457,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
   
 
   $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
-  rebasing 1:e6e7483a8950 "source"
+  rebasing e6e7483a8950 "source"
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -497,7 +497,7 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ed93aeac6b3c "source"
+  rebasing ed93aeac6b3c "source"
   abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
@@ -529,7 +529,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
@@ -565,7 +565,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:b6e55a03a5dc "source"
+  rebasing b6e55a03a5dc "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
@@ -606,7 +606,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
@@ -648,7 +648,7 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:06aece48b59f "source"
+  rebasing 06aece48b59f "source"
   merging file
   warning: internal :merge cannot merge symlinks for file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
@@ -690,7 +690,7 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
   
 
   $ hg rebase -d 2 -s 1
-  rebasing 1:ec87889f5f90 "source"
+  rebasing ec87889f5f90 "source"
   merging file
   warning: internal :merge cannot merge symlinks for file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
@@ -736,7 +736,7 @@ mergestate (like shelve):
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 3:b0582bede31d "shelve changes to: c" (tip)
+  rebasing b0582bede31d "shelve changes to: c" (tip)
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')

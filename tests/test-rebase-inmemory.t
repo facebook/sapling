@@ -36,7 +36,7 @@ Rebase a simple DAG:
   b (no-eol)
   $ hg rebase --debug -r b -d c | grep rebasing
   rebasing in-memory
-  rebasing 2:db0e82a16a62 "b" (b)
+  rebasing db0e82a16a62 "b" (b)
   $ tglog
   o  3: ca58782ad1e4 'b'
   |
@@ -95,7 +95,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   somefile (no-eol)
   $ hg rebase --debug -s b -d a | grep rebasing
   rebasing in-memory
-  rebasing 2:db0e82a16a62 "b" (b)
+  rebasing db0e82a16a62 "b" (b)
   $ tglog
   o  3: fc055c3b4d33 'b'
   |
@@ -111,8 +111,8 @@ Write files to the working copy, and ensure they're still there after the rebase
   b (no-eol)
   $ hg rebase --debug -s 1 -d 3 | grep rebasing
   rebasing in-memory
-  rebasing 1:02952614a83d "d" (d)
-  rebasing 2:f56b71190a8f "c"
+  rebasing 02952614a83d "d" (d)
+  rebasing f56b71190a8f "c"
   $ tglog
   o  3: 753feb6fd12a 'c'
   |
@@ -158,7 +158,7 @@ cleanly.
   $ hg up 0
   1 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ hg rebase -r 4 -d .
-  rebasing 4:0666f6a71f74 "change a's flags" (tip)
+  rebasing 0666f6a71f74 "change a's flags" (tip)
   saved backup bundle to $TESTTMP/repo1/repo3/.hg/strip-backup/0666f6a71f74-a2618702-rebase.hg
   $ hg up -q tip
   $ ls -l a | cut -c -10
@@ -171,7 +171,7 @@ Rebase the working copy parent:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
   rebasing in-memory
-  rebasing 3:753feb6fd12a "c" (tip)
+  rebasing 753feb6fd12a "c" (tip)
   $ tglog
   @  3: 844a7de3e617 'c'
   |
@@ -202,10 +202,10 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   o  0: b173517d0057 'a'
   
   $ hg rebase -r 3 -d 4
-  rebasing 3:844a7de3e617 "c"
+  rebasing 844a7de3e617 "c"
   merging c
   hit merge conflicts (in c); switching to on-disk merge
-  rebasing 3:844a7de3e617 "c"
+  rebasing 844a7de3e617 "c"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -218,7 +218,7 @@ Allow the working copy parent to be rebased with IMM:
   $ hg up -qC 3
   $ hg rebase -r . -d 2
   rebasing in-memory!
-  rebasing 3:844a7de3e617 "c"
+  rebasing 844a7de3e617 "c"
   saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/844a7de3e617-108d0332-rebase.hg
   $ tglog
   @  4: 6f55b7035492 'c'

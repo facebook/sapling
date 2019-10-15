@@ -27,7 +27,7 @@ Check rebase metadata
   $ echo b > b && hg ci -Am b
   adding b
   $ hg rebase -r . -d destination
-  rebasing 3:1e9a3c00cbe9 "b" (tip)
+  rebasing 1e9a3c00cbe9 "b" (tip)
   $ hg debugobsolete
   09d39afb522a08bdb03dc231608f7a3488ab4edc * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'} (glob)
   * * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)

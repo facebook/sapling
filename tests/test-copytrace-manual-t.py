@@ -23,7 +23,7 @@ sh % "hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.c
 r
 Renamed
 """ == r"""
-    rebasing 2:85b47c0eb942 "C"
+    rebasing 85b47c0eb942 "C"
     other [source] changed A which local [dest] deleted
     use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? r
     path 'A' in commit 85b47c0eb942 was renamed to [what path] in commit ed4ad4ec6472 ? Renamed

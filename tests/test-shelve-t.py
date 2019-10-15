@@ -150,7 +150,7 @@ sh % "hg unshelve --keep" == r"""
     unshelving change 'default-01'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 4:4893561a85b4 "shelve changes to: second"
+    rebasing 4893561a85b4 "shelve changes to: second"
     merging a/a"""
 
 sh % "hg revert --all -q"
@@ -258,7 +258,7 @@ sh % "hg unshelve" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 4:4893561a85b4 "shelve changes to: second"
+    rebasing 4893561a85b4 "shelve changes to: second"
     merging a/a
     warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -350,7 +350,7 @@ sh % "hg graft --continue" == r"""
     (continue: hg unshelve --continue)
     [255]"""
 sh % "hg unshelve -c --trace" == r"""
-    rebasing 4:4893561a85b4 "shelve changes to: second"
+    rebasing 4893561a85b4 "shelve changes to: second"
     unshelve of 'default' complete"""
 
 # Ensure the repo is as we hope
@@ -478,12 +478,12 @@ sh % "hg shelve" == r"""
     shelved as default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg rebase -d 1 --config 'extensions.rebase='" == r"""
-    rebasing 2:323bfa07f744 "xyz"
+    rebasing 323bfa07f744 "xyz"
     merging x"""
 sh % "hg unshelve" == r'''
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 3:a2281b51947d "shelve changes to: xyz"'''
+    rebasing a2281b51947d "shelve changes to: xyz"'''
 sh % "hg status" == "M z"
 sh % "cd .."
 
@@ -506,7 +506,7 @@ sh % "hg up -q 1"
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 3:7eac9d98447f "shelve changes to: c" (tip)"""
+    rebasing 7eac9d98447f "shelve changes to: c" (tip)"""
 sh % "hg status" == "A d"
 
 # Unshelve should work on an ancestor of the original commit
@@ -517,7 +517,7 @@ sh % "hg up 0" == "0 files updated, 0 files merged, 1 files removed, 0 files unr
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 5:325b64d70042 "shelve changes to: b" (tip)"""
+    rebasing 325b64d70042 "shelve changes to: b" (tip)"""
 sh % "hg status" == "A d"
 
 # Test bug 4073 we need to enable obsolete markers for it
@@ -594,7 +594,7 @@ sh % "hg unshelve --date '1073741824 0'" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 10:a0cc43106cdd "shelve changes to: commit stuff"
+    rebasing a0cc43106cdd "shelve changes to: commit stuff"
     merging f
     warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -625,7 +625,7 @@ sh % "hg unshelve" == r'''
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 10:a0cc43106cdd "shelve changes to: commit stuff"'''
+    rebasing a0cc43106cdd "shelve changes to: commit stuff"'''
 sh % "hg st" == r"""
     M a
     A f
@@ -641,7 +641,7 @@ sh % "mv f.orig f"
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 10:a0cc43106cdd "shelve changes to: commit stuff"
+    rebasing a0cc43106cdd "shelve changes to: commit stuff"
     merging f
     warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -1090,7 +1090,7 @@ sh % "hg unshelve" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 0:c850bce25d9f "(changes in empty repository)"
+    rebasing c850bce25d9f "(changes in empty repository)"
     merging unknown"""
 sh % "hg status" == "A unknown"
 sh % "hg forget unknown"
@@ -1109,7 +1109,7 @@ sh % "hg status"
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 0:c850bce25d9f "(changes in empty repository)"
+    rebasing c850bce25d9f "(changes in empty repository)"
     merging unknown"""
 sh % "hg status" == "M unknown"
 sh % "hg remove --force unknown"
@@ -1129,7 +1129,7 @@ sh % "hg ci -Am text1" == "adding file"
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 0:a6a994ce5ac2 "(changes in empty repository)"
+    rebasing a6a994ce5ac2 "(changes in empty repository)"
     merging file
     warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -1169,7 +1169,7 @@ sh % "hg shelve --list" == "default * shelve changes to: 1 (glob)"
 sh % "hg unshelve --keep" == r"""
     unshelving change 'default'
     rebasing shelved changes
-    rebasing 1:49351a7ca591 "shelve changes to: 1"
+    rebasing 49351a7ca591 "shelve changes to: 1"
     merging file
     warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -1178,7 +1178,7 @@ sh % "hg resolve --mark file" == r"""
     (no more unresolved files)
     continue: hg unshelve --continue"""
 sh % "hg unshelve --continue" == r"""
-    rebasing 1:49351a7ca591 "shelve changes to: 1"
+    rebasing 49351a7ca591 "shelve changes to: 1"
     unshelve of 'default' complete"""
 sh % "hg shelve --list" == "default * shelve changes to: 1 (glob)"
 sh % "cd .."

@@ -39,7 +39,7 @@ onto the newest successor of their parent.
   |/
   o  0 1f0dee641bb7 add a
   $ hg rebase --restack
-  rebasing 2:4538525df7e2 "add c"
+  rebasing 4538525df7e2 "add c"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  5 b0a0bc953ac3 add c

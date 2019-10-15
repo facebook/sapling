@@ -31,8 +31,8 @@ Rebase two commits, of which one is already in the right place
   > |/
   > A
   > EOF
-  rebasing 2:b18e25de2cf5 "D" (D)
-  already rebased 3:26805aba1e60 "C" (C tip)
+  rebasing b18e25de2cf5 "D" (D)
+  already rebased 26805aba1e60 "C" (C tip)
   o  4: fe3b4c6498fa 'D'
   |
   | o  3: 26805aba1e60 'C'
@@ -52,8 +52,8 @@ Can collapse commits even if one is already in the right place
   > |/
   > A
   > EOF
-  rebasing 2:b18e25de2cf5 "D" (D)
-  rebasing 3:26805aba1e60 "C" (C tip)
+  rebasing b18e25de2cf5 "D" (D)
+  rebasing 26805aba1e60 "C" (C tip)
   o  4: a2493f4ace65 'Collapsed revision
   |  * D
   |  * C'
@@ -77,8 +77,8 @@ the hole (B below), not on top of the destination (A).
   > |
   > A
   > EOF
-  already rebased 1:112478962961 "B" (B)
-  rebasing 3:f585351a92f8 "D" (D tip)
+  already rebased 112478962961 "B" (B)
+  rebasing f585351a92f8 "D" (D tip)
   o  4: 1e6da8103bc7 'D'
   |
   | x  3: f585351a92f8 'D'
@@ -100,7 +100,7 @@ Abort doesn't lose the commits that were already in the right place
   > A
   > EOF
   $ hg rebase -r C+D -d B
-  rebasing 2:ef8c0fe0897b "D" (D)
+  rebasing ef8c0fe0897b "D" (D)
   merging file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

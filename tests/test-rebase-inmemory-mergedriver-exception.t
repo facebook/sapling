@@ -38,7 +38,7 @@ Now make two conflicting commits:
 
 Without IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing 2:c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B tip)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -52,14 +52,14 @@ Without IMM:
 With IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing 2:c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B tip)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing 2:c1d523ef4657 "B" (B tip)
+  rebasing c1d523ef4657 "B" (B tip)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -95,14 +95,14 @@ have to try it both ways. (It might be nice to change that.)
   > EOF
   $ hg commit -m "new base"
   $ hg rebase -r A+B -d .
-  rebasing 1:6cc5ed361a96 "A" (A)
-  rebasing 2:c1d523ef4657 "B" (B)
+  rebasing 6cc5ed361a96 "A" (A)
+  rebasing c1d523ef4657 "B" (B)
   saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/c1d523ef4657-4b35995e-rebase.hg
 
 Without IMM, you can see we try to merge FILE twice (once in preprocess() and once later),
 and it fails:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing 3:ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B tip)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -122,14 +122,14 @@ and it fails:
 With IMM, it's *very* noisy, but we do eventually get to the same place:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing 3:ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B tip)
   in preprocess()
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing 3:ffa05d84855d "B" (B tip)
+  rebasing ffa05d84855d "B" (B tip)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()

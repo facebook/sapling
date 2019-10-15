@@ -42,9 +42,9 @@ TODO: Make this test compatibile with obsstore enabled.
   o  0: 1e635d440a73 'A'
   
   $ hg rebase -s 1 -d 3
-  rebasing 1:0f4f7cb4f549 "B"
+  rebasing 0f4f7cb4f549 "B"
   merging a
-  rebasing 2:30ae917c0e4f "C"
+  rebasing 30ae917c0e4f "C"
   merging a
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f4f7cb4f549-82b3b163-rebase.hg
 
@@ -106,11 +106,11 @@ Full rebase all the way back from branching point:
   $ hg rebase -r 'only(dev,def)' -d $default4 --config ui.interactive=True << EOF
   > c
   > EOF
-  rebasing 2:1e48f4172d62 "dev1"
-  rebasing 4:aeae94a564c6 "dev2"
-  rebasing 6:da5b1609fcb1 "devmerge1"
+  rebasing 1e48f4172d62 "dev1"
+  rebasing aeae94a564c6 "dev2"
+  rebasing da5b1609fcb1 "devmerge1"
   note: rebase of 6:da5b1609fcb1 created no changes to commit
-  rebasing 7:bea5bcfda5f9 "devmerge2" (tip)
+  rebasing bea5bcfda5f9 "devmerge2" (tip)
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1e48f4172d62-cc446d63-rebase.hg
   $ tglog
@@ -134,10 +134,10 @@ Grafty cherry picking rebasing:
   $ hg rebase -r 'children(only(dev,def))' -d $default4 --config ui.interactive=True << EOF
   > c
   > EOF
-  rebasing 4:aeae94a564c6 "dev2"
-  rebasing 6:da5b1609fcb1 "devmerge1"
+  rebasing aeae94a564c6 "dev2"
+  rebasing da5b1609fcb1 "devmerge1"
   note: rebase of 6:da5b1609fcb1 created no changes to commit
-  rebasing 7:bea5bcfda5f9 "devmerge2" (tip)
+  rebasing bea5bcfda5f9 "devmerge2" (tip)
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/aeae94a564c6-2b0faa8a-rebase.hg
   $ tglog
@@ -206,7 +206,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   o  0: 02f0f58d5300 'common'
   
   $ hg rebase -r 4 -d 2
-  rebasing 4:6990226659be "merge p1 3=outside p2 1=ancestor"
+  rebasing 6990226659be "merge p1 3=outside p2 1=ancestor"
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/6990226659be-4d67a0d3-rebase.hg
   $ hg tip
   changeset:   5:cca50676b1c5
@@ -218,7 +218,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   summary:     merge p1 3=outside p2 1=ancestor
   
   $ hg rebase -r 4 -d 2
-  rebasing 4:a57575f79074 "merge p1 1=ancestor p2 3=outside"
+  rebasing a57575f79074 "merge p1 1=ancestor p2 3=outside"
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/a57575f79074-385426e5-rebase.hg
   $ hg tip
   changeset:   5:f9daf77ffe76
@@ -249,7 +249,7 @@ rebase of merge of ancestors
   $ echo 'other change while merging future "rebase ancestors"' > other
   $ hg ci -Aqm 'merge rebase ancestors'
   $ hg rebase -d 5 -v
-  rebasing 6:4c5f12f25ebe "merge rebase ancestors" (tip)
+  rebasing 4c5f12f25ebe "merge rebase ancestors" (tip)
   resolving manifests
   removing other
   note: merging f9daf77ffe76+ and 4c5f12f25ebe using bids from ancestors a60552eb93fb and f59da8fc0fcf
@@ -319,9 +319,9 @@ may include unwanted content:
   > R
   > EOS
   $ hg rebase -r D+E+F -d Z
-  rebasing 5:5f2c926dfecf "D" (D)
-  rebasing 6:b296604d9846 "E" (E)
-  rebasing 7:caa9781e507d "F" (F tip)
+  rebasing 5f2c926dfecf "D" (D)
+  rebasing b296604d9846 "E" (E)
+  rebasing caa9781e507d "F" (F tip)
   abort: rebasing 7:caa9781e507d will include unwanted changes from 4:d6003a550c2c or 3:c1e6b162678d
   [255]
 
@@ -339,9 +339,9 @@ The warning does not get printed if there is no unwanted change detected:
   > R
   > EOS
   $ hg rebase -r B+C+D -d Z
-  rebasing 3:c1e6b162678d "B" (B)
-  rebasing 4:d6003a550c2c "C" (C)
-  rebasing 5:c8f78076273e "D" (D tip)
+  rebasing c1e6b162678d "B" (B)
+  rebasing d6003a550c2c "C" (C)
+  rebasing c8f78076273e "D" (D tip)
   saved backup bundle to $TESTTMP/dual-merge-base2/.hg/strip-backup/d6003a550c2c-6f1424b6-rebase.hg
   $ hg manifest -r 'desc(D)'
   B
@@ -361,8 +361,8 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   > B C Z
   > EOS
   $ hg rebase -r D+F -d Z
-  rebasing 3:004dc1679908 "D" (D)
-  rebasing 5:4be4cbf6f206 "F" (F tip)
+  rebasing 004dc1679908 "D" (D)
+  rebasing 4be4cbf6f206 "F" (F tip)
   saved backup bundle to $TESTTMP/chosen-merge-base1/.hg/strip-backup/004dc1679908-06a66a3c-rebase.hg
   $ hg manifest -r 'desc(F)'
   C
@@ -382,8 +382,8 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   > B C Z
   > EOS
   $ hg rebase -r E+F -d Z
-  rebasing 4:974e4943c210 "E" (E)
-  rebasing 5:4be4cbf6f206 "F" (F tip)
+  rebasing 974e4943c210 "E" (E)
+  rebasing 4be4cbf6f206 "F" (F tip)
   saved backup bundle to $TESTTMP/chosen-merge-base2/.hg/strip-backup/974e4943c210-b2874da5-rebase.hg
   $ hg manifest -r 'desc(F)'
   B

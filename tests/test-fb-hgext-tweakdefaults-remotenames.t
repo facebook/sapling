@@ -49,13 +49,13 @@ Test that hg pull --rebase aborts without --dest
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
-  rebasing 3:3de6bbccf693 "foo" (bm tip)
+  rebasing 3de6bbccf693 "foo" (bm tip)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/3de6bbccf693-0dce0663-rebase.hg (glob)
   $ hg pull --rebase --dest three
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
-  rebasing 3:54ac787ff1c5 "foo" (bm tip)
+  rebasing 54ac787ff1c5 "foo" (bm tip)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/54ac787ff1c5-4c2ca3a1-rebase.hg (glob)
 
 Test that hg pull --update aborts without --dest
@@ -91,7 +91,7 @@ Test that setting a defaultdest allows --update and --rebase to work
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
-  rebasing 4:50f3f60b4841 "d" (tip)
+  rebasing 50f3f60b4841 "d" (tip)
   saved backup bundle to * (glob)
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  ba0f83735c95
@@ -116,7 +116,7 @@ Test that hg pull --rebase also works with a --tool argument
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets e8aa3bc9f3f0
-  rebasing 4:ba0f83735c95 "d"
+  rebasing ba0f83735c95 "d"
   merging d
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/ba0f83735c95-ba455273-rebase.hg (glob)
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'

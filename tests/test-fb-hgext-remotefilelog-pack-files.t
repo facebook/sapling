@@ -186,9 +186,9 @@
 - commit will be required to read the new content of the first commit, which
 - hasn't been flushed to disk yet.
   $ hg rebase -s $C -d $B
-  rebasing 4:e6011cdb8530 "C"
+  rebasing e6011cdb8530 "C"
   merging foo
-  rebasing 5:f579bc04d2ae "D" (tip)
+  rebasing f579bc04d2ae "D" (tip)
   merging foo
 
 # Test compatibility with LFS

@@ -138,7 +138,7 @@ def _revsetdestrebase(repo, subset, x):
 
 def _ctxdesc(ctx):
     """short description for a context"""
-    desc = '%d:%s "%s"' % (ctx.rev(), ctx, ctx.description().split("\n", 1)[0])
+    desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
     repo = ctx.repo()
     names = []
     for nsname, ns in repo.names.iteritems():

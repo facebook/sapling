@@ -61,7 +61,7 @@ Check rebase template keyword.
   |/
   o  1 Amended
   $ hg rebase -r 2 -d .
-  rebasing 2:* "add b" (glob)
+  rebasing * "add b" (glob)
   $ showgraph
   o  4 add b
   |

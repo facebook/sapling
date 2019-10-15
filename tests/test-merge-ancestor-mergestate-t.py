@@ -41,12 +41,12 @@ B
 A   # A/file = 1\n2\n3\n4
 """
 sh % "hg rebase -s A -d 0" == r"""
-    rebasing 1:19c6d3b0d8fb "A" (A)
-    rebasing 3:5a83467e1fc3 "B" (B)
-    rebasing 5:09810f6b52c0 "F" (F)
-    rebasing 4:3ff755c5931b "C" (C)
-    rebasing 6:dc7f2675f9ab "D" (D)
-    rebasing 7:5eb863826611 "E" (E tip)
+    rebasing 19c6d3b0d8fb "A" (A)
+    rebasing 5a83467e1fc3 "B" (B)
+    rebasing 09810f6b52c0 "F" (F)
+    rebasing 3ff755c5931b "C" (C)
+    rebasing dc7f2675f9ab "D" (D)
+    rebasing 5eb863826611 "E" (E tip)
     saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/19c6d3b0d8fb-a2cf1ad8-rebase.hg"""
 sh % "showgraph" == r"""
     o  7 e71547946f82 E
@@ -65,7 +65,7 @@ sh % "showgraph" == r"""
     |
     @  0 9309aa3b805a driver"""
 sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
-    rebasing 4:aa431a9572c1 "F"
+    rebasing aa431a9572c1 "F"
     ancestor nodes = ['01ba3ad89eb70070d81f052c0c40a3877c2ba5d8']
     ancestor revs = [3]
     merging file

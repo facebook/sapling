@@ -53,11 +53,11 @@ d2fa1c02b2401b0e32867f26cce50818a4bd796a:000000000000000000000000000000000000000
 """ > ".hg/rebasestate"
 
 sh % "hg rebase --continue" == r"""
-    rebasing 4:c1e6b162678d "B" (B)
-    rebasing 8:6f7a236de685 "D" (D)
-    rebasing 2:de008c61a447 "E" (E)
-    rebasing 7:d2fa1c02b240 "G" (G)
-    rebasing 9:6582e6951a9c "H" (H tip)
+    rebasing c1e6b162678d "B" (B)
+    rebasing 6f7a236de685 "D" (D)
+    rebasing de008c61a447 "E" (E)
+    rebasing d2fa1c02b240 "G" (G)
+    rebasing 6582e6951a9c "H" (H tip)
     warning: orphaned descendants detected, not stripping c1e6b162678d, de008c61a447
     saved backup bundle to $TESTTMP/.hg/strip-backup/6f7a236de685-9880a3dc-rebase.hg"""
 

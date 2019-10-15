@@ -62,7 +62,7 @@
 
 # Try creating the rebasestate snapshot
   $ hg rebase -s "$MERGEREV" -d .
-  rebasing 7:9d3ebf4630d3 "merge #1"
+  rebasing 9d3ebf4630d3 "merge #1"
   merging mergefile
   warning: 1 conflicts while merging mergefile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

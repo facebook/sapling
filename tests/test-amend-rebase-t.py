@@ -30,7 +30,7 @@ sh % "showgraph" == r"""
     |/
     o  0 1ad88bca4140 r0"""
 sh % "hg rebase -r 1 -d 3" == r"""
-    rebasing 1:* "r1" (glob)
+    rebasing 22094967a90d "r1"
     merging mf"""
 sh % "showgraph" == r"""
     o  4 309a29d7f33b r1

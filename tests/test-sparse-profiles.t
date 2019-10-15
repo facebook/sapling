@@ -192,7 +192,7 @@ Verify rebase conflicts pulls in the conflicting changes
   webpage.sparse
 
   $ hg rebase -d 2
-  rebasing 1:e7901640ca22 "edit profile"
+  rebasing e7901640ca22 "edit profile"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py

@@ -264,7 +264,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ clearcache
   $ find $CACHEDIR -type f | sort
   $ hg rebase -s temporary -d foo
-  rebasing 3:58147a5b5242 "b" (temporary tip)
+  rebasing 58147a5b5242 "b" (temporary tip)
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/58147a5b5242-c3678817-rebase.hg (glob)
   * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob)
   $ sleep 1

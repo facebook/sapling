@@ -240,7 +240,7 @@ Test pulling new commits from a hybrid server
 
 Test rebasing treeonly commits
   $ hg rebase -d 5 -b 2
-  rebasing 2:4b702090309e "hybrid flat+tree commit"
+  rebasing 4b702090309e "hybrid flat+tree commit"
   merging subdir/x
   warning: 1 conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -250,7 +250,7 @@ Test rebasing treeonly commits
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 2:4b702090309e "hybrid flat+tree commit"
+  rebasing 4b702090309e "hybrid flat+tree commit"
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/4b702090309e-7a0f0c5f-rebase.hg (glob)
 
 Test histedit treeonly commits

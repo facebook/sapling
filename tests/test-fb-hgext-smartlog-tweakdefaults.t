@@ -33,9 +33,9 @@ Prepare a repo for rebase checks
   $ echo b > b && hg ci -Am b          # rev 5
   adding b
   $ hg rebase --hidden -r 5 -d 1       # rev 6
-  rebasing 5:1e9a3c00cbe9 "b" (tip)
+  rebasing 1e9a3c00cbe9 "b" (tip)
   $ hg rebase --hidden -r 5 -d 2       # rev 7
-  rebasing 5:1e9a3c00cbe9 "b"
+  rebasing 1e9a3c00cbe9 "b"
 
 Check the rebase template keywords
   $ hg log --hidden -r 5 -T "{node} rebased as {rebasesuccessors % '{short(rebasesuccessor)} '}\n"

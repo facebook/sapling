@@ -17,8 +17,8 @@
   > EOS
 
   $ hg rebase -s $B -d $C
-  rebasing 2:c84328973e26 "B"
-  rebasing 3:2f1af6263db7 "A1" (tip)
+  rebasing c84328973e26 "B"
+  rebasing 2f1af6263db7 "A1" (tip)
   other [source] changed A which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -60,8 +60,8 @@
   continue: hg rebase --continue
 
   $ hg rebase --continue
-  already rebased 2:c84328973e26 "B" as 27652fba03b2
-  rebasing 3:2f1af6263db7 "A1"
+  already rebased c84328973e26 "B" as 27652fba03b2
+  rebasing 2f1af6263db7 "A1"
 
   $ hg log -Gr 'all()'
   o  changeset:   5:8bbb642d1454

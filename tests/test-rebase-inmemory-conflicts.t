@@ -49,13 +49,13 @@ Make conflicts halfway up the stack:
   $ cp -R . ../control
   $ hg rebase -d c
   rebasing in-memory!
-  rebasing 4:f4016ed9f5d0 "d" (d)
-  rebasing 5:881eb15e0fdf "e" (e)
-  note: not rebasing 6:22d86c9ba040 "f" (f) and its descendants as this would cause divergence
-  rebasing 7:e692c3b32196 "f"
+  rebasing f4016ed9f5d0 "d" (d)
+  rebasing 881eb15e0fdf "e" (e)
+  note: not rebasing 22d86c9ba040 "f" (f) and its descendants as this would cause divergence
+  rebasing e692c3b32196 "f"
   merging c
   hit merge conflicts (in c); switching to on-disk merge
-  rebasing 7:e692c3b32196 "f"
+  rebasing e692c3b32196 "f"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -64,11 +64,11 @@ Make conflicts halfway up the stack:
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  already rebased 4:f4016ed9f5d0 "d" (d) as 32bb4413a7df
-  already rebased 5:881eb15e0fdf "e" (e) as d82c41319fdd
-  note: not rebasing 6:22d86c9ba040 "f" (f) and its descendants as this would cause divergence
-  rebasing 7:e692c3b32196 "f"
-  rebasing 8:2a19607ff85c "g"
+  already rebased f4016ed9f5d0 "d" (d) as 32bb4413a7df
+  already rebased 881eb15e0fdf "e" (e) as d82c41319fdd
+  note: not rebasing 22d86c9ba040 "f" (f) and its descendants as this would cause divergence
+  rebasing e692c3b32196 "f"
+  rebasing 2a19607ff85c "g"
   $ hg log -G -r 0:: -T '{desc} {rev} {node|short}'
   o  g 12 24c12a3229e2
   |
@@ -100,8 +100,8 @@ Try it with uncommitted changes, ensure it aborts nicely:
   $ echo "test" > a
   $ hg rebase -s d82c41319fdd -d a
   rebasing in-memory!
-  rebasing 10:d82c41319fdd "e"
-  rebasing 11:c33e7f678afd "f"
+  rebasing d82c41319fdd "e"
+  rebasing c33e7f678afd "f"
   transaction abort!
   rollback completed
   abort: must use on-disk merge for this rebase (hit merge conflicts in c), but you have working copy changes

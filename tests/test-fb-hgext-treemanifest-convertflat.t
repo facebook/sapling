@@ -286,7 +286,7 @@ manifest for commit 'f7febcf0f689'.
 - Test rebasing of the flat ony commits works as expected.
 
   $ hg rebase -d '9055b56f3916' -s '3795bd66ca70'
-  rebasing 4:3795bd66ca70 "flat only commit 1 over flat only commit 2 at level 2" (tip)
+  rebasing 3795bd66ca70 "flat only commit 1 over flat only commit 2 at level 2" (tip)
   fetching tree '' 40f43426c87ba597f0d9553077c72fe06d4e2acb, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 9055b56f3916
   fetching tree '' a6875e5fbf695d5fe67e03b8a5df2bab0e6dd045, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via f7febcf0f689
   fetching tree '' b7db2b1fa98f78057c528e8dad908e05ef80aeb4, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 3795bd66ca70

@@ -91,7 +91,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 3
-  rebasing 1:6a7c7fb59c1e "localcommit" (bmnottracking)
+  rebasing 6a7c7fb59c1e "localcommit" (bmnottracking)
   saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/6a7c7fb59c1e-55f908e9-*.hg (glob)
   $ printdag
   @  localcommit | bmnottracking |
@@ -191,7 +191,7 @@ Test pull with --rebase and --tool
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   new changesets b1a3b9086dc9
-  rebasing 6:1d01e32a0efb "somelocalchanges" (tracking2)
+  rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
   saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/*.hg (glob)
   $ printdag

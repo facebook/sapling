@@ -282,7 +282,7 @@ Try to push selectively
   $ cd client1
   $ echo more >> commit1
   $ hg amend --rebase -m "`hg descr | head -n1` amended"
-  rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
+  rebasing 02f6fc2b7154 "commit2" (bookmark1)
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -600,12 +600,12 @@ Expected result: client2 should be moved to 68e035cc1996
   o  0: d20a80d4def3 'base'
   
   $ hg rebase -s cebbb614447e -d d20a80d4def3 -m "`hg descr | head -n1` rebased" --collapse
-  rebasing 8:cebbb614447e "commit2 amended amended"
+  rebasing cebbb614447e "commit2 amended amended"
   $ echo 5 >> filea.txt && hg amend -m "`hg descr | head -n1` amended"
   $ hg id -i
   99e818be5af0
   $ hg rebase -s 99e818be5af0 -d a7bb357e7299 -m "`hg descr | head -n1` rebased" --collapse
-  rebasing 13:99e818be5af0 "commit2 amended amended rebased amended" (tip)
+  rebasing 99e818be5af0 "commit2 amended amended rebased amended" (tip)
   $ echo 6 >> filea.txt && hg amend -m "`hg descr | head -n1` amended"
   $ tglog -r '.'
   @  15: 68e035cc1996 'commit2 amended amended rebased amended rebased amended'
@@ -697,7 +697,7 @@ Wait for them to complete and then do another cloud sync
   $ hg debugwaitbackup
   $ hg cloud sync -q
   $ grep rebasing $TESTTMP/racerebase.out
-  rebasing 17:f2ccc2716735 "stack commit 2" (testbookmark)
+  rebasing f2ccc2716735 "stack commit 2" (testbookmark)
   $ tglog
   o  19: 715c1454ae33 'stack commit 2' testbookmark
   |
@@ -1055,8 +1055,8 @@ Pull it into one of the clients and rebase one of the stacks onto it
   o  d20a80d4def3 'base'
   
   $ hg rebase -s e58a6603d256 -d publicbookmark1
-  rebasing 23:e58a6603d256 "stack 1 first"
-  rebasing 24:9a3e7907fd5c "stack 1 second"
+  rebasing e58a6603d256 "stack 1 first"
+  rebasing 9a3e7907fd5c "stack 1 second"
   $ hg cloud sync -q
 
 Create another public commit on the server, moving one of the bookmarks
@@ -1127,8 +1127,8 @@ Do a pull on this client.  The remote bookmarks now get updated.
   
 Rebase the commits again, and resync to the first client.
   $ hg rebase -s 5df7c1d8d8ab -d publicbookmark2
-  rebasing 23:5df7c1d8d8ab "stack 1 first"
-  rebasing 24:2da6c73964b8 "stack 1 second"
+  rebasing 5df7c1d8d8ab "stack 1 first"
+  rebasing 2da6c73964b8 "stack 1 second"
   $ hg cloud sync -q
   $ cd ../client1
   $ hg cloud sync

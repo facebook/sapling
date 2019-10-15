@@ -55,7 +55,7 @@ Check filename heuristics (same dirname and same basename)
       desc: initial
 
   $ hg rebase -s . -d 1
-  rebasing 2:557f403c0afd "mod a, mod dir/file.txt" (tip)
+  rebasing 557f403c0afd "mod a, mod dir/file.txt" (tip)
   merging b and a to b
   merging dir2/file.txt and dir/file.txt to dir2/file.txt
   $ cd ..
@@ -87,7 +87,7 @@ Make sure filename heuristics do not when they are not related
       desc: initial
 
   $ hg rebase -s . -d 1
-  rebasing 2:d526312210b9 "mode a" (tip)
+  rebasing d526312210b9 "mode a" (tip)
   other [source] changed a which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -125,7 +125,7 @@ Test when lca didn't modified the file that was moved
       desc: initial, phase: draft
 
   $ hg rebase -s . -d 2
-  rebasing 3:9d5cf99c3d9f "mod a" (tip)
+  rebasing 9d5cf99c3d9f "mod a" (tip)
   merging b and a to b
   $ cd ..
   $ rm -rf repo
@@ -159,7 +159,7 @@ Rebase "backwards"
       desc: initial
 
   $ hg rebase -s . -d 0
-  rebasing 3:fbe97126b396 "mod b" (tip)
+  rebasing fbe97126b396 "mod b" (tip)
   merging a and b to a
   $ cd ..
   $ rm -rf repo
@@ -195,7 +195,7 @@ Check a few potential move candidates
       desc: initial
 
   $ hg rebase -s . -d 2
-  rebasing 3:6b2f4cece40f "mod dir/a" (tip)
+  rebasing 6b2f4cece40f "mod dir/a" (tip)
   merging dir/b and dir/a to dir/b
   $ cd ..
   $ rm -rf repo
@@ -238,7 +238,7 @@ Test the copytrace.movecandidateslimit with many move candidates
 With small limit
 
   $ hg rebase -s 2 -d 1 --config experimental.copytrace.movecandidateslimit=0
-  rebasing 2:ef716627c70b "mod a" (tip)
+  rebasing ef716627c70b "mod a" (tip)
   skipping copytracing for 'a', more candidates than the limit: 7
   other [source] changed a which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
@@ -251,7 +251,7 @@ With small limit
 With default limit which is 100
 
   $ hg rebase -s 2 -d 1
-  rebasing 2:ef716627c70b "mod a" (tip)
+  rebasing ef716627c70b "mod a" (tip)
   merging foo and a to foo
 
   $ cd ..
@@ -281,7 +281,7 @@ Move file in one branch and delete it in another
       desc: initial, phase: draft
 
   $ hg rebase -s 1 -d 2
-  rebasing 1:472e38d57782 "mv a b"
+  rebasing 472e38d57782 "mv a b"
   $ hg up -q c492ed3c7e35dcd1dc938053b8adf56e2cfbd062
   $ ls
   b
@@ -313,7 +313,7 @@ Move a directory in draft branch
       desc: initial
 
   $ hg rebase -s . -d 1
-  rebasing 2:a33d80b6e352 "mv dir/ dir2/" (tip)
+  rebasing a33d80b6e352 "mv dir/ dir2/" (tip)
   merging dir/a and dir2/a to dir2/a
   $ cd ..
   $ rm -rf server
@@ -346,7 +346,7 @@ Move file twice and rebase mod on top of moves
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial
   $ hg rebase -s . -d 2
-  rebasing 3:d41316942216 "mod a" (tip)
+  rebasing d41316942216 "mod a" (tip)
   merging c and a to c
 
   $ cd ..
@@ -378,9 +378,9 @@ Move file twice and rebase moves on top of mods
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial
   $ hg rebase -s 1 -d .
-  rebasing 1:472e38d57782 "mv a b"
+  rebasing 472e38d57782 "mv a b"
   merging a and b to b
-  rebasing 2:d3efd280421d "mv b c"
+  rebasing d3efd280421d "mv b c"
   merging b and c to c
 
   $ cd ..
@@ -415,7 +415,7 @@ Move one file and add another file in the same folder in one branch, modify file
       desc: initial
 
   $ hg rebase -s . -d 2
-  rebasing 3:ef716627c70b "mod a" (tip)
+  rebasing ef716627c70b "mod a" (tip)
   merging b and a to b
   $ ls
   b
@@ -483,7 +483,7 @@ Copy and move file
       desc: initial
 
   $ hg rebase -s . -d 1
-  rebasing 2:ef716627c70b "mod a" (tip)
+  rebasing ef716627c70b "mod a" (tip)
   merging b and a to b
   merging c and a to c
   $ ls
@@ -568,7 +568,7 @@ Test shelve/unshelve
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 1:f0569b377759 "shelve changes to: initial"
+  rebasing f0569b377759 "shelve changes to: initial"
   merging b and a to b
   $ ls
   b
@@ -607,7 +607,7 @@ File directory and base name changed in same move
       desc initial, phase: draft
 
   $ hg rebase -s . -d 1 --config experimental.copytrace.sourcecommitlimit=100
-  rebasing 2:6207d2d318e7 "mod a" (tip)
+  rebasing 6207d2d318e7 "mod a" (tip)
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
   a
@@ -644,7 +644,7 @@ in other merge parent. File moved on rebase.
       desc initial, phase: draft
 
   $ hg rebase -s . -d 1 --config experimental.copytrace.sourcecommitlimit=100
-  rebasing 2:e8919e7df8d0 "mv dir1 dir2" (tip)
+  rebasing e8919e7df8d0 "mv dir1 dir2" (tip)
   $ ls dir2
   a
   dummy
@@ -680,7 +680,7 @@ Testing the sourcecommitlimit config
 When the sourcecommitlimit is small and we have more drafts, we use heuristics only
 
   $ hg rebase -s 8b6e13696 -d .
-  rebasing 1:8b6e13696c38 "added more things to a"
+  rebasing 8b6e13696c38 "added more things to a"
   other [source] changed a which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -692,7 +692,7 @@ fullcopytracing
   $ hg rebase --abort
   rebase aborted
   $ hg rebase -s 8b6e13696 -d . --config experimental.copytrace.sourcecommitlimit=100
-  rebasing 1:8b6e13696c38 "added more things to a"
+  rebasing 8b6e13696c38 "added more things to a"
   merging foo/bar and a to foo/bar
   $ cd ..
   $ rm -rf repo

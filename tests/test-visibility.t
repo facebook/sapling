@@ -67,8 +67,8 @@ Simple creation and amending of draft commits
 
   $ mkcommit draft2a
   $ hg rebase -s ".^" -d 1
-  rebasing 4:bc066ca12b45 "draft1 amend1"
-  rebasing 5:2ccd7cddaa94 "draft2a" (tip)
+  rebasing bc066ca12b45 "draft1 amend1"
+  rebasing 2ccd7cddaa94 "draft2a" (tip)
   $ tglogp
   @  7: ecfc0c412bb8 draft 'draft2a'
   |
@@ -84,7 +84,7 @@ Simple creation and amending of draft commits
   ecfc0c412bb878c3e7b1b3468cae773b473fd3ec
   v1
   $ hg rebase -s . -d 2
-  rebasing 7:ecfc0c412bb8 "draft2a" (tip)
+  rebasing ecfc0c412bb8 "draft2a" (tip)
   $ tglogp
   @  8: af54c09bb37d draft 'draft2a'
   |
@@ -323,7 +323,7 @@ Stack navigation and rebases
   o  0: 426bada5c675 'A'
   
   $ hg next --rebase
-  rebasing 2:26805aba1e60 "C"
+  rebasing 26805aba1e60 "C"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [23910a] C
   $ tglogm
@@ -342,7 +342,7 @@ Stack navigation and rebases
   o  0: 426bada5c675 'A'
   
   $ hg next --rebase
-  rebasing 3:f585351a92f8 "D"
+  rebasing f585351a92f8 "D"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [1d30cc] D
   $ tglogm
@@ -363,7 +363,7 @@ Stack navigation and rebases
   o  0: 426bada5c675 'A'
   
   $ hg next --rebase
-  rebasing 4:9bc730a19041 "E"
+  rebasing 9bc730a19041 "E"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [ec992f] E
   $ tglogm
@@ -543,7 +543,7 @@ Test that shelve and unshelve work
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 7:f321a4a9343c "shelve changes to: F" (tip)
+  rebasing f321a4a9343c "shelve changes to: F" (tip)
   $ hg st
   A file
   $ tglogm
@@ -565,7 +565,7 @@ Test that shelve and unshelve work
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
-  rebasing 7:f321a4a9343c "shelve changes to: F"
+  rebasing f321a4a9343c "shelve changes to: F"
   $ hg st
   A file
   A other

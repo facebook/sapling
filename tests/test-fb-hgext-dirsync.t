@@ -305,7 +305,7 @@ Test that rebasing applies the same change to both
   $ echo b > dir1/a
   $ hg commit --config extensions.dirsync=! -m "edit dir1/a with sync on"
   $ hg rebase --config extensions.rebase= -d 1
-  rebasing 2:70b4edc7f658 "edit dir1/a with sync on" (tip)
+  rebasing 70b4edc7f658 "edit dir1/a with sync on" (tip)
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a

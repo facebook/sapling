@@ -28,7 +28,7 @@ Tests the --noconflict rebase flag
 Confirm it fails when rebasing a change that conflicts:
   $ hg rebase -r tip -d . --noconflict
   rebasing in-memory!
-  rebasing 3:955ac081fc7c "g" (tip)
+  rebasing 955ac081fc7c "g" (tip)
   merging c
   hit merge conflicts (in c) and --noconflict passed; exiting
   $ hg st
@@ -39,7 +39,7 @@ Confirm it fails when rebasing a change that conflicts:
 Confirm rebase without a merge behaves the same:
   $ hg rebase -r tip -d .~1 --noconflict
   rebasing in-memory!
-  rebasing 3:955ac081fc7c "g" (tip)
+  rebasing 955ac081fc7c "g" (tip)
   saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/955ac081fc7c-77e57574-rebase.hg
 
 Confirm the flag fails without IMM:
@@ -71,7 +71,7 @@ Confirm that it rebases a three-way merge, but no conflict:
   $ hg up -qC 0
   $ hg rebase -r 1 -d 2 --noconflict
   rebasing in-memory!
-  rebasing 1:12cba56c6d27 "extend to 10"
+  rebasing 12cba56c6d27 "extend to 10"
   merging a
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/12cba56c6d27-14ff6d99-rebase.hg
   $ hg cat -r tip a | wc -l | xargs

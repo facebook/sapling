@@ -49,9 +49,9 @@
 With --keep, bookmark should move
 
   $ hg rebase -r 3+4 -d E --keep
-  rebasing 3:e7b3f00ed42e "D" (BOOK-D)
+  rebasing e7b3f00ed42e "D" (BOOK-D)
   note: rebase of 3:e7b3f00ed42e created no changes to commit
-  rebasing 4:69a34c08022a "E" (BOOK-E)
+  rebasing 69a34c08022a "E" (BOOK-E)
   note: rebase of 4:69a34c08022a created no changes to commit
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  7 E BOOK-D BOOK-E
@@ -81,12 +81,12 @@ still introduced by an ancestor of changeset on B-NEW. In the below case,
 "BOOK-D", and "BOOK-E" include changes introduced by "C".
 
   $ hg rebase -s 2 -d E
-  rebasing 2:dc0947a82db8 "C" (BOOK-C C)
-  rebasing 3:e7b3f00ed42e "D" (BOOK-D)
+  rebasing dc0947a82db8 "C" (BOOK-C C)
+  rebasing e7b3f00ed42e "D" (BOOK-D)
   note: rebase of 3:e7b3f00ed42e created no changes to commit
-  rebasing 4:69a34c08022a "E" (BOOK-E)
+  rebasing 69a34c08022a "E" (BOOK-E)
   note: rebase of 4:69a34c08022a created no changes to commit
-  rebasing 5:6b2aeab91270 "F" (BOOK-F F)
+  rebasing 6b2aeab91270 "F" (BOOK-F F)
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  9 F BOOK-F
   |
@@ -136,11 +136,11 @@ Merge and its ancestors all become empty
   > EOS
 
   $ hg rebase -r '(A::)-(B::)-A' -d H
-  rebasing 2:dc0947a82db8 "C" (BOOK-C)
+  rebasing dc0947a82db8 "C" (BOOK-C)
   note: rebase of 2:dc0947a82db8 created no changes to commit
-  rebasing 3:b18e25de2cf5 "D" (BOOK-D)
+  rebasing b18e25de2cf5 "D" (BOOK-D)
   note: rebase of 3:b18e25de2cf5 created no changes to commit
-  rebasing 4:86a1f6686812 "E" (BOOK-E E)
+  rebasing 86a1f6686812 "E" (BOOK-E E)
   note: rebase of 4:86a1f6686812 created no changes to commit
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
@@ -190,13 +190,13 @@ Part of ancestors of a merge become empty
   > EOS
 
   $ hg rebase -r '(A::)-(B::)-A' -d H
-  rebasing 2:dc0947a82db8 "C" (BOOK-C)
+  rebasing dc0947a82db8 "C" (BOOK-C)
   note: rebase of 2:dc0947a82db8 created no changes to commit
-  rebasing 3:b18e25de2cf5 "D" (BOOK-D D)
-  rebasing 4:03ca77807e91 "E" (BOOK-E E)
-  rebasing 5:ad6717a6a58e "F" (BOOK-F)
+  rebasing b18e25de2cf5 "D" (BOOK-D D)
+  rebasing 03ca77807e91 "E" (BOOK-E E)
+  rebasing ad6717a6a58e "F" (BOOK-F)
   note: rebase of 5:ad6717a6a58e created no changes to commit
-  rebasing 6:c58e8bdac1f4 "G" (BOOK-G G)
+  rebasing c58e8bdac1f4 "G" (BOOK-G G)
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o    12 G BOOK-G

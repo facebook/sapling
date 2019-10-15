@@ -124,7 +124,7 @@ sh % "hg hide -c" == r"""
 sh % "hg hide -c -r ." == r"""
     abort: --rev and --cleanup are incompatible
     [255]"""
-sh % "hg --config 'extensions.rebase=' rebase -s 5 -d 6" == 'rebasing 5:1f7934a9b4de "F"'
+sh % "hg --config 'extensions.rebase=' rebase -s 5 -d 6" == 'rebasing 1f7934a9b4de "F"'
 sh % "hg book -r 5 alive --hidden"
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  7 F

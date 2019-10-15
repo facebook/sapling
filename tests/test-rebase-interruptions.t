@@ -54,8 +54,8 @@ Changes during an interruption - continue:
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
-  rebasing 1:27547f69f254 "B"
-  rebasing 2:965c486023db "C"
+  rebasing 27547f69f254 "B"
+  rebasing 965c486023db "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -91,8 +91,8 @@ Force this commit onto secret phase
 Resume the rebasing:
 
   $ hg rebase --continue
-  already rebased 1:27547f69f254 "B" as 45396c49d53b
-  rebasing 2:965c486023db "C"
+  already rebased 27547f69f254 "B" as 45396c49d53b
+  rebasing 965c486023db "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -107,8 +107,8 @@ Solve the conflict and go on:
   continue: hg rebase --continue
 
   $ hg rebase --continue
-  already rebased 1:27547f69f254 "B" as 45396c49d53b
-  rebasing 2:965c486023db "C"
+  already rebased 27547f69f254 "B" as 45396c49d53b
+  rebasing 965c486023db "C"
   warning: orphaned descendants detected, not stripping 27547f69f254, 965c486023db
 
   $ tglogp
@@ -150,8 +150,8 @@ Changes during an interruption - abort:
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
-  rebasing 1:27547f69f254 "B"
-  rebasing 2:965c486023db "C"
+  rebasing 27547f69f254 "B"
+  rebasing 965c486023db "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -222,8 +222,8 @@ Changes during an interruption - abort (again):
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
-  rebasing 1:27547f69f254 "B"
-  rebasing 2:965c486023db "C"
+  rebasing 27547f69f254 "B"
+  rebasing 965c486023db "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -283,9 +283,9 @@ Test rebase interrupted by hooks
   $ cp -R a3 hook-precommit
   $ cd hook-precommit
   $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
-  rebasing 2:965c486023db "C"
+  rebasing 965c486023db "C"
   M A
-  rebasing 6:a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F" (tip)
   abort: precommit hook exited with status 1
   [255]
   $ tglogp
@@ -306,8 +306,8 @@ Test rebase interrupted by hooks
   o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
-  already rebased 2:965c486023db "C" as 401ccec5e39f
-  rebasing 6:a0b2430ebfb8 "F"
+  already rebased 965c486023db "C" as 401ccec5e39f
+  rebasing a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
@@ -336,9 +336,9 @@ Test rebase interrupted by hooks
   $ NODE="\$HG_NODE"
 #endif
   $ hg rebase --source 2 --dest 5 --tool internal:other --config "hooks.pretxncommit=hg log -r $NODE | grep \"summary:     C\""
-  rebasing 2:965c486023db "C"
+  rebasing 965c486023db "C"
   summary:     C
-  rebasing 6:a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F" (tip)
   transaction abort!
   rollback completed
   abort: pretxncommit hook exited with status 1
@@ -361,8 +361,8 @@ Test rebase interrupted by hooks
   o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
-  already rebased 2:965c486023db "C" as 401ccec5e39f
-  rebasing 6:a0b2430ebfb8 "F"
+  already rebased 965c486023db "C" as 401ccec5e39f
+  rebasing a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
@@ -386,9 +386,9 @@ Test rebase interrupted by hooks
   $ cp -R a3 hook-pretxnclose
   $ cd hook-pretxnclose
   $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
-  rebasing 2:965c486023db "C"
+  rebasing 965c486023db "C"
   summary:     C
-  rebasing 6:a0b2430ebfb8 "F" (tip)
+  rebasing a0b2430ebfb8 "F" (tip)
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
@@ -411,8 +411,8 @@ Test rebase interrupted by hooks
   o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
-  already rebased 2:965c486023db "C" as 401ccec5e39f
-  rebasing 6:a0b2430ebfb8 "F"
+  already rebased 965c486023db "C" as 401ccec5e39f
+  rebasing a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
@@ -443,7 +443,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   $ echo c >> a
   $ hg commit -qm c
   $ hg rebase -s 1 -d 2 --noninteractive
-  rebasing 1:fdaca8533b86 "b"
+  rebasing fdaca8533b86 "b"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -454,7 +454,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 1:fdaca8533b86 "b"
+  rebasing fdaca8533b86 "b"
   note: rebase of 1:fdaca8533b86 created no changes to commit
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fdaca8533b86-7fd70513-rebase.hg
   $ hg resolve --list

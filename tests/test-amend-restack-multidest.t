@@ -42,8 +42,8 @@ Restack does topological sort and only rebases "D" once:
   |/
   o  0 426bada5c675 A
   $ hg rebase --restack
-  rebasing 5:ca53c8ceb284 "C"
-  rebasing 3:f585351a92f8 "D" (D)
+  rebasing ca53c8ceb284 "C"
+  rebasing f585351a92f8 "D" (D)
   $ showgraph
   o  8 981f3734c126 D
   |
@@ -81,15 +81,15 @@ Restack will only restack the "current" stack and leave other stacks untouched.
 
   $ hg update -q D
   $ hg rebase --restack
-  rebasing 10:be0ef73c17ad "D" (D)
+  rebasing be0ef73c17ad "D" (D)
 
   $ hg update -q G
   $ hg rebase --restack
-  rebasing 11:cc209258a732 "H" (H)
+  rebasing cc209258a732 "H" (H)
 
   $ hg update -q I
   $ hg rebase --restack
-  rebasing 12:59760668f0e1 "K" (K)
+  rebasing 59760668f0e1 "K" (K)
 
   $ rm .hg/localtags
   $ showgraph
@@ -128,14 +128,14 @@ The "prune" cases.
 
   $ hg update -q B
   $ hg rebase --restack
-  rebasing 3:112478962961 "B" (B)
-  rebasing 7:f585351a92f8 "D" (D)
-  rebasing 8:78d2dca436b2 "E" (E tip)
+  rebasing 112478962961 "B" (B)
+  rebasing f585351a92f8 "D" (D)
+  rebasing 78d2dca436b2 "E" (E tip)
 
   $ hg update -q H
   $ hg rebase --restack
-  rebasing 4:8fdb2c1feb20 "G" (G)
-  rebasing 5:02ac06fe83b9 "H" (H)
+  rebasing 8fdb2c1feb20 "G" (G)
+  rebasing 02ac06fe83b9 "H" (H)
 
   $ rm .hg/localtags
   $ showgraph
@@ -168,7 +168,7 @@ Restack could resume after resolving merge conflicts.
 
   $ hg update -q F
   $ hg rebase --restack
-  rebasing 5:ed8545a5c22a "F" (F)
+  rebasing ed8545a5c22a "F" (F)
   merging C
   warning: 1 conflicts while merging C! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -180,8 +180,8 @@ Restack could resume after resolving merge conflicts.
   $ hg resolve --mark -q
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 5:ed8545a5c22a "F"
-  rebasing 6:4d1ef7d890c5 "G" (tip)
+  rebasing ed8545a5c22a "F"
+  rebasing 4d1ef7d890c5 "G" (tip)
   merging E
   warning: 1 conflicts while merging E! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -191,8 +191,8 @@ Restack could resume after resolving merge conflicts.
   $ hg resolve --mark -q
   continue: hg rebase --continue
   $ hg rebase --continue
-  already rebased 5:ed8545a5c22a "F" as 2282fe522d5c
-  rebasing 6:4d1ef7d890c5 "G"
+  already rebased ed8545a5c22a "F" as 2282fe522d5c
+  rebasing 4d1ef7d890c5 "G"
 
   $ showgraph
   o  8 3b00517bf275 G

@@ -230,7 +230,7 @@ Test that rewriting leaving instability behind is allowed
 stabilise
 
   $ hg rebase  -r 'orphan()' -d .
-  rebasing 11:c13eb81022ca "f"
+  rebasing c13eb81022ca "f"
   $ hg up tip -q
 
 Test dropping of changeset on the top of the stack

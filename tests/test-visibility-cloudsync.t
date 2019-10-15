@@ -102,7 +102,7 @@ Create another client and use it to modify the commits and create some new ones.
   
 
   $ hg rebase -r $D -d $E
-  rebasing 3:6ba5de8abe43 "D"
+  rebasing 6ba5de8abe43 "D"
   $ hg up -q $Z
   $ echo X > X
   $ hg commit -Aqm X
@@ -138,7 +138,7 @@ Before syncing, create a new commit in the original client
 Also introduce some divergence by rebasing the same commit
 
   $ hg rebase -r $D -d $Z
-  rebasing 5:6ba5de8abe43 "D"
+  rebasing 6ba5de8abe43 "D"
 
 Now cloud sync.  The sets of commits should be merged.
 

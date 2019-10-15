@@ -70,7 +70,7 @@ Rebasing single changeset.
   abort: current changeset has no children
   [255]
   $ hg next --rebase
-  rebasing 2:776c07fa2b12 "r2"
+  rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [8fb200] r2
   $ showgraph
@@ -97,7 +97,7 @@ Test --clean flag.
   [255]
   $ hg next --rebase --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  rebasing 3:137d867d71d5 "r3"
+  rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [f12433] r3
   $ hg status
@@ -121,9 +121,9 @@ Rebasing multiple changesets at once.
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase --top
-  rebasing 2:776c07fa2b12 "r2"
-  rebasing 3:137d867d71d5 "r3"
-  rebasing 4:daa37004f338 "r4"
+  rebasing 776c07fa2b12 "r2"
+  rebasing 137d867d71d5 "r3"
+  rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [d25685] r4
   $ showgraph
@@ -147,11 +147,11 @@ Rebasing a stack one changeset at a time.
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase
-  rebasing 2:776c07fa2b12 "r2"
+  rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [8fb200] r2
   $ hg next --rebase
-  rebasing 3:137d867d71d5 "r3"
+  rebasing 137d867d71d5 "r3"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [f12433] r3
   $ showgraph
@@ -173,7 +173,7 @@ Rebasing a stack one changeset at a time.
   
 
   $ hg next --rebase
-  rebasing 4:daa37004f338 "r4"
+  rebasing daa37004f338 "r4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [d25685] r4
   $ showgraph
@@ -197,8 +197,8 @@ Rebasing a stack two changesets at a time.
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase 2
-  rebasing 2:776c07fa2b12 "r2"
-  rebasing 3:137d867d71d5 "r3"
+  rebasing 776c07fa2b12 "r2"
+  rebasing 137d867d71d5 "r3"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [f12433] r3
   $ showgraph
@@ -221,8 +221,8 @@ Rebasing a stack two changesets at a time.
   o  0 r0
   
   $ hg next --rebase 2
-  rebasing 4:daa37004f338 "r4"
-  rebasing 5:5f333e6f7274 "r5"
+  rebasing daa37004f338 "r4"
+  rebasing 5f333e6f7274 "r5"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [dd153e] r5
   $ showgraph
@@ -263,9 +263,9 @@ Rebasing after multiple amends.
   o  0 r0
   
   $ hg next --rebase --top
-  rebasing 2:776c07fa2b12 "r2"
-  rebasing 3:137d867d71d5 "r3"
-  rebasing 4:daa37004f338 "r4"
+  rebasing 776c07fa2b12 "r2"
+  rebasing 137d867d71d5 "r3"
+  rebasing daa37004f338 "r4"
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [5d31c6] r4
   $ showgraph
@@ -306,9 +306,9 @@ Rebasing from below the amended changeset with the --newest flag.
   @  0 r0
   
   $ hg next --rebase --top --newest
-  rebasing 3:137d867d71d5 "r3"
-  rebasing 4:daa37004f338 "r4"
-  rebasing 5:5f333e6f7274 "r5"
+  rebasing 137d867d71d5 "r3"
+  rebasing daa37004f338 "r4"
+  rebasing 5f333e6f7274 "r5"
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [2d8122] r5
   $ showgraph
@@ -356,7 +356,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   o  0 r0
   
   $ hg next --rebase
-  rebasing 2:776c07fa2b12 "r2"
+  rebasing 776c07fa2b12 "r2"
   changeset f03405deb52b has multiple children, namely:
   [c9239a] add a
   [8fb200] r2
@@ -408,7 +408,7 @@ Test a situation where there is a conflict.
   o  0 add a
   
   $ hg next --rebase --top
-  rebasing 2:4538525df7e2 "add c"
+  rebasing 4538525df7e2 "add c"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -436,7 +436,7 @@ Now resolve the conflict and resume the rebase.
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 2:4538525df7e2 "add c"
+  rebasing 4538525df7e2 "add c"
   $ showgraph
   o  5 add c
   |
@@ -459,7 +459,7 @@ Rebase when other predecessors are still visible
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase
-  rebasing 2:776c07fa2b12 "r2"
+  rebasing 776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [bd2075] r2
   $ hg prev
@@ -484,7 +484,7 @@ Rebase when other predecessors are still visible
   o  0 r0
   
   $ hg next --rebase
-  rebasing 5:bd2075358087 "r2"
+  rebasing bd2075358087 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [88a893] r2
   $ showgraph

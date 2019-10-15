@@ -51,8 +51,8 @@ Test hg amend --fixup.
 
   $ hg amend --fixup
   warning: --fixup is deprecated and WILL BE REMOVED. use 'hg restack' instead.
-  rebasing 2:* "add c" (glob)
-  rebasing 3:* "add d" (glob)
+  rebasing 4538525df7e2 "add c"
+  rebasing 47d2a3944de8 "add d"
   $ showgraph
   o  6 add d
   |
@@ -70,8 +70,8 @@ Test that the operation field on the metadata is correctly set.
 
 Test hg amend --rebase
   $ hg amend -m "amended again" --rebase
-  rebasing 5:* "add c" (glob)
-  rebasing 6:* "add d" (glob)
+  rebasing * "add c" (glob)
+  rebasing * "add d" (glob)
   $ showgraph
   o  9 add d
   |

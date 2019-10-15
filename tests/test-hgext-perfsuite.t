@@ -81,14 +81,14 @@ TODO: Make this test compatibile with obsstore enabled.
   stdout: reverting repo3/u/r/l/aaa
   
   ran 'revert' in * sec (glob)
-  stdout: rebasing 4:b17a0147d61c "test commit" (tip)
+  stdout: rebasing b17a0147d61c "test commit" (tip)
   saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/b17a0147d61c-bd5f50f4-rebase.hg
   
   ran 'rebase' in * sec (glob)
   stdout: 1 files updated, 0 files merged, 10 files removed, 0 files unresolved
   (activating bookmark master)
   
-  stdout: rebasing 4:f8d4b0697695 "test commit" (tip)
+  stdout: rebasing f8d4b0697695 "test commit" (tip)
   saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/f8d4b0697695-7388783a-rebase.hg
   
   ran 'immrebase' in * sec (glob)

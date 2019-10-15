@@ -88,7 +88,7 @@ Empty rebase fails
   abort: you must specify a destination (-d) for the rebase
   [255]
   $ hg rebase -d 2
-  rebasing 1:7b4cb4e1674c "b"
+  rebasing 7b4cb4e1674c "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-f22b5b1e-rebase.hg (glob)
 
 Empty rebase returns exit code 0:
@@ -436,11 +436,11 @@ and allowance of prune rebases
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding d
   $ hg rebase -r 1 -d 2
-  rebasing 1:09d39afb522a "a"
+  rebasing 09d39afb522a "a"
 
 Test that we do not show divergence warning
   $ hg rebase -r 1 -d 3 --hidden
-  rebasing 1:09d39afb522a "a"
+  rebasing 09d39afb522a "a"
 
 Test that we allow pure prune rebases
   $ hg prune 4
@@ -450,7 +450,7 @@ Test that we allow pure prune rebases
   hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg rebase -r 4 -d 3 --hidden
-  rebasing 4:31aefaa21905 "d"
+  rebasing 31aefaa21905 "d"
 
 Test diff --per-file-stat
   $ echo a >> a
@@ -492,7 +492,7 @@ Test rebase with showupdated=True
   o  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
   
   $ hg rebase -r 1 -d 2
-  rebasing 1:0e067c57feba "b"
+  rebasing 0e067c57feba "b"
   0e067c57feba -> a602e0d56f83 "b"
   saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/0e067c57feba-ca6d05e3-rebase.hg (glob)
 
@@ -529,18 +529,18 @@ Test rebase with showupdate=True and a lot of source revisions
   @  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
   
   $ hg rebase -r 'all() - 0 - 12' -d 12
-  rebasing 1:d5e255ef74f8 "c"
-  rebasing 2:a602e0d56f83 "b"
-  rebasing 3:46a418a0abd2 "1"
-  rebasing 4:ee71024c6e8c "2"
-  rebasing 5:7ab24e484daf "3"
-  rebasing 6:4e6ba707bdb8 "4"
-  rebasing 7:657f1516f142 "5"
-  rebasing 8:73800d52e8dd "6"
-  rebasing 9:e5ec40f70991 "7"
-  rebasing 10:6a01a2bb0a9f "8"
-  rebasing 11:14218977adef "9"
-  rebasing 13:6e3ddf6f49ef "11" (tip)
+  rebasing d5e255ef74f8 "c"
+  rebasing a602e0d56f83 "b"
+  rebasing 46a418a0abd2 "1"
+  rebasing ee71024c6e8c "2"
+  rebasing 7ab24e484daf "3"
+  rebasing 4e6ba707bdb8 "4"
+  rebasing 657f1516f142 "5"
+  rebasing 73800d52e8dd "6"
+  rebasing e5ec40f70991 "7"
+  rebasing 6a01a2bb0a9f "8"
+  rebasing 14218977adef "9"
+  rebasing 6e3ddf6f49ef "11" (tip)
   14218977adef -> 2d12dd93bf8b "9"
   46a418a0abd2 -> 645dc4557ba8 "1"
   4e6ba707bdb8 -> b9598afdff23 "4"
@@ -559,6 +559,6 @@ Test rebase with showupdate=True and a long commit message
   $ touch longfile && hg add -q
   $ hg commit -qm "This is a long commit message which will be truncated."
   $ hg rebase -d 1
-  rebasing 14:e915a57d67db "This is a long commit message which will be truncated." (tip)
+  rebasing e915a57d67db "This is a long commit message which will be truncated." (tip)
   e915a57d67db -> 5444f740ff6c "This is a long commit message which will be tru..."
   saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/e915a57d67db-ad3372b5-rebase.hg (glob)

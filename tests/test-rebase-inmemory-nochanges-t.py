@@ -45,7 +45,7 @@ for userustmanifest in [True, False]:
     # Rebase one version onto the other, confirm it gets rebased out:
     sh % "hg rebase -r b -d a" == r"""
         rebasing in-memory!
-        rebasing 2:811ec875201f "b" (b tip)
+        rebasing 811ec875201f "b" (b tip)
         note: rebase of 2:811ec875201f created no changes to commit"""
 
     # Without IMM, this behavior is semi-broken: the commit is not rebased out and the
@@ -53,7 +53,7 @@ for userustmanifest in [True, False]:
     sh.cd(reponame)
     sh % "setconfig 'rebase.experimental.inmemory=0'"
     sh % "hg rebase -r b -d a" == r"""
-        rebasing 2:811ec875201f "b" (b tip)
+        rebasing 811ec875201f "b" (b tip)
         warning: can't find ancestor for 'file_new' copied from 'file'!"""
 
     if userustmanifest:

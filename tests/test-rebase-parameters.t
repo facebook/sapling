@@ -124,9 +124,9 @@ Rebase with no arguments (from 3 onto 8):
   $ hg up -q -C 3
 
   $ hg rebase
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   @  9: ed65089c18f8 'D'
@@ -157,9 +157,9 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
   $ cd a2
 
   $ hg rebase --base .
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   @  9: ed65089c18f8 'D'
@@ -185,9 +185,9 @@ Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
   $ cd a3
 
   $ hg rebase --dest 'branch(.)'
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   @  11: ed65089c18f8 'D'
@@ -217,8 +217,8 @@ Specify only source (from 2 onto 8):
   $ cd a4
 
   $ hg rebase --source 'desc("C")'
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   o  8: 7726e9fd58f7 'D'
@@ -244,9 +244,9 @@ Specify only dest (from 3 onto 6):
   $ cd a5
 
   $ hg rebase --dest 6
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   @  11: 8eeb3c33ad33 'D'
@@ -276,9 +276,9 @@ Specify only base (from 1 onto 8):
   $ cd a6
 
   $ hg rebase --base 'desc("D")'
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   o  9: ed65089c18f8 'D'
@@ -304,8 +304,8 @@ Specify source and dest (from 2 onto 7):
   $ cd a7
 
   $ hg rebase --source 2 --dest 7
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   o  10: 668acadedd30 'D'
@@ -335,9 +335,9 @@ Specify base and dest (from 1 onto 7):
   $ cd a8
 
   $ hg rebase --base 3 --dest 7
-  rebasing 1:42ccdea3bb16 "B"
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 42ccdea3bb16 "B"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   o  11: 287cc92ba5a4 'D'
@@ -367,8 +367,8 @@ Specify only revs (from 2 onto 8)
   $ cd a9
 
   $ hg rebase --rev 'desc("C")::'
-  rebasing 2:5fddd98957c8 "C"
-  rebasing 3:32af7686d403 "D"
+  rebasing 5fddd98957c8 "C"
+  rebasing 32af7686d403 "D"
 
   $ tglog
   o  8: 7726e9fd58f7 'D'
@@ -392,8 +392,8 @@ Rebasing both a single revision and a merge in one command
   $ hg clone -q -u . a aX
   $ cd aX
   $ hg rebase -r 3 -r 6 --dest 8
-  rebasing 3:32af7686d403 "D"
-  rebasing 6:eea13746799a "G"
+  rebasing 32af7686d403 "D"
+  rebasing eea13746799a "G"
   $ cd ..
 
 Test --tool parameter:
@@ -420,7 +420,7 @@ Test --tool parameter:
   $ cd b1
 
   $ hg rebase -s 2 -d 1 --tool internal:local
-  rebasing 2:e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b" (tip)
   note: rebase of 2:e4e3f3546619 created no changes to commit
 
   $ hg cat c2
@@ -433,7 +433,7 @@ Test --tool parameter:
   $ cd b2
 
   $ hg rebase -s 2 -d 1 --tool internal:other
-  rebasing 2:e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b" (tip)
 
   $ hg cat c2
   c2b
@@ -445,7 +445,7 @@ Test --tool parameter:
   $ cd b3
 
   $ hg rebase -s 2 -d 1 --tool internal:fail
-  rebasing 2:e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b" (tip)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -469,7 +469,7 @@ Test --tool parameter:
   (continue: hg rebase --continue)
   [255]
   $ hg rebase -c --tool internal:fail
-  rebasing 2:e4e3f3546619 "c2b" (tip)
+  rebasing e4e3f3546619 "c2b" (tip)
   note: rebase of 2:e4e3f3546619 created no changes to commit
 
   $ hg rebase -i

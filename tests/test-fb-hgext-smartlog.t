@@ -332,7 +332,7 @@ Test singlepublicsuccessor  template keyword
   $ echo c > c && hg ci -Am c
   adding c
   $ hg rebase -s 2 -d 1
-  rebasing 2:d36c0562f908 "c" (tip)
+  rebasing d36c0562f908 "c" (tip)
   $ hg phase -r 3 --public
   $ hg smartlog -r 2 -T "SPS: {singlepublicsuccessor}" --hidden
   x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6

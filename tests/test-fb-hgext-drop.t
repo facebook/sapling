@@ -68,7 +68,7 @@ TEST: dropping changeset in the middle of the stack
   
   $ hg drop -r 2
   Dropping changeset c175ba: r2
-  rebasing 3:c034855f2b01 "r3" (tip)
+  rebasing c034855f2b01 "r3" (tip)
   merging mf
   $ hg log -G -T '{rev} {desc|firstline}'
   o  4 r3
@@ -113,15 +113,15 @@ TEST: dropping a changest with child changesets
   
   $ hg drop 2
   Dropping changeset 37d4c1: r2
-  rebasing 3:a422badec216 "r3"
+  rebasing a422badec216 "r3"
   merging mf
-  rebasing 4:b762560d23fd "r4"
+  rebasing b762560d23fd "r4"
   merging mf
-  rebasing 5:e76b6544a13a "r5"
+  rebasing e76b6544a13a "r5"
   merging mf
-  rebasing 6:4905937520ff "r6"
+  rebasing 4905937520ff "r6"
   merging mf
-  rebasing 7:2c7cfba83429 "r7" (tip)
+  rebasing 2c7cfba83429 "r7" (tip)
   merging mf
   $ hg log -G -T '{rev} {desc|firstline}'
   o  12 r7
@@ -197,7 +197,7 @@ TEST: dropping a changeset with merge conflict
   
   $ hg drop 1
   Dropping changeset 2a8ed6: r1
-  rebasing 2:3d69e4d36b46 "r2"
+  rebasing 3d69e4d36b46 "r2"
   merging of
   warning: 1 conflicts while merging of! (edit, then use 'hg resolve --mark')
   conflict occurred during drop: please fix it by running 'hg rebase --continue', and then re-run 'hg drop'

@@ -613,7 +613,7 @@ and commits are not duplicated
   > rebase =
   > EOF
   $ hg rebase -s 8057 -d 75f6
-  rebasing 17:805791ba4bcd "newbranch" (newbook tip)
+  rebasing 805791ba4bcd "newbranch" (newbook tip)
   $ hg log -l 2
   changeset:   18:35324a911c0d
   bookmark:    newbook
@@ -1117,7 +1117,7 @@ permanently delete a commit, we do not want to undo to this state.
   > rebase =
   > EOF
   $ hg rebase -r 00617 -d 28dfc
-  rebasing 28:00617a57f780 "bfile" (tip)
+  rebasing 00617a57f780 "bfile" (tip)
   merging afile
   warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -1145,7 +1145,7 @@ permanently delete a commit, we do not want to undo to this state.
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 28:00617a57f780 "bfile" (tip)
+  rebasing 00617a57f780 "bfile" (tip)
   $ hg log -G -T compact -l6
   @  29[tip]:27   e642892c5cb0   1970-01-01 00:00 +0000   test
   |    bfile
@@ -1210,7 +1210,7 @@ permanently delete a commit, we do not want to undo to this state.
   $ hg undo
   undone to *, before rebase -r 00617 -d 28dfc (glob)
   $ hg rebase -r 00617 -d 28dfc
-  rebasing 28:00617a57f780 "bfile"
+  rebasing 00617a57f780 "bfile"
   merging afile
   warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

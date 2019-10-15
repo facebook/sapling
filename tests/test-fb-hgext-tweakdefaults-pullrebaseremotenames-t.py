@@ -51,14 +51,14 @@ sh % "hg commit -qAm x"
 sh % "echo c" > "../repo/c"
 sh % "hg -R ../repo commit -qAm c"
 sh % "hg pull --rebase" == r"""
-    pulling from $TESTTMP/repo (glob)
+    pulling from $TESTTMP/repo
     searching for changes
     adding changesets
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files (+1 heads)
     new changesets 177f92b77385
-    rebasing 2:86d71924e1d0 "x" (localbookmark)
+    rebasing 86d71924e1d0 "x" (localbookmark)
     saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg"""
 sh % "hg log -G -T '{rev} {desc}: {bookmarks}'" == r"""
     @  3 x: localbookmark

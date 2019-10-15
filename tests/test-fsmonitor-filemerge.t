@@ -16,7 +16,7 @@
   $ setconfig blackbox.track=merge_resolve,watchman blackbox.logsource=true
 
   $ hg rebase -s B -d C --tool=false
-  rebasing 1:65f3e88a53bc "B" (B)
+  rebasing 65f3e88a53bc "B" (B)
   merging 2
   merging A
   merging 2 failed!
