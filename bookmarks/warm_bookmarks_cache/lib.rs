@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use blobrepo::BlobRepo;
@@ -18,7 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use failure::Error;
-use futures::{future, stream, Future, Stream};
+use futures::{future, stream, sync, Future, Stream};
 use futures_ext::StreamExt;
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
@@ -32,9 +32,9 @@ define_stats! {
     cached_bookmark_update_time_ms: timeseries(RATE, SUM),
 }
 
-#[derive(Clone)]
 pub struct WarmBookmarksCache {
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    terminate: Arc<Mutex<Option<sync::oneshot::Sender<()>>>>,
 }
 
 impl WarmBookmarksCache {
@@ -44,8 +44,18 @@ impl WarmBookmarksCache {
         repo: BlobRepo,
     ) -> impl Future<Item = Self, Error = Error> {
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
-        spawn_bookmarks_updater(bookmarks.clone(), ctx.clone(), logger, repo.clone());
-        update_bookmarks(bookmarks.clone(), ctx, repo).map(move |()| Self { bookmarks })
+        let (sender, receiver) = sync::oneshot::channel();
+        spawn_bookmarks_updater(
+            bookmarks.clone(),
+            receiver,
+            ctx.clone(),
+            logger,
+            repo.clone(),
+        );
+        update_bookmarks(bookmarks.clone(), ctx, repo).map(move |()| Self {
+            bookmarks,
+            terminate: Arc::new(Mutex::new(Some(sender))),
+        })
     }
 
     pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
@@ -57,35 +67,51 @@ impl WarmBookmarksCache {
     }
 }
 
+impl Drop for WarmBookmarksCache {
+    fn drop(&mut self) {
+        // Ignore any error - we don't care if the updater has gone away.
+        let mut terminate = self.terminate.lock().unwrap();
+        if let Some(terminate) = terminate.take() {
+            let _ = terminate.send(());
+        }
+    }
+}
+
 fn spawn_bookmarks_updater(
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    terminate: sync::oneshot::Receiver<()>,
     ctx: CoreContext,
     logger: Logger,
     repo: BlobRepo,
 ) {
-    tokio::spawn(future::lazy({
-        cloned!(bookmarks, ctx, logger, repo);
-        move || {
-            stream::repeat(())
-                .and_then(move |()| {
+    tokio::spawn(future::lazy(move || {
+        stream::repeat(())
+            .and_then({
+                cloned!(logger);
+                move |()| {
                     debug!(logger, "updating bookmark cache...");
-                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone())
-                        .timed(|stats, _| {
-                            STATS::cached_bookmark_update_time_ms.add_value(
-                                stats.completion_time.as_millis_unchecked() as i64
-                            );
+                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone()).timed(
+                        |stats, _| {
+                            STATS::cached_bookmark_update_time_ms
+                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
                             Ok(())
-                        })
-                })
-                .then(|_| {
-                    let dur = Duration::from_millis(1000);
-                    tokio::timer::Delay::new(Instant::now() + dur)
-                })
-                // Ignore all errors and always retry - we don't want a transient
-                // failure make our bookmarks stale forever
-                .then(|_| Ok(()))
-                .for_each(|_| Ok(()))
-        }
+                        },
+                    )
+                }
+            })
+            .then(|_| {
+                let dur = Duration::from_millis(1000);
+                tokio::timer::Delay::new(Instant::now() + dur)
+            })
+            // Ignore all errors and always retry - we don't want a transient
+            // failure make our bookmarks stale forever
+            .then(|_| Ok(()))
+            .for_each(|_| -> Result<(), ()> { Ok(()) })
+            .select2(terminate)
+            .then(move |_| {
+                debug!(logger, "Stopped warm bookmark cache updater");
+                Ok(())
+            })
     }));
 }
 
