@@ -77,15 +77,14 @@ fn spawn_bookmarks_updater(
                             Ok(())
                         })
                 })
-                // Ignore all errors and always retry - we don't want a transient
-                // failure make our bookmarks stale forever
                 .then(|_| {
                     let dur = Duration::from_millis(1000);
-                    tokio::timer::Delay::new(Instant::now() + dur).map_err(|_| ())
+                    tokio::timer::Delay::new(Instant::now() + dur)
                 })
-                .collect()
-                .map(|_| ())
-                .map_err(|_| ())
+                // Ignore all errors and always retry - we don't want a transient
+                // failure make our bookmarks stale forever
+                .then(|_| Ok(()))
+                .for_each(|_| Ok(()))
         }
     }));
 }
