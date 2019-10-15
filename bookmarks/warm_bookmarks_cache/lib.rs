@@ -85,19 +85,14 @@ fn spawn_bookmarks_updater(
     repo: BlobRepo,
 ) {
     tokio::spawn(future::lazy(move || {
+        debug!(logger, "Starting warm bookmark cache updater");
         stream::repeat(())
-            .and_then({
-                cloned!(logger);
-                move |()| {
-                    debug!(logger, "updating bookmark cache...");
-                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone()).timed(
-                        |stats, _| {
-                            STATS::cached_bookmark_update_time_ms
-                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            Ok(())
-                        },
-                    )
-                }
+            .and_then(move |()| {
+                update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone()).timed(|stats, _| {
+                    STATS::cached_bookmark_update_time_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    Ok(())
+                })
             })
             .then(|_| {
                 let dur = Duration::from_millis(1000);
