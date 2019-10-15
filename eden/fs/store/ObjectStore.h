@@ -14,7 +14,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook {
 namespace eden {

@@ -9,7 +9,7 @@
 #include <folly/init/Init.h>
 #include <folly/synchronization/test/Barrier.h>
 #include "eden/fs/benchharness/Bench.h"
-#include "eden/fs/tracing/Tracing.h"
+#include "eden/fs/telemetry/Tracing.h"
 
 using namespace facebook::eden;
 

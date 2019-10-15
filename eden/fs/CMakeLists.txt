@@ -39,7 +39,7 @@ add_subdirectory(model)
 add_subdirectory(service)
 add_subdirectory(sqlite)
 add_subdirectory(store)
-add_subdirectory(tracing)
+add_subdirectory(telemetry)
 add_subdirectory(utils)
 
 # Platform specific code

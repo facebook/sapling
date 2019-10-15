@@ -17,7 +17,7 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook {
 namespace eden {

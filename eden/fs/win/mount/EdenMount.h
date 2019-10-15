@@ -22,7 +22,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/mount/FsChannel.h"

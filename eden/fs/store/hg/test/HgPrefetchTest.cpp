@@ -16,8 +16,8 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
-#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 

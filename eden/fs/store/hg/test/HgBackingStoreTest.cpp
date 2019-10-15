@@ -15,8 +15,8 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
-#include "eden/fs/tracing/EdenStats.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

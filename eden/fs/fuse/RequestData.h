@@ -14,7 +14,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook {
 namespace eden {

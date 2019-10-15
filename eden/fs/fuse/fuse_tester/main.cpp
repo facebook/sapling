@@ -20,7 +20,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 

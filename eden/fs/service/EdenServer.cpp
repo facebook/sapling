@@ -28,7 +28,7 @@
 #include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual

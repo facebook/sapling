@@ -54,7 +54,7 @@
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/tracing/Tracing.h"
+#include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ProcUtil.h"

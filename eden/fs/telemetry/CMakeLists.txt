@@ -5,11 +5,11 @@
 
 file(GLOB TRACING_SRCS "*.cpp")
 add_library(
-  eden_tracing STATIC
+  eden_telemetry STATIC
     ${TRACING_SRCS}
 )
 target_link_libraries(
-  eden_tracing
+  eden_telemetry
   PUBLIC
     eden_config
     eden_utils

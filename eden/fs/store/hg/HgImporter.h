@@ -18,7 +18,7 @@
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {

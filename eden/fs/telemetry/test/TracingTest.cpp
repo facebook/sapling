@@ -10,7 +10,7 @@
 #include <folly/executors/ThreadedExecutor.h>
 #include <folly/futures/Future.h>
 
-#include "eden/fs/tracing/Tracing.h"
+#include "eden/fs/telemetry/Tracing.h"
 
 using namespace facebook::eden;
 

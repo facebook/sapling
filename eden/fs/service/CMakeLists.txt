@@ -77,7 +77,7 @@ target_link_libraries(
     eden_inodes
     eden_model
     eden_store
-    eden_tracing
+    eden_telemetry
     ${EDEN_STORE_IMPLEMENTATIONS}
     ${YARPL_LIBRARIES}
     Folly::folly

@@ -18,7 +18,7 @@ target_link_libraries(
     eden_journal
     eden_model
     eden_store
-    eden_tracing
+    eden_telemetry
     eden_utils
     eden_service_thrift_util
     eden_win_utils

@@ -13,7 +13,7 @@
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif

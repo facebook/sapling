@@ -12,7 +12,7 @@ target_link_libraries(
   eden_journal
   PUBLIC
     eden_model
-    eden_tracing
+    eden_telemetry
     eden_utils
     streamingeden_thrift_cpp
 )

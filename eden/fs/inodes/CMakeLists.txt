@@ -35,7 +35,7 @@ else()
       eden_service
       eden_store
       eden_takeover_thrift
-      eden_tracing
+      eden_telemetry
       eden_utils
   )
 endif()
