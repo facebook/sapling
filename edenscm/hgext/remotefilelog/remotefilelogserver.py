@@ -446,37 +446,6 @@ def createfileblob(filectx):
     return "%s\0%s%s" % (header, text, ancestortext)
 
 
-def gcserver(ui, repo):
-    if not repo.ui.configbool("remotefilelog", "server"):
-        return
-
-    neededfiles = set()
-    heads = repo.revs("heads(tip~25000:) - null")
-
-    cachepath = repo.localvfs.join("remotefilelogcache")
-    for head in heads:
-        mf = repo[head].manifest()
-        for filename, filenode in mf.iteritems():
-            filecachepath = os.path.join(cachepath, filename, hex(filenode))
-            neededfiles.add(filecachepath)
-
-    # delete unneeded older files
-    days = repo.ui.configint("remotefilelog", "serverexpiration", 30)
-    expiration = time.time() - (days * 24 * 60 * 60)
-
-    with progress.bar(ui, _("removing old server cache"), "files") as prog:
-        for root, dirs, files in os.walk(cachepath):
-            for file in files:
-                filepath = os.path.join(root, file)
-                prog.value += 1
-                if filepath in neededfiles:
-                    continue
-
-                stat = os.stat(filepath)
-                if stat.st_mtime < expiration:
-                    os.remove(filepath)
-
-
 def getpackv1(repo, proto, args):
     return getpack(repo, proto, args, version=1)
 

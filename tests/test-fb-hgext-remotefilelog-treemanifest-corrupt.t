@@ -39,9 +39,3 @@ Populate the second repository
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over *s (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
-
-Verifies that both repositories will be garbage collected
-
-  $ hg gc master sane
-  finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
-  warning: can't gc repository: $TESTTMP/master: "unable to find the following nodes locally or on the server: ('', bc0c2c938b929f98b1c31a8c5994396ebb096bf0)"
