@@ -7,6 +7,7 @@
  */
 
 #![deny(warnings)]
+use std::sync::Arc;
 
 mod blobrepo;
 mod errors;
@@ -20,3 +21,11 @@ pub use crate::text_only::TextOnlyFileContentStore;
 pub use store::{ChangedFileType, ChangesetStore, FileContentStore};
 
 use errors::ErrorKind;
+
+pub fn blobrepo_text_only_store(
+    blobrepo: ::blobrepo::BlobRepo,
+    max_file_size: u64,
+) -> Arc<dyn FileContentStore> {
+    let store = BlobRepoFileContentStore::new(blobrepo);
+    Arc::new(TextOnlyFileContentStore::new(store, max_file_size))
+}

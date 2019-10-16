@@ -20,7 +20,7 @@ use cache_warmup::cache_warmup;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
-use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
+use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
 use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -121,6 +121,7 @@ pub fn repo_handlers(
                     wireproto_logging,
                     bundle2_replay_params,
                     push,
+                    hook_max_file_size,
                     ..
                 } = config.clone();
 
@@ -129,7 +130,7 @@ pub fn repo_handlers(
                 let mut hook_manager = HookManager::new(
                     ctx.clone(),
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
-                    Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
+                    blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params,
                     logger.clone(),
                 );

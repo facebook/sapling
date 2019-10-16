@@ -39,6 +39,7 @@ use regex::Regex;
 use std::str::FromStr;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
+const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 
 /// Configuration of a metaconfig repository
 #[derive(Debug, Eq, PartialEq)]
@@ -687,6 +688,10 @@ impl RepoConfigs {
             .list_keys_patterns_max
             .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
 
+        let hook_max_file_size = this
+            .hook_max_file_size
+            .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
+
         let filestore = this.filestore.map(|f| f.into());
 
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
@@ -736,6 +741,7 @@ impl RepoConfigs {
             list_keys_patterns_max,
             filestore,
             commit_sync_config,
+            hook_max_file_size,
         })
     }
 
@@ -828,6 +834,7 @@ struct RawRepoConfig {
     infinitepush: Option<RawInfinitepushParams>,
     list_keys_patterns_max: Option<u64>,
     filestore: Option<RawFilestoreParams>,
+    hook_max_file_size: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1358,6 +1365,7 @@ mod test {
             bookmarks_cache_ttl=5000
             storage_config="main"
             list_keys_patterns_max=123
+            hook_max_file_size=456
 
             [wireproto_logging]
             scribe_category="category"
@@ -1621,6 +1629,7 @@ mod test {
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
                 },
                 list_keys_patterns_max: 123,
+                hook_max_file_size: 456,
                 filestore: Some(FilestoreParams {
                     chunk_size: 768,
                     concurrency: 48,
@@ -1661,6 +1670,7 @@ mod test {
                 bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
+                hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 filestore: None,
                 commit_sync_config: None,
             },
@@ -1904,6 +1914,7 @@ mod test {
                 repoid: 123,
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
+                hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 ..Default::default()
             }
         };
@@ -1965,6 +1976,7 @@ mod test {
                 repoid: 123,
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
+                hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 ..Default::default()
             }
         };

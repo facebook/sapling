@@ -17,7 +17,7 @@ use failure_ext::{err_msg, Error, Fail, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};
-use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
+use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
@@ -50,12 +50,12 @@ impl Tailer {
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
         let changeset_store = BlobRepoChangesetStore::new(repo.clone());
-        let content_store = BlobRepoFileContentStore::new(repo.clone());
+        let content_store = blobrepo_text_only_store(repo.clone(), config.hook_max_file_size);
 
         let mut hook_manager = HookManager::new(
             ctx.clone(),
             Box::new(changeset_store),
-            Arc::new(content_store),
+            content_store,
             Default::default(),
             logger.clone(),
         );

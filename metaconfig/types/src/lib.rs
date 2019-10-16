@@ -106,6 +106,8 @@ pub struct RepoConfig {
     pub filestore: Option<FilestoreParams>,
     /// Config for commit sync
     pub commit_sync_config: Option<CommitSyncConfig>,
+    /// Maximum size to consider files in hooks
+    pub hook_max_file_size: u64,
 }
 
 impl RepoConfig {

@@ -1133,6 +1133,7 @@ fn default_repo_config() -> RepoConfig {
         list_keys_patterns_max: 123,
         filestore: None,
         commit_sync_config: None,
+        hook_max_file_size: 456,
     }
 }
 
