@@ -49,6 +49,7 @@ from . import (
     pycompat,
     repository,
     repoview,
+    revlog,
     revset,
     revsetlang,
     scmutil,
@@ -840,11 +841,35 @@ class localrepository(object):
 
     @storecache("00changelog.i", "visibleheads", "remotenames")
     def changelog(self):
-        return changelog.changelog(
-            self.svfs,
-            uiconfig=self.ui.uiconfig(),
-            trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
-        )
+        def loadchangelog(self):
+            return changelog.changelog(
+                self.svfs,
+                uiconfig=self.ui.uiconfig(),
+                trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
+            )
+
+        cl = loadchangelog(self)
+
+        # Migrate from inline to non-inline
+        # internal config: format.inline-changelog
+        if cl._inline and not self.ui.configbool("format", "inline-changelog"):
+            self.ui.write_err(_("(migrating to non-inlined changelog)\n"))
+            with self.lock():
+                cl = loadchangelog(self)
+                if cl._inline:
+                    # See revlog.checkinlinesize
+                    with cl.opener(cl.datafile, "w") as df:
+                        for r in cl:
+                            df.write(cl._getsegmentforrevs(r, r)[1])
+                    with cl.opener(cl.indexfile, "w", atomictemp=True) as fp:
+                        cl.version &= ~revlog.FLAG_INLINE_DATA
+                        cl._inline = False
+                        for i in cl:
+                            e = cl._io.packentry(cl.index[i], cl.node, cl.version, i)
+                            fp.write(e)
+                    # Reopen
+                    cl = loadchangelog(self)
+        return cl
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
