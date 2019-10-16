@@ -30,17 +30,18 @@ use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
 use failure_ext::{err_msg, Error, FutureFailureErrorExt};
-use futures::{future, Future, IntoFuture};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{future, stream, Future, IntoFuture, Stream};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::{
-    blobs::HgBlobChangeset, manifest_utils::EntryStatus, Changeset, HgChangesetId, HgFileNodeId,
-    HgParents, MPath,
+    blobs::HgBlobChangeset, manifest_utils::EntryStatus, Changeset, FileBytes, HgChangesetId,
+    HgFileNodeId, HgParents, MPath,
 };
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;
 use slog::{debug, Logger};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
@@ -653,16 +654,6 @@ impl HookFile {
         }
     }
 
-    pub fn contains_string(&self, ctx: CoreContext, data: &str) -> BoxFuture<bool, Error> {
-        let data = data.to_string();
-        self.file_content(ctx)
-            .and_then(move |bytes| {
-                let str_content = str::from_utf8(&bytes)?.to_string();
-                Ok(str_content.contains(&data))
-            })
-            .boxify()
-    }
-
     pub fn len(&self, ctx: CoreContext) -> BoxFuture<u64, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
         match self.hash_and_type {
@@ -673,12 +664,14 @@ impl HookFile {
         }
     }
 
-    pub fn file_content(&self, ctx: CoreContext) -> BoxFuture<Bytes, Error> {
+    pub fn file_text(&self, ctx: CoreContext) -> BoxFuture<Option<FileBytes>, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
         match self.hash_and_type {
-            Some((entry_id, _)) => self
+            Some((id, _)) => self
                 .content_store
-                .get_file_content_by_id(ctx, entry_id)
+                .stream_file_contents(ctx, id)
+                .concat2()
+                .map(Some)
                 .boxify(),
             None => {
                 future::err(ErrorKind::MissingFile(self.changeset_id, path.into()).into()).boxify()
@@ -723,10 +716,21 @@ impl HookChangeset {
         }
     }
 
-    pub fn file_content(&self, ctx: CoreContext, path: String) -> BoxFuture<Option<Bytes>, Error> {
+    pub fn file_text(&self, ctx: CoreContext, path: String) -> BoxFuture<Option<FileBytes>, Error> {
         let path = try_boxfuture!(MPath::new(path.as_bytes()));
         self.content_store
-            .get_file_content(ctx, self.changeset_id, path.clone())
+            .resolve_path(ctx.clone(), self.changeset_id, path)
+            .and_then({
+                cloned!(self.content_store);
+                move |id| match id {
+                    Some(id) => content_store
+                        .stream_file_contents(ctx, id)
+                        .concat2()
+                        .map(Some)
+                        .left_future(),
+                    None => Ok(None).into_future().right_future(),
+                }
+            })
             .boxify()
     }
 }
@@ -858,58 +862,84 @@ impl InMemoryChangesetStore {
 }
 
 pub trait FileContentStore: Send + Sync {
-    fn get_file_content(
+    fn resolve_path(
         &self,
         ctx: CoreContext,
-        changesetid: HgChangesetId,
+        changeset_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error>;
+    ) -> BoxFuture<Option<HgFileNodeId>, Error>;
 
-    fn get_file_content_by_id(
+    fn stream_file_contents(
         &self,
         ctx: CoreContext,
-        entry_id: HgFileNodeId,
-    ) -> BoxFuture<Bytes, Error>;
+        id: HgFileNodeId,
+    ) -> BoxStream<FileBytes, Error>;
 
-    fn get_file_size(&self, ctx: CoreContext, entry_id: HgFileNodeId) -> BoxFuture<u64, Error>;
+    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error>;
+}
+
+impl FileContentStore for Arc<dyn FileContentStore> {
+    fn resolve_path(
+        &self,
+        ctx: CoreContext,
+        changeset_id: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
+        (**self).resolve_path(ctx, changeset_id, path)
+    }
+
+    fn stream_file_contents(
+        &self,
+        ctx: CoreContext,
+        id: HgFileNodeId,
+    ) -> BoxStream<FileBytes, Error> {
+        (**self).stream_file_contents(ctx, id)
+    }
+
+    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
+        (**self).get_file_size(ctx, id)
+    }
 }
 
 #[derive(Clone)]
 pub struct InMemoryFileContentStore {
-    entry_id_to_bytes: HashMap<HgFileNodeId, Bytes>,
-    path_to_bytes: HashMap<(HgChangesetId, MPath), Bytes>,
+    entry_id_to_bytes: HashMap<HgFileNodeId, FileBytes>,
+    path_to_filenode: HashMap<(HgChangesetId, MPath), HgFileNodeId>,
 }
 
 impl FileContentStore for InMemoryFileContentStore {
-    fn get_file_content(
+    fn resolve_path(
         &self,
         _ctx: CoreContext,
         cs_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error> {
-        future::ok(self.path_to_bytes.get(&(cs_id, path)).cloned()).boxify()
+    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
+        let filenode = self.path_to_filenode.get(&(cs_id, path)).cloned();
+        Ok(filenode).into_future().boxify()
     }
 
-    fn get_file_content_by_id(
+    fn stream_file_contents(
         &self,
         _ctx: CoreContext,
-        hash: HgFileNodeId,
-    ) -> BoxFuture<Bytes, Error> {
-        self.entry_id_to_bytes
-            .get(&hash)
-            .map(|bytes| bytes.clone())
-            .ok_or(err_msg("file not found"))
-            .into_future()
-            .boxify()
+        id: HgFileNodeId,
+    ) -> BoxStream<FileBytes, Error> {
+        let res = self
+            .entry_id_to_bytes
+            .get(&id)
+            .map(|b| b.clone())
+            .ok_or(err_msg("file not found"));
+
+        stream::once(res).boxify()
     }
 
-    fn get_file_size(&self, _ctx: CoreContext, hash: HgFileNodeId) -> BoxFuture<u64, Error> {
-        self.entry_id_to_bytes
-            .get(&hash)
-            .map(|bytes| bytes.len() as u64)
+    fn get_file_size(&self, _ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
+        let size = self
+            .entry_id_to_bytes
+            .get(&id)
             .ok_or(err_msg("file not found"))
-            .into_future()
-            .boxify()
+            .and_then(|b| b.size().try_into().map_err(|_| err_msg("size not valid")));
+
+        size.into_future().boxify()
     }
 }
 
@@ -917,13 +947,13 @@ impl InMemoryFileContentStore {
     pub fn new() -> InMemoryFileContentStore {
         InMemoryFileContentStore {
             entry_id_to_bytes: HashMap::new(),
-            path_to_bytes: HashMap::new(),
+            path_to_filenode: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, cs_id: HgChangesetId, path: MPath, key: HgFileNodeId, content: Bytes) {
-        self.entry_id_to_bytes.insert(key, content.clone());
-        self.path_to_bytes.insert((cs_id, path), content);
+    pub fn insert(&mut self, cs_id: HgChangesetId, path: MPath, key: HgFileNodeId, bytes: Bytes) {
+        self.entry_id_to_bytes.insert(key, FileBytes(bytes));
+        self.path_to_filenode.insert((cs_id, path), key);
     }
 }
 

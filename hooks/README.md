@@ -93,9 +93,8 @@ The type `file` is a table with the following fields:
 | `is_added()` | Returns a `boolean` indicating whether the file was added as part of the changeset |
 | `is_deleted()` | Returns a `boolean` indicating whether the file was deleted as part of the changeset |
 | `is_modified()` | Returns a `boolean` indicating whether the file was modified as part of the changeset
-| `contains_string(needle)` | Returns a `boolean` indicating whether the specified string `needle` is present in this file. (Only present if `is_deleted()` returns `false`.) |
 | `len()` | Returns a `number` that is the length of the file in bytes. (Only present if `is_deleted()` returns `false`.) |
-| `content()` | Returns a `string` containing the contents of the file. (Only present if `is_deleted()` returns `false`.) |
+| `text()` | Returns a `string` containing the contents of the file, or `nil` if the file is binary or too large. (Only present if `is_deleted()` returns `false`.) |
 | `path_regex_match(regex)` | Returns a `boolean` indicating whether the file's path matches the supplied regex |
 
 ### PerChangeset
@@ -107,7 +106,7 @@ the following additional fields:
 | --------- | ----------- |
 | `info` | (`table`) Described below. |
 | `files` | (`table`) List of objects of type `file`, described above. |
-| `file_content(path)` | (`function`) Takes the relative path to a file in the repo and returns its contents. |
+| `file_text(path)` | (`function`) Takes the relative path to a file in the repo and returns its contents, or `nil` if the file does not exist, is binary, or too large. |
 | `parse_commit_msg()` | (`function`) Returns a table with phabricator tags parsed. |
 | `is_valid_reviewer(user)` | (`function`) Returns whether a user can review the commit. |
 

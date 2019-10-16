@@ -7,7 +7,7 @@ g__hook_start = function(info, arg)
         return coroutine.yield(g__contains_string(s))
       end
       file.len = function() return coroutine.yield(g__file_len()) end
-      file.content = function() return coroutine.yield(g__file_content()) end
+      file.text = function() return coroutine.yield(g__file_text()) end
       file.is_symlink = function() return coroutine.yield(g__is_symlink()) end
       file.path_regex_match = function(p)
         return coroutine.yield(g__regex_match(p, file.path))

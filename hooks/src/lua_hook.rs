@@ -79,44 +79,25 @@ impl Hook<HookChangeset> for LuaHook {
             .collect();
         let files_map2 = files_map.clone();
 
-        let contains_string = {
-            cloned!(ctx);
-            move |path: String, string: String| -> Result<AnyFuture, Error> {
-                match files_map.get(&path) {
-                    Some(file) => {
-                        let future = file
-                            .contains_string(ctx.clone(), &string)
-                            .map_err(|err| {
-                                LuaError::ExecutionError(format!(
-                                    "failed to get file content: {}",
-                                    err
-                                ))
-                            })
-                            .map(|contains| AnyLuaValue::LuaBoolean(contains));
-                        Ok(AnyFuture::new(future))
-                    }
-                    None => Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(false)))),
-                }
-            }
-        };
-        let contains_string = function2(contains_string);
-        let file_content = {
+        let file_text = {
             cloned!(ctx, context);
             move |path: String| -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .file_content(ctx.clone(), path)
+                    .file_text(ctx.clone(), path)
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
                     .map(|opt| match opt {
-                        Some(content) => AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec())),
+                        Some(content) => {
+                            AnyLuaValue::LuaAnyString(AnyLuaString(content.into_bytes().to_vec()))
+                        }
                         None => AnyLuaValue::LuaNil,
                     });
                 Ok(AnyFuture::new(future))
             }
         };
-        let file_content = function1(file_content);
+        let file_text = function1(file_text);
         let file_len = {
             cloned!(ctx);
             move |path: String| -> Result<AnyFuture, Error> {
@@ -189,9 +170,8 @@ impl Hook<HookChangeset> for LuaHook {
         lua.openlibs();
         add_configs_lua(&mut lua, context.clone());
         add_regex_match_lua(&mut lua);
-        lua.set("g__contains_string", contains_string);
         lua.set("g__file_len", file_len);
-        lua.set("g__file_content", file_content);
+        lua.set("g__file_text", file_text);
         lua.set("g__parse_commit_msg", parse_commit_msg);
         lua.set("g__is_valid_reviewer", is_valid_reviewer);
         let res: Result<(), Error> = lua
@@ -237,34 +217,25 @@ impl Hook<HookFile> for LuaHook {
         let mut code = HOOK_START_CODE_FILE.to_string();
         code.push_str(HOOK_START_CODE_BASE);
         code.push_str(&self.code);
-        let contains_string = {
-            cloned!(ctx, context);
-            move |string: String| -> Result<AnyFuture, Error> {
-                let future = context
-                    .data
-                    .contains_string(ctx.clone(), &string)
-                    .map_err(|err| {
-                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
-                    })
-                    .map(|contains| AnyLuaValue::LuaBoolean(contains));
-                Ok(AnyFuture::new(future))
-            }
-        };
-        let contains_string = function1(contains_string);
-        let file_content = {
+        let file_text = {
             cloned!(ctx, context);
             move || -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .file_content(ctx.clone())
+                    .file_text(ctx.clone())
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
-                    .map(|content| AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec())));
+                    .map(|opt| match opt {
+                        Some(content) => {
+                            AnyLuaValue::LuaAnyString(AnyLuaString(content.into_bytes().to_vec()))
+                        }
+                        None => AnyLuaValue::LuaNil,
+                    });
                 Ok(AnyFuture::new(future))
             }
         };
-        let file_content = function0(file_content);
+        let file_text = function0(file_text);
         let is_symlink = {
             cloned!(ctx, context);
             move || -> Result<AnyFuture, Error> {
@@ -304,9 +275,8 @@ impl Hook<HookFile> for LuaHook {
         lua.openlibs();
         add_configs_lua(&mut lua, context.clone());
         add_regex_match_lua(&mut lua);
-        lua.set("g__contains_string", contains_string);
         lua.set("g__file_len", file_len);
-        lua.set("g__file_content", file_content);
+        lua.set("g__file_text", file_text);
         lua.set("g__is_symlink", is_symlink);
         let res: Result<(), Error> = lua
             .execute::<()>(&code)
@@ -474,7 +444,7 @@ mod test {
                 "hook = function (ctx)\n\
                  for _, file in ipairs(ctx.files) do\n\
                  if file.path == \"deleted\" then\n\
-                 file:file_content()\n\
+                 file:file_text()\n\
                  end\n\
                  end\n\
                  return true\n\
@@ -716,25 +686,6 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_cs_hook_file_contains_string_match(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock(fb);
-            let changeset = default_changeset(fb);
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.files[1].contains_string(\"file1sausages\") and\n
-                 ctx.files[2].contains_string(\"file2sausages\") and\n
-                 ctx.files[3].contains_string(\"file3sausages\")\n
-                 end",
-            );
-            assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
-                Ok(HookExecution::Accepted)
-            );
-        });
-    }
-
-    #[fbinit::test]
     fn test_cs_hook_path_regex_match(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
@@ -773,16 +724,16 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_cs_hook_file_content_match(fb: FacebookInit) {
+    fn test_cs_hook_file_text_match(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.files[1].content() == \"file1sausages\" and\n
-                 ctx.files[2].content() == \"file2sausages\" and\n
-                 ctx.files[3].content() == \"file3sausages\" and\n
-                 ctx.files[5].content() == \"modifiedsausages\"\n
+                 return ctx.files[1].text() == \"file1sausages\" and\n
+                 ctx.files[2].text() == \"file2sausages\" and\n
+                 ctx.files[3].text() == \"file3sausages\" and\n
+                 ctx.files[5].text() == \"modifiedsausages\"\n
                  end",
             );
             assert_matches!(
@@ -793,15 +744,15 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_cs_hook_other_file_content_match(fb: FacebookInit) {
+    fn test_cs_hook_other_file_text_match(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file_content(\"file1\") == \"file1sausages\" and\n
-                 ctx.file_content(\"file2\") == \"file2sausages\" and\n
-                 ctx.file_content(\"file3\") == \"file3sausages\"\n
+                 return ctx.file_text(\"file1\") == \"file1sausages\" and\n
+                 ctx.file_text(\"file2\") == \"file2sausages\" and\n
+                 ctx.file_text(\"file3\") == \"file3sausages\"\n
                  end",
             );
             assert_matches!(
@@ -812,13 +763,13 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_file_content_not_found_returns_nil(fb: FacebookInit) {
+    fn test_file_text_not_found_returns_nil(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file_content(\"no/such/path\") == nil\n
+                 return ctx.file_text(\"no/such/path\") == nil\n
                  end",
             );
             assert_matches!(
@@ -1167,40 +1118,6 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_file_hook_contains_string_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock(fb);
-            let hook_file = default_hook_added_file();
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.file.contains_string(\"sausages\")\n\
-                 end",
-            );
-            assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
-                Ok(HookExecution::Accepted)
-            );
-        });
-    }
-
-    #[fbinit::test]
-    fn test_file_hook_contains_string_no_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
-            let ctx = CoreContext::test_mock(fb);
-            let hook_file = default_hook_added_file();
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.file.contains_string(\"gerbils\"), 'fail'\n\
-                 end",
-            );
-            assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
-                Ok(HookExecution::Rejected(_))
-            );
-        });
-    }
-
-    #[fbinit::test]
     fn test_file_hook_path_regex_match_no_matches(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
@@ -1305,13 +1222,13 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_file_hook_content_matches(fb: FacebookInit) {
+    fn test_file_hook_text_matches(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file.content() == \"sausages\"\n\
+                 return ctx.file.text() == \"sausages\"\n\
                  end",
             );
             assert_matches!(

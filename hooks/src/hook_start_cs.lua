@@ -37,8 +37,8 @@ g__hook_start = function(info, arg)
         file.len = function()
           return coroutine.yield(g__file_len(file.path))
         end
-        file.content = function()
-          return coroutine.yield(g__file_content(file.path))
+        file.text = function()
+          return coroutine.yield(g__file_text(file.path))
         end
         file.path_regex_match = function(p)
           return coroutine.yield(g__regex_match(p, file.path))
@@ -49,8 +49,8 @@ g__hook_start = function(info, arg)
 
     ctx.files = files
     ctx.info.author_unixname = get_author_unixname(ctx.info.author)
-    ctx.file_content = function(path)
-      return coroutine.yield(g__file_content(path))
+    ctx.file_text = function(path)
+      return coroutine.yield(g__file_text(path))
     end
     ctx.parse_commit_msg = function()
       return coroutine.yield(g__parse_commit_msg())

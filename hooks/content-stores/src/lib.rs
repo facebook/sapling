@@ -11,17 +11,16 @@
 #![deny(warnings)]
 
 use blobrepo::BlobRepo;
-use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use hooks::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::manifest_utils::{self, EntryStatus};
 use mercurial_types::{
-    blobs::HgBlobChangeset, manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId,
-    MPath, Type,
+    blobs::HgBlobChangeset, manifest::get_empty_manifest, Changeset, FileBytes, HgChangesetId,
+    HgFileNodeId, MPath, Type,
 };
 use mononoke_types::FileType;
 
@@ -37,14 +36,14 @@ pub struct BlobRepoChangesetStore {
 }
 
 impl FileContentStore for BlobRepoFileContentStore {
-    fn get_file_content(
+    fn resolve_path(
         &self,
         ctx: CoreContext,
-        changesetid: HgChangesetId,
+        changeset_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error> {
+    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
         self.repo
-            .get_changeset_by_changesetid(ctx.clone(), changesetid)
+            .get_changeset_by_changesetid(ctx.clone(), changeset_id)
             .and_then({
                 cloned!(self.repo, ctx);
                 move |changeset| {
@@ -52,36 +51,19 @@ impl FileContentStore for BlobRepoFileContentStore {
                         .map(move |fs| fs.get(&path).copied())
                 }
             })
-            .and_then({
-                cloned!(self.repo);
-                move |opt| match opt {
-                    // TODO (T47378130): Elide large files in content hooks.
-                    Some(hash) => repo
-                        .get_file_content(ctx, hash)
-                        .concat2()
-                        .map(|file_bytes| Some(file_bytes.into_bytes()))
-                        .left_future(),
-                    None => future::ok(None).right_future(),
-                }
-            })
             .boxify()
     }
 
-    fn get_file_content_by_id(
+    fn stream_file_contents(
         &self,
         ctx: CoreContext,
-        hash: HgFileNodeId,
-    ) -> BoxFuture<Bytes, Error> {
-        // TODO (T47378130): Elide large files in content hooks.
-        self.repo
-            .get_file_content(ctx, hash)
-            .concat2()
-            .map(|file_bytes| file_bytes.into_bytes())
-            .boxify()
+        id: HgFileNodeId,
+    ) -> BoxStream<FileBytes, Error> {
+        self.repo.get_file_content(ctx, id)
     }
 
-    fn get_file_size(&self, ctx: CoreContext, hash: HgFileNodeId) -> BoxFuture<u64, Error> {
-        self.repo.get_file_size(ctx, hash).boxify()
+    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
+        self.repo.get_file_size(ctx, id)
     }
 }
 

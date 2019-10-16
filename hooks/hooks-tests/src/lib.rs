@@ -94,47 +94,8 @@ fn context_matching_changeset_hook(
 }
 
 #[derive(Clone, Debug)]
-struct ContainsStringMatchingChangesetHook {
-    expected_content: HashMap<String, String>,
-}
-
-impl Hook<HookChangeset> for ContainsStringMatchingChangesetHook {
-    fn run(
-        &self,
-        ctx: CoreContext,
-        context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let mut futs = stream::FuturesUnordered::new();
-        for file in context.data.files {
-            let fut = match self.expected_content.get(&file.path) {
-                Some(content) => file.contains_string(ctx.clone(), &content),
-                None => Box::new(ok(false)),
-            };
-            futs.push(fut);
-        }
-        futs.skip_while(|b| Ok(*b))
-            .into_future()
-            .map(|(opt_item, _)| {
-                if opt_item.is_some() {
-                    default_rejection()
-                } else {
-                    HookExecution::Accepted
-                }
-            })
-            .map_err(|(e, _)| e)
-            .boxify()
-    }
-}
-
-fn contains_string_matching_changeset_hook(
-    expected_content: HashMap<String, String>,
-) -> Box<dyn Hook<HookChangeset>> {
-    Box::new(ContainsStringMatchingChangesetHook { expected_content })
-}
-
-#[derive(Clone, Debug)]
 struct FileContentMatchingChangesetHook {
-    expected_content: HashMap<String, String>,
+    expected_content: HashMap<String, Option<String>>,
 }
 
 impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
@@ -148,10 +109,22 @@ impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
             let fut = match self.expected_content.get(&file.path) {
                 Some(expected_content) => {
                     let expected_content = expected_content.clone();
-                    file.file_content(ctx.clone())
+                    file.file_text(ctx.clone())
                         .map(move |content| {
-                            let content = std::str::from_utf8(&*content).unwrap().to_string();
-                            content.contains(&expected_content)
+                            let content = content
+                                .map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
+
+                            match (content, expected_content) {
+                                (Some(content), Some(expected_content)) => {
+                                    if content.contains(&expected_content) {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                (None, None) => true,
+                                _ => false,
+                            }
                         })
                         .boxify()
                 }
@@ -173,8 +146,8 @@ impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
     }
 }
 
-fn file_content_matching_changeset_hook(
-    expected_content: HashMap<String, String>,
+fn file_text_matching_changeset_hook(
+    expected_content: HashMap<String, Option<String>>,
 ) -> Box<dyn Hook<HookChangeset>> {
     Box::new(FileContentMatchingChangesetHook { expected_content })
 }
@@ -238,8 +211,10 @@ impl Hook<HookChangeset> for OtherFileMatchingChangesetHook {
         let expected_content = self.expected_content.clone();
         context
             .data
-            .file_content(ctx, self.file_path.clone())
-            .map(|opt| opt.map(|content| std::str::from_utf8(&*content).unwrap().to_string()))
+            .file_text(ctx, self.file_path.clone())
+            .map(|opt| {
+                opt.map(|content| std::str::from_utf8(content.as_bytes()).unwrap().to_string())
+            })
             .map(move |opt| {
                 if opt == expected_content {
                     HookExecution::Accepted
@@ -317,37 +292,8 @@ fn path_matching_file_hook(paths: HashSet<String>) -> Box<dyn Hook<HookFile>> {
 }
 
 #[derive(Clone, Debug)]
-struct ContainsStringMatchingFileHook {
-    content: String,
-}
-
-impl Hook<HookFile> for ContainsStringMatchingFileHook {
-    fn run(
-        &self,
-        ctx: CoreContext,
-        context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        context
-            .data
-            .contains_string(ctx, &self.content)
-            .map(|contains| {
-                if contains {
-                    HookExecution::Accepted
-                } else {
-                    default_rejection()
-                }
-            })
-            .boxify()
-    }
-}
-
-fn contains_string_matching_file_hook(content: String) -> Box<dyn Hook<HookFile>> {
-    Box::new(ContainsStringMatchingFileHook { content })
-}
-
-#[derive(Clone, Debug)]
 struct FileContentMatchingFileHook {
-    content: String,
+    expected_content: Option<String>,
 }
 
 impl Hook<HookFile> for FileContentMatchingFileHook {
@@ -356,24 +302,31 @@ impl Hook<HookFile> for FileContentMatchingFileHook {
         ctx: CoreContext,
         context: HookContext<HookFile>,
     ) -> BoxFuture<HookExecution, Error> {
-        let expected_content = self.content.clone();
+        let expected_content = self.expected_content.clone();
         context
             .data
-            .file_content(ctx)
+            .file_text(ctx)
             .map(move |content| {
-                let content = std::str::from_utf8(&*content).unwrap().to_string();
-                if content.contains(&expected_content) {
-                    HookExecution::Accepted
-                } else {
-                    default_rejection()
+                let content =
+                    content.map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
+                match (content, expected_content) {
+                    (Some(content), Some(expected_content)) => {
+                        if content.contains(&expected_content) {
+                            HookExecution::Accepted
+                        } else {
+                            default_rejection()
+                        }
+                    }
+                    (None, None) => HookExecution::Accepted,
+                    _ => default_rejection(),
                 }
             })
             .boxify()
     }
 }
 
-fn file_content_matching_file_hook(content: String) -> Box<dyn Hook<HookFile>> {
-    Box::new(FileContentMatchingFileHook { content })
+fn file_text_matching_file_hook(expected_content: Option<String>) -> Box<dyn Hook<HookFile>> {
+    Box::new(FileContentMatchingFileHook { expected_content })
 }
 
 #[derive(Clone, Debug)]
@@ -555,46 +508,7 @@ fn test_changeset_hook_context(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-fn test_changeset_hook_contains_string(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock(fb);
-        let hook1_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "elephants".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
-        ];
-        let hook2_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
-        ];
-        let hook3_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "giraffes".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "lions".to_string()
-        ];
-        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
-            "hook1".to_string() => contains_string_matching_changeset_hook(hook1_map),
-            "hook2".to_string() => contains_string_matching_changeset_hook(hook2_map),
-            "hook3".to_string() => contains_string_matching_changeset_hook(hook3_map),
-        };
-        let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
-        };
-        let regexes = hashmap! {
-            "b.*".to_string() => vec!["hook3".to_string()]
-        };
-        let expected = hashmap! {
-            "hook1".to_string() => HookExecution::Accepted,
-            "hook2".to_string() => default_rejection(),
-            "hook3".to_string() => default_rejection(),
-        };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
-    });
-}
-
-#[fbinit::test]
-fn test_changeset_hook_other_file_content(fb: FacebookInit) {
+fn test_changeset_hook_other_file_text(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
@@ -622,28 +536,28 @@ fn test_changeset_hook_other_file_content(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-fn test_changeset_hook_file_content(fb: FacebookInit) {
+fn test_changeset_hook_file_text(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock(fb);
         let hook1_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "elephants".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
+            "dir1/subdir1/subsubdir1/file_1".to_string() => Some("elephants".to_string()),
+            "dir1/subdir1/subsubdir2/file_1".to_string() => Some("hippopatami".to_string()),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => Some("eels".to_string()),
         ];
         let hook2_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
+            "dir1/subdir1/subsubdir1/file_1".to_string() => Some("anteaters".to_string()),
+            "dir1/subdir1/subsubdir2/file_1".to_string() => Some("hippopatami".to_string()),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => Some("eels".to_string()),
         ];
         let hook3_map = hashmap![
-            "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => "giraffes".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => "lions".to_string()
+            "dir1/subdir1/subsubdir1/file_1".to_string() => Some("anteaters".to_string()),
+            "dir1/subdir1/subsubdir2/file_1".to_string() => Some("giraffes".to_string()),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => Some("lions".to_string()),
         ];
         let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
-            "hook1".to_string() => file_content_matching_changeset_hook(hook1_map),
-            "hook2".to_string() => file_content_matching_changeset_hook(hook2_map),
-            "hook3".to_string() => file_content_matching_changeset_hook(hook3_map),
+            "hook1".to_string() => file_text_matching_changeset_hook(hook1_map),
+            "hook2".to_string() => file_text_matching_changeset_hook(hook2_map),
+            "hook3".to_string() => file_text_matching_changeset_hook(hook3_map),
         };
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
@@ -835,49 +749,13 @@ fn test_file_hooks_paths_mix(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-fn test_file_hook_contains_string(fb: FacebookInit) {
+fn test_file_hook_file_text(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock(fb);
         let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
-            "hook1".to_string() => contains_string_matching_file_hook("elephants".to_string()),
-            "hook2".to_string() => contains_string_matching_file_hook("hippopatami".to_string()),
-            "hook3".to_string() => contains_string_matching_file_hook("eels".to_string())
-        };
-        let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
-        };
-        let regexes = hashmap! {
-            "^b.*$".to_string() => vec!["hook3".to_string()],
-        };
-        let expected = hashmap! {
-            "hook1".to_string() => hashmap! {
-                "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
-                "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-                "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
-            },
-            "hook2".to_string() => hashmap! {
-                "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-                "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-                "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
-            },
-            "hook3".to_string() => hashmap! {
-                "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-                "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-                "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
-            },
-        };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
-    });
-}
-
-#[fbinit::test]
-fn test_file_hook_file_content(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        let ctx = CoreContext::test_mock(fb);
-        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
-            "hook1".to_string() => file_content_matching_file_hook("elephants".to_string()),
-            "hook2".to_string() => file_content_matching_file_hook("hippopatami".to_string()),
-            "hook3".to_string() => file_content_matching_file_hook("eels".to_string())
+            "hook1".to_string() => file_text_matching_file_hook(Some("elephants".to_string())),
+            "hook2".to_string() => file_text_matching_file_hook(Some("hippopatami".to_string())),
+            "hook3".to_string() => file_text_matching_file_hook(Some("eels".to_string()))
         };
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
