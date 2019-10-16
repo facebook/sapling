@@ -76,11 +76,11 @@ class RebaseTest(EdenHgTestCase):
 
     def test_rebase_commit_with_independent_folder(self) -> None:
         stdout = self.hg("--debug", "rebase", "-s", self._c11, "-d", self._c25)
-        self.assertIn(f'rebasing 1:{self._c11[:12]} "c11"\n', stdout)
-        self.assertIn(f'rebasing 2:{self._c12[:12]} "c12"\n', stdout)
-        self.assertIn(f'rebasing 3:{self._c13[:12]} "c13"\n', stdout)
-        self.assertIn(f'rebasing 4:{self._c14[:12]} "c14"\n', stdout)
-        self.assertIn(f'rebasing 5:{self._c15[:12]} "c15"\n', stdout)
+        self.assertIn(f'rebasing {self._c11[:12]} "c11"\n', stdout)
+        self.assertIn(f'rebasing {self._c12[:12]} "c12"\n', stdout)
+        self.assertIn(f'rebasing {self._c13[:12]} "c13"\n', stdout)
+        self.assertIn(f'rebasing {self._c14[:12]} "c14"\n', stdout)
+        self.assertIn(f'rebasing {self._c15[:12]} "c15"\n', stdout)
         # Note that these are empirical values, not desired values.
         # We need to figure out why this hits the slow path and fix it!
         self.assert_update_logic(stdout, num_fast_path=2, num_slow_path=5)
