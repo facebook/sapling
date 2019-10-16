@@ -129,8 +129,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.server (bool)
   undocumented: remotefilelog.servercachepath (str)
   undocumented: remotefilelog.shallowtrees (bool)
-  undocumented: remotefilelog.validatecache (str) ["on"]
-  undocumented: remotefilelog.validatecachelog (str)
   undocumented: remotenames.alias.default (bool)
   undocumented: remotenames.allownonfastforward (bool)
   undocumented: remotenames.calculatedistance (bool)

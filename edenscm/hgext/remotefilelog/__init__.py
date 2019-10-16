@@ -109,8 +109,6 @@ Configs:
 
     ``format.userustmutablestore`` switches to using the rust mutable stores.
 
-    ``format.noloosefile`` do not use loosefiles.
-
     ``treemanifest.blocksendflat`` causes an exception to be thrown if the
     current repository attempts to add flat manifests to a changegroup.
 

@@ -65,16 +65,6 @@ def interposeclass(container, classname):
     return wrap
 
 
-def getcachekey(reponame, file, id):
-    pathhash = hashlib.sha1(file).hexdigest()
-    return os.path.join(reponame, pathhash[:2], pathhash[2:], id)
-
-
-def getlocalkey(file, id):
-    pathhash = hashlib.sha1(file).hexdigest()
-    return os.path.join(pathhash, id)
-
-
 def getcachepath(ui, allowempty=False):
     cachepath = ui.config("remotefilelog", "cachepath")
     if not cachepath:
@@ -277,37 +267,6 @@ def bin2int(buf):
     return x
 
 
-def parsesizeflags(raw):
-    """given a remotefilelog blob, return (headersize, rawtextsize, flags)
-
-    see remotefilelogserver.createfileblob for the format.
-    raise RuntimeError if the content is illformed.
-    """
-    flags = revlog.REVIDX_DEFAULT_FLAGS
-    size = None
-    try:
-        index = raw.index("\0")
-        header = raw[:index]
-        if header.startswith("v"):
-            # v1 and above, header starts with 'v'
-            if header.startswith("v1\n"):
-                for s in header.split("\n"):
-                    if s.startswith(constants.METAKEYSIZE):
-                        size = int(s[len(constants.METAKEYSIZE) :])
-                    elif s.startswith(constants.METAKEYFLAG):
-                        flags = int(s[len(constants.METAKEYFLAG) :])
-            else:
-                raise RuntimeError("unsupported remotefilelog header: %s" % header)
-        else:
-            # v0, str(int(size)) is the header
-            size = int(header)
-    except ValueError:
-        raise RuntimeError("unexpected remotefilelog header: illegal format")
-    if size is None:
-        raise RuntimeError("unexpected remotefilelog header: no size found")
-    return index + 1, size, flags
-
-
 def buildfileblobheader(size, flags, version=1):
     """return the header of a remotefilelog blob.
 
@@ -328,147 +287,6 @@ def buildfileblobheader(size, flags, version=1):
     else:
         raise error.ProgrammingError("unknown fileblob version %d" % version)
     return header
-
-
-def verifyfilenode(ui, raw, hexexpectedfilenode, validatehashes):
-    offset, size, flags = parsesizeflags(raw)
-    text = raw[offset : offset + size]
-
-    if verifyredacteddata(text):
-        return ValidationResult.Redacted
-
-    # Do not check lfs data since hash verification would fail
-    if validatehashes and flags == 0:
-        ancestors = ancestormap(raw)
-        p1, p2, _, copyfrom = ancestors[bin(hexexpectedfilenode)]
-        if copyfrom:
-            # Mercurial has a complicated copy/renames logic.
-            # In vanilla hg, in case of rename p1 is always "null",
-            # and the copy information is embedded in file revision.
-            # In remotefilelog, p1 is used to store "copyfrom file node".
-            # In both cases, p2 is always "null" for a non-merge commit.
-            # It could only be not-null for merges.
-            # The code below converts between two representations.
-
-            filelogmeta = {"copy": copyfrom, "copyrev": hex(p1)}
-            text = filelog.packmeta(filelogmeta, text)
-            p1 = nullid
-        elif text.startswith("\1\n"):
-            text = filelog.packmeta({}, text)
-
-        actualhash = hex(revlog.hash(text, p1, p2))
-        if hexexpectedfilenode != actualhash:
-            ui.log(
-                "remotefilelog",
-                "remotefilelog hash verification failed \n",
-                actual_hash=actualhash,
-                expected_hash=hexexpectedfilenode,
-            )
-            return ValidationResult.Invalid
-    return ValidationResult.Valid
-
-
-def verifyredacteddata(data):
-    # Check if text is the same as the magic string used
-    # in blacklisted files. When a file is blacklisted,
-    # it's content is replaced by a default string.
-    if data == constants.REDACTED_CONTENT:
-        return True
-
-    return False
-
-
-def ancestormap(raw):
-    offset, size, flags = parsesizeflags(raw)
-    start = offset + size
-
-    mapping = {}
-    while start < len(raw):
-        divider = raw.index("\0", start + 80)
-
-        currentnode = raw[start : (start + 20)]
-        p1 = raw[(start + 20) : (start + 40)]
-        p2 = raw[(start + 40) : (start + 60)]
-        linknode = raw[(start + 60) : (start + 80)]
-        copyfrom = raw[(start + 80) : divider]
-
-        mapping[currentnode] = (p1, p2, linknode, copyfrom)
-        start = divider + 1
-
-    return mapping
-
-
-def readfile(path):
-    f = util.posixfile(path, "rb")
-    try:
-        result = f.read()
-
-        # we should never have empty files
-        if not result:
-            os.remove(path)
-            raise IOError("empty file: %s" % path)
-
-        return result
-    finally:
-        f.close()
-
-
-def unlinkfile(filepath):
-    if pycompat.iswindows:
-        # On Windows, os.unlink cannnot delete readonly files
-        os.chmod(filepath, stat.S_IWUSR)
-
-    util.unlink(filepath)
-
-
-def renamefile(source, destination):
-    if pycompat.iswindows:
-        # On Windows, os.rename cannot rename readonly files
-        # and cannot overwrite destination if it exists
-        os.chmod(source, stat.S_IWUSR)
-        if os.path.isfile(destination):
-            os.chmod(destination, stat.S_IWUSR)
-            os.unlink(destination)
-
-    os.rename(source, destination)
-
-
-def writefile(path, content, readonly=False):
-    dirname, filename = os.path.split(path)
-    if not os.path.exists(dirname):
-        try:
-            os.makedirs(dirname)
-        except OSError as ex:
-            if ex.errno != errno.EEXIST:
-                raise
-
-    fd, temp = tempfile.mkstemp(prefix=".%s-" % filename, dir=dirname)
-    os.close(fd)
-
-    try:
-        f = util.posixfile(temp, "wb")
-        f.write(content)
-        f.close()
-
-        if readonly:
-            mode = 0o444
-        else:
-            # tempfiles are created with 0o600, so we need to manually set the
-            # mode.
-            oldumask = os.umask(0)
-            # there's no way to get the umask without modifying it, so set it
-            # back
-            os.umask(oldumask)
-            mode = ~oldumask
-
-        renamefile(temp, path)
-        os.chmod(path, mode)
-    except Exception:
-        try:
-            unlinkfile(temp)
-        except OSError:
-            pass
-        raise
 
 
 def sortnodes(nodes, parentfunc):
@@ -527,20 +345,6 @@ def readpath(stream):
     rawlen = readexactly(stream, constants.FILENAMESIZE)
     pathlen = struct.unpack(constants.FILENAMESTRUCT, rawlen)[0]
     return readexactly(stream, pathlen)
-
-
-def readnodelist(stream):
-    rawlen = readexactly(stream, constants.NODECOUNTSIZE)
-    nodecount = struct.unpack(constants.NODECOUNTSTRUCT, rawlen)[0]
-    for i in range(nodecount):
-        yield readexactly(stream, constants.NODESIZE)
-
-
-def readpathlist(stream):
-    rawlen = readexactly(stream, constants.PATHCOUNTSIZE)
-    pathcount = struct.unpack(constants.PATHCOUNTSTRUCT, rawlen)[0]
-    for i in range(pathcount):
-        yield readpath(stream)
 
 
 def getgid(groupname):

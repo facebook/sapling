@@ -16,18 +16,10 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, mutablestores, shallowutil
-from .contentstore import (
-    remotecontentstore,
-    remotefilelogcontentstore,
-    unioncontentstore,
-)
+from .contentstore import remotecontentstore, unioncontentstore
 from .datapack import makedatapackstore
 from .historypack import makehistorypackstore
-from .metadatastore import (
-    remotefilelogmetadatastore,
-    remotemetadatastore,
-    unionmetadatastore,
-)
+from .metadatastore import remotemetadatastore, unionmetadatastore
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
@@ -480,18 +472,6 @@ class remotefileslog(filelog.fileslog):
         localcontent += [lpackcontent]
         localmetadata += [lpackmetadata]
 
-        if not repo.ui.configbool("format", "noloosefile", True):
-            loosecachecontent, loosecachemetadata = self.makecachestores()
-            cachecontent += [loosecachecontent]
-            cachemetadata += [loosecachemetadata]
-
-            looselocalcontent, looselocalmetadata = self.makelocalstores()
-            localcontent += [looselocalcontent]
-            localmetadata += [looselocalmetadata]
-        else:
-            loosecachecontent = None
-            loosecachemetadata = None
-
         mutablelocalstore = mutablestores.mutabledatahistorystore(
             lambda: self._mutablelocalpacks
         )
@@ -593,44 +573,6 @@ class remotefileslog(filelog.fileslog):
         )
 
         return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
-
-    def makecachestores(self):
-        """Typically machine-wide, cache of remote data; can be discarded."""
-        repo = self.repo
-        # Instantiate shared cache stores
-        cachepath = shallowutil.getcachepath(repo.ui)
-        cachecontent = remotefilelogcontentstore(
-            repo, cachepath, repo.name, shared=True
-        )
-        cachemetadata = remotefilelogmetadatastore(
-            repo, cachepath, repo.name, shared=True
-        )
-
-        self.sharedstore = cachecontent
-        self.shareddatastores.append(cachecontent)
-        self.sharedhistorystores.append(cachemetadata)
-
-        return cachecontent, cachemetadata
-
-    def makelocalstores(self):
-        """In-repo stores, like .hg/store/data; can not be discarded."""
-        repo = self.repo
-        localpath = os.path.join(repo.svfs.vfs.base, "data")
-        if not os.path.exists(localpath):
-            os.makedirs(localpath)
-
-        # Instantiate local data stores
-        localcontent = remotefilelogcontentstore(
-            repo, localpath, repo.name, shared=False
-        )
-        localmetadata = remotefilelogmetadatastore(
-            repo, localpath, repo.name, shared=False
-        )
-
-        self.localdatastores.append(localcontent)
-        self.localhistorystores.append(localmetadata)
-
-        return localcontent, localmetadata
 
     def makeremotestores(self, cachecontent, cachemetadata):
         """These stores fetch data from a remote server."""

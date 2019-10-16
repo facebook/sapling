@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import util
 from edenscm.mercurial.node import hex, nullid
 
-from . import basestore, shallowutil
+from . import shallowutil
 
 
 class unionmetadatastore(object):
@@ -124,32 +124,6 @@ class unionmetadatastore(object):
 
     def removestore(self, store):
         self.stores.remove(store)
-
-
-class remotefilelogmetadatastore(basestore.basestore):
-    def getancestors(self, name, node, known=None):
-        """Returns as many ancestors as we're aware of.
-
-        return value: {
-           node: (p1, p2, linknode, copyfrom),
-           ...
-        }
-        """
-        data = self._getdata(name, node)
-        try:
-            ancestors = shallowutil.ancestormap(data)
-        except ValueError:
-            self.handlecorruption(name, node)
-        return ancestors
-
-    def getnodeinfo(self, name, node):
-        return self.getancestors(name, node)[node]
-
-    def add(self, name, node, parents, linknode):
-        raise RuntimeError("cannot add metadata only to remotefilelog " "metadatastore")
-
-    def markforrefresh(self):
-        pass
 
 
 class remotemetadatastore(object):

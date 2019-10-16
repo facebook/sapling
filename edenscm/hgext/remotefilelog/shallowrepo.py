@@ -14,16 +14,6 @@ from edenscm.mercurial.node import hex, nullid, nullrev
 
 from ..extutil import runshellcommand
 from . import constants, fileserverclient, remotefilectx, remotefilelog, shallowutil
-from .contentstore import (
-    remotecontentstore,
-    remotefilelogcontentstore,
-    unioncontentstore,
-)
-from .metadatastore import (
-    remotefilelogmetadatastore,
-    remotemetadatastore,
-    unionmetadatastore,
-)
 from .repack import domaintenancerepack
 
 

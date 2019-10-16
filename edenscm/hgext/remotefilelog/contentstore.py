@@ -12,7 +12,7 @@ from edenscm.mercurial import manifest, mdiff, revlog, util
 from edenscm.mercurial.node import hex, nullid
 from edenscm.mercurial.pycompat import range
 
-from . import basestore, constants, shallowutil
+from . import constants, shallowutil
 
 
 class ChainIndicies(object):
@@ -158,88 +158,6 @@ class unioncontentstore(object):
             if util.safehasattr(store, "prefetch"):
                 store.prefetch(keys)
                 break
-
-
-class remotefilelogcontentstore(basestore.basestore):
-    def __init__(self, *args, **kwargs):
-        super(remotefilelogcontentstore, self).__init__(*args, **kwargs)
-        self._threaddata = threading.local()
-
-        storetype = "shared" if self._shared else "local"
-        self._metricsprefix = "filestore_%s_blob" % storetype
-
-    def get(self, name, node):
-        # return raw revision text
-        data = self._getdata(name, node)
-
-        offset, size, flags = shallowutil.parsesizeflags(data)
-        content = data[offset : offset + size]
-
-        try:
-            ancestormap = shallowutil.ancestormap(data)
-        except ValueError:
-            self.handlecorruption(name, node)
-
-        p1, p2, linknode, copyfrom = ancestormap[node]
-        copyrev = None
-        if copyfrom:
-            copyrev = hex(p1)
-
-        self._updatemetacache(node, size, flags)
-
-        # lfs tracks renames in its own metadata, remove hg copy metadata,
-        # because copy metadata will be re-added by lfs flag processor.
-        if flags & revlog.REVIDX_EXTSTORED:
-            copyrev = copyfrom = None
-        revision = shallowutil.createrevlogtext(content, copyfrom, copyrev)
-        return revision
-
-    def getdelta(self, name, node):
-        # Since remotefilelog content stores only contain full texts, just
-        # return that.
-        revision = self.get(name, node)
-        return revision, name, nullid, self.getmeta(name, node)
-
-    def getdeltachain(self, name, node):
-        # Since remotefilelog content stores just contain full texts, we return
-        # a fake delta chain that just consists of a single full text revision.
-        # The nullid in the deltabasenode slot indicates that the revision is a
-        # fulltext.
-        revision = self.get(name, node)
-        return [(name, node, None, nullid, revision)]
-
-    def getmeta(self, name, node):
-        self._sanitizemetacache()
-        if node != self._threaddata.metacache[0]:
-            data = self._getdata(name, node)
-            offset, size, flags = shallowutil.parsesizeflags(data)
-            self._updatemetacache(node, size, flags)
-        return self._threaddata.metacache[1]
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add content only to remotefilelog " "contentstore")
-
-    def _sanitizemetacache(self):
-        metacache = getattr(self._threaddata, "metacache", None)
-        if metacache is None:
-            self._threaddata.metacache = (None, None)  # (node, meta)
-
-    def _updatemetacache(self, node, size, flags):
-        self._sanitizemetacache()
-        if node == self._threaddata.metacache[0]:
-            return
-        meta = {constants.METAKEYFLAG: flags, constants.METAKEYSIZE: size}
-        self._threaddata.metacache = (node, meta)
-
-    def markforrefresh(self):
-        pass
-
-    def _reportmetrics(self, root, filename):
-        filepath = os.path.join(root, filename)
-        stats = os.stat(filepath)
-
-        self.ui.metrics.gauge(self._metricsprefix + "size", stats.st_size)
-        self.ui.metrics.gauge(self._metricsprefix + "num", 1)
 
 
 class remotecontentstore(object):
