@@ -38,11 +38,9 @@
   $ cat x
   x
 
-  $ ls .hg/store/data
   $ echo foo > f
   $ hg add f
   $ hg ci -m 'local content'
-  $ ls .hg/store/data
 
   $ cd ..
 
@@ -104,7 +102,6 @@ check its contents separately.
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ ls shallow3/.hg/store/data
   $ cat shallow3/.hg/requires
   dotencode
   fncache

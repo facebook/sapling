@@ -480,7 +480,7 @@ class remotefileslog(filelog.fileslog):
         localcontent += [lpackcontent]
         localmetadata += [lpackmetadata]
 
-        if not repo.ui.configbool("format", "noloosefile"):
+        if not repo.ui.configbool("format", "noloosefile", True):
             loosecachecontent, loosecachemetadata = self.makecachestores()
             cachecontent += [loosecachecontent]
             cachemetadata += [loosecachemetadata]

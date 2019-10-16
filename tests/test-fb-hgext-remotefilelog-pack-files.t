@@ -41,7 +41,6 @@
   $ hg up -q tip
 
 # Test pack local data
-  $ findfilessorted .hg/store/data
   $ test -d .hg/store/packs
   [1]
 
@@ -49,7 +48,6 @@
   $ echo "new commit" > new_file
   $ echo "something else" > base_file
   $ hg commit -qAm "one more node"
-  $ findfilessorted .hg/store/data
   $ findfilessorted .hg/store/packs
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack
@@ -58,7 +56,6 @@
 
   $ echo "new commit - 2" > new_file
   $ hg commit -qAm "one more node - 2"
-  $ findfilessorted .hg/store/data
   $ findfilessorted .hg/store/packs
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack

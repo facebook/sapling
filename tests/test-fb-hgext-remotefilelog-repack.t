@@ -432,14 +432,12 @@ Test huge pack cleanup using different values of packs.maxpacksize:
   removing oversize packfile $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.dataidx (1.17 KB)
 
 # Test repacking loose files
-  $ findfilessorted .hg/store/data
   $ findfilessorted .hg/store/packs
 
 # new loose file is created
   $ echo "new commit" > new_file
   $ hg commit -qAm "one more node"
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
-  $ findfilessorted .hg/store/data
 
 # repacking only loose files
   $ hg repack --looseonly
@@ -448,9 +446,6 @@ Test huge pack cleanup using different values of packs.maxpacksize:
   .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
   .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
   .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
-
-# check that loose files have been removed
-  $ findfilessorted .hg/store/data
 
 # repacking all
   $ hg repack

@@ -7,8 +7,10 @@
   $ echo y > y
   $ hg commit -qAm x
 
-  $ findfilessorted .hg/store/data
+  $ [ -d .hg/store/data ]
+  [1]
 
   $ hg repack --incremental --config remotefilelog.localdatarepack=True
 
-  $ findfilessorted .hg/store/data
+  $ [ -d .hg/store/data ]
+  [1]
