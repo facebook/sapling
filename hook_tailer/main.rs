@@ -25,7 +25,6 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::RepositoryId;
 use slog::{debug, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use std::fmt;
@@ -89,7 +88,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let blobrepo = open_blobrepo(
         fb,
         config.storage_config.clone(),
-        RepositoryId::new(config.repoid),
+        config.repoid,
         cmdlib::args::parse_myrouter_port(&matches),
         caching,
         config.bookmarks_cache_ttl,

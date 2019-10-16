@@ -12,6 +12,7 @@ use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use failure_ext::prelude::*;
 use metaconfig_types::CommitSyncConfig;
+use mononoke_types::RepositoryId;
 use std::collections::HashSet;
 use std::iter::Iterator;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ use std::sync::Arc;
 #[derive(Debug, Eq, Fail, PartialEq)]
 pub enum ErrorKind {
     #[fail(display = "Small repo {} not found", _0)]
-    SmallRepoNotFound(i32),
+    SmallRepoNotFound(RepositoryId),
 }
 
 pub type BookmarkRenamer =
@@ -27,7 +28,7 @@ pub type BookmarkRenamer =
 
 fn get_prefix_and_common_bookmarks(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<(AsciiString, HashSet<BookmarkName>)> {
     let common_pushrebase_bookmarks: HashSet<BookmarkName> = commit_sync_config
         .common_pushrebase_bookmarks
@@ -46,7 +47,7 @@ fn get_prefix_and_common_bookmarks(
 /// Get a renamer for small-to-large repo sync
 pub fn get_small_to_large_renamer(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<BookmarkRenamer> {
     let (prefix, common_pushrebase_bookmarks) =
         get_prefix_and_common_bookmarks(commit_sync_config, small_repo_id)?;
@@ -64,7 +65,7 @@ pub fn get_small_to_large_renamer(
 /// Get a renamer for a large-to-small repo sync
 pub fn get_large_to_small_renamer(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<BookmarkRenamer> {
     let (prefix, common_pushrebase_bookmarks) =
         get_prefix_and_common_bookmarks(commit_sync_config, small_repo_id)?;
@@ -112,15 +113,15 @@ mod test {
 
     fn get_commit_sync_config() -> CommitSyncConfig {
         CommitSyncConfig {
-            large_repo_id: 3,
+            large_repo_id: RepositoryId::new(3),
             direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![
                 BookmarkName::new("m1").unwrap(),
                 BookmarkName::new("m2").unwrap(),
             ],
             small_repos: hashmap! {
-                1 => get_small_repo_sync_config_1(),
-                2 => get_small_repo_sync_config_2(),
+                RepositoryId::new(1) => get_small_repo_sync_config_1(),
+                RepositoryId::new(2) => get_small_repo_sync_config_2(),
             },
         }
     }
@@ -128,8 +129,10 @@ mod test {
     #[test]
     fn test_small_to_large_renamer() {
         let commit_sync_config = get_commit_sync_config();
-        let bookmark_renamer_1 = get_small_to_large_renamer(&commit_sync_config, 1).unwrap();
-        let bookmark_renamer_2 = get_small_to_large_renamer(&commit_sync_config, 2).unwrap();
+        let bookmark_renamer_1 =
+            get_small_to_large_renamer(&commit_sync_config, RepositoryId::new(1)).unwrap();
+        let bookmark_renamer_2 =
+            get_small_to_large_renamer(&commit_sync_config, RepositoryId::new(2)).unwrap();
 
         let hello = BookmarkName::new("hello").unwrap();
         let b1_hello = BookmarkName::new("b1/hello").unwrap();
@@ -148,8 +151,10 @@ mod test {
     #[test]
     fn test_large_to_small_renamer() {
         let commit_sync_config = get_commit_sync_config();
-        let bookmark_renamer_1 = get_large_to_small_renamer(&commit_sync_config, 1).unwrap();
-        let bookmark_renamer_2 = get_large_to_small_renamer(&commit_sync_config, 2).unwrap();
+        let bookmark_renamer_1 =
+            get_large_to_small_renamer(&commit_sync_config, RepositoryId::new(1)).unwrap();
+        let bookmark_renamer_2 =
+            get_large_to_small_renamer(&commit_sync_config, RepositoryId::new(2)).unwrap();
 
         let hello = BookmarkName::new("hello").unwrap();
         let b1_hello = BookmarkName::new("b1/hello").unwrap();

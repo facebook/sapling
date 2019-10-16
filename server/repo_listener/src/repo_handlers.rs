@@ -121,7 +121,7 @@ fn open_db_from_config<S: SqlConstructors>(
 fn create_repo_sync_target(
     incomplete_repo_handler: &IncompleteRepoHandler,
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<RepoSyncTarget> {
     let repo = incomplete_repo_handler.repo.clone();
     let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
@@ -170,7 +170,7 @@ pub fn repo_handlers(
 
             let ready_handle = ready.create_handle(reponame.clone());
 
-            let repoid = RepositoryId::new(config.repoid);
+            let repoid = config.repoid;
             let disabled_hooks = disabled_hooks.clone();
 
             open_blobrepo(
@@ -372,12 +372,12 @@ pub fn repo_handlers(
 fn build_repo_handlers(
     tuples: Vec<(String, IncompleteRepoHandler, Option<CommitSyncConfig>)>,
 ) -> Result<HashMap<String, RepoHandler>> {
-    let lookup_table: HashMap<i32, IncompleteRepoHandler> = tuples
+    let lookup_table: HashMap<RepositoryId, IncompleteRepoHandler> = tuples
         .clone()
         .into_iter()
         .map(|(_, incomplete_repo_handler, _)| {
             (
-                incomplete_repo_handler.repo.repoid().id(),
+                incomplete_repo_handler.repo.repoid(),
                 incomplete_repo_handler,
             )
         })
@@ -391,7 +391,7 @@ fn build_repo_handlers(
                     None => None,
                     Some(commit_sync_config) => {
                         let large_repo_id = commit_sync_config.large_repo_id;
-                        let current_repo_id = incomplete_repo_handler.repo.repoid().id();
+                        let current_repo_id = incomplete_repo_handler.repo.repoid();
 
                         if large_repo_id == current_repo_id {
                             None

@@ -52,7 +52,6 @@ use warm_bookmarks_cache::WarmBookmarksCache;
 
 use mononoke_types::{
     fastlog_batch::max_entries_in_fastlog_batch, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
-    RepositoryId,
 };
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
@@ -117,7 +116,7 @@ impl MononokeRepo {
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
-        let repoid = RepositoryId::new(config.repoid);
+        let repoid = config.repoid;
 
         // This is hacky, for the benefit of the new Mononoke object type
         open_synced_commit_mapping(config.clone(), myrouter_port)

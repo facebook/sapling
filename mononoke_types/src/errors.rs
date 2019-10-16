@@ -36,6 +36,8 @@ pub enum ErrorKind {
     NotPathConflictFree(MPath, MPath),
     #[fail(display = "invalid bonsai changeset: {}", _0)]
     InvalidBonsaiChangeset(String),
+    #[fail(display = "Failed to parse RepositoryId from '{}'", _0)]
+    FailedToParseRepositoryId(String),
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

@@ -35,7 +35,6 @@ use tokio_openssl::SslAcceptorExt;
 use blobrepo_factory::open_blobrepo;
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
-use mononoke_types::RepositoryId;
 
 use cmdlib::{args, monitoring::create_fb303_and_stats_agg};
 
@@ -187,7 +186,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             open_blobrepo(
                 fb,
                 config.storage_config.clone(),
-                RepositoryId::new(config.repoid),
+                config.repoid,
                 myrouter_port,
                 caching,
                 config.bookmarks_cache_ttl,

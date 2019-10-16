@@ -18,7 +18,7 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use mononoke_types::MPath;
+use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -65,8 +65,7 @@ pub struct RepoConfig {
     /// How large a cache to use (in bytes) for RepoGenCache derived information
     pub generation_cache_size: usize,
     /// Numerical repo id of the repo.
-    // XXX Use RepositoryId?
-    pub repoid: i32,
+    pub repoid: RepositoryId,
     /// Scuba table for logging performance of operations
     pub scuba_table: Option<String>,
     /// Parameters of how to warm up the cache
@@ -750,13 +749,13 @@ pub enum CommitSyncDirection {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CommitSyncConfig {
     /// Large repository id
-    pub large_repo_id: i32,
+    pub large_repo_id: RepositoryId,
     /// Commit sync direction
     pub direction: CommitSyncDirection,
     /// Common pushrebase bookmarks
     pub common_pushrebase_bookmarks: Vec<BookmarkName>,
     /// Corresponding small repo configs
-    pub small_repos: HashMap<i32, SmallRepoCommitSyncConfig>,
+    pub small_repos: HashMap<RepositoryId, SmallRepoCommitSyncConfig>,
 }
 
 /// Configuration for logging wireproto commands and arguments

@@ -34,7 +34,7 @@ use metaconfig_types::{
     ShardedFilenodesParams, SmallRepoCommitSyncConfig, StorageConfig, WhitelistEntry,
     WireprotoLoggingConfig,
 };
-use mononoke_types::MPath;
+use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use std::str::FromStr;
 
@@ -279,7 +279,7 @@ impl RepoConfigs {
                     common_pushrebase_bookmarks,
                     small_repos
                 } = v;
-                let small_repos: Result<HashMap<i32, SmallRepoCommitSyncConfig>> = small_repos
+                let small_repos: Result<HashMap<RepositoryId, SmallRepoCommitSyncConfig>> = small_repos
                     .into_iter()
                     .map(|raw_small_repo_config| {
                         let RawCommitSyncSmallRepoConfig {
@@ -312,7 +312,7 @@ impl RepoConfigs {
 
                         let bookmark_prefix: Result<AsciiString> = AsciiString::from_str(&bookmark_prefix).map_err(|_| format_err!("failed to parse ascii string from: {:?}", bookmark_prefix));
 
-                        Ok((repoid, SmallRepoCommitSyncConfig {
+                        Ok((RepositoryId::new(repoid), SmallRepoCommitSyncConfig {
                             default_action,
                             map: map?,
                             bookmark_prefix: bookmark_prefix?,
@@ -328,6 +328,7 @@ impl RepoConfigs {
                 };
 
                 let common_pushrebase_bookmarks: Result<Vec<_>> = common_pushrebase_bookmarks.into_iter().map(BookmarkName::new).collect();
+                let large_repo_id = RepositoryId::new(large_repo_id);
 
                 let commit_sync_config = CommitSyncConfig {
                     large_repo_id,
@@ -514,7 +515,7 @@ impl RepoConfigs {
     }
 
     fn is_commit_sync_config_relevant_to_repo(
-        repoid: &i32,
+        repoid: &RepositoryId,
         commit_sync_config: &CommitSyncConfig,
     ) -> bool {
         &commit_sync_config.large_repo_id == repoid
@@ -546,7 +547,7 @@ impl RepoConfigs {
         let storage_config = get_storage(&this.storage_config)?;
         let enabled = this.enabled;
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
-        let repoid = this.repoid;
+        let repoid = RepositoryId::new(this.repoid);
         let scuba_table = this.scuba_table;
 
         let wireproto_logging = this
@@ -746,7 +747,10 @@ impl RepoConfigs {
     }
 
     /// Get individual `RepoConfig`, given a repo_id
-    pub fn get_repo_config<'a>(&'a self, repo_id: i32) -> Option<(&'a String, &'a RepoConfig)> {
+    pub fn get_repo_config<'a>(
+        &'a self,
+        repo_id: RepositoryId,
+    ) -> Option<(&'a String, &'a RepoConfig)> {
         self.repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
@@ -1219,11 +1223,11 @@ mod test {
 
         let expected = hashmap! {
             "mega".to_string() => CommitSyncConfig {
-                large_repo_id: 1,
+                large_repo_id: RepositoryId::new(1),
                 direction: CommitSyncDirection::SmallToLarge,
                 common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
                 small_repos: hashmap! {
-                    2 => SmallRepoCommitSyncConfig {
+                    RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                         bookmark_prefix: AsciiString::from_str("repo2").unwrap(),
                         map: hashmap! {
@@ -1231,7 +1235,7 @@ mod test {
                             MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
                         }
                     },
-                    3 => SmallRepoCommitSyncConfig {
+                    RepositoryId::new(3) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
                         bookmark_prefix: AsciiString::from_str("repo3").unwrap(),
                         map: hashmap! {
@@ -1526,7 +1530,7 @@ mod test {
                 storage_config: main_storage_config.clone(),
                 write_lock_db_address: Some("write_lock_db_address".into()),
                 generation_cache_size: 1024 * 1024,
-                repoid: 0,
+                repoid: RepositoryId::new(0),
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: Some(CacheWarmupParams {
                     bookmark: BookmarkName::new("master").unwrap(),
@@ -1652,7 +1656,7 @@ mod test {
                 },
                 write_lock_db_address: None,
                 generation_cache_size: 10 * 1024 * 1024,
-                repoid: 1,
+                repoid: RepositoryId::new(1),
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: None,
                 hook_manager_params: None,
@@ -1911,7 +1915,7 @@ mod test {
                         sharded_filenodes: Some(ShardedFilenodesParams { shard_map: "some-shards".into(), shard_num: NonZeroUsize::new(123).unwrap()}),
                     },
                 },
-                repoid: 123,
+                repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
@@ -1973,7 +1977,7 @@ mod test {
                         sharded_filenodes: None,
                     },
                 },
-                repoid: 123,
+                repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,

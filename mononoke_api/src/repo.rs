@@ -21,7 +21,6 @@ use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use metaconfig_types::{CommonConfig, MetadataDBConfig, RepoConfig};
 use mononoke_types::hash::{Sha1, Sha256};
-use mononoke_types::RepositoryId;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::Logger;
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -76,7 +75,7 @@ impl Repo {
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
-        let repoid = RepositoryId::new(config.repoid);
+        let repoid = config.repoid;
 
         let synced_commit_mapping =
             Arc::new(open_synced_commit_mapping(config.clone(), myrouter_port).await?);

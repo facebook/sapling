@@ -18,6 +18,7 @@ use panichandler::{self, Fate};
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 
@@ -202,13 +203,11 @@ pub fn get_repo_id_and_name_from_values(
         (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
         (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
         (None, Some(repo_id)) => {
-            let repo_id = repo_id
-                .parse::<u32>()
-                .map_err(|_| err_msg("Couldn't parse repo-id as u32"))?;
+            let repo_id = RepositoryId::from_str(repo_id)?;
             let mut repo_config: Vec<_> = configs
                 .repos
                 .into_iter()
-                .filter(|(_, repo_config)| repo_config.repoid == repo_id as i32)
+                .filter(|(_, repo_config)| repo_config.repoid == repo_id)
                 .collect();
             if repo_config.is_empty() {
                 Err(err_msg(format!("unknown config for repo-id {:?}", repo_id)))
@@ -219,7 +218,7 @@ pub fn get_repo_id_and_name_from_values(
                 )))
             } else {
                 let (repo_name, repo_config) = repo_config.pop().unwrap();
-                Ok((RepositoryId::new(repo_config.repoid), repo_name))
+                Ok((repo_config.repoid, repo_name))
             }
         }
         (Some(repo_name), None) => {
@@ -237,7 +236,7 @@ pub fn get_repo_id_and_name_from_values(
                 )))
             } else {
                 let (repo_name, repo_config) = repo_config.pop().unwrap();
-                Ok((RepositoryId::new(repo_config.repoid), repo_name))
+                Ok((repo_config.repoid, repo_name))
             }
         }
     }
@@ -511,7 +510,7 @@ pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> 
     let repo_id = get_repo_id(matches)?;
     let configs = read_configs(matches)?;
     configs
-        .get_repo_config(repo_id.id())
+        .get_repo_config(repo_id)
         .ok_or_else(|| err_msg(format!("unknown repoid {:?}", repo_id)))
         .map(|(name, config)| (name.clone(), config.clone()))
 }

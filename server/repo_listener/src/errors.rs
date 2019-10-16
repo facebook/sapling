@@ -8,6 +8,7 @@
 
 use failure::Fail;
 pub use failure_ext::{Error, Result, ResultExt};
+use mononoke_types::RepositoryId;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -24,5 +25,5 @@ pub enum ErrorKind {
     #[fail(display = "Unexpected identity type {}", _0)]
     UnexpectedIdentityType(String),
     #[fail(display = "Large repo not found: {}", _0)]
-    LargeRepoNotFound(i32),
+    LargeRepoNotFound(RepositoryId),
 }

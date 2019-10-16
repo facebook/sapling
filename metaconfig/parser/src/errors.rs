@@ -10,6 +10,7 @@
 
 use failure_ext::failure_derive::Fail;
 pub use failure_ext::{Error, Result};
+use mononoke_types::RepositoryId;
 
 /// Types of errors we can raise
 #[derive(Debug, Fail)]
@@ -25,7 +26,7 @@ pub enum ErrorKind {
     InvalidConfig(String),
     /// Duplicated repo ids
     #[fail(display = "repoid {} used more than once", _0)]
-    DuplicatedRepoId(i32),
+    DuplicatedRepoId(RepositoryId),
     /// Missing path for hook
     #[fail(display = "missing path")]
     MissingPath(),

@@ -14,6 +14,7 @@ use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{
     CommitSyncConfig, DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
 };
+use mononoke_types::RepositoryId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::iter::Iterator;
@@ -26,7 +27,7 @@ pub enum ErrorKind {
     #[fail(display = "Cannot apply prefix action {:?} to {:?}", _0, _1)]
     PrefixActionFailure(PrefixAction, MPath),
     #[fail(display = "Small repo {} not found", _0)]
-    SmallRepoNotFound(i32),
+    SmallRepoNotFound(RepositoryId),
     #[fail(
         display = "Provided map is not prefix-free (e.g. {:?} and {:?})",
         _0, _1
@@ -202,7 +203,7 @@ fn mover_factory(
 // split it into this repo the rest
 fn get_small_repo_and_others_from_config(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<(&SmallRepoCommitSyncConfig, Vec<&SmallRepoCommitSyncConfig>)> {
     let small_repo = match &commit_sync_config.small_repos.get(&small_repo_id) {
         Some(config) => config.clone(),
@@ -219,7 +220,7 @@ fn get_small_repo_and_others_from_config(
 /// Get a mover for small-to-large repo sync
 pub fn get_small_to_large_mover(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<Mover> {
     let (source_repo_config, _) =
         get_small_repo_and_others_from_config(commit_sync_config, small_repo_id)?;
@@ -237,7 +238,7 @@ pub fn get_small_to_large_mover(
 /// Get a mover for a large-to-small repo sync
 pub fn get_large_to_small_mover(
     commit_sync_config: &CommitSyncConfig,
-    small_repo_id: i32,
+    small_repo_id: RepositoryId,
 ) -> Result<Mover> {
     let (target_repo_config, other_repo_configs) =
         get_small_repo_and_others_from_config(commit_sync_config, small_repo_id)?;
@@ -415,12 +416,12 @@ mod test {
 
     fn get_large_repo_sync_config_non_overlapping() -> CommitSyncConfig {
         CommitSyncConfig {
-            large_repo_id: 3,
+            large_repo_id: RepositoryId::new(3),
             direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![],
             small_repos: hashmap! {
-                1 => get_small_repo_sync_config_1_non_ovelapping(),
-                2 => get_small_repo_sync_config_2_non_ovelapping(),
+                RepositoryId::new(1) => get_small_repo_sync_config_1_non_ovelapping(),
+                RepositoryId::new(2) => get_small_repo_sync_config_2_non_ovelapping(),
             },
         }
     }
@@ -428,7 +429,7 @@ mod test {
     #[test]
     fn test_get_small_to_large_mover_1_non_overlapping() {
         let large_sync_config = get_large_repo_sync_config_non_overlapping();
-        let mover = get_small_to_large_mover(&large_sync_config, 1).unwrap();
+        let mover = get_small_to_large_mover(&large_sync_config, RepositoryId::new(1)).unwrap();
 
         // `preserved2` is a directory, preserved from repo2, so changes to
         // it in repo1 it have tbe shifted
@@ -449,7 +450,7 @@ mod test {
     #[test]
     fn test_get_small_to_large_mover_2_non_overlapping() {
         let large_sync_config = get_large_repo_sync_config_non_overlapping();
-        let mover = get_small_to_large_mover(&large_sync_config, 2).unwrap();
+        let mover = get_small_to_large_mover(&large_sync_config, RepositoryId::new(2)).unwrap();
 
         // `preserved2` is a directory, preserved from repo2
         let f = mp("preserved2/f");
@@ -473,8 +474,8 @@ mod test {
     #[test]
     fn test_get_large_to_small_mover_non_overlapping_images() {
         let large_sync_config = get_large_repo_sync_config_non_overlapping();
-        let mover_1 = get_large_to_small_mover(&large_sync_config, 1).unwrap();
-        let mover_2 = get_large_to_small_mover(&large_sync_config, 2).unwrap();
+        let mover_1 = get_large_to_small_mover(&large_sync_config, RepositoryId::new(1)).unwrap();
+        let mover_2 = get_large_to_small_mover(&large_sync_config, RepositoryId::new(2)).unwrap();
 
         // any changes to large repo's `preserved2` dir could only come
         // from repo 1
@@ -558,18 +559,18 @@ mod test {
 
     fn get_large_repo_sync_config_overlapping() -> CommitSyncConfig {
         CommitSyncConfig {
-            large_repo_id: 3,
+            large_repo_id: RepositoryId::new(3),
             direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![],
             small_repos: hashmap! {
-                1 => SmallRepoCommitSyncConfig {
+                RepositoryId::new(1) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! {
                         mp("preserved2") => mp("preserved2"),
                     },
                     bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
                 },
-                2 => SmallRepoCommitSyncConfig {
+                RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
                     map: hashmap! {
                         mp("preserved2") => mp("preserved2"),
@@ -584,10 +585,16 @@ mod test {
 
     #[test]
     fn test_get_large_to_small_mover_overlapping_images() {
-        let mover_1 =
-            get_large_to_small_mover(&get_large_repo_sync_config_overlapping(), 1).unwrap();
-        let mover_2 =
-            get_large_to_small_mover(&get_large_repo_sync_config_overlapping(), 2).unwrap();
+        let mover_1 = get_large_to_small_mover(
+            &get_large_repo_sync_config_overlapping(),
+            RepositoryId::new(1),
+        )
+        .unwrap();
+        let mover_2 = get_large_to_small_mover(
+            &get_large_repo_sync_config_overlapping(),
+            RepositoryId::new(2),
+        )
+        .unwrap();
         // `preserved2` is an identical directory, we should replay changes
         // to it to both small repos
         let f = mp("preserved2/f");

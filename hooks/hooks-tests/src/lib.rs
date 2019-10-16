@@ -33,7 +33,7 @@ use metaconfig_types::{
     HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
     StorageConfig,
 };
-use mononoke_types::FileType;
+use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
 use slog::{o, Logger};
 use slog::{Discard, Drain};
@@ -1113,7 +1113,7 @@ fn default_repo_config() -> RepoConfig {
         write_lock_db_address: None,
         enabled: true,
         generation_cache_size: 1,
-        repoid: 1,
+        repoid: RepositoryId::new(1),
         scuba_table: None,
         cache_warmup: None,
         hook_manager_params: None,
