@@ -16,22 +16,76 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{info, o, Logger};
 
 use blobrepo_factory::{open_blobrepo, Caching};
+use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
-use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig, WireprotoLoggingConfig};
+use metaconfig_types::{
+    CommitSyncConfig, CommitSyncDirection, MetadataDBConfig, RepoConfig, StorageConfig,
+    WireprotoLoggingConfig,
+};
 use mononoke_types::RepositoryId;
+use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
-use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
+use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher, RepoSyncTarget};
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::fetch_skiplist_index;
 use sql_ext::SqlConstructors;
+
+use crate::errors::ErrorKind;
+
+/// An auxillary struct to pass between closures before we
+/// are capable of creating a full `RepoHandler`
+/// To create `RepoHandler`, we need to look at various
+/// fields of such struct for other repos, so we first
+/// have to construct all `IncompleteRepoHandler`s and
+/// only then can we populate the `RepoSyncTarget`
+#[derive(Clone)]
+struct IncompleteRepoHandler {
+    logger: Logger,
+    scuba: ScubaSampleBuilder,
+    wireproto_logging: Option<WireprotoLoggingConfig>,
+    repo: MononokeRepo,
+    hash_validation_percentage: usize,
+    preserve_raw_bundle2: bool,
+    pure_push_allowed: bool,
+    support_bundle2_listkeys: bool,
+}
+
+impl IncompleteRepoHandler {
+    fn into_repo_handler_with_sync_target(
+        self,
+        maybe_repo_sync_target: Option<RepoSyncTarget>,
+    ) -> RepoHandler {
+        let IncompleteRepoHandler {
+            logger,
+            scuba,
+            wireproto_logging,
+            repo,
+            hash_validation_percentage,
+            preserve_raw_bundle2,
+            pure_push_allowed,
+            support_bundle2_listkeys,
+        } = self;
+        RepoHandler {
+            logger,
+            scuba,
+            wireproto_logging,
+            repo,
+            hash_validation_percentage,
+            preserve_raw_bundle2,
+            pure_push_allowed,
+            support_bundle2_listkeys,
+            maybe_repo_sync_target,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct RepoHandler {
@@ -43,6 +97,7 @@ pub struct RepoHandler {
     pub preserve_raw_bundle2: bool,
     pub pure_push_allowed: bool,
     pub support_bundle2_listkeys: bool,
+    pub maybe_repo_sync_target: Option<RepoSyncTarget>,
 }
 
 fn open_db_from_config<S: SqlConstructors>(
@@ -59,6 +114,30 @@ fn open_db_from_config<S: SqlConstructors>(
     }
 }
 
+/// Given a `CommitSyncConfig`, a small repo id, and an
+/// auxillary struct, that holds partially built `RepoHandler`,
+/// build `RepoSyncTarget` for a push rediction from this
+/// small repo into a large repo.
+fn create_repo_sync_target(
+    incomplete_repo_handler: &IncompleteRepoHandler,
+    commit_sync_config: &CommitSyncConfig,
+    small_repo_id: i32,
+) -> Result<RepoSyncTarget> {
+    let repo = incomplete_repo_handler.repo.clone();
+    let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
+    let large_to_small_mover = get_large_to_small_mover(commit_sync_config, small_repo_id)?;
+    let small_to_large_renamer = get_small_to_large_renamer(commit_sync_config, small_repo_id)?;
+    let large_to_small_renamer = get_large_to_small_renamer(commit_sync_config, small_repo_id)?;
+
+    Ok(RepoSyncTarget {
+        repo,
+        small_to_large_mover,
+        large_to_small_mover,
+        small_to_large_renamer,
+        large_to_small_renamer,
+    })
+}
+
 pub fn repo_handlers(
     fb: FacebookInit,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
@@ -70,7 +149,9 @@ pub fn repo_handlers(
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
-    let repos: Vec<_> = repos
+    let repo_futs: Vec<
+        BoxFuture<(String, IncompleteRepoHandler, Option<CommitSyncConfig>), Error>,
+    > = repos
         .into_iter()
         .filter(|(reponame, config)| {
             if !config.enabled {
@@ -122,6 +203,7 @@ pub fn repo_handlers(
                     bundle2_replay_params,
                     push,
                     hook_max_file_size,
+                    commit_sync_config,
                     ..
                 } = config.clone();
 
@@ -204,8 +286,11 @@ pub fn repo_handlers(
                             .chain_err(format!("while warming up cache for repo: {}", reponame))
                             .from_err();
 
+                            let mutable_counters = Arc::new(sql_mutable_counters);
+
                             // TODO: T45466266 this should be replaced by gatekeepers
-                            let support_bundle2_listkeys = sql_mutable_counters
+                            let support_bundle2_listkeys = mutable_counters
+                                .clone()
                                 .get_counter(
                                     ctx.clone(),
                                     blobrepo.get_repoid(),
@@ -251,11 +336,12 @@ pub fn repo_handlers(
                                             list_keys_patterns_max,
                                             lca_hint,
                                             phases_hint,
+                                            mutable_counters,
                                         );
 
                                         (
                                             reponame,
-                                            RepoHandler {
+                                            IncompleteRepoHandler {
                                                 logger: listen_log,
                                                 scuba: scuba_logger,
                                                 wireproto_logging,
@@ -265,6 +351,7 @@ pub fn repo_handlers(
                                                 pure_push_allowed,
                                                 support_bundle2_listkeys,
                                             },
+                                            commit_sync_config,
                                         )
                                     }
                                 })
@@ -277,7 +364,60 @@ pub fn repo_handlers(
         })
         .collect();
 
-    future::join_all(repos)
-        .map(|repos| repos.into_iter().collect())
+    future::join_all(repo_futs)
+        .and_then(build_repo_handlers)
         .boxify()
+}
+
+fn build_repo_handlers(
+    tuples: Vec<(String, IncompleteRepoHandler, Option<CommitSyncConfig>)>,
+) -> Result<HashMap<String, RepoHandler>> {
+    let lookup_table: HashMap<i32, IncompleteRepoHandler> = tuples
+        .clone()
+        .into_iter()
+        .map(|(_, incomplete_repo_handler, _)| {
+            (
+                incomplete_repo_handler.repo.repoid().id(),
+                incomplete_repo_handler,
+            )
+        })
+        .collect();
+
+    tuples
+        .into_iter()
+        .map(
+            |(reponame, incomplete_repo_handler, maybe_commit_sync_config)| -> Result<(String, RepoHandler)> {
+                let maybe_repo_sync_target = match maybe_commit_sync_config {
+                    None => None,
+                    Some(commit_sync_config) => {
+                        let large_repo_id = commit_sync_config.large_repo_id;
+                        let current_repo_id = incomplete_repo_handler.repo.repoid().id();
+
+                        if large_repo_id == current_repo_id {
+                            None
+                        } else if commit_sync_config.direction != CommitSyncDirection::LargeToSmall {
+                            // We can only do push redirection when sync happens in the
+                            // `LargeToSmall` direction, as `SmallToLarge` is handled by
+                            // tailers.
+                            None
+                        } else {
+                            let target_incomplete_repo_handler = lookup_table
+                                .get(&large_repo_id)
+                                .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?;
+                            Some(create_repo_sync_target(
+                                target_incomplete_repo_handler,
+                                &commit_sync_config,
+                                current_repo_id,
+                            )?)
+                        }
+                    }
+                };
+
+                Ok((
+                    reponame,
+                    incomplete_repo_handler.into_repo_handler_with_sync_target(maybe_repo_sync_target),
+                ))
+            },
+        )
+        .collect::<Result<HashMap<_, _>>>()
 }

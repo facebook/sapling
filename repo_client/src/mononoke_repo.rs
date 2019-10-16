@@ -15,6 +15,7 @@ use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
 };
 use mononoke_types::RepositoryId;
+use mutable_counters::MutableCounters;
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
@@ -45,6 +46,7 @@ pub struct MononokeRepo {
     list_keys_patterns_max: u64,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     phases_hint: Arc<dyn Phases>,
+    mutable_counters: Arc<dyn MutableCounters>,
 }
 
 impl MononokeRepo {
@@ -62,6 +64,7 @@ impl MononokeRepo {
         list_keys_patterns_max: u64,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         phases_hint: Arc<dyn Phases>,
+        mutable_counters: Arc<dyn MutableCounters>,
     ) -> Self {
         MononokeRepo {
             blobrepo,
@@ -76,6 +79,7 @@ impl MononokeRepo {
             list_keys_patterns_max,
             lca_hint,
             phases_hint,
+            mutable_counters,
         }
     }
 
@@ -106,6 +110,11 @@ impl MononokeRepo {
 
     pub fn reponame(&self) -> &String {
         &self.reponame
+    }
+
+    #[inline]
+    pub fn repoid(&self) -> RepositoryId {
+        self.blobrepo.get_repoid()
     }
 
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {

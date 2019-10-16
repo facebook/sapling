@@ -23,4 +23,6 @@ pub enum ErrorKind {
     AclCheckerCreationFailed(String),
     #[fail(display = "Unexpected identity type {}", _0)]
     UnexpectedIdentityType(String),
+    #[fail(display = "Large repo not found: {}", _0)]
+    LargeRepoNotFound(i32),
 }

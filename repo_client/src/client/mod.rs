@@ -12,6 +12,7 @@ use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use crate::unbundle::run_post_resolve_action;
 
 use blobrepo::BlobRepo;
+use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
@@ -42,6 +43,7 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
+use movers::Mover;
 use rand::{self, Rng};
 use remotefilelog::{
     create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
@@ -210,6 +212,24 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
 }
 
 #[derive(Clone)]
+pub struct RepoSyncTarget {
+    // target (large) repo to sync into
+    pub repo: MononokeRepo,
+    // a function to apply to paths when syncing commits
+    // in small-to-large direction
+    pub small_to_large_mover: Mover,
+    // a function to apply to paths when syncing commits
+    // in large-to-small direction
+    pub large_to_small_mover: Mover,
+    // a function to apply to bookmark names when syncing
+    // commits in small-to-large direction.
+    pub small_to_large_renamer: BookmarkRenamer,
+    // a function to apply to bookmark names when syncing
+    // commits in large-to-small direction.
+    pub large_to_small_renamer: BookmarkRenamer,
+}
+
+#[derive(Clone)]
 pub struct RepoClient {
     repo: MononokeRepo,
     ctx: CoreContext,
@@ -230,6 +250,7 @@ pub struct RepoClient {
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     support_bundle2_listkeys: bool,
     wireproto_logging: Option<WireprotoLoggingConfig>,
+    maybe_repo_sync_target: Option<RepoSyncTarget>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -336,6 +357,7 @@ impl RepoClient {
         hook_manager: Arc<HookManager>,
         support_bundle2_listkeys: bool,
         wireproto_logging: Option<WireprotoLoggingConfig>,
+        maybe_repo_sync_target: Option<RepoSyncTarget>,
     ) -> Self {
         RepoClient {
             repo,
@@ -347,6 +369,7 @@ impl RepoClient {
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             support_bundle2_listkeys,
             wireproto_logging,
+            maybe_repo_sync_target,
         }
     }
 

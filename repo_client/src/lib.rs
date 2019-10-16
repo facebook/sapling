@@ -16,7 +16,7 @@ mod getbundle_response;
 mod mononoke_repo;
 mod unbundle;
 
-pub use client::{gettreepack_entries, RepoClient};
+pub use client::{gettreepack_entries, RepoClient, RepoSyncTarget};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
 pub use repo_read_write_status::RepoReadWriteFetcher;
 pub use streaming_clone::SqlStreamingChunksFetcher;
