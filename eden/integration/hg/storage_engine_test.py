@@ -91,8 +91,6 @@ class _Hidden:
 
 
 @hg_test
-# pyre-fixme[38]: `HisteditMemoryStorageEngineTest` does not implement all inherited
-#  abstract methods.
 # pyre-fixme[13]: Attribute `_commit1` is never initialized.
 # pyre-fixme[13]: Attribute `_commit2` is never initialized.
 # pyre-fixme[13]: Attribute `_commit3` is never initialized.
@@ -106,8 +104,6 @@ class HisteditMemoryStorageEngineTest(_Hidden.StorageEngineTest):
 
 
 @hg_test
-# pyre-fixme[38]: `HisteditSQLiteStorageEngineTest` does not implement all inherited
-#  abstract methods.
 # pyre-fixme[13]: Attribute `_commit1` is never initialized.
 # pyre-fixme[13]: Attribute `_commit2` is never initialized.
 # pyre-fixme[13]: Attribute `_commit3` is never initialized.
@@ -121,8 +117,6 @@ class HisteditSQLiteStorageEngineTest(_Hidden.StorageEngineTest):
 
 
 @hg_test
-# pyre-fixme[38]: `HisteditRocksDBStorageEngineTest` does not implement all
-#  inherited abstract methods.
 # pyre-fixme[13]: Attribute `_commit1` is never initialized.
 # pyre-fixme[13]: Attribute `_commit2` is never initialized.
 # pyre-fixme[13]: Attribute `_commit3` is never initialized.

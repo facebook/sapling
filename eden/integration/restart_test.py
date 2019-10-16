@@ -23,7 +23,6 @@ from .lib.service_test_case import (
 )
 
 
-# pyre-fixme[38]: `RestartTestBase` does not implement all inherited abstract methods.
 class RestartTestBase(ServiceTestCaseBase):
     def setUp(self) -> None:
         self.eden_dir = self.tmp_dir / "eden"
@@ -64,7 +63,6 @@ class RestartTestBase(ServiceTestCaseBase):
 
 
 @service_test
-# pyre-fixme[38]: `RestartTest` does not implement all inherited abstract methods.
 class RestartTest(RestartTestBase, PexpectAssertionMixin):
     def _check_edenfs_health(self) -> HealthStatus:
         instance = EdenInstance(str(self.eden_dir), etc_eden_dir=None, home_dir=None)
@@ -258,8 +256,6 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
 
 @service_test
-# pyre-fixme[38]: `RestartWithSystemdTest` does not implement all inherited abstract
-#  methods.
 class RestartWithSystemdTest(
     RestartTestBase, SystemdServiceTestCaseMarker, PexpectAssertionMixin
 ):

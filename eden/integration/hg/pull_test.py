@@ -10,15 +10,12 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test("Treemanifest", "TreeOnly")
-# pyre-fixme[38]: `PullTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
 # pyre-fixme[13]: Attribute `repo` is never initialized.
 class PullTest(EdenHgTestCase):
-    # pyre-fixme[13]: Attribute `server_repo` is never initialized.
     server_repo: hgrepo.HgRepository
-    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
 
     def create_backing_repo(self) -> hgrepo.HgRepository:

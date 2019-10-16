@@ -154,6 +154,7 @@ class EdenFS(object):
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex)
+        # pyre-fixme[22]: The cast is redundant.
         return cast(str, completed_process.stdout.decode("utf-8"))
 
     def run_unchecked(

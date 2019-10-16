@@ -298,6 +298,7 @@ class HgRepo(Repo):
     def _run_hg(self, args: List[str]) -> bytes:
         cmd = [self._hg_binary] + args
         out_bytes = subprocess.check_output(cmd, cwd=self.working_dir, env=self._env)
+        # pyre-fixme[22]: The cast is redundant.
         out = typing.cast(bytes, out_bytes)
         return out
 
@@ -320,6 +321,7 @@ class GitRepo(Repo):
 
     def _run_git(self, args: List[str]) -> bytes:
         cmd = ["git"] + args
+        # pyre-fixme[22]: The cast is redundant.
         out = typing.cast(bytes, subprocess.check_output(cmd, cwd=self.source))
         return out
 

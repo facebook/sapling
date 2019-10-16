@@ -27,6 +27,8 @@ class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
 
         def restore() -> None:
             if old_value is None:
+                # pyre-fixme[16]: `EnvironmentVariableMixin` has no attribute
+                #  `__unset_environment_variable_with_cleanup`.
                 self.__unset_environment_variable_with_cleanup(name)
             else:
                 os.environ[name] = old_value

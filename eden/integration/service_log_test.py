@@ -15,8 +15,6 @@ from .lib.service_test_case import (
 from .start_test import run_eden_start_with_real_daemon
 
 
-# pyre-fixme[38]: `ServiceLogTestBase` does not implement all inherited abstract
-#  methods.
 class ServiceLogTestBase(ServiceTestCaseBase):
     """Test how the EdenFS service stores its logs.
     """
@@ -31,8 +29,6 @@ class ServiceLogTestBase(ServiceTestCaseBase):
 
 
 @service_test
-# pyre-fixme[38]: `ServiceLogFakeEdenFSTest` does not implement all inherited
-#  abstract methods.
 class ServiceLogFakeEdenFSTest(ServiceLogTestBase):
     def test_fake_edenfs_writes_logs_to_file_in_eden_dir(self) -> None:
         self.assertFalse(

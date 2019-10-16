@@ -19,7 +19,6 @@ from eden.cli.doctor.problem import FixableProblem, ProblemTracker, UnexpectedCh
 from thrift.Thrift import TApplicationException
 
 
-# pyre-fixme[44]: `HgChecker` non-abstract class with abstract methods.
 class HgChecker:
     errors: List[str] = []
 
@@ -179,7 +178,12 @@ class DirstateChecker(HgFileChecker):
         if self._new_parents != self._old_dirstate_parents:
             with self.path.open("wb") as f:
                 eden.dirstate.write(
-                    f, self._new_parents, self._tuples_dict, self._copymap
+                    f,
+                    # pyre-fixme[6]: Expected `Tuple[bytes, bytes]` for 2nd param
+                    #  but got `Optional[Tuple[bytes, bytes]]`.
+                    self._new_parents,
+                    self._tuples_dict,
+                    self._copymap,
                 )
 
         # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.

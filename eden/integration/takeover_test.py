@@ -18,16 +18,16 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
+# pyre-fixme[13]: Attribute `commit1` is never initialized.
+# pyre-fixme[13]: Attribute `commit2` is never initialized.
+# pyre-fixme[13]: Attribute `page1` is never initialized.
+# pyre-fixme[13]: Attribute `page2` is never initialized.
+# pyre-fixme[13]: Attribute `pagesize` is never initialized.
 class TakeoverTest(testcase.EdenRepoTest):
-    # pyre-fixme[13]: Attribute `pagesize` is never initialized.
     pagesize: int
-    # pyre-fixme[13]: Attribute `page1` is never initialized.
     page1: str
-    # pyre-fixme[13]: Attribute `page2` is never initialized.
     page2: str
-    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
-    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
 
     def populate_repo(self) -> None:

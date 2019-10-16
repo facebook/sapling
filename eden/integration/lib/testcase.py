@@ -89,6 +89,7 @@ class EdenTestCase(
             is enabled for a test case.
             This can be removed once a future version of hypothesis
             ships with support for this baked in. """
+        # pyre-fixme[16]: Module `testcase` has no attribute `is_hypothesis_test`.
         if is_hypothesis_test(getattr(self, self._testMethodName)):
             try:
                 old_setUp = self.setUp
@@ -308,6 +309,8 @@ class EdenTestCase(
         return "memory"
 
 
+# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-fixme[13]: Attribute `repo_name` is never initialized.
 class EdenRepoTest(EdenTestCase):
     """
     Base class for EdenHgTest and EdenGitTest.
@@ -319,9 +322,7 @@ class EdenRepoTest(EdenTestCase):
     your tests once per supported repository type.
     """
 
-    # pyre-fixme[13]: Attribute `repo` is never initialized.
     repo: repobase.Repository
-    # pyre-fixme[13]: Attribute `repo_name` is never initialized.
     repo_name: str
 
     enable_logview: bool = False

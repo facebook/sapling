@@ -63,6 +63,7 @@ class GitRepository(repobase.Repository):
             )
         except subprocess.CalledProcessError as ex:
             raise GitError(ex) from ex
+        # pyre-fixme[22]: The cast is redundant.
         return typing.cast(str, completed_process.stdout.decode(encoding))
 
     def init(self) -> None:

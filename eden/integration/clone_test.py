@@ -352,8 +352,6 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertEqual(custom_readme_text, readme_path.read_text())
 
 
-# pyre-fixme[38]: `CloneFakeEdenFSTestBase` does not implement all inherited
-#  abstract methods.
 class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
@@ -391,8 +389,6 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
 
 
 @service_test
-# pyre-fixme[38]: `CloneFakeEdenFSTest` does not implement all inherited abstract
-#  methods.
 class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
         repo = self.make_dummy_hg_repo()
@@ -415,8 +411,6 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
 
 
 @service_test
-# pyre-fixme[38]: `CloneFakeEdenFSWithSystemdTest` does not implement all inherited
-#  abstract methods.
 class CloneFakeEdenFSWithSystemdTest(
     CloneFakeEdenFSTestBase, SystemdServiceTestCaseMarker
 ):

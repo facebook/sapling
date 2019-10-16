@@ -13,33 +13,21 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-# pyre-fixme[38]: `RebaseTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
 # pyre-fixme[13]: Attribute `repo` is never initialized.
 class RebaseTest(EdenHgTestCase):
-    # pyre-fixme[13]: Attribute `_base_commit` is never initialized.
     _base_commit: str
-    # pyre-fixme[13]: Attribute `_c11` is never initialized.
     _c11: str
-    # pyre-fixme[13]: Attribute `_c12` is never initialized.
     _c12: str
-    # pyre-fixme[13]: Attribute `_c13` is never initialized.
     _c13: str
-    # pyre-fixme[13]: Attribute `_c14` is never initialized.
     _c14: str
-    # pyre-fixme[13]: Attribute `_c15` is never initialized.
     _c15: str
-    # pyre-fixme[13]: Attribute `_c21` is never initialized.
     _c21: str
-    # pyre-fixme[13]: Attribute `_c22` is never initialized.
     _c22: str
-    # pyre-fixme[13]: Attribute `_c23` is never initialized.
     _c23: str
-    # pyre-fixme[13]: Attribute `_c24` is never initialized.
     _c24: str
-    # pyre-fixme[13]: Attribute `_c25` is never initialized.
     _c25: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:

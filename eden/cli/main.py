@@ -1323,8 +1323,8 @@ RESTART_MODE_FORCE = "force"
 
 
 @subcmd("restart", "Restart the edenfs daemon")
+# pyre-fixme[13]: Attribute `args` is never initialized.
 class RestartCmd(Subcmd):
-    # pyre-fixme[13]: Attribute `args` is never initialized.
     args: argparse.Namespace
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

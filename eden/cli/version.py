@@ -18,6 +18,7 @@ def get_installed_eden_rpm_version() -> str:
     )
     if proc.returncode != 0:
         return "<Not Installed>"
+    # pyre-fixme[22]: The cast is redundant.
     return cast(str, proc.stdout)
 
 

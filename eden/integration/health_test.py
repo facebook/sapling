@@ -33,8 +33,6 @@ class HealthTest(testcase.EdenTestCase):
 
 
 @service_test()
-# pyre-fixme[38]: `HealthOfFakeEdenFSTest` does not implement all inherited abstract
-#  methods.
 class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()

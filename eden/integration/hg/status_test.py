@@ -12,7 +12,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test("Treemanifest", "TreeOnly")
-# pyre-fixme[38]: `StatusTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
@@ -100,19 +99,14 @@ class StatusTest(EdenHgTestCase):
 # Define a separate TestCase class purely to test with different initial
 # repository contents.
 @hg_test
-# pyre-fixme[38]: `StatusRevertTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
 # pyre-fixme[13]: Attribute `repo` is never initialized.
 class StatusRevertTest(EdenHgTestCase):
-    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
-    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
-    # pyre-fixme[13]: Attribute `commit3` is never initialized.
     commit3: str
-    # pyre-fixme[13]: Attribute `commit4` is never initialized.
     commit4: str
 
     def populate_backing_repo(self, repo: HgRepository) -> None:

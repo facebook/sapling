@@ -14,7 +14,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-# pyre-fixme[38]: `FilesTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.

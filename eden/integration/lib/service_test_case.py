@@ -73,7 +73,6 @@ class ServiceTestCaseBase(
         return self.__home_dir
 
 
-# pyre-fixme[44]: `ServiceTestCaseMixinBase` non-abstract class with abstract methods.
 class ServiceTestCaseMixinBase:
     if typing.TYPE_CHECKING:
 
@@ -90,8 +89,6 @@ class ServiceTestCaseMixinBase:
 
 if typing.TYPE_CHECKING:
 
-    # pyre-fixme[38]: `SystemdServiceTestCaseMarker` does not implement all
-    #  inherited abstract methods.
     class SystemdServiceTestCaseMarker(EdenFSSystemdMixin):
         pass
 
@@ -147,8 +144,6 @@ class ManagedFakeEdenFSMixin(ServiceTestCaseMixinBase):
         )
 
 
-# pyre-fixme[44]: `SystemdEdenCLIFakeEdenFSMixin` non-abstract class with abstract
-#  methods.
 class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """Test by using 'eden start' with systemd enabled to spawn fake_edenfs.
 
@@ -218,8 +213,6 @@ def _replicate_service_test(
 
     if not skip_systemd:
 
-        # pyre-fixme[38]: `SystemdEdenCLITest` does not implement all inherited
-        #  abstract methods.
         class SystemdEdenCLITest(
             SystemdEdenCLIFakeEdenFSMixin,
             test_class,  # type: ignore

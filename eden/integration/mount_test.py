@@ -26,8 +26,8 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
+# pyre-fixme[13]: Attribute `expected_mount_entries` is never initialized.
 class MountTest(testcase.EdenRepoTest):
-    # pyre-fixme[13]: Attribute `expected_mount_entries` is never initialized.
     expected_mount_entries: Set[str]
     enable_fault_injection: bool = True
 

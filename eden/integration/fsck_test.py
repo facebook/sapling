@@ -21,8 +21,8 @@ FSCK_RETCODE_WARNINGS = 2
 FSCK_RETCODE_ERRORS = 3
 
 
+# pyre-fixme[13]: Attribute `overlay` is never initialized.
 class FsckTest(testcase.EdenRepoTest):
-    # pyre-fixme[13]: Attribute `overlay` is never initialized.
     overlay: overlay_mod.OverlayStore
 
     def populate_repo(self) -> None:

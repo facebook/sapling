@@ -10,7 +10,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-# pyre-fixme[38]: `MergeTest` does not implement all inherited abstract methods.
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
@@ -20,11 +19,8 @@ class MergeTest(EdenHgTestCase):
     https://www.mercurial-scm.org/repo/hg/help/merge-tools
     """
 
-    # pyre-fixme[13]: Attribute `commit0` is never initialized.
     commit0: str
-    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
-    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
 
     def populate_backing_repo(self, repo: HgRepository) -> None:

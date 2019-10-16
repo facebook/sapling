@@ -31,7 +31,6 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-# pyre-fixme[38]: `StopTestBase` does not implement all inherited abstract methods.
 class StopTestBase(ServiceTestCaseBase):
     eden_dir: pathlib.Path
 
@@ -53,7 +52,6 @@ class StopTestBase(ServiceTestCaseBase):
 
 
 @service_test
-# pyre-fixme[38]: `StopTest` does not implement all inherited abstract methods.
 class StopTest(StopTestBase, PexpectAssertionMixin):
     def test_stop_stops_running_daemon(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
@@ -183,8 +181,6 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
 
 
 @service_test
-# pyre-fixme[38]: `StopWithSystemdTest` does not implement all inherited abstract
-#  methods.
 class StopWithSystemdTest(
     SystemdServiceTestCaseMarker, StopTestBase, PexpectAssertionMixin
 ):

@@ -228,6 +228,7 @@ class SystemdTest(
         config_d = pathlib.Path(self.etc_eden_dir) / "config.d"
         config_d.mkdir()
         with open(config_d / "systemd.toml", "w") as config_file:
+            # pyre-fixme[6]: Expected `_Writable` for 2nd param but got `IO[Any]`.
             toml.dump(config, config_file)
 
     def spoof_user_name(self, user_name: str) -> None:
