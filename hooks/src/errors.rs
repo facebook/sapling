@@ -31,8 +31,11 @@ pub enum ErrorKind {
     #[fail(display = "Missing file for cs '{}' path '{}'", _0, _1)]
     MissingFile(HgChangesetId, MPath),
 
-    #[fail(display = "Hook(s) referenced in bookmark {:#?} do not exist", _0)]
-    NoSuchBookmarkHook(BookmarkOrRegex),
+    #[fail(
+        display = "Hook(s) referenced in bookmark {:#?} do not exist: {:?}",
+        _0, _1
+    )]
+    NoSuchBookmarkHook(BookmarkOrRegex, HashSet<String>),
 
     #[fail(display = "invalid rust hook: {}", _0)]
     InvalidRustHook(String),

@@ -79,7 +79,11 @@ pub fn load_hooks(
         let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
         let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
         if diff.len() != 0 {
-            return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
+            return Err(ErrorKind::NoSuchBookmarkHook(
+                bookmark,
+                diff.into_iter().cloned().collect(),
+            )
+            .into());
         } else {
             hook_manager.set_hooks_for_bookmark(bookmark, hooks);
         }

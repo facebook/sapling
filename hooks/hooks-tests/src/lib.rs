@@ -1247,7 +1247,7 @@ fn test_load_hooks_no_such_hook(fb: FacebookInit) {
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
-            Ok(ErrorKind::NoSuchBookmarkHook(bookmark)) => {
+            Ok(ErrorKind::NoSuchBookmarkHook(bookmark, _)) => {
                 assert_eq!(book_or_rex, bookmark);
             }
             _ => assert!(false, "Unexpected err type"),
