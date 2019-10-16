@@ -149,6 +149,12 @@ Setup another client and update to latest commit from mercurial
   $ cd client-pull
   $ setup_hg_client
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > getpackversion=2
+  > EOF
+
   $ hg up 2 -v
   resolving manifests
   lfs: downloading c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 (40 bytes)

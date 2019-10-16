@@ -107,6 +107,8 @@
   > threshold=1000B
   > usercache=$TESTTMP/lfs-cache2
   > url=$lfs_uri
+  > [remotefilelog]
+  > getpackversion = 2
   > EOF
 
   $ hg update master_bookmark -v

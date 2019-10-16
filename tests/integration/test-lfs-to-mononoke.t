@@ -121,16 +121,20 @@ Verify that if we fail to upload LFS blobs first, the push fails
 
   $ cd ..
 
-Create a new client repository
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
-  $ cd repo-hg-lfs2
+Create a new client repository, using getpack (with its own cachepath)
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate --config extensions.remotenames=
+  $ cd repo-hg-lfs3
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
+  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
   > remotenames =
+  > [remotefilelog]
+  > fetchpacks = True
+  > getpackversion = 2
+  > cachepath=$TESTTMP/cachepath-alt
   > EOF
 
   $ hgmn pull -v
@@ -142,7 +146,7 @@ Create a new client repository
   adding file changes
   added 2 changesets with 0 changes to 0 files
   new changesets 99765c8d839c:c651f052c52d
-
+ 
   $ hgmn update -r master_bookmark -v
   resolving manifests
   lfs: need to transfer 2 objects (3.92 KB)
@@ -205,55 +209,3 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-  $ cd ..
-
-
-Create a new client repository, using getpack (with its own cachepath)
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate --config extensions.remotenames=
-  $ cd repo-hg-lfs3
-  $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
-
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase =
-  > remotenames =
-  > [remotefilelog]
-  > fetchpacks = True
-  > getpackversion = 2
-  > cachepath=$TESTTMP/cachepath-alt
-  > EOF
-
-  $ hgmn pull -v
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  all local heads known remotely
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 0 changes to 0 files
-  new changesets 99765c8d839c:c651f052c52d
- 
-  $ hgmn update -r master_bookmark -v
-  resolving manifests
-  lfs: need to transfer 2 objects (3.92 KB)
-  lfs: downloading d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982 (1.96 KB)
-  lfs: processed: d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982
-  lfs: downloading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
-  getting lfs-largefile
-  getting lfs-largefile-renamed
-  getting smallfile
-  calling hook update.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ sha256sum lfs-largefile
-  e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d  lfs-largefile
-
-  $ sha256sum lfs-largefile-renamed
-  d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982  lfs-largefile-renamed
-
-  $ hgmn st --change . -C
-  A lfs-largefile-renamed
-    lfs-largefile-for-rename
-  R lfs-largefile-for-rename

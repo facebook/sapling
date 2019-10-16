@@ -62,6 +62,8 @@ Create a new repository, enable LFS there as well
   > [extensions]
   > pushrebase =
   > remotenames =
+  > [remotefilelog]
+  > getpackversion = 2
   > EOF
 
 Pull changes from Mononoke

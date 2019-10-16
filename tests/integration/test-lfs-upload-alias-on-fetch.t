@@ -93,6 +93,8 @@
   > [extensions]
   > pushrebase =
   > remotenames =
+  > [remotefilelog]
+  > getpackversion = 2
   > EOF
 
   $ hgmn pull

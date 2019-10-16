@@ -24,16 +24,14 @@ define a remotefilelog cache process that just logs when things are added
   >         cmd = sys.stdin.readline().strip()
   >         if cmd == 'exit':
   >             sys.exit(0)
-  >         elif cmd == 'get':
+  >         elif cmd == 'getdata' or cmd == 'gethistory':
   >             count = int(sys.stdin.readline())
   >             for _ in range(count):
   >                 key = sys.stdin.readline()[:-1]
-  >                 if '\0' in key:
-  >                     _, key = key.split('\0')
   >                 sys.stdout.write(key + '\n')
   >             sys.stdout.write('0\n')
   >             sys.stdout.flush()
-  >         elif cmd == 'set':
+  >         elif cmd == 'setdata' or cmd == 'sethistory':
   >             count = int(sys.stdin.readline())
   >             for _ in range(count):
   >                 key = sys.stdin.readline()[:-1]
@@ -115,16 +113,15 @@ pull the infinitepush commit
 
 the blob didn't get uploaded to the cache
   $ cat $TESTTMP/cachelog.log
+  cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
+  cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/f361a1ed16f4b87bbe47e638d8c2cc9f1de8e06f
 
-  $ hg debugremotefilelog ../cachepath/repo-pull1/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3
-  size: 9 bytes
-  path: ../cachepath/repo-pull1/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3 
-  key: b4aa7b980f00 
-  filename: file 
+  $ hg debughistorypack ../cachepath/repo-pull1/packs/f361a1ed16f4b87bbe47e638d8c2cc9f1de8e06f
   
-          node =>           p1            p2      linknode     copyfrom
-  b4aa7b980f00 => 599997c6080f  000000000000  000000000000  
-  599997c6080f => 000000000000  000000000000  d998012a9c34  
+  file
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  b4aa7b980f00  599997c6080f  000000000000  000000000000  
+  599997c6080f  000000000000  000000000000  d998012a9c34  
 
   $ hg debughistorypack ../cachepath/repo-pull1/packs/manifests/0a557814daab121c2043c7ba26a89a0d60671de6.histpack
   
@@ -191,22 +188,20 @@ pull only the master branch into another repo
 
 the blob was uploaded to the cache
   $ cat $TESTTMP/cachelog.log
-  cacheprocess: set repo-pull2/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3
+  cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
+  cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
 
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  6dbc3093b5955d7bb47512155149ec66791c277d master (default/master_bookmark)
   |
   o  d998012a9c34a2423757a3d40f8579c78af1b342 base ()
   
-  $ hg debugremotefilelog ../cachepath/repo-pull2/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3
-  size: 9 bytes
-  path: ../cachepath/repo-pull2/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3 
-  key: b4aa7b980f00 
-  filename: file 
+  $ hg debughistorypack ../cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
   
-          node =>           p1            p2      linknode     copyfrom
-  b4aa7b980f00 => 599997c6080f  000000000000  6dbc3093b595  
-  599997c6080f => 000000000000  000000000000  d998012a9c34  
+  file
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  b4aa7b980f00  599997c6080f  000000000000  6dbc3093b595  
+  599997c6080f  000000000000  000000000000  d998012a9c34  
 
   $ hg debughistorypack ../cachepath/repo-pull2/packs/manifests/d4f69b796da6848a455a916d75afe6b27e774058.histpack
   
@@ -236,15 +231,12 @@ pull the infinitepush commit again in a new repo
   new changesets 60ab8a6c8e65
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg debugremotefilelog ../cachepath/repo-pull3/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3
-  size: 9 bytes
-  path: ../cachepath/repo-pull3/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3 
-  key: b4aa7b980f00 
-  filename: file 
+  $ hg debughistorypack ../cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
   
-          node =>           p1            p2      linknode     copyfrom
-  b4aa7b980f00 => 599997c6080f  000000000000  6dbc3093b595  
-  599997c6080f => 000000000000  000000000000  d998012a9c34  
+  file
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  b4aa7b980f00  599997c6080f  000000000000  6dbc3093b595  
+  599997c6080f  000000000000  000000000000  d998012a9c34  
 
   $ hg debughistorypack ../cachepath/repo-pull3/packs/manifests/d4f69b796da6848a455a916d75afe6b27e774058.histpack
   

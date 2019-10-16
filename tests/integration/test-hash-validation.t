@@ -60,29 +60,8 @@ Prefetch should fail with corruption error
   added 3 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   new changesets 426bada5c675:26805aba1e60
-  $ hgmn prefetch -r ":"
-  remote: Command failed
-  remote:   Error:
-  remote:     Corrupt hg filenode returned: 005d992c5dcf32993668f7cede29d296c494a5d9 != a2e456504a5e61f763f1a0b36a6c247c7541b2b3
-  remote:   Root cause:
-  remote:     CorruptHgFileNode {
-  remote:         expected: HgFileNodeId(
-  remote:             HgNodeHash(
-  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9),
-  remote:             ),
-  remote:         ),
-  remote:         actual: HgFileNodeId(
-  remote:             HgNodeHash(
-  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3),
-  remote:             ),
-  remote:         ),
-  remote:     }
-  abort: error downloading file contents:
-  'connection closed early for filename * and node *' (glob)
-  [255]
 
-Same for getpackv1
-  $ hgmn prefetch -r ":" --config remotefilelog.fetchpacks=True
+  $ hgmn prefetch -r ":"
   remote: Command failed
   remote:   Error:
   remote:     Corrupt hg filenode returned: 005d992c5dcf32993668f7cede29d296c494a5d9 != a2e456504a5e61f763f1a0b36a6c247c7541b2b3
