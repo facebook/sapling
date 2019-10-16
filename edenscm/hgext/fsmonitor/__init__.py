@@ -876,9 +876,12 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
 
         with progress.spinner(self._ui, "scanning working copy"):
             try:
-                return self._pendingchanges(match)
+                # Ideally we'd return the result incrementally, but we need to
+                # be able to fall back if watchman fails. So let's consume the
+                # whole pendingchanges list upfront.
+                return list(self._pendingchanges(match))
             except fsmonitorfallback as ex:
-                return bail(ex.message)
+                return bail(str(ex))
 
     def _pendingchanges(self, match=None):
         if match is None:
