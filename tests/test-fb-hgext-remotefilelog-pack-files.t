@@ -106,12 +106,11 @@
 # Check that files are not fetched from the server for the full history
 # after clearing cache the file will be fetched because it needs a content of it
   $ findfilessorted $CACHEDIR
-  $TESTTMP/hgcache/master/packs/729c1f9b99edec87840818cfda1cfb5c026549cd.dataidx
-  $TESTTMP/hgcache/master/packs/729c1f9b99edec87840818cfda1cfb5c026549cd.datapack
+  $TESTTMP/hgcache/master/packs/221b1b8a6642854febb789d0597f5719e9380354.dataidx
+  $TESTTMP/hgcache/master/packs/221b1b8a6642854febb789d0597f5719e9380354.datapack
   $TESTTMP/hgcache/master/packs/8439c9deb49aa426fddba0f12b66e39ed3b229f7.histidx
   $TESTTMP/hgcache/master/packs/8439c9deb49aa426fddba0f12b66e39ed3b229f7.histpack
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
   $ clearcache
   $ echo "new line" >> file
   $ hg commit -vm "expecting to fetch"

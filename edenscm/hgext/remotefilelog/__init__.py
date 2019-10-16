@@ -256,7 +256,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("remotefilelog", "descendantrevfastpath", default=False)
-configitem("remotefilelog", "fetchpacks", default=False)
+configitem("remotefilelog", "fetchpacks", default=True)
 configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)

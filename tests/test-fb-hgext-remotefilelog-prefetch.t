@@ -48,17 +48,6 @@
   $ hg cat -r 0 x
   x
 
-# check the cache (print file sizes)
-#if simplecachestore
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  104
-  104
-#else
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  64
-  64
-#endif
-
 # prefetch with base
 
   $ clearcache
@@ -82,25 +71,6 @@
   $ hg prefetch -r 0::1 -b 1
   $ hg prefetch -r 0::1
 
-# check the cache (print file sizes)
-
-#if simplecachestore
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  104
-  104
-  104
-  155
-#else
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  115
-  64
-  64
-  64
-#endif
-
-# clean the caches
-  $ rm -rf ../master/.hg/remotefilelogcache/
-
 # prefetch a range of revisions
 
   $ clearcache
@@ -111,21 +81,6 @@
   x
   $ hg cat -r 1 x
   x2
-
-# check the cache, check they recovered (print file sizes)
-#if simplecachestore
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  104
-  104
-  104
-  155
-#else
-  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
-  115
-  64
-  64
-  64
-#endif
 
 # prefetch certain files
 

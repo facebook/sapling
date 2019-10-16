@@ -98,10 +98,9 @@
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histidx
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histpack
-  $TESTTMP/hgcache/master/packs/fd280cbfab2f4047961d1ec5f7858e763ac985ab.dataidx
-  $TESTTMP/hgcache/master/packs/fd280cbfab2f4047961d1ec5f7858e763ac985ab.datapack
+  $TESTTMP/hgcache/master/packs/c35125c9a76fac1fd07ab94539029532cf76dd4f.dataidx
+  $TESTTMP/hgcache/master/packs/c35125c9a76fac1fd07ab94539029532cf76dd4f.datapack
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
   $ cp -R . ../shallow2
 
@@ -237,12 +236,11 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/81474ad80722381ab760fb7ccf400b15e87a0151.dataidx
-  $TESTTMP/hgcache/master/packs/81474ad80722381ab760fb7ccf400b15e87a0151.datapack
+  $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.dataidx
+  $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.datapack
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histidx
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
   $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'
   0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs

@@ -183,16 +183,13 @@ TODO: Make this test compatibile with obsstore enabled.
   b292c1e3311f x public x
 
 # Check the contents of the remote blob for correct linknode
-  $ hg debugremotefilelog $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
-  size: 6 bytes
-  path: $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
-  key: d4a3ed9310e5 
-  filename: x 
+  $ hg debughistorypack $CACHEDIR/master/packs/861804d685584478f9eaa52741800152484b3566.histpack
   
-          node =>           p1            p2      linknode     copyfrom
-  d4a3ed9310e5 => aee31534993a  000000000000  32e6611f6149  
-  aee31534993a => 1406e7411862  000000000000  0632994590a8  
-  1406e7411862 => 000000000000  000000000000  b292c1e3311f  
+  x
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  d4a3ed9310e5  aee31534993a  000000000000  32e6611f6149  
+  aee31534993a  1406e7411862  000000000000  0632994590a8  
+  1406e7411862  000000000000  000000000000  b292c1e3311f  
 
 Test the same scenario as above but with fastlog enabled
 
@@ -254,7 +251,7 @@ Case 1: fastlog service calls fails or times out
   32e6611f6149 xx2-fake-rebased public x
   0632994590a8 xx public x
   b292c1e3311f x public x
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Case 2: fastlog returns empty results
 
@@ -346,7 +343,7 @@ Silencing stdout because we are interested only in ui.log output
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
   linkrevfixup: fastlog succeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
 
 Fastlog fails
   $ cat > $TESTTMP/bad_conduit.py <<EOF

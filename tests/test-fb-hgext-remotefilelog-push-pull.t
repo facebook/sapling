@@ -17,9 +17,9 @@
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   { metrics : { ssh : { connections : 2,
-                        getfiles : { calls : 1,  revs : 1},
-                        read : { bytes : 1462},
-                        write : { bytes : 812}}}}
+                        getpack : { calls : 1,  revs : 1},
+                        read : { bytes : 1548},
+                        write : { bytes : 803}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 918},
@@ -58,9 +58,9 @@ the server supports our custom getfiles method.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   { metrics : { ssh : { connections : 1,
-                        getfiles : { calls : 1,  revs : 1},
-                        read : { bytes : 544},
-                        write : { bytes : 156}}}}
+                        getpack : { calls : 1,  revs : 1},
+                        read : { bytes : 630},
+                        write : { bytes : 147}}}}
 
   $ cat y
   y
@@ -85,11 +85,11 @@ the server supports our custom getfiles method.
   adding file changes
   added 3 changesets with 3 changes to 3 files
   new changesets d34c38483be9:d7373980d475
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
-  { metrics : { ssh : { connections : 1,
-                        getfiles : { calls : 1,  revs : 2},
-                        read : { bytes : 611},
-                        write : { bytes : 198}}}}
+  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s
+  { metrics : { ssh : { connections : 2,
+                        getpack : { calls : 2,  revs : 4},
+                        read : { bytes : 1546},
+                        write : { bytes : 348}}}}
 
 # pull from shallow to shallow (ssh)
 
@@ -105,9 +105,9 @@ the server supports our custom getfiles method.
   new changesets d34c38483be9:d7373980d475
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
   { metrics : { ssh : { connections : 2,
-                        getfiles : { calls : 1,  revs : 2},
-                        read : { bytes : 2793},
-                        write : { bytes : 831}}}}
+                        getpack : { calls : 1,  revs : 2},
+                        read : { bytes : 2955},
+                        write : { bytes : 807}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -25,12 +25,12 @@ Clone it
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   { metrics : { ssh : { connections : 2,
-                        getfiles : { calls : 1,  revs : 2},
+                        getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2252},
-                        write : { bytes : 1042}}}}
+                        read : { bytes : 2414},
+                        write : { bytes : 1018}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

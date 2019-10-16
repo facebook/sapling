@@ -76,13 +76,10 @@ TODO: Make this test compatibile with obsstore enabled.
   $ sleep 0.5
   $ hg debugwaitonprefetch >/dev/null 2>%1
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/ef95c5376f34698742fe34f315fd82136f8f68c0
-  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
-  $TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca
-  $TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/filename
-  $TESTTMP/hgcache/master/af/f024fe4ab0fece4091de044c58c9ae4233383a/bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c
-  $TESTTMP/hgcache/master/af/f024fe4ab0fece4091de044c58c9ae4233383a/filename
-  $TESTTMP/hgcache/repos
+  $TESTTMP/hgcache/master/packs/94d53eef9e622533aec1fc6d8053cb086e785d21.histidx
+  $TESTTMP/hgcache/master/packs/94d53eef9e622533aec1fc6d8053cb086e785d21.histpack
+  $TESTTMP/hgcache/master/packs/c3ab47a06bdd98271166474310cfcba946b6da4f.dataidx
+  $TESTTMP/hgcache/master/packs/c3ab47a06bdd98271166474310cfcba946b6da4f.datapack
 
 # prefetch uses the current commit as the base
   $ hg up -q 'tip^'
@@ -129,10 +126,9 @@ TODO: Make this test compatibile with obsstore enabled.
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/94d53eef9e622533aec1fc6d8053cb086e785d21.histidx
   $TESTTMP/hgcache/master/packs/94d53eef9e622533aec1fc6d8053cb086e785d21.histpack
-  $TESTTMP/hgcache/master/packs/f3644bc7773e8289deda7f765138120c838f4e6e.dataidx
-  $TESTTMP/hgcache/master/packs/f3644bc7773e8289deda7f765138120c838f4e6e.datapack
+  $TESTTMP/hgcache/master/packs/c3ab47a06bdd98271166474310cfcba946b6da4f.dataidx
+  $TESTTMP/hgcache/master/packs/c3ab47a06bdd98271166474310cfcba946b6da4f.datapack
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
 # background prefetch with repack on update when wcprevset configured
 
@@ -141,11 +137,10 @@ TODO: Make this test compatibile with obsstore enabled.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
   $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
-  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
-  $TESTTMP/hgcache/master/39/5df8f7c51f007019cb30201c49e884b46b92fa/69a1b67522704ec122181c0890bd16e9d3e7516a
-  $TESTTMP/hgcache/master/39/5df8f7c51f007019cb30201c49e884b46b92fa/filename
-  $TESTTMP/hgcache/repos
+  $TESTTMP/hgcache/master/packs/6a5063cc90091cfb6de3cc015d68cb634d463007.dataidx
+  $TESTTMP/hgcache/master/packs/6a5063cc90091cfb6de3cc015d68cb634d463007.datapack
+  $TESTTMP/hgcache/master/packs/6fc7915a65ef33e320c8474cc46034cc6e93c691.histidx
+  $TESTTMP/hgcache/master/packs/6fc7915a65ef33e320c8474cc46034cc6e93c691.histpack
 
   $ hg up -r 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -167,37 +162,16 @@ TODO: Make this test compatibile with obsstore enabled.
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  $TESTTMP/hgcache/master/packs/*.dataidx (glob)
+  $TESTTMP/hgcache/master/packs/*.datapack (glob)
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
 # Ensure that file 'w' was prefetched - it was not part of the update operation and therefore
 # could only be downloaded by the background prefetch
 
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
-  w:
-  Node          Delta Base    Delta Length  Blob Size
-  bb6ccd5dceaa  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  ef95c5376f34  000000000000  3             3
-  1406e7411862  ef95c5376f34  14            2
-  
-  Total:                      17            5         (240.0% bigger)
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  076f5e2225b3  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  z:
-  Node          Delta Base    Delta Length  Blob Size
-  69a1b6752270  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
+  $ hg debugdatapack --node bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/* (glob)
+  w
 
 # background prefetch with repack on commit when wcprevset configured
 
@@ -220,37 +194,16 @@ TODO: Make this test compatibile with obsstore enabled.
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  $TESTTMP/hgcache/master/packs/*.dataidx (glob)
+  $TESTTMP/hgcache/master/packs/*.datapack (glob)
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
 # Ensure that file 'w' was prefetched - it was not part of the commit operation and therefore
 # could only be downloaded by the background prefetch
 
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
-  w:
-  Node          Delta Base    Delta Length  Blob Size
-  bb6ccd5dceaa  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  ef95c5376f34  000000000000  3             3
-  1406e7411862  ef95c5376f34  14            2
-  
-  Total:                      17            5         (240.0% bigger)
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  076f5e2225b3  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  z:
-  Node          Delta Base    Delta Length  Blob Size
-  69a1b6752270  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
+  $ hg debugdatapack --node bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  w
 
 # background prefetch with repack on rebase when wcprevset configured
 
@@ -272,32 +225,38 @@ TODO: Make this test compatibile with obsstore enabled.
   $ sleep 1
   $ hg debugwaitonrepack >/dev/null 2>%1
 
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
+  $TESTTMP/hgcache/master/packs/44cf97504da4233d355ef84a4be9b12658424010.dataidx
+  $TESTTMP/hgcache/master/packs/44cf97504da4233d355ef84a4be9b12658424010.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
+
 # Ensure that file 'y' was prefetched - it was not part of the rebase operation and therefore
 # could only be downloaded by the background prefetch
 
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
-  w:
-  Node          Delta Base    Delta Length  Blob Size
-  bb6ccd5dceaa  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/44cf97504da4233d355ef84a4be9b12658424010.datapack
+  $TESTTMP/hgcache/master/packs/44cf97504da4233d355ef84a4be9b12658424010:
   x:
   Node          Delta Base    Delta Length  Blob Size
-  ef95c5376f34  000000000000  3             3
-  1406e7411862  ef95c5376f34  14            2
+  1406e7411862  000000000000  2             (missing)
   
-  Total:                      17            5         (240.0% bigger)
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  076f5e2225b3  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
-  69a1b6752270  000000000000  2             2
+  69a1b6752270  000000000000  2             (missing)
   
-  Total:                      2             2         (0.0% bigger)
+  w:
+  Node          Delta Base    Delta Length  Blob Size
+  bb6ccd5dceaa  000000000000  2             (missing)
+  
+  x:
+  Node          Delta Base    Delta Length  Blob Size
+  ef95c5376f34  000000000000  3             (missing)
+  
+  y:
+  Node          Delta Base    Delta Length  Blob Size
+  076f5e2225b3  000000000000  2             (missing)
+  
 
 # Check that foregound prefetch with no arguments blocks until background prefetches finish
 
@@ -313,77 +272,26 @@ TODO: Make this test compatibile with obsstore enabled.
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
   $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  $TESTTMP/hgcache/master/packs/*.dataidx (glob)
+  $TESTTMP/hgcache/master/packs/*.datapack (glob)
   $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
 
 # Ensure that files were prefetched
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
-  w:
-  Node          Delta Base    Delta Length  Blob Size
-  bb6ccd5dceaa  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  ef95c5376f34  000000000000  3             3
-  1406e7411862  ef95c5376f34  14            2
-  
-  Total:                      17            5         (240.0% bigger)
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  076f5e2225b3  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  z:
-  Node          Delta Base    Delta Length  Blob Size
-  69a1b6752270  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-
-# Check that foreground prefetch fetches revs specified by '. + draft() + bgprefetchrevs + pullprefetch'
-
-  $ clearcache
-  $ hg prefetch --repack 2>&1 | grep 'got lock' || true
-  got lock after * seconds (glob) (?)
-  $ sleep 0.5
-  $ hg debugwaitonrepack >/dev/null 2>%1
-
-  $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
-  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/repacklock
-  $TESTTMP/hgcache/repos
-
-# Ensure that files were prefetched
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
-  w:
-  Node          Delta Base    Delta Length  Blob Size
-  bb6ccd5dceaa  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  x:
-  Node          Delta Base    Delta Length  Blob Size
-  ef95c5376f34  000000000000  3             3
-  1406e7411862  ef95c5376f34  14            2
-  
-  Total:                      17            5         (240.0% bigger)
-  y:
-  Node          Delta Base    Delta Length  Blob Size
-  076f5e2225b3  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-  z:
-  Node          Delta Base    Delta Length  Blob Size
-  69a1b6752270  000000000000  2             2
-  
-  Total:                      2             2         (0.0% bigger)
-
+  $ hg debugdatapack --node bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  w
+  $ hg debugdatapack --node 1406e74118627694268417491f018a4a883152f0 $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  x
+  $ hg debugdatapack --node ef95c5376f34698742fe34f315fd82136f8f68c0 $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  x2
+  $ hg debugdatapack --node 076f5e2225b3ff0400b98c92aa6cdf403ee24cca $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  y
+  $ hg debugdatapack --node 69a1b67522704ec122181c0890bd16e9d3e7516a $TESTTMP/hgcache/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/*: (glob)
+  z
 # Test that if data was prefetched and repacked we dont need to prefetch it again
 # It ensures that Mercurial looks not only in loose files but in packs as well
 

@@ -45,8 +45,8 @@
   $ hg up tip -q
 
 Looks like `ui.warn()` after getfiles might not make it's way to client hg. Let's read from file
-  $ grep 'getfiles' $TESTTMP/loggedrequests
-  wireproto_requests:  (args=[*], command=getfiles, duration=*, reponame=unknown, responselen=*) (glob)
+  $ grep 'getpack' $TESTTMP/loggedrequests
+  wireproto_requests:  (args=[*], command=getpack*, duration=*, reponame=unknown, responselen=*) (glob)
   $ echo cc > c && hg ci -m c
   $ hg push --force 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
@@ -79,6 +79,6 @@ Enable clienttelemetry and change reponame
   $TESTTMP/repo-clone
   $ hg pull -q
   $ hg up tip -q
-  $ grep 'getfiles' $TESTTMP/loggedrequests
-  wireproto_requests:  (args=[*], command=getfiles, duration=*, reponame=unknown, responselen=*) (glob)
-  wireproto_requests:  (args=[*], client_fullcommand=up tip -q, client_hostname=*, command=getfiles, duration=*, reponame=repo, responselen=*) (glob)
+  $ grep 'getpack' $TESTTMP/loggedrequests
+  wireproto_requests:  (args=[*], command=getpack*, duration=*, reponame=unknown, responselen=*) (glob)
+  wireproto_requests:  (args=[*], client_fullcommand=up tip -q, client_hostname=*, command=getpack*, duration=*, reponame=repo, responselen=*) (glob)

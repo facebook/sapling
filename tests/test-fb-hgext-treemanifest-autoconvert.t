@@ -21,9 +21,9 @@
   $ hgcloneshallow ssh://user@dummy/master client -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   { metrics : { ssh : { connections : 2,
-                        getfiles : { calls : 1,  revs : 1},
-                        read : { bytes : 1719},
-                        write : { bytes : 812}}}}
+                        getpack : { calls : 1,  revs : 1},
+                        read : { bytes : 1805},
+                        write : { bytes : 803}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
