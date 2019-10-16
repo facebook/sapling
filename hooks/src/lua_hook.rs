@@ -404,16 +404,14 @@ fn cached_regex_match(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        facebook, ChangedFileType, HookChangeset, HookChangesetParents, InMemoryFileContentStore,
-    };
+    use crate::{facebook, ChangedFileType, HookChangeset, HookChangesetParents};
     use aclchecker::AclChecker;
     use assert_matches::assert_matches;
     use bookmarks::BookmarkName;
-    use bytes::Bytes;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
     use futures::Future;
+    use hooks_content_stores::{InMemoryFileContentStore, InMemoryFileText};
     use mercurial_types::{HgChangesetId, MPath};
     use std::str::FromStr;
     use std::sync::Arc;
@@ -770,6 +768,27 @@ mod test {
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file_text(\"no/such/path\") == nil\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[fbinit::test]
+    fn test_file_not_text(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let added = vec![("file1".into(), ONES_FNID, 123.into())];
+            let changeset = create_hook_changeset(fb, added, vec![], vec![]);
+
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file_text(\"file1\") == nil and \
+                    ctx.files[1].text() == nil and \
+                    ctx.files[1].len() == 123\n
                  end",
             );
             assert_matches!(
@@ -1239,6 +1258,23 @@ mod test {
     }
 
     #[fbinit::test]
+    fn test_file_hook_not_text(fb: FacebookInit) {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock(fb);
+            let hook_file = default_hook_added_nontext_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.text() == nil and ctx.file.len() == 123\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[fbinit::test]
     fn test_file_hook_is_symlink(fb: FacebookInit) {
         async_unit::tokio_unit_test(move || {
             let ctx = CoreContext::test_mock(fb);
@@ -1641,12 +1677,12 @@ end"#;
 
     fn default_changeset(fb: FacebookInit) -> HookChangeset {
         let added = vec![
-            ("file1".into(), ONES_FNID),
-            ("file2".into(), TWOS_FNID),
-            ("file3".into(), THREES_FNID),
+            ("file1".into(), ONES_FNID, "file1sausages".into()),
+            ("file2".into(), TWOS_FNID, "file2sausages".into()),
+            ("file3".into(), THREES_FNID, "file3sausages".into()),
         ];
         let deleted = vec![("deleted".into(), FOURS_FNID)];
-        let modified = vec![("modified".into(), FIVES_FNID)];
+        let modified = vec![("modified".into(), FIVES_FNID, "modifiedsausages".into())];
         create_hook_changeset(fb, added, deleted, modified)
     }
 
@@ -1657,16 +1693,14 @@ end"#;
 
     fn create_hook_changeset(
         fb: FacebookInit,
-        added: Vec<(String, HgFileNodeId)>,
+        added: Vec<(String, HgFileNodeId, InMemoryFileText)>,
         deleted: Vec<(String, HgFileNodeId)>,
-        modified: Vec<(String, HgFileNodeId)>,
+        modified: Vec<(String, HgFileNodeId, InMemoryFileText)>,
     ) -> HookChangeset {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        for (path, entry_id) in added.iter().chain(modified.iter()) {
-            let content = path.clone() + "sausages";
-            let content_bytes: Bytes = content.into();
-            content_store.insert(cs_id, to_mpath(path), *entry_id, content_bytes.into());
+        for (path, entry_id, content) in added.iter().chain(modified.iter()) {
+            content_store.insert(cs_id, to_mpath(path), *entry_id, content.clone());
         }
         let content_store = Arc::new(content_store);
         let content_store2 = content_store.clone();
@@ -1688,9 +1722,18 @@ end"#;
             };
 
         let mut hook_files = vec![];
-        hook_files.extend(create_hook_files(added, ChangedFileType::Added));
+        hook_files.extend(create_hook_files(
+            added.into_iter().map(|(path, id, _)| (path, id)).collect(),
+            ChangedFileType::Added,
+        ));
         hook_files.extend(create_hook_files(deleted, ChangedFileType::Deleted));
-        hook_files.extend(create_hook_files(modified, ChangedFileType::Modified));
+        hook_files.extend(create_hook_files(
+            modified
+                .into_iter()
+                .map(|(path, id, _)| (path, id))
+                .collect(),
+            ChangedFileType::Modified,
+        ));
         let reviewers_acl_checker = acl_checker(fb);
         HookChangeset::new(
             "some-author".into(),
@@ -1707,7 +1750,7 @@ end"#;
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         let path = "/a/b/c.txt";
-        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages".into());
+        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages");
         HookFile::new(
             path.into(),
             Arc::new(content_store),
@@ -1721,7 +1764,21 @@ end"#;
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         let path = "/a/b/c.txt";
-        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages".into());
+        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages");
+        HookFile::new(
+            path.into(),
+            Arc::new(content_store),
+            cs_id,
+            ChangedFileType::Added,
+            Some((ONES_FNID, FileType::Regular)),
+        )
+    }
+
+    fn default_hook_added_nontext_file() -> HookFile {
+        let mut content_store = InMemoryFileContentStore::new();
+        let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let path = "/a/b/c.txt";
+        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, 123);
         HookFile::new(
             path.into(),
             Arc::new(content_store),

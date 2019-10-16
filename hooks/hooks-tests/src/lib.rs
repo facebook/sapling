@@ -18,11 +18,13 @@ use futures::Future;
 use futures::{stream, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{
-    hook_loader::load_hooks, ChangedFileType, ErrorKind, FileHookExecutionID, Hook, HookChangeset,
+    hook_loader::load_hooks, ErrorKind, FileHookExecutionID, Hook, HookChangeset,
     HookChangesetParents, HookContext, HookExecution, HookFile, HookManager, HookRejectionInfo,
 };
-use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
-use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
+use hooks_content_stores::{
+    BlobRepoChangesetStore, BlobRepoFileContentStore, ChangedFileType, InMemoryChangesetStore,
+    InMemoryFileContentStore,
+};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
@@ -1075,19 +1077,19 @@ fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         cs_id.clone(),
         to_mpath("dir1/subdir1/subsubdir1/file_1"),
         ONES_FNID,
-        "elephants".into(),
+        "elephants",
     );
     content_store.insert(
         cs_id.clone(),
         to_mpath("dir1/subdir1/subsubdir2/file_1"),
         TWOS_FNID,
-        "hippopatami".into(),
+        "hippopatami",
     );
     content_store.insert(
         cs_id,
         to_mpath("dir1/subdir1/subsubdir2/file_2"),
         THREES_FNID,
-        "eels".into(),
+        "eels",
     );
 
     let logger = Logger::root(Discard {}.ignore_res(), o!());

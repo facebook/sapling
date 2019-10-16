@@ -15,8 +15,6 @@ pub use mononoke_types::MPath;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "No changeset with id '{}'", _0)]
-    NoSuchChangeset(String),
     #[fail(display = "No such hook '{}'", _0)]
     NoSuchHook(String),
 
