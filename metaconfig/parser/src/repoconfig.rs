@@ -192,63 +192,94 @@ impl RepoConfigs {
         Ok(None)
     }
 
-    /// Verify the correctness of the commit sync config
-    ///
-    /// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
-    /// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
-    /// of each other, if the sync direction is small-to-large. This is not allowed, because
-    /// otherwise the mapping is unreversable, while we need to reverse it for the large-to-small
-    /// direction of sync.
-    /// Also check that no two small repos use the same bookmark prefix. If they did, this would
-    /// mean potentail bookmark name collisions.
-    fn verify_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
-        let small_repos = &commit_sync_config.small_repos;
-        let direction = &commit_sync_config.direction;
+    /// Verify that two prefixes are not a prefix of each other
+    fn verify_mpath_prefixes(first_prefix: &MPath, second_prefix: &MPath) -> Result<()> {
+        if first_prefix.is_prefix_of(second_prefix) {
+            return Err(format_err!(
+                "{:?} is a prefix of {:?}, which is disallowed",
+                first_prefix,
+                second_prefix
+            ));
+        }
+        if second_prefix.is_prefix_of(first_prefix) {
+            return Err(format_err!(
+                "{:?} is a prefix of {:?}, which is disallowed",
+                second_prefix,
+                first_prefix
+            ));
+        }
+        Ok(())
+    }
 
-        let prefixes: Vec<&MPath> = small_repos
+    /// Create auxillary structs, needed to run verification of commit sync config
+    fn produce_structs_for_verification(
+        commit_sync_config: &CommitSyncConfig,
+    ) -> (Vec<(&MPath, CommitSyncDirection)>, Vec<&AsciiString>) {
+        let small_repos = &commit_sync_config.small_repos;
+
+        let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = small_repos
             .iter()
             .flat_map(|(_, small_repo_sync_config)| {
                 let SmallRepoCommitSyncConfig {
                     default_action,
                     map,
-                    bookmark_prefix: _,
+                    direction,
+                    ..
                 } = small_repo_sync_config;
                 let iter_to_return = map.into_iter().map(|(_, target_prefix)| target_prefix);
                 match default_action {
                     DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
                         iter_to_return.chain(vec![prefix].into_iter())
                     }
-                    _ => iter_to_return.chain(vec![].into_iter()),
+                    DefaultSmallToLargeCommitSyncPathAction::Preserve => {
+                        iter_to_return.chain(vec![].into_iter())
+                    }
                 }
+                .map(move |prefix| (prefix, direction.clone()))
             })
             .collect();
-
-        for (first_prefix, second_prefix) in prefixes.iter().tuple_combinations::<(_, _)>() {
-            if direction == &CommitSyncDirection::LargeToSmall && first_prefix == second_prefix {
-                // when syncing large-to-small, it is allowed to have identical prefixes,
-                // but not prefixes that are proper prefixes of other prefixes
-                continue;
-            }
-            if first_prefix.is_prefix_of(*second_prefix) {
-                return Err(format_err!(
-                    "{:?} is a prefix of {:?}, which is disallowed",
-                    first_prefix,
-                    second_prefix
-                ));
-            }
-            if second_prefix.is_prefix_of(*first_prefix) {
-                return Err(format_err!(
-                    "{:?} is a prefix of {:?}, which is disallowed",
-                    second_prefix,
-                    first_prefix
-                ));
-            }
-        }
 
         let bookmark_prefixes: Vec<&AsciiString> = small_repos
             .iter()
             .map(|(_, sr)| &sr.bookmark_prefix)
             .collect();
+
+        (all_prefixes_with_direction, bookmark_prefixes)
+    }
+
+    /// Verify the correctness of the commit sync config
+    ///
+    /// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
+    /// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
+    /// of each other, if the sync direction is small-to-large. This is not allowed, because
+    /// otherwise there is no way to prevent path conflicts. For example, if one repo maps
+    /// `p1 => foo/bar` and the other maps `p2 => foo`, both repos can accept commits that
+    /// change `foo` and these commits can contain path conflicts. Given that the repos have
+    /// already replied successfully to their clients, it's too late to reject these commits.
+    /// To avoid this problem, we remove the possiblity of path conflicts altogether.
+    /// Also check that no two small repos use the same bookmark prefix. If they did, this would
+    /// mean potentail bookmark name collisions.
+    fn verify_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
+        let (all_prefixes_with_direction, bookmark_prefixes) =
+            Self::produce_structs_for_verification(commit_sync_config);
+
+        for ((first_prefix, first_direction), (second_prefix, second_direction)) in
+            all_prefixes_with_direction
+                .iter()
+                .tuple_combinations::<(_, _)>()
+        {
+            if first_prefix == second_prefix
+                && *first_direction == CommitSyncDirection::LargeToSmall
+                && *second_direction == CommitSyncDirection::LargeToSmall
+            {
+                // when syncing large-to-small, it is allowed to have identical prefixes,
+                // but not prefixes that are proper prefixes of other prefixes
+                continue;
+            }
+            Self::verify_mpath_prefixes(first_prefix, second_prefix)?;
+        }
+
+        // No two small repos can have the same bookmark prefix
         for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>()
         {
             let fp = first_prefix.as_str();
@@ -275,7 +306,6 @@ impl RepoConfigs {
             .map(|(config_name, v)| {
                 let RawCommitSyncConfig {
                     large_repo_id,
-                    direction,
                     common_pushrebase_bookmarks,
                     small_repos
                 } = v;
@@ -287,7 +317,8 @@ impl RepoConfigs {
                             default_action,
                             default_prefix,
                             bookmark_prefix,
-                            map
+                            map,
+                            direction,
                         } = raw_small_repo_config;
 
                         let default_action = match default_action.as_str() {
@@ -312,27 +343,27 @@ impl RepoConfigs {
 
                         let bookmark_prefix: Result<AsciiString> = AsciiString::from_str(&bookmark_prefix).map_err(|_| format_err!("failed to parse ascii string from: {:?}", bookmark_prefix));
 
+                        let direction = match direction.as_str() {
+                            "large_to_small" => CommitSyncDirection::LargeToSmall,
+                            "small_to_large" => CommitSyncDirection::SmallToLarge,
+                            other => return Err(format_err!("unknown commit sync direction: \"{}\"", other))
+                        };
+
                         Ok((RepositoryId::new(repoid), SmallRepoCommitSyncConfig {
                             default_action,
                             map: map?,
                             bookmark_prefix: bookmark_prefix?,
+                            direction,
                         }))
 
                     })
                     .collect();
-
-                let direction = match direction.as_str() {
-                    "large_to_small" => CommitSyncDirection::LargeToSmall,
-                    "small_to_large" => CommitSyncDirection::SmallToLarge,
-                    other => return Err(format_err!("unknown commit sync direction: \"{}\"", other))
-                };
 
                 let common_pushrebase_bookmarks: Result<Vec<_>> = common_pushrebase_bookmarks.into_iter().map(BookmarkName::new).collect();
                 let large_repo_id = RepositoryId::new(large_repo_id);
 
                 let commit_sync_config = CommitSyncConfig {
                     large_repo_id,
-                    direction,
                     common_pushrebase_bookmarks: common_pushrebase_bookmarks?,
                     small_repos: small_repos?,
                 };
@@ -1139,6 +1170,7 @@ pub struct RawCommitSyncSmallRepoConfig {
     default_prefix: Option<String>,
     bookmark_prefix: String,
     map: HashMap<String, String>,
+    direction: String,
 }
 
 /// Raw Commit Sync Config
@@ -1146,7 +1178,6 @@ pub struct RawCommitSyncSmallRepoConfig {
 #[serde(deny_unknown_fields)]
 pub struct RawCommitSyncConfig {
     large_repo_id: i32,
-    direction: String,
     common_pushrebase_bookmarks: Vec<String>,
     small_repos: Vec<RawCommitSyncSmallRepoConfig>,
 }
@@ -1191,13 +1222,13 @@ mod test {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
-            direction = "small_to_large"
             common_pushrebase_bookmarks = ["master"]
 
                 [[mega.small_repos]]
                 repoid = 2
                 default_action = "preserve"
                 bookmark_prefix = "repo2"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = ".r2-legacy/p1"
@@ -1208,6 +1239,7 @@ mod test {
                 bookmark_prefix = "repo3"
                 default_action = "prepend_prefix"
                 default_prefix = "subdir"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = "p1"
@@ -1224,7 +1256,6 @@ mod test {
         let expected = hashmap! {
             "mega".to_string() => CommitSyncConfig {
                 large_repo_id: RepositoryId::new(1),
-                direction: CommitSyncDirection::SmallToLarge,
                 common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
                 small_repos: hashmap! {
                     RepositoryId::new(2) => SmallRepoCommitSyncConfig {
@@ -1233,7 +1264,8 @@ mod test {
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
                             MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
-                        }
+                        },
+                        direction: CommitSyncDirection::SmallToLarge,
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
@@ -1241,7 +1273,8 @@ mod test {
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
                             MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
-                        }
+                        },
+                        direction: CommitSyncDirection::SmallToLarge,
                     }
                 },
             }
@@ -1251,17 +1284,17 @@ mod test {
     }
 
     #[test]
-    fn test_commit_sync_config_conflicting_path_prefixes() {
+    fn test_commit_sync_config_conflicting_path_prefixes_small_to_large() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
-            direction = "small_to_large"
             common_pushrebase_bookmarks = ["master"]
 
                 [[mega.small_repos]]
                 repoid = 2
                 bookmark_prefix = "repo2"
                 default_action = "preserve"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = ".r2-legacy/p1"
@@ -1272,6 +1305,7 @@ mod test {
                 bookmark_prefix = "repo3"
                 default_action = "prepend_prefix"
                 default_prefix = "subdir"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = "p1"
@@ -1287,17 +1321,166 @@ mod test {
     }
 
     #[test]
+    fn test_commit_sync_config_conflicting_path_prefixes_large_to_small() {
+        // Purely identical prefixes, allowed in large-to-small
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p5" = "subdir"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_ok());
+
+        // Overlapping, but not identical prefixes
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p5" = "subdir/bla"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_err());
+    }
+
+    #[test]
+    fn test_commit_sync_config_conflicting_path_prefixes_mixed() {
+        // Conflicting paths, should fail
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p5" = "subdir"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+                direction = "small_to_large"
+
+                    [mega.small_repos.map]
+                    "p1" = "p1"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_err());
+
+        // Paths, identical between large-to-smalls, but
+        // overlapping with small-to-large, should fail
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p5" = "subdir"
+
+                [[mega.small_repos]]
+                repoid = 3
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "r3"
+                direction = "small_to_large"
+
+                    [mega.small_repos.map]
+                    "p1" = "subdir/bla"
+
+                [[mega.small_repos]]
+                repoid = 4
+                bookmark_prefix = "repo4"
+                default_action = "prepend_prefix"
+                default_prefix = "r4"
+                direction = "large_to_small"
+
+                    [mega.small_repos.map]
+                    "p4" = "subdir"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let commit_sync_config = RepoConfigs::read_commit_sync_config(tmp_dir.path());
+        assert!(commit_sync_config.is_err());
+    }
+
+    #[test]
     fn test_commit_sync_config_conflicting_bookmark_prefixes() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
-            direction = "small_to_large"
             common_pushrebase_bookmarks = ["master"]
 
                 [[mega.small_repos]]
                 repoid = 2
                 bookmark_prefix = "repo3/bla"
                 default_action = "preserve"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = ".r2-legacy/p1"
@@ -1307,6 +1490,7 @@ mod test {
                 bookmark_prefix = "repo3"
                 default_action = "prepend_prefix"
                 default_prefix = "subdir"
+                direction = "small_to_large"
 
                     [mega.small_repos.map]
                     "p1" = "p1"

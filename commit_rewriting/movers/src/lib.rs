@@ -399,6 +399,7 @@ mod test {
                 mp("preserved2") => mp("repo1-rest/preserved2"),
             },
             bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
@@ -411,13 +412,13 @@ mod test {
                 mp("sub2") => mp("repo2-rest/sub2"),
             },
             bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
     fn get_large_repo_sync_config_non_overlapping() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(3),
-            direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![],
             small_repos: hashmap! {
                 RepositoryId::new(1) => get_small_repo_sync_config_1_non_ovelapping(),
@@ -560,7 +561,6 @@ mod test {
     fn get_large_repo_sync_config_overlapping() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(3),
-            direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![],
             small_repos: hashmap! {
                 RepositoryId::new(1) => SmallRepoCommitSyncConfig {
@@ -569,6 +569,7 @@ mod test {
                         mp("preserved2") => mp("preserved2"),
                     },
                     bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
+                    direction: CommitSyncDirection::LargeToSmall,
                 },
                 RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
@@ -578,6 +579,7 @@ mod test {
                         mp("sub2") => mp("repo2-rest/sub2"),
                     },
                     bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
+                    direction: CommitSyncDirection::LargeToSmall,
                 },
             },
         }

@@ -100,6 +100,7 @@ mod test {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
             map: hashmap! {},
             bookmark_prefix: AsciiString::from_ascii("b1/".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
@@ -108,13 +109,13 @@ mod test {
             default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted")),
             map: hashmap! {},
             bookmark_prefix: AsciiString::from_ascii("b2/".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
     fn get_commit_sync_config() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(3),
-            direction: CommitSyncDirection::LargeToSmall,
             common_pushrebase_bookmarks: vec![
                 BookmarkName::new("m1").unwrap(),
                 BookmarkName::new("m2").unwrap(),

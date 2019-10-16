@@ -3,7 +3,9 @@
 setup configuration
 
   $ REPOTYPE="blob:files"
-  $ setup_common_config $REPOTYPE
+  $ REPOID=0 REPONAME=repo setup_common_config $REPOTYPE
+  $ REPOID=1 REPONAME=repo1 setup_common_config $REPOTYPE
+  $ REPOID=2 REPONAME=repo2 setup_common_config $REPOTYPE
   $ setup_commitsyncmap
 
   $ cd $TESTTMP

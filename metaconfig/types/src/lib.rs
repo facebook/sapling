@@ -734,10 +734,12 @@ pub struct SmallRepoCommitSyncConfig {
     pub map: HashMap<MPath, MPath>,
     /// Bookmark prefix to use in the large repo
     pub bookmark_prefix: AsciiString,
+    /// Commit sync direction
+    pub direction: CommitSyncDirection,
 }
 
 /// Commit sync direction
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CommitSyncDirection {
     /// Syncing commits from large repo to small ones
     LargeToSmall,
@@ -750,8 +752,6 @@ pub enum CommitSyncDirection {
 pub struct CommitSyncConfig {
     /// Large repository id
     pub large_repo_id: RepositoryId,
-    /// Commit sync direction
-    pub direction: CommitSyncDirection,
     /// Common pushrebase bookmarks
     pub common_pushrebase_bookmarks: Vec<BookmarkName>,
     /// Corresponding small repo configs

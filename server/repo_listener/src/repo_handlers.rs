@@ -395,20 +395,27 @@ fn build_repo_handlers(
 
                         if large_repo_id == current_repo_id {
                             None
-                        } else if commit_sync_config.direction != CommitSyncDirection::LargeToSmall {
-                            // We can only do push redirection when sync happens in the
-                            // `LargeToSmall` direction, as `SmallToLarge` is handled by
-                            // tailers.
-                            None
                         } else {
-                            let target_incomplete_repo_handler = lookup_table
-                                .get(&large_repo_id)
-                                .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?;
-                            Some(create_repo_sync_target(
-                                target_incomplete_repo_handler,
-                                &commit_sync_config,
-                                current_repo_id,
-                            )?)
+                            let direction = commit_sync_config
+                                .small_repos
+                                .get(&current_repo_id)
+                                .ok_or(ErrorKind::SmallRepoNotFound(current_repo_id))?
+                                .direction;
+                            if direction != CommitSyncDirection::LargeToSmall {
+                                // We can only do push redirection when sync happens in the
+                                // `LargeToSmall` direction, as `SmallToLarge` is handled by
+                                // tailers.
+                                None
+                            } else {
+                                let target_incomplete_repo_handler = lookup_table
+                                    .get(&large_repo_id)
+                                    .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?;
+                                Some(create_repo_sync_target(
+                                    target_incomplete_repo_handler,
+                                    &commit_sync_config,
+                                    current_repo_id,
+                                )?)
+                            }
                         }
                     }
                 };
