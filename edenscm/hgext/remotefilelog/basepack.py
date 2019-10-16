@@ -109,8 +109,6 @@ class basepackstore(object):
         self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
         self.packspath = set()
 
-        self.fetchpacksenabled = self.ui.configbool("remotefilelog", "fetchpacks")
-
     def _getavailablepackfiles(self, currentpacks=None):
         """For each pack file (a index/data file combo), yields:
           (full path without extension, mtime, size)
@@ -268,7 +266,7 @@ class basepackstore(object):
         # better solution is to use a file format that isn't immutable, like
         # IndexedLog. Running repack is the short-time solution until
         # IndexedLog is more widely deployed.
-        if self.fetchpacksenabled and len(self.packs) == self.DEFAULTCACHESIZE:
+        if len(self.packs) == self.DEFAULTCACHESIZE:
             self.packs.clear()
             self.packspath.clear()
             try:

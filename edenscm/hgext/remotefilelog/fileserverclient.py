@@ -214,12 +214,6 @@ class cacheconnection(object):
     def gethistorypack(self, keys):
         self._makerequest("gethistory", keys)
 
-    def get(self, keys):
-        self._makerequest("get", keys)
-
-    def set(self, keys):
-        self._makerequest("set", keys)
-
     def setdatapack(self, keys):
         self._makerequest("setdata", keys)
 
@@ -266,108 +260,6 @@ class cacheconnection(object):
         return result
 
 
-def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap, batchsize):
-    # Over http(s), iterbatch is a streamy method and we can start
-    # looking at results early. This means we send one (potentially
-    # large) request, but then we show nice progress as we process
-    # file results, rather than showing chunks of $batchsize in
-    # progress.
-    #
-    # Over ssh, iterbatch isn't streamy because batch() wasn't
-    # explicitly designed as a streaming method. In the future we
-    # should probably introduce a streambatch() method upstream and
-    # use that for this.
-    if (
-        getattr(remote, "iterbatch", False)
-        and remote.capable("httppostargs")
-        and isinstance(remote, httppeer.httppeer)
-    ):
-        b = remote.iterbatch()
-        for m in missed:
-            file_ = idmap[m]
-            node = m[-40:]
-            b.getfile(file_, node)
-        b.submit()
-        for m, r in itertools.izip(missed, b.results()):
-            file_ = idmap[m]
-            node = m[-40:]
-            progresstick(file_)
-            receivemissing(io.BytesIO("%d\n%s" % (len(r), r)), file_, node, m)
-        return
-    while missed:
-        chunk, missed = missed[:batchsize], missed[batchsize:]
-        b = remote.iterbatch()
-        for m in chunk:
-            file_ = idmap[m]
-            node = m[-40:]
-            b.getfile(file_, node)
-        b.submit()
-        for m, v in zip(chunk, b.results()):
-            file_ = idmap[m]
-            node = m[-40:]
-            progresstick(file_)
-            receivemissing(io.BytesIO("%d\n%s" % (len(v), v)), file_, node, m)
-
-
-def _getfiles_optimistic(remote, receivemissing, progresstick, missed, idmap, step):
-    remote._callstream("getfiles")
-    i = 0
-    pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
-    pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
-    while i < len(missed):
-        # issue a batch of requests
-        start = i
-        end = min(len(missed), start + step)
-        i = end
-        for missingid in missed[start:end]:
-            # issue new request
-            versionid = missingid[-40:]
-            file = idmap[missingid]
-            sshrequest = "%s%s\n" % (versionid, file)
-            pipeo.write(sshrequest)
-        pipeo.flush()
-
-        # receive batch results
-        for missingid in missed[start:end]:
-            versionid = missingid[-40:]
-            file = idmap[missingid]
-            progresstick(file)
-            receivemissing(pipei, file, versionid, missingid)
-
-    # End the command
-    pipeo.write("\n")
-    pipeo.flush()
-
-
-def _getfiles_threaded(remote, receivemissing, progresstick, missed, idmap, step):
-    remote._callstream("getfiles")
-    pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
-    pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
-
-    def writer():
-        for missingid in missed:
-            versionid = missingid[-40:]
-            file = idmap[missingid]
-            sshrequest = "%s%s\n" % (versionid, file)
-            pipeo.write(sshrequest)
-        pipeo.flush()
-
-    writerthread = threading.Thread(target=writer)
-    writerthread.daemon = True
-    writerthread.start()
-
-    for missingid in missed:
-        versionid = missingid[-40:]
-        file = idmap[missingid]
-        progresstick(file)
-        receivemissing(pipei, file, versionid, missingid)
-
-    writerthread.join()
-    # End the command
-    pipeo.write("\n")
-    pipeo.flush()
-
-
 class lazyfield(object):
     """Fields that are populated lazily"""
 
@@ -410,24 +302,18 @@ class fileserverclient(object):
 
     datastore = lazyfield("datastore")
     historystore = lazyfield("historystore")
-    writedata = lazyfield("writedata")
-    writehistory = lazyfield("writehistory")
 
-    def setstore(self, datastore, historystore, writedata, writehistory):
+    def setstore(self, datastore, historystore):
         # obj.__dict__['x'] access bypasses obj.x (property)
         d = self.__dict__
         d["datastore"] = datastore
         d["historystore"] = historystore
-        d["writedata"] = writedata
-        d["writehistory"] = writehistory
 
     def _connect(self):
         return self.repo.connectionpool.get(self.repo.fallbackpath)
 
     def request(self, fileids, fetchdata, fetchhistory):
-        if self.ui.configbool("remotefilelog", "fetchpacks"):
-            return self.requestpacks(fileids, fetchdata, fetchhistory)
-        return self.requestloose(fileids)
+        return self.requestpacks(fileids, fetchdata, fetchhistory)
 
     def updatecache(self, dpackpath, hpackpath):
         if self.remotecache.connected:
@@ -504,214 +390,6 @@ class fileserverclient(object):
                 self._fetchpackfiles(misses, fetchdata, fetchhistory)
         finally:
             os.umask(oldumask)
-
-    def requestloose(self, fileids):
-        """Takes a list of filename/node pairs and fetches them from the
-        server. Files are stored in the local cache.
-        A list of nodes that the server couldn't find is returned.
-        If the connection fails, an exception is raised.
-        """
-        if not self.remotecache.connected:
-            self.connect()
-        perftrace.traceflag("loose")
-
-        cache = self.remotecache
-        writedata = self.writedata
-
-        repo = self.repo
-        idmap = {}
-        reponame = repo.name
-        for file, id in fileids:
-            key = getcachekey(reponame, file, id)
-            idmap[key] = file
-
-        # requesting scmmemcache
-        filefullids = idmap.keys()
-        if self.cacheprocesspasspath:
-            filefullids = [
-                file + "\0" + filefullid for filefullid, file in idmap.iteritems()
-            ]
-        cache.get(filefullids)
-
-        getfilenamepath = lambda name: None
-        if util.safehasattr(self.writedata, "_getfilenamepath"):
-            getfilenamepath = self.writedata._getfilenamepath
-
-        total = len(fileids)
-        with progress.bar(self.ui, _("downloading"), total=total) as prog:
-            missed = set()
-            try:
-                missed = cache.receive(prog)
-            except CacheConnectionError:
-                for missingid in idmap.iterkeys():
-                    missed.add(missingid)
-                self.ui.warn(
-                    _(
-                        "warning: cache connection closed early - "
-                        + "falling back to server\n"
-                    )
-                )
-
-            # If the cacheprocess knew the filename, it should store it
-            # somewhere useful (e.g. in a pack file it generates).  Otherwise,
-            # we must write the filename out for it.
-            if not self.cacheprocesspasspath:
-                for fullid, file in idmap.iteritems():
-                    if fullid not in missed:
-                        filenamepath = getfilenamepath(fullid)
-                        if (
-                            filenamepath is not None
-                            and os.path.isdir(os.path.dirname(filenamepath))
-                            and not os.path.exists(filenamepath)
-                        ):
-                            shallowutil.writefile(filenamepath, file, readonly=True)
-
-            global fetchmisses
-            missedlen = len(missed)
-            perftrace.tracevalue("Memcache Misses", len(missed))
-            fetchmisses += missedlen
-
-            fromcache = total - missedlen
-            prog.value = fromcache
-            self.ui.log(
-                "remotefilelog",
-                "remote cache hit rate is %r of %r\n",
-                fromcache,
-                total,
-                hit=fromcache,
-                total=total,
-            )
-
-            oldumask = os.umask(0o002)
-            try:
-                # receive cache misses from master
-                if missed:
-
-                    fetchedfiles = self._fetchloosefiles(idmap, missed, prog=prog)
-                    # send to memcache
-                    if self.ui.configbool("remotefilelog", "updatesharedcache"):
-                        if fetchedfiles:
-                            cache.set(fetchedfiles)
-
-                # mark ourselves as a user of this cache
-                writedata.markrepo(self.repo.path)
-            finally:
-                os.umask(oldumask)
-
-    def _fetchloosefiles(self, idmap, missed, prog=None):
-        """Fetch missed filesnodes from the server in the loose files format.
-        Returns a set of the fetched file fullids.
-        """
-        # let's track the progress
-        total = len(idmap)
-        count = [total - len(missed)]
-        fromcache = count[0]
-
-        def progresstick(name=""):
-            count[0] += 1
-            if prog is not None:
-                prog.value = (count[0], name)
-
-        # When verbose is true, sshpeer prints 'running ssh...'
-        # to stdout, which can interfere with some command
-        # outputs
-        verbose = self.ui.verbose
-        self.ui.verbose = False
-        draft = set()
-        try:
-            with self._connect() as conn:
-                remote = conn.peer
-                missedlist = list(missed)
-
-                self.ui.metrics.gauge("ssh_getfiles_revs", len(missedlist))
-                self.ui.metrics.gauge("ssh_getfiles_calls", 1)
-
-                # TODO: deduplicate this with the constant in
-                #       shallowrepo
-                if remote.capable("remotefilelog"):
-                    if not isinstance(remote, sshpeer.sshpeer):
-                        msg = "remotefilelog requires ssh servers"
-                        raise error.Abort(msg)
-                    step = self.ui.configint("remotefilelog", "getfilesstep", 10000)
-                    getfilestype = self.ui.config(
-                        "remotefilelog", "getfilestype", "optimistic"
-                    )
-                    if getfilestype == "threaded":
-                        _getfiles = _getfiles_threaded
-                    else:
-                        _getfiles = _getfiles_optimistic
-                    _getfiles(
-                        remote,
-                        functools.partial(self.receivemissing, draft),
-                        progresstick,
-                        missedlist,
-                        idmap,
-                        step,
-                    )
-                elif remote.capable("getfile"):
-                    if remote.capable("batch"):
-                        batchdefault = 100
-                    else:
-                        batchdefault = 10
-                    batchsize = self.ui.configint(
-                        "remotefilelog", "batchsize", batchdefault
-                    )
-                    _getfilesbatch(
-                        remote,
-                        functools.partial(self.receivemissing, draft),
-                        progresstick,
-                        missedlist,
-                        idmap,
-                        batchsize,
-                    )
-                else:
-                    msg = (
-                        "configured remotefilelog server"
-                        " does not support remotefilelog"
-                    )
-                    raise error.Abort(msg)
-
-            self.ui.log(
-                "remotefilefetchlog",
-                "Success\n",
-                fetched_files=count[0] - fromcache,
-                total_to_fetch=total - fromcache,
-            )
-        except Exception:
-            self.ui.log(
-                "remotefilefetchlog",
-                "Fail\n",
-                fetched_files=count[0] - fromcache,
-                total_to_fetch=total - fromcache,
-            )
-            raise
-        finally:
-            self.ui.verbose = verbose
-
-        return missed - draft
-
-    def receivemissing(self, draftset, pipe, filename, node, key):
-        line = pipe.readline()[:-1]
-        if not line:
-            raise error.ResponseError(
-                _("error downloading file contents:"),
-                _("connection closed early for filename %s and node %s")
-                % (filename, node),
-            )
-        size = int(line)
-        data = pipe.read(size)
-        if len(data) != size:
-            raise error.ResponseError(
-                _("error downloading file contents:"),
-                _("only received %s of %s bytes") % (len(data), size),
-            )
-        data = lz4decompress(data)
-        mapping = shallowutil.ancestormap(data)
-        if any(
-            linknode == nullid for _p1, _p2, linknode, _copyfrom in mapping.values()
-        ):
-            draftset.add(key)
-        self.writedata.addremotefilelognode(filename, bin(node), data)
 
     def _fetchpackfiles(self, fileids, fetchdata, fetchhistory):
         """Requests the given file revisions from the server in a pack files
@@ -885,20 +563,17 @@ class fileserverclient(object):
     def connect(self):
         if self.cacheprocess:
             options = ""
-            if self.ui.configbool("remotefilelog", "fetchpacks"):
-                cachepath = shallowutil.getcachepackpath(
-                    self.repo, constants.FILEPACK_CATEGORY
-                )
+            cachepath = shallowutil.getcachepackpath(
+                self.repo, constants.FILEPACK_CATEGORY
+            )
 
-                if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-                    path = shallowutil.getindexedlogdatastorepath(self.repo)
-                    options += "--indexedlog_dir %s" % path
+            if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
+                path = shallowutil.getindexedlogdatastorepath(self.repo)
+                options += "--indexedlog_dir %s" % path
 
-                if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
-                    path = shallowutil.getindexedloghistorystorepath(self.repo)
-                    options += " --indexedloghistorystore_dir %s" % path
-            else:
-                cachepath = shallowutil.getcachepath(self.ui)
+            if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
+                path = shallowutil.getindexedloghistorystorepath(self.repo)
+                options += " --indexedloghistorystore_dir %s" % path
 
             cmd = " ".join([self.cacheprocess, self.key, cachepath, options])
             self.remotecache.connect(cmd)
@@ -915,17 +590,11 @@ class fileserverclient(object):
                 def close(self):
                     pass
 
-                def set(self, keys):
-                    pass
-
                 def setdatapack(self, keys):
                     pass
 
                 def sethistorypack(self, keys):
                     pass
-
-                def get(self, keys):
-                    self.missingids.append(keys)
 
                 def getdatapack(self, keys):
                     self.missingids.append(keys)

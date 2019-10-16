@@ -502,38 +502,33 @@ class remotefileslog(filelog.fileslog):
 
         sharedcontentstores = [spackcontent, mutablesharedstore]
         sharedmetadatastores = [spackmetadata, mutablesharedstore]
-        if self.ui.configbool("remotefilelog", "fetchpacks"):
-            if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-                path = shallowutil.getindexedlogdatastorepath(repo)
-                mask = os.umask(0o002)
-                try:
-                    store = revisionstore.indexedlogdatastore(path)
-                    sharedcontentstores.append(store)
-                    self.shareddatastores.append(store)
-                finally:
-                    os.umask(mask)
+        if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
+            path = shallowutil.getindexedlogdatastorepath(repo)
+            mask = os.umask(0o002)
+            try:
+                store = revisionstore.indexedlogdatastore(path)
+                sharedcontentstores.append(store)
+                self.shareddatastores.append(store)
+            finally:
+                os.umask(mask)
 
-            if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
-                path = shallowutil.getindexedloghistorystorepath(repo)
-                mask = os.umask(0o002)
-                try:
-                    store = revisionstore.indexedloghistorystore(path)
-                    sharedmetadatastores.append(store)
-                    self.sharedhistorystores.append(store)
-                finally:
-                    os.umask(mask)
+        if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
+            path = shallowutil.getindexedloghistorystorepath(repo)
+            mask = os.umask(0o002)
+            try:
+                store = revisionstore.indexedloghistorystore(path)
+                sharedmetadatastores.append(store)
+                self.sharedhistorystores.append(store)
+            finally:
+                os.umask(mask)
 
-            sunioncontentstore = unioncontentstore(*sharedcontentstores)
-            sunionmetadatastore = unionmetadatastore(
-                *sharedmetadatastores, allowincomplete=True
-            )
-            remotecontent, remotemetadata = self.makeremotestores(
-                sunioncontentstore, sunionmetadatastore
-            )
-        else:
-            remotecontent, remotemetadata = self.makeremotestores(
-                loosecachecontent, loosecachemetadata
-            )
+        sunioncontentstore = unioncontentstore(*sharedcontentstores)
+        sunionmetadatastore = unionmetadatastore(
+            *sharedmetadatastores, allowincomplete=True
+        )
+        remotecontent, remotemetadata = self.makeremotestores(
+            sunioncontentstore, sunionmetadatastore
+        )
 
         contentstores = (
             sharedcontentstores
@@ -555,14 +550,7 @@ class remotefileslog(filelog.fileslog):
         self.localcontentstore = unioncontentstore(*self.localdatastores)
         self.localmetadatastore = unionmetadatastore(*self.localhistorystores)
 
-        fileservicedatawrite = loosecachecontent
-        fileservicehistorywrite = loosecachemetadata
-        repo.fileservice.setstore(
-            self.contentstore,
-            self.metadatastore,
-            fileservicedatawrite,
-            fileservicehistorywrite,
-        )
+        repo.fileservice.setstore(self.contentstore, self.metadatastore)
         shallowutil.reportpackmetrics(
             repo.ui,
             "filestore",

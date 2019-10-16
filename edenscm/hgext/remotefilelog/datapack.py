@@ -72,8 +72,7 @@ class datapackstore(basepack.basepackstore):
         raise RuntimeError("cannot add to datapackstore")
 
     def repackstore(self, incremental=True):
-        if self.fetchpacksenabled:
-            revisionstore.repackincrementaldatapacks(self.path, self.path)
+        revisionstore.repackincrementaldatapacks(self.path, self.path)
 
 
 def makedatapackstore(ui, path, deletecorruptpacks=False):

@@ -76,8 +76,7 @@ class historypackstore(basepack.basepackstore):
         )
 
     def repackstore(self):
-        if self.fetchpacksenabled:
-            revisionstore.repackincrementalhistpacks(self.path, self.path)
+        revisionstore.repackincrementalhistpacks(self.path, self.path)
 
 
 def makehistorypackstore(ui, path, deletecorruptpacks=False):
