@@ -20,10 +20,6 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 DEFINE_bool(
-    enable_fault_injection,
-    false,
-    "Enable the fault injection framework.");
-DEFINE_bool(
     fault_injection_block_mounts,
     false,
     "Block mount attempts via the fault injection framework.  "
@@ -44,13 +40,14 @@ ServerState::ServerState(
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    std::shared_ptr<const EdenConfig> edenConfig)
+    std::shared_ptr<const EdenConfig> edenConfig,
+    bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},
       processNameCache_{std::move(processNameCache)},
-      faultInjector_{new FaultInjector(FLAGS_enable_fault_injection)},
+      faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       config_{edenConfig},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->userIgnoreFile.getValue(),

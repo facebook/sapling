@@ -301,14 +301,7 @@ TEST(TreeInode, createExists) {
       mount.getFileInode("somedir/foo.txt"_relpath), "test\n", 0644);
 }
 
-DECLARE_bool(enable_fault_injection);
-
 TEST(TreeInode, createOverlayWriteError) {
-  // TODO: We should make TestMount always enable fault injection.
-  // Ideally I plan to refactor ServerState soon so that this is configurable in
-  // its constructor rather than only controlled through a command line flag.
-  FLAGS_enable_fault_injection = true;
-
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};

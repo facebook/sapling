@@ -46,7 +46,8 @@ class ServerState {
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      std::shared_ptr<const EdenConfig> edenConfig);
+      std::shared_ptr<const EdenConfig> edenConfig,
+      bool enableFaultInjection = false);
   ~ServerState();
 
   /**

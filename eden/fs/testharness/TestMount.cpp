@@ -94,7 +94,10 @@ TestMount::TestMount()
           AbsolutePath{testDir_->path().string() + ".edenrc"},
           /*systemConfigDir=*/AbsolutePath{testDir_->path().string()},
           /*systemConfigPath=*/
-          AbsolutePath{testDir_->path().string() + "edenfs.rc"}))};
+          AbsolutePath{
+              testDir_->path().string() + "edenfs.rc",
+          }),
+      /*enableFaultInjection=*/true)};
 }
 
 TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)

@@ -77,6 +77,10 @@ DEFINE_bool(
     false,
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
+DEFINE_bool(
+    enable_fault_injection,
+    false,
+    "Enable the fault injection framework.");
 
 #ifndef _WIN32
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
@@ -229,7 +233,8 @@ EdenServer::EdenServer(
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
-          edenConfig)} {
+          edenConfig,
+          FLAGS_enable_fault_injection)} {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
