@@ -189,11 +189,6 @@ py_class!(class datapack |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
-        // Used in Python repack, for loosefiles, so nothing needs to be done here.
-        Ok(Python::None(py))
-    }
-
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py);
         store.iter_py(py)
@@ -270,11 +265,6 @@ py_class!(class datapackstore |py| {
         self.store(py).get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
-        // Used in Python repack, for loosefiles, so nothing needs to be done here.
-        Ok(Python::None(py))
-    }
-
     def markforrefresh(&self) -> PyResult<PyObject> {
         self.store(py).force_rescan();
         Ok(Python::None(py))
@@ -345,11 +335,6 @@ py_class!(class historypack |py| {
         store.get_node_info_py(py, name, node)
     }
 
-    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
-        // Used in Python repack, for loosefiles, so nothing needs to be done here.
-        Ok(Python::None(py))
-    }
-
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py);
         store.iter_py(py)
@@ -384,11 +369,6 @@ py_class!(class historypackstore |py| {
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         self.store(py).get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
-        // Used in Python repack, for loosefiles, so nothing needs to be done here.
-        Ok(Python::None(py))
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {
@@ -450,10 +430,6 @@ py_class!(class indexedlogdatastore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
-    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
-        Ok(Python::None(py))
-    }
-
     def markforrefresh(&self) -> PyResult<PyObject> {
         let store = self.store(py);
         store.flush_py(py)?;
@@ -501,10 +477,6 @@ py_class!(class indexedloghistorystore |py| {
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
         store.get_node_info_py(py, name, node)
-    }
-
-    def markledger(&self, _ledger: &PyObject, _options: &PyDict) -> PyResult<PyObject> {
-        Ok(Python::None(py))
     }
 
     def markforrefresh(&self) -> PyResult<PyObject> {

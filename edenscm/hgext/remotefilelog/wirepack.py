@@ -232,9 +232,6 @@ class wirepackstore(object):
             if count == 0 and filename == "":
                 break
 
-    def markledger(self, ledger, options=None):
-        pass
-
     def cleanup(self, ledger):
         pass
 

@@ -138,10 +138,6 @@ class unioncontentstore(object):
                 missing = store.getmissing(missing)
         return missing
 
-    def markledger(self, ledger, options=None):
-        for store in self.stores:
-            store.markledger(ledger, options)
-
     def markforrefresh(self):
         for store in self.stores:
             if util.safehasattr(store, "markforrefresh"):
@@ -192,9 +188,6 @@ class remotecontentstore(object):
 
     def getmissing(self, keys):
         return keys
-
-    def markledger(self, ledger, options=None):
-        pass
 
 
 class manifestrevlogstore(object):
@@ -284,40 +277,6 @@ class manifestrevlogstore(object):
     def setrepacklinkrevrange(self, startrev, endrev):
         self._repackstartlinkrev = startrev
         self._repackendlinkrev = endrev
-
-    def markledger(self, ledger, options=None):
-        if options and options.get(constants.OPTION_PACKSONLY):
-            return
-        treename = ""
-        rl = revlog.revlog(self.repo.svfs, "00manifesttree.i")
-        startlinkrev = self._repackstartlinkrev
-        endlinkrev = self._repackendlinkrev
-        for rev in range(len(rl) - 1, -1, -1):
-            linkrev = rl.linkrev(rev)
-            if linkrev < startlinkrev:
-                break
-            if linkrev > endlinkrev:
-                continue
-            node = rl.node(rev)
-            ledger.markdataentry(self, treename, node)
-            ledger.markhistoryentry(self, treename, node)
-
-        for path, encoded, size in self.repo.store.datafiles():
-            if path[:5] != "meta/" or path[-2:] != ".i":
-                continue
-
-            treename = path[5 : -len("/00manifest.i")]
-
-            rl = revlog.revlog(self.repo.svfs, path)
-            for rev in range(len(rl) - 1, -1, -1):
-                linkrev = rl.linkrev(rev)
-                if linkrev < startlinkrev:
-                    break
-                if linkrev > endlinkrev:
-                    continue
-                node = rl.node(rev)
-                ledger.markdataentry(self, treename, node)
-                ledger.markhistoryentry(self, treename, node)
 
     def cleanup(self, ledger):
         pass

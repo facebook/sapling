@@ -95,32 +95,26 @@
   $ hg pull -q
   $ hg up -q tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  $ hg repack --looseonly
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
-  $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.dataidx
-  $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.datapack
-  $TESTTMP/hgcache/master/packs/3b65e3071e408ff050835eba9d2662d0c5ea51db.histidx
-  $TESTTMP/hgcache/master/packs/3b65e3071e408ff050835eba9d2662d0c5ea51db.histpack
-  $TESTTMP/hgcache/master/packs/e76434b1db2a53cec4e4e92606a5f183d57f9861.dataidx
-  $TESTTMP/hgcache/master/packs/e76434b1db2a53cec4e4e92606a5f183d57f9861.datapack
-  $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histidx
-  $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histpack
-  $TESTTMP/hgcache/master/packs/repacklock
-
-  $ chmod +w $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.datapack
-  $ python $TESTDIR/truncate.py --size 200 $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.datapack
   $ hg repack
   $ find $CACHEDIR | sort
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.dataidx
-  $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.datapack
-  $TESTTMP/hgcache/master/packs/dc03adc1ee1c136ce84a8d4d6c718da54099f792.dataidx
-  $TESTTMP/hgcache/master/packs/dc03adc1ee1c136ce84a8d4d6c718da54099f792.datapack
+  $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.dataidx
+  $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
+  $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histidx
+  $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histpack
+  $TESTTMP/hgcache/master/packs/repacklock
+
+  $ chmod +w $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
+  $ python $TESTDIR/truncate.py --size 200 $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
+  $ hg repack
+  $ find $CACHEDIR | sort
+  $TESTTMP/hgcache
+  $TESTTMP/hgcache/master
+  $TESTTMP/hgcache/master/packs
+  $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.dataidx
+  $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
   $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histidx
   $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histpack
   $TESTTMP/hgcache/master/packs/repacklock
@@ -132,4 +126,4 @@
   > fastmanifest=
   > EOF
 
-  $ hg repack --incremental --packsonly
+  $ hg repack --incremental

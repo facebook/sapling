@@ -73,16 +73,6 @@
   new commit
 
 # Test repack
-  $ hg repack --looseonly
-  $ findfilessorted .hg/store/packs
-  .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
-  .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack
-  .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histidx
-  .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histpack
-  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.dataidx
-  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.datapack
-  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.dataidx
-  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.datapack
   $ hg repack
   $ findfilessorted .hg/store/packs
   .hg/store/packs/7f818eed999b52efef9b2bb175ef2bd01f7edec6.dataidx

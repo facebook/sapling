@@ -77,12 +77,6 @@ Configs:
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
     files to include in an incremental history repack.
 
-    ``remotefilelog.packsonlyrepack`` only repack packfiles during background
-    repacks.
-
-    ``remotefilelog.incrementalloosefilerepack`` repack a portion of the
-    loosefiles.
-
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
 
@@ -1182,16 +1176,6 @@ def debugindexedloghistorystore(ui, *paths, **opts):
     return debugcommands.debugindexedloghistorystore(ui, paths, **opts)
 
 
-@command("debugkeepset", [], _("hg debugkeepset"))
-def debugkeepset(ui, repo, **opts):
-    # The command is used to measure keepset computation time
-    def keyfn(fname, fnode):
-        return fileserverclient.getcachekey(repo.name, fname, hex(fnode))
-
-    repackmod.keepset(repo, keyfn)
-    return
-
-
 @command("debugwaitonrepack", [], _("hg debugwaitonrepack"))
 def debugwaitonrepack(ui, repo, **opts):
     return debugcommands.debugwaitonrepack(repo)
@@ -1308,30 +1292,19 @@ def prefetch(ui, repo, *pats, **opts):
     [
         ("", "background", None, _("run in a background process"), None),
         ("", "incremental", None, _("do an incremental repack"), None),
-        ("", "packsonly", None, _("only repack packs (skip loose objects)"), None),
-        ("", "looseonly", None, _("only repack loose objects (skip packs)"), None),
     ],
     _("hg repack [OPTIONS]"),
 )
 def repack(ui, repo, *pats, **opts):
     if opts.get("background"):
-        repackmod.backgroundrepack(
-            repo,
-            incremental=opts.get("incremental"),
-            packsonly=opts.get("packsonly", False),
-        )
+        repackmod.backgroundrepack(repo, incremental=opts.get("incremental"))
         return
-
-    if opts["packsonly"] and opts["looseonly"]:
-        raise error.Abort("can't specify both --packsonly and --looseonly")
-
-    options = {"packsonly": opts["packsonly"], "looseonly": opts["looseonly"]}
 
     try:
         if opts.get("incremental"):
-            repackmod.incrementalrepack(repo, options=options)
+            repackmod.incrementalrepack(repo)
         else:
-            repackmod.fullrepack(repo, options=options)
+            repackmod.fullrepack(repo)
     except repackmod.RepackAlreadyRunning as ex:
         # Don't propogate the exception if the repack is already in
         # progress, since we want the command to exit 0.

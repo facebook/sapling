@@ -217,14 +217,7 @@ from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
 from ..remotefilelog.datapack import makedatapackstore, memdatapack
 from ..remotefilelog.historypack import makehistorypackstore, memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
-from ..remotefilelog.repack import (
-    _computeincrementaldatapack,
-    _computeincrementalhistorypack,
-    _runrepack,
-    _topacks,
-    domaintenancerepack,
-    repacklockvfs,
-)
+from ..remotefilelog.repack import domaintenancerepack, repacklockvfs
 
 
 cmdtable = {}
@@ -2560,9 +2553,6 @@ class generatingdatastore(object):
     def getmissing(self, keys):
         return keys
 
-    def markledger(self, ledger, options=None):
-        pass
-
     def getmetrics(self):
         return {}
 
@@ -2672,64 +2662,6 @@ class ondemandtreedatastore(generatingdatastore):
             with repo.wlock(), repo.lock():
                 with repo.transaction("demandtreegen") as tr:
                     convert(tr)
-
-
-def serverrepack(repo, incremental=False, options=None):
-    packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
-
-    revlogstore = manifestrevlogstore(repo)
-
-    try:
-        files = util.listdir(packpath, stat=True)
-    except OSError:
-        files = []
-
-    # Data store
-    fulldatapackstore = makedatapackstore(repo.ui, packpath)
-    if incremental:
-        datastores = _topacks(
-            repo.ui,
-            packpath,
-            _computeincrementaldatapack(repo.ui, files),
-            revisionstore.datapack,
-        )
-    else:
-        datastores = [fulldatapackstore]
-    datastores.append(revlogstore)
-    datastore = unioncontentstore(*datastores)
-
-    # History store
-    if incremental:
-        historystores = _topacks(
-            repo.ui,
-            packpath,
-            _computeincrementalhistorypack(repo.ui, files),
-            revisionstore.historypack,
-        )
-    else:
-        historystores = [makehistorypackstore(repo.ui, packpath)]
-    historystores.append(revlogstore)
-    histstore = unionmetadatastore(*historystores)
-
-    startrev = repo.ui.configint("treemanifest", "repackstartrev", 0)
-    endrev = repo.ui.configint("treemanifest", "repackendrev", len(repo.changelog) - 1)
-    if startrev == 0 and incremental:
-        latestpackedlinkrev = 0
-        mfl = repo.manifestlog
-        if isinstance(mfl, hybridmanifestlog):
-            treemfl = mfl.treemanifestlog
-        elif isinstance(mfl, treemanifestlog):
-            treemfl = mfl
-        mfrevlog = treemfl._revlog
-        for i in range(len(mfrevlog) - 1, 0, -1):
-            node = mfrevlog.node(i)
-            if not fulldatapackstore.getmissing([("", node)]):
-                latestpackedlinkrev = mfrevlog.linkrev(i)
-                break
-        startrev = latestpackedlinkrev + 1
-
-    revlogstore.setrepacklinkrevrange(startrev, endrev)
-    _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY, options=options)
 
 
 def _debugcmdfindtreemanifest(orig, ctx):

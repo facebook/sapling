@@ -88,29 +88,6 @@
   $TESTTMP/hgcache/master/packs/887690f1138ae5b99c50d754ed02262874bf8ecb.datapack
   $TESTTMP/hgcache/master/packs/repacklock
 
-# First assert that with --packsonly, the loose object will be ignored:
-
-  $ hg repack --packsonly --config "devel.print-metrics=1"
-
-  $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
-  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.dataidx
-  $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.datapack
-  $TESTTMP/hgcache/master/packs/repacklock
-
-# Now test that --looseonly will only repack the loose file, leaving
-# the old packs:
-
-  $ hg repack --looseonly --traceback --config "devel.print-metrics=1"
-
-  $ find $CACHEDIR -type f | sort
-  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
-  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.dataidx
-  $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.datapack
-  $TESTTMP/hgcache/master/packs/repacklock
-
 # A full repack creates the optimal packing:
 
   $ hg repack --traceback --config "devel.print-metrics=1"
@@ -336,28 +313,6 @@ Single pack - repack does nothing
   -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
   -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
 
-For the data packs, setting the limit for the repackmaxpacksize to be 64 such
-that data pack with size 65 is more than the limit. This effectively ensures
-that no generation has 3 packs and therefore, no packs are chosen for the
-incremental repacking. As for the history packs, setting repackmaxpacksize to be
-0 which should always result in no repacking.
-  $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=64 \
-  > --config remotefilelog.history.repackmaxpacksize=0
-  $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
-  $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-
-Setting limit for the repackmaxpacksize to be the size of the biggest pack file
-which ensures that it is effectively ignored in the incremental repacking.
-  $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=65 \
-  > --config remotefilelog.history.repackmaxpacksize=336
-  $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
-  $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-
-1 gen3 pack, 1 gen0 pack - does nothing
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
@@ -425,27 +380,14 @@ Test limiting the max delta chain length
   1bb2e6237e03  000000000000  8             (missing)
   
 
-Test huge pack cleanup using different values of packs.maxpacksize:
-  $ hg repack --incremental --debug
-  $ hg repack --incremental --debug --config packs.maxpacksize=512
-  removing oversize packfile $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.datapack (261 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/c155d24742424ff6f6eec6c54d232c3f550b6922.dataidx (1.17 KB)
-
 # Test repacking loose files
-  $ findfilessorted .hg/store/packs
+  $ [ -d .hg/store/packs ]
+  [1]
 
 # new loose file is created
   $ echo "new commit" > new_file
   $ hg commit -qAm "one more node"
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
-
-# repacking only loose files
-  $ hg repack --looseonly
-  $ findfilessorted .hg/store/packs
-  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histidx
-  .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
-  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
-  .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
 
 # repacking all
   $ hg repack
@@ -454,11 +396,6 @@ Test huge pack cleanup using different values of packs.maxpacksize:
   .hg/store/packs/114243ab99c9697960e23423df9d98f259a0159d.histpack
   .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.dataidx
   .hg/store/packs/6fdfb86776d8d88be3b98aa72ae1c06ca54765f2.datapack
-
-# incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
-  $ hg repack --incremental --debug --config packs.maxpacksize=1
-  removing oversize packfile $TESTTMP/hgcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.datapack (130 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.dataidx (1.05 KB)
 
 # check the commit data
   $ hg cat -r . new_file
@@ -469,10 +406,14 @@ Test huge pack cleanup using different values of packs.maxpacksize:
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
   $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
+  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx
+  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack
   $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $TESTTMP/hgcache/master/packs/repacklock
   $ hg repack
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histidx
   $TESTTMP/hgcache/master/packs/28c4bd4f9174a2c5f750bd5612d53e3212e0aaf9.histpack
+  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.dataidx
+  $TESTTMP/hgcache/master/packs/425d7ea48f627e2a50e6e3d1ea374ab4be7c1812.datapack
   $TESTTMP/hgcache/master/packs/repacklock
