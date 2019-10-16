@@ -10,7 +10,6 @@
 #![feature(never_type)]
 
 use ascii::{AsciiChar, AsciiString};
-use asyncmemo::Weight;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
@@ -23,7 +22,6 @@ use sql::mysql_async::{
 };
 use std::collections::HashMap;
 use std::fmt;
-use std::mem;
 use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
 
 mod cache;
@@ -157,13 +155,6 @@ impl BookmarkName {
 
     pub fn as_str(&self) -> &str {
         self.bookmark.as_str()
-    }
-}
-
-impl Weight for BookmarkName {
-    #[inline]
-    fn get_weight(&self) -> usize {
-        mem::size_of::<Self>() + self.bookmark.len()
     }
 }
 

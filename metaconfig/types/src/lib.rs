@@ -159,12 +159,6 @@ pub struct CacheWarmupParams {
 /// Configuration for the hook manager
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct HookManagerParams {
-    /// Entry limit for the hook manager result cache
-    pub entrylimit: usize,
-
-    /// Weight limit for the hook manager result cache
-    pub weightlimit: usize,
-
     /// Wether to disable the acl checker or not (intended for testing purposes)
     pub disable_acl_checker: bool,
 }
@@ -172,8 +166,6 @@ pub struct HookManagerParams {
 impl Default for HookManagerParams {
     fn default() -> Self {
         Self {
-            entrylimit: 1024 * 1024,
-            weightlimit: 100 * 1024 * 1024, // 100Mb
             disable_acl_checker: false,
         }
     }

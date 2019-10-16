@@ -23,7 +23,7 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
-use slog::{debug, info, Logger};
+use slog::{debug, info};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -34,7 +34,6 @@ pub struct Tailer {
     bookmark: BookmarkName,
     last_rev_key: String,
     manifold_client: ManifoldHttpClient,
-    logger: Logger,
     excludes: HashSet<ChangesetId>,
 }
 
@@ -45,7 +44,6 @@ impl Tailer {
         config: RepoConfig,
         bookmark: BookmarkName,
         manifold_client: ManifoldHttpClient,
-        logger: Logger,
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
@@ -57,7 +55,6 @@ impl Tailer {
             Box::new(changeset_store),
             content_store,
             Default::default(),
-            logger.clone(),
         );
 
         load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;
@@ -72,7 +69,6 @@ impl Tailer {
             bookmark,
             last_rev_key,
             manifold_client,
-            logger,
             excludes,
         })
     }
@@ -88,11 +84,9 @@ impl Tailer {
         last_rev: HgChangesetId,
         end_rev: HgChangesetId,
         bm: BookmarkName,
-        logger: Logger,
         excludes: HashSet<ChangesetId>,
     ) -> BoxFuture<Vec<HookResults>, Error> {
-        debug!(logger, "Running in range {} to {}", last_rev, end_rev);
-        cloned!(logger);
+        debug!(ctx.logger(), "Running in range {} to {}", last_rev, end_rev);
         nodehash_to_bonsai(ctx.clone(), &repo, end_rev)
             .and_then(move |end_rev| {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
@@ -100,8 +94,8 @@ impl Tailer {
                     .filter(move |cs| !excludes.contains(cs))
                     .map({
                         move |cs| {
-                            cloned!(ctx, bm, hm, logger, repo);
-                            run_hooks_for_changeset(ctx, repo, hm, bm, cs, logger)
+                            cloned!(ctx, bm, hm, repo);
+                            run_hooks_for_changeset(ctx, repo, hm, bm, cs)
                         }
                     })
                     .map(spawn_future)
@@ -134,7 +128,6 @@ impl Tailer {
             last_rev,
             end_rev,
             bookmark,
-            self.logger.clone(),
             excludes,
         )
     }
@@ -143,13 +136,7 @@ impl Tailer {
         &self,
         changeset: HgChangesetId,
     ) -> BoxFuture<Vec<HookResults>, Error> {
-        cloned!(
-            self.ctx,
-            self.repo,
-            self.hook_manager,
-            self.bookmark,
-            self.logger
-        );
+        cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark,);
         repo.get_bonsai_from_hg(ctx, changeset)
             .and_then(move |maybe_bonsai| {
                 maybe_bonsai.ok_or(err_msg(format!(
@@ -159,9 +146,7 @@ impl Tailer {
             })
             .and_then({
                 cloned!(self.ctx);
-                move |bonsai| {
-                    run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, bonsai, logger)
-                }
+                move |bonsai| run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, bonsai)
             })
             .map(|(_, result)| vec![result])
             .boxify()
@@ -185,7 +170,7 @@ impl Tailer {
                 move |bm_rev| nodehash_to_bonsai(ctx, &repo, bm_rev)
             });
 
-        cloned!(self.ctx, self.repo, self.logger);
+        cloned!(self.ctx, self.repo);
         bm_rev
             .and_then(move |bm_rev| {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bm_rev)
@@ -193,8 +178,8 @@ impl Tailer {
                     .filter(move |cs| !excludes.contains(cs))
                     .map({
                         move |cs| {
-                            cloned!(ctx, bm, hm, logger, repo);
-                            run_hooks_for_changeset(ctx, repo, hm, bm, cs, logger)
+                            cloned!(ctx, bm, hm, repo);
+                            run_hooks_for_changeset(ctx, repo, hm, bm, cs)
                         }
                     })
                     .map(spawn_future)
@@ -207,7 +192,7 @@ impl Tailer {
 
     pub fn run(&self) -> BoxFuture<Vec<HookResults>, Error> {
         info!(
-            self.logger,
+            self.ctx.logger(),
             "Running tailer on bookmark {}",
             self.bookmark.clone()
         );
@@ -236,7 +221,6 @@ impl Tailer {
             })
             .and_then({
                 cloned!(
-                    self.logger,
                     self.bookmark,
                     self.excludes,
                     self.hook_manager,
@@ -246,13 +230,13 @@ impl Tailer {
                 move |(current_bm_cs, last_rev)| {
                     let end_rev = current_bm_cs;
                     info!(
-                        logger,
+                        ctx.logger(),
                         "Bookmark is currently at {}, last processed revision is {}",
                         end_rev,
                         last_rev
                     );
                     if last_rev == end_rev {
-                        info!(logger, "Nothing to do");
+                        info!(ctx.logger(), "Nothing to do");
                     }
                     Tailer::run_in_range0(
                         ctx,
@@ -261,16 +245,18 @@ impl Tailer {
                         last_rev,
                         end_rev,
                         bookmark,
-                        logger,
                         excludes,
                     )
                     .map(move |res| (end_rev, res))
                 }
             })
             .and_then({
-                cloned!(self.last_rev_key, self.logger, self.manifold_client);
+                cloned!(self.last_rev_key, self.ctx, self.manifold_client);
                 move |(end_rev, res)| {
-                    info!(logger, "Setting last processed revision to {:?}", end_rev);
+                    info!(
+                        ctx.logger(),
+                        "Setting last processed revision to {:?}", end_rev
+                    );
                     let bytes = end_rev.as_bytes().into();
                     manifold_client.write(last_rev_key, bytes).map(|()| res)
                 }
@@ -294,16 +280,18 @@ fn run_hooks_for_changeset(
     hm: Arc<HookManager>,
     bm: BookmarkName,
     cs: ChangesetId,
-    logger: Logger,
 ) -> impl Future<Item = (HgChangesetId, HookResults), Error = Error> {
     repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
         .and_then(move |hg_cs| {
-            debug!(logger, "Running file hooks for changeset {:?}", hg_cs);
+            debug!(ctx.logger(), "Running file hooks for changeset {:?}", hg_cs);
             hm.run_file_hooks_for_bookmark(ctx.clone(), hg_cs.clone(), &bm, None)
                 .map(move |res| (hg_cs, res))
                 .and_then(move |(hg_cs, file_res)| {
                     let hg_cs = hg_cs.clone();
-                    debug!(logger, "Running changeset hooks for changeset {:?}", hg_cs);
+                    debug!(
+                        ctx.logger(),
+                        "Running changeset hooks for changeset {:?}", hg_cs
+                    );
                     hm.run_changeset_hooks_for_bookmark(ctx, hg_cs.clone(), &bm, None)
                         .map(move |res| {
                             let hook_results = HookResults {

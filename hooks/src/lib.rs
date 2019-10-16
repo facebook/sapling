@@ -23,7 +23,6 @@ mod phabricator_message_parser;
 pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
-use asyncmemo::{Asyncmemo, Filler, Weight};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
@@ -37,31 +36,27 @@ use mercurial_types::{Changeset, FileBytes, HgChangesetId, HgFileNodeId, HgParen
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;
-use slog::{debug, Logger};
+use slog::debug;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::mem;
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tracing::{trace_args, Traced};
 
 type ChangesetHooks = HashMap<String, (Arc<dyn Hook<HookChangeset>>, HookConfig)>;
-type FileHooks = Arc<Mutex<HashMap<String, (Arc<dyn Hook<HookFile>>, HookConfig)>>>;
-type Cache = Asyncmemo<HookCacheFiller>;
+type FileHooks = HashMap<String, (Arc<dyn Hook<HookFile>>, HookConfig)>;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
 
 pub struct HookManager {
-    cache: Cache,
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     changeset_store: Box<dyn ChangesetStore>,
     content_store: Arc<dyn FileContentStore>,
-    logger: Logger,
     reviewers_acl_checker: Arc<Option<AclChecker>>,
 }
 
@@ -71,22 +66,10 @@ impl HookManager {
         changeset_store: Box<dyn ChangesetStore>,
         content_store: Arc<dyn FileContentStore>,
         hook_manager_params: HookManagerParams,
-        logger: Logger,
     ) -> HookManager {
         let fb = ctx.fb;
         let changeset_hooks = HashMap::new();
-        let file_hooks = Arc::new(Mutex::new(HashMap::new()));
-
-        let filler = HookCacheFiller {
-            ctx,
-            file_hooks: file_hooks.clone(),
-        };
-        let cache = Asyncmemo::with_limits(
-            "hooks",
-            filler,
-            hook_manager_params.entrylimit,
-            hook_manager_params.weightlimit,
-        );
+        let file_hooks = HashMap::new();
 
         let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
             let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
@@ -106,14 +89,12 @@ impl HookManager {
         };
 
         HookManager {
-            cache,
             changeset_hooks,
             file_hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
             changeset_store,
             content_store,
-            logger,
             reviewers_acl_checker: Arc::new(reviewers_acl_checker),
         }
     }
@@ -134,8 +115,8 @@ impl HookManager {
         hook: Arc<dyn Hook<HookFile>>,
         config: HookConfig,
     ) {
-        let mut hooks = self.file_hooks.lock().unwrap();
-        hooks.insert(hook_name.to_string(), (hook, config));
+        self.file_hooks
+            .insert(hook_name.to_string(), (hook, config));
     }
 
     pub fn set_hooks_for_bookmark(&mut self, bookmark: BookmarkOrRegex, hooks: Vec<String>) {
@@ -158,17 +139,15 @@ impl HookManager {
 
     pub fn file_hook_names(&self) -> HashSet<String> {
         self.file_hooks
-            .lock()
-            .unwrap()
             .iter()
             .map(|(name, _)| name.clone())
             .collect()
     }
 
-    fn hooks_for_bookmark(&self, bookmark: &BookmarkName) -> HashSet<String> {
-        let mut hooks: HashSet<_> = match self.bookmark_hooks.get(bookmark) {
+    fn hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
+        let mut hooks: Vec<_> = match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => hooks.clone().into_iter().collect(),
-            None => HashSet::new(),
+            None => Vec::new(),
         };
 
         let bookmark_str = bookmark.to_string();
@@ -181,6 +160,20 @@ impl HookManager {
         hooks
     }
 
+    fn file_hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
+        self.hooks_for_bookmark(bookmark)
+            .into_iter()
+            .filter(|name| self.file_hooks.contains_key(name))
+            .collect()
+    }
+
+    fn changeset_hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
+        self.hooks_for_bookmark(bookmark)
+            .into_iter()
+            .filter(|name| self.changeset_hooks.contains_key(name))
+            .collect()
+    }
+
     // Changeset hooks
 
     pub fn run_changeset_hooks_for_bookmark(
@@ -190,23 +183,18 @@ impl HookManager {
         bookmark: &BookmarkName,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
-        let hooks: Vec<_> = self
-            .hooks_for_bookmark(bookmark)
-            .into_iter()
-            .filter(|name| self.changeset_hooks.contains_key(name))
-            .collect();
+        debug!(
+            ctx.logger(),
+            "Running changeset hooks for bookmark {:?}", bookmark
+        );
 
-        if hooks.is_empty() {
-            future::ok(Vec::new()).boxify()
-        } else {
-            self.run_changeset_hooks_for_changeset_id(
-                ctx,
-                changeset_id,
-                hooks,
-                maybe_pushvars,
-                bookmark,
-            )
-        }
+        self.run_changeset_hooks_for_changeset_id(
+            ctx,
+            changeset_id,
+            self.changeset_hooks_for_bookmark(bookmark),
+            maybe_pushvars,
+            bookmark,
+        )
     }
 
     fn run_changeset_hooks_for_changeset_id(
@@ -217,6 +205,11 @@ impl HookManager {
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         bookmark: &BookmarkName,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
+        debug!(
+            ctx.logger(),
+            "Running changeset hooks for changeset id {:?}", changeset_id
+        );
+
         let hooks: Result<Vec<(String, (Arc<dyn Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
             .map(|hook_name| {
@@ -269,29 +262,13 @@ impl HookManager {
         bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
-            HookManager::run_changeset_hook(
+            HookManager::run_hook(
                 ctx.clone(),
                 hook,
                 HookContext::new(hook_name, config, changeset.clone(), bookmark.clone()),
             )
         }))
         .boxify()
-    }
-
-    fn run_changeset_hook(
-        ctx: CoreContext,
-        hook: Arc<dyn Hook<HookChangeset>>,
-        hook_context: HookContext<HookChangeset>,
-    ) -> BoxFuture<(String, HookExecution), Error> {
-        let hook_name = hook_context.hook_name.clone();
-        hook.run(ctx, hook_context)
-            .map({
-                cloned!(hook_name);
-                move |he| (hook_name, he)
-            })
-            .with_context(move |_| format!("while executing hook {}", hook_name))
-            .from_err()
-            .boxify()
     }
 
     // File hooks
@@ -304,82 +281,79 @@ impl HookManager {
         maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
-            self.logger.clone(),
+            ctx.logger(),
             "Running file hooks for bookmark {:?}", bookmark
         );
-        let hooks: Vec<_> = {
-            let hooks = self.hooks_for_bookmark(bookmark);
-            let file_hooks = self.file_hooks.lock().unwrap();
-            hooks
-                .into_iter()
-                .filter_map(|name| file_hooks.get(&name).map(|hook| (name, hook.clone())))
-                .collect()
-        };
 
-        if hooks.is_empty() {
-            future::ok(Vec::new()).boxify()
-        } else {
-            self.run_file_hooks_for_changeset_id(
-                ctx.clone(),
-                changeset_id,
-                hooks,
-                maybe_pushvars,
-                self.logger.clone(),
-                bookmark.clone(),
-            )
-            .traced(
-                &ctx.trace(),
-                "run_file_hooks",
-                trace_args! {
-                    "bookmark" => bookmark.to_string(),
-                    "changeset" => changeset_id.to_hex().to_string(),
-                },
-            )
-            .boxify()
-        }
+        self.run_file_hooks_for_changeset_id(
+            ctx.clone(),
+            changeset_id,
+            self.file_hooks_for_bookmark(bookmark),
+            maybe_pushvars,
+            bookmark.clone(),
+        )
+        .traced(
+            &ctx.trace(),
+            "run_file_hooks",
+            trace_args! {
+                "bookmark" => bookmark.to_string(),
+                "changeset" => changeset_id.to_hex().to_string(),
+            },
+        )
+        .boxify()
     }
 
     fn run_file_hooks_for_changeset_id(
         &self,
         ctx: CoreContext,
         changeset_id: HgChangesetId,
-        hooks: Vec<(String, (Arc<dyn Hook<HookFile>>, HookConfig))>,
+        hooks: Vec<String>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
-        logger: Logger,
         bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
-            self.logger,
+            ctx.logger(),
             "Running file hooks for changeset id {:?}", changeset_id
         );
-        let cache = self.cache.clone();
-        self.get_hook_changeset(ctx.clone(), changeset_id)
-            .and_then(move |hcs| {
-                let hooks = HookManager::filter_bypassed_hooks(
-                    hooks.clone(),
-                    &hcs.comments,
-                    maybe_pushvars.as_ref(),
-                );
-                let hooks = hooks.into_iter().map(|(name, _, _)| name).collect();
 
-                HookManager::run_file_hooks_for_changeset(
-                    changeset_id,
-                    hcs.clone(),
-                    hooks,
-                    cache,
-                    logger,
-                    bookmark,
-                )
+        let hooks: Result<Vec<(String, (Arc<dyn Hook<HookFile>>, HookConfig))>, Error> = hooks
+            .iter()
+            .map(|hook_name| {
+                let hook = self
+                    .file_hooks
+                    .get(hook_name)
+                    .ok_or(ErrorKind::NoSuchHook(hook_name.to_string()))?;
+                Ok((hook_name.clone(), hook.clone()))
+            })
+            .collect();
+        let hooks = try_boxfuture!(hooks);
+
+        self.get_hook_changeset(ctx.clone(), changeset_id)
+            .and_then({
+                move |hcs| {
+                    let hooks = HookManager::filter_bypassed_hooks(
+                        hooks.clone(),
+                        &hcs.comments,
+                        maybe_pushvars.as_ref(),
+                    );
+
+                    HookManager::run_file_hooks_for_changeset(
+                        ctx.clone(),
+                        changeset_id,
+                        hcs.clone(),
+                        hooks,
+                        bookmark,
+                    )
+                }
             })
             .boxify()
     }
 
     fn run_file_hooks_for_changeset(
+        ctx: CoreContext,
         changeset_id: HgChangesetId,
         changeset: HookChangeset,
-        hooks: Vec<String>,
-        cache: Cache,
-        logger: Logger,
+        hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
@@ -390,11 +364,10 @@ impl HookManager {
                 match file.ty {
                     ChangedFileType::Added | ChangedFileType::Modified => Some(
                         HookManager::run_file_hooks(
+                            ctx.clone(),
                             changeset_id,
                             file.clone(),
                             hooks.clone(),
-                            cache.clone(),
-                            logger.clone(),
                             bookmark.clone(),
                         )
                     ),
@@ -408,41 +381,50 @@ impl HookManager {
     }
 
     fn run_file_hooks(
+        ctx: CoreContext,
         cs_id: HgChangesetId,
         file: HookFile,
-        hooks: Vec<String>,
-        cache: Cache,
-        logger: Logger,
+        hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
-        let v: Vec<BoxFuture<(FileHookExecutionID, HookExecution), _>> = hooks
-            .iter()
-            .map(move |hook_name| {
-                HookManager::run_file_hook(
-                    FileHookExecutionID {
-                        cs_id,
-                        hook_name: hook_name.to_string(),
-                        file: file.clone(),
-                        bookmark: bookmark.clone(),
-                    },
-                    cache.clone(),
-                    logger.clone(),
-                )
+        let hook_futs = hooks.into_iter().map(move |(hook_name, hook, config)| {
+            let hook_context = HookContext::new(
+                hook_name.to_string(),
+                config,
+                file.clone(),
+                bookmark.clone(),
+            );
+
+            HookManager::run_hook(ctx.clone(), hook, hook_context).map({
+                cloned!(file, bookmark);
+                move |(hook_name, exec)| {
+                    (
+                        FileHookExecutionID {
+                            cs_id,
+                            hook_name,
+                            file,
+                            bookmark,
+                        },
+                        exec,
+                    )
+                }
             })
-            .collect();
-        futures::future::join_all(v).boxify()
+        });
+        futures::future::join_all(hook_futs).boxify()
     }
 
-    fn run_file_hook(
-        key: FileHookExecutionID,
-        cache: Cache,
-        logger: Logger,
-    ) -> BoxFuture<(FileHookExecutionID, HookExecution), Error> {
-        debug!(logger, "Running file hook {:?}", key);
-        let hook_name = key.hook_name.clone();
-        cache
-            .get(key.clone())
-            .map(|he| (key, he))
+    fn run_hook<T: Clone>(
+        ctx: CoreContext,
+        hook: Arc<dyn Hook<T>>,
+        hook_context: HookContext<T>,
+    ) -> BoxFuture<(String, HookExecution), Error> {
+        let hook_name = hook_context.hook_name.clone();
+        debug!(ctx.logger(), "Running hook {:?}", hook_context.hook_name);
+        hook.run(ctx, hook_context)
+            .map({
+                cloned!(hook_name);
+                move |he| (hook_name, he)
+            })
             .with_context(move |_| format!("while executing hook {}", hook_name))
             .from_err()
             .boxify()
@@ -602,12 +584,6 @@ impl PartialEq for HookFile {
     }
 }
 
-impl Weight for HookFile {
-    fn get_weight(&self) -> usize {
-        self.path.get_weight() + self.changeset_id.get_weight()
-    }
-}
-
 impl Eq for HookFile {}
 
 impl Hash for HookFile {
@@ -721,15 +697,6 @@ impl fmt::Display for HookExecution {
     }
 }
 
-impl Weight for HookExecution {
-    fn get_weight(&self) -> usize {
-        match self {
-            HookExecution::Accepted => mem::size_of::<Self>(),
-            HookExecution::Rejected(info) => mem::size_of::<Self>() + info.get_weight(),
-        }
-    }
-}
-
 /// Information on why the hook rejected the changeset
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookRejectionInfo {
@@ -737,12 +704,6 @@ pub struct HookRejectionInfo {
     pub description: String,
     /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
     pub long_description: String,
-}
-
-impl Weight for HookRejectionInfo {
-    fn get_weight(&self) -> usize {
-        mem::size_of::<Self>() + self.description.get_weight() + self.long_description.get_weight()
-    }
 }
 
 impl HookRejectionInfo {
@@ -763,36 +724,7 @@ impl HookRejectionInfo {
     }
 }
 
-struct HookCacheFiller {
-    ctx: CoreContext,
-    file_hooks: FileHooks,
-}
-
-impl Filler for HookCacheFiller {
-    type Key = FileHookExecutionID;
-    type Value = BoxFuture<HookExecution, Error>;
-
-    fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
-        let hooks = self.file_hooks.lock().unwrap();
-        match hooks.get(&key.hook_name) {
-            Some(arc_hook) => {
-                let arc_hook = arc_hook.clone();
-                let hook_context: HookContext<HookFile> = HookContext::new(
-                    key.hook_name.clone(),
-                    arc_hook.1.clone(),
-                    key.file.clone(),
-                    key.bookmark.clone(),
-                );
-                arc_hook.0.run(self.ctx.clone(), hook_context)
-            }
-            None => panic!("Can't find hook {}", key.hook_name), // TODO
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-// TODO Note that when we move to Bonsai changesets the ID that we use in the cache will
-// be the content hash
 pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
@@ -804,15 +736,6 @@ pub struct FileHookExecutionID {
 pub struct ChangesetHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
-}
-
-impl Weight for FileHookExecutionID {
-    fn get_weight(&self) -> usize {
-        self.cs_id.get_weight()
-            + self.hook_name.get_weight()
-            + self.file.get_weight()
-            + self.bookmark.get_weight()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

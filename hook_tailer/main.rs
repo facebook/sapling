@@ -114,7 +114,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             blobrepo
                 .get_hg_bonsai_mapping(ctx.clone(), excludes)
                 .and_then({
-                    cloned!(manifold_client, logger);
+                    cloned!(manifold_client);
                     move |excl| {
                         result(Tailer::new(
                             ctx,
@@ -122,7 +122,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                             config.clone(),
                             bookmark,
                             manifold_client.clone(),
-                            logger.clone(),
                             excl.into_iter().map(|(_, cs)| cs).collect(),
                             &disabled_hooks,
                         ))

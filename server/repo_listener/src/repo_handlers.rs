@@ -214,7 +214,6 @@ pub fn repo_handlers(
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params,
-                    logger.clone(),
                 );
 
                 // TODO: Don't require full config in load_hooks so we can avoid a clone here.

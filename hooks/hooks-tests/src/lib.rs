@@ -35,8 +35,6 @@ use metaconfig_types::{
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
-use slog::{o, Logger};
-use slog::{Discard, Drain};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -1027,13 +1025,11 @@ fn hook_manager_blobrepo(fb: FacebookInit) -> HookManager {
     let repo = many_files_dirs::getrepo(fb);
     let changeset_store = BlobRepoChangesetStore::new(repo.clone());
     let content_store = BlobRepoFileContentStore::new(repo);
-    let logger = Logger::root(Discard {}.ignore_res(), o!());
     HookManager::new(
         ctx,
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
-        logger,
     )
 }
 
@@ -1092,13 +1088,11 @@ fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         "eels",
     );
 
-    let logger = Logger::root(Discard {}.ignore_res(), o!());
     HookManager::new(
         ctx,
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
-        logger,
     )
 }
 

@@ -604,8 +604,6 @@ impl RepoConfigs {
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
         });
         let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
-            entrylimit: params.entrylimit,
-            weightlimit: params.weightlimit,
             disable_acl_checker: params.disable_acl_checker,
         });
         let bookmarks = {
@@ -877,13 +875,6 @@ struct RawRepoConfig {
 struct RawCacheWarmupConfig {
     bookmark: String,
     commit_limit: Option<usize>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-struct RawHookManagerParams {
-    entrylimit: usize,
-    weightlimit: usize,
 }
 
 /// This structure helps to resolve an issue that when using serde_regex on Option<Regex> parsing
@@ -1563,8 +1554,6 @@ mod test {
             bookmark="master"
             commit_limit=100
             [hook_manager_params]
-            entrylimit=1234
-            weightlimit=4321
             disable_acl_checker=false
 
             [storage.main]
@@ -1721,8 +1710,6 @@ mod test {
                     commit_limit: 100,
                 }),
                 hook_manager_params: Some(HookManagerParams {
-                    entrylimit: 1234,
-                    weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
                 bookmarks_cache_ttl: Some(Duration::from_millis(5000)),
