@@ -78,8 +78,9 @@ New bookmark is created
   $ mkcommit newbook_commit_second
   $ hgmn push -r . --to newbook -q
 
-Sync a pushrebase bookmark move
+Sync a pushrebase bookmark move. Note that we are using 0 start-id intentionally - sync job
+should ignore it and fetch the latest id from db
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop_regenerate repo-hg 3 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
+  $ mononoke_hg_sync_loop_regenerate repo-hg 0 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [4] (glob)
   * successful sync of entries [5] (glob)

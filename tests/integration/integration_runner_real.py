@@ -37,6 +37,7 @@ EPHEMERAL_DB_WHITELIST = {
     "test-mononoke-admin.t",
     "test-bookmarks-filler.t",
     "test-pushrebase.t",
+    "test-mononoke-hg-sync-job-generate-bundles-loop.t",
 }
 
 # At this time, all tests support the network blackhole (except when ephemeral
