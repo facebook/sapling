@@ -1695,7 +1695,7 @@ def export(
                 mode="wb",
                 modemap=filemode,
             )
-            dest = fo.name
+            dest = getattr(fo, "name", "<unnamed>")
 
             def write(s, **kw):
                 fo.write(s)

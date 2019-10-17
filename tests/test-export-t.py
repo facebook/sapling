@@ -9,23 +9,15 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require("false")  # test not passing
 sh % "hg init repo"
 sh % "cd repo"
 sh % "touch foo"
 sh % "hg add foo"
-sh % 'for i in 0 1 2 3 4 5 6 7 8 9 10 "11;" do' == r"""
-    >    echo "foo-$i" >> foo
-    >    hg ci -m "foo-$i"
-    > done"""
+for i in range(12):
+    open("foo", "ab").write("foo-%s\n" % i)
+    sh.hg("ci", "-m", "foo-%s" % i)
 
-sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
-    >    echo
-    >    echo "# foo-$out.patch"
-    >    hg export -v -o "foo-$out.patch" 2:tip
-    > done
-
-    # foo-%nof%N.patch
+sh % "hg export -v -o 'foo-%nof%N.patch' 2:tip" == r"""
     exporting patches:
     foo-01of10.patch
     foo-02of10.patch
@@ -36,9 +28,8 @@ sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
     foo-07of10.patch
     foo-08of10.patch
     foo-09of10.patch
-    foo-10of10.patch
-
-    # foo-%%%H.patch
+    foo-10of10.patch"""
+sh % "hg export -v -o 'foo-%%%H.patch' 2:tip" == r"""
     exporting patches:
     foo-%617188a1c80f869a7b66c85134da88a6fb145f67.patch
     foo-%dd41a5ff707a5225204105611ba49cc5c229d55f.patch
@@ -49,9 +40,8 @@ sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
     foo-%9688c41894e6931305fa7165a37f6568050b4e9b.patch
     foo-%747d3c68f8ec44bb35816bfcd59aeb50b9654c2f.patch
     foo-%5f17a83f5fbd9414006a5e563eab4c8a00729efd.patch
-    foo-%f3acbafac161ec68f1598af38f794f28847ca5d3.patch
-
-    # foo-%b-%R.patch
+    foo-%f3acbafac161ec68f1598af38f794f28847ca5d3.patch"""
+sh % "hg export -v -o 'foo-%b-%R.patch' 2:tip" == r"""
     exporting patches:
     foo-repo-2.patch
     foo-repo-3.patch
@@ -62,9 +52,8 @@ sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
     foo-repo-8.patch
     foo-repo-9.patch
     foo-repo-10.patch
-    foo-repo-11.patch
-
-    # foo-%h.patch
+    foo-repo-11.patch"""
+sh % "hg export -v -o 'foo-%h.patch' 2:tip" == r"""
     exporting patches:
     foo-617188a1c80f.patch
     foo-dd41a5ff707a.patch
@@ -75,9 +64,8 @@ sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
     foo-9688c41894e6.patch
     foo-747d3c68f8ec.patch
     foo-5f17a83f5fbd.patch
-    foo-f3acbafac161.patch
-
-    # foo-%r.patch
+    foo-f3acbafac161.patch"""
+sh % "hg export -v -o 'foo-%r.patch' 2:tip" == r"""
     exporting patches:
     foo-02.patch
     foo-03.patch
@@ -88,9 +76,8 @@ sh % 'for out in %nof%N %%%H %b-%R %h %r "%m;" do' == r"""
     foo-08.patch
     foo-09.patch
     foo-10.patch
-    foo-11.patch
-
-    # foo-%m.patch
+    foo-11.patch"""
+sh % "hg export -v -o 'foo-%m.patch' 2:tip" == r"""
     exporting patches:
     foo-foo_2.patch
     foo-foo_3.patch
@@ -108,21 +95,21 @@ sh % "hg export -v -o foo-%m.patch 2:3" == r"""
     exporting patches:
     foo-foo_2.patch
     foo-foo_3.patch"""
-sh % "grep HG foo-foo_2.patch" | "wc -l" == "\\s*1 (re)"
-sh % "grep HG foo-foo_3.patch" | "wc -l" == "\\s*1 (re)"
+sh % "grep HG foo-foo_2.patch" | "wc -l" == "1"
+sh % "grep HG foo-foo_3.patch" | "wc -l" == "1"
 
 # Exporting 4 changesets to a file:
 
 sh % "hg export -o export_internal 1 2 3 4"
-sh % "grep HG export_internal" | "wc -l" == "\\s*4 (re)"
+sh % "grep HG export_internal" | "wc -l" == "4"
 
 # Doing it again clobbers the file rather than appending:
 sh % "hg export -o export_internal 1 2 3 4"
-sh % "grep HG export_internal" | "wc -l" == "\\s*4 (re)"
+sh % "grep HG export_internal" | "wc -l" == "4"
 
 # Exporting 4 changesets to stdout:
 
-sh % "hg export 1 2 3 4" | "grep HG" | "wc -l" == "\\s*4 (re)"
+sh % "hg export 1 2 3 4" | "grep HG" | "wc -l" == "4"
 
 # Exporting revision -2 to a file:
 
@@ -188,7 +175,7 @@ sh % "hg export -v 1 -o -" == r"""
 # Checking if only alphanumeric characters are used in the file name (%m option):
 
 sh % "echo line" >> "foo"
-sh % 'hg commit -m " !\\"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\\`abcdefghijklmnopqrstuvwxyz{|}~"'
+sh % 'hg commit -m " !\\"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"'
 sh % "hg export -v -o %m.patch tip" == r"""
     exporting patch:
     ____________0123456789_______ABCDEFGHIJKLMNOPQRSTUVWXYZ______abcdefghijklmnopqrstuvwxyz____.patch"""
@@ -213,7 +200,7 @@ sh % "hg export" == r"""
      foo-11
     +line"""
 
-sh % "hg export " == r"""
+sh % "hg export ''" == r"""
     hg: parse error: empty query
     [255]"""
 sh % "hg export 999" == r"""

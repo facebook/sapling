@@ -223,18 +223,31 @@ def true():
     return ""
 
 
+def wc(*args, **kwargs):
+    stdin = kwargs.get("stdin", "")
+    linecount = len(stdin.splitlines())
+    for arg in args:
+        if arg.startswith("-"):
+            if arg != "-l":
+                raise NotImplementedError("wc %s is not implemented" % arg)
+        else:
+            linecount += len(open(arg).read().splitlines())
+    return "%s" % linecount
+
+
 globals()["["] = test
 
 
 # grep
 
 
-def grep(pattern, stdin=None):
+def grep(pattern, *paths, **kwargs):
     import re
 
     pattern = re.compile(pattern)
-    if stdin is None:
-        raise NotImplementedError("this grep implementation requires stdin")
+    stdin = kwargs.get("stdin", "")
+    for path in paths:
+        stdin += open(path).read()
     return "".join(l for l in stdin.splitlines(True) if pattern.search(l))
 
 
