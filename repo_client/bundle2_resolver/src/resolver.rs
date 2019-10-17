@@ -117,7 +117,15 @@ impl From<BundleResolverError> for Error {
 /// Data, needed to perform post-resolve `Push` action
 pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
-    pub bookmark_push: Vec<BookmarkPush<HgChangesetId>>,
+    pub bookmark_pushes: Vec<PlainBookmarkPush<HgChangesetId>>,
+    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub allow_non_fast_forward: bool,
+}
+
+/// Data, needed to perform post-resolve `InfinitePush` action
+pub struct PostResolveInfinitePush {
+    pub changegroup_id: Option<PartId>,
+    pub bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub allow_non_fast_forward: bool,
 }
@@ -145,6 +153,7 @@ pub struct PostResolveBookmarkOnlyPushRebase {
 /// - all received changesets and blobs uploaded
 pub enum PostResolveAction {
     Push(PostResolvePush),
+    InfinitePush(PostResolveInfinitePush),
     PushRebase(PostResolvePushRebase),
     BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase),
 }
@@ -270,14 +279,14 @@ fn resolve_push(
             move |(cg_push, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
-                    .map(move |(pushkeys, bundle2)| {
+                    .and_then(move |(pushkeys, bundle2)| {
                         let infinitepush_bp = cg_push
                             .as_ref()
                             .and_then(|cg_push| cg_push.infinitepush_payload.clone())
                             .and_then(|ip_payload| ip_payload.bookmark_push);
-                        let bookmark_push = collect_all_bookmark_pushes(pushkeys, infinitepush_bp);
-                        STATS::bookmark_pushkeys_count.add_value(bookmark_push.len() as i64);
-                        (cg_push, bookmark_push, bundle2)
+                        let bookmark_push =
+                            try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp)?;
+                        Ok((cg_push, bookmark_push, bundle2))
                     })
             }
         })
@@ -344,13 +353,24 @@ fn resolve_push(
                 maybe_raw_bundle2_id,
                 _maybe_uploaded_hg_bonsai_map,
             )| {
-                // TODO(ikostia): split into push and infinitepush parts
-                PostResolveAction::Push(PostResolvePush {
-                    changegroup_id,
-                    bookmark_push,
-                    maybe_raw_bundle2_id,
-                    allow_non_fast_forward,
-                })
+                match bookmark_push {
+                    AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
+                        PostResolveAction::Push(PostResolvePush {
+                            changegroup_id,
+                            bookmark_pushes,
+                            maybe_raw_bundle2_id,
+                            allow_non_fast_forward,
+                        })
+                    }
+                    AllBookmarkPushes::Inifinitepush(bookmark_push) => {
+                        PostResolveAction::InfinitePush(PostResolveInfinitePush {
+                            changegroup_id,
+                            bookmark_push,
+                            maybe_raw_bundle2_id,
+                            allow_non_fast_forward,
+                        })
+                    }
+                }
             }
         })
         .context("bundle2_resolver error")
@@ -583,11 +603,17 @@ fn next_item(
     bundle2.into_future().map_err(|(err, _)| err).boxify()
 }
 
-pub enum BookmarkPush<T: Copy> {
-    PlainPush(PlainBookmarkPush<T>),
-    Infinitepush(InfiniteBookmarkPush<T>),
+/// Represents all the bookmark pushes that are created
+/// by a single unbundle wireproto command. This can
+/// be either an exactly one infinitepush, or multiple
+/// plain pushes
+pub enum AllBookmarkPushes<T: Copy> {
+    PlainPushes(Vec<PlainBookmarkPush<T>>),
+    Inifinitepush(InfiniteBookmarkPush<T>),
 }
 
+/// Represets a single non-infinitepush bookmark push
+/// This can be a result of a normal push or a pushrebase
 #[derive(Debug, Clone)]
 pub struct PlainBookmarkPush<T: Copy> {
     pub part_id: PartId,
@@ -596,6 +622,7 @@ pub struct PlainBookmarkPush<T: Copy> {
     pub new: Option<T>,
 }
 
+/// Represents an infinitepush bookmark push
 #[derive(Debug, Clone)]
 pub struct InfiniteBookmarkPush<T> {
     pub name: BookmarkName,
@@ -1225,20 +1252,27 @@ fn collect_pushkey_bookmark_pushes(
         .collect()
 }
 
-fn collect_all_bookmark_pushes(
+fn try_collect_all_bookmark_pushes(
     pushkeys: Vec<Pushkey>,
     infinitepush_bookmark_push: Option<InfiniteBookmarkPush<HgChangesetId>>,
-) -> Vec<BookmarkPush<HgChangesetId>> {
-    let mut bookmark_pushes: Vec<_> = collect_pushkey_bookmark_pushes(pushkeys)
+) -> Result<AllBookmarkPushes<HgChangesetId>> {
+    let bookmark_pushes: Vec<_> = collect_pushkey_bookmark_pushes(pushkeys)
         .into_iter()
-        .map(BookmarkPush::PlainPush)
         .collect();
-
-    if let Some(infinitepush_bookmark_push) = infinitepush_bookmark_push {
-        bookmark_pushes.push(BookmarkPush::Infinitepush(infinitepush_bookmark_push));
+    let bookmark_pushes_len = bookmark_pushes.len();
+    match (bookmark_pushes_len, infinitepush_bookmark_push) {
+        (0, Some(infinitepush_bookmark_push)) => {
+            STATS::bookmark_pushkeys_count.add_value(1);
+            Ok(AllBookmarkPushes::Inifinitepush(infinitepush_bookmark_push))
+        }
+        (bookmark_pushes_len, None) => {
+            STATS::bookmark_pushkeys_count.add_value(bookmark_pushes_len as i64);
+            Ok(AllBookmarkPushes::PlainPushes(bookmark_pushes))
+        }
+        (_, Some(_)) => Err(format_err!(
+            "Same bundle2 can not be used for both plain and infinite push"
+        )),
     }
-
-    bookmark_pushes
 }
 
 /// Helper fn to return some (usually "empty") value and

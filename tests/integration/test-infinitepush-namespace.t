@@ -66,7 +66,7 @@ Invalid infinitepush, with pushrebase disabled
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     infinitepush error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Invalid Infinitepush bookmark: bad/123 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",
@@ -86,7 +86,7 @@ Invalid infinitepush, with pushrebase enabled
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     infinitepush error
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Invalid Infinitepush bookmark: bad/456 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",

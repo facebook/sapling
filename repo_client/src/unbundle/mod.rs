@@ -13,8 +13,8 @@ use crate::getbundle_response;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bundle2_resolver::{
-    BookmarkPush, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
-    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolvePush,
+    BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush, PlainBookmarkPush,
+    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use bytes::{Bytes, BytesMut};
@@ -43,6 +43,11 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 
+enum BookmarkPush<T: Copy> {
+    PlainPush(PlainBookmarkPush<T>),
+    Infinitepush(InfiniteBookmarkPush<T>),
+}
+
 pub fn run_post_resolve_action(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -63,6 +68,9 @@ pub fn run_post_resolve_action(
             infinitepush_params,
             action,
         ),
+        PostResolveAction::InfinitePush(action) => {
+            run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
+        }
         PostResolveAction::PushRebase(action) => run_pushrebase(
             ctx,
             repo,
@@ -95,7 +103,7 @@ fn run_push(
 ) -> BoxFuture<Bytes, BundleResolverError> {
     let PostResolvePush {
         changegroup_id,
-        bookmark_push,
+        bookmark_pushes,
         maybe_raw_bundle2_id,
         allow_non_fast_forward,
     } = action;
@@ -103,28 +111,35 @@ fn run_push(
     ({
         cloned!(ctx);
         move || {
-            let bookmark_ids: Vec<_> = bookmark_push
-                .iter()
-                .filter_map(|bp| match bp {
-                    BookmarkPush::PlainPush(bp) => Some(bp.part_id),
-                    BookmarkPush::Infinitepush(..) => None,
-                })
-                .collect();
+            let bookmark_ids = bookmark_pushes.iter().map(|bp| bp.part_id).collect();
             let reason = BookmarkUpdateReason::Push {
                 bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
             };
-            resolve_bookmark_pushes(
-                ctx,
-                repo,
-                bookmark_push,
-                reason,
-                lca_hint,
-                allow_non_fast_forward,
-                bookmark_attrs,
-                infinitepush_params,
-            )
-            .map(move |()| (changegroup_id, bookmark_ids))
-            .boxify()
+
+            let bookmark_pushes_futures = bookmark_pushes.into_iter().map({
+                cloned!(ctx, repo, lca_hint, bookmark_attrs, infinitepush_params);
+                move |bookmark_push| {
+                    get_bonsai_plain_bookmark_push_future(
+                        ctx.clone(),
+                        repo.clone(),
+                        bookmark_push,
+                        lca_hint.clone(),
+                        allow_non_fast_forward,
+                        bookmark_attrs.clone(),
+                        infinitepush_params.clone(),
+                    )
+                }
+            });
+
+            future::join_all(bookmark_pushes_futures)
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |maybe_bookmark_pushes| {
+                        save_bookmark_pushes_to_db(ctx, repo, reason, maybe_bookmark_pushes)
+                    }
+                })
+                .map(move |()| (changegroup_id, bookmark_ids))
+                .boxify()
         }
     })()
     .context("While updating Bookmarks")
@@ -133,6 +148,52 @@ fn run_push(
         prepare_push_response(changegroup_id, bookmark_ids)
     })
     .context("push error")
+    .from_err()
+    .boxify()
+}
+
+fn run_infinitepush(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    infinitepush_params: InfinitepushParams,
+    action: PostResolveInfinitePush,
+) -> BoxFuture<Bytes, BundleResolverError> {
+    let PostResolveInfinitePush {
+        changegroup_id,
+        bookmark_push,
+        maybe_raw_bundle2_id,
+        ..
+    } = action;
+
+    ({
+        cloned!(ctx);
+        move || {
+            let reason = BookmarkUpdateReason::Push {
+                bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+            };
+
+            get_bonsai_infinite_bookmark_push_future(
+                ctx.clone(),
+                repo.clone(),
+                bookmark_push,
+                lca_hint,
+                infinitepush_params,
+            )
+            .and_then({
+                cloned!(ctx, repo);
+                move |maybe_bonsai_bookmark_push| {
+                    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push])
+                }
+            })
+            .map(move |()| changegroup_id)
+            .boxify()
+        }
+    })()
+    .context("While updating Bookmarks")
+    .from_err()
+    .and_then(move |changegroup_id| prepare_push_response(changegroup_id, Vec::new()))
+    .context("infinitepush error")
     .from_err()
     .boxify()
 }
@@ -242,21 +303,25 @@ fn run_bookmark_only_pushrebase(
     } = action;
 
     let part_id = bookmark_push.part_id;
-    let pushes = vec![BookmarkPush::PlainPush(bookmark_push)];
     let reason = BookmarkUpdateReason::Pushrebase {
         // Since this a bookmark-only pushrebase, there are no changeset timestamps
         bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
     };
-    resolve_bookmark_pushes(
+    get_bonsai_plain_bookmark_push_future(
         ctx.clone(),
-        repo,
-        pushes,
-        reason,
+        repo.clone(),
+        bookmark_push,
         lca_hint,
         allow_non_fast_forward,
         bookmark_attrs,
         infinitepush_params,
     )
+    .and_then({
+        cloned!(ctx, repo);
+        move |maybe_bookmark_push| {
+            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
+        }
+    })
     .and_then(move |_| ok(part_id).boxify())
     .and_then({
         cloned!(ctx);
@@ -513,104 +578,118 @@ fn force_pushrebase(
             let target_bcs =
                 try_boxfuture!(maybe_target_bcs
                     .ok_or(err_msg("new changeset is required for force pushrebase")));
-            let pushes = vec![BookmarkPush::PlainPush(bookmark_push)];
             let reason = BookmarkUpdateReason::Pushrebase {
                 bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
             };
             // Note that this push did not do any actual rebases, so we do not
             // need to provide any actual mapping, an empty Vec will do
             let ret = (target_bcs, Vec::new());
-            resolve_bookmark_pushes(
-                ctx,
-                repo,
-                pushes,
-                reason,
+            get_bonsai_plain_bookmark_push_future(
+                ctx.clone(),
+                repo.clone(),
+                bookmark_push,
                 lca_hint,
                 true,
                 bookmark_attrs,
                 infinitepush_params,
             )
+            .and_then({
+                cloned!(ctx, repo);
+                move |maybe_bookmark_push| {
+                    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
+                }
+            })
             .map(move |_| ret)
             .boxify()
         },
     )
 }
 
-/// Produce a future that creates a transaction with potentitally multiple bookmark pushes
-fn resolve_bookmark_pushes(
+/// Produce a future for a plain bookmark push
+fn get_bonsai_plain_bookmark_push_future(
     ctx: CoreContext,
     repo: BlobRepo,
-    bookmark_pushes: Vec<BookmarkPush<HgChangesetId>>,
-    reason: BookmarkUpdateReason,
+    bookmark_push: PlainBookmarkPush<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     allow_non_fast_forward: bool,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
-) -> impl Future<Item = (), Error = Error> {
-    let bookmarks_push_fut = bookmark_pushes
-        .into_iter()
-        .map({
-            cloned!(ctx, repo);
-            move |bp| {
-                hg_bookmark_push_to_bonsai(ctx.clone(), &repo.clone(), bp).and_then({
-                    cloned!(repo, ctx, lca_hint, bookmark_attrs, infinitepush_params);
-                    move |bp| match bp {
-                        BookmarkPush::PlainPush(bp) => check_bookmark_push_allowed(
-                            ctx.clone(),
-                            repo.clone(),
-                            bookmark_attrs,
-                            allow_non_fast_forward,
-                            infinitepush_params,
-                            bp,
-                            lca_hint,
-                        )
-                        .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-                        .left_future(),
-                        BookmarkPush::Infinitepush(bp) => filter_or_check_infinitepush_allowed(
-                            ctx.clone(),
-                            repo.clone(),
-                            lca_hint,
-                            infinitepush_params,
-                            bp,
-                        )
-                        .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
-                        .right_future(),
-                    }
-                })
+) -> impl Future<Item = Option<BookmarkPush<ChangesetId>>, Error = Error> {
+    plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo.clone(), bookmark_push)
+        .and_then({
+            cloned!(repo, ctx, lca_hint, bookmark_attrs, infinitepush_params);
+            move |bookmark_push| {
+                check_plain_bookmark_push_allowed(
+                    ctx,
+                    repo,
+                    bookmark_attrs,
+                    allow_non_fast_forward,
+                    infinitepush_params,
+                    bookmark_push,
+                    lca_hint,
+                )
             }
         })
-        .collect::<Vec<_>>();
-
-    future::join_all(bookmarks_push_fut).and_then({
-        cloned!(ctx, repo);
-        move |bonsai_bookmark_pushes| {
-            if bonsai_bookmark_pushes.is_empty() {
-                // If we have no bookmarks, then don't create an empty transaction. This is a
-                // temporary workaround for the fact that we committing an empty transaction
-                // evicts the cache.
-                return ok(()).boxify();
-            }
-
-            let mut txn = repo.update_bookmark_transaction(ctx.clone());
-
-            for bp in bonsai_bookmark_pushes.into_iter().flatten() {
-                try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone()));
-            }
-
-            txn.commit()
-                .and_then(|ok| {
-                    if ok {
-                        Ok(())
-                    } else {
-                        Err(format_err!("Bookmark transaction failed"))
-                    }
-                })
-                .boxify()
-        }
-    })
+        .map(|bp| Some(BookmarkPush::PlainPush(bp)))
 }
 
-fn check_bookmark_push_allowed(
+/// Produce a future for an infinitepush bookmark push
+fn get_bonsai_infinite_bookmark_push_future(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    infinitepush_params: InfinitepushParams,
+) -> impl Future<Item = Option<BookmarkPush<ChangesetId>>, Error = Error> {
+    infinite_hg_bookmark_push_to_bonsai(ctx.clone(), &repo.clone(), bookmark_push)
+        .and_then({
+            cloned!(repo, ctx, lca_hint, infinitepush_params);
+            move |bookmark_push| {
+                filter_or_check_infinitepush_allowed(
+                    ctx.clone(),
+                    repo.clone(),
+                    lca_hint,
+                    infinitepush_params,
+                    bookmark_push,
+                )
+            }
+        })
+        .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
+}
+
+/// Save several bookmark pushes to the database
+fn save_bookmark_pushes_to_db(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    reason: BookmarkUpdateReason,
+    bonsai_bookmark_pushes: Vec<Option<BookmarkPush<ChangesetId>>>,
+) -> impl Future<Item = (), Error = Error> {
+    if bonsai_bookmark_pushes.is_empty() {
+        // If we have no bookmarks, then don't create an empty transaction. This is a
+        // temporary workaround for the fact that we committing an empty transaction
+        // evicts the cache.
+        return ok(()).boxify();
+    }
+
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+
+    for bp in bonsai_bookmark_pushes.into_iter().flatten() {
+        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone()));
+    }
+
+    txn.commit()
+        .and_then(|ok| {
+            if ok {
+                Ok(())
+            } else {
+                Err(format_err!("Bookmark transaction failed"))
+            }
+        })
+        .boxify()
+}
+
+/// Run sanity checks for plain (non-infinitepush) bookmark pushes
+fn check_plain_bookmark_push_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
@@ -650,6 +729,7 @@ fn check_bookmark_push_allowed(
     }
 }
 
+/// Run sanity checks for infinitepush bookmark moves
 fn filter_or_check_infinitepush_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -680,7 +760,7 @@ fn filter_or_check_infinitepush_allowed(
                     Err(e)
                 }
             })
-            // Finally,, check that the push is a fast-forward, or --force is set.
+            // Finally, check that the push is a fast-forward, or --force is set.
             .and_then(|bp| match bp.force {
                 true => ok(()).left_future(),
                 false => check_is_ancestor_opt(ctx, repo, lca_hint, bp.old, bp.new)
@@ -774,61 +854,61 @@ fn check_is_ancestor_opt(
     }
 }
 
-fn hg_bookmark_push_to_bonsai(
+fn plain_hg_bookmark_push_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_push: BookmarkPush<HgChangesetId>,
-) -> impl Future<Item = BookmarkPush<ChangesetId>, Error = Error> + Send {
-    match bookmark_push {
-        BookmarkPush::PlainPush(PlainBookmarkPush {
+    bookmark_push: PlainBookmarkPush<HgChangesetId>,
+) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
+    let PlainBookmarkPush {
+        part_id,
+        name,
+        old,
+        new,
+    } = bookmark_push;
+    (
+        bonsai_from_hg_opt(ctx.clone(), repo, old),
+        bonsai_from_hg_opt(ctx.clone(), repo, new),
+    )
+        .into_future()
+        .map(move |(old, new)| PlainBookmarkPush {
             part_id,
             name,
             old,
             new,
-        }) => (
-            bonsai_from_hg_opt(ctx.clone(), repo, old),
-            bonsai_from_hg_opt(ctx, repo, new),
-        )
-            .into_future()
-            .map(move |(old, new)| {
-                BookmarkPush::PlainPush(PlainBookmarkPush {
-                    part_id,
-                    name,
-                    old,
-                    new,
-                })
-            })
-            .left_future(),
-        BookmarkPush::Infinitepush(InfiniteBookmarkPush {
+        })
+}
+
+fn infinite_hg_bookmark_push_to_bonsai(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
+) -> impl Future<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
+    let InfiniteBookmarkPush {
+        name,
+        force,
+        create,
+        old,
+        new,
+    } = bookmark_push;
+
+    (
+        bonsai_from_hg_opt(ctx.clone(), repo, old),
+        repo.get_bonsai_from_hg(ctx.clone(), new),
+    )
+        .into_future()
+        .and_then(|(old, new)| match new {
+            Some(new) => Ok((old, new)),
+            None => Err(err_msg("Bonsai Changeset not found")),
+        })
+        .map(move |(old, new)| InfiniteBookmarkPush {
             name,
             force,
             create,
             old,
             new,
-        }) => (
-            bonsai_from_hg_opt(ctx.clone(), repo, old),
-            repo.get_bonsai_from_hg(ctx.clone(), new),
-        )
-            .into_future()
-            .and_then(|(old, new)| match new {
-                Some(new) => Ok((old, new)),
-                None => Err(err_msg("Bonsai Changeset not found")),
-            })
-            .map(move |(old, new)| {
-                BookmarkPush::Infinitepush(InfiniteBookmarkPush {
-                    name,
-                    force,
-                    create,
-                    old,
-                    new,
-                })
-            })
-            .right_future(),
-    }
+        })
 }
 
-// TODO: (torozco) T44841164 bonsai_from_hg_opt should probably error if we map Some<HgChangesetId>
-// to None.
 fn bonsai_from_hg_opt(
     ctx: CoreContext,
     repo: &BlobRepo,
@@ -836,7 +916,16 @@ fn bonsai_from_hg_opt(
 ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
     match cs_id {
         None => ok(None).left_future(),
-        Some(cs_id) => repo.get_bonsai_from_hg(ctx, cs_id).right_future(),
+        Some(cs_id) => repo
+            .get_bonsai_from_hg(ctx, cs_id.clone())
+            .and_then(move |maybe_bcs_id| {
+                if maybe_bcs_id.is_none() {
+                    err(format_err!("No bonsai mapping found for {}", cs_id))
+                } else {
+                    ok(maybe_bcs_id)
+                }
+            })
+            .right_future(),
     }
 }
 
