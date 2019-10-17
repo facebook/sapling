@@ -30,11 +30,11 @@ use context::CoreContext;
 use failure_ext::chain::ChainExt;
 use hyper::{client::HttpConnector, Client};
 use hyper_openssl::HttpsConnector;
+use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
 use mononoke_types::ContentId;
 
 use crate::errors::ErrorKind;
 use crate::middleware::{LfsMethod, RequestContext};
-use crate::protocol::{RequestBatch, RequestObject, ResponseBatch};
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 

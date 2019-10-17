@@ -23,6 +23,7 @@ use itertools::Itertools;
 use std::iter;
 
 use failure_ext::chain::ChainExt;
+use lfs_protocol::ResponseError;
 
 use crate::batch;
 use crate::download;
@@ -30,7 +31,6 @@ use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, HttpError, TryIntoResponse};
 use crate::lfs_server_context::LfsServerContext;
 use crate::middleware::RequestContext;
-use crate::protocol::ResponseError;
 use crate::upload;
 
 fn build_response<IR>(

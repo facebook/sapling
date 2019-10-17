@@ -25,15 +25,15 @@ use std::str::FromStr;
 
 use failure_ext::chain::ChainExt;
 use filestore::StoreRequest;
+use lfs_protocol::{
+    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
+};
 use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
 use crate::http::{EmptyBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::{LfsMethod, ScubaMiddlewareState};
-use crate::protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
-};
 
 define_stats! {
     prefix ="mononoke.lfs.upload";

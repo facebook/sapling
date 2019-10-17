@@ -10,9 +10,8 @@ use hyper::StatusCode;
 
 use failure_ext::Fail;
 
+use lfs_protocol::{RequestObject, ResponseObject};
 use mononoke_types::ContentId;
-
-use crate::protocol::{RequestObject, ResponseObject};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

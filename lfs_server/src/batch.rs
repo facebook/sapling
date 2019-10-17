@@ -21,16 +21,16 @@ use std::collections::HashMap;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use failure_ext::chain::ChainExt;
 use filestore::Alias;
+use lfs_protocol::{
+    ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
+    ResponseObject, Transfer,
+};
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
 use crate::middleware::{LfsMethod, ScubaMiddlewareState};
-use crate::protocol::{
-    ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseObject, Transfer,
-};
 
 define_stats! {
     prefix ="mononoke.lfs.batch";

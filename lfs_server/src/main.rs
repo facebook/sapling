@@ -52,9 +52,7 @@ mod errors;
 mod handler;
 mod lfs_server_context;
 mod middleware;
-mod protocol;
 mod router;
-mod str_serialized;
 mod upload;
 #[macro_use]
 mod http;
