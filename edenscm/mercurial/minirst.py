@@ -383,7 +383,7 @@ def findsections(blocks):
         if (
             block["type"] == "paragraph"
             and len(block["lines"]) == 2
-            and encoding.colwidth(block["lines"][0]) == len(block["lines"][1])
+            and encoding.colwidth(block["lines"][0]) <= len(block["lines"][1])
             and _sectionre.match(block["lines"][1])
         ):
             block["underline"] = block["lines"][1][0:1]

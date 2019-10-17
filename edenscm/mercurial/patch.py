@@ -2409,6 +2409,7 @@ def difffeatureopts(
                 buildopts["index"] = hlen
 
     buildopts["hashbinary"] = ui.configbool("diff", "hashbinary")
+    buildopts["filtercopysource"] = ui.configbool("diff", "filtercopysource")
     if whitespace:
         buildopts["ignorews"] = get("ignore_all_space", "ignorews")
         buildopts["ignorewsamount"] = get("ignore_space_change", "ignorewsamount")
@@ -2560,6 +2561,12 @@ def diffhunks(
         copy = {}
         if opts.git or opts.upgrade:
             copy = copies.pathcopies(ctx1, ctx2, match=match)
+            if opts.filtercopysource and match is not None:
+                newcopy = {}
+                for copydst, copysrc in copy.items():
+                    if match(copysrc):
+                        newcopy[copydst] = copysrc
+                copy = newcopy
 
     if relroot is not None:
         if not relfiltered:

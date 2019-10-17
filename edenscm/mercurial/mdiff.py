@@ -61,6 +61,7 @@ class diffopts(object):
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank
     upgrade generates git diffs to avoid data loss
+    filtercopysource removes copy/rename if source does not match matcher
     """
 
     defaults = {
@@ -80,6 +81,7 @@ class diffopts(object):
         "showsimilarity": False,
         "worddiff": False,
         "hashbinary": False,
+        "filtercopysource": False,
     }
 
     def __init__(self, **opts):

@@ -295,3 +295,55 @@ sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
     @@ -1,1 +1,1 @@
     -0
     +3"""
+
+# Export with diff.filtercopysource=1 - note bar/1 -> foo/3 copy is ignored
+
+sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource=0" == r"""
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Parent  0000000000000000000000000000000000000000
+    A
+
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    B
+
+    diff --git a/bar/1 b/foo/3
+    copy from bar/1
+    copy to foo/3
+    --- a/bar/1
+    +++ b/foo/3
+    @@ -1,1 +1,1 @@
+    -0
+    +3"""
+
+sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource=1" == r"""
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Parent  0000000000000000000000000000000000000000
+    A
+
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    B
+
+    diff --git a/foo/3 b/foo/3
+    new file mode 100644
+    --- /dev/null
+    +++ b/foo/3
+    @@ -0,0 +1,1 @@
+    +3"""

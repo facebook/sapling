@@ -128,7 +128,7 @@ Mercurial can use various systems to display color. The supported modes are
 about how to control the mode.
 
 Effects
-=======
+========
 
 Other effects in addition to color, like bold and underlined text, are
 also available. By default, the terminfo database is used to find the
@@ -940,6 +940,9 @@ for related options for the annotate command.
 
 ``hashbinary``
     Show a SHA-1 hash of changed binaries in diff output.
+
+``filtercopysource``
+    Ignore copies or renames if the source path is outside file patterns.
 
 
 ``discovery``
@@ -4347,7 +4350,7 @@ The following predicates are supported:
 .. predicatesmarker
 
 Aliases
-=======
+========
 
 New predicates (known as "aliases") can be defined, using any combination of
 existing predicates or other aliases. An alias definition looks like::
@@ -4668,7 +4671,7 @@ You can also use a chain of filters to get the desired output::
    2008-08-21 18:22 +0000
 
 Filters
-=======
+========
 
 List of filters:
 
@@ -4711,7 +4714,7 @@ The dot operator can be used as a shorthand for accessing a sub item:
 - ``dict.key`` is identical to ``get(dict, 'key')``.
 
 Aliases
-=======
+========
 
 New keywords and functions can be defined in the ``templatealias`` section of
 a Mercurial configuration file::
