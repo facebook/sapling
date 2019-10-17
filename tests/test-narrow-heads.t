@@ -141,3 +141,20 @@ Phases
   (phases are now managed by remotenames and heads; manully editing phases is a no-op)
   $ hg phase $A
   0: public
+
+Rebase
+
+  $ newrepo
+  $ enable rebase amend
+  $ drawdag << 'EOS'
+  > B C
+  > |/
+  > | D
+  > |/
+  > A
+  > EOS
+  $ hg debugremotebookmark master $B
+  $ hg hide $D -q
+  $ hg rebase -s $D -d $B
+  "source" revision set is invisible - nothing to rebase
+  (hint: use 'hg unhide' to make commits visible first)

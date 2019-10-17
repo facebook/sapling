@@ -1143,7 +1143,10 @@ def _definedestmap(
             ui.status(_('empty "source" revision set - nothing to rebase\n'))
             return None
         rebaseset = repo.revs("(%ld)::", src)
-        assert rebaseset
+        if not rebaseset:
+            ui.status(_('"source" revision set is invisible - nothing to rebase\n'))
+            ui.status(_("(hint: use 'hg unhide' to make commits visible first)\n"))
+            return None
     else:
         base = scmutil.revrange(repo, [basef or "."])
         if not base:
