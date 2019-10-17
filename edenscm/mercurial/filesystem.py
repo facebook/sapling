@@ -146,11 +146,6 @@ class physicalfilesystem(object):
                 # Repackage it with a False bit to indicate no lookup necessary.
                 yield (changed[0], changed[1], False)
 
-        # Report all the files that need lookup resolution. This is temporary
-        # and will be replaced soon.
-        for fn in lookups:
-            yield (fn, True, True)
-
         auditpath = pathutil.pathauditor(self.root, cached=True)
 
         # Identify files that should exist but were not seen in the walk and
@@ -193,9 +188,15 @@ class physicalfilesystem(object):
                     continue
                 yield (fn, False, False)
             else:
-                changed = self._ischanged(fn, st)
+                changed = self._ischanged(fn, st, lookups)
                 if changed:
-                    yield changed
+                    # Repackage it with a False bit to indicate no lookup necessary.
+                    yield (changed[0], changed[1], False)
+
+        # Report all the files that need lookup resolution. This is temporary
+        # and will be replaced soon.
+        for fn in lookups:
+            yield (fn, True, True)
 
     @util.timefunction("fswalk", 0, "ui")
     def _rustwalk(self, match, listignored=False):
