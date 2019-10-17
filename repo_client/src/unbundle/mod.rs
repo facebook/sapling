@@ -13,9 +13,9 @@ use crate::getbundle_response;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bundle2_resolver::{
-    BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush, PlainBookmarkPush,
-    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
-    PostResolvePushRebase, PushrebaseBookmarkSpec,
+    BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush, NonFastForwardPolicy,
+    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
+    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -105,7 +105,7 @@ fn run_push(
         changegroup_id,
         bookmark_pushes,
         maybe_raw_bundle2_id,
-        allow_non_fast_forward,
+        non_fast_forward_policy,
     } = action;
 
     ({
@@ -124,7 +124,7 @@ fn run_push(
                         repo.clone(),
                         bookmark_push,
                         lca_hint.clone(),
-                        allow_non_fast_forward,
+                        non_fast_forward_policy,
                         bookmark_attrs.clone(),
                         infinitepush_params.clone(),
                     )
@@ -299,7 +299,7 @@ fn run_bookmark_only_pushrebase(
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
         maybe_raw_bundle2_id,
-        allow_non_fast_forward,
+        non_fast_forward_policy,
     } = action;
 
     let part_id = bookmark_push.part_id;
@@ -312,7 +312,7 @@ fn run_bookmark_only_pushrebase(
         repo.clone(),
         bookmark_push,
         lca_hint,
-        allow_non_fast_forward,
+        non_fast_forward_policy,
         bookmark_attrs,
         infinitepush_params,
     )
@@ -589,7 +589,7 @@ fn force_pushrebase(
                 repo.clone(),
                 bookmark_push,
                 lca_hint,
-                true,
+                NonFastForwardPolicy::Allowed,
                 bookmark_attrs,
                 infinitepush_params,
             )
@@ -611,7 +611,7 @@ fn get_bonsai_plain_bookmark_push_future(
     repo: BlobRepo,
     bookmark_push: PlainBookmarkPush<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    allow_non_fast_forward: bool,
+    non_fast_forward_policy: NonFastForwardPolicy,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
 ) -> impl Future<Item = Option<BookmarkPush<ChangesetId>>, Error = Error> {
@@ -623,7 +623,7 @@ fn get_bonsai_plain_bookmark_push_future(
                     ctx,
                     repo,
                     bookmark_attrs,
-                    allow_non_fast_forward,
+                    non_fast_forward_policy,
                     infinitepush_params,
                     bookmark_push,
                     lca_hint,
@@ -693,7 +693,7 @@ fn check_plain_bookmark_push_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
-    allow_non_fast_forward: bool,
+    non_fast_forward_policy: NonFastForwardPolicy,
     infinitepush_params: InfinitepushParams,
     bp: PlainBookmarkPush<ChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
@@ -711,7 +711,8 @@ fn check_plain_bookmark_push_allowed(
     let fastforward_only_bookmark = bookmark_attrs.is_fast_forward_only(&bp.name);
     // only allow non fast forward moves if the pushvar is set and the bookmark does not
     // explicitly block them.
-    let block_non_fast_forward = fastforward_only_bookmark || !allow_non_fast_forward;
+    let block_non_fast_forward =
+        fastforward_only_bookmark || non_fast_forward_policy == NonFastForwardPolicy::Disallowed;
 
     match (bp.old, bp.new) {
         (old, Some(new)) if block_non_fast_forward => {

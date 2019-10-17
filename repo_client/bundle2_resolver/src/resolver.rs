@@ -58,6 +58,22 @@ lazy_static! {
         BookmarkName::new("__pushrebase_donotrebase__").unwrap();
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum NonFastForwardPolicy {
+    Allowed,
+    Disallowed,
+}
+
+impl From<bool> for NonFastForwardPolicy {
+    fn from(allowed: bool) -> Self {
+        if allowed {
+            Self::Allowed
+        } else {
+            Self::Disallowed
+        }
+    }
+}
+
 pub enum BundleResolverError {
     HookError(
         (
@@ -119,7 +135,7 @@ pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_pushes: Vec<PlainBookmarkPush<HgChangesetId>>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    pub allow_non_fast_forward: bool,
+    pub non_fast_forward_policy: NonFastForwardPolicy,
 }
 
 /// Data, needed to perform post-resolve `InfinitePush` action
@@ -127,7 +143,7 @@ pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    pub allow_non_fast_forward: bool,
+    pub non_fast_forward_policy: NonFastForwardPolicy,
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
@@ -144,7 +160,7 @@ pub struct PostResolvePushRebase {
 pub struct PostResolveBookmarkOnlyPushRebase {
     pub bookmark_push: PlainBookmarkPush<HgChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    pub allow_non_fast_forward: bool,
+    pub non_fast_forward_policy: NonFastForwardPolicy,
 }
 
 /// An action to take after the `unbundle` bundle2 was completely resolved
@@ -213,14 +229,17 @@ pub fn resolve(
         .from_err()
         .and_then(
             move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
-                let mut allow_non_fast_forward = false;
-                // check the bypass condition
-                if let Some(ref pushvars) = maybe_pushvars {
-                    allow_non_fast_forward = pushvars
-                        .get("NON_FAST_FORWARD")
-                        .map(|s| s.to_ascii_lowercase())
-                        == Some("true".into());
-                }
+                let non_fast_forward_policy = {
+                    let mut allow_non_fast_forward = false;
+                    // check the bypass condition
+                    if let Some(ref pushvars) = maybe_pushvars {
+                        allow_non_fast_forward = pushvars
+                            .get("NON_FAST_FORWARD")
+                            .map(|s| s.to_ascii_lowercase())
+                            == Some("true".into());
+                    }
+                    NonFastForwardPolicy::from(allow_non_fast_forward)
+                };
 
                 if let Some(commonheads) = maybe_commonheads {
                     if pushkey_next {
@@ -228,7 +247,7 @@ pub fn resolve(
                             ctx,
                             resolver,
                             bundle2,
-                            allow_non_fast_forward,
+                            non_fast_forward_policy,
                             maybe_full_content,
                         )
                         .from_err()
@@ -252,7 +271,7 @@ pub fn resolve(
                         ctx,
                         resolver,
                         bundle2,
-                        allow_non_fast_forward,
+                        non_fast_forward_policy,
                         maybe_full_content,
                         move || pure_push_allowed,
                     )
@@ -268,7 +287,7 @@ fn resolve_push(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
-    allow_non_fast_forward: bool,
+    non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> BoxFuture<PostResolveAction, Error> {
@@ -359,7 +378,7 @@ fn resolve_push(
                             changegroup_id,
                             bookmark_pushes,
                             maybe_raw_bundle2_id,
-                            allow_non_fast_forward,
+                            non_fast_forward_policy,
                         })
                     }
                     AllBookmarkPushes::Inifinitepush(bookmark_push) => {
@@ -367,7 +386,7 @@ fn resolve_push(
                             changegroup_id,
                             bookmark_push,
                             maybe_raw_bundle2_id,
-                            allow_non_fast_forward,
+                            non_fast_forward_policy,
                         })
                     }
                 }
@@ -551,7 +570,7 @@ fn resolve_bookmark_only_pushrebase(
     _ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
-    allow_non_fast_forward: bool,
+    non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
@@ -590,7 +609,7 @@ fn resolve_bookmark_only_pushrebase(
                 PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
                     bookmark_push,
                     maybe_raw_bundle2_id,
-                    allow_non_fast_forward,
+                    non_fast_forward_policy,
                 })
             }
         })

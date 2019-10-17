@@ -17,7 +17,7 @@ mod upload_blobs;
 mod upload_changesets;
 
 pub use resolver::{
-    resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush, PlainBookmarkPush,
-    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
-    PostResolvePushRebase, PushrebaseBookmarkSpec,
+    resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
+    NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
+    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
