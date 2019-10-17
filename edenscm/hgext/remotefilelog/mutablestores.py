@@ -150,12 +150,5 @@ class mutabledatahistorystore(object):
 
         return hpack.getnodeinfo(name, node)
 
-    def getancestors(self, name, node, known=None):
-        hpack = self.getpendingpacks().getmutablehpack(True)
-        if hpack is None:
-            raise KeyError(name, hex(node))
-
-        return hpack.getancestors(name, node, known=known)
-
     def getmetrics(self):
         return {}

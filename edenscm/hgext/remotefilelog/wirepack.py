@@ -163,38 +163,6 @@ class wirepackstore(object):
             raise KeyError((name, hex(node)))
         return {constants.METAKEYFLAG: "", constants.METAKEYSIZE: len(delta)}
 
-    def getancestors(self, name, node, known=None):
-        if known is None:
-            known = set()
-        if node in known:
-            return []
-
-        ancestors = {}
-        seen = set()
-        missing = [(name, node)]
-        while missing:
-            curname, curnode = missing.pop()
-            info = self._history.get((name, node))
-            if info is None:
-                continue
-
-            p1, p2, linknode, copyfrom = info
-            if p1 != nullid and p1 not in known:
-                key = (name if not copyfrom else copyfrom, p1)
-                if key not in seen:
-                    seen.add(key)
-                    missing.append(key)
-            if p2 != nullid and p2 not in known:
-                key = (name, p2)
-                if key not in seen:
-                    seen.add(key)
-                    missing.append(key)
-
-            ancestors[curnode] = (p1, p2, linknode, copyfrom)
-        if not ancestors:
-            raise KeyError((name, hex(node)))
-        return ancestors
-
     def getnodeinfo(self, name, node):
         try:
             return self._history[(name, node)]

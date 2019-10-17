@@ -21,11 +21,10 @@ use tempfile::NamedTempFile;
 
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
-use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
+use crate::historystore::{HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
@@ -294,15 +293,6 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
 }
 
 impl HistoryStore for MutableHistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        AncestorIterator::new(
-            key,
-            |k, _seen| self.get_node_info(k),
-            AncestorTraversal::Partial,
-        )
-        .collect()
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let inner = self.inner.lock();
         Ok(inner
@@ -443,59 +433,6 @@ mod tests {
     }
 
     quickcheck! {
-        fn test_get_ancestors(keys: Vec<(Key, bool)>) -> bool {
-            let mut rng = ChaChaRng::from_seed([0u8; 32]);
-            let tempdir = tempdir().unwrap();
-            let muthistorypack =
-                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-
-            // Insert all the keys, randomly choosing nodes from the already inserted keys
-            let mut chains = HashMap::<Key, Ancestors>::new();
-            chains.insert(Key::default(), Ancestors::new());
-            for &(ref key, ref has_p2) in keys.iter() {
-                let mut p1 = Key::default();
-                let mut p2 = Key::default();
-                let available_parents = chains.keys().map(|k| k.clone()).collect::<Vec<Key>>();
-
-                if !chains.is_empty() {
-                    p1 = available_parents.choose(&mut rng)
-                        .expect("choose p1")
-                        .clone();
-
-                    if *has_p2 {
-                        p2 = available_parents.choose(&mut rng)
-                            .expect("choose p2")
-                            .clone();
-                    }
-                }
-
-                // Insert into the history pack
-                let info = NodeInfo {
-                    parents: [p1.clone(), p2.clone()],
-                    linknode: Node::random(&mut rng),
-                };
-                muthistorypack.add(&key, &info).unwrap();
-
-                // Compute the ancestors for the inserted key
-                let p1_ancestors = chains.get(&p1).expect("get p1 ancestors").clone();
-                let p2_ancestors = chains.get(&p2).expect("get p2 ancestors").clone();
-                let mut ancestors = Ancestors::new();
-                ancestors.extend(p1_ancestors);
-                ancestors.extend(p2_ancestors);
-                ancestors.insert(key.clone(), info.clone());
-                chains.insert(key.clone(), ancestors);
-            }
-
-            for &(ref key, _) in keys.iter() {
-                let in_pack = muthistorypack.get_ancestors(&key).expect("get ancestors").unwrap();
-                if in_pack != chains[&key] {
-                    return false;
-                }
-            }
-
-            true
-        }
-
         fn test_get_node_info(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
             let tempdir = tempdir().unwrap();
             let muthistorypack =

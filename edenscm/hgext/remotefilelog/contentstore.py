@@ -218,31 +218,6 @@ class manifestrevlogstore(object):
             constants.METAKEYSIZE: rl.rawsize(rev),
         }
 
-    def getancestors(self, name, node, known=None):
-        if known is None:
-            known = set()
-        if node in known:
-            return []
-
-        rl = self._revlog(name)
-        ancestors = {}
-        missing = set((node,))
-        for ancrev in rl.ancestors([rl.rev(node)], inclusive=True):
-            ancnode = rl.node(ancrev)
-            missing.discard(ancnode)
-
-            p1, p2 = rl.parents(ancnode)
-            if p1 != nullid and p1 not in known:
-                missing.add(p1)
-            if p2 != nullid and p2 not in known:
-                missing.add(p2)
-
-            linknode = self.repo.changelog.node(rl.linkrev(ancrev))
-            ancestors[rl.node(ancrev)] = (p1, p2, linknode, "")
-            if not missing:
-                break
-        return ancestors
-
     def getnodeinfo(self, name, node):
         cl = self.repo.changelog
         rl = self._revlog(name)

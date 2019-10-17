@@ -15,8 +15,8 @@ use cpython_ext::Bytes;
 use cpython_failure::ResultPyErrExt;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    Ancestors, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta,
-    HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
+    CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta, HistoryPack,
+    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
     IndexedLogHistoryStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
     MutableHistoryPack, MutableHistoryStore,
 };
@@ -319,12 +319,6 @@ py_class!(class historypack |py| {
         Ok(PyBytes::new(py, &path))
     }
 
-    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
-        let _known = known;
-        let store = self.store(py);
-        store.get_ancestors_py(py, name, node)
-    }
-
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
@@ -356,11 +350,6 @@ py_class!(class historypackstore |py| {
         };
 
         historypackstore::create_instance(py, Box::new(HistoryPackStore::new(&path, corruption_policy)), path)
-    }
-
-    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
-        let _known = known;
-        self.store(py).get_ancestors_py(py, name, node)
     }
 
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
@@ -461,12 +450,6 @@ py_class!(class indexedloghistorystore |py| {
     def repair(path: &PyBytes) -> PyResult<Bytes> {
         let path = encoding::local_bytes_to_path(path.data(py)).map_pyerr::<exc::TypeError>(py)?;
         IndexedLogHistoryStore::repair(path).map_pyerr::<exc::IOError>(py).map(|s| Bytes::from(s))
-    }
-
-    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
-        let _known = known;
-        let store = self.store(py);
-        store.get_ancestors_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -647,12 +630,6 @@ py_class!(pub class mutablehistorystore |py| {
         store.flush_py(py)
     }
 
-    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<PyObject>) -> PyResult<PyDict> {
-        let _known = known;
-        let store = self.store(py);
-        store.get_ancestors_py(py, name, node)
-    }
-
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py);
         store.get_node_info_py(py, name, node)
@@ -665,13 +642,6 @@ py_class!(pub class mutablehistorystore |py| {
 });
 
 impl HistoryStore for mutablehistorystore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.store(py).get_ancestors(key)
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

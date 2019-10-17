@@ -35,7 +35,7 @@ mod tests {
 
     use cloned::cloned;
     use futures_ext::FutureExt;
-    use revisionstore::{Ancestors, HistoryPackVersion, MutableHistoryPack, MutableHistoryStore};
+    use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutableHistoryStore};
     use types::{testutil::*, Key, NodeInfo};
 
     fn make_historypack(
@@ -53,9 +53,8 @@ mod tests {
 
     // XXX: we should unify this and historypack.rs
 
-    fn get_nodes() -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
+    fn get_nodes() -> HashMap<Key, NodeInfo> {
         let mut nodes = HashMap::new();
-        let mut ancestor_map = HashMap::new();
 
         let file1 = "a";
         let file2 = "a/b";
@@ -67,9 +66,6 @@ mod tests {
             linknode: node("101"),
         };
         nodes.insert(key1.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key1.clone(), info.clone());
-        ancestor_map.insert(key1.clone(), ancestors);
 
         // Insert key 2
         let key2 = key(&file2, "3");
@@ -78,9 +74,6 @@ mod tests {
             linknode: node("102"),
         };
         nodes.insert(key2.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key2.clone(), info.clone());
-        ancestor_map.insert(key2.clone(), ancestors);
 
         // Insert key 3
         let key3 = key(&file1, "4");
@@ -89,43 +82,15 @@ mod tests {
             linknode: node("102"),
         };
         nodes.insert(key3.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key3.clone(), info.clone());
-        ancestors.extend(ancestor_map.get(&key2).unwrap().clone());
-        ancestors.extend(ancestor_map.get(&key1).unwrap().clone());
-        ancestor_map.insert(key3.clone(), ancestors);
 
-        (nodes, ancestor_map)
-    }
-
-    #[test]
-    fn test_get_ancestors() {
-        let tempdir = TempDir::new().unwrap();
-
-        let (nodes, ancestors) = get_nodes();
-
-        let mut work = make_historypack(&tempdir, &nodes).boxify();
-        for (key, _) in nodes.iter() {
-            cloned!(key, ancestors);
-            work = work
-                .and_then(move |historypack| {
-                    historypack.get_ancestors(&key).map(move |response| {
-                        assert_eq!(&response.unwrap(), ancestors.get(&key).unwrap());
-                        historypack
-                    })
-                })
-                .boxify();
-        }
-
-        let mut runtime = Runtime::new().unwrap();
-        runtime.block_on(work).expect("get_ancestors failed");
+        nodes
     }
 
     #[test]
     fn test_get_node_info() {
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes();
+        let nodes = get_nodes();
 
         let mut work = make_historypack(&tempdir, &nodes).boxify();
         for (key, info) in nodes.iter() {

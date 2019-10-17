@@ -7,7 +7,7 @@ use failure::{format_err, Fallible};
 use types::{Key, NodeInfo};
 
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
-use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
+use crate::historystore::{HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
@@ -128,16 +128,6 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
 }
 
 impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        for store in self.stores.iter() {
-            if let Some(ancestors) = store.get_ancestors(key)? {
-                return Ok(Some(ancestors));
-            }
-        }
-
-        Ok(None)
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         for store in self.stores.iter() {
             if let Some(nodeinfo) = store.get_node_info(key)? {

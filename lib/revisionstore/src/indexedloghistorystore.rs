@@ -23,8 +23,7 @@ use types::{
 };
 
 use crate::{
-    ancestors::{AncestorIterator, AncestorTraversal},
-    historystore::{Ancestors, HistoryStore, MutableHistoryStore},
+    historystore::{HistoryStore, MutableHistoryStore},
     localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
@@ -231,15 +230,6 @@ impl LocalStore for IndexedLogHistoryStore {
 }
 
 impl HistoryStore for IndexedLogHistoryStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        AncestorIterator::new(
-            key,
-            |k, _seen| self.get_node_info(k),
-            AncestorTraversal::Partial,
-        )
-        .collect()
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let inner = self.inner.read().unwrap();
         let entry = match Entry::from_log(key, &inner.log)? {
@@ -332,31 +322,12 @@ mod tests {
     }
 
     #[test]
-    fn test_add_get_ancestors() -> Fallible<()> {
-        let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
-
-        let (nodes, ancestors) = get_nodes(&mut rng);
-        for (key, info) in nodes.iter() {
-            log.add(&key, &info)?;
-        }
-
-        for (key, _) in nodes.iter() {
-            log.get_node_info(&key)?;
-            let response = log.get_ancestors(&key)?;
-            assert_eq!(response.as_ref(), ancestors.get(&key));
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_corrupted() -> Fallible<()> {
         let tempdir = TempDir::new()?;
         let log = IndexedLogHistoryStore::new(&tempdir)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }

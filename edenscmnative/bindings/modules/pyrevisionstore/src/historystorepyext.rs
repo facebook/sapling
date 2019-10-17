@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{
-    PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
+    PyBytes, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
 use failure::Fallible;
@@ -17,7 +17,6 @@ use crate::pythonutil::{
 };
 
 pub trait HistoryStorePyExt {
-    fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
 }
@@ -41,23 +40,6 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
 }
 
 impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
-    fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        let key = to_key(py, name, node)?;
-        let ancestors = self
-            .get_ancestors(&key)
-            .map_err(|e| to_pyerr(py, &e))?
-            .ok_or_else(|| key_error(py, &key))?;
-
-        let ancestors = ancestors
-            .iter()
-            .map(|(k, v)| (PyBytes::new(py, k.node.as_ref()), from_node_info(py, k, v)));
-        let pyancestors = PyDict::new(py);
-        for (node, value) in ancestors {
-            pyancestors.set_item(py, node, value)?;
-        }
-        Ok(pyancestors)
-    }
-
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.

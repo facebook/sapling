@@ -52,15 +52,6 @@ class historypackstore(basepack.basepackstore):
     def getpack(self, path):
         return revisionstore.historypack(path)
 
-    def getancestors(self, name, node, known=None):
-        def func(pack):
-            return pack.getancestors(name, node, known=known)
-
-        for ancestors in self.runonpacks(func):
-            return ancestors
-
-        raise KeyError((name, hex(node)))
-
     def getnodeinfo(self, name, node):
         def func(pack):
             return pack.getnodeinfo(name, node)
@@ -103,14 +94,6 @@ class memhistorypack(object):
                 if node not in filehistory:
                     missing.append((name, node))
         return missing
-
-    def getancestors(self, name, node, known=None):
-        ancestors = {}
-        try:
-            ancestors[node] = self.history[name][node]
-        except KeyError:
-            raise KeyError((name, node))
-        return ancestors
 
     def getnodeinfo(self, name, node):
         try:

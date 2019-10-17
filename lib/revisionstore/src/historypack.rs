@@ -95,9 +95,8 @@ use memmap::{Mmap, MmapOptions};
 use types::{Key, Node, NodeInfo, RepoPath, RepoPathBuf};
 use util::path::remove_file;
 
-use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
-use crate::historystore::{Ancestors, HistoryStore};
+use crate::historystore::HistoryStore;
 use crate::localstore::LocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
@@ -328,15 +327,6 @@ impl HistoryPack {
 }
 
 impl HistoryStore for HistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        AncestorIterator::new(
-            key,
-            |k, _seen| self.get_node_info(k),
-            AncestorTraversal::Partial,
-        )
-        .collect()
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         let node_location = match self.index.get_node_entry(key)? {
             None => return Ok(None),
@@ -479,7 +469,7 @@ pub mod tests {
         HistoryPack::new(&path).unwrap()
     }
 
-    pub fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
+    pub fn get_nodes(mut rng: &mut ChaChaRng) -> HashMap<Key, NodeInfo> {
         let file1 = RepoPath::from_str("path").unwrap();
         let file2 = RepoPath::from_str("path/file").unwrap();
         let null = Node::null_id();
@@ -491,7 +481,6 @@ pub mod tests {
         let node6 = Node::random(&mut rng);
 
         let mut nodes = HashMap::new();
-        let mut ancestor_map = HashMap::new();
 
         // Insert key 1
         let key1 = Key::new(file1.to_owned(), node2.clone());
@@ -503,9 +492,6 @@ pub mod tests {
             linknode: Node::random(&mut rng),
         };
         nodes.insert(key1.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key1.clone(), info.clone());
-        ancestor_map.insert(key1.clone(), ancestors);
 
         // Insert key 2
         let key2 = Key::new(file2.to_owned(), node3.clone());
@@ -517,9 +503,6 @@ pub mod tests {
             linknode: Node::random(&mut rng),
         };
         nodes.insert(key2.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key2.clone(), info.clone());
-        ancestor_map.insert(key2.clone(), ancestors);
 
         // Insert key 3
         let key3 = Key::new(file1.to_owned(), node4.clone());
@@ -528,29 +511,8 @@ pub mod tests {
             linknode: Node::random(&mut rng),
         };
         nodes.insert(key3.clone(), info.clone());
-        let mut ancestors = HashMap::new();
-        ancestors.insert(key3.clone(), info.clone());
-        ancestors.extend(ancestor_map.get(&key2).unwrap().clone());
-        ancestors.extend(ancestor_map.get(&key1).unwrap().clone());
-        ancestor_map.insert(key3.clone(), ancestors);
 
-        (nodes, ancestor_map)
-    }
-
-    #[test]
-    fn test_get_ancestors() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let tempdir = TempDir::new().unwrap();
-
-        let (nodes, ancestors) = get_nodes(&mut rng);
-
-        let pack = make_historypack(&tempdir, &nodes);
-
-        for (ref key, _) in nodes.iter() {
-            pack.get_node_info(key).unwrap();
-            let response: Ancestors = pack.get_ancestors(key).unwrap().unwrap();
-            assert_eq!(&response, ancestors.get(key).unwrap());
-        }
+        nodes
     }
 
     #[test]
@@ -558,7 +520,7 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
 
@@ -573,7 +535,7 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
 
@@ -590,7 +552,7 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
 
@@ -610,7 +572,7 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
 
         let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {

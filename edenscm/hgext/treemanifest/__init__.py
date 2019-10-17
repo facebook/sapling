@@ -2556,11 +2556,6 @@ class generatingdatastore(object):
     def getmetrics(self):
         return {}
 
-    def getancestors(self, name, node, known=None):
-        with self._generating(name, node):
-            self._generatetrees(name, node)
-            return self._sharedhistory.getancestors(name, node, known=known)
-
     def getnodeinfo(self, name, node):
         with self._generating(name, node):
             self._generatetrees(name, node)
@@ -2845,9 +2840,6 @@ class cachestorecommon(object):
         )
 
     ########### APIS ###########################################
-
-    def getancestors(self, name, node, known=None):
-        return self.store.getancestors(name, node, known=known)
 
     def getnodeinfo(self, name, node):
         key = self._key(name, node, "nodeinfo")

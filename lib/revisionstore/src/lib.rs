@@ -2,7 +2,6 @@
 //! revisionstore - Data and history store for generic revision data (usually commit, manifest,
 //! and file data)
 
-mod ancestors;
 mod contentstore;
 mod dataindex;
 mod edenapi;
@@ -34,7 +33,7 @@ pub use crate::contentstore::ContentStore;
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
-pub use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
+pub use crate::historystore::{HistoryStore, MutableHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHistoryStore;
 pub use crate::localstore::LocalStore;

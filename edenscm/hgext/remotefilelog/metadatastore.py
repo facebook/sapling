@@ -121,10 +121,6 @@ class remotemetadatastore(object):
             [(name, hex(node))], force=True, fetchdata=False, fetchhistory=True
         )
 
-    def getancestors(self, name, node, known=None):
-        self._prefetch(name, node)
-        return self._shared.getancestors(name, node, known=known)
-
     def getnodeinfo(self, name, node):
         self._prefetch(name, node)
         return self._shared.getnodeinfo(name, node)

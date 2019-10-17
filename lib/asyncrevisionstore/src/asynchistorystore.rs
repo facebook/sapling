@@ -5,7 +5,7 @@ use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{Ancestors, HistoryStore, ToKeys};
+use revisionstore::{HistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::util::AsyncWrapper;
@@ -20,15 +20,6 @@ impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
         AsyncHistoryStore {
             history: AsyncWrapper::new(store),
         }
-    }
-
-    /// Asynchronously call the HistoryStore::get_ancestors method.
-    pub fn get_ancestors(
-        &self,
-        key: &Key,
-    ) -> impl Future<Item = Option<Ancestors>, Error = Error> + Send {
-        cloned!(key);
-        self.history.block(move |store| store.get_ancestors(&key))
     }
 
     /// Asynchronously call the HistoryStore::get_missing method.

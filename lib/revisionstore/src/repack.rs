@@ -258,7 +258,6 @@ mod tests {
     use crate::datapack::tests::make_datapack;
     use crate::datastore::Delta;
     use crate::historypack::tests::{get_nodes, make_historypack};
-    use crate::historystore::Ancestors;
 
     #[test]
     fn test_repack_no_datapack() {
@@ -432,7 +431,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, ancestors) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
         let newpath =
@@ -441,8 +440,8 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
         for (ref key, _) in nodes.iter() {
-            let response: Ancestors = newpack.get_ancestors(key).unwrap().unwrap();
-            assert_eq!(&response, ancestors.get(key).unwrap());
+            let response = newpack.get_node_info(key).unwrap().unwrap();
+            assert_eq!(&response, nodes.get(key).unwrap());
         }
     }
 
@@ -450,16 +449,14 @@ mod tests {
     fn test_repack_multiple_historypack() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
-        let mut ancestors = HashMap::new();
         let mut nodes = HashMap::new();
         let mut paths = Vec::new();
 
         for _ in 0..2 {
-            let (node, ancestor) = get_nodes(&mut rng);
+            let node = get_nodes(&mut rng);
             let pack = make_historypack(&tempdir, &node);
             let path = pack.base_path().to_path_buf();
 
-            ancestors.extend(ancestor.into_iter());
             nodes.extend(node.into_iter());
             paths.push(path);
         }
@@ -469,8 +466,8 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
-            let response = newpack.get_ancestors(&key).unwrap().unwrap();
-            assert_eq!(&response, ancestors.get(key).unwrap());
+            let response = newpack.get_node_info(&key).unwrap().unwrap();
+            assert_eq!(&response, nodes.get(key).unwrap());
         }
     }
 }

@@ -19,7 +19,7 @@ use types::{Key, NodeInfo};
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
-use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
+use crate::historystore::{HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
@@ -356,10 +356,6 @@ impl DataStore for DataPackStore {
 }
 
 impl HistoryStore for HistoryPackStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        self.inner.lock().run(|store| store.get_ancestors(key))
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         self.inner.lock().run(|store| store.get_node_info(key))
     }
@@ -466,10 +462,6 @@ impl MutableHistoryPackStore {
 }
 
 impl HistoryStore for MutableHistoryPackStore {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Option<Ancestors>> {
-        self.inner.union_store.get_ancestors(key)
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
         self.inner.union_store.get_node_info(key)
     }
@@ -657,7 +649,7 @@ mod tests {
         let tempdir = TempDir::new()?;
         let store = HistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
         make_historypack(&tempdir, &nodes);
         for (key, info) in nodes.iter() {
             let response: NodeInfo = store.get_node_info(key)?.unwrap();
@@ -842,7 +834,7 @@ mod tests {
         let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
         for (key, info) in &nodes {
             packstore.add(key, info)?;
         }
@@ -860,7 +852,7 @@ mod tests {
         let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let (nodes, _) = get_nodes(&mut rng);
+        let nodes = get_nodes(&mut rng);
         for (key, info) in &nodes {
             packstore.add(key, info)?;
         }
