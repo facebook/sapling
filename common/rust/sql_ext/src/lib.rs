@@ -19,6 +19,7 @@ use tokio_timer::sleep;
 
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection, Transaction};
 
+#[derive(Clone)]
 pub struct SqlConnections {
     pub write_connection: Connection,
     pub read_connection: Connection,

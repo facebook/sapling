@@ -6,7 +6,7 @@
  * directory of this source tree.
  */
 
-use bookmarks::{BookmarkUpdateReason, Bookmarks};
+use bookmarks::{BookmarkUpdateReason, Bookmarks, Freshness};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
@@ -269,6 +269,7 @@ pub fn subcommand_process_hg_sync(
                                     id as u64,
                                     repo_id,
                                     limit,
+                                    Freshness::MostRecent,
                                 )
                             }
                         })
@@ -324,7 +325,13 @@ pub fn subcommand_process_hg_sync(
             bookmarks
                 .and_then(move |bookmarks| {
                     bookmarks
-                        .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1)
+                        .read_next_bookmark_log_entries(
+                            ctx.clone(),
+                            id - 1,
+                            repo_id,
+                            1,
+                            Freshness::MostRecent,
+                        )
                         .into_future()
                         .map(|(entry, _)| entry)
                         .map_err(|(err, _)| err)

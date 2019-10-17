@@ -552,10 +552,17 @@ impl Bookmarks for SqlBookmarks {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
+        freshness: Freshness,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
+        let connection = if freshness == Freshness::MostRecent {
+            &self.read_master_connection
+        } else {
+            &self.read_connection
+        };
+
+        ReadNextBookmarkLogEntries::query(&connection, &id, &repoid, &limit)
             .map(|entries| {
                 stream::iter_ok(entries.into_iter()).and_then(|entry| {
                     let (

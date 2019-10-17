@@ -351,6 +351,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
+        freshness: Freshness,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error>;
 
     /// Same as `read_next_bookmark_log_entries`, but limits the stream of returned entries

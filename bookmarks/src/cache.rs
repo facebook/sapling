@@ -287,9 +287,10 @@ impl Bookmarks for CachedBookmarks {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
+        freshness: Freshness,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
         self.bookmarks
-            .read_next_bookmark_log_entries(ctx, id, repoid, limit)
+            .read_next_bookmark_log_entries(ctx, id, repoid, limit, freshness)
     }
 
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
@@ -576,6 +577,7 @@ mod tests {
             _id: u64,
             _repoid: RepositoryId,
             _limit: u64,
+            _freshness: Freshness,
         ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
             unimplemented!()
         }

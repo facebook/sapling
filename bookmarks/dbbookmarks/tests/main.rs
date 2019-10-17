@@ -87,7 +87,7 @@ fn test_simple_unconditional_set_get(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -212,7 +212,7 @@ fn test_simple_create(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -461,7 +461,7 @@ fn test_simple_update_bookmark(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -542,7 +542,7 @@ fn test_infinitepush_update_bookmark(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -659,7 +659,7 @@ fn test_force_delete(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 2, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 2, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -723,7 +723,7 @@ fn test_delete(fb: FacebookInit) {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap(),
@@ -952,7 +952,7 @@ fn test_create_different_repos(fb: FacebookInit) {
 fn fetch_single(fb: FacebookInit, bookmarks: &SqlBookmarks, id: u64) -> BookmarkUpdateLogEntry {
     let ctx = CoreContext::test_mock(fb);
     bookmarks
-        .read_next_bookmark_log_entries(ctx, id, REPO_ZERO, 1)
+        .read_next_bookmark_log_entries(ctx, id, REPO_ZERO, 1, Freshness::MostRecent)
         .collect()
         .wait()
         .unwrap()
@@ -1067,7 +1067,7 @@ fn test_log_correct_order(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 4)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 4, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()
@@ -1077,7 +1077,7 @@ fn test_log_correct_order(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 8)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 8, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()
@@ -1086,7 +1086,7 @@ fn test_log_correct_order(fb: FacebookInit) {
     );
 
     let entries = bookmarks
-        .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 6)
+        .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 6, Freshness::MostRecent)
         .collect()
         .wait()
         .unwrap();
@@ -1198,7 +1198,7 @@ fn test_read_log_entry_many_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()
@@ -1208,7 +1208,7 @@ fn test_read_log_entry_many_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ONE, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ONE, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()
@@ -1218,7 +1218,7 @@ fn test_read_log_entry_many_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()
@@ -1228,7 +1228,7 @@ fn test_read_log_entry_many_repos(fb: FacebookInit) {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_TWO, 1)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_TWO, 1, Freshness::MostRecent)
             .collect()
             .wait()
             .unwrap()

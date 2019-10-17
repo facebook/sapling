@@ -569,9 +569,10 @@ impl BlobRepo {
         ctx: CoreContext,
         id: u64,
         limit: u64,
+        freshness: Freshness,
     ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
         self.bookmarks
-            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit)
+            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
     }
 
     /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
