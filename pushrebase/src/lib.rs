@@ -213,13 +213,7 @@ pub fn do_pushrebase_bonsai(
             move |(head, root)| {
                 // Calculate client changed files only once, since they won't change
                 (
-                    find_changed_files(
-                        ctx.clone(),
-                        &repo,
-                        root,
-                        head,
-                        /* reject_merges */ false,
-                    ),
+                    find_changed_files(ctx.clone(), &repo, root, head),
                     fetch_bonsai_range(ctx.clone(), &repo, root, head),
                 )
                     .into_future()
@@ -287,7 +281,6 @@ fn rebase_in_loop(
                                 &repo,
                                 latest_rebase_attempt.clone(),
                                 bookmark_val.unwrap_or(root),
-                                /* reject_merges */ true,
                             )
                         }
                     })
@@ -478,56 +471,51 @@ fn find_closest_ancestor_root(
 ) -> BoxFuture<ChangesetId, PushrebaseError> {
     let mut queue = VecDeque::new();
     queue.push_back(onto_bookmark_cs_id);
-    loop_fn((queue, 0), move |(mut queue, depth)| {
-        if depth >= config.recursion_limit {
-            return err(PushrebaseError::RootTooFarBehind).boxify();
-        }
-        match queue.pop_front() {
-            None => err(PushrebaseError::Error(
-                ErrorKind::PushrebaseNoCommonRoot(
-                    bookmark.clone(),
-                    roots.keys().cloned().collect(),
-                )
-                .into(),
-            ))
-            .boxify(),
-            Some(id) => match roots.get(&id) {
-                Some(index) => {
-                    if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), id)
-                            .from_err()
-                            .and_then({
-                                cloned!(bookmark);
-                                move |hgcs| {
-                                    err(PushrebaseError::Error(
-                                        ErrorKind::P2RootRebaseForbidden(hgcs, bookmark).into(),
-                                    ))
-                                }
-                            })
-                            .boxify()
-                    } else {
-                        ok(Loop::Break(id)).boxify()
+    loop_fn(
+        (queue, HashSet::new(), 0),
+        move |(mut queue, mut visited, depth)| {
+            if depth >= config.recursion_limit {
+                return err(PushrebaseError::RootTooFarBehind).boxify();
+            }
+            match queue.pop_front() {
+                None => err(PushrebaseError::Error(
+                    ErrorKind::PushrebaseNoCommonRoot(
+                        bookmark.clone(),
+                        roots.keys().cloned().collect(),
+                    )
+                    .into(),
+                ))
+                .boxify(),
+                Some(id) => match roots.get(&id) {
+                    Some(index) => {
+                        if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
+                            repo.get_hg_from_bonsai_changeset(ctx.clone(), id)
+                                .from_err()
+                                .and_then({
+                                    cloned!(bookmark);
+                                    move |hgcs| {
+                                        err(PushrebaseError::Error(
+                                            ErrorKind::P2RootRebaseForbidden(hgcs, bookmark).into(),
+                                        ))
+                                    }
+                                })
+                                .boxify()
+                        } else {
+                            ok(Loop::Break(id)).boxify()
+                        }
                     }
-                }
-                None => repo
-                    .get_changeset_parents_by_bonsai(ctx.clone(), id)
-                    .from_err()
-                    .and_then(move |parents| {
-                        match parents.as_slice() {
-                            [] => (),
-                            [parent] => {
-                                queue.push_back(*parent);
-                            }
-                            _ => {
-                                return err(PushrebaseError::RebaseOverMerge);
-                            }
-                        };
-                        ok(Loop::Continue((queue, depth + 1)))
-                    })
-                    .boxify(),
-            },
-        }
-    })
+                    None => repo
+                        .get_changeset_parents_by_bonsai(ctx.clone(), id)
+                        .from_err()
+                        .map(move |parents| {
+                            queue.extend(parents.into_iter().filter(|p| visited.insert(*p)));
+                            Loop::Continue((queue, visited, depth + 1))
+                        })
+                        .boxify(),
+                },
+            }
+        },
+    )
     .boxify()
 }
 
@@ -595,7 +583,6 @@ fn find_changed_files(
     repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-    reject_merges: bool,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
     cloned!(repo);
     RangeNodeStream::new(
@@ -624,9 +611,6 @@ fn find_changed_files(
                 match *parents {
                     [] | [_] => ok(extract_conflict_files_from_bonsai_changeset(bcs)).left_future(),
                     [p0_id, p1_id] => {
-                        if reject_merges {
-                            return err(PushrebaseError::RebaseOverMerge).left_future();
-                        }
                         match (ids.get(&p0_id), ids.get(&p1_id)) {
                             (Some(_), Some(_)) => {
                                 // both parents are in the rebase set, so we can just take
@@ -1000,12 +984,12 @@ mod tests {
     use super::*;
     use failure::err_msg;
     use fbinit::FacebookInit;
-    use fixtures::{linear, many_files_dirs};
+    use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
-    use std::str::FromStr;
+    use std::{collections::BTreeMap, str::FromStr};
     use tests_utils::{create_commit, create_commit_with_date, store_files, store_rename};
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
@@ -1115,7 +1099,7 @@ mod tests {
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2, false)
+                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2)
                     .wait()
                     .unwrap(),
                 make_paths(&["file", "file2"]),
@@ -1185,7 +1169,7 @@ mod tests {
             let bcs_id_2 = create_commit(ctx.clone(), repo.clone(), vec![bcs_id_1], file_changes);
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2, false)
+                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2)
                     .wait()
                     .unwrap(),
                 make_paths(&["file", "file_renamed"]),
@@ -1313,7 +1297,7 @@ mod tests {
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo, root, bcs_id_3, false)
+                find_changed_files(ctx.clone(), &repo, root, bcs_id_3)
                     .wait()
                     .unwrap(),
                 make_paths(&["f0", "f1", "f2"]),
@@ -2381,5 +2365,190 @@ mod tests {
             do_pushrebase(ctx, repo, config_allow_p2, book, hgcss, None),
         )
         .expect("push-rebase failed");
+    }
+
+    #[fbinit::test]
+    fn pushrebase_over_merge(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let p1 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+            store_files(
+                ctx.clone(),
+                btreemap! {"p1" => Some("some content")},
+                repo.clone(),
+            ),
+        );
+
+        let p2 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+            store_files(
+                ctx.clone(),
+                btreemap! {"p2" => Some("some content")},
+                repo.clone(),
+            ),
+        );
+
+        let merge = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![p1, p2],
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge" => Some("some content")},
+                repo.clone(),
+            ),
+        );
+
+        let book = master_bookmark();
+
+        let merge_hg_cs_id = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), merge)
+            .wait()?;
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            &format!("{}", merge_hg_cs_id),
+        );
+
+        let push_and_verify = {
+            cloned!(ctx, repo, p1);
+            move |content: BTreeMap<&str, Option<&str>>, should_succeed: bool| {
+                let cs_id = create_commit(
+                    ctx.clone(),
+                    repo.clone(),
+                    vec![p1],
+                    store_files(ctx.clone(), content, repo.clone()),
+                );
+
+                let hgcss = vec![repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .wait()
+                    .unwrap()];
+
+                let res = do_pushrebase(
+                    ctx.clone(),
+                    repo.clone(),
+                    PushrebaseParams::default(),
+                    book.clone(),
+                    hgcss,
+                    None,
+                )
+                .wait();
+
+                if should_succeed {
+                    assert!(res.is_ok());
+                } else {
+                    should_have_conflicts(res);
+                }
+            }
+        };
+
+        // Modify a file touched in another branch - should fail
+        push_and_verify(btreemap! {"p2" => Some("some content")}, false);
+        // Modify a file modified in th merge commit - should fail
+        push_and_verify(btreemap! {"merge" => Some("some content")}, false);
+        // Any other files should succeed
+        push_and_verify(btreemap! {"p1" => Some("some content")}, true);
+        push_and_verify(btreemap! {"otherfile" => Some("some content")}, true);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn pushrebase_over_merge_even(fb: FacebookInit) -> Result<()> {
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        let ctx = CoreContext::test_mock(fb);
+        let repo = merge_even::getrepo(fb);
+
+        // 4dcf230cd2f20577cb3e88ba52b73b376a2b3f69 - is a merge commit,
+        // 3cda5c78aa35f0f5b09780d971197b51cad4613a is one of the ancestors
+        let root = run_future(
+            &mut runtime,
+            repo.get_bonsai_from_hg(
+                ctx.clone(),
+                HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a").unwrap(),
+            ),
+        )?
+        .unwrap();
+
+        // Modifies the same file "branch" - pushrebase should fail because of conflicts
+        let bcs_id_should_fail = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![root],
+            store_files(
+                ctx.clone(),
+                btreemap! {"branch" => Some("some content")},
+                repo.clone(),
+            ),
+        );
+
+        let bcs_id_should_succeed = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![root],
+            store_files(
+                ctx.clone(),
+                btreemap! {"randomfile" => Some("some content")},
+                repo.clone(),
+            ),
+        );
+
+        let book = master_bookmark();
+
+        let hgcss = vec![run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail),
+        )?];
+
+        let res = do_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            PushrebaseParams::default(),
+            book.clone(),
+            hgcss,
+            None,
+        )
+        .wait();
+
+        should_have_conflicts(res);
+        let hgcss = vec![run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed),
+        )?];
+
+        do_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            PushrebaseParams::default(),
+            book,
+            hgcss,
+            None,
+        )
+        .wait()
+        .expect("pushrebase should have been successful!");
+
+        Ok(())
+    }
+
+    fn should_have_conflicts(res: ::std::result::Result<PushrebaseSuccessResult, PushrebaseError>) {
+        match res {
+            Err(err) => match err {
+                PushrebaseError::Conflicts(_) => {}
+                _ => {
+                    panic!("pushrebase should have had conflicts");
+                }
+            },
+            Ok(_) => {
+                panic!("pushrebase should have failed");
+            }
+        }
     }
 }

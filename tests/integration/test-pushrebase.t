@@ -63,8 +63,6 @@ Pushrebase commit 1
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
-TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
-
   $ hgmn up master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log -r ":"
@@ -268,21 +266,10 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  A [public;rev=0;426bada5c675]
   
 
-Push-Rebase over merge is not allowed
+Previously commits below were testing pushrebasing over merge.
+Keep them in place to not change the output for all the tests below
   $ hgmn up 11 -q
   $ echo 8 > 8 && hg add 8 && hg ci -m 8
-  $ hgmn push -r . --to master_bookmark
-  pushing rev e0f0824ca6a6 to destination ssh://user@dummy/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     pushrebase failed RebaseOverMerge
-  remote:   Root cause:
-  remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed RebaseOverMerge",
-  remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
   $ hgmn up master_bookmark -q
 
 Push-rebase of a commit with p2 being the ancestor of the destination bookmark
