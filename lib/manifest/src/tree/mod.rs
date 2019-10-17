@@ -569,6 +569,19 @@ pub fn compat_subtree_diff(
     Ok(state.result)
 }
 
+/// Recursively prefetch the entire subtree under the given Key up to the given depth.
+////
+/// This serves as a client-driven alternative to the `gettreepack` wire protocol
+/// command (wherein the server determines which missing tree nodes to send).
+///
+/// Determining which missing nodes to fetch on the client side, as this function does,
+/// may be faster in some cases since any nodes that are already present on the client
+/// will be by definition fast to access, whereas the server would effectively be forced
+/// to fetch the desired tree and the base tree from its underlying datastore. This comes
+/// at the expense of an increased number of network roundtrips to the server (specifically,
+/// O(depth) requests will be sent serially), which may be problematic if there is high
+/// network latency between the server and client. As such, this function's performance
+/// relative to `gettreepack` is highly dependent on the situation in question.
 pub fn prefetch(
     store: Arc<dyn TreeStore + Send + Sync>,
     key: Key,
@@ -580,6 +593,8 @@ pub fn prefetch(
     while !dirs.is_empty() {
         let keys = dirs.iter().filter_map(|d| d.key()).collect::<Vec<_>>();
         if !keys.is_empty() {
+            // Note that the prefetch() function is expected to filter out
+            // keys that are already present in the client's cache.
             tree.store.prefetch(keys)?;
         }
 
