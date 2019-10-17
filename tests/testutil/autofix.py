@@ -37,7 +37,11 @@ def eq(actual, expected, nested=0, eqfunc=None, fixfunc=None):
     start col), (end line, end col)), code)` if it can.
     """
     # For strings. Remove leading spaces and compare them again.
-    if isinstance(actual, str) and isinstance(expected, str) and "\n" in expected:
+    if (
+        isinstance(actual, str)
+        and isinstance(expected, str)
+        and "\n" in (actual + expected)
+    ):
         multiline = True
         actual = _removeindent(actual.replace("\t", " ")).strip()
         expected = _removeindent(expected.replace("\t", " ")).strip()
