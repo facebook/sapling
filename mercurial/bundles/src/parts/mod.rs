@@ -34,6 +34,8 @@ use scuba_ext::ScubaSampleBuilderExt;
 use std::fmt;
 use std::io::Write;
 
+pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>);
+
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
     N: Into<Bytes>,
@@ -88,15 +90,7 @@ where
 
 pub fn changegroup_part<CS>(
     changelogentries: CS,
-    filenodeentries: Option<
-        BoxStream<
-            (
-                MPath,
-                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
-            ),
-            Error,
-        >,
-    >,
+    filenodeentries: Option<BoxStream<(MPath, Vec<FilenodeEntry>), Error>>,
     version: CgVersion,
 ) -> Result<PartEncodeBuilder>
 where
@@ -145,14 +139,7 @@ pub fn pushrebase_changegroup_part<CS, FS>(
 ) -> Result<PartEncodeBuilder>
 where
     CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
-    FS: Stream<
-            Item = (
-                MPath,
-                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
-            ),
-            Error = Error,
-        > + Send
-        + 'static,
+    FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xRebase)?;
     builder.add_mparam("onto", onto_bookmark.as_ref())?;
@@ -215,14 +202,7 @@ fn convert_file_stream<FS>(
     cg_version: CgVersion,
 ) -> impl Stream<Item = Part, Error = Error>
 where
-    FS: Stream<
-            Item = (
-                MPath,
-                Vec<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>)>,
-            ),
-            Error = Error,
-        > + Send
-        + 'static,
+    FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
 {
     filenodeentries
         .map(move |(path, nodes)| {
