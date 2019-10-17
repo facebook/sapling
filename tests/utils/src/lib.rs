@@ -20,9 +20,9 @@ use mononoke_types::{
 };
 use std::collections::BTreeMap;
 
-pub fn store_files(
+pub fn store_files<T: AsRef<str>>(
     ctx: CoreContext,
-    files: BTreeMap<&str, Option<&str>>,
+    files: BTreeMap<&str, Option<T>>,
     repo: BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
     let mut res = btreemap! {};
@@ -31,6 +31,7 @@ pub fn store_files(
         let path = MPath::new(path).unwrap();
         match content {
             Some(content) => {
+                let content = content.as_ref();
                 let size = content.len();
                 let content = FileContents::new_bytes(Bytes::from(content));
                 let content_id = content

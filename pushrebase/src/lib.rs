@@ -1473,7 +1473,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_1],
-                store_files(ctx.clone(), btreemap! {"FILE" => None}, repo.clone()),
+                store_files::<String>(ctx.clone(), btreemap! {"FILE" => None}, repo.clone()),
             );
             let bcs_id_3 = create_commit(
                 ctx.clone(),
@@ -1593,7 +1593,7 @@ mod tests {
                     vec![head],
                     store_files(
                         ctx.clone(),
-                        btreemap! {file.as_ref() => Some(content.as_ref())},
+                        btreemap! {file.as_ref() => Some(content)},
                         repo.clone(),
                     ),
                 );

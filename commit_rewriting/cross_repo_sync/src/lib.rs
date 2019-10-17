@@ -211,18 +211,18 @@ impl CommitSyncRepos {
     }
 }
 
-pub fn upload_rewritten_commits_compat(
+pub fn upload_commits_compat(
     ctx: CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
-    upload_rewritten_commits(ctx, rewritten_list, source_repo, target_repo)
+    upload_commits(ctx, rewritten_list, source_repo, target_repo)
         .boxed()
         .compat()
 }
 
-pub async fn upload_rewritten_commits(
+pub async fn upload_commits(
     ctx: CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
     source_repo: BlobRepo,
@@ -383,7 +383,7 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
             // Sync commit
             let frozen = rewritten.freeze()?;
             let rewritten_list = vec![frozen];
-            upload_rewritten_commits(
+            upload_commits(
                 ctx.clone(),
                 rewritten_list.clone(),
                 source_repo.clone(),
