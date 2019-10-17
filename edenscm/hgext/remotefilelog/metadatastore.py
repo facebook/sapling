@@ -62,9 +62,7 @@ class unionmetadatastore(object):
         while missing:
             curname, curnode = missing.pop()
             try:
-                ancestors.update(
-                    self._getpartialancestors(curname, curnode, known=known)
-                )
+                ancestors.update({curnode: self.getnodeinfo(curname, curnode)})
                 newmissing = traverse(curname, curnode)
                 missing.extend(newmissing)
             except KeyError:
@@ -77,15 +75,6 @@ class unionmetadatastore(object):
 
         # TODO: ancestors should probably be (name, node) -> (value)
         return ancestors
-
-    def _getpartialancestors(self, name, node, known=None):
-        for store in self.stores:
-            try:
-                return store.getancestors(name, node, known=known)
-            except KeyError:
-                pass
-
-        raise shallowutil.MissingNodesError([(name, node)])
 
     def getnodeinfo(self, name, node):
         for store in self.stores:
