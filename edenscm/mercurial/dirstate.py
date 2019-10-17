@@ -866,6 +866,7 @@ class dirstate(object):
 
         nonnormalset = dmap.nonnormalset
         otherparentset = dmap.otherparentset
+        oldid = self.identity()
 
         # Step 1: Get the files that are different from the clean checkedout p1 tree.
         pendingchanges = self._fs.pendingchanges(match, listignored=listignored)
@@ -1031,7 +1032,7 @@ class dirstate(object):
                 match.bad(path, encoding.strtolocal(ex.strerror))
 
         if not getattr(self._repo, "_insidepoststatusfixup", False):
-            self._poststatusfixup(status, fixup, wctx)
+            self._poststatusfixup(status, fixup, wctx, oldid)
 
         perftrace.tracevalue("A/M/R Files", len(modified) + len(added) + len(removed))
         if len(unknown) > 0:
@@ -1087,7 +1088,7 @@ class dirstate(object):
 
         return modified, deleted, fixup
 
-    def _poststatusfixup(self, status, fixup, wctx):
+    def _poststatusfixup(self, status, fixup, wctx, oldid):
         """update dirstate for files that are actually clean"""
         poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
@@ -1097,8 +1098,6 @@ class dirstate(object):
             # wctx.status()
             self._repo._insidepoststatusfixup = True
             try:
-                oldid = self.identity()
-
                 # Updating the dirstate is optional so we don't wait on the
                 # lock.
                 # wlock can invalidate the dirstate, so cache normal _after_
