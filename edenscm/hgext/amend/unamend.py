@@ -67,6 +67,8 @@ def unamend(ui, repo, **opts):
     # identify the commit to which to unamend
     if mutation.enabled(repo):
         prednodes = curctx.mutationpredecessors()
+        if not prednodes:
+            prednodes = []
     else:
         prednodes = [marker.prednode() for marker in predecessormarkers(curctx)]
 
