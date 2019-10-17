@@ -35,18 +35,18 @@ class physicalfilesystem(object):
         self.mtolog = self.ui.configint("experimental", "samplestatus")
         self.ltolog = self.mtolog
 
-    def _ischanged(self, fn, st):
+    def _ischanged(self, fn, st, lookups):
         try:
             t = self.dirstate._map[fn]
         except KeyError:
             t = ("?", 0, 0, 0)
 
         if st is None:
-            return (fn, False, False)
+            return (fn, False)
 
         state = t[0]
         if state in "a?":
-            return (fn, True, False)
+            return (fn, True)
         elif state in "mnr":
             # 'm' and 'n' states mean the dirstate is tracking the file, so
             # we need to check if it's modified.
@@ -92,27 +92,24 @@ class physicalfilesystem(object):
                         reasons.append("mode changed (%s -> %s)" % (mode, st.st_mode))
                     self.ui.log("status", "M %s: %s" % (fn, ", ".join(reasons)))
 
-                return (fn, True, False)
-            elif time != st.st_mtime and time != st.st_mtime & _rangemask:
+                return (fn, True)
+            elif (
+                time != st.st_mtime and time != st.st_mtime & _rangemask
+            ) or st.st_mtime == self.dirstate._lastnormaltime:
                 if self.ltolog:
                     self.ltolog -= 1
-                    reason = "mtime changed (%s -> %s)" % (time, st.st_mtime)
+                    if st.st_mtime == self.dirstate._lastnormaltime:
+                        reason = "mtime untrusted (%s)" % (st.st_mtime)
+                    else:
+                        reason = "mtime changed (%s -> %s)" % (time, st.st_mtime)
                     self.ui.log("status", "L %s: %s" % (fn, reason))
-                return (fn, True, True)
-            elif st.st_mtime == self.dirstate._lastnormaltime:
-                # fn may have just been marked as normal and it may have
-                # changed in the same second without changing its size.
-                # This can happen if we quickly do multiple commits.
-                # Force lookup, so we don't miss such a racy file change.
-                if self.ltolog:
-                    self.ltolog -= 1
-                    reason = "mtime untrusted (%s)" % (st.st_mtime)
-                    self.ui.log("status", "L %s: %s" % (fn, reason))
-                return (fn, True, True)
+
+                lookups.append(fn)
+                return None
             else:
                 if self.dirstate._istreestate:
                     self.dirstate.clearneedcheck(fn)
-                return None
+                return False
         else:
             raise error.ProgrammingError(
                 "filesystem.walk should not yield state '%s' for '%s'" % (state, fn)
@@ -141,11 +138,18 @@ class physicalfilesystem(object):
         if self.ui.configbool("workingcopy", "enablerustwalker"):
             walkfn = self._rustwalk
 
+        lookups = []
         for fn, st in walkfn(match, listignored):
             seen.add(fn)
-            changed = self._ischanged(fn, st)
+            changed = self._ischanged(fn, st, lookups)
             if changed:
-                yield changed
+                # Repackage it with a False bit to indicate no lookup necessary.
+                yield (changed[0], changed[1], False)
+
+        # Report all the files that need lookup resolution. This is temporary
+        # and will be replaced soon.
+        for fn in lookups:
+            yield (fn, True, True)
 
         auditpath = pathutil.pathauditor(self.root, cached=True)
 

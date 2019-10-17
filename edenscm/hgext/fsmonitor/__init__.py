@@ -888,10 +888,17 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
             match = util.always
 
         self.dirstate._map.preload()
+        lookups = []
         for fn, st in self._fsmonitorwalk(match):
-            changed = self._ischanged(fn, st)
+            changed = self._ischanged(fn, st, lookups)
             if changed:
-                yield changed
+                # Repackage it with a False bit to indicate no lookup necessary.
+                yield (changed[0], changed[1], False)
+
+        # Report all the files that need lookup resolution. This is temporary
+        # and will be replaced soon.
+        for fn in lookups:
+            yield (fn, True, True)
 
     @util.timefunction("fsmonitorwalk", 0, "_ui")
     def _fsmonitorwalk(self, match):
