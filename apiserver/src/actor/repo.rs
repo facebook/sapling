@@ -8,9 +8,9 @@
 
 use std::{
     cmp,
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     convert::{TryFrom, TryInto},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use blobrepo::{file_history::get_file_history, BlobRepo};
@@ -21,7 +21,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use failure::Error;
-use fastlog::{prefetch_history, RootFastlog, RootFastlogMapping};
+use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, err, join_all, ok},
@@ -29,7 +29,9 @@ use futures::{
     stream::{futures_ordered, iter_ok, FuturesUnordered},
     Future, IntoFuture, Stream,
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{
+    bounded_traversal::bounded_traversal_dag, try_boxfuture, BoxFuture, FutureExt, StreamExt,
+};
 use futures_stats::{FutureStats, Timed};
 use manifest::{Entry as ManifestEntry, ManifestOps};
 use remotefilelog::create_getpack_v1_blob;
@@ -50,9 +52,7 @@ use types::{
 };
 use warm_bookmarks_cache::WarmBookmarksCache;
 
-use mononoke_types::{
-    fastlog_batch::max_entries_in_fastlog_batch, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
-};
+use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
@@ -87,6 +87,7 @@ define_stats! {
     eden_prefetch_trees: timeseries(RATE, SUM),
 }
 
+#[derive(Clone)]
 pub struct MononokeRepo {
     pub(crate) repo: BlobRepo,
     logger: Logger,
@@ -234,6 +235,35 @@ impl MononokeRepo {
         }
     }
 
+    fn get_unode_entry_by_changeset_id(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+        path: Option<MPath>,
+    ) -> BoxFuture<ManifestEntry<ManifestUnodeId, FileUnodeId>, ErrorKind> {
+        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+
+        let blobstore = repo.get_blobstore();
+        RootUnodeManifestId::derive(ctx.clone(), repo, unodes_derived_mapping, bcs_id)
+            .map_err(ErrorKind::InternalError)
+            .and_then({
+                cloned!(blobstore, ctx, path);
+                move |root_unode_mf_id| {
+                    root_unode_mf_id
+                        .manifest_unode_id()
+                        .find_entry(ctx, blobstore, path)
+                        .map_err(ErrorKind::InternalError)
+                }
+            })
+            .and_then(move |maybe_entry| {
+                maybe_entry.ok_or(ErrorKind::NotFound(
+                    format!("{:?} {:?}", bcs_id, path),
+                    None,
+                ))
+            })
+            .boxify()
+    }
+
     fn get_unode_entry(
         &self,
         ctx: CoreContext,
@@ -243,34 +273,33 @@ impl MononokeRepo {
         let mpath = if path.is_empty() {
             None
         } else {
-            Some(try_boxfuture!(FS::get_mpath(path.clone())))
+            Some(try_boxfuture!(FS::get_mpath(path)))
         };
 
-        cloned!(ctx, self.repo, self.unodes_derived_mapping);
+        cloned!(ctx);
+        self.get_bonsai_id_from_revision(ctx.clone(), revision)
+            .and_then({
+                cloned!(ctx);
+                let this = self.clone();
+                move |bcs_id| this.get_unode_entry_by_changeset_id(ctx.clone(), bcs_id, mpath)
+            })
+            .boxify()
+    }
 
+    fn get_unode_changeset_id(
+        &self,
+        ctx: CoreContext,
+        unode_entry: ManifestEntry<ManifestUnodeId, FileUnodeId>,
+    ) -> BoxFuture<ChangesetId, ErrorKind> {
+        cloned!(ctx, self.repo);
         let blobstore = repo.get_blobstore();
-        self.get_bonsai_id_from_revision(ctx.clone(), revision.clone())
-            .and_then({
-                cloned!(ctx, repo);
-                move |bcs_id| {
-                    RootUnodeManifestId::derive(ctx, repo, unodes_derived_mapping, bcs_id)
-                        .map_err(ErrorKind::InternalError)
-                }
-            })
-            .and_then({
-                cloned!(blobstore, ctx, mpath);
-                move |root_unode_mf_id| {
-                    root_unode_mf_id
-                        .manifest_unode_id()
-                        .find_entry(ctx, blobstore, mpath)
-                        .map_err(ErrorKind::InternalError)
-                }
-            })
-            .and_then(move |maybe_entry| {
-                maybe_entry.ok_or(ErrorKind::NotFound(
-                    format!("{:?} {:?}", revision, mpath),
-                    None,
-                ))
+        unode_entry
+            .load(ctx.clone(), &blobstore)
+            .map_err(Error::from)
+            .from_err()
+            .map(move |unode| match unode {
+                ManifestEntry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                ManifestEntry::Leaf(file_unode) => file_unode.linknode().clone(),
             })
             .boxify()
     }
@@ -282,25 +311,21 @@ impl MononokeRepo {
         path: String,
     ) -> BoxFuture<HgBlobChangeset, ErrorKind> {
         cloned!(ctx, self.repo);
-        let blobstore = repo.get_blobstore();
         self.get_unode_entry(ctx.clone(), revision, path)
             .and_then({
-                cloned!(blobstore, ctx);
-                move |entry| entry.load(ctx, &blobstore).map_err(Error::from).from_err()
+                cloned!(ctx);
+                let this = self.clone();
+                move |unode_entry| this.get_unode_changeset_id(ctx.clone(), unode_entry)
             })
             .and_then({
                 cloned!(ctx, repo);
-                move |unode| {
-                    let changeset_id = match unode {
-                        ManifestEntry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                        ManifestEntry::Leaf(file_unode) => file_unode.linknode().clone(),
-                    };
-                    repo.get_hg_from_bonsai_changeset(ctx, changeset_id)
+                move |changeset_id| {
+                    repo.get_hg_from_bonsai_changeset(ctx.clone(), changeset_id)
                         .from_err()
                 }
             })
             .and_then(move |hg_changeset_id| {
-                repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
+                repo.get_changeset_by_changesetid(ctx, hg_changeset_id)
                     .from_err()
             })
             .boxify()
@@ -378,65 +403,65 @@ impl MononokeRepo {
             .boxify()
     }
 
-    fn get_file_history(
+    // TODO(aida): move it to the blobrepo
+    fn get_hg_changeset_ids_by_bonsais(
         &self,
         ctx: CoreContext,
-        revision: Revision,
-        path: String,
-        limit: i32,
-        skip: i32,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        STATS::get_file_history.add_value(1);
-        let limit = limit as usize;
-        let skip = skip as usize;
-
-        // for now we fetch only one history batch
-        let max_entries = max_entries_in_fastlog_batch();
-        if skip >= max_entries {
-            return future::err(ErrorKind::InvalidInput(
-                format!("cannot skip {}, batch size is {}", skip, max_entries),
-                None,
-            ))
-            .boxify();
-        }
-        if limit + skip > max_entries {
-            return future::err(ErrorKind::InvalidInput(
-                format!("cannot fetch {}, batch size is {}", limit, max_entries),
-                None,
-            ))
-            .boxify();
-        }
-        if limit == 0 {
-            return future::err(ErrorKind::InvalidInput(
-                "0 commits requested".to_string(),
-                None,
-            ))
-            .boxify();
-        }
-
-        // it's not necessary to fetch history in this case, we need just the most recent commit
-        if skip == 0 && limit == 1 {
-            return self
-                .do_get_last_commit_on_path(ctx.clone(), revision, path)
-                .and_then(move |changeset| {
-                    changeset
-                        .try_into()
-                        .map_err(Error::from)
-                        .map_err(ErrorKind::from)
-                })
-                .map(move |changeset| MononokeRepoResponse::GetFileHistory {
-                    history: vec![changeset],
-                })
-                .boxify();
-        }
-
+        changeset_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<HgChangesetId>, ErrorKind> {
         cloned!(ctx, self.repo);
-        let bcs_id_fut = self.get_bonsai_id_from_revision(ctx.clone(), revision.clone());
-        self.get_unode_entry(ctx.clone(), revision.clone(), path.clone())
-            .join(bcs_id_fut)
+        repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids.clone())
+            .from_err()
             .and_then({
                 cloned!(ctx, repo);
-                move |(entry, bcs_id)| {
+                move |hg_bonsai_list| {
+                    let mapping: HashMap<_, _> = hg_bonsai_list
+                        .into_iter()
+                        .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
+                        .collect();
+
+                    futures_ordered(changeset_ids.into_iter().map(|bcs_id| {
+                        match mapping.get(&bcs_id) {
+                            Some(hg_cs_id) => ok(*hg_cs_id).left_future(),
+                            None => repo
+                                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                                .map_err(ErrorKind::InternalError)
+                                .right_future(),
+                        }
+                    }))
+                    .collect()
+                }
+            })
+            .boxify()
+    }
+
+    fn get_hg_changesets_by_ids(
+        &self,
+        ctx: CoreContext,
+        changeset_ids: Vec<HgChangesetId>,
+    ) -> BoxFuture<Vec<HgBlobChangeset>, ErrorKind> {
+        let mut cs_futs = vec![];
+        for cs_id in changeset_ids.into_iter() {
+            cloned!(ctx, self.repo);
+            cs_futs.push(
+                repo.get_changeset_by_changesetid(ctx.clone(), cs_id)
+                    .from_err(),
+            );
+        }
+        futures_ordered(cs_futs).collect().boxify()
+    }
+
+    fn prefetch_history_batch(
+        &self,
+        ctx: CoreContext,
+        changeset_id: ChangesetId,
+        path: Option<MPath>,
+    ) -> BoxFuture<Vec<(ChangesetId, Vec<FastlogParent>)>, ErrorKind> {
+        cloned!(ctx, self.repo);
+        self.get_unode_entry_by_changeset_id(ctx.clone(), changeset_id, path.clone())
+            .and_then({
+                cloned!(ctx, repo, path);
+                move |entry| {
                     // optimistically try to fetch history for a unode
                     prefetch_history(ctx.clone(), repo.clone(), entry)
                         .map_err(Error::from)
@@ -454,7 +479,7 @@ impl MononokeRepo {
                                         ctx.clone(),
                                         repo.clone(),
                                         fastlog_derived_mapping,
-                                        bcs_id,
+                                        changeset_id,
                                     )
                                     .map_err(ErrorKind::InternalError)
                                     .and_then({
@@ -467,7 +492,7 @@ impl MononokeRepo {
                                     })
                                     .and_then(move |maybe_history| {
                                         maybe_history.ok_or(ErrorKind::NotFound(
-                                            format!("{:?} {:?}", revision, path),
+                                            format!("{:?} {:?}", changeset_id, path),
                                             None,
                                         ))
                                     })
@@ -477,67 +502,228 @@ impl MononokeRepo {
                         })
                 }
             })
-            .and_then({
-                cloned!(ctx, repo);
-                move |history| {
-                    let number = cmp::min(history.len(), skip + limit);
-                    if number < skip {
-                        // we skip more commits than the history has
-                        ok(vec![]).left_future()
-                    } else {
-                        let changeset_ids: Vec<_> = history[skip..number]
+            .boxify()
+    }
+
+    fn do_history_graph_unfold(
+        &self,
+        ctx: CoreContext,
+        changeset_id: ChangesetId,
+        stage: i32,
+        path: Option<MPath>,
+        total_length: usize,
+        history_graph: Arc<Mutex<HashMap<ChangesetId, Option<Vec<ChangesetId>>>>>,
+        global_stage: Arc<Mutex<i32>>,
+    ) -> BoxFuture<((), Vec<(ChangesetId, i32)>), ErrorKind> {
+        cloned!(ctx);
+
+        self.prefetch_history_batch(ctx.clone(), changeset_id, path.clone())
+            .map({
+                // construct the history graph
+                move |history_batch: Vec<_>| {
+                    let mut next = vec![];
+                    let mut graph = history_graph.lock().unwrap();
+                    for (cs_id, parents) in history_batch {
+                        let has_unknown_parent = parents.iter().any(|parent| match parent {
+                            FastlogParent::Unknown => true,
+                            _ => false,
+                        });
+                        let known_parents: Vec<ChangesetId> = parents
                             .into_iter()
-                            .map(|(cs_id, _)| *cs_id)
+                            .filter_map(|parent| match parent {
+                                FastlogParent::Known(cs_id) => Some(cs_id),
+                                _ => None,
+                            })
                             .collect();
 
-                        repo.get_hg_bonsai_mapping(ctx.clone(), changeset_ids.clone())
-                            .from_err()
-                            .and_then({
-                                cloned!(ctx, repo);
-                                move |hg_bonsai_list| {
-                                    let mapping: HashMap<_, _> = hg_bonsai_list
-                                        .into_iter()
-                                        .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
-                                        .collect();
-
-                                    let hg_cs_ids_fut = changeset_ids.into_iter().map(|bcs_id| {
-                                        match mapping.get(&bcs_id) {
-                                            Some(hg_cs_id) => ok(*hg_cs_id).left_future(),
-                                            None => repo
-                                                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                                                .map_err(ErrorKind::InternalError)
-                                                .right_future(),
-                                        }
-                                    });
-                                    futures_ordered(hg_cs_ids_fut).collect()
-                                }
-                            })
-                            .right_future()
+                        if let Some(maybe_parents) = graph.get(&cs_id) {
+                            // history graph has the changeset
+                            if maybe_parents.is_none() && !has_unknown_parent {
+                                // the node was visited but had unknown parents
+                                // let's update the graph
+                                graph.insert(cs_id, Some(known_parents.clone()));
+                            }
+                        } else {
+                            // we haven't seen this changeset before
+                            if has_unknown_parent {
+                                // at least one parent is unknown ->
+                                // need to fetch unode batch for this changeset
+                                //
+                                // let's add to the graph with None parents, this way we mark the
+                                // changeset as visited for other traversal branches
+                                graph.insert(cs_id, None);
+                                // the changeset hasn't been visited before
+                                next.push((cs_id, stage + 1));
+                            } else {
+                                graph.insert(cs_id, Some(known_parents.clone()));
+                            }
+                        }
                     }
+
+                    // We need staging so we would fetch all unode batches on the same depth level.
+                    // For example, we need to return 120 history commits, but the fetched batch
+                    // has only 110 and 5 changesets with unknown parents. Then on next iteration
+                    // we need to fetch batches for _all_ these 5 changesets, so the bfs ordering
+                    // in the end would be correct.
+                    let mut global_stage = global_stage.lock().unwrap();
+                    if graph.len() < total_length || *global_stage > stage {
+                        // need to fetch more history
+                        if *global_stage < stage + 1 {
+                            *global_stage = stage + 1;
+                        }
+                        ((), next)
+                    } else {
+                        ((), vec![])
+                    }
+                }
+            })
+            .boxify()
+    }
+
+    fn sort_history(
+        &self,
+        changeset_id: ChangesetId,
+        history_graph: &HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
+    ) -> Vec<ChangesetId> {
+        let mut sorted = vec![changeset_id.clone()];
+        let mut visited = HashSet::new();
+        visited.insert(changeset_id);
+
+        let mut next: usize = 0;
+        while next < sorted.len() {
+            if let Some(maybe_parents) = history_graph.get(&sorted[next]) {
+                if let Some(parents) = maybe_parents {
+                    for parent in parents {
+                        if !visited.contains(parent) {
+                            sorted.push(parent.clone());
+                            visited.insert(*parent);
+                        }
+                    }
+                }
+            }
+            next += 1;
+        }
+        return sorted;
+    }
+
+    fn get_file_history(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+        path: String,
+        limit: i32,
+        skip: i32,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        STATS::get_file_history.add_value(1);
+
+        /* validation */
+
+        if limit <= 0 || skip < 0 {
+            return future::err(ErrorKind::InvalidInput(
+                format!("invalid parameters: limit {}, skip {}", limit, skip),
+                None,
+            ))
+            .boxify();
+        }
+
+        let limit = limit as usize;
+        let skip = skip as usize;
+
+        // it's not necessary to fetch history in this case, we need just the most recent commit
+        if skip == 0 && limit == 1 {
+            return self
+                .do_get_last_commit_on_path(ctx.clone(), revision, path)
+                .and_then(move |changeset| {
+                    changeset
+                        .try_into()
+                        .map_err(Error::from)
+                        .map_err(ErrorKind::from)
+                })
+                .map(move |changeset| MononokeRepoResponse::GetFileHistory {
+                    history: vec![changeset],
+                })
+                .boxify();
+        }
+
+        let mpath = if path.is_empty() {
+            None
+        } else {
+            Some(try_boxfuture!(FS::get_mpath(path.clone())))
+        };
+
+        cloned!(ctx);
+        let global_stage = Arc::new(Mutex::new(0));
+        let history_graph: Arc<Mutex<HashMap<ChangesetId, Option<Vec<ChangesetId>>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        self.get_bonsai_id_from_revision(ctx.clone(), revision.clone())
+            .and_then({
+                // construct history graph and get the first changeset
+                cloned!(ctx, global_stage, history_graph, mpath, skip, limit);
+                let this = self.clone();
+                move |bcs_id| {
+                    bounded_traversal_dag(
+                        256,
+                        (bcs_id.clone(), 0),
+                        // unfold
+                        {
+                            cloned!(ctx, mpath);
+                            let this = this.clone();
+                            move |(changeset_id, stage)| {
+                                this.do_history_graph_unfold(
+                                    ctx.clone(),
+                                    changeset_id,
+                                    stage,
+                                    mpath.clone(),
+                                    skip + limit,
+                                    history_graph.clone(),
+                                    global_stage.clone(),
+                                )
+                            }
+                        },
+                        // fold
+                        move |_, _| ok(()),
+                    )
+                    .join(
+                        this.get_unode_entry_by_changeset_id(ctx.clone(), bcs_id, mpath.clone())
+                            .and_then({
+                                let this = this.clone();
+                                move |entry| this.get_unode_changeset_id(ctx.clone(), entry)
+                            }),
+                    )
                 }
             })
             .and_then({
-                move |hg_changeset_ids| {
-                    let mut history_chunk_fut = vec![];
-                    for hg_changeset_id in hg_changeset_ids {
-                        cloned!(ctx, repo);
-                        history_chunk_fut.push(
-                            repo.get_changeset_by_changesetid(ctx.clone(), hg_changeset_id)
-                                .from_err()
-                                .and_then(move |changeset| {
-                                    changeset
-                                        .try_into()
-                                        .map_err(Error::from)
-                                        .map_err(ErrorKind::from)
-                                }),
-                        );
-                    }
-                    futures_ordered(history_chunk_fut).collect()
+                cloned!(ctx);
+                let this = self.clone();
+                move |(_, changeset_id)| {
+                    let history = this.sort_history(changeset_id, &history_graph.lock().unwrap());
+                    let length = history.len();
+                    let range = cmp::min(length, skip + limit);
+                    let history_chunk = if skip > length {
+                        vec![]
+                    } else {
+                        history[skip..range].to_vec()
+                    };
+                    this.get_hg_changeset_ids_by_bonsais(ctx.clone(), history_chunk)
                 }
             })
-            .map(move |history_chunk| MononokeRepoResponse::GetFileHistory {
-                history: history_chunk,
+            .and_then({
+                let this = self.clone();
+                move |hg_changeset_ids| this.get_hg_changesets_by_ids(ctx.clone(), hg_changeset_ids)
             })
+            .and_then(move |changesets| {
+                let maybe_result: Result<Vec<_>, _> = changesets
+                    .into_iter()
+                    .map(|changeset| {
+                        changeset
+                            .try_into()
+                            .map_err(Error::from)
+                            .map_err(ErrorKind::from)
+                    })
+                    .collect();
+                maybe_result
+            })
+            .map(move |result| MononokeRepoResponse::GetFileHistory { history: result })
             .boxify()
     }
 

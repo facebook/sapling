@@ -32,6 +32,7 @@ define_stats! {
     cached_bookmark_update_time_ms: timeseries(RATE, SUM),
 }
 
+#[derive(Clone)]
 pub struct WarmBookmarksCache {
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
     terminate: Arc<Mutex<Option<sync::oneshot::Sender<()>>>>,
