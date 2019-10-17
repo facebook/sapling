@@ -343,7 +343,7 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   doctor: 
-  export: output, switch-parent, rev, text, git, binary, nodates
+  export: output, switch-parent, rev, pattern, text, git, binary, nodates, include, exclude
   files: rev, print0, include, exclude, template
   forget: include, exclude
   fs: 

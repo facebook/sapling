@@ -237,5 +237,61 @@ sh % "hg export --color always --nodates tip" == r"""
      foo-11
     \x1b[0;92m+line\x1b[0m (esc)"""
 
+# Test exporting a subset of files
 
-sh % "cd .."
+sh % "newrepo"
+sh % "setconfig diff.git=1"
+sh % "drawdag" << r"""
+       # B/foo/3=3\n (copied from bar/1)
+       # B/foo/1=1\n (copied from bar/1)
+       # B/bar/2=2\n
+    B  # B/foo/2=2\n (renamed from foo/1)
+    |  # A/bar/1=0\n
+    A  # A/foo/1=0\n
+"""
+
+sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Parent  0000000000000000000000000000000000000000
+    A
+
+    diff --git a/foo/1 b/foo/1
+    new file mode 100644
+    --- /dev/null
+    +++ b/foo/1
+    @@ -0,0 +1,1 @@
+    +0
+    # HG changeset patch
+    # User test
+    # Date 0 0
+    #      Thu Jan 01 00:00:00 1970 +0000
+    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    B
+
+    diff --git a/foo/1 b/foo/1
+    --- a/foo/1
+    +++ b/foo/1
+    @@ -1,1 +1,1 @@
+    -0
+    +1
+    diff --git a/foo/1 b/foo/2
+    copy from foo/1
+    copy to foo/2
+    --- a/foo/1
+    +++ b/foo/2
+    @@ -1,1 +1,1 @@
+    -0
+    +2
+    diff --git a/bar/1 b/foo/3
+    copy from bar/1
+    copy to foo/3
+    --- a/bar/1
+    +++ b/foo/3
+    @@ -1,1 +1,1 @@
+    -0
+    +3"""

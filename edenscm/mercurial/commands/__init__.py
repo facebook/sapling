@@ -2082,8 +2082,10 @@ def diff(ui, repo, *pats, **opts):
         ("o", "output", "", _("print output to file with formatted name"), _("FORMAT")),
         ("", "switch-parent", None, _("diff against the second parent")),
         ("r", "rev", [], _("revisions to export"), _("REV")),
+        ("", "pattern", [], _("file patterns"), _("PATTERN")),
     ]
-    + diffopts,
+    + diffopts
+    + walkopts,
     _("[OPTION]... [-o OUTFILESPEC] [-r] [REV]..."),
     cmdtype=readonly,
 )
@@ -2149,6 +2151,7 @@ def export(ui, repo, *changesets, **opts):
     """
     opts = pycompat.byteskwargs(opts)
     changesets += tuple(opts.get("rev", []))
+    m = scmutil.match(repo[None], opts.get("pattern", []), pycompat.byteskwargs(opts))
     if not changesets:
         changesets = ["."]
     revs = scmutil.revrange(repo, changesets)
@@ -2165,6 +2168,7 @@ def export(ui, repo, *changesets, **opts):
         fntemplate=opts.get("output"),
         switch_parent=opts.get("switch_parent"),
         opts=patch.diffallopts(ui, opts),
+        match=m,
     )
 
 
