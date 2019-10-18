@@ -10,6 +10,7 @@
 
 #include <combaseapi.h>
 #include <string>
+#include "StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
 #include "folly/Format.h"
 
@@ -38,7 +39,7 @@ class Guid {
     return *this;
   }
 
-  std::wstring toString() const {
+  std::wstring toWString() const {
     std::wstring str(40, L'0');
     int size = StringFromGUID2(guid_, str.data(), static_cast<int>(str.size()));
 
@@ -50,6 +51,10 @@ class Guid {
     // Returned size includes the null character
     str.resize(size - 1);
     return str;
+  }
+
+  std::string toString() const {
+    return wstringToString(toWString());
   }
 
   const GUID& getGuid() const noexcept {

@@ -20,17 +20,21 @@ TEST(GuidTest, assignedGuid) {
                                 {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
 
   Guid guid{testGuid};
-  std::wstring guidString{L"{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}"};
+  std::wstring guidWString{L"{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}"};
+  std::string guidString{"{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}"};
 
+  EXPECT_EQ(guid.toWString(), guidWString);
   EXPECT_EQ(guid.toString(), guidString);
   EXPECT_EQ(guid.getGuid(), testGuid);
 }
 
 TEST(GuidTest, emptyGuid) {
   static const GUID testGuid{0};
-  std::wstring guidString{L"{00000000-0000-0000-0000-000000000000}"};
+  std::wstring guidWString{L"{00000000-0000-0000-0000-000000000000}"};
+  std::string guidString{"{00000000-0000-0000-0000-000000000000}"};
   Guid guid;
 
+  EXPECT_EQ(guid.toWString(), guidWString);
   EXPECT_EQ(guid.toString(), guidString);
   EXPECT_EQ(guid.getGuid(), testGuid);
 }
@@ -41,7 +45,7 @@ TEST(GuidTest, generatedGuid) {
   guid = Guid::generate();
   Guid testGuid{guid};
 
-  EXPECT_EQ(testGuid.toString(), guid.toString());
+  EXPECT_EQ(testGuid.toWString(), guid.toWString());
   EXPECT_EQ(guid.getGuid(), testGuid.getGuid());
 }
 

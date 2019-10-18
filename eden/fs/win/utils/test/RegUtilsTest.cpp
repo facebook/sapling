@@ -17,7 +17,7 @@ namespace {
 class RegUtilsTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    rootPath_ /= guid_.toString();
+    rootPath_ /= guid_.toWString();
     rootKey_ = RegistryKey::createCurrentUser(rootPath_.c_str());
   }
 
