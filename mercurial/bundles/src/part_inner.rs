@@ -86,13 +86,16 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
     }
 }
 
-pub fn get_cg_version(header: PartHeader) -> Result<changegroup::unpacker::CgVersion> {
-    header
-        .aparams()
-        .get(changegroup::CG_PART_VERSION_HEADER_NAME)
-        .ok_or(
-            ErrorKind::CgDecode("No changegroup version in Part Header in aparams".into()).into(),
-        )
+pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::unpacker::CgVersion> {
+    let version = header.mparams().get(field).or(header.aparams().get(field));
+    let err = ErrorKind::CgDecode(format!(
+        "No changegroup version in Part Header in field {}",
+        field
+    ))
+    .into();
+
+    version
+        .ok_or(err)
         .and_then(|version_bytes| {
             str::from_utf8(version_bytes)
                 .map_err(|e| ErrorKind::CgDecode(format!("{:?}", e)).into())
@@ -104,9 +107,13 @@ pub fn get_cg_version(header: PartHeader) -> Result<changegroup::unpacker::CgVer
         })
 }
 
-pub fn get_cg_unpacker(ctx: CoreContext, header: PartHeader) -> changegroup::unpacker::CgUnpacker {
+pub fn get_cg_unpacker(
+    ctx: CoreContext,
+    header: PartHeader,
+    field: &str,
+) -> changegroup::unpacker::CgUnpacker {
     // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
-    get_cg_version(header)
+    get_cg_version(header, field)
     .map(|version| changegroup::unpacker::CgUnpacker::new(ctx.clone(), version))
     // ChangeGroup2 by default
     .unwrap_or_else(|e| {
@@ -130,8 +137,9 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     let bundle2item = match header.part_type() {
         &PartHeaderType::Changegroup => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "cg2")),
+                ctx.with_logger_kv(o!("stream" => "changegroup")),
                 header.clone(),
+                "version",
             ));
             Bundle2Item::Changegroup(header, cg2_stream.boxify())
         }
@@ -141,8 +149,9 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xInfinitepush => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "cg2")),
+                ctx.with_logger_kv(o!("stream" => "b2xinfinitepush")),
                 header.clone(),
+                "cgversion",
             ));
             Bundle2Item::B2xInfinitepush(header, cg2_stream.boxify())
         }
@@ -181,8 +190,9 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xRebase => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
-                ctx.with_logger_kv(o!("stream" => "cg2")),
+                ctx.with_logger_kv(o!("stream" => "bx2rebase")),
                 header.clone(),
+                "cgversion",
             ));
             Bundle2Item::B2xRebase(header, cg2_stream.boxify())
         }
@@ -233,20 +243,26 @@ mod test {
     fn test_cg_unpacker_v3() {
         let mut header_builder =
             PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
-        header_builder.add_aparam("cgversion", "03").unwrap();
+        header_builder.add_aparam("version", "03").unwrap();
         let header = header_builder.build(1);
 
-        assert_eq!(get_cg_version(header).unwrap(), CgVersion::Cg3Version);
+        assert_eq!(
+            get_cg_version(header, "version").unwrap(),
+            CgVersion::Cg3Version
+        );
     }
 
     #[test]
     fn test_cg_unpacker_v2() {
         let mut header_builder =
             PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
-        header_builder.add_aparam("cgversion", "02").unwrap();
+        header_builder.add_aparam("version", "02").unwrap();
         let header = header_builder.build(1);
 
-        assert_eq!(get_cg_version(header).unwrap(), CgVersion::Cg2Version);
+        assert_eq!(
+            get_cg_version(header, "version").unwrap(),
+            CgVersion::Cg2Version
+        );
     }
 
     #[test]
@@ -254,7 +270,7 @@ mod test {
         let header_builder = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
         let h = header_builder.build(1);
 
-        assert_eq!(get_cg_version(h).is_err(), true);
+        assert_eq!(get_cg_version(h, "version").is_err(), true);
     }
 
 }

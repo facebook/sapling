@@ -12,8 +12,6 @@ pub mod packer;
 pub mod unpacker;
 pub use unpacker::CgVersion;
 
-pub const CG_PART_VERSION_HEADER_NAME: &'static str = "cgversion";
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Section {
     Changeset,

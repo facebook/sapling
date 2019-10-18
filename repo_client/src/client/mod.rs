@@ -179,7 +179,7 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
     let caps = {
         let mut caps = vec![
             ("HG20", vec![]),
-            ("changegroup", vec!["02"]),
+            ("changegroup", vec!["02", "03"]),
             ("b2x:infinitepush", vec![]),
             ("b2x:infinitepushscratchbookmarks", vec![]),
             ("pushkey", vec![]),
