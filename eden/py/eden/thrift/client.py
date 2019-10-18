@@ -14,7 +14,14 @@ from thrift.Thrift import TApplicationException
 from thrift.transport.THeaderTransport import THeaderTransport
 from thrift.transport.TTransport import TTransportException
 
-from .windows_thrift import EdenTSocket
+
+if os.name == "nt":
+    # pyre-fixme[21]: Could not find a module corresponding to import
+    # eden.thrift.windows_thrift. This is a Windows only file and only included
+    # on Windows.
+    from .windows_thrift import WinTSocket
+else:
+    from thrift.transport.TSocket import TSocket
 
 
 SOCKET_PATH = "socket"
@@ -58,7 +65,12 @@ class EdenClient(EdenService.Client):
             self._socket_path = os.path.join(eden_dir, SOCKET_PATH)
         else:
             raise TypeError("one of eden_dir or socket_path is required")
-        self._socket = EdenTSocket(unix_socket=self._socket_path)
+        if os.name == "nt":
+            # pyre-fixme[16]: Module eden.thrift has no attribute windows_thrift.
+            self._socket = WinTSocket(unix_socket=self._socket_path)
+        else:
+            self._socket = TSocket(unix_socket=self._socket_path)
+
         # We used to set a timeout here, but picking the right duration is hard,
         # and safely retrying an arbitrary thrift call may not be safe.  So we
         # just leave the client with no timeout.
