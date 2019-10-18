@@ -858,6 +858,7 @@ def logmessage(repo, opts):
                 % (currentinvaliopts[0])
             )
         opts["message"] = scmutil.revsingle(repo, reuserev).description()
+        opts["reuse_message"] = False
 
     message = opts.get("message")
     logfile = opts.get("logfile")
