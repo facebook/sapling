@@ -42,9 +42,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
-// Needed for MissingKeyError
-#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
-
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
