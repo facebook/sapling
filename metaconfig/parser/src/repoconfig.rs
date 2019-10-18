@@ -658,7 +658,7 @@ impl RepoConfigs {
                 let default = PushrebaseParams::default();
                 PushrebaseParams {
                     rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
-                    recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
+                    recursion_limit: raw.recursion_limit.or(default.recursion_limit),
                     commit_scribe_category: raw.commit_scribe_category,
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
                     forbid_p2_root_rebases: raw
@@ -1778,7 +1778,7 @@ mod test {
                 },
                 pushrebase: PushrebaseParams {
                     rewritedates: false,
-                    recursion_limit: 1024,
+                    recursion_limit: Some(1024),
                     commit_scribe_category: None,
                     block_merges: false,
                     forbid_p2_root_rebases: false,

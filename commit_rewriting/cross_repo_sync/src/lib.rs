@@ -396,6 +396,7 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
                 params.rewritedates = false;
                 params.forbid_p2_root_rebases = false;
                 params.casefolding_check = false;
+                params.recursion_limit = None;
                 params
             };
             let bookmark = OntoBookmarkParams { bookmark };

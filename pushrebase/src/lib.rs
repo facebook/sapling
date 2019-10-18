@@ -62,6 +62,7 @@ use mononoke_types::{
     Timestamp,
 };
 use revset::RangeNodeStream;
+use slog::info;
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
@@ -474,8 +475,13 @@ fn find_closest_ancestor_root(
     loop_fn(
         (queue, HashSet::new(), 0),
         move |(mut queue, mut visited, depth)| {
-            if depth >= config.recursion_limit {
-                return err(PushrebaseError::RootTooFarBehind).boxify();
+            if depth > 0 && depth % 1000 == 0 {
+                info!(ctx.logger(), "pushrebase recursion depth: {}", depth);
+            }
+            if let Some(recursion_limit) = config.recursion_limit {
+                if depth >= recursion_limit {
+                    return err(PushrebaseError::RootTooFarBehind).boxify();
+                }
             }
             match queue.pop_front() {
                 None => err(PushrebaseError::Error(
@@ -1628,7 +1634,7 @@ mod tests {
 
             // try rebase with small recursion limit
             let config = PushrebaseParams {
-                recursion_limit: 128,
+                recursion_limit: Some(128),
                 ..Default::default()
             };
             let result = do_pushrebase(
@@ -1646,7 +1652,7 @@ mod tests {
             }
 
             let config = PushrebaseParams {
-                recursion_limit: 256,
+                recursion_limit: Some(256),
                 ..Default::default()
             };
             do_pushrebase(ctx, repo_arc, config, book, hgcss, None)

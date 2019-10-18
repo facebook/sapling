@@ -371,7 +371,7 @@ pub struct PushrebaseParams {
     /// Update dates of rebased commits
     pub rewritedates: bool,
     /// How far will we go from bookmark to find rebase root
-    pub recursion_limit: usize,
+    pub recursion_limit: Option<usize>,
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
     /// Block merge commits
@@ -388,7 +388,7 @@ impl Default for PushrebaseParams {
     fn default() -> Self {
         PushrebaseParams {
             rewritedates: true,
-            recursion_limit: 16384, // this number is fairly arbirary
+            recursion_limit: Some(16384), // this number is fairly arbirary
             commit_scribe_category: None,
             block_merges: false,
             forbid_p2_root_rebases: true,
