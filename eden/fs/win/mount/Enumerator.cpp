@@ -30,7 +30,6 @@ Enumerator::Enumerator(
 
 const FileMetadata* Enumerator::current() {
   for (; listIndex_ < metadataList_.size(); listIndex_++) {
-    DCHECK(!searchExpression_.empty());
     if (PrjFileNameMatch(
             metadataList_[listIndex_].name.c_str(),
             searchExpression_.c_str())) {
