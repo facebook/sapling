@@ -71,16 +71,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
-  /** Holds the results of a create operation. */
-  struct CreateResult {
-    /// file attributes and cache ttls.
-    Dispatcher::Attr attr;
-    /// The newly created inode instance.
-    FileInodePtr inode;
-
-    explicit CreateResult(const EdenMount* mount);
-  };
-
   /**
    * Construct a TreeInode from a source control tree.
    */
@@ -159,8 +149,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     return contents_;
   }
 
-  FOLLY_NODISCARD folly::Future<CreateResult>
-  create(PathComponentPiece name, mode_t mode, int flags);
   FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
 
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
@@ -168,12 +156,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(PathComponentPiece name);
 
   /**
-   * Create a special filesystem node.
-   * Only unix domain sockets are supported; attempting to create any
-   * other kind of node will fail.
+   * Create a filesystem node.
+   * Only unix domain sockets and regular files are supported; attempting to
+   * create any other kind of node will fail.
    */
-  FOLLY_NODISCARD FileInodePtr
-  mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
+  FileInodePtr mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
 
   /**
    * Compute differences between a source control Tree and the current inode

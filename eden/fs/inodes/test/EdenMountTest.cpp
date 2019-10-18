@@ -363,10 +363,8 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
 
   clock.advance(10min);
 
-  auto newFile = testMount.getEdenMount()
-                     ->getRootInode()
-                     ->create("newfile.txt"_pc, 0660, 0)
-                     .get();
+  auto newFile = testMount.getEdenMount()->getRootInode()->mknod(
+      "newfile.txt"_pc, S_IFREG | 0660, 0);
   auto fileInode = testMount.getFileInode("newfile.txt");
   auto timestamps = fileInode->getMetadata().timestamps;
   EXPECT_EQ(

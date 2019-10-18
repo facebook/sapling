@@ -366,11 +366,10 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   const auto treeInode = getTreeInode(relativePath.dirname());
-  auto createResult =
-      treeInode->create(relativePath.basename(), /*mode*/ 0644, /*flags*/ 0)
-          .get();
-  createResult.inode->write(contents, /*off*/ 0).get(0ms);
-  createResult.inode->fsync(/*datasync*/ true);
+  auto createResult = treeInode->mknod(
+      relativePath.basename(), /*mode=*/S_IFREG | 0644, /*rdev=*/0);
+  createResult->write(contents, /*off*/ 0).get(0ms);
+  createResult->fsync(/*datasync*/ true);
 }
 
 void TestMount::addSymlink(

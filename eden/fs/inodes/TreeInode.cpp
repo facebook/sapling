@@ -61,9 +61,6 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
-TreeInode::CreateResult::CreateResult(const EdenMount* mount)
-    : attr(mount->initStatData()) {}
-
 /**
  * A helper class to track info about inode loads that we started while holding
  * the contents_ lock.
@@ -919,43 +916,6 @@ FileInodePtr TreeInode::createImpl(
   getMount()->getJournal().recordCreated(targetName);
 
   return inode;
-}
-
-folly::Future<TreeInode::CreateResult>
-TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
-  FileInodePtr inode;
-
-  validatePathComponentLength(name);
-  materialize();
-
-  // We need to scope the write lock as the getattr call below implicitly
-  // wants to acquire a read lock.
-  {
-    // Acquire our contents lock
-    auto contents = contents_.wlock();
-
-    // The mode passed in by the caller may not have the file type bits set.
-    // Ensure that we mark this as a regular file.
-    mode = S_IFREG | (07777 & mode);
-    inode = createImpl(std::move(contents), name, mode, ByteRange{});
-  }
-
-  // Now that we have the file handle, let's look up the attributes.
-  //
-  // TODO: We probably could compute this more efficiently without using an
-  // extra Future::thenValue() call.  getattr() should always complete
-  // immediately in this case.  We should be able to avoid calling stat() on
-  // the underlying overlay file since we just created it and know it is an
-  // empty file.
-  return inode->getattr().thenValue([=](Dispatcher::Attr attr) {
-    CreateResult result(getMount());
-
-    // Return all of the results back to the kernel.
-    result.inode = inode;
-    result.attr = attr;
-
-    return result;
-  });
 }
 
 FileInodePtr TreeInode::symlink(

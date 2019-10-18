@@ -187,14 +187,18 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
       name,
       mode,
       flags);
-  return inodeMap_->lookupTreeInode(parent)
-      .thenValue([childName = PathComponent{name}, mode, flags](
-                     const TreeInodePtr& parentInode) {
-        return parentInode->create(childName, mode, flags);
-      })
-      .thenValue([=](TreeInode::CreateResult created) {
-        created.inode->incFuseRefcount();
-        return computeEntryParam(created.inode->getNodeId(), created.attr);
+  // force 'mode' to be regular file, in which case rdev arg to mknod is ignored
+  // (and thus can be zero)
+  mode = S_IFREG | (07777 & mode);
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [=](const TreeInodePtr& inode) {
+        auto childName = PathComponent{name};
+        auto child = inode->mknod(childName, mode, 0);
+        return child->getattr().thenValue(
+            [child](Dispatcher::Attr attr) -> fuse_entry_out {
+              child->incFuseRefcount();
+              return computeEntryParam(child->getNodeId(), attr);
+            });
       });
 }
 
@@ -295,10 +299,11 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, rdev);
-        return child->getattr().thenValue([child](Dispatcher::Attr attr) {
-          child->incFuseRefcount();
-          return computeEntryParam(child->getNodeId(), attr);
-        });
+        return child->getattr().thenValue(
+            [child](Dispatcher::Attr attr) -> fuse_entry_out {
+              child->incFuseRefcount();
+              return computeEntryParam(child->getNodeId(), attr);
+            });
       });
 }
 

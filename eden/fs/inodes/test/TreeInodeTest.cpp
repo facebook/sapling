@@ -274,14 +274,10 @@ TEST(TreeInode, create) {
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto createResult = somedir->create("newfile.txt"_pc, S_IFREG | 0740, 0)
-                          .getTryVia(mount.getServerExecutor().get());
+  auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0);
 
-  EXPECT_TRUE(createResult.hasValue());
-  EXPECT_EQ(
-      mount.getFileInode("somedir/newfile.txt"_relpath),
-      createResult.value().inode);
-  EXPECT_FILE_INODE(createResult.value().inode, "", 0740);
+  EXPECT_EQ(mount.getFileInode("somedir/newfile.txt"_relpath), resultInode);
+  EXPECT_FILE_INODE(resultInode, "", 0740);
 }
 
 TEST(TreeInode, createExists) {
@@ -291,12 +287,8 @@ TEST(TreeInode, createExists) {
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto createResult = folly::makeFutureWith([&] {
-                        return somedir->create("foo.txt"_pc, S_IFREG | 0600, 0);
-                      })
-                          .getTryVia(mount.getServerExecutor().get());
 
-  EXPECT_THROW_ERRNO(createResult.value(), EEXIST);
+  EXPECT_THROW_ERRNO(somedir->mknod("foo.txt"_pc, S_IFREG | 0600, 0), EEXIST);
   EXPECT_FILE_INODE(
       mount.getFileInode("somedir/foo.txt"_relpath), "test\n", 0644);
 }
@@ -311,10 +303,7 @@ TEST(TreeInode, createOverlayWriteError) {
       folly::makeSystemErrorExplicit(ENOSPC, "too many cat videos"));
 
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto createResult =
-      folly::makeFutureWith(
-          [&] { return somedir->create("newfile.txt"_pc, S_IFREG | 0600, 0); })
-          .getTryVia(mount.getServerExecutor().get());
 
-  EXPECT_THROW_ERRNO(createResult.value(), ENOSPC);
+  EXPECT_THROW_ERRNO(
+      somedir->mknod("newfile.txt"_pc, S_IFREG | 0600, 0), ENOSPC);
 }
