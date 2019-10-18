@@ -245,7 +245,7 @@ sh % "drawdag" << r"""
        # B/foo/3=3\n (copied from bar/1)
        # B/foo/1=1\n (copied from bar/1)
        # B/bar/2=2\n
-    B  # B/foo/2=2\n (renamed from foo/1)
+    B  # B/foo/2=2\n (copied from foo/1)
     |  # A/bar/1=0\n
     A  # A/foo/1=0\n
 """
@@ -269,7 +269,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
     # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
     B
 
@@ -311,7 +311,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
     # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
     B
 
@@ -337,7 +337,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID c5a079dfa7dc8d389147a9ae832c47d8ee4675be
+    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
     # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
     B
 
