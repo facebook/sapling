@@ -218,35 +218,6 @@ def readcommitcloudstate(repo):
     return "\n".join(lines) + "\n"
 
 
-def readfsmonitorstate(repo):
-    """
-    Read the fsmonitor.state file and pretty print some information from it.
-    Based on file format version 4. See hgext/fsmonitor/state.py for real
-    implementation.
-    """
-    lines = []
-    if "treestate" in repo.requirements:
-        lines.append("from treestate")
-        clock = repo.dirstate.getclock()
-        lines.append("clock: %s" % clock)
-    else:
-        f = repo.localvfs("fsmonitor.state", "rb")
-        versionbytes = f.read(4)
-        version = struct.unpack(">I", versionbytes)[0]
-        data = f.read()
-        state = data.split("\0")
-        hostname, clock, ignorehash = state[0:3]
-        files = state[3:-1]  # discard empty entry after final file
-        numfiles = len(files)
-        lines.append("version: %d" % version)
-        lines.append("hostname: %s" % hostname)
-        lines.append("clock: %s" % clock)
-        lines.append("ignorehash: %s" % ignorehash)
-        lines.append("files (first 20 of %d):" % numfiles)
-        lines.extend(files[:20])
-    return "\n".join(lines) + "\n"
-
-
 def _makerage(ui, repo, **opts):
     # Make graphlog shorter.
     configoverrides = {("experimental", "graphshorten"): "1"}
@@ -339,8 +310,9 @@ def _makerage(ui, repo, **opts):
             lambda: infinitepushbackuplogs(ui, repo),
         ),
         ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
+        ("debugstatus", lambda: hgcmd("debugstatus")),
+        ("debugtree", lambda: hgcmd("debugtree")),
         ("hg config (overrides)", lambda: "\n".join(overriddenconfig(ui))),
-        ("fsmonitor state", lambda: readfsmonitorstate(repo)),
         ("edenfs rage", lambda: shcmd("edenfsctl rage --stdout")),
         (
             "environment variables",
