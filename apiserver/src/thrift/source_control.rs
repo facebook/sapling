@@ -638,6 +638,7 @@ mod errors {
     impl_into_thrift_error!(service::FileExistsExn);
     impl_into_thrift_error!(service::FileInfoExn);
     impl_into_thrift_error!(service::FileContentChunkExn);
+    impl_into_thrift_error!(service::CommitLookupXrepoExn);
 
     pub(super) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
         thrift::RequestError {
@@ -994,6 +995,33 @@ impl SourceControlService for SourceControlServiceImpl {
                 })
             }
             (_repo, None) => Err(errors::file_not_found(file.description()).into()),
+        }
+    }
+
+    /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
+    async fn commit_lookup_xrepo(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitLookupXRepoParams,
+    ) -> Result<thrift::CommitLookupResponse, service::CommitLookupXrepoExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let repo = self.repo(ctx.clone(), &commit.repo)?;
+        let other_repo = self.repo(ctx, &params.other_repo)?;
+        match repo
+            .xrepo_commit_lookup(&other_repo, ChangesetSpecifier::from_request(&commit.id)?)
+            .await?
+        {
+            Some(cs) => {
+                let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
+                Ok(thrift::CommitLookupResponse {
+                    exists: true,
+                    ids: Some(ids),
+                })
+            }
+            None => Ok(thrift::CommitLookupResponse {
+                exists: false,
+                ids: None,
+            }),
         }
     }
 }
