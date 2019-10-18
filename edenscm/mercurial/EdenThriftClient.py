@@ -17,6 +17,8 @@ import random
 import sys
 import time
 
+import toml
+
 from . import demandimport, node, pycompat
 
 
@@ -82,12 +84,9 @@ class EdenThriftClient(object):
         self._repo = repo
         self._root = repo.root
         if pycompat.iswindows:
-            # We don't have the .eden/symlinks on Windows right now
-            # will enable this code when we have them or something equivalent working.
-            self._socket_path = None
-
-            # On Windows, Repo root will be mount root.
-            self._eden_root = self._root
+            toml_config = toml.load(os.path.join(self._root, ".eden", "config"))
+            self._eden_root = toml_config["Config"]["root"]
+            self._socket_path = toml_config["Config"]["socket"]
         else:
             self._socket_path = readlink_retry_estale(
                 os.path.join(self._root, ".eden", "socket")
