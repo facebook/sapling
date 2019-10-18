@@ -8,7 +8,6 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

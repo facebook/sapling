@@ -35,8 +35,6 @@
 #include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
-#include "eden/fs/fuse/FileHandle.h"
-#include "eden/fs/fuse/FileHandleBase.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenDispatcher.h"

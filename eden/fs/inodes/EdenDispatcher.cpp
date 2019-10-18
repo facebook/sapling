@@ -14,7 +14,6 @@
 #include <shared_mutex>
 
 #include "eden/fs/fuse/DirList.h"
-#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"

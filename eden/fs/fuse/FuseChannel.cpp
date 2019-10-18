@@ -16,7 +16,6 @@
 #include <type_traits>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Synchronized.h"
