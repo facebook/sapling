@@ -145,8 +145,7 @@ def extsetup(ui):
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
-    opawarerebase = markermetadatawritingcommand(ui, _rebase, "rebase")
-    wrapcommand(rebase.cmdtable, "rebase", opawarerebase)
+    wrapcommand(rebase.cmdtable, "rebase", _rebase)
     wrapfunction(scmutil, "cleanupnodes", cleanupnodeswrapper)
     entry = wrapcommand(commands.table, "pull", pull)
     options = entry[1]
@@ -196,8 +195,7 @@ def extsetup(ui):
     wrapcommand(commands.table, "graft", graftcmd)
     try:
         amendmodule = extensions.find("amend")
-        opawareamend = markermetadatawritingcommand(ui, amendcmd, "amend")
-        wrapcommand(amendmodule.cmdtable, "amend", opawareamend)
+        wrapcommand(amendmodule.cmdtable, "amend", amendcmd)
     except KeyError:
         pass
     try:
@@ -495,32 +493,6 @@ def blame(orig, ui, repo, *pats, **opts):
         + ': \\")}{line}"}'
     )
     return orig(ui, repo, *pats, **opts)
-
-
-def markermetadatawritingcommand(ui, origcmd, operationame):
-    """Wrap origcmd in a context where globaldata config contains
-    the name of current operation so that any function up the call
-    stack can query for this value:
-        `repo.ui.config(globaldata, createmarkersoperation)`
-
-    In particular, we want `obsolete.createmarkers` to know whether
-    top-level scenario is amend, rebase or something else so that
-    it can write these values into marker metadata.
-    """
-    origargs = inspect.getargspec(origcmd)
-    try:
-        repo_index = origargs.args.index("repo")
-    except ValueError:
-        ui.warn(_("cannot wrap a command that does not have repo argument"))
-        return origcmd
-
-    def cmd(*args, **kwargs):
-        repo = args[repo_index]
-        overrides = {(globaldata, createmarkersoperation): operationame}
-        with repo.ui.configoverride(overrides, "tweakdefaults"):
-            return origcmd(*args, **kwargs)
-
-    return cmd
 
 
 def _analyzewrapper(orig, x, ui):
