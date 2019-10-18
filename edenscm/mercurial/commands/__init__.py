@@ -2736,7 +2736,10 @@ def grep(ui, repo, pattern, *pats, **opts):
         m = scmutil.match(wctx, ["."], match_opts)
         # Scope biggrep to the cwd equivalent path, relative to the root
         # of its corpus.
-        biggrepcmd += ["-f", util.pathto(repo.getcwd(), reporoot, ".")]
+        biggrepcmd += [
+            "-f",
+            os.path.normpath(util.pathto(reporoot, repo.getcwd(), ".")),
+        ]
     else:
         # Search using the specified patterns
         m = scmutil.match(wctx, pats, match_opts)
@@ -2745,7 +2748,13 @@ def grep(ui, repo, pattern, *pats, **opts):
         # so we cross fingers and hope that the patterns are simple filenames.
         biggrepcmd += [
             "-f",
-            "(%s)" % "|".join([util.pathto(repo.getcwd(), reporoot, f) for f in pats]),
+            "(%s)"
+            % "|".join(
+                [
+                    os.path.normpath(util.pathto(reporoot, repo.getcwd(), f))
+                    for f in pats
+                ]
+            ),
         ]
 
     # Add '--' to make sure grep recognizes all remaining arguments
