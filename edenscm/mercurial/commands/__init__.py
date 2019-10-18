@@ -2823,21 +2823,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         # Now check to see what has changed since the corpusrev
         # we're going to need to grep those and stitch the results together
         try:
-            needbin = True
-            svnmeta = getattr(repo, "svnmeta", None)
-            if svnmeta:
-                meta = svnmeta(skiperrorcheck=True)
-                if meta.revmapexists:
-                    corpusbin = meta.revmap.get((int(corpusrev), None))
-                    # If None is returned, we don't have information about
-                    # that revision locally, so trigger the pull instructions.
-                    if corpusbin is None:
-                        raise error.RepoLookupError
-                    needbin = False
-
-            if needbin:
-                corpusbin = bin(corpusrev)
-
+            corpusbin = bin(corpusrev)
             changes = repo.status(corpusbin, None, m)
         except error.RepoLookupError:
             # TODO: can we trigger a commit cloud fetch for this case?
