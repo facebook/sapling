@@ -8,7 +8,7 @@ use std::{collections::HashMap, time::Duration};
 use bytes::Bytes;
 
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
-use types::{HistoryEntry, Key, Node, RepoPathBuf};
+use types::{HgId, HistoryEntry, Key, RepoPathBuf};
 
 use crate::datastore::Delta;
 
@@ -87,8 +87,8 @@ impl EdenApi for FakeEdenApi {
     fn prefetch_trees(
         &self,
         _rootdir: RepoPathBuf,
-        _mfnodes: Vec<Node>,
-        _basemfnodes: Vec<Node>,
+        _mfnodes: Vec<HgId>,
+        _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
         _progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {

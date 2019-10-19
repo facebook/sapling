@@ -18,8 +18,8 @@ use indexedlog::{
     rotate::{OpenOptions, RotateLog},
 };
 use types::{
-    node::{ReadNodeExt, WriteNodeExt},
-    Key, Node, NodeInfo, RepoPath, RepoPathBuf,
+    hgid::{ReadHgIdExt, WriteHgIdExt},
+    HgId, Key, NodeInfo, RepoPath, RepoPathBuf,
 };
 
 use crate::{
@@ -40,9 +40,9 @@ pub struct IndexedLogHistoryStore {
 struct Entry {
     key: Key,
 
-    p1: Node,
-    p2: Node,
-    linknode: Node,
+    p1: HgId,
+    p2: HgId,
+    linknode: HgId,
     copy_from: Option<RepoPathBuf>,
 }
 
@@ -50,8 +50,8 @@ impl Entry {
     pub fn new(key: &Key, info: &NodeInfo) -> Self {
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
-        assert_ne!(key.node, info.parents[0].node);
-        assert_ne!(key.node, info.parents[1].node);
+        assert_ne!(key.hgid, info.parents[0].hgid);
+        assert_ne!(key.hgid, info.parents[1].hgid);
 
         let copy_from = if info.parents[0].path != key.path {
             Some(info.parents[0].path.to_owned())
@@ -61,8 +61,8 @@ impl Entry {
 
         Entry {
             key: key.clone(),
-            p1: info.parents[0].node,
-            p2: info.parents[1].node,
+            p1: info.parents[0].hgid,
+            p2: info.parents[1].hgid,
             linknode: info.linknode,
             copy_from,
         }
@@ -74,8 +74,8 @@ impl Entry {
         let mut buf: [u8; 20] = Default::default();
         hasher.result(&mut buf);
 
-        let mut index_key = Vec::with_capacity(Node::len() * 2);
-        index_key.extend_from_slice(key.node.as_ref());
+        let mut index_key = Vec::with_capacity(HgId::len() * 2);
+        index_key.extend_from_slice(key.hgid.as_ref());
         index_key.extend_from_slice(&buf);
 
         index_key
@@ -84,19 +84,19 @@ impl Entry {
     /// Read an entry from the slice and deserialize it.
     ///
     /// The on-disk format of an entry is the following:
-    /// - Node: <20 bytes>
+    /// - HgId: <20 bytes>
     /// - Sha1(path) <20 bytes>
     /// - Path len: 2 unsigned bytes, big-endian
     /// - Path: <Path len> bytes
-    /// - p1 node: <20 bytes>
-    /// - p2 node: <20 bytes>
+    /// - p1 hgid: <20 bytes>
+    /// - p2 hgid: <20 bytes>
     /// - linknode: <20 bytes>
     /// Optionally:
     /// - copy from len: 2 unsigned bytes, big-endian
     /// - copy from: <copy from len> bytes
     fn from_slice(data: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(data);
-        let node = cur.read_node()?;
+        let hgid = cur.read_hgid()?;
 
         // Jump over the hashed path.
         cur.set_position(40);
@@ -107,11 +107,11 @@ impl Entry {
         cur.set_position(cur.position() + path_len);
         let path = RepoPath::from_utf8(path_slice)?;
 
-        let key = Key::new(path.to_owned(), node);
+        let key = Key::new(path.to_owned(), hgid);
 
-        let p1 = cur.read_node()?;
-        let p2 = cur.read_node()?;
-        let linknode = cur.read_node()?;
+        let p1 = cur.read_hgid()?;
+        let p2 = cur.read_hgid()?;
+        let linknode = cur.read_hgid()?;
 
         let copy_from = if let Ok(copy_from_len) = cur.read_u16::<BigEndian>() {
             let copy_from_slice = data.get_err(
@@ -151,9 +151,9 @@ impl Entry {
         let path_slice = self.key.path.as_byte_slice();
         buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
         buf.write_all(path_slice)?;
-        buf.write_node(&self.p1)?;
-        buf.write_node(&self.p2)?;
-        buf.write_node(&self.linknode)?;
+        buf.write_hgid(&self.p1)?;
+        buf.write_hgid(&self.p2)?;
+        buf.write_hgid(&self.linknode)?;
 
         if let Some(copy_from) = self.copy_from {
             let copy_from_slice = copy_from.as_byte_slice();
@@ -206,7 +206,7 @@ impl IndexedLogHistoryStore {
             .max_bytes_per_log(500 * 1000 * 1000)
             .create(true)
             .index("node_and_path", |_| {
-                vec![IndexOutput::Reference(0..(Node::len() * 2) as u64)]
+                vec![IndexOutput::Reference(0..(HgId::len() * 2) as u64)]
             })
     }
 }
@@ -295,7 +295,7 @@ mod tests {
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
-            linknode: node("3"),
+            linknode: hgid("3"),
         };
 
         log.add(&k, &nodeinfo)?;
@@ -310,7 +310,7 @@ mod tests {
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
-            linknode: node("3"),
+            linknode: hgid("3"),
         };
         log.add(&k, &nodeinfo)?;
         log.flush()?;
@@ -357,7 +357,7 @@ mod tests {
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
-            linknode: node("3"),
+            linknode: hgid("3"),
         };
         log.add(&k, &nodeinfo)?;
 

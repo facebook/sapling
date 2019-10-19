@@ -20,7 +20,7 @@ use parking_lot::Mutex;
 use tempfile::{Builder, NamedTempFile};
 
 use lz4_pyframe::compress;
-use types::{Key, Node};
+use types::{HgId, Key};
 
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
@@ -33,7 +33,7 @@ use crate::packwriter::PackWriter;
 struct MutableDataPackInner {
     dir: PathBuf,
     data_file: PackWriter<NamedTempFile>,
-    mem_index: HashMap<Node, DeltaLocation>,
+    mem_index: HashMap<HgId, DeltaLocation>,
     hasher: Sha1,
 }
 
@@ -82,7 +82,7 @@ impl MutableDataPackInner {
     }
 
     fn read_entry(&self, key: &Key) -> Fallible<Option<(Delta, Metadata)>> {
-        let location: &DeltaLocation = match self.mem_index.get(&key.node) {
+        let location: &DeltaLocation = match self.mem_index.get(&key.hgid) {
             None => return Ok(None),
             Some(location) => location,
         };
@@ -105,7 +105,7 @@ impl MutableDataPackInner {
                 base: entry
                     .delta_base()
                     .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
-                key: Key::new(key.path.clone(), entry.node().clone()),
+                key: Key::new(key.path.clone(), entry.hgid().clone()),
             },
             entry.metadata().clone(),
         )))
@@ -122,17 +122,17 @@ impl MutableDataPackInner {
         let compressed = compress(&delta.data)?;
 
         // Preallocate with approximately the size we need:
-        // (namelen(2) + name + node(20) + node(20) + datalen(8) + data + metadata(~22))
+        // (namelen(2) + name + hgid(20) + hgid(20) + datalen(8) + data + metadata(~22))
         let mut buf = Vec::with_capacity(path_slice.len() + compressed.len() + 72);
         buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
         buf.write_all(path_slice)?;
-        buf.write_all(delta.key.node.as_ref())?;
+        buf.write_all(delta.key.hgid.as_ref())?;
 
         buf.write_all(
             delta
                 .base
                 .as_ref()
-                .map_or_else(|| Node::null_id(), |k| &k.node)
+                .map_or_else(|| HgId::null_id(), |k| &k.hgid)
                 .as_ref(),
         )?;
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
@@ -144,12 +144,12 @@ impl MutableDataPackInner {
         self.hasher.input(&buf);
 
         let delta_location = DeltaLocation {
-            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.node.clone())),
+            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.hgid.clone())),
             offset,
             size: buf.len() as u64,
         };
         self.mem_index
-            .insert(delta.key.node.clone(), delta_location);
+            .insert(delta.key.hgid.clone(), delta_location);
         Ok(())
     }
 }
@@ -271,7 +271,7 @@ impl LocalStore for MutableDataPack {
         let inner = self.inner.lock();
         Ok(keys
             .iter()
-            .filter(|k| inner.mem_index.get(&k.node).is_none())
+            .filter(|k| inner.mem_index.get(&k.hgid).is_none())
             .map(|k| k.clone())
             .collect())
     }
@@ -346,13 +346,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(RepoPathBuf::new(), node("1")),
+            key: Key::new(RepoPathBuf::new(), hgid("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
-            base: Some(Key::new(RepoPathBuf::new(), delta.key.node.clone())),
-            key: Key::new(RepoPathBuf::new(), node("2")),
+            base: Some(Key::new(RepoPathBuf::new(), delta.key.hgid.clone())),
+            key: Key::new(RepoPathBuf::new(), hgid("2")),
         };
         mutdatapack.add(&delta2, &Default::default()).unwrap();
 
@@ -390,13 +390,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(RepoPathBuf::new(), node("1")),
+            key: Key::new(RepoPathBuf::new(), hgid("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(RepoPathBuf::new(), node("2")),
+            key: Key::new(RepoPathBuf::new(), hgid("2")),
         };
         let meta2 = Metadata {
             flags: Some(2),

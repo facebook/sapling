@@ -96,29 +96,29 @@ static inline void hexlify(const uint8_t* input, int len, char* dst) {
 #ifdef __cplusplus
 
 /**
- * Converts a given 40-byte hex string into a 20-byte node.
+ * Converts a given 40-byte hex string into a 20-byte hgid.
  */
-static inline void appendbinfromhex(const char* node, std::string& output) {
+static inline void appendbinfromhex(const char* hgid, std::string& output) {
   for (size_t i = 0; i < HEX_NODE_SIZE;) {
-    int8_t hi = hextable[(unsigned char)node[i++]];
-    int8_t lo = hextable[(unsigned char)node[i++]];
+    int8_t hi = hextable[(unsigned char)hgid[i++]];
+    int8_t lo = hextable[(unsigned char)hgid[i++]];
     output.push_back((hi << 4) | lo);
   }
 }
 
 /**
- * Converts a given 40-byte hex string into a 20-byte node.
+ * Converts a given 40-byte hex string into a 20-byte hgid.
  */
-static inline std::string binfromhex(const char* node) {
+static inline std::string binfromhex(const char* hgid) {
   std::string result;
 
   result.reserve(BIN_NODE_SIZE);
-  appendbinfromhex(node, result);
+  appendbinfromhex(hgid, result);
   return result;
 }
 
 /**
- * Converts a given 20-byte node into a 40-byte hex string.
+ * Converts a given 20-byte hgid into a 40-byte hex string.
  */
 static inline void hexfrombin(const char* binnode, std::string& output) {
   for (size_t ix = 0; ix < BIN_NODE_SIZE; ix++) {

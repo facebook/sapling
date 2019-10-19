@@ -63,7 +63,7 @@ mod tests {
         let key1 = key(&file1, "2");;
         let info = NodeInfo {
             parents: [key(&file1, "1"), null_key(&file1)],
-            linknode: node("101"),
+            linknode: hgid("101"),
         };
         nodes.insert(key1.clone(), info.clone());
 
@@ -71,7 +71,7 @@ mod tests {
         let key2 = key(&file2, "3");
         let info = NodeInfo {
             parents: [key(&file2, "5"), key(&file2, "6")],
-            linknode: node("102"),
+            linknode: hgid("102"),
         };
         nodes.insert(key2.clone(), info.clone());
 
@@ -79,7 +79,7 @@ mod tests {
         let key3 = key(&file1, "4");
         let info = NodeInfo {
             parents: [key2.clone(), key1.clone()],
-            linknode: node("102"),
+            linknode: hgid("102"),
         };
         nodes.insert(key3.clone(), info.clone());
 

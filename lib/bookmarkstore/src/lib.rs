@@ -13,7 +13,7 @@ use std::str;
 use failure::Fallible;
 
 use indexedlog::log::{IndexDef, IndexOutput, Log};
-use types::node::Node;
+use types::hgid::HgId;
 
 pub mod errors;
 
@@ -27,14 +27,14 @@ impl BookmarkStore {
         //   LOG := UPDATE | REMOVAL
         //   UPDATE := 'U' + NODE_ID + BOOKMARK_NAME
         //   REMOVAL := 'R' + BOOKMARK_NAME
-        //   NODE_ID := fixed-length 20-byte node id
+        //   NODE_ID := fixed-length 20-byte hgid
         //   BOOKMARK_NAME := variable-length bookmark name
         // On update or deletion, a new entry is appended.
         // * To lookup a bookmark, find the last entry with the bookmark.
-        // * To lookup a node, find all entries with the node id. This gives a list of candidate
+        // * To lookup a hgid, find all entries with the hgid. This gives a list of candidate
         //   bookmarks. For each candidate bookmark, lookup the bookmark (following the procedure
         //   of the previous bullet point) and check whether it is currently associated with
-        //   the node.
+        //   the hgid.
 
         Ok(Self {
             log: Log::open(
@@ -43,13 +43,13 @@ impl BookmarkStore {
                     IndexDef::new("bookmark", |data: &[u8]| match data[0] {
                         b'R' => vec![IndexOutput::Reference(1u64..data.len() as u64)],
                         b'U' => vec![IndexOutput::Reference(
-                            (Node::len() + 1) as u64..data.len() as u64,
+                            (HgId::len() + 1) as u64..data.len() as u64,
                         )],
                         c => panic!("invalid BookmarkEntry type '{}'", c),
                     }),
                     IndexDef::new("node", |data: &[u8]| match data[0] {
                         b'R' => vec![],
-                        b'U' => vec![IndexOutput::Reference(1u64..(Node::len() + 1) as u64)],
+                        b'U' => vec![IndexOutput::Reference(1u64..(HgId::len() + 1) as u64)],
                         c => panic!("invalid BookmarkEntry type '{}'", c),
                     }),
                 ],
@@ -57,7 +57,7 @@ impl BookmarkStore {
         })
     }
 
-    pub fn lookup_bookmark(&self, bookmark: &str) -> Option<Node> {
+    pub fn lookup_bookmark(&self, bookmark: &str) -> Option<HgId> {
         let mut iter = self.log.lookup(0, bookmark).unwrap();
         iter.next().and_then(|data| {
             let data = data.unwrap();
@@ -70,17 +70,17 @@ impl BookmarkStore {
                 }
                 BookmarkEntry::Update {
                     bookmark: found_bookmark,
-                    node,
+                    hgid,
                 } => {
                     assert_eq!(found_bookmark, bookmark);
-                    Some(node)
+                    Some(hgid)
                 }
             }
         })
     }
 
-    pub fn lookup_node(&self, node: &Node) -> Option<Vec<String>> {
-        let iter = self.log.lookup(1, &node).unwrap();
+    pub fn lookup_hgid(&self, hgid: &HgId) -> Option<Vec<String>> {
+        let iter = self.log.lookup(1, &hgid).unwrap();
         let result = iter
             .filter_map(|data| {
                 let data = data.unwrap();
@@ -91,15 +91,15 @@ impl BookmarkStore {
                     }
                     BookmarkEntry::Update {
                         bookmark,
-                        node: found_node,
+                        hgid: found_hgid,
                     } => {
-                        assert_eq!(&found_node, node);
-                        let latest_node = self.lookup_bookmark(bookmark);
-                        match latest_node {
-                            Some(latest_node) if &latest_node == node => {
+                        assert_eq!(&found_hgid, hgid);
+                        let latest_hgid = self.lookup_bookmark(bookmark);
+                        match latest_hgid {
+                            Some(latest_hgid) if &latest_hgid == hgid => {
                                 Some(String::from(bookmark))
                             }
-                            Some(_) => None, // bookmark still present, but points to another node
+                            Some(_) => None, // bookmark still present, but points to another hgid
                             None => None,    // bookmark has been removed
                         }
                     }
@@ -113,12 +113,12 @@ impl BookmarkStore {
         }
     }
 
-    pub fn update(&mut self, bookmark: &str, node: Node) -> Fallible<()> {
+    pub fn update(&mut self, bookmark: &str, hgid: HgId) -> Fallible<()> {
         Ok(self
             .log
             .append(BookmarkEntry::pack(&BookmarkEntry::Update {
                 bookmark,
-                node,
+                hgid,
             }))?)
     }
 
@@ -141,7 +141,7 @@ impl BookmarkStore {
 }
 
 enum BookmarkEntry<'a> {
-    Update { bookmark: &'a str, node: Node },
+    Update { bookmark: &'a str, hgid: HgId },
     Remove { bookmark: &'a str },
 }
 
@@ -153,9 +153,9 @@ impl<'a> BookmarkEntry<'a> {
                 result.write_all(&['R' as u8]).unwrap();
                 result.write_all(bookmark.as_bytes()).unwrap();
             }
-            BookmarkEntry::Update { bookmark, node } => {
+            BookmarkEntry::Update { bookmark, hgid } => {
                 result.write_all(&['U' as u8]).unwrap();
-                result.write_all(node.as_ref()).unwrap();
+                result.write_all(hgid.as_ref()).unwrap();
                 result.write_all(bookmark.as_bytes()).unwrap();
             }
         }
@@ -169,9 +169,9 @@ impl<'a> BookmarkEntry<'a> {
                 BookmarkEntry::Remove { bookmark }
             }
             b'U' => {
-                let bookmark = str::from_utf8(&data[Node::len() + 1..]).unwrap();
-                let node = Node::from_slice(&data[1..Node::len() + 1]).unwrap();
-                BookmarkEntry::Update { bookmark, node }
+                let bookmark = str::from_utf8(&data[HgId::len() + 1..]).unwrap();
+                let hgid = HgId::from_slice(&data[1..HgId::len() + 1]).unwrap();
+                BookmarkEntry::Update { bookmark, hgid }
             }
             c => panic!("invalid BookmarkEntry type '{}'", c),
         }
@@ -194,35 +194,35 @@ mod tests {
     #[test]
     fn test_update() {
         let bookmark = "test";
-        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
+        let hgid = HgId::from_str("0123456789012345678901234567890123456789").unwrap();
 
         let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.update(&bookmark, node).unwrap();
-        assert_eq!(bm_store.lookup_bookmark(&bookmark).unwrap(), node);
+        bm_store.update(&bookmark, hgid).unwrap();
+        assert_eq!(bm_store.lookup_bookmark(&bookmark).unwrap(), hgid);
         assert_eq!(
-            bm_store.lookup_node(&node),
+            bm_store.lookup_hgid(&hgid),
             Some(vec![bookmark.to_string()])
         );
     }
 
     #[test]
-    fn test_multiple_bookmarks_for_single_node() {
+    fn test_multiple_bookmarks_for_single_hgid() {
         let bookmark = "test";
         let bookmark2 = "test2";
         let bookmark3 = "test3";
-        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
+        let hgid = HgId::from_str("0123456789012345678901234567890123456789").unwrap();
 
         let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.update(bookmark, node).unwrap();
-        bm_store.update(bookmark2, node).unwrap();
-        bm_store.update(bookmark3, node).unwrap();
+        bm_store.update(bookmark, hgid).unwrap();
+        bm_store.update(bookmark2, hgid).unwrap();
+        bm_store.update(bookmark3, hgid).unwrap();
 
-        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node));
-        assert_eq!(bm_store.lookup_bookmark(bookmark2), Some(node));
-        assert_eq!(bm_store.lookup_bookmark(bookmark3), Some(node));
-        let actual: HashSet<_> = HashSet::from_iter(bm_store.lookup_node(&node).unwrap());
+        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(hgid));
+        assert_eq!(bm_store.lookup_bookmark(bookmark2), Some(hgid));
+        assert_eq!(bm_store.lookup_bookmark(bookmark3), Some(hgid));
+        let actual: HashSet<_> = HashSet::from_iter(bm_store.lookup_hgid(&hgid).unwrap());
         let expected = HashSet::from_iter(vec![
             String::from(bookmark),
             String::from(bookmark2),
@@ -234,14 +234,14 @@ mod tests {
     #[test]
     fn test_remove() {
         let bookmark = "test";
-        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
+        let hgid = HgId::from_str("0123456789012345678901234567890123456789").unwrap();
 
         let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.update(bookmark, node).unwrap();
+        bm_store.update(bookmark, hgid).unwrap();
         bm_store.remove(bookmark).unwrap();
         assert_eq!(bm_store.lookup_bookmark(bookmark), None);
-        assert_eq!(bm_store.lookup_node(&node), None);
+        assert_eq!(bm_store.lookup_hgid(&hgid), None);
     }
 
     #[test]
@@ -258,12 +258,12 @@ mod tests {
     #[test]
     fn test_update_bookmark() {
         let bookmark = "test";
-        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
-        let node2 = Node::from(&[1u8; 20]);
+        let hgid = HgId::from_str("0123456789012345678901234567890123456789").unwrap();
+        let node2 = HgId::from(&[1u8; 20]);
 
         let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.update(bookmark, node).unwrap();
+        bm_store.update(bookmark, hgid).unwrap();
         bm_store.update(bookmark, node2).unwrap();
 
         assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node2));
@@ -272,17 +272,17 @@ mod tests {
     #[test]
     fn test_write_bookmarks_to_file() {
         let bookmark = "testbookmark";
-        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
+        let hgid = HgId::from_str("0123456789012345678901234567890123456789").unwrap();
 
         let (mut original_bm_store, dir) = new_indexed_log_bookmark_store();
-        original_bm_store.update(bookmark, node).unwrap();
+        original_bm_store.update(bookmark, hgid).unwrap();
         original_bm_store.flush().unwrap();
 
         let bm_store = BookmarkStore::new(dir.path()).unwrap();
         assert_eq!(
-            bm_store.lookup_node(&node),
+            bm_store.lookup_hgid(&hgid),
             Some(vec![String::from(bookmark)])
         );
-        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node));
+        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(hgid));
     }
 }

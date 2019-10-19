@@ -19,7 +19,7 @@ use driver::MultiDriver;
 use handler::Collector;
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
-    DataEntry, HistoryEntry, Key, Node, RepoPathBuf, Validity, WireHistoryEntry,
+    DataEntry, HgId, HistoryEntry, Key, RepoPathBuf, Validity, WireHistoryEntry,
 };
 
 use crate::api::EdenApi;
@@ -247,8 +247,8 @@ impl EdenApi for EdenApiCurlClient {
     fn prefetch_trees(
         &self,
         rootdir: RepoPathBuf,
-        mfnodes: Vec<Node>,
-        basemfnodes: Vec<Node>,
+        mfnodes: Vec<HgId>,
+        basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {

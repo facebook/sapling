@@ -2,7 +2,6 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-
 use cpython::{
     exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
     PythonObject, PythonObjectWithTypeObject,
@@ -33,7 +32,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
-        let py_node = PyBytes::new(py, key.node.as_ref());
+        let py_node = PyBytes::new(py, key.hgid.as_ref());
 
         let py_data = match self
             .py_store
@@ -58,7 +57,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
-        let py_node = PyBytes::new(py, key.node.as_ref());
+        let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_delta = match self
             .py_store
             .call_method(py, "getdelta", (py_name, py_node), None)
@@ -84,7 +83,7 @@ impl DataStore for PythonDataStore {
             to_key(py, &py_delta_name, &py_delta_node).map_err(|e| PythonError::from(e))?;
         Ok(Some(Delta {
             data: py_bytes.data(py).to_vec().into(),
-            base: if base_key.node.is_null() {
+            base: if base_key.hgid.is_null() {
                 None
             } else {
                 Some(base_key)
@@ -97,7 +96,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
-        let py_node = PyBytes::new(py, key.node.as_ref());
+        let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_chain =
             match self
                 .py_store
@@ -124,7 +123,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.path.as_byte_slice());
-        let py_node = PyBytes::new(py, key.node.as_ref());
+        let py_node = PyBytes::new(py, key.hgid.as_ref());
         let py_meta = match self
             .py_store
             .call_method(py, "getmeta", (py_name, py_node), None)
@@ -153,7 +152,7 @@ impl RemoteDataStore for PythonDataStore {
             .into_iter()
             .map(|key| {
                 let py_name = PyBytes::new(py, key.path.as_byte_slice());
-                let py_node = PyBytes::new(py, key.node.as_ref());
+                let py_node = PyBytes::new(py, key.hgid.as_ref());
                 (py_name, py_node)
             })
             .collect::<Vec<_>>();

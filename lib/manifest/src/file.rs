@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use types::{Node, RepoPathBuf};
+use types::{HgId, RepoPathBuf};
 
 use crate::tree::Link;
 
@@ -38,11 +38,11 @@ impl From<(RepoPathBuf, FileMetadata)> for File {
 }
 
 /// The contents of the Manifest for a file.
-/// * node: used to determine the revision of the file in the repository.
+/// * hgid: used to determine the revision of the file in the repository.
 /// * file_type: determines the type of the file.
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct FileMetadata {
-    pub node: Node,
+    pub hgid: HgId,
     pub file_type: FileType,
 }
 
@@ -69,23 +69,23 @@ impl Default for FileType {
 }
 
 impl FileMetadata {
-    pub fn new(node: Node, file_type: FileType) -> Self {
-        Self { node, file_type }
+    pub fn new(hgid: HgId, file_type: FileType) -> Self {
+        Self { hgid, file_type }
     }
 
     /// Creates `FileMetadata` with file_type set to `FileType::Regular`.
-    pub fn regular(node: Node) -> Self {
-        Self::new(node, FileType::Regular)
+    pub fn regular(hgid: HgId) -> Self {
+        Self::new(hgid, FileType::Regular)
     }
 
     /// Creates `FileMetadata` with file_type set to `FileType::Executable`.
-    pub fn executable(node: Node) -> Self {
-        Self::new(node, FileType::Executable)
+    pub fn executable(hgid: HgId) -> Self {
+        Self::new(hgid, FileType::Executable)
     }
 
     /// Creates `FileMetadata` with file_type set to `FileType::Symlink`.
-    pub fn symlink(node: Node) -> Self {
-        Self::new(node, FileType::Symlink)
+    pub fn symlink(hgid: HgId) -> Self {
+        Self::new(hgid, FileType::Symlink)
     }
 }
 
@@ -101,8 +101,8 @@ impl quickcheck::Arbitrary for FileType {
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for FileMetadata {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let node = Node::arbitrary(g);
+        let hgid = HgId::arbitrary(g);
         let file_type = FileType::arbitrary(g);
-        FileMetadata::new(node, file_type)
+        FileMetadata::new(hgid, file_type)
     }
 }

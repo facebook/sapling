@@ -7,7 +7,7 @@ use std::fmt;
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{node::Node, path::RepoPathBuf};
+use crate::{hgid::HgId, path::RepoPathBuf};
 
 #[derive(
     Clone,
@@ -24,19 +24,19 @@ use crate::{node::Node, path::RepoPathBuf};
 pub struct Key {
     // Name is usually a file or directory path
     pub path: RepoPathBuf,
-    // Node is always a 20 byte hash. This will be changed to a fix length array later.
-    pub node: Node,
+    // HgId is always a 20 byte hash. This will be changed to a fix length array later.
+    pub hgid: HgId,
 }
 
 impl Key {
-    pub fn new(path: RepoPathBuf, node: Node) -> Self {
-        Key { path, node }
+    pub fn new(path: RepoPathBuf, hgid: HgId) -> Self {
+        Key { path, hgid }
     }
 }
 
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", &self.node, self.path)
+        write!(f, "{} {}", &self.hgid, self.path)
     }
 }
 
@@ -46,14 +46,14 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        Key::new(RepoPathBuf::arbitrary(g), Node::arbitrary(g))
+        Key::new(RepoPathBuf::arbitrary(g), HgId::arbitrary(g))
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
     use super::Key;
-    use crate::node::mocks::{ONES, THREES, TWOS};
+    use crate::hgid::mocks::{ONES, THREES, TWOS};
     use crate::testutil::*;
 
     use lazy_static::lazy_static;

@@ -2,7 +2,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{key::Key, node::Node, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
+use crate::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
 
 /// Structure containing the fields corresponding to a HistoryPack's
 /// in-memory representation of a history entry. Useful for adding
@@ -37,7 +37,7 @@ impl HistoryEntry {
             Parents::None => Default::default(),
             Parents::One(p1) => {
                 let p1 = Key::new(p1_path, p1);
-                // If there is no p2, its node hash is null and its path is empty.
+                // If there is no p2, its hgid hash is null and its path is empty.
                 let p2 = Key::default();
                 [p1, p2]
             }
@@ -85,9 +85,9 @@ impl From<(WireHistoryEntry, RepoPathBuf)> for HistoryEntry {
     Deserialize
 )]
 pub struct WireHistoryEntry {
-    pub node: Node,
+    pub node: HgId,
     pub parents: Parents,
-    pub linknode: Node,
+    pub linknode: HgId,
     pub copyfrom: Option<RepoPathBuf>,
 }
 
@@ -96,15 +96,15 @@ impl From<HistoryEntry> for WireHistoryEntry {
         let [p1, p2] = entry.nodeinfo.parents;
         // If the p1's path differs from the entry's path, this means the file
         // was copied, so populate the copyfrom path with the p1 path.
-        let copyfrom = if !p1.node.is_null() && !p1.path.is_empty() && p1.path != entry.key.path {
+        let copyfrom = if !p1.hgid.is_null() && !p1.path.is_empty() && p1.path != entry.key.path {
             Some(p1.path)
         } else {
             None
         };
 
         Self {
-            node: entry.key.node,
-            parents: Parents::new(p1.node, p2.node),
+            node: entry.key.hgid,
+            parents: Parents::new(p1.hgid, p2.hgid),
             linknode: entry.nodeinfo.linknode,
             copyfrom,
         }
@@ -125,17 +125,17 @@ impl Arbitrary for HistoryEntry {
         // always puts the copied from path in the p1 Key's path,
         // so p2's path must always match the current entry's path
         // unless p2 is null.
-        if !nodeinfo.parents[1].node.is_null() {
+        if !nodeinfo.parents[1].hgid.is_null() {
             nodeinfo.parents[1].path = key.path.clone();
         }
 
-        // If p1's key contains a null node hash or an empty path,
+        // If p1's key contains a null hgid hash or an empty path,
         // the other field must also be null/empty, since it doesn't
         // make sense to have a file path with a null hash or an empty
         // path with a non-null hash.
         //
         // Likewise, if p1 is null, then p2 must also be null.
-        if nodeinfo.parents[0].path.is_empty() || nodeinfo.parents[0].node.is_null() {
+        if nodeinfo.parents[0].path.is_empty() || nodeinfo.parents[0].hgid.is_null() {
             nodeinfo.parents[0] = Key::default();
             nodeinfo.parents[1] = Key::default();
         }
@@ -159,9 +159,9 @@ impl Arbitrary for WireHistoryEntry {
         }
 
         Self {
-            node: Node::arbitrary(g),
+            node: HgId::arbitrary(g),
             parents,
-            linknode: Node::arbitrary(g),
+            linknode: HgId::arbitrary(g),
             copyfrom,
         }
     }

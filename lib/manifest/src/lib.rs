@@ -12,7 +12,7 @@
 
 use failure::Fallible;
 
-use types::{Node, RepoPath, RepoPathBuf};
+use types::{HgId, RepoPath, RepoPathBuf};
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.
@@ -41,12 +41,12 @@ pub trait Manifest {
 
     /// Persists the manifest so that it can be retrieved at a later time. Returns a note
     /// representing the identifier for saved manifest.
-    fn flush(&mut self) -> Fallible<Node>;
+    fn flush(&mut self) -> Fallible<HgId>;
 
     /// Retrieve the FileMetadata that is associated with a path.
     /// Paths that were not set will return None.
     fn get_file(&self, file_path: &RepoPath) -> Fallible<Option<FileMetadata>> {
-        let result = self.get(file_path)?.and_then(|fs_node| match fs_node {
+        let result = self.get(file_path)?.and_then(|fs_hgid| match fs_hgid {
             FsNode::File(file_metadata) => Some(file_metadata),
             FsNode::Directory => None,
         });

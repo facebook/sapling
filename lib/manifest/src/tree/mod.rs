@@ -24,7 +24,7 @@ use failure::{bail, Fallible};
 use once_cell::sync::OnceCell;
 
 use pathmatcher::Matcher;
-use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
 pub use self::diff::{Diff, DiffEntry, DiffType};
@@ -45,11 +45,11 @@ pub struct Tree {
 }
 
 impl Tree {
-    /// Instantiates a tree manifest that was stored with the specificed `Node`
-    pub fn durable(store: Arc<dyn TreeStore + Send + Sync>, node: Node) -> Self {
+    /// Instantiates a tree manifest that was stored with the specificed `HgId`
+    pub fn durable(store: Arc<dyn TreeStore + Send + Sync>, hgid: HgId) -> Self {
         Tree {
             store: InnerStore::new(store),
-            root: Link::durable(node),
+            root: Link::durable(hgid),
         }
     }
 
@@ -192,11 +192,11 @@ impl Manifest for Tree {
         }
     }
 
-    fn flush(&mut self) -> Fallible<Node> {
-        fn compute_node<C: AsRef<[u8]>>(content: C) -> Node {
+    fn flush(&mut self) -> Fallible<HgId> {
+        fn compute_hgid<C: AsRef<[u8]>>(content: C) -> HgId {
             let mut hasher = Sha1::new();
             hasher.input(content.as_ref());
-            let mut buf = [0u8; Node::len()];
+            let mut buf = [0u8; HgId::len()];
             hasher.result(&mut buf);
             (&buf).into()
         }
@@ -204,44 +204,44 @@ impl Manifest for Tree {
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
-        ) -> Fallible<(&'c Node, store::Flag)> {
+        ) -> Fallible<(&'c HgId, store::Flag)> {
             loop {
                 match cursor {
                     Leaf(file_metadata) => {
                         return Ok((
-                            &file_metadata.node,
+                            &file_metadata.hgid,
                             store::Flag::File(file_metadata.file_type.clone()),
                         ));
                     }
-                    Durable(entry) => return Ok((&entry.node, store::Flag::Directory)),
+                    Durable(entry) => return Ok((&entry.hgid, store::Flag::Directory)),
                     Ephemeral(links) => {
                         let iter = links.iter_mut().map(|(component, link)| {
                             pathbuf.push(component.as_path_component());
-                            let (node, flag) = do_flush(store, pathbuf, link)?;
+                            let (hgid, flag) = do_flush(store, pathbuf, link)?;
                             pathbuf.pop();
                             Ok(store::Element::new(
                                 component.to_owned(),
-                                node.clone(),
+                                hgid.clone(),
                                 flag,
                             ))
                         });
                         let entry = store::Entry::from_elements(iter)?;
-                        let node = compute_node(&entry);
-                        store.insert_entry(&pathbuf, node, entry)?;
+                        let hgid = compute_hgid(&entry);
+                        store.insert_entry(&pathbuf, hgid, entry)?;
 
                         let cell = OnceCell::new();
                         // TODO: remove clone
                         cell.set(Ok(links.clone())).unwrap();
 
-                        let durable_entry = DurableEntry { node, links: cell };
+                        let durable_entry = DurableEntry { hgid, links: cell };
                         *cursor = Durable(Arc::new(durable_entry));
                     }
                 }
             }
         }
         let mut path = RepoPathBuf::new();
-        let (node, _) = do_flush(&self.store, &mut path, &mut self.root)?;
-        Ok(node.clone())
+        let (hgid, _) = do_flush(&self.store, &mut path, &mut self.root)?;
+        Ok(hgid.clone())
     }
 }
 
@@ -266,14 +266,14 @@ impl fmt::Debug for Tree {
         fn write_links(f: &mut fmt::Formatter<'_>, link: &Link, indent: usize) -> fmt::Result {
             match link {
                 Link::Leaf(metadata) => {
-                    write!(f, "(File, {}, {:?})\n", metadata.node, metadata.file_type)
+                    write!(f, "(File, {}, {:?})\n", metadata.hgid, metadata.file_type)
                 }
                 Link::Ephemeral(children) => {
                     write!(f, "(Ephemeral)\n")?;
                     write_children(f, children, indent)
                 }
                 Link::Durable(entry) => {
-                    write!(f, "(Durable, {})\n", entry.node)?;
+                    write!(f, "(Durable, {})\n", entry.hgid)?;
                     match entry.links.get() {
                         None => Ok(()),
                         Some(Err(fallible)) => {
@@ -294,12 +294,12 @@ impl Tree {
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&Tree>,
-    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, Node, Bytes, Node, Node)>> {
-        fn compute_node<C: AsRef<[u8]>>(parent_tree_nodes: &[Node], content: C) -> Node {
+    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
+        fn compute_hgid<C: AsRef<[u8]>>(parent_tree_nodes: &[HgId], content: C) -> HgId {
             let mut hasher = Sha1::new();
             debug_assert!(parent_tree_nodes.len() <= 2);
-            let p1 = parent_tree_nodes.get(0).unwrap_or(Node::null_id());
-            let p2 = parent_tree_nodes.get(1).unwrap_or(Node::null_id());
+            let p1 = parent_tree_nodes.get(0).unwrap_or(HgId::null_id());
+            let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
             // Even if parents are sorted two hashes go into hash computation but surprise
             // the NULL_ID is not a special case in this case and gets sorted.
             if p1 < p2 {
@@ -310,14 +310,14 @@ impl Tree {
                 hasher.input(p1.as_ref());
             }
             hasher.input(content.as_ref());
-            let mut buf = [0u8; Node::len()];
+            let mut buf = [0u8; HgId::len()];
             hasher.result(&mut buf);
             (&buf).into()
         }
         struct Executor<'a> {
             store: &'a InnerStore,
             path: RepoPathBuf,
-            converted_nodes: Vec<(RepoPathBuf, Node, Bytes, Node, Node)>,
+            converted_nodes: Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
             parent_trees: Vec<Cursor<'a>>,
         };
         impl<'a> Executor<'a> {
@@ -338,15 +338,15 @@ impl Tree {
                 }
                 Ok(executor)
             }
-            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Fallible<Vec<Node>> {
+            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Fallible<Vec<HgId>> {
                 let mut parent_nodes = Vec::with_capacity(active_parents.len());
                 for id in active_parents {
                     let cursor = &self.parent_trees[*id];
-                    let node = match cursor.link() {
+                    let hgid = match cursor.link() {
                         Leaf(_) | Ephemeral(_) => unreachable!(),
-                        Durable(entry) => entry.node,
+                        Durable(entry) => entry.hgid,
                     };
-                    parent_nodes.push(node);
+                    parent_nodes.push(hgid);
                 }
                 Ok(parent_nodes)
             }
@@ -390,17 +390,17 @@ impl Tree {
                 &mut self,
                 link: &mut Link,
                 active_parents: Vec<usize>,
-            ) -> Fallible<(Node, store::Flag)> {
+            ) -> Fallible<(HgId, store::Flag)> {
                 let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
                 if let Durable(entry) = link {
-                    if parent_tree_nodes.contains(&entry.node) {
-                        return Ok((entry.node, store::Flag::Directory));
+                    if parent_tree_nodes.contains(&entry.hgid) {
+                        return Ok((entry.hgid, store::Flag::Directory));
                     }
                 }
                 self.advance_parents(&active_parents)?;
                 if let Leaf(file_metadata) = link {
                     return Ok((
-                        file_metadata.node,
+                        file_metadata.hgid,
                         store::Flag::File(file_metadata.file_type.clone()),
                     ));
                 }
@@ -412,30 +412,30 @@ impl Tree {
                 for (component, link) in links.iter_mut() {
                     self.path.push(component.as_path_component());
                     let child_parents = self.parent_trees_for_subdirectory(&active_parents)?;
-                    let (node, flag) = self.work(link, child_parents)?;
+                    let (hgid, flag) = self.work(link, child_parents)?;
                     self.path.pop();
-                    let element = store::Element::new(component.clone(), node, flag);
+                    let element = store::Element::new(component.clone(), hgid, flag);
                     entry.add_element(element);
                 }
                 let entry = entry.freeze();
-                let node = compute_node(&parent_tree_nodes, &entry);
+                let hgid = compute_hgid(&parent_tree_nodes, &entry);
 
                 let cell = OnceCell::new();
                 // TODO: remove clone
                 cell.set(Ok(links.clone())).unwrap();
 
-                let durable_entry = DurableEntry { node, links: cell };
+                let durable_entry = DurableEntry { hgid, links: cell };
                 let inner = Arc::new(durable_entry);
                 *link = Durable(inner);
-                let parent_node = |id| *parent_tree_nodes.get(id).unwrap_or(Node::null_id());
+                let parent_hgid = |id| *parent_tree_nodes.get(id).unwrap_or(HgId::null_id());
                 self.converted_nodes.push((
                     self.path.clone(),
-                    node,
+                    hgid,
                     entry.to_bytes(),
-                    parent_node(0),
-                    parent_node(1),
+                    parent_hgid(0),
+                    parent_hgid(1),
                 ));
-                Ok((node, store::Flag::Directory))
+                Ok((hgid, store::Flag::Directory))
             }
         }
 
@@ -489,44 +489,44 @@ pub enum List {
 /// in memory format that is the same as the wire format.
 ///
 /// This function returns the nodes that need to be sent over the wire for a subtree of the
-/// manifest to be fully hydrated. The subtree is represented by `path` and `node`. The data
+/// manifest to be fully hydrated. The subtree is represented by `path` and `hgid`. The data
 /// that is present locally by the client is represented by `other_nodes`.
 ///
 /// It is undefined what this function will do when called with a path that points to a file
 /// or with nodes that don't make sense.
 // NOTE: The implementation is currently custom. Consider converting the code to use Cursor.
 // The suggestion received in code review was also to consider making the return type more
-// simple (RepoPath, Node) and letting the call sites deal with the Bytes.
+// simple (RepoPath, HgId) and letting the call sites deal with the Bytes.
 pub fn compat_subtree_diff(
     store: Arc<dyn TreeStore + Send + Sync>,
     path: &RepoPath,
-    node: Node,
-    other_nodes: Vec<Node>,
+    hgid: HgId,
+    other_nodes: Vec<HgId>,
     depth: i32,
-) -> Fallible<Vec<(RepoPathBuf, Node, Bytes)>> {
+) -> Fallible<Vec<(RepoPathBuf, HgId, Bytes)>> {
     struct State {
         store: InnerStore,
         path: RepoPathBuf,
-        result: Vec<(RepoPathBuf, Node, Bytes)>,
+        result: Vec<(RepoPathBuf, HgId, Bytes)>,
         depth_remaining: i32,
     }
     impl State {
-        fn work(&mut self, node: Node, other_nodes: Vec<Node>) -> Fallible<()> {
-            let entry = self.store.get_entry(&self.path, node)?;
+        fn work(&mut self, hgid: HgId, other_nodes: Vec<HgId>) -> Fallible<()> {
+            let entry = self.store.get_entry(&self.path, hgid)?;
 
             if self.depth_remaining > 0 {
                 // TODO: optimize "other_nodes" construction
                 // We use BTreeMap for convenience only, it is more efficient to use an array since
                 // the entries are already sorted.
                 let mut others_map = BTreeMap::new();
-                for other_node in other_nodes {
-                    let other_entry = self.store.get_entry(&self.path, other_node)?;
+                for other_hgid in other_nodes {
+                    let other_entry = self.store.get_entry(&self.path, other_hgid)?;
                     for other_element_result in other_entry.elements() {
                         let other_element = other_element_result?;
                         others_map
                             .entry(other_element.component)
                             .or_insert(vec![])
-                            .push(other_element.node);
+                            .push(other_element.hgid);
                     }
                 }
                 for element_result in entry.elements() {
@@ -537,25 +537,25 @@ pub fn compat_subtree_diff(
                     let mut others = others_map
                         .remove(&element.component)
                         .unwrap_or_else(|| vec![]);
-                    if others.contains(&element.node) {
+                    if others.contains(&element.hgid) {
                         continue;
                     }
                     others.dedup();
                     self.path.push(element.component.as_ref());
                     self.depth_remaining -= 1;
-                    self.work(element.node, others)?;
+                    self.work(element.hgid, others)?;
                     self.depth_remaining += 1;
                     self.path.pop();
                 }
             }
             // NOTE: order in the result set matters for a lot of the integration tests
             self.result
-                .push((self.path.clone(), node, entry.to_bytes()));
+                .push((self.path.clone(), hgid, entry.to_bytes()));
             Ok(())
         }
     }
 
-    if other_nodes.contains(&node) {
+    if other_nodes.contains(&hgid) {
         return Ok(vec![]);
     }
 
@@ -565,7 +565,7 @@ pub fn compat_subtree_diff(
         result: vec![],
         depth_remaining: depth - 1,
     };
-    state.work(node, other_nodes)?;
+    state.work(hgid, other_nodes)?;
     Ok(state.result)
 }
 
@@ -587,7 +587,7 @@ pub fn prefetch(
     key: Key,
     mut depth: Option<usize>,
 ) -> Fallible<()> {
-    let tree = Tree::durable(store, key.node);
+    let tree = Tree::durable(store, key.hgid);
     let mut dirs = vec![Directory::from_link(&tree.root, key.path).unwrap()];
 
     while !dirs.is_empty() {
@@ -618,13 +618,13 @@ pub fn prefetch(
 
 /// A directory (inner node) encountered during a tree traversal.
 ///
-/// The directory may have a manifest node hash if it is unmodified from its
+/// The directory may have a manifest hgid if it is unmodified from its
 /// state on disk. If the directory has in-memory modifications that have not
-/// been persisted to disk, it will not have a node hash.
+/// been persisted to disk, it will not have an hgid.
 #[derive(Clone, Debug)]
 pub(crate) struct Directory<'a> {
     path: RepoPathBuf,
-    node: Option<Node>,
+    hgid: Option<HgId>,
     link: &'a Link,
 }
 
@@ -632,12 +632,12 @@ impl<'a> Directory<'a> {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
     pub(crate) fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
-        let node = match link {
+        let hgid = match link {
             Link::Leaf(_) => return None,
             Link::Ephemeral(_) => None,
-            Link::Durable(entry) => Some(entry.node),
+            Link::Durable(entry) => Some(entry.hgid),
         };
-        Some(Self { path, node, link })
+        Some(Self { path, hgid, link })
     }
 
     /// Same as `from_link`, but set the directory's path to the empty
@@ -683,11 +683,11 @@ impl<'a> Directory<'a> {
         Ok((files, dirs))
     }
 
-    /// Create a `Key` (path/node pair) corresponding to this directory. Keys are used
+    /// Create a `Key` (path/hgid pair) corresponding to this directory. Keys are used
     /// by the Eden API to fetch data from the server, making this representation useful
     /// for interacting with Mercurial's data fetching code.
     pub(crate) fn key(&self) -> Option<Key> {
-        Some(Key::new(self.path.clone(), self.node.clone()?))
+        Some(Key::new(self.path.clone(), self.hgid.clone()?))
     }
 }
 
@@ -695,14 +695,14 @@ impl Eq for Directory<'_> {}
 
 impl PartialEq for Directory<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.path == other.path && self.node == other.node
+        self.path == other.path && self.hgid == other.hgid
     }
 }
 
 impl Ord for Directory<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.path.cmp(&other.path) {
-            Ordering::Equal => self.node.cmp(&other.node),
+            Ordering::Equal => self.hgid.cmp(&other.hgid),
             ord => ord,
         }
     }
@@ -718,7 +718,7 @@ impl PartialOrd for Directory<'_> {
 mod tests {
     use super::*;
 
-    use types::{node::NULL_ID, testutil::*};
+    use types::{hgid::NULL_ID, testutil::*};
 
     use self::{store::TestStore, testutil::*};
     use crate::FileType;
@@ -786,7 +786,7 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(RepoPath::empty(), node("1"), root_entry.to_bytes())
+            .insert(RepoPath::empty(), hgid("1"), root_entry.to_bytes())
             .unwrap();
         let foo_entry = store::Entry::from_elements(vec![store_element(
             "bar",
@@ -795,9 +795,9 @@ mod tests {
         )])
         .unwrap();
         store
-            .insert(repo_path("foo"), node("10"), foo_entry.to_bytes())
+            .insert(repo_path("foo"), hgid("10"), foo_entry.to_bytes())
             .unwrap();
-        let mut tree = Tree::durable(Arc::new(store), node("1"));
+        let mut tree = Tree::durable(Arc::new(store), hgid("1"));
 
         assert_eq!(
             tree.get_file(repo_path("foo/bar")).unwrap(),
@@ -926,7 +926,7 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(RepoPath::empty(), node("1"), root_entry.to_bytes())
+            .insert(RepoPath::empty(), hgid("1"), root_entry.to_bytes())
             .unwrap();
         let a1_entry = store::Entry::from_elements(vec![
             store_element("b1", "11", store::Flag::File(FileType::Regular)),
@@ -934,9 +934,9 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(repo_path("a1"), node("10"), a1_entry.to_bytes())
+            .insert(repo_path("a1"), hgid("10"), a1_entry.to_bytes())
             .unwrap();
-        let mut tree = Tree::durable(Arc::new(store), node("1"));
+        let mut tree = Tree::durable(Arc::new(store), hgid("1"));
 
         assert_eq!(tree.remove(repo_path("a1")).unwrap(), None);
         assert_eq!(
@@ -980,9 +980,9 @@ mod tests {
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
 
-        let node = tree.flush().unwrap();
+        let hgid = tree.flush().unwrap();
 
-        let tree = Tree::durable(store.clone(), node);
+        let tree = Tree::durable(store.clone(), hgid);
         assert_eq!(
             tree.get_file(repo_path("a1/b1/c1/d1")).unwrap(),
             Some(make_meta("10"))
@@ -1023,8 +1023,8 @@ mod tests {
         // for the values returned in the previous finalize call
 
         use bytes::Bytes;
-        for (path, node, raw, _, _) in tree_changed.iter() {
-            store.insert(&path, *node, Bytes::from(&raw[..])).unwrap();
+        for (path, hgid, raw, _, _) in tree_changed.iter() {
+            store.insert(&path, *hgid, Bytes::from(&raw[..])).unwrap();
         }
 
         let mut update = tree.clone();
@@ -1072,23 +1072,23 @@ mod tests {
             .unwrap();
         let tree_changed: Vec<_> = tree.finalize(vec![&p1, &p2]).unwrap().collect();
         assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(tree_changed[0].3, get_node(&p1, repo_path("a1")));
-        assert_eq!(tree_changed[0].4, get_node(&p2, repo_path("a1")));
+        assert_eq!(tree_changed[0].3, get_hgid(&p1, repo_path("a1")));
+        assert_eq!(tree_changed[0].4, get_hgid(&p2, repo_path("a1")));
 
         assert_eq!(tree_changed[1].0, repo_path_buf("a2/b2"));
-        assert_eq!(tree_changed[1].3, get_node(&p1, repo_path("a2/b2")));
+        assert_eq!(tree_changed[1].3, get_hgid(&p1, repo_path("a2/b2")));
         assert_eq!(tree_changed[1].4, NULL_ID);
         assert_eq!(tree_changed[2].0, repo_path_buf("a2"));
         assert_eq!(tree_changed[3].0, repo_path_buf("a3"));
-        assert_eq!(tree_changed[3].3, get_node(&p2, repo_path("a3")));
+        assert_eq!(tree_changed[3].3, get_hgid(&p2, repo_path("a3")));
         assert_eq!(tree_changed[3].4, NULL_ID);
         assert_eq!(tree_changed[4].0, RepoPathBuf::new());
 
         assert_eq!(
             vec![tree_changed[4].3, tree_changed[4].4],
             vec![
-                get_node(&p1, RepoPath::empty()),
-                get_node(&p2, RepoPath::empty()),
+                get_hgid(&p1, RepoPath::empty()),
+                get_hgid(&p2, RepoPath::empty()),
             ]
         );
     }
@@ -1162,9 +1162,9 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(RepoPath::empty(), node("1"), entry_1.to_bytes())
+            .insert(RepoPath::empty(), hgid("1"), entry_1.to_bytes())
             .unwrap();
-        let parent = Tree::durable(store.clone(), node("1"));
+        let parent = Tree::durable(store.clone(), hgid("1"));
 
         let entry_2 = store::Entry::from_elements(vec![
             store_element("foo", "10", store::Flag::Directory),
@@ -1172,10 +1172,10 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(RepoPath::empty(), node("2"), entry_2.to_bytes())
+            .insert(RepoPath::empty(), hgid("2"), entry_2.to_bytes())
             .unwrap();
 
-        let mut tree = Tree::durable(store.clone(), node("2"));
+        let mut tree = Tree::durable(store.clone(), hgid("2"));
 
         let _changes: Vec<_> = tree.finalize(vec![&parent]).unwrap().collect();
         // expecting the code to not panic
@@ -1240,7 +1240,7 @@ mod tests {
         let mut tree = Tree::ephemeral(store.clone());
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        let _node = tree.flush().unwrap();
+        let _hgid = tree.flush().unwrap();
 
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
             .unwrap();
@@ -1276,7 +1276,7 @@ mod tests {
         store
             .insert(
                 RepoPath::empty(),
-                node("1"),
+                hgid("1"),
                 root_1_entry.clone().to_bytes(),
             )
             .unwrap();
@@ -1289,7 +1289,7 @@ mod tests {
         store
             .insert(
                 repo_path("foo"),
-                node("11"),
+                hgid("11"),
                 foo_11_entry.clone().to_bytes(),
             )
             .unwrap();
@@ -1301,7 +1301,7 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(RepoPath::empty(), node("2"), root_2_entry.to_bytes())
+            .insert(RepoPath::empty(), hgid("2"), root_2_entry.to_bytes())
             .unwrap();
         let foo_12_entry = store::Entry::from_elements(vec![store_element(
             "bar",
@@ -1310,27 +1310,27 @@ mod tests {
         )])
         .unwrap();
         store
-            .insert(repo_path("foo"), node("12"), foo_12_entry.to_bytes())
+            .insert(repo_path("foo"), hgid("12"), foo_12_entry.to_bytes())
             .unwrap();
 
         assert_eq!(
             compat_subtree_diff(
                 store.clone(),
                 RepoPath::empty(),
-                node("1"),
-                vec![node("2")],
+                hgid("1"),
+                vec![hgid("2")],
                 3
             )
             .unwrap(),
             vec![
                 (
                     repo_path_buf("foo"),
-                    node("11"),
+                    hgid("11"),
                     foo_11_entry.clone().to_bytes()
                 ),
                 (
                     RepoPathBuf::new(),
-                    node("1"),
+                    hgid("1"),
                     root_1_entry.clone().to_bytes()
                 ),
             ]
@@ -1339,14 +1339,14 @@ mod tests {
             compat_subtree_diff(
                 store.clone(),
                 RepoPath::empty(),
-                node("1"),
-                vec![node("2")],
+                hgid("1"),
+                vec![hgid("2")],
                 1
             )
             .unwrap(),
             vec![(
                 RepoPathBuf::new(),
-                node("1"),
+                hgid("1"),
                 root_1_entry.clone().to_bytes()
             ),]
         );
@@ -1354,14 +1354,14 @@ mod tests {
             compat_subtree_diff(
                 store.clone(),
                 repo_path("foo"),
-                node("11"),
-                vec![node("12")],
+                hgid("11"),
+                vec![hgid("12")],
                 3
             )
             .unwrap(),
             vec![(
                 repo_path_buf("foo"),
-                node("11"),
+                hgid("11"),
                 foo_11_entry.clone().to_bytes()
             ),]
         );
@@ -1369,8 +1369,8 @@ mod tests {
             compat_subtree_diff(
                 store.clone(),
                 RepoPath::empty(),
-                node("1"),
-                vec![node("1")],
+                hgid("1"),
+                vec![hgid("1")],
                 3
             )
             .unwrap(),
@@ -1380,8 +1380,8 @@ mod tests {
             compat_subtree_diff(
                 store.clone(),
                 repo_path("foo"),
-                node("11"),
-                vec![node("11")],
+                hgid("11"),
+                vec![hgid("11")],
                 3
             )
             .unwrap(),
@@ -1397,7 +1397,7 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
             .unwrap();
-        let _node = tree.flush().unwrap();
+        let _hgid = tree.flush().unwrap();
         tree.insert(repo_path_buf("a2/b3/c2"), make_meta("30"))
             .unwrap();
         tree.insert(repo_path_buf("a2/b4"), make_meta("30"))
@@ -1448,7 +1448,7 @@ mod tests {
         let _file = File::from_link(&ephemeral, path.clone());;
 
         // Durable link should result in a directory.
-        let durable = Link::durable(node("a"));
+        let durable = Link::durable(hgid("a"));
         let file = File::from_link(&durable, path.clone());;
         assert!(file.is_none());
     }
@@ -1462,17 +1462,17 @@ mod tests {
         let dir = Directory::from_link(&ephemeral, path.clone()).unwrap();
         let expected = Directory {
             path: path.clone(),
-            node: None,
+            hgid: None,
             link: &ephemeral,
         };
         assert_eq!(dir, expected);
 
-        let hash = node("b");
+        let hash = hgid("b");
         let durable = Link::durable(hash);
         let dir = Directory::from_link(&durable, path.clone()).unwrap();
         let expected = Directory {
             path: path.clone(),
-            node: Some(hash),
+            hgid: Some(hash),
             link: &ephemeral,
         };
         assert_eq!(dir, expected);

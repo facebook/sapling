@@ -151,8 +151,8 @@ fn repack_historypack(
 ) -> Fallible<()> {
     for k in history_pack.to_keys() {
         let key = k?;
-        if let Some(node) = history_pack.get_node_info(&key)? {
-            mut_pack.add(&key, &node)?;
+        if let Some(hgid) = history_pack.get_node_info(&key)? {
+            mut_pack.add(&key, &hgid)?;
         }
     }
 
@@ -453,11 +453,11 @@ mod tests {
         let mut paths = Vec::new();
 
         for _ in 0..2 {
-            let node = get_nodes(&mut rng);
-            let pack = make_historypack(&tempdir, &node);
+            let hgid = get_nodes(&mut rng);
+            let pack = make_historypack(&tempdir, &hgid);
             let path = pack.base_path().to_path_buf();
 
-            nodes.extend(node.into_iter());
+            nodes.extend(hgid.into_iter());
             paths.push(path);
         }
 

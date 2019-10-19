@@ -17,7 +17,7 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::{Key, Node, RepoPath};
+use types::{HgId, Key, RepoPath};
 
 use crate::fanouttable::FanoutTable;
 use crate::historypack::HistoryPackVersion;
@@ -85,11 +85,11 @@ pub struct NodeLocation {
 
 #[derive(PartialEq, Debug)]
 pub(crate) struct FileIndexEntry {
-    pub node: Node,
+    pub hgid: HgId,
     pub file_section_offset: u64,
     pub file_section_size: u64,
-    pub node_index_offset: u32,
-    pub node_index_size: u32,
+    pub hgid_index_offset: u32,
+    pub hgid_index_size: u32,
 }
 const FILE_ENTRY_LEN: usize = 44;
 
@@ -97,29 +97,29 @@ impl FileIndexEntry {
     pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = buf.get_err(0..20)?;
+        let hgid_slice: &[u8] = buf.get_err(0..20)?;
         Ok(FileIndexEntry {
-            node: Node::from_slice(node_slice)?,
+            hgid: HgId::from_slice(hgid_slice)?,
             file_section_offset: cur.read_u64::<BigEndian>()?,
             file_section_size: cur.read_u64::<BigEndian>()?,
-            node_index_offset: cur.read_u32::<BigEndian>()?,
-            node_index_size: cur.read_u32::<BigEndian>()?,
+            hgid_index_offset: cur.read_u32::<BigEndian>()?,
+            hgid_index_size: cur.read_u32::<BigEndian>()?,
         })
     }
 
     fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
-        writer.write_all(self.node.as_ref())?;
+        writer.write_all(self.hgid.as_ref())?;
         writer.write_u64::<BigEndian>(self.file_section_offset)?;
         writer.write_u64::<BigEndian>(self.file_section_size)?;
-        writer.write_u32::<BigEndian>(self.node_index_offset)?;
-        writer.write_u32::<BigEndian>(self.node_index_size)?;
+        writer.write_u32::<BigEndian>(self.hgid_index_offset)?;
+        writer.write_u32::<BigEndian>(self.hgid_index_size)?;
         Ok(())
     }
 }
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct NodeIndexEntry {
-    pub node: Node,
+    pub hgid: HgId,
     pub offset: u64,
 }
 const NODE_ENTRY_LEN: usize = 28;
@@ -128,15 +128,15 @@ impl NodeIndexEntry {
     pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = buf.get_err(0..20)?;
+        let hgid_slice: &[u8] = buf.get_err(0..20)?;
         Ok(NodeIndexEntry {
-            node: Node::from_slice(node_slice)?,
+            hgid: HgId::from_slice(hgid_slice)?,
             offset: cur.read_u64::<BigEndian>()?,
         })
     }
 
     pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
-        writer.write_all(self.node.as_ref())?;
+        writer.write_all(self.hgid.as_ref())?;
         writer.write_u64::<BigEndian>(self.offset)?;
         Ok(())
     }
@@ -200,10 +200,10 @@ impl HistoryIndex {
         };
         options.write(writer)?;
 
-        let mut file_sections: Vec<(&RepoPath, Node, FileSectionLocation)> = file_sections
+        let mut file_sections: Vec<(&RepoPath, HgId, FileSectionLocation)> = file_sections
             .iter()
             .map(|e| Ok((e.0, sha1(&e.0.as_byte_slice()), e.1.clone())))
-            .collect::<Fallible<Vec<(&RepoPath, Node, FileSectionLocation)>>>()?;
+            .collect::<Fallible<Vec<(&RepoPath, HgId, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
 
@@ -221,9 +221,9 @@ impl HistoryIndex {
 
         <HistoryIndex>::write_file_index(writer, &options, &file_sections, nodes)?;
 
-        // For each file, write a node index
+        // For each file, write a hgid index
         for &(file_name, ..) in file_sections.iter() {
-            <HistoryIndex>::write_node_section(writer, nodes, file_name)?;
+            <HistoryIndex>::write_hgid_section(writer, nodes, file_name)?;
         }
 
         Ok(())
@@ -232,17 +232,17 @@ impl HistoryIndex {
     fn write_file_index<T: Write>(
         writer: &mut T,
         options: &HistoryIndexOptions,
-        file_sections: &Vec<(&RepoPath, Node, FileSectionLocation)>,
+        file_sections: &Vec<(&RepoPath, HgId, FileSectionLocation)>,
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Fallible<()> {
-        // For each file, keep track of where its node index will start.
-        // The first ones starts after the header, fanout, file count, file section, and node count.
-        let mut node_offset: usize = 2
+        // For each file, keep track of where its hgid index will start.
+        // The first ones starts after the header, fanout, file count, file section, and hgid count.
+        let mut hgid_offset: usize = 2
             + FanoutTable::get_size(options.large)
             + 8
             + (file_sections.len() * FILE_ENTRY_LEN)
             + 8;
-        let mut node_count = 0;
+        let mut hgid_count = 0;
 
         // Write out the file section entries
         let mut seen_files = HashSet::<&RepoPath>::with_capacity(file_sections.len());
@@ -260,28 +260,28 @@ impl HistoryIndex {
                 nodes.get(file_name).ok_or_else(|| {
                     HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
                 })?;
-            let node_section_size = file_nodes.len() * NODE_ENTRY_LEN;
+            let hgid_section_size = file_nodes.len() * NODE_ENTRY_LEN;
             FileIndexEntry {
-                node: file_hash.clone(),
+                hgid: file_hash.clone(),
                 file_section_offset: section_location.offset,
                 file_section_size: section_location.size,
-                node_index_offset: node_offset as u32,
-                node_index_size: node_section_size as u32,
+                hgid_index_offset: hgid_offset as u32,
+                hgid_index_size: hgid_section_size as u32,
             }
             .write(writer)?;
 
-            // Keep track of the current node index offset
-            node_offset += 2 + file_name.as_byte_slice().len() + node_section_size;
-            node_count += file_nodes.len();
+            // Keep track of the current hgid index offset
+            hgid_offset += 2 + file_name.as_byte_slice().len() + hgid_section_size;
+            hgid_count += file_nodes.len();
         }
 
         // Write the total number of nodes
-        writer.write_u64::<BigEndian>(node_count as u64)?;
+        writer.write_u64::<BigEndian>(hgid_count as u64)?;
 
         Ok(())
     }
 
-    fn write_node_section<T: Write>(
+    fn write_hgid_section<T: Write>(
         writer: &mut T,
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
         file_name: &RepoPath,
@@ -291,17 +291,17 @@ impl HistoryIndex {
         writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
         writer.write_all(file_name_slice)?;
 
-        // Write each node, in sorted order so the can be bisected
+        // Write each hgid, in sorted order so the can be bisected
         let file_nodes = nodes.get(file_name).ok_or_else(|| {
             HistoryIndexError(format!("unabled to find nodes for {:?}", file_name))
         })?;
         let mut file_nodes: Vec<(&Key, &NodeLocation)> =
             file_nodes.iter().collect::<Vec<(&Key, &NodeLocation)>>();
-        file_nodes.sort_by_key(|x| x.0.node);
+        file_nodes.sort_by_key(|x| x.0.hgid);
 
         for &(key, location) in file_nodes.iter() {
             NodeIndexEntry {
-                node: key.node.clone(),
+                hgid: key.hgid.clone(),
                 offset: location.offset,
             }
             .write(writer)?;
@@ -311,15 +311,15 @@ impl HistoryIndex {
     }
 
     pub fn get_file_entry(&self, key: &Key) -> Fallible<Option<FileIndexEntry>> {
-        let filename_node = sha1(key.path.as_byte_slice());
-        let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
+        let filename_hgid = sha1(key.path.as_byte_slice());
+        let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_hgid)?;
         let start = start + self.index_start;
         let end = end
             .map(|pos| pos + self.index_start)
             .unwrap_or(self.index_end);
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = match self.binary_search_files(&filename_node, buf) {
+        let entry_offset = match self.binary_search_files(&filename_hgid, buf) {
             None => return Ok(None),
             Some(offset) => offset,
         };
@@ -327,22 +327,22 @@ impl HistoryIndex {
             .map(Some)
     }
 
-    pub fn get_node_entry(&self, key: &Key) -> Fallible<Option<NodeIndexEntry>> {
+    pub fn get_hgid_entry(&self, key: &Key) -> Fallible<Option<NodeIndexEntry>> {
         let file_entry = match self.get_file_entry(&key)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
 
-        let start = file_entry.node_index_offset as usize + 2 + key.path.as_byte_slice().len();
-        let end = start + file_entry.node_index_size as usize;
+        let start = file_entry.hgid_index_offset as usize + 2 + key.path.as_byte_slice().len();
+        let end = start + file_entry.hgid_index_size as usize;
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = match self.binary_search_nodes(&key.node, &buf) {
+        let entry_offset = match self.binary_search_nodes(&key.hgid, &buf) {
             None => return Ok(None),
             Some(offset) => offset,
         };
 
-        self.read_node_entry((start + entry_offset) - self.index_start)
+        self.read_hgid_entry((start + entry_offset) - self.index_start)
             .map(Some)
     }
 
@@ -350,7 +350,7 @@ impl HistoryIndex {
         FileIndexEntry::read(self.read_data(offset, FILE_ENTRY_LEN)?)
     }
 
-    fn read_node_entry(&self, offset: usize) -> Fallible<NodeIndexEntry> {
+    fn read_hgid_entry(&self, offset: usize) -> Fallible<NodeIndexEntry> {
         NodeIndexEntry::read(self.read_data(offset, NODE_ENTRY_LEN)?)
     }
 
@@ -361,7 +361,7 @@ impl HistoryIndex {
 
     // These two binary_search_* functions are very similar, but I couldn't find a way to unify
     // them without using macros.
-    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Option<usize> {
+    fn binary_search_files(&self, key: &HgId, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / FILE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; FILE_ENTRY_LEN]] = unsafe {
@@ -377,7 +377,7 @@ impl HistoryIndex {
         }
     }
 
-    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Option<usize> {
+    fn binary_search_nodes(&self, key: &HgId, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / NODE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; NODE_ENTRY_LEN]] = unsafe {
@@ -398,7 +398,7 @@ impl HistoryIndex {
     }
 }
 
-fn sha1(value: &[u8]) -> Node {
+fn sha1(value: &[u8]) -> HgId {
     let mut hasher = Sha1::new();
     hasher.input(value);
     let mut buf: [u8; 20] = Default::default();
@@ -447,18 +447,18 @@ mod tests {
 
     quickcheck! {
         fn test_file_index_entry_roundtrip(
-            node: Node,
+            hgid: HgId,
             file_section_offset: u64,
             file_section_size: u64,
-            node_index_offset: u32,
-            node_index_size: u32
+            hgid_index_offset: u32,
+            hgid_index_size: u32
         ) -> bool {
             let entry = FileIndexEntry {
-                node,
+                hgid,
                 file_section_offset,
                 file_section_size,
-                node_index_offset,
-                node_index_size,
+                hgid_index_offset,
+                hgid_index_size,
             };
 
             let mut buf: Vec<u8> = vec![];
@@ -466,9 +466,9 @@ mod tests {
             entry == FileIndexEntry::read(buf.as_ref()).unwrap()
         }
 
-        fn test_node_index_entry_roundtrip(node: Node, offset: u64) -> bool {
+        fn test_hgid_index_entry_roundtrip(hgid: HgId, offset: u64) -> bool {
             let entry = NodeIndexEntry {
-                node, offset
+                hgid, offset
             };
 
             let mut buf: Vec<u8> = vec![];
@@ -498,30 +498,30 @@ mod tests {
                 seen_files.insert(path.clone());
 
                 file_sections.push((path, location.clone()));
-                let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
-                for (key, node_location) in nodes.iter() {
-                    let key = Key::new(path.clone(), key.node.clone());
-                    node_map.insert(key, node_location.clone());
+                let mut hgid_map: HashMap<Key, NodeLocation> = HashMap::new();
+                for (key, hgid_location) in nodes.iter() {
+                    let key = Key::new(path.clone(), key.hgid.clone());
+                    hgid_map.insert(key, hgid_location.clone());
                 }
-                file_nodes.insert(path, node_map);
+                file_nodes.insert(path, hgid_map);
             }
 
             let index = make_index(&file_sections, &file_nodes);
 
             // Lookup each file section
             for (path, location) in file_sections {
-                let my_key = Key::new(path.to_owned(), Node::null_id().clone());
+                let my_key = Key::new(path.to_owned(), HgId::null_id().clone());
                 let entry = index.get_file_entry(&my_key).unwrap().unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
             }
 
-            // Lookup each node
-            for (path, node_map) in file_nodes {
-                for (key, location) in node_map {
+            // Lookup each hgid
+            for (path, hgid_map) in file_nodes {
+                for (key, location) in hgid_map {
                     assert_eq!(path, key.path.as_ref());
-                    let entry = index.get_node_entry(&key).unwrap().unwrap();
-                    assert_eq!(key.node, entry.node);
+                    let entry = index.get_hgid_entry(&key).unwrap().unwrap();
+                    assert_eq!(key.hgid, entry.hgid);
                     assert_eq!(location.offset, entry.offset);
                 }
             }

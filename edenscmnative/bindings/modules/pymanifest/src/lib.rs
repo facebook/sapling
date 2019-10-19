@@ -127,7 +127,7 @@ py_class!(class treemanifest |py| {
         let tree = self.underlying(py).borrow();
         let result = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => None,
-            Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.node)),
+            Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.hgid)),
         };
         Ok(result.or(default))
     }
@@ -184,7 +184,7 @@ py_class!(class treemanifest |py| {
             lines.push(format!(
                 "{}\0{}{}\n",
                 file.path,
-                file.meta.node,
+                file.meta.hgid,
                 file_type_to_str(file.meta.file_type)
             ));
         }
@@ -230,7 +230,7 @@ py_class!(class treemanifest |py| {
             match entry {
                 None => (None, PyString::new(py, "")),
                 Some(file_metadata) => (
-                    Some(node_to_pybytes(py, file_metadata.node)),
+                    Some(node_to_pybytes(py, file_metadata.hgid)),
                     file_type_to_pystring(py, file_metadata.file_type)
                 )
             }
@@ -287,7 +287,7 @@ py_class!(class treemanifest |py| {
         for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
             let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
             let pypath = path_to_pybytes(py, &file.path);
-            let pynode = node_to_pybytes(py, file.meta.node);
+            let pynode = node_to_pybytes(py, file.meta.hgid);
             result.call_method(py, "__setitem__", (pypath, pynode), None)?;
             let pypath = path_to_pybytes(py, &file.path);
             let pyflags = file_type_to_pystring(py, file.meta.file_type);
@@ -303,7 +303,7 @@ py_class!(class treemanifest |py| {
         let file_metadata = match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => FileMetadata::new(node, FileType::Regular),
             Some(mut file_metadata) => {
-                file_metadata.node = node;
+                file_metadata.hgid = node;
                 file_metadata
             }
         };
@@ -322,7 +322,7 @@ py_class!(class treemanifest |py| {
         let path = pybytes_to_path(py, key);
         let tree = self.underlying(py).borrow();
         match tree.get_file(&path).map_pyerr::<exc::RuntimeError>(py)? {
-            Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.node)),
+            Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
         }
     }
@@ -365,7 +365,7 @@ py_class!(class treemanifest |py| {
             let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
             let tuple = (
                 path_to_pybytes(py, &file.path),
-                node_to_pybytes(py, file.meta.node),
+                node_to_pybytes(py, file.meta.hgid),
             );
             result.push(tuple);
         }
@@ -482,7 +482,7 @@ fn file_metadata_to_py_tuple(
     py: Python,
     file_metadata: &manifest::FileMetadata,
 ) -> PyResult<(PyBytes, String)> {
-    let node = PyBytes::new(py, file_metadata.node.as_ref());
+    let node = PyBytes::new(py, file_metadata.hgid.as_ref());
     let flag = {
         let mut s = String::new();
         match file_metadata.file_type {

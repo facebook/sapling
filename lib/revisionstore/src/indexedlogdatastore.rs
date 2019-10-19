@@ -19,7 +19,7 @@ use indexedlog::{
     rotate::{OpenOptions, RotateLog},
 };
 use lz4_pyframe::{compress, decompress};
-use types::{node::ReadNodeExt, Key, Node, RepoPath};
+use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
@@ -58,7 +58,7 @@ impl Entry {
     /// Read an entry from the slice and deserialize it.
     ///
     /// The on-disk format of an entry is the following:
-    /// - Node <20 bytes>
+    /// - HgId <20 bytes>
     /// - Path len: 2 unsigned bytes, big-endian
     /// - Path: <Path len> bytes
     /// - Metadata: metadata-list
@@ -71,7 +71,7 @@ impl Entry {
     /// - Value: <Len> bytes, big-endian
     fn from_slice(data: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(data);
-        let node = cur.read_node()?;
+        let hgid = cur.read_hgid()?;
 
         let name_len = cur.read_u16::<BigEndian>()? as u64;
         let name_slice =
@@ -79,7 +79,7 @@ impl Entry {
         cur.set_position(cur.position() + name_len);
         let filename = RepoPath::from_utf8(name_slice)?;
 
-        let key = Key::new(filename.to_owned(), node);
+        let key = Key::new(filename.to_owned(), hgid);
 
         let metadata = Metadata::read(&mut cur)?;
 
@@ -97,7 +97,7 @@ impl Entry {
 
     /// Read an entry from the IndexedLog and deserialize it.
     pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Option<Self>> {
-        let mut log_entry = log.lookup(0, key.node.as_ref())?;
+        let mut log_entry = log.lookup(0, key.hgid.as_ref())?;
         let buf = match log_entry.nth(0) {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -109,7 +109,7 @@ impl Entry {
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
     pub fn write_to_log(self, log: &mut RotateLog) -> Fallible<()> {
         let mut buf = Vec::new();
-        buf.write_all(self.key.node.as_ref())?;
+        buf.write_all(self.key.hgid.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
         buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
         buf.write_all(path_slice)?;
@@ -175,7 +175,7 @@ impl IndexedLogDataStore {
             .max_bytes_per_log(2500 * 1000 * 1000)
             .create(true)
             .index("node", |_| {
-                vec![IndexOutput::Reference(0..Node::len() as u64)]
+                vec![IndexOutput::Reference(0..HgId::len() as u64)]
             })
     }
 }

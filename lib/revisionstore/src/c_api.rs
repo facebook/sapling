@@ -19,7 +19,7 @@ use std::{
 
 use failure::Fallible;
 
-use types::{Key, Node, RepoPath};
+use types::{HgId, Key, RepoPath};
 
 use crate::datapack::DataPack;
 use crate::datastore::DataStore;
@@ -161,17 +161,17 @@ pub extern "C" fn revisionstore_datapackunion_free(store: *mut DataPackUnion) {
 }
 
 /// Construct an instance of Key from the provided ffi parameters
-fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) -> Fallible<Key> {
+fn make_key(name: *const u8, name_len: usize, hgid: *const u8, hgid_len: usize) -> Fallible<Key> {
     debug_assert!(!name.is_null());
-    debug_assert!(!node.is_null());
+    debug_assert!(!hgid.is_null());
 
     let path_slice = unsafe { slice::from_raw_parts(name, name_len) };
     let path = RepoPath::from_utf8(path_slice)?.to_owned();
 
-    let node_slice = unsafe { slice::from_raw_parts(node, node_len) };
-    let node = Node::from_slice(node_slice)?;
+    let hgid_slice = unsafe { slice::from_raw_parts(hgid, hgid_len) };
+    let hgid = HgId::from_slice(hgid_slice)?;
 
-    Ok(Key::new(path, node))
+    Ok(Key::new(path, hgid))
 }
 
 /// Helper function that performs the get operation, wrapped in a Result
@@ -179,12 +179,12 @@ fn datapackunion_get_impl(
     store: *mut DataPackUnion,
     name: *const u8,
     name_len: usize,
-    node: *const u8,
-    node_len: usize,
+    hgid: *const u8,
+    hgid_len: usize,
 ) -> Fallible<Option<Vec<u8>>> {
     debug_assert!(!store.is_null());
     let store = unsafe { &mut *store };
-    let key = make_key(name, name_len, node, node_len)?;
+    let key = make_key(name, name_len, hgid, hgid_len)?;
     store.get(&key)
 }
 
@@ -195,7 +195,7 @@ pub struct GetData {
     is_key_error: bool,
 }
 
-/// Lookup the value corresponding to name/node.
+/// Lookup the value corresponding to name/hgid.
 /// If the key is present, de-delta and populate `GetData::value`.
 /// If the requested key could not be found sets `GetData::is_key_error` to true.
 /// If some other error occurred, populates `GetData::error`.
@@ -208,10 +208,10 @@ pub extern "C" fn revisionstore_datapackunion_get(
     store: *mut DataPackUnion,
     name: *const u8,
     name_len: usize,
-    node: *const u8,
-    node_len: usize,
+    hgid: *const u8,
+    hgid_len: usize,
 ) -> GetData {
-    match datapackunion_get_impl(store, name, name_len, node, node_len) {
+    match datapackunion_get_impl(store, name, name_len, hgid, hgid_len) {
         Ok(Some(data)) => GetData {
             value: Box::into_raw(Box::new(data)),
             error: ptr::null_mut(),

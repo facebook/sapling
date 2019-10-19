@@ -146,7 +146,7 @@ impl<'a> Diff<'a> {
         let mut current = VecDeque::new();
 
         // Don't even attempt to perform a diff if these trees are the same.
-        if lroot.node != rroot.node || lroot.node.is_none() {
+        if lroot.hgid != rroot.hgid || lroot.hgid.is_none() {
             current.push_back(DiffItem::Changed(lroot, rroot));
         }
 
@@ -388,7 +388,7 @@ fn diff_dirs<'a>(
                     // The exception is if both hashes are None (indicating the trees
                     // have not yet been persisted), in which case we must manually compare
                     // all of the entries since we can't tell if they are the same.
-                    if l.node != r.node || l.node.is_none() {
+                    if l.hgid != r.hgid || l.hgid.is_none() {
                         add_to_output(DiffItem::Changed(l, r));
                     }
                     ldir = ldirs.next();
@@ -480,14 +480,14 @@ mod tests {
             DiffEntry::new(
                 repo_path_buf("a"),
                 DiffType::LeftOnly(FileMetadata {
-                    node: node("1"),
+                    hgid: hgid("1"),
                     file_type: FileType::Regular,
                 }),
             ),
             DiffEntry::new(
                 repo_path_buf("c"),
                 DiffType::LeftOnly(FileMetadata {
-                    node: node("3"),
+                    hgid: hgid("3"),
                     file_type: FileType::Regular,
                 }),
             ),
@@ -524,14 +524,14 @@ mod tests {
             DiffEntry::new(
                 repo_path_buf("b"),
                 DiffType::LeftOnly(FileMetadata {
-                    node: node("2"),
+                    hgid: hgid("2"),
                     file_type: FileType::Regular,
                 }),
             ),
             DiffEntry::new(
                 repo_path_buf("d"),
                 DiffType::RightOnly(FileMetadata {
-                    node: node("5"),
+                    hgid: hgid("5"),
                     file_type: FileType::Regular,
                 }),
             ),
@@ -539,11 +539,11 @@ mod tests {
                 repo_path_buf("e"),
                 DiffType::Changed(
                     FileMetadata {
-                        node: node("4"),
+                        hgid: hgid("4"),
                         file_type: FileType::Regular,
                     },
                     FileMetadata {
-                        node: node("6"),
+                        hgid: hgid("6"),
                         file_type: FileType::Regular,
                     },
                 ),
@@ -704,15 +704,15 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_does_not_evaluate_durable_on_node_equality() {
+    fn test_diff_does_not_evaluate_durable_on_hgid_equality() {
         // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
-        let left = Tree::durable(Arc::new(TestStore::new()), node("10"));
-        let right = Tree::durable(Arc::new(TestStore::new()), node("10"));
+        let left = Tree::durable(Arc::new(TestStore::new()), hgid("10"));
+        let right = Tree::durable(Arc::new(TestStore::new()), hgid("10"));
         assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
             .is_none());
 
-        let right = Tree::durable(Arc::new(TestStore::new()), node("20"));
+        let right = Tree::durable(Arc::new(TestStore::new()), hgid("20"));
         assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
             .next()
             .unwrap()

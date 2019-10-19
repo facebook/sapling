@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
-use types::{Node, PathComponentBuf, RepoPath};
+use types::{HgId, PathComponentBuf, RepoPath};
 
 use crate::tree::{store, store::InnerStore};
 use crate::FileMetadata;
@@ -43,13 +43,13 @@ pub use self::Link::*;
 // retries. Long story short is that caching the failure is a reasonable place to start from.
 #[derive(Debug)]
 pub struct DurableEntry {
-    pub node: Node,
+    pub hgid: HgId,
     pub links: OnceCell<Fallible<BTreeMap<PathComponentBuf, Link>>>,
 }
 
 impl Link {
-    pub fn durable(node: Node) -> Link {
-        Link::Durable(Arc::new(DurableEntry::new(node)))
+    pub fn durable(hgid: HgId) -> Link {
+        Link::Durable(Arc::new(DurableEntry::new(hgid)))
     }
 
     #[cfg(test)]
@@ -76,9 +76,9 @@ impl Link {
 }
 
 impl DurableEntry {
-    pub fn new(node: Node) -> Self {
+    pub fn new(hgid: HgId) -> Self {
         DurableEntry {
-            node,
+            hgid,
             links: OnceCell::new(),
         }
     }
@@ -91,15 +91,15 @@ impl DurableEntry {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
         let result = self.links.get_or_init(|| {
-            let entry = store.get_entry(path, self.node)?;
+            let entry = store.get_entry(path, self.hgid)?;
             let mut links = BTreeMap::new();
             for element_result in entry.elements() {
                 let element = element_result?;
                 let link = match element.flag {
                     store::Flag::File(file_type) => {
-                        Leaf(FileMetadata::new(element.node, file_type))
+                        Leaf(FileMetadata::new(element.hgid, file_type))
                     }
-                    store::Flag::Directory => Link::durable(element.node),
+                    store::Flag::Directory => Link::durable(element.hgid),
                 };
                 links.insert(element.component, link);
             }
@@ -110,7 +110,7 @@ impl DurableEntry {
             Err(error) => Err(format_err!(
                 "failed to read manifest entry ({}, {}): {}",
                 path,
-                self.node,
+                self.hgid,
                 error
             )),
         }
@@ -123,7 +123,7 @@ impl DurableEntry {
 #[cfg(test)]
 impl PartialEq for DurableEntry {
     fn eq(&self, other: &DurableEntry) -> bool {
-        if self.node != other.node {
+        if self.hgid != other.hgid {
             return false;
         }
         match (self.links.get(), other.links.get()) {

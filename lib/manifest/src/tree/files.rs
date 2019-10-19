@@ -131,8 +131,8 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let node = tree.flush().unwrap();
-        let tree = Tree::durable(store.clone(), node);
+        let hgid = tree.flush().unwrap();
+        let tree = Tree::durable(store.clone(), hgid);
 
         assert_eq!(
             tree.files(&AlwaysMatcher::new())
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_files_finish_on_error_when_collecting_to_vec() {
-        let tree = Tree::durable(Arc::new(TestStore::new()), node("1"));
+        let tree = Tree::durable(Arc::new(TestStore::new()), hgid("1"));
         let file_results = tree.files(&AlwaysMatcher::new()).collect::<Vec<_>>();
         assert_eq!(file_results.len(), 1);
         assert!(file_results[0].is_err());

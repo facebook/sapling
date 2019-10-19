@@ -32,8 +32,8 @@ extern "C" GetData revisionstore_datapackunion_get(
     DataPackUnionStruct* store,
     const uint8_t* name,
     size_t name_len,
-    const uint8_t* node,
-    size_t node_len) noexcept;
+    const uint8_t* hgid,
+    size_t hgid_len) noexcept;
 
 extern "C" void revisionstore_string_free(
     RevisionStoreStringStruct* str) noexcept;
@@ -58,11 +58,11 @@ DataPackUnion::DataPackUnion(const char* const paths[], size_t num_paths)
 
 folly::Optional<RevisionStoreByteVec> DataPackUnion::get(
     folly::ByteRange name,
-    folly::ByteRange node) {
+    folly::ByteRange hgid) {
   // This implementation is strongly coupled to that of
   // revisionstore_datapackunion_get in scm/hg/lib/revisionstore/src/c_api.rs
   auto got = revisionstore_datapackunion_get(
-      store_.get(), name.data(), name.size(), node.data(), node.size());
+      store_.get(), name.data(), name.size(), hgid.data(), hgid.size());
   if (got.value) {
     return RevisionStoreByteVec(got.value);
   }

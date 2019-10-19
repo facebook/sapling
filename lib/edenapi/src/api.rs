@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 
-use types::{HistoryEntry, Key, Node, RepoPathBuf};
+use types::{HgId, HistoryEntry, Key, RepoPathBuf};
 
 use crate::errors::ApiResult;
 use crate::progress::ProgressFn;
@@ -57,8 +57,8 @@ pub trait EdenApi: Send + Sync {
     fn prefetch_trees(
         &self,
         rootdir: RepoPathBuf,
-        mfnodes: Vec<Node>,
-        basemfnodes: Vec<Node>,
+        mfnodes: Vec<HgId>,
+        basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)>;

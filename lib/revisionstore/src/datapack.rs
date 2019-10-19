@@ -19,7 +19,7 @@
 //!                [<revision>,...]
 //!     revision = <filename len: 2 byte unsigned int>
 //!                <filename>
-//!                <node: 20 byte>
+//!                <hgid: 20 byte>
 //!                <deltabasenode: 20 byte>
 //!                <delta len: 8 byte unsigned int>
 //!                <delta>
@@ -36,10 +36,10 @@
 //! .dataidx
 //!     The index file consists of two parts, the fanout and the index.
 //!
-//!     The index is a list of index entries, sorted by node (one per revision
+//!     The index is a list of index entries, sorted by hgid (one per revision
 //!     in the pack). Each entry has:
 //!
-//!     - node (The 20 byte node of the entry; i.e. the commit hash, file node
+//!     - hgid (The 20 byte hgid of the entry; i.e. the commit hash, file hgid
 //!             hash, etc)
 //!     - deltabase index offset (The location in the index of the deltabase for
 //!                               this entry. The deltabase is the next delta in
@@ -56,7 +56,7 @@
 //!     bisecting the index. It is a series of 4 byte pointers to positions
 //!     within the index. It has 2^16 entries, which corresponds to hash
 //!     prefixes [0000, 0001,..., FFFE, FFFF]. Example: the pointer in slot
-//!     4F0A points to the index position of the first revision whose node
+//!     4F0A points to the index position of the first revision whose hgid
 //!     starts with 4F0A. This saves log(2^16)=16 bisect steps.
 //!
 //!     dataidx = <version: 1 byte>
@@ -65,7 +65,7 @@
 //!               <index>
 //!     fanouttable = [<index offset: 4 byte unsigned int>,...] (2^8 or 2^16 entries)
 //!     index = [<index entry>,...]
-//!     indexentry = <node: 20 byte>
+//!     indexentry = <hgid: 20 byte>
 //!                  <deltabase location: 4 byte signed int>
 //!                  <pack entry offset: 8 byte unsigned int>
 //!                  <pack entry size: 8 byte unsigned int>
@@ -89,7 +89,7 @@ use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use lz4_pyframe::decompress;
-use types::{Key, Node, RepoPath};
+use types::{HgId, Key, RepoPath};
 use util::path::remove_file;
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
@@ -120,8 +120,8 @@ pub struct DataPack {
 pub struct DataEntry<'a> {
     offset: u64,
     filename: &'a RepoPath,
-    node: Node,
-    delta_base: Option<Node>,
+    hgid: HgId,
+    delta_base: Option<HgId>,
     compressed_data: &'a [u8],
     data: RefCell<Option<Bytes>>,
     metadata: Metadata,
@@ -162,14 +162,14 @@ impl<'a> DataEntry<'a> {
         let cur_pos = cur.position();
         cur.set_position(cur_pos + filename_len);
 
-        // Node
-        let mut node_buf: [u8; 20] = Default::default();
-        cur.read_exact(&mut node_buf)?;
-        let node = Node::from(&node_buf);
+        // HgId
+        let mut hgid_buf: [u8; 20] = Default::default();
+        cur.read_exact(&mut hgid_buf)?;
+        let hgid = HgId::from(&hgid_buf);
 
         // Delta
-        cur.read_exact(&mut node_buf)?;
-        let delta_base = Node::from(&node_buf);
+        cur.read_exact(&mut hgid_buf)?;
+        let delta_base = HgId::from(&hgid_buf);
         let delta_base = if delta_base.is_null() {
             None
         } else {
@@ -197,7 +197,7 @@ impl<'a> DataEntry<'a> {
         Ok(DataEntry {
             offset,
             filename,
-            node,
+            hgid,
             delta_base,
             compressed_data,
             data,
@@ -214,11 +214,11 @@ impl<'a> DataEntry<'a> {
         self.filename
     }
 
-    pub fn node(&self) -> &Node {
-        &self.node
+    pub fn hgid(&self) -> &HgId {
+        &self.hgid
     }
 
-    pub fn delta_base(&self) -> &Option<Node> {
+    pub fn delta_base(&self) -> &Option<HgId> {
         &self.delta_base
     }
 
@@ -244,11 +244,11 @@ impl<'a> fmt::Debug for DataEntry<'a> {
         write!(
             f,
             "DataEntry {{\n  offset: {:?}\n  filename: {:?}\n  \
-             node: {:?}\n  delta_base: {:?}\n  compressed_len: {:?}\n  \
+             hgid: {:?}\n  delta_base: {:?}\n  compressed_len: {:?}\n  \
              data_len: {:?}\n  data: {:?}\n  metadata: N/A\n}}",
             self.offset,
             self.filename,
-            self.node,
+            self.hgid,
             self.delta_base,
             self.compressed_data.len(),
             delta.len(),
@@ -312,7 +312,7 @@ impl DataStore for DataPack {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
-        let entry = match self.index.get_entry(&key.node)? {
+        let entry = match self.index.get_entry(&key.hgid)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
@@ -323,13 +323,13 @@ impl DataStore for DataPack {
             base: data_entry
                 .delta_base()
                 .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
-            key: Key::new(key.path.clone(), data_entry.node().clone()),
+            key: Key::new(key.path.clone(), data_entry.hgid().clone()),
         }))
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
-        let mut next_entry = match self.index.get_entry(&key.node)? {
+        let mut next_entry = match self.index.get_entry(&key.hgid)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
@@ -340,7 +340,7 @@ impl DataStore for DataPack {
                 base: data_entry
                     .delta_base()
                     .map(|delta_base| Key::new(data_entry.filename.to_owned(), delta_base.clone())),
-                key: Key::new(data_entry.filename.to_owned(), data_entry.node().clone()),
+                key: Key::new(data_entry.filename.to_owned(), data_entry.hgid().clone()),
             });
 
             if let DeltaBaseOffset::Offset(offset) = next_entry.delta_base_offset() {
@@ -354,7 +354,7 @@ impl DataStore for DataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
-        let index_entry = match self.index.get_entry(&key.node)? {
+        let index_entry = match self.index.get_entry(&key.hgid)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
@@ -372,7 +372,7 @@ impl LocalStore for DataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.index.get_entry(&k.node) {
+            .filter(|k| match self.index.get_entry(&k.hgid) {
                 Ok(None) | Err(_) => true,
                 Ok(Some(_)) => false,
             })
@@ -430,7 +430,7 @@ impl<'a> Iterator for DataPackIterator<'a> {
         Some(match entry {
             Ok(ref e) => {
                 self.offset = e.next_offset;
-                Ok(Key::new(e.filename.to_owned(), e.node))
+                Ok(Key::new(e.filename.to_owned(), e.hgid))
             }
             Err(e) => {
                 // The entry is corrupted, and we have no way to know where the next one is

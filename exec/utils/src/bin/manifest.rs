@@ -11,13 +11,13 @@ use structopt::StructOpt;
 
 use pathmatcher::AlwaysMatcher;
 use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::UnionDataStore};
-use types::{Key, Node, RepoPath};
+use types::{HgId, Key, RepoPath};
 
 #[derive(StructOpt)]
 #[structopt(rename_all = "verbatim")]
 struct Cli {
-    #[structopt(short = "n", parse(try_from_str = Node::from_str))]
-    node: Node,
+    #[structopt(short = "n", parse(try_from_str = HgId::from_str))]
+    hgid: HgId,
     #[structopt(
         short = "p",
         default_value = "/var/cache/hgcache/fbsource/packs/manifests"
@@ -28,7 +28,7 @@ struct Cli {
 fn main() {
     let args = Cli::from_args();
     let store = Arc::new(DataPackStore::new(PathBuf::from(args.manifest_path)).unwrap());
-    let manifest = manifest::Tree::durable(store, args.node);
+    let manifest = manifest::Tree::durable(store, args.hgid);
 
     for file in manifest.files(&AlwaysMatcher::new()).map(|x| x.unwrap()) {
         println!("{}", file.path);
@@ -66,8 +66,8 @@ impl DataPackStore {
 }
 
 impl manifest::TreeStore for DataPackStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
-        let key = Key::new(path.to_owned(), node);
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes> {
+        let key = Key::new(path.to_owned(), hgid);
         let result = self
             .union_store
             .get(&key)?
@@ -75,7 +75,7 @@ impl manifest::TreeStore for DataPackStore {
         Ok(Bytes::from(result))
     }
 
-    fn insert(&self, _path: &RepoPath, _node: Node, _value: Bytes) -> Fallible<()> {
+    fn insert(&self, _path: &RepoPath, _node: HgId, _value: Bytes) -> Fallible<()> {
         unimplemented!("this binary doesn't do writes yet");
     }
 }

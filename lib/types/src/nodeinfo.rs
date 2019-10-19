@@ -5,7 +5,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{key::Key, node::Node};
+use crate::{hgid::HgId, key::Key};
 
 #[derive(
     Clone,
@@ -21,7 +21,7 @@ use crate::{key::Key, node::Node};
 )]
 pub struct NodeInfo {
     pub parents: [Key; 2],
-    pub linknode: Node,
+    pub linknode: HgId,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -32,7 +32,7 @@ impl Arbitrary for NodeInfo {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         NodeInfo {
             parents: [Key::arbitrary(g), Key::arbitrary(g)],
-            linknode: Node::arbitrary(g),
+            linknode: HgId::arbitrary(g),
         }
     }
 }

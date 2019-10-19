@@ -5,7 +5,7 @@ use crypto::{digest::Digest, sha1::Sha1};
 use failure::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{key::Key, node::Node, parents::Parents};
+use crate::{hgid::HgId, key::Key, parents::Parents};
 
 /// Tombstone string to replace the content of blacklisted files with
 /// TODO(T48685378): Handle redacted content in a less hacky way
@@ -15,7 +15,7 @@ const REDACTED_TOMBSTONE: &str =
 /// Structure representing source control data (typically
 /// either file content or a tree entry) on the wire.
 /// Includes the information required to add the data to
-/// a MutableDataPack, along with the node's parent
+/// a MutableDataPack, along with the hgid's parent
 /// information to allow for hash verification.
 #[derive(
     Clone,
@@ -47,7 +47,7 @@ pub enum Validity {
     /// redacted data.
     Redacted,
     /// Validation failed, but the path associated with this data is
-    /// empty. If this DataEntry represents a tree manifest node, this
+    /// empty. If this DataEntry represents a tree manifest hgid, this
     /// situation is sometimes expected in legacy situations involving
     /// hybrid tree manifests. The filenode hash represents is that of
     /// a flat manifest while the data is the content of a root tree
@@ -75,7 +75,7 @@ impl DataEntry {
     }
 
     /// Compute the filenode hash of this `DataEntry` using its parents and
-    /// content, and compare it with the known node hash from the entry's `Key`.
+    /// content, and compare it with the known hgid hash from the entry's `Key`.
     fn validate(&self) -> Validity {
         // TODO(T48685378): Handle redacted content in a less hacky ways
         if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
@@ -83,7 +83,7 @@ impl DataEntry {
         }
 
         // Mercurial hashes the parent nodes in sorted order
-        // when computing the node hash.
+        // when computing the hgid hash.
         let (p1, p2) = match self.parents.clone().into_nodes() {
             (p1, p2) if p1 > p2 => (p2, p1),
             (p1, p2) => (p1, p2),
@@ -96,8 +96,8 @@ impl DataEntry {
         hasher.input(&self.data);
         hasher.result(&mut hash);
 
-        let computed = Node::from_byte_array(hash);
-        let expected = &self.key.node;
+        let computed = HgId::from_byte_array(hash);
+        let expected = &self.key.hgid;
 
         if &computed != expected {
             let err = format_err!(

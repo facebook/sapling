@@ -230,14 +230,14 @@ mod tests {
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), key("a", "3")],
-            linknode: node("4"),
+            linknode: hgid("4"),
         };
 
         multiplex.add(&k, &nodeinfo)?;
         drop(multiplex);
 
-        let read_node = pack.get_node_info(&k)?;
-        assert_eq!(Some(nodeinfo), read_node);
+        let read_hgid = pack.get_node_info(&k)?;
+        assert_eq!(Some(nodeinfo), read_hgid);
 
         pack.flush()?;
         Ok(())
@@ -255,17 +255,17 @@ mod tests {
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), key("a", "3")],
-            linknode: node("4"),
+            linknode: hgid("4"),
         };
 
         multiplex.add(&k, &nodeinfo)?;
         drop(multiplex);
 
-        let read_node = pack1.get_node_info(&k)?;
-        assert_eq!(Some(nodeinfo.clone()), read_node);
+        let read_hgid = pack1.get_node_info(&k)?;
+        assert_eq!(Some(nodeinfo.clone()), read_hgid);
 
-        let read_node = pack2.get_node_info(&k)?;
-        assert_eq!(Some(nodeinfo), read_node);
+        let read_hgid = pack2.get_node_info(&k)?;
+        assert_eq!(Some(nodeinfo), read_hgid);
 
         pack1.flush()?;
         pack2.flush()?;

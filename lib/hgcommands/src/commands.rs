@@ -12,7 +12,7 @@ use cliparser::define_flags;
 use revisionstore::{
     CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
 };
-use types::{Key, Node, RepoPathBuf};
+use types::{HgId, Key, RepoPathBuf};
 
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
@@ -51,7 +51,7 @@ define_flags! {
         path: String,
 
         #[arg]
-        node: String,
+        hgid: String,
     }
 
     pub struct DebugPythonOpts {
@@ -76,7 +76,7 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
 
 pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
     let path = RepoPathBuf::from_string(opts.path)?;
-    let node = Node::from_str(&opts.node)?;
+    let hgid = HgId::from_str(&opts.hgid)?;
     let config = repo.config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
         Some(c) => c,
@@ -95,7 +95,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
     let mut unionstore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);
-    let k = Key::new(path, node);
+    let k = Key::new(path, hgid);
     if let Some(content) = unionstore.get(&k)? {
         io.write(content)?;
     }

@@ -23,7 +23,7 @@
 //!                   <filename>
 //!                   <revision count: 4 byte unsigned int>
 //!                   [<revision>,...]
-//!     revision = <node: 20 byte>
+//!     revision = <hgid: 20 byte>
 //!                <p1node: 20 byte>
 //!                <p2node: 20 byte>
 //!                <linknode: 20 byte>
@@ -32,50 +32,50 @@
 //!
 //!     The revisions within each filesection are stored in topological order
 //!     (newest first). If a given entry has a parent from another file (a copy)
-//!     then p1node is the node from the other file, and copyfrom is the
+//!     then p1node is the hgid from the other file, and copyfrom is the
 //!     filepath of the other file.
 //!
 //! .histidx
 //!     The index file provides a mapping from filename to the file section in
 //!     the histpack. In V1 it also contains sub-indexes for specific nodes
 //!     within each file. It consists of three parts, the fanout, the file index
-//!     and the node indexes.
+//!     and the hgid indexes.
 //!
 //!     The file index is a list of index entries, sorted by filename hash (one
 //!     per file section in the pack). Each entry has:
 //!
-//!     - node (The 20 byte hash of the filename)
+//!     - hgid (The 20 byte hash of the filename)
 //!     - pack entry offset (The location of this file section in the histpack)
 //!     - pack content size (The on-disk length of this file section's pack
 //!                          data)
-//!     - node index offset (The location of the file's node index in the index
+//!     - hgid index offset (The location of the file's hgid index in the index
 //!                          file) [1]
-//!     - node index size (the on-disk length of this file's node index) [1]
+//!     - hgid index size (the on-disk length of this file's hgid index) [1]
 //!
 //!     The fanout is a quick lookup table to reduce the number of steps for
 //!     bisecting the index. It is a series of 4 byte pointers to positions
 //!     within the index. It has 2^16 entries, which corresponds to hash
 //!     prefixes [00, 01, 02,..., FD, FE, FF]. Example: the pointer in slot 4F
-//!     points to the index position of the first revision whose node starts
+//!     points to the index position of the first revision whose hgid starts
 //!     with 4F. This saves log(2^16) bisect steps.
 //!
 //!     dataidx = <fanouttable>
 //!               <file count: 8 byte unsigned> [1]
 //!               <fileindex>
-//!               <node count: 8 byte unsigned> [1]
+//!               <hgid count: 8 byte unsigned> [1]
 //!               [<nodeindex>,...] [1]
 //!     fanouttable = [<index offset: 4 byte unsigned int>,...] (2^16 entries)
 //!
 //!     fileindex = [<file index entry>,...]
-//!     fileindexentry = <node: 20 byte>
+//!     fileindexentry = <hgid: 20 byte>
 //!                      <pack file section offset: 8 byte unsigned int>
 //!                      <pack file section size: 8 byte unsigned int>
-//!                      <node index offset: 4 byte unsigned int> [1]
-//!                      <node index size: 4 byte unsigned int>   [1]
-//!     nodeindex = <filename>[<node index entry>,...] [1]
+//!                      <hgid index offset: 4 byte unsigned int> [1]
+//!                      <hgid index size: 4 byte unsigned int>   [1]
+//!     nodeindex = <filename>[<hgid index entry>,...] [1]
 //!     filename = <filename len : 2 byte unsigned int><filename value> [1]
-//!     nodeindexentry = <node: 20 byte> [1]
-//!                      <pack file node offset: 8 byte unsigned int> [1]
+//!     nodeindexentry = <hgid: 20 byte> [1]
+//!                      <pack file hgid offset: 8 byte unsigned int> [1]
 //!
 //! ```
 //! [1]: new in version 1.
@@ -92,7 +92,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::{Key, Node, NodeInfo, RepoPath, RepoPathBuf};
+use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
 use util::path::remove_file;
 
 use crate::historyindex::HistoryIndex;
@@ -142,10 +142,10 @@ pub(crate) struct FileSectionHeader<'a> {
 
 #[derive(Debug, PartialEq)]
 pub struct HistoryEntry<'a> {
-    pub node: Node,
-    pub p1: Node,
-    pub p2: Node,
-    pub link_node: Node,
+    pub hgid: HgId,
+    pub p1: HgId,
+    pub p2: HgId,
+    pub link_hgid: HgId,
     pub copy_from: Option<&'a RepoPath>,
 }
 
@@ -184,21 +184,21 @@ impl<'a> FileSectionHeader<'a> {
 impl<'a> HistoryEntry<'a> {
     pub(crate) fn read(buf: &[u8]) -> Fallible<HistoryEntry> {
         let mut cur = Cursor::new(buf);
-        let mut node_buf: [u8; 20] = Default::default();
+        let mut hgid_buf: [u8; 20] = Default::default();
 
         // Node
-        cur.read_exact(&mut node_buf)?;
-        let node = Node::from(&node_buf);
+        cur.read_exact(&mut hgid_buf)?;
+        let hgid = HgId::from(&hgid_buf);
 
         // Parents
-        cur.read_exact(&mut node_buf)?;
-        let p1 = Node::from(&node_buf);
-        cur.read_exact(&mut node_buf)?;
-        let p2 = Node::from(&node_buf);
+        cur.read_exact(&mut hgid_buf)?;
+        let p1 = HgId::from(&hgid_buf);
+        cur.read_exact(&mut hgid_buf)?;
+        let p2 = HgId::from(&hgid_buf);
 
         // LinkNode
-        cur.read_exact(&mut node_buf)?;
-        let link_node = Node::from(&node_buf);
+        cur.read_exact(&mut hgid_buf)?;
+        let link_hgid = HgId::from(&hgid_buf);
 
         // Copyfrom
         let copy_from_len = cur.read_u16::<BigEndian>()? as usize;
@@ -210,23 +210,23 @@ impl<'a> HistoryEntry<'a> {
         };
 
         Ok(HistoryEntry {
-            node,
+            hgid,
             p1,
             p2,
-            link_node,
+            link_hgid,
             copy_from,
         })
     }
 
     pub fn write<T: Write>(
         writer: &mut T,
-        node: &Node,
-        p1: &Node,
-        p2: &Node,
-        linknode: &Node,
+        hgid: &HgId,
+        p1: &HgId,
+        p2: &HgId,
+        linknode: &HgId,
         copy_from: &Option<&RepoPath>,
     ) -> Fallible<()> {
-        writer.write_all(node.as_ref())?;
+        writer.write_all(hgid.as_ref())?;
         writer.write_all(p1.as_ref())?;
         writer.write_all(p2.as_ref())?;
         writer.write_all(linknode.as_ref())?;
@@ -309,7 +309,7 @@ impl HistoryPack {
 
     fn read_node_info(&self, key: &Key, offset: u64) -> Fallible<NodeInfo> {
         let entry = self.read_history_entry(offset)?;
-        assert_eq!(entry.node, key.node);
+        assert_eq!(entry.hgid, key.hgid);
         let p1 = Key::new(
             match entry.copy_from {
                 Some(value) => value.to_owned(),
@@ -321,18 +321,18 @@ impl HistoryPack {
 
         Ok(NodeInfo {
             parents: [p1, p2],
-            linknode: entry.link_node.clone(),
+            linknode: entry.link_hgid.clone(),
         })
     }
 }
 
 impl HistoryStore for HistoryPack {
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
-        let node_location = match self.index.get_node_entry(key)? {
+        let hgid_location = match self.index.get_hgid_entry(key)? {
             None => return Ok(None),
             Some(location) => location,
         };
-        self.read_node_info(key, node_location.offset).map(Some)
+        self.read_node_info(key, hgid_location.offset).map(Some)
     }
 }
 
@@ -344,7 +344,7 @@ impl LocalStore for HistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.index.get_node_entry(&k) {
+            .filter(|k| match self.index.get_hgid_entry(&k) {
                 Ok(None) | Err(_) => true,
                 Ok(Some(_)) => false,
             })
@@ -428,7 +428,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
                     Some(path) => 2 + path.as_byte_slice().len() as u64,
                     None => 2,
                 };
-                Ok(Key::new(self.current_name.clone(), e.node))
+                Ok(Key::new(self.current_name.clone(), e.hgid))
             }
             Err(e) => {
                 // The entry is corrupted, and we have no way to know where the next one is
@@ -472,13 +472,13 @@ pub mod tests {
     pub fn get_nodes(mut rng: &mut ChaChaRng) -> HashMap<Key, NodeInfo> {
         let file1 = RepoPath::from_str("path").unwrap();
         let file2 = RepoPath::from_str("path/file").unwrap();
-        let null = Node::null_id();
-        let node1 = Node::random(&mut rng);
-        let node2 = Node::random(&mut rng);
-        let node3 = Node::random(&mut rng);
-        let node4 = Node::random(&mut rng);
-        let node5 = Node::random(&mut rng);
-        let node6 = Node::random(&mut rng);
+        let null = HgId::null_id();
+        let node1 = HgId::random(&mut rng);
+        let node2 = HgId::random(&mut rng);
+        let node3 = HgId::random(&mut rng);
+        let node4 = HgId::random(&mut rng);
+        let node5 = HgId::random(&mut rng);
+        let node6 = HgId::random(&mut rng);
 
         let mut nodes = HashMap::new();
 
@@ -489,7 +489,7 @@ pub mod tests {
                 Key::new(file1.to_owned(), node1.clone()),
                 Key::new(file1.to_owned(), null.clone()),
             ],
-            linknode: Node::random(&mut rng),
+            linknode: HgId::random(&mut rng),
         };
         nodes.insert(key1.clone(), info.clone());
 
@@ -500,7 +500,7 @@ pub mod tests {
                 Key::new(file2.to_owned(), node5.clone()),
                 Key::new(file2.to_owned(), node6.clone()),
             ],
-            linknode: Node::random(&mut rng),
+            linknode: HgId::random(&mut rng),
         };
         nodes.insert(key2.clone(), info.clone());
 
@@ -508,7 +508,7 @@ pub mod tests {
         let key3 = Key::new(file1.to_owned(), node4.clone());
         let info = NodeInfo {
             parents: [key2.clone(), key1.clone()],
-            linknode: Node::random(&mut rng),
+            linknode: HgId::random(&mut rng),
         };
         nodes.insert(key3.clone(), info.clone());
 
@@ -618,26 +618,26 @@ pub mod tests {
         }
 
         fn test_history_entry_serialization(
-            node: Node,
-            p1: Node,
-            p2: Node,
-            link_node: Node,
+            hgid: HgId,
+            p1: HgId,
+            p2: HgId,
+            link_hgid: HgId,
             copy_from: Option<RepoPathBuf>
         ) -> bool {
             let mut buf = vec![];
             HistoryEntry::write(
                 &mut buf,
-                &node,
+                &hgid,
                 &p1,
                 &p2,
-                &link_node,
+                &link_hgid,
                 &copy_from.as_ref().map(|x| x.as_ref()),
             ).unwrap();
             let entry = HistoryEntry::read(&buf).unwrap();
-            assert_eq!(node, entry.node);
+            assert_eq!(hgid, entry.hgid);
             assert_eq!(p1, entry.p1);
             assert_eq!(p2, entry.p2);
-            assert_eq!(link_node, entry.link_node);
+            assert_eq!(link_hgid, entry.link_hgid);
             true
         }
     }

@@ -6,9 +6,9 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     dataentry::DataEntry,
+    hgid::HgId,
     historyentry::{HistoryEntry, WireHistoryEntry},
     key::Key,
-    node::Node,
     path::RepoPathBuf,
 };
 
@@ -85,16 +85,16 @@ impl IntoIterator for HistoryResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TreeRequest {
     pub rootdir: RepoPathBuf,
-    pub mfnodes: Vec<Node>,
-    pub basemfnodes: Vec<Node>,
+    pub mfnodes: Vec<HgId>,
+    pub basemfnodes: Vec<HgId>,
     pub depth: Option<usize>,
 }
 
 impl TreeRequest {
     pub fn new(
         rootdir: RepoPathBuf,
-        mfnodes: Vec<Node>,
-        basemfnodes: Vec<Node>,
+        mfnodes: Vec<HgId>,
+        basemfnodes: Vec<HgId>,
         depth: Option<usize>,
     ) -> Self {
         Self {
@@ -111,8 +111,8 @@ mod tests {
     use super::*;
 
     use crate::{
+        hgid::mocks::{AS, BS, CS, ONES, THREES, TWOS},
         key::mocks::{BAR_KEY, BAZ_KEY, FOO_KEY},
-        node::mocks::{AS, BS, CS, ONES, THREES, TWOS},
         nodeinfo::NodeInfo,
         parents::Parents,
         testutil::*,

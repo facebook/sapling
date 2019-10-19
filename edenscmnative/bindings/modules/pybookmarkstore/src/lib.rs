@@ -12,7 +12,7 @@ use cpython::*;
 
 use ::bookmarkstore::BookmarkStore;
 use encoding::local_bytes_to_path;
-use types::node::Node;
+use types::hgid::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "bookmarkstore"].join(".");
@@ -36,10 +36,10 @@ py_class!(class bookmarkstore |py| {
 
     def update(&self, bookmark: &str, node: PyBytes) -> PyResult<PyObject> {
         let mut bm_store = self.bm_store(py).borrow_mut();
-        let node = Node::from_slice(node.data(py))
+        let hgid = HgId::from_slice(node.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
-        bm_store.update(bookmark, node)
+        bm_store.update(bookmark, hgid)
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
         Ok(py.None())
@@ -64,10 +64,10 @@ py_class!(class bookmarkstore |py| {
 
     def lookup_node(&self, node: PyBytes) -> PyResult<Option<PyList>> {
         let bm_store = self.bm_store(py).borrow();
-        let node = Node::from_slice(node.data(py))
+        let hgid = HgId::from_slice(node.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
-        match bm_store.lookup_node(&node) {
+        match bm_store.lookup_hgid(&hgid) {
             Some(bms) => {
                 let bms: Vec<_> = bms.iter()
                     .map(|bm| PyString::new(py, bm).into_object())

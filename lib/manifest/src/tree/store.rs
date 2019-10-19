@@ -8,7 +8,7 @@ use std::{str::from_utf8, sync::Arc};
 use bytes::{Bytes, BytesMut};
 use failure::{format_err, Fallible};
 
-use types::{Key, Node, PathComponent, PathComponentBuf, RepoPath};
+use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
 
 use crate::FileType;
 
@@ -16,9 +16,9 @@ use crate::FileType;
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
 pub trait TreeStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes>;
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes>;
 
-    fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()>;
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Fallible<()>;
 
     /// Indicate to the store that we will be attempting to access the given
     /// tree nodes soon. Some stores (especially ones that may perform network
@@ -40,13 +40,13 @@ impl InnerStore {
         InnerStore { tree_store }
     }
 
-    pub fn get_entry(&self, path: &RepoPath, node: Node) -> Fallible<Entry> {
-        let bytes = self.tree_store.get(path, node)?;
+    pub fn get_entry(&self, path: &RepoPath, hgid: HgId) -> Fallible<Entry> {
+        let bytes = self.tree_store.get(path, hgid)?;
         Ok(Entry(bytes))
     }
 
-    pub fn insert_entry(&self, path: &RepoPath, node: Node, entry: Entry) -> Fallible<()> {
-        self.tree_store.insert(path, node, entry.0)
+    pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Fallible<()> {
+        self.tree_store.insert(path, hgid, entry.0)
     }
 
     pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<()> {
@@ -60,14 +60,14 @@ impl InnerStore {
 ///
 /// The ABNF specification for the current serialization is:
 /// Entry         = 1*( Element LF )
-/// Element       = PathComponent %x00 Node [ Flag ]
+/// Element       = PathComponent %x00 HgId [ Flag ]
 /// Flag          = %s"x" / %s"l" / %s"t"
 /// PathComponent = 1*( %x01-%x09 / %x0B-%xFF )
-/// Node          = 40HEXDIG
+/// HgId          = 40HEXDIG
 ///
 /// In this case an `Entry` is equivalent to the contents of a directory. The elements of the
 /// directory are described by `Element`. `Entry` is a list of serialized `Element`s that are
-/// separated by `\n`. An `Element` will always have a name (`PathComponent`) and a hash (`Node`).
+/// separated by `\n`. An `Element` will always have a name (`PathComponent`) and a hash (`HgId`).
 /// `Elements` may be different types of files or they can be directories. The type of element is
 /// described by the flag or the absence of the flag. When the flag is missing we have a regular
 /// file, the various flag options are: `x` for executable, `l` for symlink and `d` for directory.
@@ -86,7 +86,7 @@ pub struct EntryMut(BytesMut);
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Element {
     pub component: PathComponentBuf,
-    pub node: Node,
+    pub hgid: HgId,
     pub flag: Flag,
 }
 
@@ -180,10 +180,10 @@ impl<'a> Iterator for Elements<'a> {
 }
 
 impl Element {
-    pub fn new(component: PathComponentBuf, node: Node, flag: Flag) -> Element {
+    pub fn new(component: PathComponentBuf, hgid: HgId, flag: Flag) -> Element {
         Element {
             component,
-            node,
+            hgid,
             flag,
         }
     }
@@ -194,16 +194,16 @@ impl Element {
             None => return Err(format_err!("did not find path delimiter")),
         };
         let component = PathComponent::from_utf8(&byte_slice[..path_len])?.to_owned();
-        if path_len + Node::hex_len() > byte_slice.len() {
-            return Err(format_err!("node length is shorter than expected"));
+        if path_len + HgId::hex_len() > byte_slice.len() {
+            return Err(format_err!("hgid length is shorter than expected"));
         }
-        if byte_slice.len() > path_len + Node::hex_len() + 2 {
+        if byte_slice.len() > path_len + HgId::hex_len() + 2 {
             return Err(format_err!("entry longer than expected"));
         }
         // TODO: We don't need this conversion to string
-        let utf8_parsed = from_utf8(&byte_slice[path_len + 1..path_len + Node::hex_len() + 1])?;
-        let node = Node::from_str(utf8_parsed)?;
-        let flag = match byte_slice.get(path_len + Node::hex_len() + 1) {
+        let utf8_parsed = from_utf8(&byte_slice[path_len + 1..path_len + HgId::hex_len() + 1])?;
+        let hgid = HgId::from_str(utf8_parsed)?;
+        let flag = match byte_slice.get(path_len + HgId::hex_len() + 1) {
             None => Flag::File(FileType::Regular),
             Some(b'x') => Flag::File(FileType::Executable),
             Some(b'l') => Flag::File(FileType::Symlink),
@@ -212,7 +212,7 @@ impl Element {
         };
         let element = Element {
             component,
-            node,
+            hgid,
             flag,
         };
         Ok(element)
@@ -222,10 +222,10 @@ impl Element {
         let component = self.component.as_byte_slice();
         // TODO: benchmark taking a buffer as a parameter
         // We may not use the last byte but it doesn't hurt to allocate
-        let mut buffer = Vec::with_capacity(component.len() + Node::hex_len() + 2);
+        let mut buffer = Vec::with_capacity(component.len() + HgId::hex_len() + 2);
         buffer.extend_from_slice(component);
         buffer.push(0);
-        buffer.extend_from_slice(self.node.to_hex().as_ref());
+        buffer.extend_from_slice(self.hgid.to_hex().as_ref());
         let flag = match self.flag {
             Flag::File(FileType::Regular) => None,
             Flag::File(FileType::Executable) => Some(b'x'),
@@ -249,7 +249,7 @@ use types::RepoPathBuf;
 #[cfg(test)]
 /// An in memory `Store` implementation backed by HashMaps. Primarily intended for tests.
 pub struct TestStore {
-    entries: RwLock<HashMap<RepoPathBuf, HashMap<Node, Bytes>>>,
+    entries: RwLock<HashMap<RepoPathBuf, HashMap<HgId, Bytes>>>,
     pub prefetched: Mutex<Vec<Vec<Key>>>,
 }
 
@@ -270,21 +270,21 @@ impl TestStore {
 
 #[cfg(test)]
 impl TreeStore for TestStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> Fallible<Bytes> {
         let underlying = self.entries.read();
         let result = underlying
             .get(path)
-            .and_then(|node_hash| node_hash.get(&node))
+            .and_then(|hgid_hash| hgid_hash.get(&hgid))
             .map(|entry| entry.clone());
-        result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, node))
+        result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
     }
 
-    fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()> {
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Fallible<()> {
         let mut underlying = self.entries.write();
         underlying
             .entry(path.to_owned())
             .or_insert(HashMap::new())
-            .insert(node, data);
+            .insert(hgid, data);
         Ok(())
     }
 
@@ -306,34 +306,34 @@ mod tests {
     fn test_element_from_byte_slice() {
         let mut buffer = vec![];
         let path = PathComponent::from_str("foo").unwrap();
-        let node = node("123");
+        let hgid = hgid("123");
         assert!(Element::from_byte_slice(&buffer).is_err());
         buffer.extend_from_slice(path.as_byte_slice());
         assert!(Element::from_byte_slice(&buffer).is_err());
         buffer.push(b'\0');
         assert!(Element::from_byte_slice(&buffer).is_err());
-        buffer.extend_from_slice(node.to_hex().as_ref());
+        buffer.extend_from_slice(hgid.to_hex().as_ref());
         assert_eq!(
             Element::from_byte_slice(&buffer).unwrap(),
-            Element::new(path.to_owned(), node, Flag::File(FileType::Regular))
+            Element::new(path.to_owned(), hgid, Flag::File(FileType::Regular))
         );
 
         buffer.push(b'x');
         assert_eq!(
             Element::from_byte_slice(&buffer).unwrap(),
-            Element::new(path.to_owned(), node, Flag::File(FileType::Executable))
+            Element::new(path.to_owned(), hgid, Flag::File(FileType::Executable))
         );
 
         *buffer.last_mut().unwrap() = b'l';
         assert_eq!(
             Element::from_byte_slice(&buffer).unwrap(),
-            Element::new(path.to_owned(), node, Flag::File(FileType::Symlink))
+            Element::new(path.to_owned(), hgid, Flag::File(FileType::Symlink))
         );
 
         *buffer.last_mut().unwrap() = b't';
         assert_eq!(
             Element::from_byte_slice(&buffer).unwrap(),
-            Element::new(path.to_owned(), node, Flag::Directory)
+            Element::new(path.to_owned(), hgid, Flag::Directory)
         );
 
         *buffer.last_mut().unwrap() = b's';
@@ -347,10 +347,10 @@ mod tests {
     #[test]
     fn test_roundtrip_serialization_on_directory() {
         let component = PathComponentBuf::from_string(String::from("c")).unwrap();
-        let node = Node::from_str("2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
+        let hgid = HgId::from_str("2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
         let flag = Flag::Directory;
         let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196et";
-        let element = Element::new(component, node, flag);
+        let element = Element::new(component, hgid, flag);
         assert_eq!(Element::from_byte_slice(byte_slice).unwrap(), element);
         let buffer = element.to_byte_vec();
         assert_eq!(buffer.to_vec(), byte_slice.to_vec());
@@ -359,14 +359,14 @@ mod tests {
     quickcheck! {
         fn test_rountrip_serialization(
             component: PathComponentBuf,
-            node: Node,
+            hgid: HgId,
             flag_proxy: Option<FileType>
         ) -> bool {
             let flag = match flag_proxy {
                 Some(file_type) => Flag::File(file_type),
                 None => Flag::Directory,
             };
-            let element = Element::new(component, node, flag);
+            let element = Element::new(component, hgid, flag);
             let buffer = element.to_byte_vec();
             Element::from_byte_slice(&buffer).unwrap() == element
         }

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use failure::Fallible;
 
-use types::{testutil::*, Node, RepoPath};
+use types::{testutil::*, HgId, RepoPath};
 
 use crate::{
     tree::{
@@ -20,21 +20,21 @@ use crate::{
 pub(crate) fn store_element(path: &str, hex: &str, flag: store::Flag) -> Fallible<store::Element> {
     Ok(store::Element::new(
         path_component_buf(path),
-        node(hex),
+        hgid(hex),
         flag,
     ))
 }
 
-pub(crate) fn get_node(tree: &Tree, path: &RepoPath) -> Node {
+pub(crate) fn get_hgid(tree: &Tree, path: &RepoPath) -> HgId {
     match tree.get_link(path).unwrap().unwrap() {
-        Link::Leaf(file_metadata) => file_metadata.node,
-        Link::Durable(ref entry) => entry.node,
-        Link::Ephemeral(_) => panic!("Asked for node on path {} but found ephemeral node.", path),
+        Link::Leaf(file_metadata) => file_metadata.hgid,
+        Link::Durable(ref entry) => entry.hgid,
+        Link::Ephemeral(_) => panic!("Asked for hgid on path {} but found ephemeral hgid.", path),
     }
 }
 
 pub(crate) fn make_meta(hex: &str) -> FileMetadata {
-    FileMetadata::regular(node(hex))
+    FileMetadata::regular(hgid(hex))
 }
 
 pub(crate) fn make_file(path: &str, hex: &str) -> File {
@@ -47,7 +47,7 @@ pub(crate) fn make_file(path: &str, hex: &str) -> File {
 pub(crate) fn make_dir<'a>(path: &str, hex: Option<&str>, link: &'a Link) -> Directory<'a> {
     Directory {
         path: repo_path_buf(path),
-        node: hex.map(node),
+        hgid: hex.map(hgid),
         link,
     }
 }

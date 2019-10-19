@@ -73,13 +73,13 @@ class DataPackUnion {
  public:
   DataPackUnion(const char* const paths[], size_t num_paths);
 
-  // Look up the name/node pair.  If found, de-delta and return the data as a
+  // Look up the name/hgid pair.  If found, de-delta and return the data as a
   // RevisionStoreByteVec.  If not found, return folly::none.  If an error
   // occurs, throw a DataPackUnionGetError exception. This method is not thread
   // safe.
   folly::Optional<RevisionStoreByteVec> get(
       folly::ByteRange name,
-      folly::ByteRange node);
+      folly::ByteRange hgid);
 
  private:
   struct Deleter {

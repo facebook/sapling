@@ -57,7 +57,7 @@ mod tests {
         let my_key = key(&file, "2");
         let info = NodeInfo {
             parents: [key(&file, "1"), null_key(&file)],
-            linknode: node("100"),
+            linknode: hgid("100"),
         };
 
         let keycloned = my_key.clone();

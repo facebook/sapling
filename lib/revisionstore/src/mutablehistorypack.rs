@@ -66,50 +66,50 @@ impl MutableHistoryPackInner {
         &self,
         writer: &mut Vec<u8>,
         file_name: &'a RepoPath,
-        node_map: &HashMap<Key, NodeInfo>,
+        hgid_map: &HashMap<Key, NodeInfo>,
         section_offset: usize,
         nodes: &mut HashMap<&'a RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Fallible<()> {
-        let mut node_locations = HashMap::<Key, NodeLocation>::with_capacity(node_map.len());
+        let mut hgid_locations = HashMap::<Key, NodeLocation>::with_capacity(hgid_map.len());
 
         // Write section header
         FileSectionHeader {
             file_name: &file_name,
-            count: node_map.len() as u32,
+            count: hgid_map.len() as u32,
         }
         .write(writer)?;
 
         // Sort the nodes in topological order (ancestors first), as required by the histpack spec
-        let node_map = topo_sort(node_map)?;
+        let hgid_map = topo_sort(hgid_map)?;
 
         // Write nodes
-        for (key, node_info) in node_map.iter() {
+        for (key, node_info) in hgid_map.iter() {
             let p1 = &node_info.parents[0];
-            let copyfrom = if !p1.node.is_null() && p1.path != key.path {
+            let copyfrom = if !p1.hgid.is_null() && p1.path != key.path {
                 Some(p1.path.as_ref())
             } else {
                 None
             };
 
-            let node_offset = section_offset + writer.len() as usize;
+            let hgid_offset = section_offset + writer.len() as usize;
             HistoryEntry::write(
                 writer,
-                &key.node,
-                &node_info.parents[0].node,
-                &node_info.parents[1].node,
+                &key.hgid,
+                &node_info.parents[0].hgid,
+                &node_info.parents[1].hgid,
                 &node_info.linknode,
                 &copyfrom,
             )?;
 
-            node_locations.insert(
+            hgid_locations.insert(
                 (*key).clone(),
                 NodeLocation {
-                    offset: node_offset as u64,
+                    offset: hgid_offset as u64,
                 },
             );
         }
 
-        nodes.insert(file_name, node_locations);
+        nodes.insert(file_name, hgid_locations);
         Ok(())
     }
 }
@@ -127,8 +127,8 @@ impl MutableHistoryStore for MutableHistoryPack {
         let mut inner = self.inner.lock();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
-        assert_ne!(key.node, info.parents[0].node);
-        assert_ne!(key.node, info.parents[1].node);
+        assert_ne!(key.hgid, info.parents[0].hgid);
+        assert_ne!(key.hgid, info.parents[1].hgid);
 
         // Ideally we could use something like:
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
@@ -176,11 +176,11 @@ impl MutablePack for MutableHistoryPackInner {
         let mut keys = self.mem_index.keys().collect::<Vec<_>>();
         keys.sort_unstable();
         for file_name in keys {
-            let node_map = self.mem_index.get(file_name).unwrap();
+            let hgid_map = self.mem_index.get(file_name).unwrap();
             self.write_section(
                 &mut section_buf,
                 file_name,
-                node_map,
+                hgid_map,
                 section_offset as usize,
                 &mut nodes,
             )?;
@@ -227,21 +227,21 @@ impl MutablePack for MutableHistoryPack {
     }
 }
 
-fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo)>> {
+fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo)>> {
     // Sorts the given keys into newest-first topological order
     let mut roots = Vec::<&Key>::new();
 
     // Child map will be used to perform an oldest-first walk later.
-    let mut child_map = HashMap::<&Key, HashSet<&Key>>::with_capacity(node_map.len());
+    let mut child_map = HashMap::<&Key, HashSet<&Key>>::with_capacity(hgid_map.len());
     // Parent count will be used to keep track of when all a commit's parents have been processed.
-    let mut parent_counts = HashMap::with_capacity(node_map.len());
+    let mut parent_counts = HashMap::with_capacity(hgid_map.len());
 
-    for (key, info) in node_map.iter() {
+    for (key, info) in hgid_map.iter() {
         let mut parent_count = 0;
         for parent in &info.parents {
-            // Only record the relationship if the parent is also in the provided node_map.
+            // Only record the relationship if the parent is also in the provided hgid_map.
             // This also filters out null parents.
-            if node_map.contains_key(parent) {
+            if hgid_map.contains_key(parent) {
                 let children = child_map.entry(parent).or_default();
                 if !children.contains(key) {
                     children.insert(key);
@@ -264,7 +264,7 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
     let mut pending = VecDeque::<&Key>::from_iter(roots.iter().cloned());
     let mut results = Vec::new();
     while let Some(key) = pending.pop_front() {
-        results.push((key, node_map.get(key).unwrap()));
+        results.push((key, hgid_map.get(key).unwrap()));
 
         if let Some(children) = child_map.get(key) {
             for child in children.iter() {
@@ -288,7 +288,7 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo
     // We built the result in oldest first order, but we need it in newest first order.
     results.reverse();
 
-    assert_eq!(results.len(), node_map.len());
+    assert_eq!(results.len(), hgid_map.len());
     Ok(results)
 }
 
@@ -329,7 +329,7 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use types::{node::Node, testutil::key};
+    use types::{hgid::HgId, testutil::key};
 
     use crate::historypack::HistoryPack;
     use crate::repack::ToKeys;
@@ -342,7 +342,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        let null_key = Key::new(RepoPathBuf::new(), Node::null_id().clone());
+        let null_key = Key::new(RepoPathBuf::new(), HgId::null_id().clone());
 
         let chain_count = 2;
         let chain_len = 3;
@@ -363,10 +363,10 @@ mod tests {
                     null_key.clone()
                 };
 
-                let key = Key::new(RepoPathBuf::new(), Node::random(&mut rng));
+                let key = Key::new(RepoPathBuf::new(), HgId::random(&mut rng));
                 let info = NodeInfo {
                     parents: [p1, p2],
-                    linknode: Node::random(&mut rng),
+                    linknode: HgId::random(&mut rng),
                 };
                 entries.push((key.clone(), info.clone()));
                 chain.push((key.clone(), info.clone()));

@@ -14,7 +14,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::Node;
+use types::HgId;
 
 use crate::fanouttable::FanoutTable;
 use crate::sliceext::SliceExt;
@@ -35,14 +35,14 @@ struct DataIndexOptions {
 
 #[derive(Debug)]
 pub struct DeltaLocation {
-    pub delta_base: Option<Node>,
+    pub delta_base: Option<HgId>,
     pub offset: u64,
     pub size: u64,
 }
 
 #[derive(Debug)]
 pub struct IndexEntry {
-    node: Node,
+    hgid: HgId,
     delta_base_offset: u32,
     pack_entry_offset: u64,
     pack_entry_size: u64,
@@ -50,13 +50,13 @@ pub struct IndexEntry {
 
 impl IndexEntry {
     pub fn new(
-        node: Node,
+        hgid: HgId,
         delta_base_offset: DeltaBaseOffset,
         pack_entry_offset: u64,
         pack_entry_size: u64,
     ) -> Self {
         IndexEntry {
-            node,
+            hgid,
             delta_base_offset: match delta_base_offset {
                 DeltaBaseOffset::FullText => 0xffffffff,
                 DeltaBaseOffset::Missing => 0xfffffffe,
@@ -67,8 +67,8 @@ impl IndexEntry {
         }
     }
 
-    pub fn node(&self) -> &Node {
-        &self.node
+    pub fn hgid(&self) -> &HgId {
+        &self.hgid
     }
 
     pub fn delta_base_offset(&self) -> DeltaBaseOffset {
@@ -123,14 +123,14 @@ impl IndexEntry {
     pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = buf.get_err(0..20)?;
-        let node = Node::from_slice(node_slice)?;
+        let hgid_slice: &[u8] = buf.get_err(0..20)?;
+        let hgid = HgId::from_slice(hgid_slice)?;
         let delta_base_offset = cur.read_i32::<BigEndian>()?;
         let delta_base_offset = DeltaBaseOffset::new(delta_base_offset)?;
         let pack_entry_offset = cur.read_u64::<BigEndian>()?;
         let pack_entry_size = cur.read_u64::<BigEndian>()?;
         Ok(IndexEntry::new(
-            node,
+            hgid,
             delta_base_offset,
             pack_entry_offset,
             pack_entry_size,
@@ -138,7 +138,7 @@ impl IndexEntry {
     }
 
     fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
-        writer.write_all(self.node().as_ref())?;
+        writer.write_all(self.hgid().as_ref())?;
         writer.write_i32::<BigEndian>(self.delta_base_offset().to_i32())?;
         writer.write_u64::<BigEndian>(self.pack_entry_offset())?;
         writer.write_u64::<BigEndian>(self.pack_entry_size())?;
@@ -208,7 +208,7 @@ impl DataIndex {
         })
     }
 
-    pub fn write<T: Write>(writer: &mut T, values: &HashMap<Node, DeltaLocation>) -> Fallible<()> {
+    pub fn write<T: Write>(writer: &mut T, values: &HashMap<HgId, DeltaLocation>) -> Fallible<()> {
         // Write header
         let options = DataIndexOptions {
             version: 1,
@@ -216,7 +216,7 @@ impl DataIndex {
         };
         options.write(writer)?;
 
-        let mut values: Vec<(&Node, &DeltaLocation)> = values.iter().collect();
+        let mut values: Vec<(&HgId, &DeltaLocation)> = values.iter().collect();
         // They must be written in sorted order
         values.sort_by_key(|x| x.0);
 
@@ -232,15 +232,15 @@ impl DataIndex {
             Some(&mut locations),
         )?;
 
-        // Map from node to location
-        let mut nodelocations: HashMap<Node, u32> = HashMap::new();
-        for (i, &(node, _value)) in values.iter().enumerate() {
-            nodelocations.insert(node.clone(), locations[i]);
+        // Map from hgid to location
+        let mut nodelocations: HashMap<HgId, u32> = HashMap::new();
+        for (i, &(hgid, _value)) in values.iter().enumerate() {
+            nodelocations.insert(hgid.clone(), locations[i]);
         }
 
         // Write index
         writer.write_u64::<BigEndian>(values.len() as u64)?;
-        for &(node, value) in values.iter() {
+        for &(hgid, value) in values.iter() {
             let delta_base_offset =
                 value
                     .delta_base
@@ -251,7 +251,7 @@ impl DataIndex {
                             .unwrap_or(DeltaBaseOffset::Missing)
                     });
 
-            let entry = IndexEntry::new(node.clone(), delta_base_offset, value.offset, value.size);
+            let entry = IndexEntry::new(hgid.clone(), delta_base_offset, value.offset, value.size);
 
             entry.write(writer)?;
         }
@@ -259,15 +259,15 @@ impl DataIndex {
         Ok(())
     }
 
-    pub fn get_entry(&self, node: &Node) -> Fallible<Option<IndexEntry>> {
-        let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), node)?;
+    pub fn get_entry(&self, hgid: &HgId) -> Fallible<Option<IndexEntry>> {
+        let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), hgid)?;
         let start = start + self.index_start;
         let end = match end {
             Option::None => self.mmap.len(),
             Option::Some(pos) => pos + self.index_start,
         };
 
-        let entry_offset = match self.binary_search(node, &self.mmap[start..end]) {
+        let entry_offset = match self.binary_search(hgid, &self.mmap[start..end]) {
             None => return Ok(None),
             Some(offset) => offset,
         };
@@ -281,7 +281,7 @@ impl DataIndex {
         IndexEntry::read(raw_entry)
     }
 
-    fn binary_search(&self, key: &Node, slice: &[u8]) -> Option<usize> {
+    fn binary_search(&self, key: &HgId, slice: &[u8]) -> Option<usize> {
         let size = slice.len() / ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; ENTRY_LEN]] =
@@ -306,7 +306,7 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::NamedTempFile;
 
-    fn make_index(values: &HashMap<Node, DeltaLocation>) -> DataIndex {
+    fn make_index(values: &HashMap<HgId, DeltaLocation>) -> DataIndex {
         let mut file = NamedTempFile::new().expect("file");
         DataIndex::write(&mut file, &values).expect("write dataindex");
         let path = file.into_temp_path();
@@ -326,11 +326,11 @@ mod tests {
     #[test]
     fn test_missing_delta_base() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let mut values: HashMap<Node, DeltaLocation> = HashMap::new();
-        let node = Node::random(&mut rng);
-        let base = Node::random(&mut rng);
+        let mut values: HashMap<HgId, DeltaLocation> = HashMap::new();
+        let hgid = HgId::random(&mut rng);
+        let base = HgId::random(&mut rng);
         values.insert(
-            node.clone(),
+            hgid.clone(),
             DeltaLocation {
                 delta_base: Some(base),
                 offset: 1,
@@ -339,17 +339,17 @@ mod tests {
         );
         let index = make_index(&values);
 
-        let delta = index.get_entry(&node).unwrap().unwrap();
+        let delta = index.get_entry(&hgid).unwrap().unwrap();
         assert_eq!(delta.delta_base_offset(), DeltaBaseOffset::Missing);
     }
 
     #[test]
     fn test_missing_key() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let mut values: HashMap<Node, DeltaLocation> = HashMap::new();
-        let node = Node::random(&mut rng);
+        let mut values: HashMap<HgId, DeltaLocation> = HashMap::new();
+        let hgid = HgId::random(&mut rng);
         values.insert(
-            node.clone(),
+            hgid.clone(),
             DeltaLocation {
                 delta_base: None,
                 offset: 1,
@@ -358,7 +358,7 @@ mod tests {
         );
         let index = make_index(&values);
 
-        let other = Node::random(&mut rng);
+        let other = HgId::random(&mut rng);
         assert!(index.get_entry(&other).unwrap().is_none());
     }
 
@@ -372,17 +372,17 @@ mod tests {
             options == parsed_options
         }
 
-        fn test_roundtrip_index(nodes: Vec<(Node, u64)>) -> bool {
-            let mut values: HashMap<Node, DeltaLocation> = HashMap::new();
+        fn test_roundtrip_index(nodes: Vec<(HgId, u64)>) -> bool {
+            let mut values: HashMap<HgId, DeltaLocation> = HashMap::new();
 
             let mut nodes = nodes;
-            let last_node = nodes.pop();
+            let last_hgid = nodes.pop();
 
             let mut offset = 0;
-            for &(node, size) in nodes.iter() {
+            for &(hgid, size) in nodes.iter() {
                 let size = size + 1;
                 values.insert(
-                    node.clone(),
+                    hgid.clone(),
                     DeltaLocation {
                         delta_base: Default::default(),
                         offset: offset,
@@ -396,10 +396,10 @@ mod tests {
             let index = make_index(&values);
 
             let mut offset = 0;
-            for &(node, size) in nodes.iter() {
+            for &(hgid, size) in nodes.iter() {
                 let size = size + 1;
-                let entry = index.get_entry(&node).expect("get_entry").unwrap();
-                assert_eq!(entry.node(), &node);
+                let entry = index.get_entry(&hgid).expect("get_entry").unwrap();
+                assert_eq!(entry.hgid(), &hgid);
                 assert_eq!(entry.delta_base_offset(), DeltaBaseOffset::FullText);
                 assert_eq!(entry.pack_entry_offset(), offset);
                 assert_eq!(entry.pack_entry_size(), size);
@@ -407,8 +407,8 @@ mod tests {
             }
 
             let mut rng = ChaChaRng::from_seed([0u8; 32]);
-            let last_node = last_node.unwrap_or((Node::random(&mut rng), 0)).0;
-            index.get_entry(&last_node).unwrap().is_none()
+            let last_hgid = last_hgid.unwrap_or((HgId::random(&mut rng), 0)).0;
+            index.get_entry(&last_hgid).unwrap().is_none()
         }
     }
 }
