@@ -901,7 +901,7 @@ impl MononokeRepo {
         STATS::eden_get_data.add_value(1);
         let mut fetches = Vec::new();
         for key in keys {
-            let filenode = HgFileNodeId::new(key.node.clone().into());
+            let filenode = HgFileNodeId::new(key.hgid.clone().into());
             let get_parents = self.repo.get_file_parents(ctx.clone(), filenode);
 
             let get_content =
@@ -947,7 +947,7 @@ impl MononokeRepo {
         for key in keys {
             let ctx = ctx.clone();
             let repo = self.repo.clone();
-            let filenode = HgFileNodeId::new(key.node.clone().into());
+            let filenode = HgFileNodeId::new(key.hgid.clone().into());
             let logger = self.logger.clone();
 
             let fut = MPath::new(key.path.as_byte_slice())
@@ -987,7 +987,7 @@ impl MononokeRepo {
         STATS::eden_get_trees.add_value(1);
         let mut fetches = Vec::new();
         for key in keys {
-            let manifest_id = HgManifestId::new(key.node.clone().into());
+            let manifest_id = HgManifestId::new(key.hgid.clone().into());
             let entry = self.repo.get_root_entry(manifest_id);
             let get_parents = entry.get_parents(ctx.clone());
             let get_content = entry.get_raw_content(ctx.clone());
