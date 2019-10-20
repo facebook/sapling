@@ -4,15 +4,14 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-#include "scm/hg/lib/backingstore/c_api/HgNativeBackingStore.h"
+#include "HgNativeBackingStore.h"
 
+#include <folly/Optional.h>
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <memory>
-#include <optional>
 #include <stdexcept>
-#include "scm/hg/lib/backingstore/c_api/RustBackingStore.h"
 
 namespace facebook {
 namespace eden {
@@ -29,7 +28,7 @@ HgNativeBackingStore::HgNativeBackingStore(folly::StringPiece repository) {
   store_ = store.unwrap();
 }
 
-std::optional<folly::IOBuf> HgNativeBackingStore::getBlob(
+folly::Optional<folly::IOBuf> HgNativeBackingStore::getBlob(
     folly::ByteRange name,
     folly::ByteRange node) {
   RustCFallible<RustCBytes> result(
@@ -41,7 +40,7 @@ std::optional<folly::IOBuf> HgNativeBackingStore::getBlob(
     XLOG(ERR) << "Error while getting blob name=" << name.data()
               << " node=" << node.data()
               << "from backingstore: " << result.getError();
-    return std::nullopt;
+    return folly::none;
   }
   auto buffer = result.get();
   auto iobuf =

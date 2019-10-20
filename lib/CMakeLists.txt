@@ -1,2 +1,3 @@
+add_subdirectory(backingstore)
 add_subdirectory(configparser)
 add_subdirectory(revisionstore)

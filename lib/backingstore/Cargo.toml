@@ -11,3 +11,6 @@ types = { path = "../types" }
 bytes = "*"
 failure = "*"
 libc = "*"
+
+[lib]
+crate-type = ["staticlib", "lib"]

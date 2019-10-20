@@ -8,12 +8,15 @@
 
 #include <folly/Range.h>
 #include <memory>
-#include <optional>
 
-#include "scm/hg/lib/backingstore/c_api/RustBackingStore.h"
+// This is relative path because of the CMake build since it does not preserve
+// the directory structure we have in the repository
+#include "RustBackingStore.h" // @manual
 
 namespace folly {
 class IOBuf;
+template <typename T>
+class Optional;
 } // namespace folly
 
 namespace facebook {
@@ -22,7 +25,7 @@ class HgNativeBackingStore {
  public:
   explicit HgNativeBackingStore(folly::StringPiece repository);
 
-  std::optional<folly::IOBuf> getBlob(
+  folly::Optional<folly::IOBuf> getBlob(
       folly::ByteRange name,
       folly::ByteRange node);
 
