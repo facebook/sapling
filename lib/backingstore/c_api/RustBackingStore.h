@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<b6ea2b8425b6c250eefd001f49810f72>>
+ * @generated SignedSource<<c6051bcd5d2d58ea14574bd2ed931e19>>
  *
  */
 
@@ -75,7 +75,14 @@ public:
 #include <cstdlib>
 #include <new>
 
+struct RustBackingStore;
+
 extern "C" {
+
+void rust_backingstore_free(RustBackingStore *store);
+
+RustCFallibleBase rust_backingstore_new(const char *repository,
+                                                          size_t repository_len);
 
 void rust_cfallible_free_error(char *ptr);
 

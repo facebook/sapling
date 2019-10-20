@@ -5,5 +5,8 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
 
 [dependencies]
+revisionstore = { path = "../revisionstore" }
+configparser = { path = "../configparser" }
+bytes = "*"
 failure = "*"
 libc = "*"

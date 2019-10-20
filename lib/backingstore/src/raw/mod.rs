@@ -8,6 +8,7 @@
 //! the function is written in Rust. Changes to this mod may need regenerations of the C/C++
 //! binding header. To regenerate the binding header, run `./tools/cbindgen.sh`.
 
+mod backingstore;
 mod cfallible;
 mod tests;
 
