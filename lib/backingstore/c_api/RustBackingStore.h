@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<3782b120d3ae15e986679d1b48167dc0>>
+ * @generated SignedSource<<d0eb0f27d8a1f4480f53709c6c9dcd1c>>
  *
  */
 
@@ -97,6 +97,12 @@ operator folly::ByteRange() const {
 extern "C" {
 
 void rust_backingstore_free(RustBackingStore *store);
+
+RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
+                                                         const uint8_t *name,
+                                                         uintptr_t name_len,
+                                                         const uint8_t *node,
+                                                         uintptr_t node_len);
 
 RustCFallibleBase rust_backingstore_new(const char *repository,
                                                           size_t repository_len);

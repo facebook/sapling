@@ -5,16 +5,16 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use failure::{ensure, Fallible};
+use failure::{ensure, err_msg, Fallible};
 use libc::{c_char, size_t};
 use std::{slice, str};
 
 use crate::backingstore::BackingStore;
-use crate::raw::CFallible;
+use crate::raw::{CBytes, CFallible};
 
-fn stringpiece_to_slice<'a>(ptr: *const c_char, length: size_t) -> Fallible<&'a [u8]> {
+fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Fallible<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");
-    Ok(unsafe { slice::from_raw_parts(ptr as *const u8, length) })
+    Ok(unsafe { slice::from_raw_parts(ptr as *const U, length) })
 }
 
 fn backingstore_new(
@@ -41,4 +41,34 @@ pub extern "C" fn rust_backingstore_free(store: *mut BackingStore) {
     assert!(!store.is_null());
     let store = unsafe { Box::from_raw(store) };
     drop(store);
+}
+
+fn backingstore_get_blob(
+    store: *mut BackingStore,
+    name: *const u8,
+    name_len: usize,
+    node: *const u8,
+    node_len: usize,
+) -> Fallible<*mut CBytes> {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let path = stringpiece_to_slice(name, name_len)?;
+    let node = stringpiece_to_slice(node, node_len)?;
+
+    store
+        .get_blob(path, node)
+        .and_then(|opt| opt.ok_or_else(|| err_msg("no blob found")))
+        .map(CBytes::from_vec)
+        .map(|result| Box::into_raw(Box::new(result)))
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_blob(
+    store: *mut BackingStore,
+    name: *const u8,
+    name_len: usize,
+    node: *const u8,
+    node_len: usize,
+) -> CFallible<CBytes> {
+    backingstore_get_blob(store, name, name_len, node, node_len).into()
 }

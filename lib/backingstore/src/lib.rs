@@ -13,3 +13,5 @@
 
 mod backingstore;
 mod raw;
+
+pub use crate::backingstore::BackingStore;
