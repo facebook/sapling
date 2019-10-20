@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<c6051bcd5d2d58ea14574bd2ed931e19>>
+ * @generated SignedSource<<3782b120d3ae15e986679d1b48167dc0>>
  *
  */
 
@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <functional>
+#include <folly/Range.h>
 
 extern "C" void rust_cfallible_free_error(char *ptr);
 
@@ -77,6 +78,22 @@ public:
 
 struct RustBackingStore;
 
+template<typename T>
+struct RustVec;
+
+struct RustCBytes {
+  const uint8_t *ptr;
+  size_t len;
+  RustVec<uint8_t> *vec;
+folly::ByteRange asByteRange() const {
+  return folly::ByteRange(ptr, len);
+}
+
+operator folly::ByteRange() const {
+  return asByteRange();
+}
+};
+
 extern "C" {
 
 void rust_backingstore_free(RustBackingStore *store);
@@ -84,7 +101,11 @@ void rust_backingstore_free(RustBackingStore *store);
 RustCFallibleBase rust_backingstore_new(const char *repository,
                                                           size_t repository_len);
 
+void rust_cbytes_free(RustCBytes *vec);
+
 void rust_cfallible_free_error(char *ptr);
+
+RustCBytes rust_test_cbytes();
 
 /// Returns a `CFallible` with error message "failure!". This function is intended to be called
 /// from C++ tests.

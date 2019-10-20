@@ -5,7 +5,7 @@
 
 //! This mod provides utilities functions needed for running tests.
 
-use crate::raw::CFallible;
+use crate::raw::{CBytes, CFallible};
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
@@ -25,4 +25,9 @@ pub extern "C" fn rust_test_cfallible_ok_free(val: *mut u8) {
 #[no_mangle]
 pub extern "C" fn rust_test_cfallible_err() -> CFallible<u8> {
     CFallible::err("failure!")
+}
+
+#[no_mangle]
+pub extern "C" fn rust_test_cbytes() -> CBytes {
+    CBytes::from_vec("hello world".to_string().into_bytes())
 }

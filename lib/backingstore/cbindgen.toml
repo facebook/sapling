@@ -22,6 +22,7 @@ header = """/*
 
 #include <memory>
 #include <functional>
+#include <folly/Range.h>
 
 extern "C" void rust_cfallible_free_error(char *ptr);
 
@@ -80,3 +81,14 @@ exclude = ["CFallible"]
 
 [export.rename]
 "CFallible" = "CFallibleBase"
+
+[export.body]
+"CBytes" = """
+folly::ByteRange asByteRange() const {
+  return folly::ByteRange(ptr, len);
+}
+
+operator folly::ByteRange() const {
+  return asByteRange();
+}
+"""

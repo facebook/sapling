@@ -9,7 +9,9 @@
 //! binding header. To regenerate the binding header, run `./tools/cbindgen.sh`.
 
 mod backingstore;
+mod cbytes;
 mod cfallible;
 mod tests;
 
+pub use cbytes::CBytes;
 pub use cfallible::CFallible;
