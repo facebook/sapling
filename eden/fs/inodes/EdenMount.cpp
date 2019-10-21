@@ -113,7 +113,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::shared_ptr<const Tree> rootTree) {
-    auto diffContext = mount->createDiffContext(this, /*listIgnored=*/false);
+    auto diffContext = mount->createDiffContext(this);
     auto rawContext = diffContext.get();
 
     return rootInode

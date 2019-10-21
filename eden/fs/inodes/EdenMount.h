@@ -398,17 +398,14 @@ class EdenMount {
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
-  folly::Future<folly::Unit> diff(const DiffContext* ctxPtr, Hash commitHash)
-      const;
+  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+      const DiffContext* ctxPtr,
+      Hash commitHash) const;
 
   /**
    * Compute differences between the current commit and the working directory
    * state.
    *
-   * @param callback This callback will be invoked as differences are found.
-   *     Note that the callback methods may be invoked simultaneously from
-   *     multiple different threads, and the callback is responsible for
-   *     performing synchronization (if it is needed).
    * @param listIgnored Whether or not to inform the callback of ignored files.
    *     When listIgnored is set to false can speed up the diff computation, as
    *     the code does not need to descend into ignored directories at all.
@@ -420,20 +417,9 @@ class EdenMount {
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
-      DiffCallback* callback,
+  FOLLY_NODISCARD folly::Future<std::unique_ptr<ScmStatus>> diff(
       Hash commitHash,
       bool listIgnored = false,
-      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request =
-          nullptr) const;
-
-  /**
-   * Executes diff against commitHash and returns the ScmStatus for the diff
-   * operation.
-   */
-  folly::Future<std::unique_ptr<ScmStatus>> diff(
-      Hash commitHash,
-      bool listIgnored,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
 
   /**
@@ -644,11 +630,31 @@ class EdenMount {
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
+  /**
+   * Create a DiffContext to be passed through the TreeInode diff codepath. This
+   * will be used to record differences through the callback (in which
+   * listIgnored determines if ignored files will be reported in the callback)
+   * and houses the thrift request in order to check to see if the diff() should
+   * be short circuited
+   */
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
-      bool listIgnored,
+      bool listIgnored = false,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request =
           nullptr) const;
+
+  /**
+   * This accepts a callback which will be invoked as differences are found.
+   * Note that the callback methods may be invoked simultaneously from multiple
+   * different threads, and the callback is responsible for performing
+   * synchronization (if it is needed). It will be packaged into a DiffContext
+   * and passed through the TreeInode diff() codepath
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+      DiffCallback* callback,
+      Hash commitHash,
+      bool listIgnored,
+      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
 
   /**
    * Open the FUSE device and mount it using the mount(2) syscall.

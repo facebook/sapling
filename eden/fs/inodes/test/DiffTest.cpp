@@ -92,14 +92,10 @@ class DiffTest {
     return callback.extractStatus();
   }
   folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
-    auto callback = std::make_unique<ScmStatusDiffCallback>();
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
-    auto diffFuture =
-        mount_.getEdenMount()->diff(callback.get(), commitHash, listIgnored);
+    auto diffFuture = mount_.getEdenMount()->diff(commitHash, listIgnored);
     return std::move(diffFuture)
-        .thenValue([callback = std::move(callback)](auto&&) {
-          return callback->extractStatus();
-        });
+        .thenValue([](std::unique_ptr<ScmStatus>&& result) { return *result; });
   }
 
   ScmStatus resetCommitAndDiff(FakeTreeBuilder& builder, bool loadInodes);
@@ -1215,8 +1211,7 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  ScmStatusDiffCallback callback;
-  auto diffFuture = mount.getEdenMount()->diff(&callback, commitHash2);
+  auto diffFuture = mount.getEdenMount()->diff(commitHash2);
 
   // The diff should not be ready yet
   EXPECT_FALSE(diffFuture.isReady());
@@ -1289,10 +1284,10 @@ TEST(DiffTest, fileNotReady) {
 
   // The diff should be complete now.
   ASSERT_TRUE(diffFuture.isReady());
-  std::move(diffFuture).get(10ms);
-  auto result = callback.extractStatus();
+  auto result = std::move(diffFuture).get(10ms);
+
   EXPECT_THAT(
-      result.entries,
+      result->entries,
       UnorderedElementsAre(
           std::make_pair("src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("src/s.txt", ScmFileStatus::MODIFIED),
