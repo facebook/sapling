@@ -146,6 +146,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
   Skipping tests/test-rustthreading.py it has no-che?k-code (glob)
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
+  edenscm/mercurial/EdenThriftClient.py:87: use foobar, not foo_bar naming --> toml_config = toml.load(os.path.join(self._root, ".eden", "config"))
   edenscm/mercurial/commands/eden.py:408: use foobar, not foo_bar naming --> def cmd_get_file_size(self, request):
   tests/run-tests.py:*: don't use camelcase in identifiers --> self.testsSkipped = 0 (glob)
 
