@@ -502,10 +502,10 @@ class EdenCommandError(subprocess.CalledProcessError):
 
     def __str__(self) -> str:
         cmd_str = " ".join(shlex.quote(arg) for arg in self.cmd)
-        return "eden command [%s] returned non-zero exit status %d\n" "stderr=%s" % (
+        return "eden command [%s] returned non-zero exit status %d\nstderr=%s" % (
             cmd_str,
             self.returncode,
-            self.stderr,
+            self.stderr.decode("utf-8"),
         )
 
 
