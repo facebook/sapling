@@ -95,6 +95,23 @@ class gitutil(object):
         return s[0:40], s[40:]
 
     @classmethod
+    def _parsestatus(cls, s):
+        status, remainder = s[0], s[1:]
+        if status not in [
+            cls.GIT_FILE_STATUS_ADDED,
+            cls.GIT_FILE_STATUS_COPIED,
+            cls.GIT_FILE_STATUS_DELETED,
+            cls.GIT_FILE_STATUS_MOVED,
+            cls.GIT_FILE_STATUS_RENAMED,
+            cls.GIT_FILE_STATUS_TYPE_CHANGED,
+            cls.GIT_FILE_STATUS_UNMERGED,
+            cls.GIT_FILE_STATUS_UNKNOWN,
+        ]:
+            raise ValueError(_('Status "%s" is invalid') % status)
+
+        return status, remainder
+
+    @classmethod
     def _parsepath(cls, s, separator):
         endindex = s.index(separator)
         return s[:endindex], s[endindex:]
@@ -110,11 +127,9 @@ class gitutil(object):
         remainder = cls._parsespecificchar(remainder, " ")
         dsthash, remainder = cls._parsehash(remainder)
         remainder = cls._parsespecificchar(remainder, " ")
-        status, remainder = remainder[0], remainder[1:]
-        if status not in ["A", "C", "D", "M", "R", "T", "U", "X"]:
-            raise ValueError(_('Status "%s" is invalid') % status)
-        if status in ["C", "R"] or (
-            status == "M" and remainder[0] not in ["\t", "\x00"]
+        status, remainder = cls._parsestatus(remainder)
+        if status in [cls.GIT_FILE_STATUS_COPIED, cls.GIT_FILE_STATUS_RENAMED] or (
+            status == cls.GIT_FILE_STATUS_MOVED and remainder[0] not in ["\t", "\x00"]
         ):
             score, remainder = int(remainder[0:2]), remainder[2:]
         else:
@@ -672,7 +687,10 @@ class repo_source(common.converter_source):
     values and "join" to combine them back together again.
     """
 
+    CONFIG_NAMESPACE = "convert"
     CONFIG_FULL_MERGE = "repo.fullmerge"  # Find a better name for this
+    CONFIG_DIFFTREE_CACHE_ENABLED = "repo.difftreecache"
+    CONFIG_DIRRED_ENABLED = "repo.enabledirred"
 
     VARIANT_ROOTED = "R"  # Used for commits migrated to root directory
     VARIANT_DIRRED = "D"  # Used for commits migrated to manifest directory
@@ -691,6 +709,16 @@ class repo_source(common.converter_source):
 
         super(repo_source, self).__init__(ui, repotype, path, revs=revs)
 
+        self._fullmergeenabled = self.ui.configbool(
+            self.CONFIG_NAMESPACE, self.CONFIG_FULL_MERGE, default=True
+        )
+        self._difftreecacheenabled = self.ui.configbool(
+            self.CONFIG_NAMESPACE, self.CONFIG_DIFFTREE_CACHE_ENABLED, default=True
+        )
+        self._dirredenabled = self.ui.configbool(
+            self.CONFIG_NAMESPACE, self.CONFIG_DIRRED_ENABLED, default=True
+        )
+
         self.pprinter = pprint.PrettyPrinter()
         self.repo = repo(ui, path)
         self.repocommandline = repo_commandline(ui, path)
@@ -703,7 +731,7 @@ class repo_source(common.converter_source):
         self.commitprojectindex = self._buildcommitprojectmap()
         self.objecthashprojectindex = {}
         self.filecache = {}
-        self.difftreecache = {}
+        self._difftreecache = {}
 
     def before(self):
         """See converter_source.before"""
@@ -745,6 +773,7 @@ class repo_source(common.converter_source):
             + [
                 self._joinrevfields(self.VARIANT_DIRRED, commithash)
                 for commithash in commithashes
+                if self._dirredenabled
             ]
             + [
                 self._joinrevfields(self.VARIANT_UNIFIED, commithash)
@@ -809,18 +838,22 @@ class repo_source(common.converter_source):
 
         projectpath = self.commitprojectindex[commithash]
 
-        if (projectpath, commithash) in self.difftreecache:
-            filediffs = self.difftreecache[(projectpath, commithash)]
+        if (
+            self._difftreecacheenabled
+            and (projectpath, commithash) in self._difftreecache
+        ):
+            difftree = self._difftreecache[(projectpath, commithash)]
         else:
             gitpath = os.path.join(self.path, projectpath)
             difftreeoutput = gitutil.difftree(self.ui, gitpath, commithash)
-            filediffs = gitutil.parsedifftree(difftreeoutput[0:-1])
-            if len(self.difftreecache) > self.DIFFCACHE_SIZE_MAX:
-                self.difftreecache.pop(self.difftreecache.keys()[0])
-            self.difftreecache[(projectpath, commithash)] = filediffs
+            difftree = gitutil.parsedifftree(difftreeoutput[0:-1])
+            if len(self._difftreecache) > self.DIFFCACHE_SIZE_MAX:
+                self._difftreecache.popitem()
+            if self._difftreecacheenabled:
+                self._difftreecache[(projectpath, commithash)] = difftree
 
             # TODO: Fix for multiple parents
-            for parentdiff in filediffs:
+            for parentdiff in difftree:
                 for filediff in parentdiff:
                     # Keep track of which project contains these trees and blobs for later
                     self.objecthashprojectindex[
@@ -837,29 +870,32 @@ class repo_source(common.converter_source):
         changes = (
             [
                 (
-                    os.path.join(pathprefix, p1diff["dest"]["path"]),
-                    p1diff["source"]["hash"],
+                    os.path.join(pathprefix, filediff["dest"]["path"]),
+                    filediff["source"]["hash"],
                 )
-                for p1diff in filediffs[0]
+                for parentdiff in difftree
+                for filediff in parentdiff
             ]
-            if filediffs
+            if difftree
             else []
         )
+
         # TODO: Do we need to consider cross-project copies?
         copies = (
             {
-                os.path.join(pathprefix, diff["dest"]["path"]): os.path.join(
-                    pathprefix, diff["source"]["path"]
+                os.path.join(pathprefix, filediff["dest"]["path"]): os.path.join(
+                    pathprefix, filediff["source"]["path"]
                 )
-                for diff in filediffs[0]
-                if gitutil.iscopystatus(diff["status"])
+                for parentdiff in difftree
+                for filediff in parentdiff
+                if gitutil.iscopystatus(filediff["status"])
             }
-            if filediffs
+            if difftree
             else {}
         )
+
         cleanp2 = set()
-        output = (changes, copies, cleanp2)
-        return output
+        return (changes, copies, cleanp2)
 
     def getcommit(self, version):
         """Overrides common.converter_source.getcommit
@@ -900,12 +936,16 @@ class repo_source(common.converter_source):
                 parentversion = self._joinrevfields(self.VARIANT_UNIFIED, previoushash)
                 commit.parents = [parentversion]
             # Tie the dirred version back to directory-located version
-            dirredhash = self._joinrevfields(self.VARIANT_DIRRED, commit.rev)
+            if self._dirredenabled:
+                dirredhash = self._joinrevfields(self.VARIANT_DIRRED, commit.rev)
+                commit.extra["dirred_hash"] = dirredhash
             rootedhash = self._joinrevfields(self.VARIANT_ROOTED, commit.rev)
-            commit.extra["dirred_hash"] = dirredhash
             commit.extra["rooted_hash"] = rootedhash
-            if self.ui.configbool("convert", self.CONFIG_FULL_MERGE):
-                commit.parents.append(dirredhash)
+            if self._fullmergeenabled:
+                if self._dirredenabled:
+                    commit.parents.append(dirredhash)
+                else:
+                    commit.parents.append(rootedhash)
         elif variant == self.VARIANT_DIRRED:
             commit.parents = [
                 self._joinrevfields(variant, parenthash)
@@ -914,7 +954,7 @@ class repo_source(common.converter_source):
             # Tie the dirred version back to rooted version
             rootedhash = self._joinrevfields(self.VARIANT_ROOTED, commit.rev)
             commit.extra["rooted_hash"] = rootedhash
-            if self.ui.configbool("convert", self.CONFIG_FULL_MERGE):
+            if self._fullmergeenabled:
                 parentversion = rootedhash
                 commit.parents.append(parentversion)
         else:
@@ -956,6 +996,7 @@ class repo_source(common.converter_source):
             raise LookupError(
                 _("could not find which project contains version %s") % rev
             )
+
         projectpath = self.commitprojectindex[rev]
 
         revspecifier = None if i is None else ("%s^%d" % (rev, i))
