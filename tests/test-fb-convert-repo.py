@@ -142,6 +142,13 @@ Change-Id: Ie8ded3a8316b465c89a256c1a9146345614ed68f"""
         out = gitutil.parsegitcommitraw(commit_hash, commit_string)
 
         self.assertEqual(out.rev, "6c6677a7b5cf683a1883bc5e4ad47cad0a496904")
+        self.assertSequenceEqual(
+            out.parents,
+            [
+                "c6c89b3401f3f6690e2307de7e2d079894c8147a",
+                "2051d0428d045796ded3764c4188249669d1fcf3",
+            ],
+        )
         self.assertEqual(
             out.desc,
             """Merge AU_LINUX_ANDROID_LA.BR.1.3.7_RB1.08.01.00.336.038 on remote branch
