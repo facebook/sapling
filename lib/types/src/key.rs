@@ -25,6 +25,8 @@ pub struct Key {
     // Name is usually a file or directory path
     pub path: RepoPathBuf,
     // HgId is always a 20 byte hash. This will be changed to a fix length array later.
+    #[serde(alias = "node")]
+    #[serde(rename = "node")]
     pub hgid: HgId,
 }
 
