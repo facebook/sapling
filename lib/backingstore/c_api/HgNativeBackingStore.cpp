@@ -37,9 +37,9 @@ folly::Optional<folly::IOBuf> HgNativeBackingStore::getBlob(
       rust_cbytes_free);
 
   if (result.isError()) {
-    XLOG(ERR) << "Error while getting blob name=" << name.data()
-              << " node=" << node.data()
-              << "from backingstore: " << result.getError();
+    XLOG(DBG5) << "Error while getting blob name=" << name.data()
+               << " node=" << folly::hexlify(node)
+               << " from backingstore: " << result.getError();
     return folly::none;
   }
   auto buffer = result.get();
