@@ -6,6 +6,8 @@
   > [extensions]
   > crdump=
   > remotenames=
+  > [crdump]
+  > commitcloud=True
   > EOF
 
 Setup server
