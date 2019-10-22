@@ -80,7 +80,7 @@ def getdiffstatus(repo, *diffid):
 
     if not diffid:
         return []
-    timeout = repo.ui.configint("ssl", "timeout", 5)
+    timeout = repo.ui.configint("ssl", "timeout", 10)
     ca_certs = repo.ui.configpath("web", "cacerts")
 
     try:

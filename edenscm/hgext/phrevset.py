@@ -63,7 +63,7 @@ DESCRIPTION_REGEX = re.compile(
 
 def getdiff(repo, diffid):
     """Resolves a phabricator Diff number to a commit hash of it's latest version """
-    timeout = repo.ui.configint("ssl", "timeout", 5)
+    timeout = repo.ui.configint("ssl", "timeout", 10)
     ca_certs = repo.ui.configpath("web", "cacerts")
     try:
         client = graphql.Client(

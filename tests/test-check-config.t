@@ -151,7 +151,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.upstream (list)
   undocumented: server.requireexplicitfullclone (bool)
   undocumented: smartlog.ignorebookmarks (str) ["!"]
-  undocumented: ssl.timeout (int) [5]
+  undocumented: ssl.timeout (int) [10]
   undocumented: treemanifest.verifyautocreate (bool)
   undocumented: ui.editor.chunkselector (str)
   undocumented: workingcopy.enablerustwalker (bool)
