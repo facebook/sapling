@@ -29,8 +29,7 @@ endif()
 if(EDEN_HAVE_RUST_DATAPACK)
   list(
     APPEND EDEN_STORE_HG_OPTIONAL_DEPS
-      Mercurial::configparser
-      Mercurial::revisionstore
+      Mercurial::backingstore
   )
 endif()
 

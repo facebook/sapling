@@ -223,7 +223,7 @@ HgBackingStore::HgBackingStore(
       config_(config),
       serverThreadPool_(serverThreadPool) {
 #ifdef EDEN_HAVE_RUST_DATAPACK
-  datapackStore_ = makeHgDatapackStore(repository, config_);
+  datapackStore_ = std::make_optional<HgDatapackStore>(repository);
 #endif
   HgImporter importer(
       repository, localStore, getSharedHgImporterStatsForCurrentThread(stats));
