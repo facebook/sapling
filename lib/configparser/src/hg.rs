@@ -13,8 +13,9 @@ use std::path::Path;
 
 use bytes::Bytes;
 use failure::Fallible;
+use util::path::expand_path;
 
-use crate::config::{expand_path, ConfigSet, Options};
+use crate::config::{ConfigSet, Options};
 use crate::error::Error;
 
 pub const HGPLAIN: &str = "HGPLAIN";

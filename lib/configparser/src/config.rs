@@ -3,7 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::convert::AsRef;
 use std::fs;
@@ -16,6 +15,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use indexmap::IndexMap;
 use pest::{self, Parser, Span};
+use util::path::expand_path;
 
 use crate::error::Error;
 use crate::parser::{ConfigParser, Rule};
@@ -505,41 +505,6 @@ fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
     buf.slice(start, end)
 }
 
-/// Expand `~` to home directory and expand environment variables.
-pub(crate) fn expand_path(path: &str) -> PathBuf {
-    // The shellexpand crate does not expand Windows environment variables
-    // like `%PROGRAMDATA%`. We'd like to expand them too. So let's do some
-    // pre-processing.
-    let new_path = {
-        let mut new_path = String::new();
-        let mut is_starting = true;
-        for ch in path.chars() {
-            if ch == '%' {
-                if is_starting {
-                    new_path.push_str("${");
-                } else {
-                    new_path.push('}');
-                }
-                is_starting = !is_starting;
-            } else if cfg!(windows) && ch == '/' {
-                // Only on Windows, change "/" to "\" automatically.
-                // This makes sure "%include /foo" works as expected.
-                new_path.push('\\')
-            } else {
-                new_path.push(ch);
-            }
-        }
-        new_path
-    };
-
-    Path::new(
-        shellexpand::full(&new_path)
-            .unwrap_or(Cow::Borrowed(path))
-            .as_ref(),
-    )
-    .to_path_buf()
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -961,13 +926,11 @@ pub(crate) mod tests {
         write_file(
             dir.path().join("rootrc"),
             "%include ./${FOO}1/$FOO/3.rc\n\
-             %include ./%FOO%2/%FOO%/4.rc\n\
-             %include ./%/%/%.rc\n",
+             %include ./%FOO%2/%FOO%/4.rc\n",
         );
 
         write_file(dir.path().join("f1/f/3.rc"), "[x]\na=1\n");
         write_file(dir.path().join("f2/f/4.rc"), "[y]\nb=2\n");
-        write_file(dir.path().join("%/%/%.rc"), "[z]\nc=3\n");
 
         let mut cfg = ConfigSet::new();
         let errors = cfg.load_path(dir.path().join("rootrc"), &"include_expand".into());
@@ -975,6 +938,5 @@ pub(crate) mod tests {
 
         assert_eq!(cfg.get("x", "a"), Some(Bytes::from("1")));
         assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
-        assert_eq!(cfg.get("z", "c"), Some(Bytes::from("3")));
     }
 }

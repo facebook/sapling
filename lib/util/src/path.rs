@@ -5,6 +5,7 @@
 
 //! Path-related utilities.
 
+use std::env;
 #[cfg(not(unix))]
 use std::fs::rename;
 use std::fs::{self, remove_file as fs_remove_file};
@@ -132,6 +133,73 @@ pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
     }
 }
 
+/// Expand the user's home directory and any environment variables references in
+/// the given path.
+///
+/// This function is designed to emulate the behavior of Mercurial's `util.expandpath`
+/// function, which in turn uses Python's `os.path.expand{user,vars}` functions. This
+/// results in behavior that is notably different from the default expansion behavior
+/// of the `shellexpand` crate. In particular:
+///
+/// - If a reference to an environment variable is missing or invalid, the reference
+///   is left unchanged in the resulting path rather than emitting an error.
+///
+/// - Home directory expansion explicitly happens after environment variable
+///   expansion, meaning that if an environment variable is expanded into a
+///   string starting with a tilde (`~`), the tilde will be expanded into the
+///   user's home directory.
+///
+pub fn expand_path(path: impl AsRef<str>) -> PathBuf {
+    expand_path_impl(path.as_ref(), |k| env::var(k).ok(), dirs::home_dir)
+}
+
+/// Same as `expand_path` but explicitly takes closures for environment variable
+/// and home directory lookup for the sake of testability.
+fn expand_path_impl<E, H>(path: &str, getenv: E, homedir: H) -> PathBuf
+where
+    E: FnMut(&str) -> Option<String>,
+    H: FnOnce() -> Option<PathBuf>,
+{
+    // The shellexpand crate does not expand Windows environment variables
+    // like `%PROGRAMDATA%`. We'd like to expand them too. So let's do some
+    // pre-processing.
+    //
+    // XXX: Doing this preprocessing has the unfortunate side-effect that
+    // if an environment variable fails to expand on Windows, the resulting
+    // string will contain a UNIX-style environment variable reference.
+    //
+    // e.g., "/foo/%MISSING%/bar" will expand to "/foo/${MISSING}/bar"
+    //
+    // The current approach is good enough for now, but likely needs to
+    // be improved later for correctness.
+    let path = {
+        let mut new_path = String::new();
+        let mut is_starting = true;
+        for ch in path.chars() {
+            if ch == '%' {
+                if is_starting {
+                    new_path.push_str("${");
+                } else {
+                    new_path.push('}');
+                }
+                is_starting = !is_starting;
+            } else if cfg!(windows) && ch == '/' {
+                // Only on Windows, change "/" to "\" automatically.
+                // This makes sure "%include /foo" works as expected.
+                new_path.push('\\')
+            } else {
+                new_path.push(ch);
+            }
+        }
+        new_path
+    };
+
+    let path = shellexpand::env_with_context_no_errors(&path, getenv);
+    shellexpand::tilde_with_context(&path, homedir)
+        .as_ref()
+        .into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,5 +279,25 @@ mod tests {
         let err = create_dir(&path).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::AlreadyExists);
         Ok(())
+    }
+
+    #[test]
+    fn test_path_expansion() {
+        fn getenv(key: &str) -> Option<String> {
+            match key {
+                "foo" => Some("~/a".into()),
+                "bar" => Some("b".into()),
+                _ => None,
+            }
+        }
+
+        fn homedir() -> Option<PathBuf> {
+            Some(PathBuf::from("/home/user"))
+        }
+
+        let path = "$foo/${bar}/$baz";
+        let expected = PathBuf::from("/home/user/a/b/$baz");
+
+        assert_eq!(expand_path_impl(&path, getenv, homedir), expected);
     }
 }
