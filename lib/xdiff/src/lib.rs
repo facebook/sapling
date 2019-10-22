@@ -213,6 +213,10 @@ where
     pub fn collect(self) -> S {
         self.seed.unwrap()
     }
+
+    pub fn unwrap(self) -> (F, S) {
+        (self.reduce, self.seed.unwrap())
+    }
 }
 
 /// Computes a headerless diff between two byte-slices: `old_text` and `new_text`,
@@ -324,6 +328,52 @@ where
     state.collect()
 }
 
+/// A helper function that allow us to avoid calling xdiff for trivial all-plus
+/// and all-minus diffs.
+///
+/// `emit` callback is called many times as the parts of diff are generated
+///
+/// Hopefuly we'll be able to refactor this API to use (currently unstable) Rust generators.
+/// The only available public API now is `diff_unified` which just returns a `vec<u8>`.
+fn gen_diff_unified_headerless_entire_file<T, F, S>(prefix: u8, text: &T, seed: S, reduce: F) -> S
+where
+    T: AsRef<[u8]>,
+    F: Fn(S, &[u8]) -> S,
+{
+    let mut state = DiffState {
+        seed: Some(seed),
+        reduce,
+    };
+    let text = text.as_ref();
+    let missing_newline = !text.is_empty() && !text.ends_with(b"\n");
+    let text_to_split = if missing_newline || text.is_empty() {
+        &text[..]
+    } else {
+        &text[0..text.len() - 1]
+    };
+    let start = if text.is_empty() { 0 } else { 1 };
+    let count = text_to_split.split(|c| c == &b'\n').count();
+    state.emit(
+        format!(
+            "@@ -{},{} +{},{} @@\n",
+            if prefix == b'-' { start } else { 0 },
+            if prefix == b'-' { count } else { 0 },
+            if prefix == b'+' { start } else { 0 },
+            if prefix == b'+' { count } else { 0 },
+        )
+        .as_bytes(),
+    );
+    text_to_split.split(|c| c == &b'\n').for_each(|line| {
+        state.emit(&[prefix]);
+        state.emit(line);
+        state.emit(b"\n");
+    });
+    if missing_newline {
+        state.emit(MISSING_NEWLINE_MARKER);
+    }
+    state.collect()
+}
+
 /// Computes a headerless diff between two byte-slices: `old_text` and `new_text`,
 /// the number of `context` lines can be set in `opts` struct.
 ///
@@ -333,6 +383,114 @@ where
     T: AsRef<[u8]>,
 {
     gen_diff_unified_headerless(old_text, new_text, opts, Vec::new(), |mut v, part| {
+        v.extend(part);
+        v
+    })
+}
+
+/// Struct representing the diffed file. Contains all the information
+/// needed for header-generation.
+pub struct DiffFile<P, C>
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    /// file path (as [u8])
+    path: P,
+    /// file contents (as [u8])
+    contents: C,
+}
+
+impl<P, C> DiffFile<P, C>
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    pub fn new(path: P, contents: C) -> Self {
+        Self { path, contents }
+    }
+}
+
+/// Computes a diff between two files `old_file` and `new_file`,
+/// the number of `context` lines can be set in `opts` struct.
+///
+/// `emit` callback is called many times as the parts of diff are generated.
+fn gen_diff_unified<P, C, F, S>(
+    old_file: Option<DiffFile<P, C>>,
+    new_file: Option<DiffFile<P, C>>,
+    opts: DiffOpts,
+    seed: S,
+    reduce: F,
+) -> S
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+    F: Fn(S, &[u8]) -> S,
+{
+    let mut state = DiffState {
+        seed: Some(seed),
+        reduce,
+    };
+    // When the files have no differences the output should be empty.
+    if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
+        let old_contents = old_file.contents.as_ref();
+        let new_contents = new_file.contents.as_ref();
+        if old_contents.len() == new_contents.len() && old_contents == new_contents {
+            return state.collect();
+        }
+    }
+    // Headers for old file.
+    if let Some(old_file) = &old_file {
+        state.emit(b"--- a/");
+        state.emit(old_file.path.as_ref());
+        state.emit(b"\n");
+    } else {
+        state.emit(b"--- /dev/null\n");
+    }
+    // Headers for new file.
+    if let Some(new_file) = &new_file {
+        state.emit(b"+++ b/");
+        state.emit(new_file.path.as_ref());
+        state.emit(b"\n");
+    } else {
+        state.emit(b"+++ /dev/null\n");
+    }
+    // All headers emitted, now emit the actual diff.
+    let (reduce, seed) = state.unwrap();
+    match (&old_file, &new_file) {
+        (Some(old_file), Some(new_file)) => {
+            // Typical case, we need to call actual diff function to get the diff.
+            gen_diff_unified_headerless(&old_file.contents, &new_file.contents, opts, seed, reduce)
+        }
+        (Some(old_file), None) => {
+            // Degenerated case of all-minus diff.
+            gen_diff_unified_headerless_entire_file(b'-', &old_file.contents, seed, reduce)
+        }
+        (None, Some(new_file)) => {
+            // Degenerated case of all-plus diff.
+            gen_diff_unified_headerless_entire_file(b'+', &new_file.contents, seed, reduce)
+        }
+        (None, None) => {
+            // There's nothing to diff.
+            seed
+        }
+    }
+}
+
+/// Computes a diff between two files `old_file` and `new_file`,
+/// the number of `context` lines can be set in `opts` struct.
+///
+/// Returns a vector of bytes containing the entire diff.
+pub fn diff_unified<N, C>(
+    old_file: Option<DiffFile<N, C>>,
+    new_file: Option<DiffFile<N, C>>,
+    opts: DiffOpts,
+) -> Vec<u8>
+where
+    N: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    gen_diff_unified(old_file, new_file, opts, Vec::new(), |mut v, part| {
         v.extend(part);
         v
     })
@@ -396,6 +554,78 @@ z"#;
 \ No newline at end of file
 "
             .as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_diff_unified() {
+        let a = r#"a
+b
+c
+d1
+d2
+z"#;
+        let b = r#"a
+b2
+b3
+c
+d
+e
+z"#;
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: &a,
+                    path: "x",
+                }),
+                Some(DiffFile {
+                    contents: &b,
+                    path: "y",
+                }),
+                DiffOpts { context: 10 }
+            )),
+            r"--- a/x
++++ b/y
+@@ -1,6 +1,7 @@
+ a
+-b
++b2
++b3
+ c
+-d1
+-d2
++d
++e
+ z
+\ No newline at end of file
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_with_empty() {
+        let a = r#"a
+b
+c
+d
+"#;
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: &a,
+                    path: "x",
+                }),
+                None,
+                DiffOpts { context: 10 }
+            )),
+            r"--- a/x
++++ /dev/null
+@@ -1,4 +0,0 @@
+-a
+-b
+-c
+-d
+"
         );
     }
 }

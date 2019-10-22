@@ -4,7 +4,7 @@
 
 use std::env;
 use std::fs;
-use xdiff::{diff_unified_headerless, DiffOpts};
+use xdiff::{diff_unified, DiffFile, DiffOpts};
 
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
@@ -17,7 +17,12 @@ fn main() -> Result<(), std::io::Error> {
     let a = fs::read(&args[1])?;
     let b = fs::read(&args[2])?;
 
-    let diff = diff_unified_headerless(&a, &b, DiffOpts { context: 3 });
+    let diff = diff_unified(
+        Some(DiffFile::new(&args[1], &a)),
+        Some(DiffFile::new(&args[2], &b)),
+        DiffOpts { context: 3 },
+    );
+
     print!("{}", String::from_utf8_lossy(&diff));
     Ok(())
 }
