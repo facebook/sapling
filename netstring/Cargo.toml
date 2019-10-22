@@ -1,13 +1,17 @@
+# @autocargo from //common/rust/netstring:netstring
+# Signature<<1a46e0a8b4942037df72efdf333f4adfebb1f7b5>>
 [package]
 name = "netstring"
-version = "0.1.0"
-authors = ["Jeremy Fitzhardinge <jsgf@fb.com>"]
 edition = "2018"
+version = "0.1.0"
+authors = ['Jeremy Fitzhardinge <jsgf@fb.com>']
+include = ["src/**/*.rs"]
 
 [dependencies]
 failure_ext = { path = "../failure_ext" }
-bytes = "0.4.11"
-tokio-io = "0.1.10"
+bytes = { version="*", features=["serde"] }
+tokio-io = "0.1"
 
 [dev-dependencies]
-quickcheck = "0.6.2"
+quickcheck = "0.6" # ascii has a hard-coded dep on 0.6
+# @end of Signature<<1a46e0a8b4942037df72efdf333f4adfebb1f7b5>>

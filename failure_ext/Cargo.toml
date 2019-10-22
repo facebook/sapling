@@ -1,11 +1,15 @@
+# @autocargo from //common/rust/failure_ext:failure_ext
+# Signature<<f75d246c560d46a5b3c1ae4f12a8c39eb68d415c>>
 [package]
 name = "failure_ext"
-version = "0.0.1"
-authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 edition = "2018"
+version = "0.0.1"
+authors = ['Source Control Oncall oncall+source_control@xmail.facebook.com']
+include = ["src/**/*.rs"]
 
 [dependencies]
-futures = "0.1.23"
-failure = "0.1.2"
-failure_derive = "0.1.2"
-slog = "2.3.2"
+failure = "*"
+failure_derive = "*"
+futures = "0.1"
+slog = { version="*", features=["max_level_debug"] }
+# @end of Signature<<f75d246c560d46a5b3c1ae4f12a8c39eb68d415c>>

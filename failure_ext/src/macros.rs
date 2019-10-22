@@ -85,11 +85,15 @@ macro_rules! format_err {
 /// Downcast matching
 /// Usage:
 /// ```
+/// # use failure_ext::{err_downcast_ref, Error, Fail};
+/// # fn foo<Type: Fail, YourType: Fail>(err: Error) {
 /// let res = err_downcast_ref! {
 ///    err,
-///    ty: Type => { use ty as &Type }
-///    yours: YourType => { use yours as &YourType }
+///    ty: Type => { /* use ty as &Type */ },
+///    yours: YourType => { /* use yours as &YourType */ },
 /// };
+/// # }
+/// # fn main() {}
 /// ```
 ///
 /// Where `err` is a `&failure::Error`.
@@ -125,11 +129,15 @@ macro_rules! err_downcast_ref {
 /// Downcast matching
 /// Usage:
 /// ```
+/// # use failure_ext::{err_downcast, Error, Fail};
+/// # fn foo<Type: Fail, YourType: Fail>(err: Error) {
 /// let res = err_downcast! {
 ///    err,
-///    ty: Type => { use ty as Type }
-///    yours: YourType => { use yours as YourType }
+///    ty: Type => { /* use ty as Type */ },
+///    yours: YourType => { /* use yours as YourType */ },
 /// };
+/// # }
+/// # fn main() {}
 /// ```
 ///
 /// Where `err` is a `failure::Error`.

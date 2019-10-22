@@ -839,19 +839,27 @@ where
 /// Stream as a result. See pseudocode below
 ///
 ///  ```
-///     fn async_write_interface(writer: &mut AsyncWrite) -> impl Future<(), Error> {
-///       ...
-///     }
+/// # use failure::Error;
+/// # use futures::Future;
+/// # use futures_ext::{BoxFuture, SinkToAsyncWrite};
+/// # use tokio_io::AsyncWrite;
+/// # use tokio;
+/// fn async_write_interface(writer: &mut dyn AsyncWrite) -> BoxFuture<(), Error> {
+///     unimplemented!()
+/// }
 ///
+/// fn foo() {
 ///     use futures::sync::mpsc;
 ///     let (sender, receiver) = mpsc::channel(1);
 ///
 ///     tokio::spawn(
-///        async_write_interface(SinkToAsyncWrite::new(sender))
+///        async_write_interface(&mut SinkToAsyncWrite::new(sender))
 ///            .map_err(|err| {})
 ///     );
 ///
 ///     // receiver is a stream of values written from async_write_interface
+/// }
+/// # fn main() {}
 ///  ```
 pub struct SinkToAsyncWrite<S> {
     sink: S,
