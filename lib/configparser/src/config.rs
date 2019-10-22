@@ -23,19 +23,19 @@ use crate::parser::{ConfigParser, Rule};
 type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
 /// Collection of config sections loaded from various sources.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct ConfigSet {
     sections: IndexMap<Bytes, Section>,
 }
 
 /// Internal representation of a config section.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 struct Section {
     items: IndexMap<Bytes, Vec<ValueSource>>,
 }
 
 /// A config value with associated metadata like where it comes from.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ValueSource {
     value: Option<Bytes>,
     source: Bytes, // global, user, repo, "--config", or an extension name, etc.
@@ -44,7 +44,7 @@ pub struct ValueSource {
 
 /// The on-disk file name and byte offsets that provide the config value.
 /// Useful if applications want to edit config values in-place.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ValueLocation {
     path: Arc<PathBuf>,
     content: Bytes,
