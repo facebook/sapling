@@ -16,16 +16,14 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use failure::Error;
 use futures::{future, stream, sync, Future, Stream};
-use futures_ext::StreamExt;
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
 use slog::{info, Logger};
 use stats::{define_stats, Timeseries};
 use time_ext::DurationExt;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
@@ -37,12 +35,17 @@ pub struct WarmBookmarksCache {
     terminate: Option<sync::oneshot::Sender<()>>,
 }
 
+type WarmerFn =
+    dyn Fn(CoreContext, BlobRepo, ChangesetId) -> BoxFuture<(), Error> + Send + Sync + 'static;
+
 impl WarmBookmarksCache {
     pub fn new(
         ctx: CoreContext,
         logger: Logger,
         repo: BlobRepo,
+        warmers: Vec<Box<WarmerFn>>,
     ) -> impl Future<Item = Self, Error = Error> {
+        let warmers = Arc::new(warmers);
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
         let (sender, receiver) = sync::oneshot::channel();
         spawn_bookmarks_updater(
@@ -51,8 +54,9 @@ impl WarmBookmarksCache {
             ctx.clone(),
             logger,
             repo.clone(),
+            warmers.clone(),
         );
-        update_bookmarks(bookmarks.clone(), ctx, repo).map(move |()| Self {
+        update_bookmarks(bookmarks.clone(), ctx, repo, warmers).map(move |()| Self {
             bookmarks,
             terminate: Some(sender),
         })
@@ -82,12 +86,14 @@ fn spawn_bookmarks_updater(
     ctx: CoreContext,
     logger: Logger,
     repo: BlobRepo,
+    warmers: Arc<Vec<Box<WarmerFn>>>,
 ) {
     tokio::spawn(future::lazy(move || {
         info!(logger, "Starting warm bookmark cache updater");
         stream::repeat(())
             .and_then(move |()| {
-                update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone()).timed(|stats, _| {
+                update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone(), warmers.clone())
+                .timed(|stats, _| {
                     STATS::cached_bookmark_update_time_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
                     Ok(())
@@ -113,26 +119,22 @@ fn update_bookmarks(
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
     ctx: CoreContext,
     repo: BlobRepo,
+    warmers: Arc<Vec<Box<WarmerFn>>>,
 ) -> impl Future<Item = (), Error = Error> {
     repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
         .map({
-            cloned!(ctx, repo);
             move |(bookmark, cs_id)| {
                 // Derive all the necessary derive data.
                 // This makes sure that read path don't have to generate
                 // derived data if a bookmark is requested (which is the most
-                // common case).
-                let unodes_derived_mapping =
-                    Arc::new(RootUnodeManifestMapping::new(repo.get_blobstore()));
-                let unodes = RootUnodeManifestId::derive(
-                    ctx.clone(),
-                    repo.clone(),
-                    unodes_derived_mapping,
-                    cs_id,
-                );
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .join(unodes)
-                    .map(move |_| (bookmark.into_name(), cs_id))
+                // common case). Ignore any errors during derivation - we
+                // don't want that to affect the set of bookmarks.
+                stream::futures_unordered(warmers.iter().map({
+                    cloned!(ctx, repo);
+                    move |warmer| (*warmer)(ctx.clone(), repo.clone(), cs_id).then(|_| Ok(()))
+                }))
+                .for_each(|_| Ok(()))
+                .map(move |_| (bookmark.into_name(), cs_id))
             }
         })
         .buffered(100)
@@ -144,4 +146,17 @@ fn update_bookmarks(
                 *bookmarks = map;
             }
         })
+}
+
+/// Warm the Mecurial derived data for a changeset.
+// TODO(mbthomas): move to Mercurial derived data crate when Mercurial is
+// derived using the normal derivation mechanism.
+pub fn warm_hg_changeset(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs_id: ChangesetId,
+) -> BoxFuture<(), Error> {
+    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .map(|_| ())
+        .boxify()
 }

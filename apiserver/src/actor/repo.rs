@@ -38,7 +38,7 @@ use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use time_ext::DurationExt;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::{derive_unodes, RootUnodeManifestId, RootUnodeManifestMapping};
 
 use mercurial_types::{
     blobs::HgBlobChangeset, manifest::Content, HgChangesetId, HgEntry, HgFileNodeId, HgManifestId,
@@ -50,7 +50,7 @@ use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
-use warm_bookmarks_cache::WarmBookmarksCache;
+use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
 
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use reachabilityindex::ReachabilityIndex;
@@ -136,8 +136,12 @@ impl MononokeRepo {
                 logger.clone(),
             ))
             .map(move |(synced_commit_mapping, repo)| {
-                let warm_bookmarks_cache =
-                    WarmBookmarksCache::new(ctx.clone(), logger.clone(), repo.clone());
+                let warm_bookmarks_cache = WarmBookmarksCache::new(
+                    ctx.clone(),
+                    logger.clone(),
+                    repo.clone(),
+                    vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
+                );
 
                 let skiplist_index = {
                     if !with_skiplist {
