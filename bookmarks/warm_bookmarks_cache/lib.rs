@@ -22,7 +22,7 @@ use futures::{future, stream, sync, Future, Stream};
 use futures_ext::StreamExt;
 use futures_stats::Timed;
 use mononoke_types::ChangesetId;
-use slog::{debug, Logger};
+use slog::{info, Logger};
 use stats::{define_stats, Timeseries};
 use time_ext::DurationExt;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
@@ -86,7 +86,7 @@ fn spawn_bookmarks_updater(
     repo: BlobRepo,
 ) {
     tokio::spawn(future::lazy(move || {
-        debug!(logger, "Starting warm bookmark cache updater");
+        info!(logger, "Starting warm bookmark cache updater");
         stream::repeat(())
             .and_then(move |()| {
                 update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone()).timed(|stats, _| {
@@ -105,7 +105,7 @@ fn spawn_bookmarks_updater(
             .for_each(|_| -> Result<(), ()> { Ok(()) })
             .select2(terminate)
             .then(move |_| {
-                debug!(logger, "Stopped warm bookmark cache updater");
+                info!(logger, "Stopped warm bookmark cache updater");
                 Ok(())
             })
     }));
