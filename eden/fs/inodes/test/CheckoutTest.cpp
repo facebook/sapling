@@ -951,10 +951,12 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
                 ->lookupInode(subInodeNumber)
                 .get(1ms)
                 .asTreePtr();
-  auto subTreeContents = subTree->getContents().rlock();
-  EXPECT_TRUE(subTree->isUnlinked());
-  // Unlinked inodes are considered materialized?
-  EXPECT_TRUE(subTreeContents->isMaterialized());
+  {
+    auto subTreeContents = subTree->getContents().rlock();
+    EXPECT_TRUE(subTree->isUnlinked());
+    // Unlinked inodes are considered materialized?
+    EXPECT_TRUE(subTreeContents->isMaterialized());
+  }
 
   auto dirTree =
       testMount.getEdenMount()->getInode("dir"_relpath).get(1ms).asTreePtr();

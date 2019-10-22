@@ -330,15 +330,30 @@ StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
 }
 
 void FakeBackingStore::discardOutstandingRequests() {
-  auto data = data_.wlock();
-  for (const auto& tree : data->trees) {
-    tree.second->discardOutstandingRequests();
-  }
-  for (const auto& blob : data->blobs) {
-    blob.second->discardOutstandingRequests();
-  }
-  for (const auto& commit : data->commits) {
-    commit.second->discardOutstandingRequests();
+  // Destroying promises before they're complete will trigger a BrokenPromise
+  // error, running arbitrary Future callbacks. Take care to destroy the
+  // promises outside of the lock.
+
+  std::vector<folly::Promise<std::unique_ptr<Tree>>> trees;
+  std::vector<folly::Promise<std::unique_ptr<Blob>>> blobs;
+  std::vector<folly::Promise<std::unique_ptr<Hash>>> commits;
+  {
+    auto data = data_.wlock();
+    for (const auto& tree : data->trees) {
+      for (auto&& discarded : tree.second->discardOutstandingRequests()) {
+        trees.emplace_back(std::move(discarded));
+      }
+    }
+    for (const auto& blob : data->blobs) {
+      for (auto&& discarded : blob.second->discardOutstandingRequests()) {
+        blobs.emplace_back(std::move(discarded));
+      }
+    }
+    for (const auto& commit : data->commits) {
+      for (auto&& discarded : commit.second->discardOutstandingRequests()) {
+        commits.emplace_back(std::move(discarded));
+      }
+    }
   }
 }
 

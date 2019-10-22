@@ -124,9 +124,15 @@ class StoredObject {
     }
   }
 
-  void discardOutstandingRequests() {
-    auto data = data_.wlock();
-    data->promises.clear();
+  std::vector<folly::Promise<std::unique_ptr<T>>> discardOutstandingRequests() {
+    std::vector<folly::Promise<std::unique_ptr<T>>> promises;
+    {
+      auto data = data_.wlock();
+      // Destroying a Promise can run callbacks, so do that while the lock isn't
+      // held.
+      std::swap(promises, data->promises);
+    }
+    return promises;
   }
 
  private:
