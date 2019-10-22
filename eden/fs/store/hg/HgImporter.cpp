@@ -69,10 +69,10 @@ DEFINE_string(
 
 DEFINE_string(
     hgPath,
-    "C:\\tools\\hg\\hg.real.exe",
+    "C:\\tools\\scm-telemetry\\hg.exe",
     "The path to the mercurial executable");
 #else
-DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
+DEFINE_string(hgPath, "hg", "The path to the mercurial executable");
 #endif
 
 constexpr bool kEnableHgImportSubcommand = true;
