@@ -9,11 +9,12 @@
 // Definitions for interfacing with SQL data stores
 
 use sql::mysql_async::{
+    from_value_opt,
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
 
-use crate::{HgChangesetId, HgFileNodeId, HgNodeHash};
+use crate::{Globalrev, HgChangesetId, HgFileNodeId, HgNodeHash};
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
@@ -26,6 +27,12 @@ impl From<HgFileNodeId> for Value {
 impl From<HgChangesetId> for Value {
     fn from(id: HgChangesetId) -> Self {
         Value::Bytes(id.into_nodehash().0.as_ref().into())
+    }
+}
+
+impl From<Globalrev> for Value {
+    fn from(globalrev: Globalrev) -> Self {
+        Value::UInt(globalrev.id())
     }
 }
 
@@ -64,10 +71,28 @@ impl<T: FromNodeHash> ConvIr<T> for HgNodeHash {
     }
 }
 
+impl ConvIr<Globalrev> for Globalrev {
+    fn new(v: Value) -> FromValueResult<Self> {
+        Ok(Globalrev::new(from_value_opt(v)?))
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
 impl FromValue for HgFileNodeId {
     type Intermediate = HgNodeHash;
 }
 
 impl FromValue for HgChangesetId {
     type Intermediate = HgNodeHash;
+}
+
+impl FromValue for Globalrev {
+    type Intermediate = Globalrev;
 }

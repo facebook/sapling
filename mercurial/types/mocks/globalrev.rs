@@ -6,11 +6,7 @@
  * directory of this source tree.
  */
 
-#![deny(warnings)]
-#![feature(const_fn)]
+use mercurial_types::Globalrev;
 
-pub mod errors;
-pub mod globalrev;
-pub mod hash;
-pub mod manifest;
-pub mod nodehash;
+pub const GLOBALREV_ZERO: Globalrev = Globalrev::new(0);
+pub const GLOBALREV_ONE: Globalrev = Globalrev::new(1);

@@ -59,6 +59,7 @@ pub mod errors;
 pub mod file;
 pub mod flags;
 pub mod fsencode;
+pub mod globalrev;
 pub mod hash;
 pub mod manifest;
 pub mod manifest_utils;
@@ -85,6 +86,7 @@ pub use fsencode::{fncache_fsencode, simple_fsencode};
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
 // directly on mononoke_types;
 pub use file::FileBytes;
+pub use globalrev::Globalrev;
 pub use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
 pub use node::Node;
 pub use nodehash::{
