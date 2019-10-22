@@ -11,6 +11,8 @@
 #include <folly/logging/xlog.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/eden-config.h"
+
 #ifdef EDEN_HAVE_SERVICEROUTER
 #include <servicerouter/client/cpp2/ServiceRouter.h>
 #endif

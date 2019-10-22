@@ -13,6 +13,8 @@
 #include <folly/logging/xlog.h>
 #include <optional>
 
+#include "eden/fs/eden-config.h"
+
 #ifdef EDEN_HAVE_SERVICEROUTER
 #include <servicerouter/client/cpp2/ServiceRouter.h> // @manual
 #endif
@@ -43,9 +45,13 @@ std::optional<SocketAddressWithHostname> ServiceAddress::addressFromHostname() {
 std::optional<SocketAddressWithHostname> ServiceAddress::addressFromSMCTier(
     std::shared_ptr<facebook::servicerouter::ServiceCacheIf> selector) {
 #ifdef EDEN_HAVE_SERVICEROUTER
-  auto selection = selector->getSelection(std::get<std::string>(name_));
+  auto tier = std::get<std::string>(name_);
+  XLOG(DBG7) << "resolving with SMC tier: " << tier;
+  auto selection = selector->getSelection(tier);
 
   if (selection.hosts->empty()) {
+    XLOG(DBG5) << "resolution of SMC tier: " << tier
+               << "failed because ServiceRouter returned empty selection";
     return std::nullopt;
   }
 
@@ -69,6 +75,7 @@ std::optional<SocketAddressWithHostname> ServiceAddress::addressFromSMCTier() {
 
   return addressFromSMCTier(selector);
 #else
+  XLOG(ERR) << "EdenFS is compiled without ServiceRouter support!";
   return std::nullopt;
 #endif
 }
