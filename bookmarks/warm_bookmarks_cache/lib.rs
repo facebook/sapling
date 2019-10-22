@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use blobrepo::BlobRepo;
@@ -32,10 +32,9 @@ define_stats! {
     cached_bookmark_update_time_ms: timeseries(RATE, SUM),
 }
 
-#[derive(Clone)]
 pub struct WarmBookmarksCache {
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
-    terminate: Arc<Mutex<Option<sync::oneshot::Sender<()>>>>,
+    terminate: Option<sync::oneshot::Sender<()>>,
 }
 
 impl WarmBookmarksCache {
@@ -55,7 +54,7 @@ impl WarmBookmarksCache {
         );
         update_bookmarks(bookmarks.clone(), ctx, repo).map(move |()| Self {
             bookmarks,
-            terminate: Arc::new(Mutex::new(Some(sender))),
+            terminate: Some(sender),
         })
     }
 
@@ -71,8 +70,7 @@ impl WarmBookmarksCache {
 impl Drop for WarmBookmarksCache {
     fn drop(&mut self) {
         // Ignore any error - we don't care if the updater has gone away.
-        let mut terminate = self.terminate.lock().unwrap();
-        if let Some(terminate) = terminate.take() {
+        if let Some(terminate) = self.terminate.take() {
             let _ = terminate.send(());
         }
     }
