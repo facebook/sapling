@@ -8,7 +8,8 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "hg --config 'ui.ssh=echo ssh: SSH is not working 1>&2; exit 1;' clone 'ssh://foo//bar'" == r"""
+sh % "hg --config 'ui.ssh=echo ssh: SSH is not working 1>&2; echo bad stdout; exit 1;' clone 'ssh://foo//bar'" == r"""
     ssh: SSH is not working
-    abort: no suitable response from remote hg!
+    abort: no suitable response from remote hg: 'bad stdout
+    '!
     [255]"""
