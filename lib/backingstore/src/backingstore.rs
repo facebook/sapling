@@ -32,6 +32,16 @@ impl BackingStore {
         let node = Node::from_slice(node)?;
         let key = Key::new(path, node);
 
+        // Return None for LFS blobs
+        // TODO: LFS support
+        if let Ok(Some(metadata)) = self.store.get_meta(&key) {
+            if let Some(flag) = metadata.flags {
+                if flag == 0x2000 {
+                    return Ok(None);
+                }
+            }
+        }
+
         self.store
             .get(&key)
             .map(|blob| blob.map(discard_metadata_header))
