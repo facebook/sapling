@@ -26,26 +26,24 @@ if sys.version_info < (2, 7, 6):
     # 2.7.6 was the first version to allow unicode format strings in
     # struct.{pack,unpack}; our devservers have 2.7.5, so let's
     # monkey patch in support for unicode format strings.
+    import functools
     import struct
-
-    orig_pack = struct.pack
-    orig_unpack = struct.unpack
 
     # We disable F821 below because we know we are in Python 2.x based on the
     # sys.version_info check above.
 
-    def wrap_pack(fmt, *args):
+    def pack(orig, fmt, *args):
         if isinstance(fmt, unicode):  # noqa: F821
             fmt = fmt.encode("utf-8")
-        return orig_pack(fmt, *args)
+        return orig(fmt, *args)
 
-    def wrap_unpack(fmt, data):
+    def unpack(orig, fmt, data):
         if isinstance(fmt, unicode):  # noqa: F821
             fmt = fmt.encode("utf-8")
-        return orig_unpack(fmt, data)
+        return orig(fmt, data)
 
-    struct.pack = wrap_pack
-    struct.unpack = wrap_unpack
+    struct.pack = functools.partial(pack, struct.pack)
+    struct.unpack = functools.partial(unpack, struct.unpack)
 
 # Disable demandimport while importing thrift files.
 #
@@ -84,9 +82,9 @@ class EdenThriftClient(object):
         self._repo = repo
         self._root = repo.root
         if pycompat.iswindows:
-            toml_config = toml.load(os.path.join(self._root, ".eden", "config"))
-            self._eden_root = toml_config["Config"]["root"]
-            self._socket_path = toml_config["Config"]["socket"]
+            tomlconfig = toml.load(os.path.join(self._root, ".eden", "config"))
+            self._eden_root = tomlconfig["Config"]["root"]
+            self._socket_path = tomlconfig["Config"]["socket"]
         else:
             self._socket_path = readlink_retry_estale(
                 os.path.join(self._root, ".eden", "socket")
