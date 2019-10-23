@@ -1,4 +1,0 @@
-verifying [a-f0-9]{12} against file:///[\w/]*/testrepo-1/trunk@5 (re)
-difference in: alpha
-missing file: beta
-verifying [a-f0-9]{12} against file:///[\w/]*/testrepo-1/trunk@5 (re)

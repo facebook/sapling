@@ -1322,8 +1322,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         paths.get("default"),
     ]:
         if check:
-            # hgsubversion and hggit do funky things on push. Just call direct.
-            if check.startswith("svn+") or check.startswith("git+"):
+            # hggit does funky things on push. Just call direct.
+            if check.startswith("git+"):
                 return orig(ui, repo, dest, opargs=opargs, **opts)
             # Once we have found the path where we are pushing, do not continue
             # checking for places we are not pushing.
@@ -1694,9 +1694,6 @@ def activepath(ui, remote):
                 except AttributeError:
                     uri = url.getauthinfo(uri)[0]
         uri = uri.rstrip("/")
-        # guard against hgsubversion nonsense
-        if not isinstance(rpath, basestring):  # noqa
-            continue
         rpath = rpath.rstrip("/")
         if uri == rpath:
             candidates.append(path)

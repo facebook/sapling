@@ -266,7 +266,6 @@ def _preimportmodules():
         "gitlookup",
         "grpcheck",
         "hgevents",
-        "hgsubversion",
         "hiddenerror",
         "histedit",
         "infinitepush",

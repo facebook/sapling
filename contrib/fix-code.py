@@ -118,10 +118,9 @@ def ispathskipped(path):
             "contrib",
             "doc",
             "hggit",
-            "hgsubversion",
             "newdoc",
             "pywatchman",
-            # Part of "tests" are hg-git or hgsubversion code.
+            # Part of "tests" are hg-git code.
             "tests",
             "third-party",
             "thirdparty",

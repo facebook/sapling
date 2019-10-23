@@ -20,7 +20,6 @@ sh % "cd master"
 sh % "cat" << r"""
 [extensions]
 globalrevs=
-hgsubversion=
 [globalrevs]
 svnrevinteroperation=True
 [hgsql]

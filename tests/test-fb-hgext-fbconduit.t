@@ -171,7 +171,7 @@ Make sure that globalrevs work
   $ cd ..
   $ initserver mockwwwrepo mockwwwrepo
   $ cd mockwwwrepo
-  $ enable fbconduit globalrevs hgsubversion pushrebase
+  $ enable fbconduit globalrevs pushrebase
   $ setconfig \
   > hgsql.enabled=True \
   > fbconduit.reponame=basic \

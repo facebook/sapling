@@ -28,10 +28,6 @@
   >     elif not isexec and interpreter and not isrs:
   >         print("%s is not an executable but does have #!" % path)
   > EOF
-  tests/fixtures/addspecial.sh is not an executable but does have #!
-  tests/fixtures/mergeexternals.sh is not an executable but does have #!
-  tests/fixtures/project_name_with_space.sh is not an executable but does have #!
-  tests/fixtures/rename-closed-branch-dir.sh is not an executable but does have #!
   tests/infinitepush/library.sh is not an executable but does have #!
   tests/stresstest-atomicreplace.py is not an executable but does have #!
   tests/test-fb-hgext-cstore-treemanifest.py is a Python script but does not have Python interpreter specified

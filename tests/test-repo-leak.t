@@ -64,15 +64,6 @@ Fine extension: treemanifest only
   0000000000000000000000000000000000000000
   __del__ called
 
-Fine extension: hgsubversion
-
-  $ newrepo
-  __del__ called
-  $ setconfig extensions.hgsubversion=
-  $ hg log -r . -T '{manifest % "{node}"}\n'
-  0000000000000000000000000000000000000000
-  __del__ called
-
 Fine extension: sparse
 
   $ newrepo
@@ -140,7 +131,6 @@ Somehow problematic: With many extensions
   > gitrevset=!
   > grpcheck=
   > hgevents=
-  > hgsubversion=
   > hiddenerror=
   > histedit=
   > infinitepush=

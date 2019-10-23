@@ -1465,10 +1465,6 @@ packages = [
     "edenscm.hgext.fsmonitor",
     "edenscm.hgext.hgevents",
     "edenscm.hgext.hggit",
-    "edenscm.hgext.hgsubversion",
-    "edenscm.hgext.hgsubversion.hooks",
-    "edenscm.hgext.hgsubversion.layouts",
-    "edenscm.hgext.hgsubversion.svnwrap",
     "edenscm.hgext.highlight",
     "edenscm.hgext.infinitepush",
     "edenscm.hgext.lfs",
@@ -1926,7 +1922,6 @@ packagedata = {
         "mercurial/locale/*/LC_MESSAGES/hg.mo",
         "mercurial/help/*.txt",
         "mercurial/help/internals/*.txt",
-        "mercurial/help/subversion/*.rst",
         "mercurial/default.d/*.rc",
         "mercurial/dummycert.pem",
     ]

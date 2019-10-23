@@ -98,6 +98,7 @@ MAPFILE = "globalrev-nodemap"
 
 
 @templatekeyword("globalrev")
+@templatekeyword("svnrev")
 def globalrevkw(repo, ctx, **kwargs):
     return _getglobalrev(repo.ui, ctx.extra())
 
@@ -118,34 +119,6 @@ def uisetup(ui):
         if loaded:
             hgsqlmod = extensions.find("hgsql")
             extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
-
-    def _hgsubversionwrapper(loaded):
-        if loaded:
-            hgsubversionmod = extensions.find("hgsubversion")
-            extensions.wrapfunction(
-                hgsubversionmod.util, "lookuprev", _lookupsvnrevwrapper
-            )
-            extensions.wrapfunction(hgsubversionmod, "_svnrevkw", _svnrevkwwrapper)
-        else:
-
-            @templatekeyword("svnrev")
-            def svnrevkw(repo, ctx, **kwargs):
-                return globalrevkw(repo, ctx, **kwargs)
-
-            @revsetpredicate("svnrev(number)", safe=True, weight=10)
-            def _revsetsvnrev(repo, subset, x):
-                """Changesets with given Subversion revision number.
-                """
-                args = revset.getargs(x, 1, 1, "svnrev takes one argument")
-                svnrev = revset.getinteger(
-                    args[0], "the argument to svnrev() must be a number"
-                )
-
-                torev = repo.changelog.rev
-                revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, svnrev))
-                return subset & revs
-
-    extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
 
     # We only wrap `hgsql` extension for embedding strictly increasing global
     # revision number in commits if the repository has `hgsql` enabled and it is
@@ -280,14 +253,6 @@ def _sqllocalrepowrapper(orig, repo):
     repo.__class__ = globalrevsrepo
 
 
-def _lookupsvnrevwrapper(orig, repo, rev):
-    return _lookupglobalrev(repo, rev)
-
-
-def _svnrevkwwrapper(orig, repo, ctx, **kwargs):
-    return globalrevkw(repo, ctx, **kwargs)
-
-
 _u64lestruct = struct.Struct("<Q")
 _bin2u64le = _u64lestruct.unpack
 _u64le2bin = _u64lestruct.pack
@@ -389,6 +354,18 @@ def _revsetglobalrev(repo, subset, x):
 
     torev = repo.changelog.rev
     revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, globalrev))
+    return subset & revs
+
+
+@revsetpredicate("svnrev(number)", safe=True, weight=10)
+def _revsetsvnrev(repo, subset, x):
+    """Changesets with given Subversion revision number.
+    """
+    args = revset.getargs(x, 1, 1, "svnrev takes one argument")
+    svnrev = revset.getinteger(args[0], "the argument to svnrev() must be a number")
+
+    torev = repo.changelog.rev
+    revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, svnrev))
     return subset & revs
 
 

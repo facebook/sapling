@@ -34,12 +34,6 @@ from edenscm.mercurial.i18n import _
 from .extlib.phabricator import arcconfig, diffprops, graphql
 
 
-try:
-    from hgsubversion import util as svnutil
-except ImportError:
-    svnutil = None
-
-
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -200,16 +194,7 @@ def revsetdiff(repo, diffid):
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 
-    if vcs == "svn" and svnutil:
-        # commit has landed in svn, parse the description to get the SVN
-        # revision and delegate to hgsubversion for the rest
-
-        svnrev = parsedesc(repo, resp, ignoreparsefailure=False)
-        repo.ui.debug("[diffrev] SVN rev is r%s\n" % svnrev)
-
-        return [repo[n].rev() for n in svnutil.lookuprev(repo, svnrev)]
-
-    elif vcs == "git":
+    if vcs == "git":
         gitrev = parsedesc(repo, resp, ignoreparsefailure=False)
         repo.ui.debug("[diffrev] GIT rev is %s\n" % gitrev)
 

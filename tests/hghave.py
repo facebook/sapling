@@ -387,39 +387,6 @@ def has_docutils():
         return False
 
 
-def getsvnversion():
-    m = matchoutput("svn --version --quiet 2>&1", br"^(\d+)\.(\d+)")
-    if not m:
-        return (0, 0)
-    return (int(m.group(1)), int(m.group(2)))
-
-
-@checkvers("svn", "subversion client and admin tools >= %s", (1.3, 1.5))
-def has_svn_range(v):
-    major, minor = v.split(".")[0:2]
-    return getsvnversion() >= (int(major), int(minor))
-
-
-@check("svn", "subversion client and admin tools")
-def has_svn():
-    return matchoutput("svn --version 2>&1", br"^svn, version") and matchoutput(
-        "svnadmin --version 2>&1", br"^svnadmin, version"
-    )
-
-
-@check("svn-bindings", "subversion python bindings")
-def has_svn_bindings():
-    try:
-        import svn.core
-
-        version = svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR
-        if version < (1, 4):
-            return False
-        return True
-    except ImportError:
-        return False
-
-
 @check("p4", "Perforce server and client")
 def has_p4():
     return matchoutput("p4 -V", br"Rev\. P4/") and matchoutput("p4d -V", br"Rev\. P4D/")
