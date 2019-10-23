@@ -33,7 +33,7 @@ pub struct PoolSizeConfig {
 }
 
 impl PoolSizeConfig {
-    fn for_regular_connection() -> Self {
+    pub fn for_regular_connection() -> Self {
         Self {
             write_pool_size: 1,
             read_pool_size: myrouter::DEFAULT_MAX_NUM_OF_CONCURRENT_CONNECTIONS,
@@ -144,6 +144,16 @@ pub fn create_raw_xdb_connections(
         })
     })
     .and_then(|r| r)
+}
+
+pub fn create_sqlite_connections(path: &Path) -> Result<SqlConnections> {
+    let con = SqliteConnection::open(path)?;
+    let con = Connection::with_sqlite(con);
+    Ok(SqlConnections {
+        write_connection: con.clone(),
+        read_connection: con.clone(),
+        read_master_connection: con.clone(),
+    })
 }
 
 /// Set of useful constructors for Mononoke's sql based data access objects

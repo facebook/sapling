@@ -30,7 +30,10 @@ use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
-use sql_ext::myrouter_ready;
+use sql_ext::{
+    create_myrouter_connections, create_raw_xdb_connections, create_sqlite_connections,
+    myrouter_ready, PoolSizeConfig, SqlConnections,
+};
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
@@ -46,6 +49,9 @@ trait SqlFactoryBase: Send + Sync {
 
     /// Open SqlFilenodes, and return a tier name and the struct.
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error>;
+
+    /// Creates connections to the db.
+    fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error>;
 }
 
 struct XdbFactory {
@@ -108,6 +114,20 @@ impl SqlFactoryBase for XdbFactory {
             .map(move |filenodes| (tier, Arc::new(filenodes)))
             .boxify()
     }
+
+    fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
+        match self.myrouter_port {
+            Some(myrouter_port) => future::ok(create_myrouter_connections(
+                self.db_address.clone(),
+                None,
+                myrouter_port,
+                PoolSizeConfig::for_regular_connection(),
+                label,
+            ))
+            .boxify(),
+            None => create_raw_xdb_connections(self.db_address.clone()).boxify(),
+        }
+    }
 }
 
 struct SqliteFactory {
@@ -131,6 +151,12 @@ impl SqlFactoryBase for SqliteFactory {
             .map(|filenodes| ("sqlite".to_string(), filenodes))
             .boxify()
     }
+
+    fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
+        create_sqlite_connections(&self.path.join(label))
+            .into_future()
+            .boxify()
+    }
 }
 
 pub struct SqlFactory {
@@ -146,6 +172,16 @@ impl SqlFactory {
         self.underlying
             .as_ref()
             .either(|l| l.open_filenodes(), |r| r.open_filenodes())
+    }
+
+    pub fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
+        self.underlying.as_ref().either(
+            {
+                cloned!(label);
+                move |l| l.create_connections(label)
+            },
+            |r| r.create_connections(label),
+        )
     }
 }
 
