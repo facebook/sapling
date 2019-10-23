@@ -11,7 +11,6 @@ use std::collections::{BTreeMap, HashMap};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
 use bookmarks::BookmarkName;
-use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error, Fail};
 use futures::Future;
@@ -143,24 +142,20 @@ async fn remap_parents_and_rewrite_commit<M: SyncedCommitMapping>(
     target_repo_id: RepositoryId,
     mapping: &M,
     rewrite_path: Mover,
-) -> Result<Option<(BonsaiChangesetMut, Vec<ChangesetId>)>, Error> {
-    let mut changesets_to_check: Vec<ChangesetId> = Vec::new();
+) -> Result<Option<BonsaiChangesetMut>, Error> {
     let mut remapped_parents = HashMap::new();
     for commit in cs.parents.iter_mut() {
         let remapped_commit = mapping
             .get(ctx.clone(), source_repo_id, *commit, target_repo_id)
             .compat()
             .await?;
-        // If it doesn't remap, we will optimistically assume that the
-        // target is already in the repo - this is passed out
-        // to the caller to validate, as Mercurial has trouble if it's not true
-        let remapped_commit = remapped_commit.unwrap_or(*commit);
-        changesets_to_check.push(remapped_commit.clone());
+
+        let remapped_commit =
+            remapped_commit.ok_or(err_msg(format!("{} hasn't been remapped", *commit)))?;
         remapped_parents.insert(commit.clone(), remapped_commit);
     }
 
-    let cs = rewrite_commit(cs, &remapped_parents, rewrite_path)?;
-    Ok(cs.map(|cs| (cs, changesets_to_check)))
+    rewrite_commit(cs, &remapped_parents, rewrite_path)
 }
 
 #[derive(Clone)]
@@ -338,31 +333,7 @@ pub async fn sync_commit<M: SyncedCommitMapping + Clone + 'static>(
     .await?
     {
         None => Ok(None),
-        Some((rewritten, changesets)) => {
-            // And check changesets are all in target
-            let changesets_check: FuturesUnordered<_> = changesets
-                .into_iter()
-                .map({
-                    |cs| {
-                        cloned!(ctx, cs, target_repo);
-                        async move {
-                            if !target_repo
-                                .changeset_exists_by_bonsai(ctx, cs)
-                                .compat()
-                                .await?
-                            {
-                                Err(ErrorKind::MissingRemappedCommit(cs).into())
-                            } else {
-                                Ok(())
-                            }
-                        }
-                    }
-                })
-                .collect();
-            changesets_check
-                .try_for_each_concurrent(100, identity)
-                .await?;
-
+        Some(rewritten) => {
             // Special case - commits with no parents (=> beginning of a repo) graft directly
             // to the bookmark, so that we can start a new sync with a fresh repo
             // Note that this won't work if the bookmark does not yet exist - don't do that
