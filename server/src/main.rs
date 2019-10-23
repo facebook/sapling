@@ -15,7 +15,6 @@ use clap::{App, ArgMatches};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::Future;
-use lazy_static::lazy_static;
 use metaconfig_parser::RepoConfigs;
 use slog::{crit, info, Logger};
 use std::path::PathBuf;
@@ -27,9 +26,7 @@ mod errors {
 }
 use crate::errors::*;
 
-lazy_static! {
-    static ref TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
-}
+static TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = App::new("mononoke server")
