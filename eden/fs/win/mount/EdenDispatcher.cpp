@@ -351,5 +351,29 @@ EdenDispatcher::readMultipleFileChunks(
 
   return S_OK;
 }
+
+void EdenDispatcher::notification(
+    const PRJ_CALLBACK_DATA& callbackData,
+    bool isDirectory,
+    PRJ_NOTIFICATION notificationType,
+    PCWSTR destinationFileName,
+    PRJ_NOTIFICATION_PARAMETERS& notificationParameters) {
+  switch (notificationType) {
+    case PRJ_NOTIFICATION_NEW_FILE_CREATED:
+      TRACE("CREATED {}", callbackData.FilePathName);
+      break;
+    case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
+    case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
+      TRACE("MODIFIED {}", callbackData.FilePathName);
+      break;
+    case PRJ_NOTIFICATION_FILE_RENAMED:
+      TRACE("RENAMED {} -> {}", callbackData.FilePathName, destinationFileName);
+      break;
+    case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
+      TRACE("DELETED {}", callbackData.FilePathName);
+      break;
+  }
+}
+
 } // namespace eden
 } // namespace facebook

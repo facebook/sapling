@@ -50,9 +50,17 @@ class EdenDispatcher {
       uint64_t byteOffset,
       uint32_t length) noexcept;
 
+  void notification(
+      const PRJ_CALLBACK_DATA& callbackData,
+      bool isDirectory,
+      PRJ_NOTIFICATION notificationType,
+      PCWSTR destinationFileName,
+      PRJ_NOTIFICATION_PARAMETERS& notificationParameters);
+
   //
   // Pointer to the dispatcher will be returned from the underlying file system.
-  //  isValidDispatcher() can be used to verify that it is a correct pointer.
+  // isValidDispatcher() can be used to verify that it is a correct pointer.
+  //
 
   bool isValidDispatcher() const {
     return (verificationCode_ == kDispatcherCode);

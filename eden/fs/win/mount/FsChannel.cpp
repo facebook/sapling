@@ -72,12 +72,27 @@ void FsChannel::start() {
   callbacks.GetDirectoryEnumerationCallback = getEnumerationData;
   callbacks.GetPlaceholderInfoCallback = getPlaceholderInfo;
   callbacks.GetFileDataCallback = getFileData;
+  callbacks.NotificationCallback = notification;
 
-  //
-  // TODO: Enable the notification and cancel when impl is ready.
-  //
-  // callbacks.NotificationCallback = notification;
-  // callbacks.CancelCommandCallback = cancelOperation;
+  PRJ_STARTVIRTUALIZING_OPTIONS startOpts = {};
+  PRJ_NOTIFICATION_MAPPING notificationMappings[3] = {};
+
+  notificationMappings[0].NotificationRoot = L"";
+  notificationMappings[0].NotificationBitMask = PRJ_NOTIFY_NEW_FILE_CREATED |
+      PRJ_NOTIFY_FILE_OVERWRITTEN | PRJ_NOTIFY_FILE_RENAMED |
+      PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
+      PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED;
+
+  notificationMappings[1].NotificationRoot = L".hg";
+  notificationMappings[1].NotificationBitMask =
+      PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS;
+
+  notificationMappings[2].NotificationRoot = L".eden";
+  notificationMappings[2].NotificationBitMask =
+      PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS;
+
+  startOpts.NotificationMappings = notificationMappings;
+  startOpts.NotificationMappingsCount = std::size(notificationMappings);
 
   auto dispatcher = mount_->getDispatcher();
   XLOG(INFO) << sformat(
@@ -87,7 +102,7 @@ void FsChannel::start() {
   DCHECK(dispatcher->isValidDispatcher());
 
   HRESULT result = PrjStartVirtualizing(
-      winPath_.c_str(), &callbacks, dispatcher, nullptr, &mountChannel_);
+      winPath_.c_str(), &callbacks, dispatcher, &startOpts, &mountChannel_);
 
   if (FAILED(result)) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
@@ -154,6 +169,22 @@ HRESULT FsChannel::getFileData(
     UINT32 length) noexcept {
   return getDispatcher(callbackData)
       ->getFileData(*callbackData, byteOffset, length);
+}
+
+HRESULT FsChannel::notification(
+    const PRJ_CALLBACK_DATA* callbackData,
+    BOOLEAN isDirectory,
+    PRJ_NOTIFICATION notificationType,
+    PCWSTR destinationFileName,
+    PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
+  getDispatcher(callbackData)
+      ->notification(
+          *callbackData,
+          isDirectory,
+          notificationType,
+          destinationFileName,
+          *notificationParameters);
+  return S_OK;
 }
 
 } // namespace eden
