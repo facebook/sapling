@@ -33,6 +33,7 @@ pub fn table() -> CommandTable {
         "print information about blobstore",
     );
     table.register(debugpython, "debugpython", "run python interpreter");
+    table.register(debugargs, "debug-args", "print arguments received");
 
     table
 }
@@ -55,6 +56,11 @@ define_flags! {
     }
 
     pub struct DebugPythonOpts {
+        #[args]
+        args: Vec<String>,
+    }
+
+    pub struct DebugArgsOpts {
         #[args]
         args: Vec<String>,
     }
@@ -107,4 +113,11 @@ pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Fallible<u8> {
     args.insert(0, "hgpython".to_string());
     let mut interp = crate::HgPython::new(args.clone());
     Ok(interp.run_python(args, io))
+}
+
+pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+    match io.write(format!("{:?}\n", opts.args)) {
+        Ok(_) => Ok(0),
+        Err(_) => Ok(255),
+    }
 }

@@ -933,6 +933,7 @@ Test list of internal help commands
   $ hg help debug
   Debug commands (internal and unsupported):
   
+   debug-args    print arguments received
    debugancestor
                  find the ancestor revision of two revisions in a given index
    debugapplystreamclonebundle

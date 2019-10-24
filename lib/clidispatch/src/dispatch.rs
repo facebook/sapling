@@ -8,7 +8,7 @@ use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::repo::OptionalRepo;
 use bytes::Bytes;
-use cliparser::alias::expand_aliases;
+use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
@@ -58,32 +58,6 @@ where
     }
 
     Ok(())
-}
-
-fn find_command_name(has_command: impl Fn(&str) -> bool, args: Vec<String>) -> Option<String> {
-    let mut command_name = None;
-    for arg in args {
-        if command_name.is_none() {
-            if has_command(&arg) {
-                command_name = Some(arg);
-            } else {
-                return None;
-            }
-        } else {
-            // To check for subcommands we continue iterating to see if a longer valid command
-            // is able to be created.
-            //
-            // $ hg cloud sync -> will become Some("cloud") then attempt "cloud sync".
-            let orig = command_name.unwrap();
-            let curr = orig.clone() + &arg;
-            if has_command(&curr) {
-                command_name = Some(curr.to_string())
-            } else {
-                return Some(orig);
-            }
-        }
-    }
-    command_name
 }
 
 fn last_chance_to_abort(opts: &HgGlobalOpts) -> Fallible<()> {
@@ -242,18 +216,28 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
     debug_assert!(first_arg_index < args.len());
     debug_assert_eq!(&args[first_arg_index], first_arg);
 
+    // The difference between args, expanded and new_args is:
+    // - args are unchanged arguments provided by the user.
+    //   args can have global flags before command name.
+    //   for example, ["hg", "--traceback", "log", "-Gvr", "master"]
+    //                                      ^^^^^ first_arg_index, "log" is "command_name"
+    // - expanded: includes alias expansion result
+    //   no global flags before command name.
+    //   for example, with alias "log = log -f", ["log", "-Gvr", "master"]
+    //   will be expanded to ["log", "-f", "-Gvr", "master"].
+    // - new_args: final args to parse, like expanded with global flags.
+    //   ["hg", "--traceback", "log", "-f", "-Gvr", "master"].
+
     let command_name = first_arg.to_string();
+    let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
+    let (command_name, command_arg_len) =
+        find_command_name(|name| command_table.contains_key(name), &expanded)
+            .ok_or_else(|| errors::UnknownCommand(command_name))?;
 
-    let (expanded, _first_arg_indexd) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
-
-    let mut new_args = Vec::new();
-
+    let mut new_args = Vec::with_capacity(args.len());
     new_args.extend_from_slice(&args[..first_arg_index]);
-    new_args.extend_from_slice(&expanded[..]);
-
-    let command_name = find_command_name(|name| command_table.contains_key(name), expanded)
-        .ok_or_else(|| errors::UnknownCommand(command_name))?;
-
+    new_args.push(command_name.clone());
+    new_args.extend_from_slice(&expanded[command_arg_len..]);
     let full_args = new_args;
 
     let def = &command_table[&command_name];

@@ -26,10 +26,15 @@ pub fn expand_aliases<S: ToString>(
     let mut visited = HashSet::new();
 
     let mut args: Vec<String> = args.iter().map(ToString::to_string).collect();
-    let mut command_name = args.first().cloned().unwrap_or_default();
 
-    while let Some(alias) = lookup(&command_name) {
-        let alias = alias.to_string();
+    while let Some((command_name, command_len)) = find_command_name(|s| lookup(s).is_some(), &args)
+    {
+        if command_len > 1 {
+            let mut new_args = vec![command_name.to_string()];
+            new_args.extend_from_slice(&args[command_len..]);
+            args = new_args;
+        }
+        let alias = lookup(&command_name).unwrap().to_string();
         let bad_alias = || ParseError::MalformedAlias {
             name: command_name.clone(),
             value: alias.to_string(),
@@ -54,13 +59,53 @@ pub fn expand_aliases<S: ToString>(
 
         let next_command_name = args.first().cloned().ok_or_else(bad_alias)?;
         if next_command_name == command_name {
+            // This allows alias like "log = log -G".
             break;
-        } else {
-            command_name = next_command_name;
         }
     }
 
     Ok((args, replaced))
+}
+
+/// Find the longest match of the command name. This checks subcommands in
+/// various forms.
+///
+/// Suppose `foo-bar` is a defined command, then the following
+/// arguments can all be used to run the `foo-bar` command:
+/// - `["foo-bar"]`
+/// - `["foo", "--bar"]`
+/// - `["foo", "bar"]`  (only if `foo` does not match)
+///
+/// Return the command name (For example, `"foo-bar"`), and the number of
+/// arguments used (For example, 2 for `["foo", "bar"]`, 1 for `["foo-bar"]`).
+///
+/// Only consider the first 3 args. This avoids expensive checks.
+pub fn find_command_name(
+    has_command: impl Fn(&str) -> bool,
+    args: &[String],
+) -> Option<(String, usize)> {
+    // "best" == "longest"
+    let mut best_match = None;
+    let mut candidate = String::new();
+
+    for (i, arg) in args.iter().enumerate().take(3) {
+        if arg.starts_with("--") {
+            // Turn ["foo", "--bar"] into "foo-bar".
+            candidate += &arg[1..];
+        } else if best_match.is_none() {
+            // Turn ["foo", "bar"] into "foo-bar", if "foo" does not already match.
+            if i > 0 {
+                candidate += "-";
+            }
+            candidate += arg;
+        } else {
+            break;
+        }
+        if has_command(&candidate) {
+            best_match = Some((candidate.clone(), i + 1))
+        }
+    }
+    best_match
 }
 
 /// Expand a single alias.

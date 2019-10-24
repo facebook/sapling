@@ -80,6 +80,7 @@ Do not show debug commands if there are other candidates
 
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
+  debug-args
   debugancestor
   debugapplystreamclonebundle
   debugbindag
@@ -271,6 +272,7 @@ Show all commands + options
   config: untrusted, edit, local, global, template
   continue: 
   copy: after, force, include, exclude, dry-run
+  debug-args: 
   debugancestor: 
   debugapplystreamclonebundle: 
   debugbindag: rev, output
