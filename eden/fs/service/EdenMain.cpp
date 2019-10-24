@@ -47,7 +47,6 @@ DEFINE_bool(
     "Report successful startup without waiting for all configured mounts "
     "to be remounted.");
 
-
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
@@ -60,6 +59,12 @@ std::string EdenMain::getEdenfsBuildName() {
   // Subclasses can override this if desired to include a version number
   // or other build information.
   return "edenfs";
+}
+
+std::string EdenMain::getEdenfsVersion() {
+  // Subclasses can override this if desired to return specific version
+  // information
+  return "";
 }
 
 void EdenMain::runServer(const EdenServer& server) {
@@ -205,7 +210,8 @@ int EdenMain::main(int argc, char** argv) {
         std::move(originalCommandLine),
         std::move(identity),
         std::move(privHelper),
-        std::move(edenConfig));
+        std::move(edenConfig),
+        getEdenfsVersion());
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {

@@ -71,7 +71,8 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       std::vector<std::string>{"edenfs_unit_test"},
       userInfo,
       std::move(privHelper),
-      config);
+      config,
+      "test server");
 }
 
 } // namespace eden

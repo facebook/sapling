@@ -105,7 +105,8 @@ class EdenServer : private TakeoverHandler {
       std::vector<std::string> originalCommandLine,
       UserInfo userInfo,
       std::unique_ptr<PrivHelper> privHelper,
-      std::shared_ptr<const EdenConfig> edenConfig);
+      std::shared_ptr<const EdenConfig> edenConfig,
+      std::string version = "");
 
   virtual ~EdenServer();
 
@@ -282,6 +283,10 @@ class EdenServer : private TakeoverHandler {
 
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
+  }
+
+  const std::string& getVersion() const {
+    return version_;
   }
 
   std::shared_ptr<EdenStats> getSharedStats() {
@@ -505,6 +510,11 @@ class EdenServer : private TakeoverHandler {
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;
+
+  /**
+   * Build package version
+   */
+  const std::string version_;
 
   /**
    * The EventBase driving the main thread loop.

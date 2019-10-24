@@ -219,7 +219,8 @@ EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
-    std::shared_ptr<const EdenConfig> edenConfig)
+    std::shared_ptr<const EdenConfig> edenConfig,
+    std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
       blobCache_{BlobCache::create(
@@ -232,7 +233,8 @@ EdenServer::EdenServer(
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
           edenConfig,
-          FLAGS_enable_fault_injection)} {
+          FLAGS_enable_fault_injection)},
+      version_{std::move(version)} {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
