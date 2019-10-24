@@ -343,3 +343,73 @@ fn record_tracing_metadata(
         );
     }
 }
+
+// -------- APIs for non-"tokio/tracing" use-cases --------
+
+impl TracingData {
+    /// Record a new [`Espan`] that can be used afterwards.
+    ///
+    /// If `reuse_espan_id` is not empty, and matches `key_values`,
+    /// `reuse_espan_id` will be returned instead.
+    pub fn add_espan(
+        &mut self,
+        key_values: &[(&str, &str)],
+        reuse_espan_id: Option<EspanId>,
+    ) -> EspanId {
+        if let Some(reuse_espan_id) = reuse_espan_id {
+            if let Some(orig_espan) = self.espans.get(reuse_espan_id.0 as usize) {
+                if orig_espan
+                    .meta
+                    .iter()
+                    .map(|(k, v)| (self.strings.get(*k), self.strings.get(*v)))
+                    .cmp(key_values.iter().cloned())
+                    == std::cmp::Ordering::Equal
+                {
+                    // Espan can be reused.
+                    return reuse_espan_id;
+                }
+            }
+        }
+
+        let mut meta = IndexMap::with_capacity(key_values.len());
+
+        for (key, value) in key_values {
+            meta.insert(
+                self.strings.id(key.to_string()),
+                self.strings.id(value.to_string()),
+            );
+        }
+
+        let espan = Espan { meta };
+
+        let result = EspanId(self.espans.len() as u64);
+        self.espans.push(espan);
+        result.into()
+    }
+
+    /// Edit key-value data to an existing [`Espan`].
+    pub fn edit_espan<S1: ToString, S2: ToString>(
+        &mut self,
+        id: EspanId,
+        key_values: impl IntoIterator<Item = (S1, S2)>,
+    ) {
+        if let Some(espan) = self.espans.get_mut(id.0 as usize) {
+            for (key, value) in key_values {
+                espan.meta.insert(
+                    self.strings.id(key.to_string()),
+                    self.strings.id(value.to_string()),
+                );
+            }
+        }
+    }
+
+    /// Record a new "Action" about an [`EspanId`].
+    pub fn add_action(&mut self, espan_id: EspanId, action: Action) {
+        self.push_eventus(action, espan_id);
+    }
+
+    /// Mark `new_span_id` as following `old_span_id`.
+    pub fn set_follows_from(&mut self, old_span_id: EspanId, new_span_id: EspanId) {
+        // TODO: Implement this.
+    }
+}
