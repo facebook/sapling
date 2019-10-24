@@ -134,7 +134,7 @@ thread_local! {
 impl TracingData {
     /// Matches `tracing::Subscriber::new_span`.
     pub fn new_span(&mut self, attributes: &tracing::span::Attributes) -> tracing::span::Id {
-        unimplemented!()
+        self.push_espan(attributes).into()
     }
 
     /// Matches `tracing::Subscriber::record`.
@@ -152,7 +152,8 @@ impl TracingData {
 
     /// Matches `tracing::Subscriber::event`.
     pub fn event(&mut self, event: &tracing::event::Event) {
-        unimplemented!()
+        let id = self.push_espan(event);
+        self.push_eventus(Action::Event, id);
     }
 
     /// Matches `tracing::Subscriber::enter`.
@@ -165,6 +166,22 @@ impl TracingData {
     pub fn exit(&mut self, id: &tracing::span::Id) {
         let id = id.clone().into();
         self.push_eventus(Action::ExitSpan, id);
+    }
+
+    /// Push a Span or Event. Return its Id.
+    fn push_espan(&mut self, espan: &impl EspanLike) -> EspanId {
+        let mut meta = IndexMap::with_capacity(3);
+        if let Some(parent_id) = espan.parent_id() {
+            meta.insert(self.strings.id("parent"), self.strings.id(parent_id.0));
+        }
+
+        espan.record_values(&mut self.strings, &mut meta);
+
+        let espan = Espan { meta };
+
+        let result = EspanId(self.espans.len() as u64);
+        self.espans.push(espan);
+        result.into()
     }
 }
 
@@ -233,5 +250,71 @@ impl<'a> tracing::field::Visit for FieldVisitor<'a> {
         value: &(dyn std::error::Error + 'static),
     ) {
         self.record(field, value)
+    }
+}
+
+/// Common methods exposed by [`tracing::Span`] and [`tracing::Event`]
+trait EspanLike {
+    /// Optional. Parent [`EspanId`].
+    fn parent_id(&self) -> Option<EspanId>;
+
+    /// Write key-value map to `strings` and `meta` that are not coupled with
+    /// `tokio/tracing`.
+    fn record_values(&self, strings: &mut InternedStrings, meta: &mut IndexMap<StringId, StringId>);
+}
+
+impl EspanLike for tracing::span::Attributes<'_> {
+    fn parent_id(&self) -> Option<EspanId> {
+        self.parent().cloned().map(Into::into)
+    }
+
+    fn record_values(
+        &self,
+        strings: &mut InternedStrings,
+        meta: &mut IndexMap<StringId, StringId>,
+    ) {
+        record_tracing_metadata(self.metadata(), strings, meta);
+        let mut visitor = FieldVisitor::new(strings, meta);
+        self.record(&mut visitor)
+    }
+}
+
+impl EspanLike for tracing::Event<'_> {
+    fn parent_id(&self) -> Option<EspanId> {
+        self.parent().cloned().map(Into::into)
+    }
+
+    fn record_values(
+        &self,
+        strings: &mut InternedStrings,
+        meta: &mut IndexMap<StringId, StringId>,
+    ) {
+        record_tracing_metadata(self.metadata(), strings, meta);
+        let mut visitor = FieldVisitor::new(strings, meta);
+        self.record(&mut visitor)
+    }
+}
+
+/// Write static key-value data (`tracing::Metadata`) to `output_meta`.
+fn record_tracing_metadata(
+    tracing_metadata: &tracing::Metadata<'static>,
+    output_strings: &mut InternedStrings,
+    output_meta: &mut IndexMap<StringId, StringId>,
+) {
+    output_meta.insert(
+        output_strings.id("name"),
+        output_strings.id(tracing_metadata.name()),
+    );
+    if let Some(module_path) = tracing_metadata.module_path() {
+        output_meta.insert(
+            output_strings.id("module_path"),
+            output_strings.id(module_path),
+        );
+    }
+    if let Some(line) = tracing_metadata.line() {
+        output_meta.insert(
+            output_strings.id("line"),
+            output_strings.id(format!("{}", line)),
+        );
     }
 }
