@@ -410,49 +410,48 @@ RocksDbLocalStore::getBatch(
     futures.emplace_back(
         faultInjector_.checkAsync("local store get batch", "")
             .via(&ioPool_)
-            .thenValue(
-                [store = getSharedFromThis(),
-                 keySpace,
-                 keys = std::move(batch)](folly::Unit&&) {
-                  XLOG(DBG3) << __func__ << " starting to actually do work";
-                  auto handles = store->getHandles();
-                  std::vector<Slice> keySlices;
-                  std::vector<std::string> values;
-                  std::vector<rocksdb::ColumnFamilyHandle*> columns;
-                  for (auto& key : *keys) {
-                    keySlices.emplace_back(key);
-                    columns.emplace_back(handles->columns[keySpace].get());
+            .thenValue([store = getSharedFromThis(),
+                        keySpace,
+                        keys = std::move(batch)](folly::Unit&&) {
+              XLOG(DBG3) << __func__ << " starting to actually do work";
+              auto handles = store->getHandles();
+              std::vector<Slice> keySlices;
+              std::vector<std::string> values;
+              std::vector<rocksdb::ColumnFamilyHandle*> columns;
+              for (auto& key : *keys) {
+                keySlices.emplace_back(key);
+                columns.emplace_back(handles->columns[keySpace].get());
+              }
+              auto statuses = handles->db->MultiGet(
+                  ReadOptions(), columns, keySlices, &values);
+
+              std::vector<StoreResult> results;
+              for (size_t i = 0; i < keys->size(); ++i) {
+                auto& status = statuses[i];
+                if (!status.ok()) {
+                  if (status.IsNotFound()) {
+                    // Return an empty StoreResult
+                    results.emplace_back(); // StoreResult();
+                    continue;
                   }
-                  auto statuses = handles->db->MultiGet(
-                      ReadOptions(), columns, keySlices, &values);
 
-                  std::vector<StoreResult> results;
-                  for (size_t i = 0; i < keys->size(); ++i) {
-                    auto& status = statuses[i];
-                    if (!status.ok()) {
-                      if (status.IsNotFound()) {
-                        // Return an empty StoreResult
-                        results.emplace_back(); // StoreResult();
-                        continue;
-                      }
+                  // TODO: RocksDB can return a "TryAgain" error.
+                  // Should we try again for the user, rather than
+                  // re-throwing the error?
 
-                      // TODO: RocksDB can return a "TryAgain" error.
-                      // Should we try again for the user, rather than
-                      // re-throwing the error?
-
-                      // We don't use RocksException::check(), since we don't
-                      // want to waste our time computing the hex string of the
-                      // key if we succeeded.
-                      throw RocksException::build(
-                          status,
-                          "failed to get ",
-                          folly::hexlify(keys->at(i)),
-                          " from local store");
-                    }
-                    results.emplace_back(std::move(values[i]));
-                  }
-                  return results;
-                }));
+                  // We don't use RocksException::check(), since we don't
+                  // want to waste our time computing the hex string of the
+                  // key if we succeeded.
+                  throw RocksException::build(
+                      status,
+                      "failed to get ",
+                      folly::hexlify(keys->at(i)),
+                      " from local store");
+                }
+                results.emplace_back(std::move(values[i]));
+              }
+              return results;
+            }));
   }
 
   return folly::collect(futures).thenValue(

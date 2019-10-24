@@ -16,7 +16,6 @@
 #include <sys/sysctl.h> // @manual
 #endif
 
-
 namespace facebook::eden::detail {
 
 ProcPidCmdLine getProcPidCmdLine(pid_t pid) {

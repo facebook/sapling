@@ -10,8 +10,6 @@
 #include <chrono>
 #include <memory>
 
-
-
 namespace {
 constexpr std::chrono::microseconds kMinValue{0};
 constexpr std::chrono::microseconds kMaxValue{10000};

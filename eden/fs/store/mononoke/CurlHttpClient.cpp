@@ -12,7 +12,6 @@
 #include <folly/synchronization/CallOnce.h>
 #include "eden/fs/utils/ServiceAddress.h"
 
-
 namespace facebook {
 namespace eden {
 

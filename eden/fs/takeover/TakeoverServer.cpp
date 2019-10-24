@@ -24,7 +24,6 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
-
 using apache::thrift::CompactSerializer;
 using folly::AsyncServerSocket;
 using folly::exceptionStr;

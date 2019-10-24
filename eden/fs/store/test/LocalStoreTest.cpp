@@ -15,7 +15,6 @@ using namespace facebook::eden;
 using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;
 
-
 LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
   return {std::nullopt, std::make_unique<MemoryLocalStore>()};
 }
