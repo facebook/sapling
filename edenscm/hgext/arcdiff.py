@@ -56,10 +56,13 @@ def extsetup(ui):
 
 def _differentialhash(ui, repo, phabrev):
     timeout = repo.ui.configint("ssl", "timeout", 10)
+    signalstatus = repo.ui.configbool("ssl", "signal_status", True)
     ca_certs = repo.ui.configpath("web", "cacerts")
     try:
         client = graphql.Client(repodir=repo.root, ca_bundle=ca_certs, repo=repo)
-        info = client.getrevisioninfo(timeout, [phabrev]).get(str(phabrev))
+        info = client.getrevisioninfo(timeout, signalstatus, [phabrev]).get(
+            str(phabrev)
+        )
         if not info:
             return None
         return info

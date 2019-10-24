@@ -157,17 +157,26 @@ class Client(object):
             "latest_phabricator_version"
         ]
 
-    def getrevisioninfo(self, timeout, *revision_numbers):
+    def getrevisioninfo(self, timeout, signalstatus, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
         if self._mock:
             ret = self._mocked_responses.pop()
         else:
             params = {"params": {"numbers": rev_numbers}}
-            ret = self._client.query(timeout, self._getquery(), params)
+            ret = self._client.query(timeout, self._getquery(signalstatus), params)
         return self._processrevisioninfo(ret)
 
-    def _getquery(self):
-        return """
+    def _getquery(self, signalstatus):
+        signalquery = ""
+
+        if signalstatus:
+            signalquery = """
+                signal_summary {
+                  signals_status
+                }"""
+
+        return (
+            """
         query RevisionQuery(
           $params: [PhabricatorDiffQueryParams!]!
         ) {
@@ -200,14 +209,14 @@ class Client(object):
                 differential_diffs: phabricator_versions {
                   count
                 }
-                signal_summary {
-                  signals_status
-                }
+                %s
               }
             }
           }
         }
         """
+            % signalquery
+        )
 
     def _processrevisioninfo(self, ret):
         try:
