@@ -127,3 +127,56 @@ thread_local! {
     // FIXME: Implement THREAD_ID
     pub static THREAD_ID: u64 = 0;
 }
+
+// -------- Integration with "tokio/tracing" --------
+
+// Matches `tracing::Subscriber` APIs.
+impl TracingData {
+    /// Matches `tracing::Subscriber::new_span`.
+    pub fn new_span(&mut self, attributes: &tracing::span::Attributes) -> tracing::span::Id {
+        unimplemented!()
+    }
+
+    /// Matches `tracing::Subscriber::record`.
+    pub fn record(&mut self, id: &tracing::span::Id, values: &tracing::span::Record) {
+        let id: EspanId = id.clone().into();
+        let meta = &mut self.espans[id.0 as usize].meta;
+        unimplemented!();
+    }
+
+    /// Matches `tracing::Subscriber::record_follows_from`.
+    pub fn record_follows_from(&mut self, id: &tracing::span::Id, follows: &tracing::span::Id) {
+        // TODO: Implement this.
+    }
+
+    /// Matches `tracing::Subscriber::event`.
+    pub fn event(&mut self, event: &tracing::event::Event) {
+        unimplemented!()
+    }
+
+    /// Matches `tracing::Subscriber::enter`.
+    pub fn enter(&mut self, id: &tracing::span::Id) {
+        let id = id.clone().into();
+        self.push_eventus(Action::EnterSpan, id);
+    }
+
+    /// Matches `tracing::Subscriber::exit`.
+    pub fn exit(&mut self, id: &tracing::span::Id) {
+        let id = id.clone().into();
+        self.push_eventus(Action::ExitSpan, id);
+    }
+}
+
+// Id type conversions - EspanId can be 0 while tracing::span::Id cannot.
+
+impl From<tracing::span::Id> for EspanId {
+    fn from(id: tracing::span::Id) -> EspanId {
+        EspanId(id.into_u64() - 1)
+    }
+}
+
+impl From<EspanId> for tracing::span::Id {
+    fn from(id: EspanId) -> tracing::span::Id {
+        tracing::span::Id::from_u64(id.0 + 1)
+    }
+}
