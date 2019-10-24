@@ -9,3 +9,6 @@ libc = "0.2"
 parking_lot = "0.9"
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+winapi = {version = "0.3.7", features = ["processthreadsapi"]}

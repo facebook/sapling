@@ -124,8 +124,33 @@ impl TracingData {
 }
 
 thread_local! {
-    // FIXME: Implement THREAD_ID
-    pub static THREAD_ID: u64 = 0;
+    pub static THREAD_ID: u64 = loop {
+        #[cfg(target_os = "linux")]
+        {
+            break unsafe { libc::syscall(libc::SYS_gettid) as u64 };
+        }
+        #[cfg(target_os = "macos")]
+        {
+            #[link(name = "pthread")]
+            extern "C" {
+                fn pthread_threadid_np(
+                    thread: libc::pthread_t,
+                    thread_id: *mut libc::uint64_t,
+                ) -> libc::c_int;
+            }
+            let mut thread_id = 0;
+            unsafe { pthread_threadid_np(0, &mut thread_id) };
+            break thread_id;
+        }
+        #[cfg(windows)]
+        {
+            break unsafe { winapi::um::processthreadsapi::GetCurrentThreadId() as u64 };
+        }
+        #[allow(unreachable_code)]
+        {
+            break 0;
+        }
+    };
 }
 
 // -------- Integration with "tokio/tracing" --------
