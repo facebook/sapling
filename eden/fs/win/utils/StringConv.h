@@ -10,12 +10,32 @@
 
 #include <algorithm>
 #include <cassert>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include "eden/fs/win/utils/WinError.h"
 
 namespace facebook {
 namespace eden {
+
+//
+// Defining the wide char path pointer and strings. On Windows where we need
+// wide char paths we will use std::filesystem::path, until we port PathFunc to
+// work with widechar strings. std::filesystem::path has member functions to
+// internally convert path from wide char to multibyte and also handle the
+// backslash and forward slash conversion, so it will be the best choice for our
+// case.
+//
+// We don't have anything that would sanity check the paths to be relative or
+// absolute and a function which expects an Absolute path will not complain if
+// relative is passed.
+//
+
+using ConstWinRelativePathWPtr = const wchar_t*;
+using ConstWinAbsolutePathWPtr = const wchar_t*;
+using WinRelativePathW = std::filesystem::path;
+using WinAbsolutePathW = std::filesystem::path;
+using WinPathComponentW = std::wstring;
 
 // TODO: Move these functions to the better location.
 
