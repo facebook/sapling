@@ -5,6 +5,10 @@
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::io;
+use std::ops::DerefMut;
 
 /// Collected tracing data.
 ///
@@ -48,6 +52,14 @@ impl InternedStrings {
     fn id(&mut self, s: impl ToString) -> StringId {
         let (id, _existed) = self.0.insert_full(s.to_string());
         StringId(id as u64)
+    }
+
+    /// Convert an id to a string
+    fn get(&self, id: StringId) -> &str {
+        match self.0.get_index(id.0 as usize) {
+            Some(s) => s,
+            None => "<missing>",
+        }
     }
 }
 
@@ -412,4 +424,146 @@ impl TracingData {
     pub fn set_follows_from(&mut self, old_span_id: EspanId, new_span_id: EspanId) {
         // TODO: Implement this.
     }
+}
+
+// -------- Convert to Trace Event format (Chrome Trace) --------
+
+/// Zero-copy `serde_json::Value` alternative.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum RefValue<'a> {
+    Str(&'a str),
+    Int(u64),
+    Map(IndexMap<&'a str, RefValue<'a>>),
+}
+
+impl From<u64> for RefValue<'_> {
+    fn from(v: u64) -> Self {
+        RefValue::Int(v)
+    }
+}
+
+impl<'a> From<&'a str> for RefValue<'a> {
+    fn from(v: &'a str) -> Self {
+        RefValue::Str(v)
+    }
+}
+
+impl<'a> From<IndexMap<&'a str, RefValue<'a>>> for RefValue<'a> {
+    fn from(v: IndexMap<&'a str, RefValue<'a>>) -> Self {
+        RefValue::Map(v)
+    }
+}
+
+impl<'a> RefValue<'a> {
+    fn insert(&mut self, name: &'a str, value: impl Into<RefValue<'a>>) {
+        if let RefValue::Map(obj) = self {
+            obj.insert(name, value.into());
+        }
+    }
+}
+
+macro_rules! object {
+    ({ $( $k:ident : $v:expr, )* }) => {{
+        #[allow(unused_mut)]
+        let mut obj = IndexMap::new();
+        $( obj.insert(stringify!($k), object!($v)); )*
+        $crate::model::RefValue::Map(obj)
+    }};
+    ($v: expr) => { RefValue::from($v) };
+}
+
+impl TracingData {
+    /// Write "Trace Event" format that can be viewed by Chrome "about:tracing".
+    ///
+    /// See https://github.com/catapult-project/catapult/tree/master/tracing.
+    pub fn write_trace_event_json(
+        &self,
+        out: &mut dyn io::Write,
+        other_data: HashMap<String, String>,
+    ) -> Result<(), serde_json::Error> {
+        // FEATURE: "Trace Event" supports a lot of things. Features to consider:
+        // - Handle async events (set "id" to espan_id, and use async phase names).
+        // - Translate Espan::follower_ids to "Flow Events" (if follower_ids get used).
+        // - Using "Metadata Events" to add names to threads.
+
+        // Extract string from espan.meta.
+        let extract = |espan: &Espan, name: &str| -> Option<&str> {
+            let meta = &espan.meta;
+            if let Some((key_id, _)) = self.strings.0.get_full(name) {
+                let key_id = StringId(key_id as u64);
+                if let Some(value_id) = meta.get(&key_id) {
+                    return Some(self.strings.get(*value_id));
+                }
+            }
+            None
+        };
+
+        // Calculate JSON objects in a streaming way to reduce memory usage.
+        let trace_event_iter = self.eventus.iter().map(|eventus| {
+            let espan = &self.espans[eventus.espan_id.0 as usize];
+            let ph = match eventus.action {
+                Action::Event => "i",     // Instant Event
+                Action::EnterSpan => "B", // Duration Event: Begin
+                Action::ExitSpan => "E",  // Duration Event: End
+            };
+            let args: IndexMap<&str, RefValue> = espan
+                .meta
+                .iter()
+                .filter(|(k, _v)| {
+                    let s = self.strings.get(**k);
+                    s != "name" && s != "cat"
+                })
+                .map(|(k, v)| (self.strings.get(*k), self.strings.get(*v).into()))
+                .collect();
+            let pid = match eventus.process_id as u64 {
+                0 => self.default_process_id,
+                v => v,
+            };
+            let tid = match eventus.thread_id {
+                0 => self.default_thread_id,
+                v => v,
+            };
+            let mut obj = object!({
+                name: extract(espan, "name").unwrap_or("(unnamed)"),
+                cat: extract(espan, "cat").unwrap_or("default"),
+                ts: eventus.timestamp.0,
+                pid: pid,
+                tid: tid,
+                ph: ph,
+                args: args,
+            });
+            if ph == "i" {
+                // Add "s": "p" (scope: process) for Instant Events.
+                obj.insert("s", "p");
+            }
+            obj
+        });
+
+        #[allow(non_snake_case)]
+        #[derive(Serialize)]
+        struct Trace<'a, I: Iterator<Item = RefValue<'a>>> {
+            #[serde(serialize_with = "serialize_iter")]
+            traceEvents: RefCell<I>,
+            displayTimeUnit: &'static str,
+            otherData: HashMap<String, String>,
+        }
+        let trace = Trace {
+            traceEvents: RefCell::new(trace_event_iter),
+            displayTimeUnit: "ms",
+            otherData: other_data,
+        };
+
+        serde_json::to_writer(out, &trace)
+    }
+}
+
+fn serialize_iter<S, V, I>(iter: &RefCell<I>, s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    V: Serialize,
+    I: Iterator<Item = V>,
+{
+    let mut iter = iter.borrow_mut();
+    s.collect_seq(iter.deref_mut())
 }
