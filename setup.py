@@ -1773,12 +1773,6 @@ extmodules += cythonize(
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
-            "edenscmnative.litemmap",
-            sources=["edenscmnative/litemmap.pyx"],
-            include_dirs=include_dirs,
-            extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
-        ),
-        Extension(
             "edenscmnative.patchrmdir",
             sources=["edenscmnative/patchrmdir.pyx"],
             include_dirs=include_dirs,

@@ -16,7 +16,6 @@ import time
 from edenscm.mercurial import error, policy, pycompat, util, vfs as vfsmod
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
-from edenscmnative import litemmap
 
 from . import constants, shallowutil
 
