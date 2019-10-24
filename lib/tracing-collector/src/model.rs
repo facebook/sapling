@@ -70,7 +70,7 @@ struct Espan {
     meta: IndexMap<StringId, StringId>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Eventus {
     action: Action,
     timestamp: RelativeTime,
@@ -79,20 +79,51 @@ struct Eventus {
     thread_id: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Clone, Copy, Deserialize)]
 pub enum Action {
     EnterSpan,
     ExitSpan,
     Event,
 }
 
-#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Serialize
+)]
 struct StringId(u64);
 
-#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Serialize
+)]
 pub struct EspanId(pub u64);
 
-#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Default,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize
+)]
 struct RelativeTime(u64);
 
 impl TracingData {
