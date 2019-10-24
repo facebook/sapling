@@ -13,6 +13,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/win/mount/CurrentState.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/mount/EdenMount.h"
 #include "eden/fs/win/store/WinStore.h"
@@ -200,6 +201,10 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
           result,
           win32ErrorToString(result));
     }
+
+    getMount().getCurrentState()->entryCreated(
+        callbackData.FilePathName, metadata);
+
     return result;
   } catch (const std::exception& ex) {
     return exceptionToHResult();
@@ -231,6 +236,9 @@ EdenDispatcher::getFileData(
     // Assuming that it will not be a chain of IOBUFs.
     // TODO: The following assert fails - need to dig more into IOBuf.
     // assert(iobuf.next() == nullptr);
+    //
+
+    getMount().getCurrentState()->entryLoaded(callbackData.FilePathName);
 
     if (iobuf.length() <= kMinChunkSize) {
       //
@@ -361,16 +369,24 @@ void EdenDispatcher::notification(
   switch (notificationType) {
     case PRJ_NOTIFICATION_NEW_FILE_CREATED:
       TRACE("CREATED {}", callbackData.FilePathName);
+      getMount().getCurrentState()->fileCreated(
+          callbackData.FilePathName, isDirectory);
       break;
     case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
     case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
       TRACE("MODIFIED {}", callbackData.FilePathName);
+      getMount().getCurrentState()->fileModified(
+          callbackData.FilePathName, isDirectory);
       break;
     case PRJ_NOTIFICATION_FILE_RENAMED:
       TRACE("RENAMED {} -> {}", callbackData.FilePathName, destinationFileName);
+      getMount().getCurrentState()->fileRenamed(
+          callbackData.FilePathName, destinationFileName, isDirectory);
       break;
     case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
       TRACE("DELETED {}", callbackData.FilePathName);
+      getMount().getCurrentState()->fileRemoved(
+          callbackData.FilePathName, isDirectory);
       break;
   }
 }

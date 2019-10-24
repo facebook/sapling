@@ -16,6 +16,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/win/mount/CurrentState.h"
 #include "eden/fs/win/mount/RepoConfig.h"
 
 #include <folly/logging/xlog.h>
@@ -24,6 +25,8 @@ namespace facebook {
 namespace eden {
 
 static constexpr folly::StringPiece kEdenStracePrefix = "eden.strace.";
+constexpr std::wstring_view kCurrentStateDataPath =
+    L"SOFTWARE\\facebook\\eden\\repo";
 
 static uint64_t generateLuid() {
   LUID luid;
@@ -94,6 +97,10 @@ void EdenMount::start() {
   fsChannel_.start();
   createRepoConfig(
       getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
+  if (!getCurrentState()) {
+    currentState_ = std::make_unique<CurrentState>(
+        kCurrentStateDataPath, stringToWstring(getMountId(getPath().c_str())));
+  }
 }
 
 void EdenMount::stop() {

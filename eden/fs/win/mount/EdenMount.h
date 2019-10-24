@@ -43,6 +43,7 @@ class BindMount;
 class CheckoutConfig;
 class CheckoutConflict;
 class Clock;
+class CurrentState;
 class DiffContext;
 class EdenDispatcher;
 class FuseChannel;
@@ -161,6 +162,10 @@ class EdenMount {
 
   const CheckoutConfig* getConfig() const {
     return config_.get();
+  }
+
+  CurrentState* getCurrentState() const {
+    return currentState_.get();
   }
 
   /**
@@ -392,6 +397,8 @@ class EdenMount {
   std::shared_ptr<ObjectStore> objectStore_;
 
   EdenDispatcher dispatcher_;
+
+  std::unique_ptr<CurrentState> currentState_;
 
   /**
    * This is the channel between ProjectedFS and rest of Eden.
