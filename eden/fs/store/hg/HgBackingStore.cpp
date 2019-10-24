@@ -223,7 +223,11 @@ HgBackingStore::HgBackingStore(
       config_(config),
       serverThreadPool_(serverThreadPool) {
 #ifdef EDEN_HAVE_RUST_DATAPACK
-  datapackStore_ = std::make_optional<HgDatapackStore>(repository);
+  try {
+    datapackStore_ = std::make_optional<HgDatapackStore>(repository);
+  } catch (const std::runtime_error& ex) {
+    XLOG(WARN) << "Rust native store is disabled due to: " << ex.what();
+  }
 #endif
   HgImporter importer(
       repository, localStore, getSharedHgImporterStatsForCurrentThread(stats));
@@ -301,7 +305,7 @@ HgBackingStore::initializeHttpMononokeBackingStore() {
   try {
     auto clientCertificate = edenConfig->getClientCertificate();
     sslContext = buildSSLContext(clientCertificate);
-  } catch (std::runtime_error& ex) {
+  } catch (const std::runtime_error& ex) {
     XLOG(WARN) << "mononoke is disabled because of build failure when "
                   "creating SSLContext: "
                << ex.what();
