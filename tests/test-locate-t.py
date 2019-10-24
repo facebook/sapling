@@ -93,17 +93,12 @@ sh % "rm -r t"
 
 sh % "hg rm t/b"
 
-sh % "hg locate 't/**'" == r"""
-    t/b
-    t/e.h
-    t/x"""
+sh % "hg locate 't/**'" == "[1]"
 
 sh % "hg files" == r"""
     b
     dir.h/foo
-    t.h
-    t/e.h
-    t/x"""
+    t.h"""
 sh % "hg files b" == "b"
 
 sh % "mkdir otherdir"
@@ -112,26 +107,19 @@ sh % "cd otherdir"
 sh % "hg files 'path:'" == r"""
     ../b
     ../dir.h/foo
-    ../t.h
-    ../t/e.h
-    ../t/x"""
+    ../t.h"""
 sh % "hg files 'path:.'" == r"""
     ../b
     ../dir.h/foo
-    ../t.h
-    ../t/e.h
-    ../t/x"""
+    ../t.h"""
 
 sh % "hg locate b" == r"""
-    ../b
-    ../t/b"""
+    ../b"""
 sh % "hg locate '*.h'" == r"""
-    ../t.h
-    ../t/e.h"""
-sh % "hg locate 'path:t/x'" == "../t/x"
+    ../t.h"""
+sh % "hg locate 'path:t/x'" == "[1]"
 sh % "hg locate 're:.*\\.h$'" == r"""
-    ../t.h
-    ../t/e.h"""
+    ../t.h"""
 sh % "hg locate -r 0 b" == r"""
     ../b
     ../t/b"""
@@ -146,9 +134,7 @@ sh % "hg locate -r 0 're:.*\\.h$'" == r"""
 sh % "hg files" == r"""
     ../b
     ../dir.h/foo
-    ../t.h
-    ../t/e.h
-    ../t/x"""
+    ../t.h"""
 sh % "hg files ." == "[1]"
 
 # Convert native path separator to slash (issue5572)
@@ -156,8 +142,6 @@ sh % "hg files ." == "[1]"
 sh % "hg files -T '{path|slashpath}\\n'" == r"""
     ../b
     ../dir.h/foo
-    ../t.h
-    ../t/e.h
-    ../t/x"""
+    ../t.h"""
 
 sh % "cd ../.."
