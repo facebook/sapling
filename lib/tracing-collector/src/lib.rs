@@ -8,6 +8,9 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
+pub mod model;
+pub use model::TracingData;
+
 use tracing::{
     span::{Attributes, Record},
     Event, Id, Metadata, Subscriber,

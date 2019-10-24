@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+indexmap = { version = "1", features = ["serde-1"] }
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
