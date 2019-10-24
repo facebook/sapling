@@ -457,6 +457,86 @@ impl TracingData {
     }
 }
 
+// -------- Merge multiple TracingData --------
+
+impl TracingData {
+    /// Merge multiple [`TracingData`]s into one [`TracingData`].
+    pub fn merge(list: Vec<TracingData>) -> TracingData {
+        if list.is_empty() {
+            return TracingData::new();
+        }
+
+        let start = list.iter().map(|t| t.start).min().unwrap(); // list.len >= 1
+        let relative_start = list.iter().map(|t| t.relative_start).min().unwrap();
+        let default_process_id = unsafe { libc::getpid() } as u64;
+        let default_thread_id = THREAD_ID.with(|thread_id| *thread_id);
+        let mut strings = InternedStrings::default();
+        let mut espans = Vec::with_capacity(list.iter().map(|t| t.espans.len()).sum());
+        let mut eventus = Vec::with_capacity(list.iter().map(|t| t.eventus.len()).sum());
+
+        for data in list {
+            let espan_offset = espans.len() as u64;
+            let time_offset = data.start.duration_since(start).unwrap().as_micros() as u64;
+
+            // Add Espans (and strings as a side effect)
+            for espan in data.espans.iter() {
+                let meta = espan
+                    .meta
+                    .iter()
+                    .map(|(key_id, value_id)| {
+                        let key = data.strings.get(*key_id);
+                        let value = data.strings.get(*value_id);
+                        (strings.id(key), strings.id(value))
+                    })
+                    .collect();
+                espans.push(Espan { meta });
+            }
+
+            // Add Eventus
+            for Eventus {
+                action,
+                timestamp,
+                espan_id,
+                process_id,
+                thread_id,
+            } in data.eventus.iter()
+            {
+                let action = *action;
+                let timestamp = RelativeTime(timestamp.0 + time_offset);
+                let espan_id = EspanId(espan_id.0 + espan_offset);
+                let process_id = match *process_id {
+                    0 => data.default_process_id,
+                    v => v,
+                };
+                let thread_id = match *thread_id {
+                    0 => data.default_thread_id,
+                    v => v,
+                };
+                eventus.push(Eventus {
+                    action,
+                    timestamp,
+                    espan_id,
+                    process_id,
+                    thread_id,
+                });
+            }
+        }
+
+        // Sort by timestamp.
+        eventus.sort_by(|e1, e2| e1.timestamp.cmp(&e2.timestamp));
+
+        TracingData {
+            start,
+            strings,
+            espans,
+            eventus,
+            default_process_id,
+            default_thread_id,
+            relative_start,
+        }
+    }
+}
+
 // -------- Convert to Trace Event format (Chrome Trace) --------
 
 /// Zero-copy `serde_json::Value` alternative.
