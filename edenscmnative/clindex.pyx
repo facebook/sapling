@@ -125,12 +125,12 @@ cdef class clindex(object):
     def __len__(self):
         return len(self._origindex)
 
-    def __delslice__(self, Py_ssize_t i, Py_ssize_t j):
+    def __delitem__(self, x):
         # This one is tricky: it's called by strip. The Rust nodemap cannot
         # really handle it easily so let's just disable it for now.
         # repo.destroyed() will reconstruct a clindex object, which will
         # re-enable and re-build the cache.
-        del self._origindex[i:j]
+        del self._origindex[x]
         self._config.nodemap = False
 
     @property
