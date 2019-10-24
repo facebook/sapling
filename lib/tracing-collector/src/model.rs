@@ -141,7 +141,8 @@ impl TracingData {
     pub fn record(&mut self, id: &tracing::span::Id, values: &tracing::span::Record) {
         let id: EspanId = id.clone().into();
         let meta = &mut self.espans[id.0 as usize].meta;
-        unimplemented!();
+        let mut visitor = FieldVisitor::new(&mut self.strings, meta);
+        values.record(&mut visitor)
     }
 
     /// Matches `tracing::Subscriber::record_follows_from`.
@@ -178,5 +179,59 @@ impl From<tracing::span::Id> for EspanId {
 impl From<EspanId> for tracing::span::Id {
     fn from(id: EspanId) -> tracing::span::Id {
         tracing::span::Id::from_u64(id.0 + 1)
+    }
+}
+
+// The only way to get data out from [`tracing::field::ValueSet`] is to
+// implement a [`tracing::field::Visit`].
+//
+// This `Visit` just converts everything to string.
+/// Extract content from [`tracing::field::ValueSet`] to key-value strings.
+struct FieldVisitor<'a> {
+    strings: &'a mut InternedStrings,
+    meta: &'a mut IndexMap<StringId, StringId>,
+}
+
+impl<'a> FieldVisitor<'a> {
+    pub fn new(
+        strings: &'a mut InternedStrings,
+        meta: &'a mut IndexMap<StringId, StringId>,
+    ) -> Self {
+        Self { strings, meta }
+    }
+}
+
+impl<'a> FieldVisitor<'a> {
+    fn record(&mut self, field: &tracing::field::Field, value: impl ToString) {
+        let key = self.strings.id(field.name());
+        let value = self.strings.id(value.to_string());
+        self.meta.insert(key, value);
+    }
+}
+
+impl<'a> tracing::field::Visit for FieldVisitor<'a> {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        self.record(field, format!("{:?}", value));
+    }
+    fn record_i64(&mut self, field: &tracing::field::Field, value: i64) {
+        // NOTE: Maybe consider doing '+' here?
+        self.record(field, value)
+    }
+    fn record_u64(&mut self, field: &tracing::field::Field, value: u64) {
+        // NOTE: Maybe consider doing '+' here?
+        self.record(field, value)
+    }
+    fn record_bool(&mut self, field: &tracing::field::Field, value: bool) {
+        self.record(field, value)
+    }
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        self.record(field, value)
+    }
+    fn record_error(
+        &mut self,
+        field: &tracing::field::Field,
+        value: &(dyn std::error::Error + 'static),
+    ) {
+        self.record(field, value)
     }
 }
