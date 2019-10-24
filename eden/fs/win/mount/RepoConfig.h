@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include <string>
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -15,5 +16,8 @@ void createRepoConfig(
     const AbsolutePath& repoPath,
     const AbsolutePath& socket,
     const AbsolutePath& client);
-}
+
+std::string getMountId(const std::string& repoPath);
+
+} // namespace eden
 } // namespace facebook
