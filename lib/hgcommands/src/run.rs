@@ -6,6 +6,8 @@
 use crate::{commands, HgPython};
 use clidispatch::{dispatch, errors};
 use std::env;
+use std::io;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 /// Run a Rust or Python command.
@@ -26,7 +28,13 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     // accurately, at least for non-chg cases.
     log_start(args.clone());
 
-    let cwd = env::current_dir().unwrap();
+    let cwd = match current_dir(io) {
+        Err(e) => {
+            let _ = io.write_err(format!("abort: cannot get current directory: {}\n", e));
+            return exitcode::IOERR;
+        }
+        Ok(dir) => dir,
+    };
     let table = commands::table();
 
     let exit_code = match dispatch::dispatch(&table, args[1..].to_vec(), io) {
@@ -62,6 +70,30 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     log_end(exit_code as u8, now);
 
     exit_code
+}
+
+/// Similar to `std::env::current_dir`. But does some extra things:
+/// - Attempt to autofix issues when running under a typical shell (which
+///   sets $PWD), and a directory is deleted and then recreated.
+fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
+    let result = env::current_dir();
+    if let Err(ref err) = result {
+        match err.kind() {
+            io::ErrorKind::NotConnected | io::ErrorKind::NotFound => {
+                // For those errors, attempt to fix it by `cd $PWD`.
+                // - NotConnected: edenfsctl stop; edenfsctl start
+                // - NotFound: rmdir $PWD; mkdir $PWD
+                if let Ok(pwd) = env::var("PWD") {
+                    if env::set_current_dir(pwd).is_ok() {
+                        let _ = io.write_err("(warning: the current directory was recrated, consider running 'cd $PWD' to fix your shell)\n");
+                        return env::current_dir();
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+    result
 }
 
 fn log_start(args: Vec<String>) {
@@ -134,4 +166,9 @@ fn log_end(exit_code: u8, now: SystemTime) {
 
 fn is_inside_test() -> bool {
     std::env::var_os("TESTTMP").is_some()
+}
+
+// TODO: Replace this with the 'exitcode' crate once it's available.
+mod exitcode {
+    pub const IOERR: i32 = 74;
 }
