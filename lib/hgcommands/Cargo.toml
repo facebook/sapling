@@ -9,8 +9,9 @@ blackbox = { path = "../blackbox" }
 clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
-libc = "0.2"
 failure = "0.1"
+indexedlog = { path = "../indexedlog" }
+libc = "0.2"
 procinfo = { path = "../procinfo"}
 revisionstore = { path = "../revisionstore"}
 types = { path = "../types" }

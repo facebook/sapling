@@ -114,6 +114,8 @@ Show debug commands if there are no other candidates
   debugignore
   debugindex
   debugindexdot
+  debugindexedlog-dump
+  debugindexedlog-repair
   debuginstall
   debugknown
   debuglabelcomplete
@@ -305,6 +307,8 @@ Show all commands + options
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
+  debugindexedlog-dump: 
+  debugindexedlog-repair: 
   debuginstall: template
   debugknown: 
   debuglabelcomplete: 

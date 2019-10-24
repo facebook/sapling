@@ -12,6 +12,7 @@ use cliparser::define_flags;
 use revisionstore::{
     CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
 };
+use std::path::Path;
 use types::{HgId, Key, RepoPathBuf};
 
 #[allow(dead_code)]
@@ -34,6 +35,16 @@ pub fn table() -> CommandTable {
     );
     table.register(debugpython, "debugpython", "run python interpreter");
     table.register(debugargs, "debug-args", "print arguments received");
+    table.register(
+        debugindexedlogdump,
+        "debugindexedlog-dump",
+        "dump indexedlog data",
+    );
+    table.register(
+        debugindexedlogrepair,
+        "debugindexedlog-repair",
+        "repair indexedlog log",
+    );
 
     table
 }
@@ -120,4 +131,37 @@ pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
         Ok(_) => Ok(0),
         Err(_) => Ok(255),
     }
+}
+
+pub fn debugindexedlogdump(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+    for path in opts.args {
+        let _ = io.write(format!("{}\n", path));
+        let path = Path::new(&path);
+        if let Ok(meta) = indexedlog::log::LogMetadata::read_file(path) {
+            io.write(format!("Metadata File {:?}\n{:?}\n", path, meta))?;
+        } else if path.is_dir() {
+            // Treate it as Log.
+            let log = indexedlog::log::Log::open(path, Vec::new())?;
+            io.write(format!("Log Directory {:?}:\n{:#?}\n", path, log))?;
+        } else if path.is_file() {
+            // Treate it as Index.
+            let idx = indexedlog::index::OpenOptions::new().open(path)?;
+            io.write(format!("Index File {:?}\n{:?}\n", path, idx))?;
+        } else {
+            io.write_err(format!("Path {:?} is not a file or directory.\n\n", path))?;
+        }
+    }
+    Ok(0)
+}
+
+pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
+    for path in opts.args {
+        io.write(format!("Repairing {:?}\n", path))?;
+        io.write(format!(
+            "{}\n",
+            indexedlog::log::OpenOptions::new().repair(path)?
+        ))?;
+        io.write("Done\n")?;
+    }
+    Ok(0)
 }
