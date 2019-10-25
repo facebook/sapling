@@ -1,0 +1,12 @@
+[package]
+name = "auth"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.12"
+configparser = { path = "../configparser" }
+failure = "0.1.6"
+indexmap = "1.0.1"
+url = "2.1.0"
+util = { path = "../util" }
