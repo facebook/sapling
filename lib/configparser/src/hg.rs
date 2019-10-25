@@ -59,6 +59,9 @@ pub trait ConfigSetHgExt {
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
 
     /// Get a config item. Convert to type `T`.
+    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Fallible<Option<T>>;
+
+    /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, calculate it using `default_func`.
     fn get_or<T: FromConfigValue>(
@@ -66,7 +69,9 @@ pub trait ConfigSetHgExt {
         section: &str,
         name: &str,
         default_func: impl Fn() -> T,
-    ) -> Fallible<T>;
+    ) -> Fallible<T> {
+        Ok(self.get_opt(section, name)?.unwrap_or_else(default_func))
+    }
 
     /// Get a config item. Convert to type `T`.
     ///
@@ -76,7 +81,7 @@ pub trait ConfigSetHgExt {
         section: &str,
         name: &str,
     ) -> Fallible<T> {
-        self.get_or(section, name, || Default::default())
+        self.get_or(section, name, Default::default)
     }
 }
 
@@ -319,16 +324,10 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_path(path, &opts)
     }
 
-    fn get_or<T: FromConfigValue>(
-        &self,
-        section: &str,
-        name: &str,
-        default_func: impl Fn() -> T,
-    ) -> Fallible<T> {
-        match ConfigSet::get(self, section, name) {
-            None => Ok(default_func()),
-            Some(bytes) => Ok(T::try_from_bytes(&bytes)?),
-        }
+    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Fallible<Option<T>> {
+        ConfigSet::get(self, section, name)
+            .map(|bytes| T::try_from_bytes(&bytes))
+            .transpose()
     }
 }
 
