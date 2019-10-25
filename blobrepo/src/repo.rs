@@ -2161,3 +2161,16 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepo {
         }
     }
 }
+
+impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
+    {
+        let bookmarks = modify(self.bookmarks.clone());
+        BlobRepo {
+            bookmarks,
+            ..self.clone()
+        }
+    }
+}

@@ -199,6 +199,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping>(
 }
 
 /// The state of a source repo commit in a target repo
+#[derive(Debug)]
 pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate,
@@ -367,6 +368,87 @@ where
 
         // The commit does not belong to this sync DAG - don't sync it
         Ok(Some(CommitSyncOutcome::NotSyncCandidate))
+    }
+
+    pub fn sync_commit_compat(
+        self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
+        async fn sync_commit_compat_wrapper<M>(
+            this: CommitSyncConfig<M>,
+            ctx: CoreContext,
+            source_cs_id: ChangesetId,
+        ) -> Result<Option<ChangesetId>, Error>
+        where
+            M: SyncedCommitMapping + Clone + 'static,
+        {
+            this.sync_commit(ctx, source_cs_id).await
+        }
+        sync_commit_compat_wrapper(self, ctx, source_cs_id)
+            .boxed()
+            .compat()
+    }
+
+    pub async fn sync_commit(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        // Take most of below function sync_commit into here and delete. Leave pushrebase in next fn
+        let repos = self.repos.clone();
+        let mapping = self.mapping.clone();
+        let (source_repo, target_repo, rewrite_paths) = match repos.clone() {
+            CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo,
+                mover,
+            } => (large_repo, small_repo, mover),
+            CommitSyncRepos::SmallToLarge {
+                small_repo,
+                large_repo,
+                mover,
+            } => (small_repo, large_repo, mover),
+        };
+
+        let cs = source_repo
+            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+            .compat()
+            .await?;
+        // Rewrite the commit
+        match remap_parents_and_rewrite_commit(
+            ctx.clone(),
+            cs.into_mut(),
+            &source_repo,
+            &target_repo,
+            &mapping,
+            rewrite_paths,
+        )
+        .await?
+        {
+            None => Ok(None),
+            Some(rewritten) => {
+                // Sync commit
+                let frozen = rewritten.freeze()?;
+                let rewritten_cs_id = frozen.get_changeset_id();
+                let rewritten_list = vec![frozen];
+                upload_commits(
+                    ctx.clone(),
+                    rewritten_list.clone(),
+                    source_repo.clone(),
+                    target_repo.clone(),
+                )
+                .await?;
+
+                update_mapping(
+                    ctx.clone(),
+                    hashmap! { source_cs_id => rewritten_cs_id },
+                    &self,
+                )
+                .await?;
+                Ok(Some(rewritten_cs_id))
+            }
+        }
     }
 }
 
