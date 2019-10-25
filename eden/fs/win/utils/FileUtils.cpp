@@ -8,6 +8,7 @@
 #include "folly/portability/Windows.h"
 
 #include <folly/portability/IOVec.h>
+#include <filesystem>
 #include <iostream>
 #include "FileUtils.h"
 #include "eden/fs/model/Hash.h"
@@ -105,20 +106,8 @@ void writeFile(const wchar_t* filePath, const folly::ByteRange data) {
 }
 
 void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
-  // TODO(puneetk): Create a path class and fix the use of POSIX /. At this
-  // point we only have one caller which use POSIX path.
-  // Verify it:
-  std::wstring_view fullPath{filePath};
-  DCHECK(fullPath.rfind('\\') == std::string::npos);
-
-  std::wstring parent;
-  auto slash = fullPath.rfind(L'/');
-  if (slash != std::wstring::npos) {
-    parent = fullPath.substr(0, slash);
-  } else {
-    parent = L"";
-  }
-
+  std::filesystem::path fullPath{filePath};
+  auto parent = fullPath.parent_path();
   std::wstring tmpFile(MAX_PATH, 0);
 
   DWORD retVal = GetTempFileName(parent.c_str(), L"TMP_", 0, tmpFile.data());
