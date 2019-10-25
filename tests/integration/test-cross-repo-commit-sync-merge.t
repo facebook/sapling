@@ -78,9 +78,9 @@ run the sync, expected to fail, as parent of the synced commit is not present in
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
   * Done preparing * (glob)
-  * 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
+  * Could not find a commit in the target repo with the same working copy as 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 (glob)
   * Queue size is 0 (glob)
-  * 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
+  * Could not find a commit in the target repo with the same working copy as 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 (glob)
   [1]
 
 insert sync mapping entry
