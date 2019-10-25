@@ -43,7 +43,7 @@ BLACKBOX_PATTERN = """
 ["or",
  {"legacy_log":
   {"msg":"_",
-   "service": ["not", "remotefilelog"]}},
+   "service": ["not", ["or", "remotefilelog", "remotefilefetchlog"]]}},
  ["not", {"legacy_log": "_"}]]
 """
 
@@ -270,8 +270,8 @@ def _makerage(ui, repo, **opts):
             "hg sl --master='interestingmaster()' -r 'predecessors(draft())'",
             lambda: hgcmd(
                 "smartlog",
-                master='interestingmaster()',
-                rev=['predecessors(draft())'],
+                master="interestingmaster()",
+                rev=["predecessors(draft())"],
                 _repo=repo.unfiltered(),
                 template='{sub("\\n", " ", "{node} {sl_debug}")}',
             ),
