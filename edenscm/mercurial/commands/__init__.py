@@ -2760,7 +2760,6 @@ def grep(ui, repo, pattern, *pats, **opts):
     # Add '--' to make sure grep recognizes all remaining arguments
     # (passed in by xargs) as filenames.
     cmd.append("--")
-    ui.pager("grep")
 
     if biggrep:
         p = subprocess.Popen(
@@ -2835,24 +2834,41 @@ def grep(ui, repo, pattern, *pats, **opts):
             corpusbin = bin(corpusrev)
             changes = repo.status(corpusbin, None, m)
         except error.RepoLookupError:
-            # TODO: can we trigger a commit cloud fetch for this case?
+            # We don't have the rev locally, so go get it.
+            if not ui.quiet:
+                ui.write_err(_("pulling biggrep corpus commit %s\n") % (hex(corpusbin)))
 
-            # print the results we've gathered so far.  We're not sure
-            # how things differ, so we'll follow up with a warning.
-            for lines in resultsbyfile.values():
-                for line in lines:
-                    ui.write(line)
+            # Redirect the pull output to stderr so that we don't break folks
+            # that are parsing the `hg grep` output
+            fout = ui.fout
+            try:
+                ui.fout = ui.ferr
+                pull = cmdutil.findcmd("pull", table)[1][0]
+                pull(ui, repo)
+            finally:
+                ui.fout = fout
 
-            ui.warn(
-                _(
-                    "The results above are based on revision %s\n"
-                    "which is not available locally and thus may be inaccurate.\n"
-                    "To get accurate results, run `hg pull` and re-run "
-                    "your grep.\n"
+            # Try to resolve that rev again now
+            try:
+                changes = repo.status(corpusbin, None, m)
+            except error.RepoLookupError:
+                # print the results we've gathered so far.  We're not sure
+                # how things differ, so we'll follow up with a warning.
+                ui.pager("grep")
+                for lines in resultsbyfile.values():
+                    for line in lines:
+                        ui.write(line)
+
+                ui.warn(
+                    _(
+                        "The results above are based on revision %s\n"
+                        "which is not available locally and thus may be inaccurate.\n"
+                        "To get accurate results, run `hg pull` and re-run "
+                        "your grep.\n"
+                    )
+                    % corpusrev
                 )
-                % corpusrev
-            )
-            return
+                return
 
         # which files we're going to search locally
         filestogrep = set()
@@ -2873,6 +2889,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
         # Having filtered out the changed files from the big grep results,
         # we can now print those that remain.
+        ui.pager("grep")
         for lines in resultsbyfile.values():
             for line in lines:
                 ui.write(line)
@@ -2891,6 +2908,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     files = sorted(status.clean + status.modified + status.added)
     files = [file for file in files if not islink(file)]
 
+    ui.pager("grep")
     return _rungrep(cmd, files, m)
 
 
