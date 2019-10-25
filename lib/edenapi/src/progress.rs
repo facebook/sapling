@@ -8,26 +8,26 @@ mod stats;
 
 pub type ProgressFn = Box<dyn FnMut(ProgressStats) + Send + 'static>;
 
-pub struct ProgressHandle {
-    inner: Rc<RefCell<ProgressManagerInner>>,
+pub struct ProgressUpdater {
+    inner: Rc<RefCell<ProgressInner>>,
     index: usize,
 }
 
-impl ProgressHandle {
+impl ProgressUpdater {
     pub fn update(&self, stats: ProgressStats) {
         self.inner.borrow_mut().update(self.index, stats);
     }
 }
 
-pub struct ProgressManager {
-    inner: Rc<RefCell<ProgressManagerInner>>,
+pub struct ProgressReporter {
+    inner: Rc<RefCell<ProgressInner>>,
     callback: Option<ProgressFn>,
 }
 
-impl ProgressManager {
+impl ProgressReporter {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            inner: Rc::new(RefCell::new(ProgressManagerInner::with_capacity(capacity))),
+            inner: Rc::new(RefCell::new(ProgressInner::with_capacity(capacity))),
             callback: None,
         }
     }
@@ -36,10 +36,10 @@ impl ProgressManager {
         self.callback = f;
     }
 
-    pub fn register(&self) -> ProgressHandle {
+    pub fn new_updater(&self) -> ProgressUpdater {
         let inner = Rc::clone(&self.inner);
-        let index = inner.borrow_mut().register();
-        ProgressHandle { inner, index }
+        let index = inner.borrow_mut().new_slot();
+        ProgressUpdater { inner, index }
     }
 
     pub fn stats(&self) -> ProgressStats {
@@ -58,12 +58,12 @@ impl ProgressManager {
     }
 }
 
-struct ProgressManagerInner {
+struct ProgressInner {
     stats: Vec<ProgressStats>,
     first_response: Option<Instant>,
 }
 
-impl ProgressManagerInner {
+impl ProgressInner {
     fn with_capacity(capacity: usize) -> Self {
         Self {
             stats: Vec::with_capacity(capacity),
@@ -71,7 +71,7 @@ impl ProgressManagerInner {
         }
     }
 
-    fn register(&mut self) -> usize {
+    fn new_slot(&mut self) -> usize {
         let index = self.stats.len();
         self.stats.push(Default::default());
         index

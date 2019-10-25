@@ -2,26 +2,26 @@
 
 use curl::easy::{Handler, WriteError};
 
-use crate::progress::{ProgressHandle, ProgressStats};
+use crate::progress::{ProgressStats, ProgressUpdater};
 
 /// Simple Handler that just writes all received data to an internal buffer.
 pub(super) struct Collector {
     data: Vec<u8>,
-    progress: Option<ProgressHandle>,
+    updater: Option<ProgressUpdater>,
 }
 
 impl Collector {
     pub fn new() -> Self {
         Self {
             data: Vec::new(),
-            progress: None,
+            updater: None,
         }
     }
 
-    pub fn with_progress(progress: ProgressHandle) -> Self {
+    pub fn with_progress(updater: ProgressUpdater) -> Self {
         Self {
             data: Vec::new(),
-            progress: Some(progress),
+            updater: Some(updater),
         }
     }
 
@@ -45,13 +45,13 @@ impl Handler for Collector {
     }
 
     fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
-        if let Some(ref progress) = self.progress {
+        if let Some(ref updater) = self.updater {
             let dltotal = dltotal as usize;
             let dlnow = dlnow as usize;
             let ultotal = ultotal as usize;
             let ulnow = ulnow as usize;
             let stats = ProgressStats::new(dlnow, ulnow, dltotal, ultotal);
-            progress.update(stats);
+            updater.update(stats);
         }
         true
     }

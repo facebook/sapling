@@ -9,7 +9,7 @@ use curl::{
 };
 
 use crate::errors::ApiResult;
-use crate::progress::ProgressManager;
+use crate::progress::ProgressReporter;
 
 /// Timeout for a single iteration of waiting for activity
 /// on any active transfer in a curl::Multi session.
@@ -20,7 +20,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct MultiDriver<'a, H> {
     multi: &'a mut Multi,
     handles: RefCell<Vec<Option<Easy2Handle<H>>>>,
-    progress: Option<ProgressManager>,
+    progress: Option<ProgressReporter>,
     num_transfers: usize,
     fail_early: bool,
 }
@@ -36,11 +36,11 @@ impl<'a, H> MultiDriver<'a, H> {
         }
     }
 
-    pub fn set_progress_manager(&mut self, progress: ProgressManager) {
+    pub fn set_progress_reporter(&mut self, progress: ProgressReporter) {
         self.progress = Some(progress);
     }
 
-    pub fn progress(&self) -> Option<&ProgressManager> {
+    pub fn progress(&self) -> Option<&ProgressReporter> {
         self.progress.as_ref()
     }
 

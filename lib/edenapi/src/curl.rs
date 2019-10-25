@@ -25,7 +25,7 @@ use types::{
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
 use crate::errors::{ApiError, ApiErrorKind, ApiResult};
-use crate::progress::{ProgressFn, ProgressManager};
+use crate::progress::{ProgressFn, ProgressReporter};
 use crate::stats::DownloadStats;
 
 mod driver;
@@ -410,20 +410,20 @@ where
     let requests = requests.into_iter().collect::<Vec<_>>();
     let num_requests = requests.len();
 
-    let mut progress = ProgressManager::with_capacity(num_requests);
+    let mut progress = ProgressReporter::with_capacity(num_requests);
     let mut driver = MultiDriver::with_capacity(multi, num_requests);
     driver.fail_early(true);
 
     for request in requests {
-        let handle = progress.register();
-        let handler = Collector::with_progress(handle);
+        let updater = progress.new_updater();
+        let handler = Collector::with_progress(updater);
         let mut easy = new_easy_handle(creds, handler)?;
         prepare_cbor_post(&mut easy, &url, &request)?;
         driver.add(easy)?;
     }
 
     progress.set_callback(progress_cb);
-    driver.set_progress_manager(progress);
+    driver.set_progress_reporter(progress);
 
     log::debug!("Performing {} requests", num_requests);
     let start = Instant::now();
