@@ -19,6 +19,11 @@ def getownerteam(ui):
     )
 
 
+def getconfighelp(ui):
+    # internal config: help.commitcloud-config-remediate
+    return ui.config("help", "commitcloud-config-remediate")
+
+
 class UnexpectedError(error.Abort):
     def __init__(self, ui, message, *args):
         details = traceback.format_exc()  # last part of traceback
@@ -59,8 +64,10 @@ class WorkspaceError(error.Abort):
 
 class ConfigurationError(error.Abort):
     def __init__(self, ui, message, *args):
-        contact = _("(please contact %s to report misconfiguration)") % getownerteam(ui)
-        message = "config error: %s\n%s" % (message, contact)
+        helptext = getconfighelp(ui)
+        message = "config error: %s" % (message,)
+        if helptext:
+            message += "\n" + helptext
         super(ConfigurationError, self).__init__(
             message, *args, component="commitcloud"
         )
