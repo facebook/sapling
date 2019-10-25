@@ -6,7 +6,7 @@
 # The files in the eden/fs/win/mount and eden/fs/win/store directories
 # have interlinked dependencies on each other, so they have to be combined into
 # a single library.
-file(GLOB CONFIG_SRCS "mount/*.cpp" "store/*.cpp")
+file(GLOB CONFIG_SRCS "mount/*.cpp" "store/*.cpp" "mount/*.h" "store/*.h")
 add_library(
   eden_win STATIC
     ${CONFIG_SRCS}

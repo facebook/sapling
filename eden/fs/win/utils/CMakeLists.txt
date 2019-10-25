@@ -3,7 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB CONFIG_SRCS "*.cpp")
+# Adding header files in CMake will add them to Visual Studio project
+file(GLOB CONFIG_SRCS "*.cpp" "*.h")
 add_library(
   eden_win_utils STATIC
     ${CONFIG_SRCS}
