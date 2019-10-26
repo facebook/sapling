@@ -8,6 +8,7 @@ file(GLOB TELEMETRY_SRCS "*.cpp")
 if (WIN32)
   list(
     REMOVE_ITEM TELEMETRY_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/ScubaStructuredLogger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SubprocessScribeLogger.cpp
   )
 endif()

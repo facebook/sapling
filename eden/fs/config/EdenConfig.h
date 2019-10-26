@@ -281,6 +281,19 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether Eden reads from Mercurial's datapack store.
    */
   ConfigSetting<bool> useDatapack{"hg:use-datapack", false, this};
+
+  /**
+   * Location of scribe_cat binary on the system. If not specified, scribe
+   * logging will be disabled.
+   */
+  ConfigSetting<std::string> scribeLogger{"telemetry:scribe-cat", "", this};
+
+  /**
+   * Scribe category is the first argument passed to the scribe_cat binary.
+   */
+  ConfigSetting<std::string> scribeCategory{"telemetry:scribe-category",
+                                            "",
+                                            this};
 };
 } // namespace eden
 } // namespace facebook
