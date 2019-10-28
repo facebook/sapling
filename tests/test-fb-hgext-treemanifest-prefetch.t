@@ -1,28 +1,15 @@
-  $ setconfig extensions.treemanifest=!
-There are three cases which are of interest in this test:
-
- - client remotefilelog enabled and the client repo is a shallowrepo
- In this case, the expectation is that the prefetch command will be able to
- prefetch both trees and files.
-
- - client remotefilelog enabled and the client repo is not a shallowrepo
- In this case, the expectation is that the prefetch command will be able to only
- prefetch trees.
-
- - client remotefilelog disabled
- In this case, the expectation is that the prefetch command will be able to only
- prefetch trees and will not be able to perform operations like repack which
- require remotefilelog.
-
-#testcases remotefilelog.true.shallowrepo.true remotefilelog.true.shallowrepo.false remotefilelog.false
-
   $ CACHEDIR=`pwd`/hgcache
-  $ setconfig treemanifest.treeonly=False
 
   $ . "$TESTDIR/library.sh"
 
   $ hginit master
   $ cd master
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > server=True
+  > [remotefilelog]
+  > server=True
+  > EOF
   $ mkdir dir
   $ echo x > dir/x
   $ hg commit -qAm 'add x'
@@ -32,82 +19,56 @@ There are three cases which are of interest in this test:
   $ echo x >> dir/x
   $ hg commit -Am 'modify x'
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > 
   > [remotefilelog]
   > server=True
   > name=master
   > cachepath=$CACHEDIR
   > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
-  > 
   > [treemanifest]
   > server=True
+  > sendtrees=True
   > EOF
 
   $ cd ..
 
-#if remotefilelog.true.shallowrepo.true
   $ hgcloneshallow ssh://user@dummy/master client
   streaming all changes
-  3 files to transfer, 749 bytes of data
-  transferred 749 bytes in * seconds (*) (glob)
+  3 files to transfer, 746 bytes of data
+  transferred 746 bytes in * seconds (*) (glob)
   searching for changes
   no changes found
   updating to branch default
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
+  3 trees fetched over * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
-#else
-  $ hg clone ssh://user@dummy/master client
-  streaming all changes
-  5 files to transfer, * of data (glob)
-  transferred 952 bytes in * seconds (*) (glob)
-  searching for changes
-  no changes found
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-#endif
 
   $ cd master
-  $ hg backfilltree
 
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > fastmanifest=
   > [remotefilelog]
   > reponame = master
   > prefetchdays=0
   > cachepath = $CACHEDIR
-  > [fastmanifest]
-  > usetree = True
-  > usecache = False
   > EOF
-
-#if remotefilelog.false
-  $ cat >> .hg/hgrc <<EOF
-  > 
-  > [extensions]
-  > remotefilelog=!
-  > EOF
-#endif
 
 Test prefetch
   $ hg prefetch -r '0 + 1 + 2'
-  6 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  4 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests
-  29938257d506f677320d5abec8e34a1a9ed635fe.histidx
-  29938257d506f677320d5abec8e34a1a9ed635fe.histpack
-  adc41dd93f904447812dd994d49bce59ea7c4360.dataidx
-  adc41dd93f904447812dd994d49bce59ea7c4360.datapack
+  214f2046312905a44188b27497625a36ffaa4c3d.histidx
+  214f2046312905a44188b27497625a36ffaa4c3d.histpack
+  5363bd2b98ea8fb0987f683c0cae80e0313e95a6.dataidx
+  5363bd2b98ea8fb0987f683c0cae80e0313e95a6.datapack
+  9695a88823f13dc82d06280705d9b37f7c25c50d.histidx
+  9695a88823f13dc82d06280705d9b37f7c25c50d.histpack
+  9c4f8bc12fc0d3a742847e75687c57cc0cafa334.dataidx
+  9c4f8bc12fc0d3a742847e75687c57cc0cafa334.datapack
   $ hg debugdatapack --config extensions.remotefilelog= \
   > --long $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
+  $TESTTMP/hgcache/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6:
   subdir:
   Node                                      Delta Base                                Delta Length  Blob Size
   ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
@@ -118,19 +79,24 @@ Test prefetch
   
   dir:
   Node                                      Delta Base                                Delta Length  Blob Size
-  a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43            (missing)
-  
-  (empty name):
-  Node                                      Delta Base                                Delta Length  Blob Size
-  60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95            (missing)
-  
-  dir:
-  Node                                      Delta Base                                Delta Length  Blob Size
   bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43            (missing)
   
   (empty name):
   Node                                      Delta Base                                Delta Length  Blob Size
   ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46            (missing)
+  
+  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
+  dir:
+  Node                                      Delta Base                                Delta Length  Blob Size
+  a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43            (missing)
+  
+  subdir:
+  Node                                      Delta Base                                Delta Length  Blob Size
+  ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
+  
+  (empty name):
+  Node                                      Delta Base                                Delta Length  Blob Size
+  60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95            (missing)
   
   $ hg debughistorypack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.histidx
@@ -138,20 +104,30 @@ Test prefetch
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   60a7f7acb6bb  1be4ab2126dd  000000000000  bd6f9b289c01  
+  
+  dir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  a18d21674e76  bc0c2c938b92  000000000000  bd6f9b289c01  
+  
+  subdir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
   1be4ab2126dd  ef362f8bbe8a  000000000000  f15c65c6e9bd  
   ef362f8bbe8a  000000000000  000000000000  ecfb693caff5  
   
   dir
   Node          P1 Node       P2 Node       Link Node     Copy From
-  a18d21674e76  bc0c2c938b92  000000000000  bd6f9b289c01  
   bc0c2c938b92  000000000000  000000000000  ecfb693caff5  
   
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
   ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
   $ hg debugdatapack --config extensions.remotefilelog= \
-  > --node-delta ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
+  > --node-delta ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6:
   
   
   Node                                      Delta Base                                Delta SHA1                                Delta Length
@@ -161,22 +137,16 @@ Test prefetch
        0         0      47     -1       0 ef362f8bbe8a 000000000000 000000000000
        1        47      61      0       1 1be4ab2126dd ef362f8bbe8a 000000000000
        2       108      58      1       2 60a7f7acb6bb 1be4ab2126dd 000000000000
-  $ hg -R ../master debugindex ../master/.hg/store/00manifest.i
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      48     -1       0 ef362f8bbe8a 000000000000 000000000000
-       1        48      62      0       1 1be4ab2126dd ef362f8bbe8a 000000000000
-       2       110      59      1       2 60a7f7acb6bb 1be4ab2126dd 000000000000
 
 Test prefetch with base node (subdir/ shouldn't show up in the pack)
   $ rm -rf $CACHEDIR/master
 
-#if remotefilelog.true.shallowrepo.true
 Multiple trees are fetched in this case because the file prefetching code path
 requires tree manifest for the base commit.
 
   $ hg prefetch -r '2' --base '1'
   2 trees fetched over * (glob)
-  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   2 trees fetched over * (glob)
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
@@ -206,37 +176,14 @@ requires tree manifest for the base commit.
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-#else
-  $ hg prefetch -r '2' --base '1'
-  2 trees fetched over * (glob)
-  $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d.dataidx
-
-  $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
-#endif
-
 Test prefetching when a draft commit is marked public
   $ mkdir $TESTTMP/cachedir.bak
   $ mv $CACHEDIR/* $TESTTMP/cachedir.bak
 
 - Create a draft commit, and force it to be public
-#if remotefilelog.true.shallowrepo.true
   $ hg prefetch -r .
   3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
-#else
-  $ hg prefetch -r .
-  3 trees fetched over * (glob)
-#endif
   $ echo foo > foo
   $ hg commit -Aqm 'add foo'
   $ hg phase -p -r .
@@ -291,7 +238,7 @@ Test auto prefetch during normal access
    dir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack
@@ -324,16 +271,16 @@ Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r tip
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
 - Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
   $ hg log -r tip --stat --pager=off > /dev/null
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 Test auto prefetch during pull
 
@@ -405,7 +352,7 @@ Test auto prefetch during pull
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 1
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
@@ -457,8 +404,7 @@ Test prefetching certain revs during pull
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files (remotefilelog.true.shallowrepo.true !)
-  added 2 changesets with 2 changes to 1 files (no-remotefilelog.true.shallowrepo.true !)
+  added 2 changesets with 0 changes to 0 files
   new changesets dece825f8add:cfacdcc4cee5
   prefetching tree for bd6f9b289c01
   3 trees fetched over * (glob)
@@ -515,13 +461,13 @@ Test that prefetch refills just part of a tree when the cache is deleted
 
   $ echo >> dir/x
   $ hg commit -m 'edit x locally'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
   z
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 Test prefetch non-parent commits with no base node (should fetch minimal
 trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
@@ -529,33 +475,27 @@ trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r '2 + 4'
   5 trees fetched over * (glob)
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
 
 Test repack option
   $ rm -rf $CACHEDIR/master
 
   $ hg prefetch -r '0'
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ hg prefetch -r '2'
   3 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
 
-#if remotefilelog.false
-  $ hg prefetch -r '4' --repack
-  abort: repack requires remotefilelog extension
-  [255]
-#else
   $ hg prefetch -r '4' --repack
   2 trees fetched over * (glob)
   (running background incremental repack)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
   $ sleep 3
   $ hg debugwaitonrepack
   $ ls_l $CACHEDIR/master/packs/manifests | grep datapack | wc -l
   \s*1 (re)
-#endif
 
 Test prefetching with no options works. The expectation is to prefetch the stuff
 required for working with the draft commits which happens to be only revision 5
@@ -563,7 +503,6 @@ in this case.
 
   $ rm -rf $CACHEDIR/master
 
-#if remotefilelog.true.shallowrepo.true
 The tree prefetching code path fetches no trees for revision 5. However, the
 file prefetching code path fetches 1 file for revision 5 and while doing so,
 also fetches 3 trees dealing with the tree manifest of the base revision 2.
@@ -572,11 +511,6 @@ also fetches 3 trees dealing with the tree manifest of the base revision 2.
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-#else
-The tree prefetching code path fetches no trees for revision 5. And there is no
-prefetching of files in this test case.
-  $ hg prefetch
-#endif
 
 Running prefetch in the master repository should exit gracefully
 
