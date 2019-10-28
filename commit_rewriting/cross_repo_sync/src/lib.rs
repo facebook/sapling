@@ -256,14 +256,6 @@ where
         self.repos.get_mover()
     }
 
-    fn get_commit_sync_outcome_boxed(
-        &self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> future::BoxFuture<Result<Option<CommitSyncOutcome>, Error>> {
-        self.get_commit_sync_outcome(ctx, source_cs_id).boxed()
-    }
-
     pub fn get_commit_sync_outcome_compat(
         self,
         ctx: CoreContext,
@@ -282,6 +274,38 @@ where
         get_commit_sync_outcome_wrapper(self, ctx, source_cs_id)
             .boxed()
             .compat()
+    }
+
+    /// Check to see if this commit should exist in the target repo
+    /// Either the source repo is small or the source cs has files that should be present in the target repo
+    async fn should_be_present_in_target(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<bool, Error> {
+        if !self.repos.source_is_large() {
+            return Ok(true);
+        }
+
+        let source_cs = self
+            .get_source_repo()
+            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+            .compat()
+            .await?;
+
+        let remapped_files: Result<Vec<_>, Error> = source_cs
+            .file_changes()
+            .map(|(path, _)| self.get_mover()(path))
+            .collect();
+
+        let remapped_files = remapped_files?;
+
+        // A commit will be synced if it touches no files at all, or if at least one
+        // file is kept in the target repo
+        Ok(remapped_files.is_empty()
+            || remapped_files
+                .into_iter()
+                .any(|opt_path| opt_path.is_some()))
     }
 
     pub async fn get_commit_sync_outcome(
@@ -307,62 +331,57 @@ where
             }
         }
 
-        // Check to see if this commit should exist in the target repo
-        // Either the source repo is small or the source cs has files that should be present in the target repo
-        let should_be_present_in_target = !self.repos.source_is_large() || {
-            let source_cs = self
-                .get_source_repo()
-                .get_bonsai_changeset(ctx.clone(), source_cs_id)
-                .compat()
-                .await?;
-
-            let remapped_files: Result<Vec<_>, Error> = source_cs
-                .file_changes()
-                .map(|(path, _)| self.get_mover()(path))
-                .collect();
-
-            let remapped_files = remapped_files?;
-
-            // A commit will be synced if it touches no files at all, or if at least one
-            // file is kept in the target repo
-            remapped_files.is_empty()
-                || remapped_files
-                    .into_iter()
-                    .any(|opt_path| opt_path.is_some())
-        };
+        let should_be_present_in_target = self
+            .should_be_present_in_target(ctx.clone(), source_cs_id)
+            .await?;
 
         // Do an ancestor walk to find out what outcome (if any) is in place
-        let mut candidate_commits = AncestorsNodeStream::new(
+        // TODO(T56351515): Replace this by recursion on parents, to correctly handle merges
+        let mut ancestors = AncestorsNodeStream::new(
             ctx.clone(),
             &self.get_source_repo().get_changeset_fetcher(),
             source_cs_id,
         )
         .compat()
-        // Skip over the current commit - we just want ancestors here, and the first return will be
-        // source_cs_id.
-        .skip(1)
-        .and_then(|candidate| self.get_commit_sync_outcome_boxed(ctx.clone(), candidate));
+        // Skip the commit we're considering - it's always the first to be returned, and we know it doesn't remap
+        .skip(1);
 
-        // Here, we know that the commit has not yet been synced, and whether it should change the target working copy
-        // Now look at ancestors to decide what to do with this commit
-        while let Some(state) = candidate_commits.try_next().await? {
-            // TODO: If a commit does not remap, do we need to check all its parents to know if it can be synced?
-            // Or can we get away with looking at its parents in generation order?
-            match (should_be_present_in_target, state) {
-                // The commit should be present in the target, and has a synced ancestor.
-                // This commit needs syncing before we know what the outcome is
-                (true, Some(CommitSyncOutcome::Preserved))
-                | (true, Some(CommitSyncOutcome::RewrittenAs(_))) => return Ok(None),
-                // The commit will be removed during syncing, but has an ancestor that was rewritten.
-                // We can't directly sync it, but we know what you should replace it with during sync
-                (false, Some(CommitSyncOutcome::RewrittenAs(cs))) => {
-                    return Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs)))
+        while let Some(ancestor) = ancestors.try_next().await? {
+            if let Some(remapped_ancestor) = remap_changeset_id(
+                ctx.clone(),
+                ancestor,
+                self.repos.get_source_repo(),
+                self.repos.get_target_repo(),
+                &self.mapping,
+            )
+            .await?
+            {
+                // We have an ancestor that's been synced.
+                // If that ancestor is unchanged, then we need to be synced, too, regardless of what files we change
+                // TODO(T56351515): This will only apply if all parents are unchanged in a merge situation
+                if remapped_ancestor == ancestor {
+                    return Ok(None);
                 }
-                // If the state of a parent is unknown, then this commit is in unknown state
-                (_, None) => return Ok(None),
-                // Else we need to go deeper to determine the replacement
-                // TODO: Can we use EquivalentWorkingCopyAncestor to identify that there's a RewrittenAs ancestor?
-                _ => continue,
+                // If we change files in the target repo, then we need to be synced, too.
+                else if should_be_present_in_target {
+                    return Ok(None);
+                }
+                // Finally, if the ancestor has been rewritten, but we don't change the target repo,
+                // then we have the same working copy as that ancestor in the target repo
+                // TODO(T56351515): Is this true in a merge situation?
+                else {
+                    return Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(
+                        remapped_ancestor,
+                    )));
+                }
+            } else {
+                // If this ancestor should be synced, but isn't, then we need to be synced, too
+                if self
+                    .should_be_present_in_target(ctx.clone(), ancestor)
+                    .await?
+                {
+                    return Ok(None);
+                }
             }
         }
 
