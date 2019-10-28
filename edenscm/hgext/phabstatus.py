@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os
+import ssl
 
 from edenscm.mercurial import (
     cmdutil,
@@ -91,15 +92,13 @@ def getdiffstatus(repo, *diffid):
         statuses = client.getrevisioninfo(timeout, signalstatus, diffid)
     except arcconfig.ArcConfigError as ex:
         msg = _(
-            "arcconfig configuration problem. No diff information can be " "provided.\n"
+            "arcconfig configuration problem. No diff information can be provided.\n"
         )
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
-    except graphql.ClientError as ex:
-        msg = _(
-            "Error talking to phabricator. No diff information can be " "provided.\n"
-        )
+    except (graphql.ClientError, ssl.SSLError) as ex:
+        msg = _("Error talking to phabricator. No diff information can be provided.\n")
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
