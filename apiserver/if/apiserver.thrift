@@ -7,7 +7,6 @@
  */
 
 include "common/fb303/if/fb303.thrift"
-include "scm/service/if/source_control.thrift"
 
 namespace cpp2 scm.mononoke.apiserver.thrift
 namespace py scm.mononoke.apiserver.thrift.apiserver
@@ -148,7 +147,7 @@ enum MononokeFileType {
   SYMLINK = 3,
 }
 
-service MononokeAPIService extends source_control.SourceControlService {
+service MononokeAPIService extends fb303.FacebookService {
   binary get_raw(1: MononokeGetRawParams params)
     throws (1: MononokeAPIException e),
 

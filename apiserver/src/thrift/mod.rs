@@ -12,12 +12,10 @@ use std::thread;
 use cloned::cloned;
 use slog::{info, Logger};
 
-use ::source_control::server::make_SourceControlService_server;
 use apiserver_thrift::server::make_MononokeAPIService_server;
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
-use mononoke_api::Mononoke as NewMononoke;
 use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
@@ -26,13 +24,11 @@ use tokio::runtime::TaskExecutor;
 
 use self::facebook::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;
-use self::source_control::SourceControlServiceImpl;
 use super::actor::Mononoke;
 use scuba_ext::ScubaSampleBuilder;
 
 mod facebook;
 mod mononoke;
-mod source_control;
 
 pub fn make_thrift(
     fb: FacebookInit,
@@ -41,28 +37,12 @@ pub fn make_thrift(
     host: String,
     port: u16,
     mononoke: Arc<Mononoke>,
-    new_mononoke: Arc<NewMononoke>,
     scuba_builder: ScubaSampleBuilder,
 ) {
     let base = |proto| make_BaseService_server(proto, FacebookServiceImpl);
     let fb_svc = move |proto| make_FacebookService_server(proto, FacebookServiceImpl, base);
-    let sc_svc = {
-        cloned!(new_mononoke, logger, scuba_builder);
-        move |proto| {
-            make_SourceControlService_server(
-                proto,
-                SourceControlServiceImpl::new(
-                    fb,
-                    new_mononoke.clone(),
-                    logger.clone(),
-                    scuba_builder.clone(),
-                ),
-                fb_svc,
-            )
-        }
-    };
     let api_svc = {
-        cloned!(mononoke, logger, scuba_builder);
+        cloned!(logger);
         move |proto| {
             make_MononokeAPIService_server(
                 proto,
@@ -72,7 +52,7 @@ pub fn make_thrift(
                     logger.clone(),
                     scuba_builder.clone(),
                 ),
-                sc_svc.clone(),
+                fb_svc.clone(),
             )
         }
     };

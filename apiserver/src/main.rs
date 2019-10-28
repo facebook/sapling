@@ -607,7 +607,6 @@ fn main(fb: FacebookInit) -> Fallible<()> {
             host.to_string(),
             port,
             mononoke.clone(),
-            new_mononoke.clone(),
             scuba_builder.clone(),
         );
     }
