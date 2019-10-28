@@ -11,6 +11,7 @@ use hyper::{Body, Response};
 use std::panic::RefUnwindSafe;
 
 mod client_identity;
+mod load;
 mod log;
 mod ods;
 mod request_context;
@@ -19,6 +20,7 @@ mod server_identity;
 mod timer;
 
 pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
+pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};

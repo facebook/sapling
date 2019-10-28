@@ -41,8 +41,8 @@ use cmdlib::{args, monitoring::create_fb303_and_stats_agg};
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
-    ClientIdentityMiddleware, LogMiddleware, OdsMiddleware, RequestContextMiddleware,
-    ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
+    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
+    RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
 };
 use crate::router::build_router;
 
@@ -227,6 +227,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .add(RequestContextMiddleware::new())
         .add(LogMiddleware::new(logger.clone()))
         .add(ServerIdentityMiddleware::new())
+        .add(LoadMiddleware::new())
         .add(ScubaMiddleware::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())

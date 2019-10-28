@@ -16,7 +16,7 @@ use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{ClientIdentity, Middleware, RequestContext};
+use super::{ClientIdentity, Middleware, RequestContext, RequestLoad};
 
 #[derive(Clone)]
 pub struct ScubaMiddleware {
@@ -75,6 +75,10 @@ fn log_stats(state: &mut State, status_code: &StatusCode) -> Option<()> {
             let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
             scuba.add("client_identities", identities);
         }
+    }
+
+    if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
+        scuba.add("request_load", request_load.0);
     }
 
     scuba.add("request_id", request_id(&state));
