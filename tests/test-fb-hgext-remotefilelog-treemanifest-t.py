@@ -8,10 +8,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig 'extensions.treemanifest=!'"
-
 sh % '. "$TESTDIR/library.sh"'
-sh % "setconfig 'treemanifest.treeonly=False'"
 
 sh % "hginit master"
 
@@ -31,20 +28,18 @@ server=True
 sh % "mkdir dir"
 sh % "echo x" > "dir/x"
 sh % "hg commit -qAm x1"
-sh % "hg backfilltree"
 sh % "cd .."
 
 # Clone with shallowtrees not set (False)
 
-sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate --config 'extensions.fastmanifest='" == r"""
+sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate" == r"""
     streaming all changes
-    4 files to transfer, 347 bytes of data
-    transferred 347 bytes in 0.0 seconds (339 KB/sec)
+    3 files to transfer, 235 bytes of data
+    transferred 235 bytes in 0.0 seconds (229 KB/sec)
     searching for changes
     no changes found"""
 sh % "ls 'shallow/.hg/store/00*.i'" == r"""
     shallow/.hg/store/00changelog.i
-    shallow/.hg/store/00manifest.i
     shallow/.hg/store/00manifesttree.i"""
 sh % "rm -rf shallow"
 
@@ -54,12 +49,10 @@ sh % "cat" << r"""
 shallowtrees=True
 """ >> "master/.hg/hgrc"
 
-sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate --config 'extensions.fastmanifest='" == r"""
+sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate" == r"""
     streaming all changes
-    3 files to transfer, 236 bytes of data
-    transferred 236 bytes in 0.0 seconds (230 KB/sec)
+    2 files to transfer, 124 bytes of data
+    transferred 124 bytes in 0.0 seconds (121 KB/sec)
     searching for changes
     no changes found"""
-sh % "ls 'shallow/.hg/store/00*.i'" == r"""
-    shallow/.hg/store/00changelog.i
-    shallow/.hg/store/00manifest.i"""
+sh % "ls 'shallow/.hg/store/00*.i'" == "shallow/.hg/store/00changelog.i"
