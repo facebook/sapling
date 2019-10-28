@@ -2,24 +2,33 @@
 
 //! A simple binary that computes the diff between two files.
 
-use std::env;
 use std::fs;
+use std::path::PathBuf;
+use structopt::StructOpt;
 use xdiff::{diff_unified, DiffFile, DiffOpts};
 
+#[derive(Debug, StructOpt)]
+#[structopt(name = "diff", about = "A showcase binary for xdiff diff library.")]
+
+struct Opt {
+    /// Input file
+    #[structopt(parse(from_os_str))]
+    file_a: PathBuf,
+
+    /// Output file, stdout if not present
+    #[structopt(parse(from_os_str))]
+    file_b: PathBuf,
+}
+
 fn main() -> Result<(), std::io::Error> {
-    let args: Vec<String> = env::args().collect();
+    let opt = Opt::from_args();
 
-    if args.len() < 3 {
-        eprintln!("usage: {} FILE1 FILE2\n", &args[0]);
-        std::process::exit(1);
-    }
-
-    let a = fs::read(&args[1])?;
-    let b = fs::read(&args[2])?;
+    let a = fs::read(&opt.file_a)?;
+    let b = fs::read(&opt.file_b)?;
 
     let diff = diff_unified(
-        Some(DiffFile::new(&args[1], &a)),
-        Some(DiffFile::new(&args[2], &b)),
+        Some(DiffFile::new(&opt.file_a.to_string_lossy().as_bytes(), &a)),
+        Some(DiffFile::new(&opt.file_b.to_string_lossy().as_bytes(), &b)),
         DiffOpts { context: 3 },
     );
 
