@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+auth = { path = "../auth" }
 bytes = "0.4.11"
+configparser = { path = "../configparser" }
 curl = { version = "0.4.20", features = ["http2"] }
 failure = "0.1.3"
 http = "0.1.17"
@@ -14,4 +16,7 @@ parking_lot = "0.9"
 serde = "1.0.89"
 serde_cbor = "0.9.0"
 types = { path = "../types" }
-url = "1.7.2"
+url = "2.1.0"
+
+[dev-dependencies]
+tempdir = "0.3.7"

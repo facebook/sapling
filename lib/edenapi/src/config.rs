@@ -2,7 +2,11 @@
 
 use std::path::{Path, PathBuf};
 
+use failure::ResultExt;
 use url::Url;
+
+use auth::AuthConfig;
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 
 use crate::errors::{ApiErrorKind, ApiResult};
 
@@ -22,6 +26,56 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn from_hg_config(config: &ConfigSet) -> ApiResult<Self> {
+        let base_url = config
+            .get_opt("edenapi", "url")
+            .context(ApiErrorKind::BadConfig("edenapi.url".into()))?
+            .map(|s: String| s.parse())
+            .transpose()?;
+        let creds = base_url
+            .as_ref()
+            .and_then(|url| AuthConfig::new(&config).auth_for_url(url))
+            .and_then(|auth| match (auth.cert, auth.key) {
+                (Some(cert), Some(key)) => Some(ClientCreds::new(cert, key)),
+                _ => None,
+            })
+            .transpose()?;
+
+        let repo = config
+            .get_opt("remotefilelog", "reponame")
+            .context(ApiErrorKind::BadConfig("remotefilelog.reponame".into()))?;
+        let data_batch_size = config
+            .get_opt("edenapi", "databatchsize")
+            .context(ApiErrorKind::BadConfig("edenapi.databatchsize".into()))?;
+        let history_batch_size = config
+            .get_opt("edenapi", "historybatchsize")
+            .context(ApiErrorKind::BadConfig("edenapi.historybatchsize".into()))?;
+        let validate = config
+            .get_or_default("edenapi", "validate")
+            .context(ApiErrorKind::BadConfig("edenapi.validate".into()))?;
+        let stream_data = config
+            .get_or_default("edenapi", "streamdata")
+            .context(ApiErrorKind::BadConfig("edenapi.streamdata".into()))?;
+        let stream_history = config
+            .get_or_default("edenapi", "streamhistory")
+            .context(ApiErrorKind::BadConfig("edenapi.streamhistory".into()))?;
+        let stream_trees = config
+            .get_or_default("edenapi", "streamtrees")
+            .context(ApiErrorKind::BadConfig("edenapi.streamtrees".into()))?;
+
+        Ok(Self {
+            base_url,
+            creds,
+            repo,
+            data_batch_size,
+            history_batch_size,
+            validate,
+            stream_data,
+            stream_history,
+            stream_trees,
+        })
     }
 
     /// Base URL of the Mononoke API server host.
@@ -103,15 +157,15 @@ impl Config {
 /// certificate chain and an RSA or ECDSA private key.
 #[derive(Clone, Debug)]
 pub struct ClientCreds {
-    pub(crate) certs: PathBuf,
+    pub(crate) cert: PathBuf,
     pub(crate) key: PathBuf,
 }
 
 impl ClientCreds {
-    pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> ApiResult<Self> {
-        let certs = certs.as_ref().to_path_buf();
-        if !certs.is_file() {
-            return Err(ApiErrorKind::BadCertificate(certs).into());
+    pub fn new(cert: impl AsRef<Path>, key: impl AsRef<Path>) -> ApiResult<Self> {
+        let cert = cert.as_ref().to_path_buf();
+        if !cert.is_file() {
+            return Err(ApiErrorKind::BadCertificate(cert).into());
         }
 
         let key = key.as_ref().to_path_buf();
@@ -119,6 +173,66 @@ impl ClientCreds {
             return Err(ApiErrorKind::BadCertificate(key).into());
         }
 
-        Ok(Self { certs, key })
+        Ok(Self { cert, key })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::fs::File;
+
+    use failure::Fallible;
+    use tempdir::TempDir;
+
+    use configparser::config::Options;
+
+    #[test]
+    fn test_from_hg_config() -> Fallible<()> {
+        // Need to ensure that configured cert and key
+        // paths actually exist on disk since otherwise
+        // the auth crate will ignore the auth settings.
+        let tmp = TempDir::new("test_from_hg_config")?;
+        let cert = tmp.path().to_path_buf().join("cert.pem");
+        let key = tmp.path().to_path_buf().join("key.pem");
+        let _ = File::create(&cert)?;
+        let _ = File::create(&key)?;
+
+        let mut hg_config = ConfigSet::new();
+        let _errors = hg_config.parse(
+            format!(
+                "[remotefilelog]\n\
+                 reponame = repo\n\
+                 [edenapi]\n\
+                 url = https://example.com/repo\n\
+                 databatchsize = 1234\n\
+                 historybatchsize = 5678\n\
+                 validate = true\n\
+                 streamdata = true\n\
+                 [auth]\n\
+                 edenapi.prefix = example.com\n\
+                 edenapi.cert = {}\n\
+                 edenapi.key = {}\n\
+                 ",
+                cert.to_string_lossy(),
+                key.to_string_lossy()
+            ),
+            &Options::default(),
+        );
+        let config = Config::from_hg_config(&hg_config)?;
+
+        assert_eq!(config.repo, Some("repo".into()));
+        assert_eq!(config.base_url, Some("https://example.com/repo".parse()?));
+        assert_eq!(config.creds.as_ref().expect("cert missing").cert, cert);
+        assert_eq!(config.creds.as_ref().expect("key missing").key, key);
+        assert_eq!(config.data_batch_size, Some(1234));
+        assert_eq!(config.history_batch_size, Some(5678));
+        assert_eq!(config.validate, true);
+        assert_eq!(config.stream_data, true);
+        assert_eq!(config.stream_history, false);
+        assert_eq!(config.stream_trees, false);
+
+        Ok(())
     }
 }

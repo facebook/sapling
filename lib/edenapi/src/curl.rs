@@ -519,8 +519,8 @@ where
 /// Configure a new curl::Easy2 handle with appropriate default settings.
 fn new_easy_handle<H: Handler>(creds: Option<&ClientCreds>, handler: H) -> ApiResult<Easy2<H>> {
     let mut handle = Easy2::new(handler);
-    if let Some(ClientCreds { ref certs, ref key }) = creds {
-        handle.ssl_cert(certs)?;
+    if let Some(ClientCreds { ref cert, ref key }) = creds {
+        handle.ssl_cert(cert)?;
         handle.ssl_key(key)?;
     }
     handle.http_version(HttpVersion::V2)?;
