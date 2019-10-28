@@ -6,6 +6,7 @@
     # Name of the rpm binary
     rpmbin = rpm
 """
+import ctypes
 import datetime
 import glob
 import json
@@ -15,6 +16,7 @@ import socket
 import struct
 import subprocess
 import tempfile
+import threading
 import time
 import traceback
 from functools import partial
@@ -98,7 +100,8 @@ def _tail(userlogdir, userlogfiles, nlines=100):
 
 
 rageopts = [
-    ("p", "preview", None, _("print diagnostic information without uploading paste"))
+    ("p", "preview", None, _("print diagnostic information without uploading paste")),
+    ("t", "timeout", 20, _("maximum seconds spent on collecting one section")),
 ]
 
 
@@ -230,15 +233,18 @@ def _makerage(ui, repo, **opts):
         if "_repo" in opts:
             _repo = opts["_repo"]
             del opts["_repo"]
-        ui.pushbuffer(error=True)
+        # If we failed to popbuffer for some reason, do not mess up with the
+        # main `ui` object.
+        newui = ui.copy()
+        newui.pushbuffer(error=True)
         try:
             with ui.configoverride(configoverrides, "rage"):
                 if cmd.norepo:
-                    cmd(ui, *args, **opts)
+                    cmd(newui, *args, **opts)
                 else:
-                    cmd(ui, _repo, *args, **opts)
+                    cmd(newui, _repo, *args, **opts)
         finally:
-            return ui.popbuffer()
+            return newui.popbuffer()
 
     basic = [
         ("date", lambda: time.ctime()),
@@ -357,16 +363,44 @@ def _makerage(ui, repo, **opts):
         )
 
     footnotes = []
+    timeout = opts.get("timeout") or 20
 
-    def _failsafe(gen):
-        try:
-            return gen()
-        except Exception as ex:
-            index = len(footnotes) + 1
-            footnotes.append(
-                "[%d]: %s\n%s\n\n" % (index, str(ex), traceback.format_exc())
+    def _failsafe(gen, timeout=timeout):
+        class TimedOut(RuntimeError):
+            pass
+
+        def target(result, gen):
+            try:
+                result.append(gen())
+            except TimedOut:
+                return
+            except Exception as ex:
+                index = len(footnotes) + 1
+                footnotes.append(
+                    "[%d]: %s\n%s\n\n" % (index, str(ex), traceback.format_exc())
+                )
+                result.append("(Failed. See footnote [%d])" % index)
+
+        result = []
+        thread = threading.Thread(target=target, args=(result, gen))
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout)
+        if result:
+            value = result[0]
+            return value
+        else:
+            if thread.is_alive():
+                # Attempt to stop the thread, since hg is not thread safe.
+                # There is no pure Python API to interrupt a thread.
+                # But CPython C API can do that.
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                    ctypes.c_long(thread.ident), ctypes.py_object(TimedOut)
+                )
+            return (
+                "(Did not complete in %s seconds, rerun with a larger --timeout to collect this)"
+                % timeout
             )
-            return "(Failed. See footnote [%d])" % index
 
     msg = []
     profile = []
