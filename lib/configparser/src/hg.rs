@@ -9,7 +9,7 @@ use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::hash::Hash;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use bytes::Bytes;
 use failure::Fallible;
@@ -410,10 +410,24 @@ impl FromConfigValue for ByteCount {
     }
 }
 
+impl FromConfigValue for PathBuf {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let st = std::str::from_utf8(&bytes)?;
+
+        Ok(expand_path(st))
+    }
+}
+
 impl<T: FromConfigValue> FromConfigValue for Vec<T> {
     fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
         let items = parse_list(bytes);
         items.into_iter().map(|s| T::try_from_bytes(&s)).collect()
+    }
+}
+
+impl<T: FromConfigValue> FromConfigValue for Option<T> {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        T::try_from_bytes(&bytes).map(Option::Some)
     }
 }
 

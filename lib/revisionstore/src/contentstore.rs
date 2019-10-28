@@ -7,7 +7,7 @@ use std::{
 
 use failure::{format_err, Fallible};
 
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use edenapi::EdenApi;
 use types::Key;
 use util::path::create_dir;
@@ -46,11 +46,11 @@ fn get_repo_name(config: &ConfigSet) -> Fallible<String> {
 
 fn get_cache_path(config: &ConfigSet) -> Fallible<PathBuf> {
     let reponame = get_repo_name(config)?;
-    let config_path = config
-        .get("remotefilelog", "cachepath")
+    let config_path: PathBuf = config
+        .get_or_default::<Option<_>>("remotefilelog", "cachepath")?
         .ok_or_else(|| format_err!("remotefilelog.cachepath is not set"))?;
     let mut path = PathBuf::new();
-    path.push(String::from_utf8(config_path.to_vec())?);
+    path.push(config_path);
     path.push(reponame);
     create_dir(&path)?;
     Ok(path)
