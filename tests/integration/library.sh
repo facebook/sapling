@@ -738,7 +738,6 @@ function hginit_treemanifest() {
   cat >> "$1"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
-fastmanifest=!
 remotefilelog=
 smartlog=
 clienttelemetry=
@@ -761,7 +760,6 @@ function hgclone_treemanifest() {
 [extensions]
 treemanifest=
 remotefilelog=
-fastmanifest=
 smartlog=
 clienttelemetry=
 [treemanifest]
