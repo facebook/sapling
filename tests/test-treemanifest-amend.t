@@ -1,6 +1,6 @@
 Crash in histpack code path where the amend destination already exists
 
-  $ enable undo treemanifest fastmanifest remotefilelog
+  $ enable undo treemanifest remotefilelog
   $ setconfig experimental.evolution=createmarkers treemanifest.treeonly=1 remotefilelog.reponame=foo remotefilelog.cachepath=$TESTTMP/cache
   $ newrepo
   $ drawdag << 'EOS'
