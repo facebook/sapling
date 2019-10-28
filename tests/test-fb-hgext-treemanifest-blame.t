@@ -1,4 +1,3 @@
-  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH <<EOF
@@ -8,7 +7,6 @@
   > mainbranch=default
   > modes=fctx
   > EOF
-  $ setconfig treemanifest.treeonly=False
 
 Setup the server
 
@@ -17,7 +15,6 @@ Setup the server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > fastannotate=
-  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -41,16 +38,13 @@ Make local commits on the server
 Run blame on client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
+  fetching tree '' 11a84bc431b8c59b792f10ed427e7a01fc1a6b75, found via 70b8370240f6
+  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > fastannotate=
-  > fastmanifest=
-  > treemanifest=
-  > [fastmanifest]
-  > usecache=False
-  > usetree=True
   > [treemanifest]
   > demanddownload=True
   > [fastannotate]
