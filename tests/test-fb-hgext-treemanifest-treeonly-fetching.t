@@ -24,15 +24,10 @@ Setup the client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
-  > fastmanifest=
   > 
   > [treemanifest]
   > sendtrees=True
   > treeonly=True
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
   > 
   > [remotefilelog]
   > reponame=treeonlyrepo
