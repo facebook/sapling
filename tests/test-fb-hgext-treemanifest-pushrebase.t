@@ -1,7 +1,5 @@
-  $ setconfig extensions.treemanifest=!
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
-  $ setconfig treemanifest.treeonly=False
 
   $ . "$TESTDIR/library.sh"
 
@@ -12,12 +10,8 @@ TODO: Make this test compatibile with obsstore enabled.
   >        cat >> client\$i/.hg/hgrc <<EOF2
   > [paths]
   > default=ssh://user@dummy/master
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
+  > [treemanifest]
+  > sendtrees=True
   > EOF2
   > 
   >        hg -R client\$i pull -q
@@ -57,13 +51,14 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   > # Sleep gives all the hg serve processes time to load the original repo
   > # state. Otherwise there are race with loading hg server while pushes are
   > # happening.
+  > [remotefilelog]
+  > server=True
   > [hooks]
   > prepushrebase.sleep=sleep 1
   > EOF
   $ mkdir subdir/
   $ touch subdir/a && hg ci -Aqm subdir/a
   $ hg book master
-  $ hg backfilltree
   $ cd ..
 
   $ initclients
@@ -95,7 +90,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   7\x00cc31c19aff7dbbbed214ec304839a8003fdd0b10 (esc)
   8\x00cc31c19aff7dbbbed214ec304839a8003fdd0b10 (esc)
   9\x00cc31c19aff7dbbbed214ec304839a8003fdd0b10 (esc)
-  subdir/a\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
+  subdir\x008515d4bfda768e04af4c13a69a72e28c7effbea7t (esc)
 
 Test that pushrebase hooks can access the commit data
   $ cat >> $TESTTMP/cathook.sh <<EOF
@@ -111,26 +106,19 @@ Test that pushrebase hooks can access the commit data
   $ cd ..
 
   $ hg clone -q ssh://user@dummy/master hook_client
+  fetching tree '' *, based on 0ca5062b87888558ca097bff2f7511160e2e20f6, found via * (glob)
+  1 trees fetched over * (glob)
   $ cd hook_client
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
-  > EOF
   $ hg up -q master
   $ echo baz >> subdir/a
   $ hg commit -Aqm 'hook commit'
-  fetching tree * (glob)
-  1 trees fetched over * (glob)
 
 - Push without sendtrees
   $ hg push --to master -B master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: baz
+  remote: abort: "unable to find the following nodes locally or on the server: ('', *)" (glob)
+  remote: 
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
   [255]
@@ -156,5 +144,7 @@ Push an empty commit with no trees
   $ hg push --to master --rev . --config treemanifest.sendtrees=True
   pushing to ssh://user@dummy/master
   searching for changes
+  fetching tree '' *, based on *, found via * (glob)
+  1 trees fetched over * (glob)
   remote: pushing 1 changeset:
   remote:     *  Empty commit (glob)
