@@ -3,7 +3,6 @@
   $ setconfig treemanifest.flatcompat=False
 
   $ enable lfs treemanifest pushrebase
-  $ setconfig treemanifest.treeonly=True
   $ hginit master
 
   $ cd master
@@ -14,7 +13,7 @@
   $ hg book master
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow --config extensions.fastmanifest= --config fastmanifest.usetrees=True --config extensions.treemanifest= --config treemanifest.treeonly=True
+  $ hgcloneshallow ssh://user@dummy/master shallow
   streaming all changes
   2 files to transfer, * of data (glob)
   transferred 124 bytes in * seconds (*) (glob)
@@ -27,9 +26,8 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
   $ cd shallow
-  $ enable fastmanifest remotenames
-  $ setconfig fastmanifest.usetrees=True
-  $ setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
+  $ enable remotenames
+  $ setconfig treemanifest.sendtrees=True
   $ echo >> dir/x
   $ hg commit -m "Modify dir/x"
   $ hg push --to master
