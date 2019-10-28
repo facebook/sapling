@@ -13,14 +13,8 @@ different, so this is a different test script.
   $ hgcloneshallow ssh://user@dummy/master client -q
   $ cd client
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
   > [remotefilelog]
   > usefastdatapack=True
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
   > EOF
 
   $ sorted() {
