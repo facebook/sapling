@@ -342,7 +342,70 @@ impl FromConfigValue for bool {
     }
 }
 
+impl FromConfigValue for i8 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for i16 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for i32 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
 impl FromConfigValue for i64 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for isize {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for u8 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for u16 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for u32 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for u64 {
+    fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
+        let value = std::str::from_utf8(bytes)?.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for usize {
     fn try_from_bytes(bytes: &[u8]) -> Fallible<Self> {
         let value = std::str::from_utf8(bytes)?.parse()?;
         Ok(value)
