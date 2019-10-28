@@ -1,36 +1,44 @@
   $ enable amend
-  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
-  $ setconfig treemanifest.treeonly=False
 
 
-  $ hg init master
-  $ hg clone -q ssh://user@dummy/master client
-
+  $ hginit master
   $ cd master
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > server=True
+  > reponame=master
+  > 
+  > [treemanifest]
+  > server=True
+  > sendtrees=True
+  > EOF
+
   $ echo a > a && hg commit -Aqm 'add a'
   $ mkdir dir && echo b > dir/b && hg commit -Aqm 'add dir/b'
 
-  $ cd ../client
+  $ cd ..
+  $ hgcloneshallow ssh://user@dummy/master client -q --noupdate
+
+  $ cd client
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
   > [remotefilelog]
   > reponame=master
   > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
-  > 
   > [treemanifest]
+  > sendtrees=True
   > autocreatetrees=True
   > EOF
 
 # Test repacking shared manifest packs
-  $ hg pull -q -r 0
-  $ hg pull -q -r 1
+  $ hg up -q -r 0
+  fetching tree '' a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  1 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ hg up -q -r 1
+  fetching tree '' 1832e0765de95635a71dc8f6ed96a1adb824ae13, based on a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, found via 8e83608cbe60
+  2 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
   -r--r--r--     256 0369e6459e768b72223a4a4fcbba59b5ada8d08f.datapack
   -r--r--r--      89 4301ce26f4c07686220c7f57d80b466cfba9899e.histpack
