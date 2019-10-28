@@ -35,11 +35,9 @@ where
 
 #[fbinit::main]
 fn main(fb: FacebookInit) {
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    };
-    let matches = app
-        .build("Blobrepo checker")
+    let matches = args::MononokeApp::new("Blobrepo checker")
+        .with_advanced_args_hidden()
+        .build()
         .version("0.0.0")
         .about("Validate that a blobrepo has all file content and history needed to check out a given commit or its ancestors")
         .args_from_usage(

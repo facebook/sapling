@@ -347,11 +347,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 )
         );
 
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    };
-
-    app.build("Mononoke admin command line tool")
+    args::MononokeApp::new("Mononoke admin command line tool")
+        .with_advanced_args_hidden()
+        .build()
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch)

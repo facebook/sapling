@@ -26,12 +26,9 @@ const DEFAULT_NUM_JOBS: usize = 10;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    };
-
-    let matches = app
-        .build(NAME)
+    let matches = args::MononokeApp::new(NAME)
+        .with_advanced_args_hidden()
+        .build()
         .version("0.0.0")
         .about("Rechunk blobs using the filestore")
         .arg(

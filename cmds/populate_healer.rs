@@ -113,62 +113,62 @@ impl<'a> From<&'a State> for StateSerde {
 }
 
 fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
-    let app = args::MononokeApp {
-        hide_advanced_args: false,
-    }
-    .build("populate healer queue")
-    .version("0.0.0")
-    .about("Populate blobstore queue from existing manifold bucket")
-    .arg(
-        Arg::with_name("storage-id")
-            .long("storage-id")
-            .short("S")
-            .takes_value(true)
-            .value_name("STORAGEID")
-            .help("Storage identifier"),
-    )
-    .arg(
-        Arg::with_name("source-blobstore-id")
-            .long("source-blobstore-id")
-            .short("s")
-            .takes_value(true)
-            .value_name("SOURCE")
-            .help("source blobstore identifier"),
-    )
-    .arg(
-        Arg::with_name("destination-blobstore-id")
-            .long("destination-blobstore-id")
-            .short("d")
-            .takes_value(true)
-            .value_name("DESTINATION")
-            .help("destination blobstore identifier"),
-    )
-    .arg(
-        Arg::with_name("start-key")
-            .long("start-key")
-            .takes_value(true)
-            .value_name("START_KEY")
-            .help("if specified iteration will start from this key"),
-    )
-    .arg(
-        Arg::with_name("end-key")
-            .long("end-key")
-            .takes_value(true)
-            .value_name("END_KEY")
-            .help("if specified iteration will end at this key"),
-    )
-    .arg(
-        Arg::with_name("resume-state-key")
-            .long("resume-state-key")
-            .takes_value(true)
-            .value_name("STATE_MANIFOLD_KEY")
-            .help("manifold key which contains current iteration state and can be used to resume"),
-    )
-    .arg(
-        Arg::with_name("dry-run")
-            .long("dry-run")
-            .help("do not add entries to a queue"),
-    );
+    let app = args::MononokeApp::new("populate healer queue")
+        .build()
+        .version("0.0.0")
+        .about("Populate blobstore queue from existing manifold bucket")
+        .arg(
+            Arg::with_name("storage-id")
+                .long("storage-id")
+                .short("S")
+                .takes_value(true)
+                .value_name("STORAGEID")
+                .help("Storage identifier"),
+        )
+        .arg(
+            Arg::with_name("source-blobstore-id")
+                .long("source-blobstore-id")
+                .short("s")
+                .takes_value(true)
+                .value_name("SOURCE")
+                .help("source blobstore identifier"),
+        )
+        .arg(
+            Arg::with_name("destination-blobstore-id")
+                .long("destination-blobstore-id")
+                .short("d")
+                .takes_value(true)
+                .value_name("DESTINATION")
+                .help("destination blobstore identifier"),
+        )
+        .arg(
+            Arg::with_name("start-key")
+                .long("start-key")
+                .takes_value(true)
+                .value_name("START_KEY")
+                .help("if specified iteration will start from this key"),
+        )
+        .arg(
+            Arg::with_name("end-key")
+                .long("end-key")
+                .takes_value(true)
+                .value_name("END_KEY")
+                .help("if specified iteration will end at this key"),
+        )
+        .arg(
+            Arg::with_name("resume-state-key")
+                .long("resume-state-key")
+                .takes_value(true)
+                .value_name("STATE_MANIFOLD_KEY")
+                .help(
+                    "manifold key which contains current iteration state and can be used to resume",
+                ),
+        )
+        .arg(
+            Arg::with_name("dry-run")
+                .long("dry-run")
+                .help("do not add entries to a queue"),
+        );
 
     let matches = app.get_matches();
     let repo_id = args::get_repo_id(&matches)?;

@@ -29,10 +29,8 @@ use std::sync::Arc;
 use tracing::{trace_args, Traced};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = args::MononokeApp {
-        hide_advanced_args: false,
-    };
-    app.build("revlog to blob importer")
+    args::MononokeApp::new("revlog to blob importer")
+        .build()
         .version("0.0.0")
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(

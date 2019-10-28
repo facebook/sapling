@@ -35,25 +35,24 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::with_name(FROM_ID).required(true))
         .arg(Arg::with_name(TO_ID).required(true));
 
-    args::MononokeApp {
-        hide_advanced_args: true,
-    }
-    .build("Insert stub log entries - use to test e.g. the admin tool")
-    .version("0.0.0")
-    .arg(
-        Arg::with_name(BOOKMARK)
-            .long(BOOKMARK)
-            .takes_value(true)
-            .required(true),
-    )
-    .arg(
-        Arg::with_name(BLOBIMPORT)
-            .long(BLOBIMPORT)
-            .required(false)
-            .help("Use blobimport reason"),
-    )
-    .subcommand(create)
-    .subcommand(update)
+    args::MononokeApp::new("Insert stub log entries - use to test e.g. the admin tool")
+        .with_advanced_args_hidden()
+        .build()
+        .version("0.0.0")
+        .arg(
+            Arg::with_name(BOOKMARK)
+                .long(BOOKMARK)
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(BLOBIMPORT)
+                .long(BLOBIMPORT)
+                .required(false)
+                .help("Use blobimport reason"),
+        )
+        .subcommand(create)
+        .subcommand(update)
 }
 
 #[fbinit::main]

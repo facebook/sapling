@@ -276,12 +276,9 @@ impl fmt::Display for HookExecutionStat {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = cmdlib::args::MononokeApp {
-        hide_advanced_args: true,
-    };
-
-    let app = app
-        .build("run hooks against repo")
+    let app = cmdlib::args::MononokeApp::new("run hooks against repo")
+        .with_advanced_args_hidden()
+        .build()
         .version("0.0.0")
         .arg(
             Arg::with_name("bookmark")

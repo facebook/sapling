@@ -250,11 +250,8 @@ fn ensure_small_db_replication_lag(
 }
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    let app_template = args::MononokeApp {
-        hide_advanced_args: false,
-    };
-
-    let app = app_template.build(app_name)
+    let app = args::MononokeApp::new(app_name)
+        .build()
         .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
         .args_from_usage(

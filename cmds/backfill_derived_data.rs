@@ -96,81 +96,80 @@ fn open_repo_maybe_unredacted<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    }
-    .build("Utility to work with bonsai derived data")
-    .version("0.0.0")
-    .about("Utility to work bonsai derived data")
-    .subcommand(
-        SubCommand::with_name(SUBCOMMAND_BACKFILL)
-            .about("backfill derived data for public commits")
-            .arg(
-                Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                    .required(true)
-                    .index(1)
-                    .possible_values(POSSIBLE_TYPES)
-                    .help("derived data type for which backfill will be run"),
-            )
-            .arg(
-                Arg::with_name(ARG_SKIP)
-                    .long(ARG_SKIP)
-                    .takes_value(true)
-                    .help("skip this number of changesets"),
-            )
-            .arg(
-                Arg::with_name(ARG_REGENERATE)
-                    .long(ARG_REGENERATE)
-                    .help("regenerate derivations even if mapping contains changeset"),
-            )
-            .arg(
-                Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
-                    .long(ARG_PREFETCHED_COMMITS_PATH)
-                    .takes_value(true)
-                    .required(false)
-                    .help("a file with a list of bonsai changesets to backfill"),
-            ),
-    )
-    .subcommand(
-        SubCommand::with_name(SUBCOMMAND_TAIL)
-            .about("tail public commits and fill derived data")
-            .arg(
-                Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                    .required(true)
-                    .multiple(true)
-                    .index(1)
-                    .possible_values(POSSIBLE_TYPES)
-                    .help("comma separated list of derived data types"),
-            ),
-    )
-    .subcommand(
-        SubCommand::with_name(SUBCOMMAND_PREFETCH_COMMITS)
-            .about("fetch commits metadata from the database and save them to a file")
-            .arg(
-                Arg::with_name(ARG_OUT_FILENAME)
-                    .long(ARG_OUT_FILENAME)
-                    .takes_value(true)
-                    .required(true)
-                    .help("file name where commits will be saved"),
-            ),
-    )
-    .subcommand(
-        SubCommand::with_name(SUBCOMMAND_SINGLE)
-            .about("backfill single changeset (mainly for performance testing purposes)")
-            .arg(
-                Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                    .required(true)
-                    .index(1)
-                    .possible_values(POSSIBLE_TYPES)
-                    .help("derived data type for which backfill will be run"),
-            )
-            .arg(
-                Arg::with_name(ARG_CHANGESET)
-                    .required(true)
-                    .index(2)
-                    .help("changeset by {hd|bonsai} hash or bookmark"),
-            ),
-    );
+    let app = args::MononokeApp::new("Utility to work with bonsai derived data")
+        .with_advanced_args_hidden()
+        .build()
+        .version("0.0.0")
+        .about("Utility to work with bonsai derived data")
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_BACKFILL)
+                .about("backfill derived data for public commits")
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .index(1)
+                        .possible_values(POSSIBLE_TYPES)
+                        .help("derived data type for which backfill will be run"),
+                )
+                .arg(
+                    Arg::with_name(ARG_SKIP)
+                        .long(ARG_SKIP)
+                        .takes_value(true)
+                        .help("skip this number of changesets"),
+                )
+                .arg(
+                    Arg::with_name(ARG_REGENERATE)
+                        .long(ARG_REGENERATE)
+                        .help("regenerate derivations even if mapping contains changeset"),
+                )
+                .arg(
+                    Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
+                        .long(ARG_PREFETCHED_COMMITS_PATH)
+                        .takes_value(true)
+                        .required(false)
+                        .help("a file with a list of bonsai changesets to backfill"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_TAIL)
+                .about("tail public commits and fill derived data")
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .multiple(true)
+                        .index(1)
+                        .possible_values(POSSIBLE_TYPES)
+                        .help("comma separated list of derived data types"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_PREFETCH_COMMITS)
+                .about("fetch commits metadata from the database and save them to a file")
+                .arg(
+                    Arg::with_name(ARG_OUT_FILENAME)
+                        .long(ARG_OUT_FILENAME)
+                        .takes_value(true)
+                        .required(true)
+                        .help("file name where commits will be saved"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_SINGLE)
+                .about("backfill single changeset (mainly for performance testing purposes)")
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .index(1)
+                        .possible_values(POSSIBLE_TYPES)
+                        .help("derived data type for which backfill will be run"),
+                )
+                .arg(
+                    Arg::with_name(ARG_CHANGESET)
+                        .required(true)
+                        .index(2)
+                        .help("changeset by {hd|bonsai} hash or bookmark"),
+                ),
+        );
     let app = args::add_fb303_args(app);
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);

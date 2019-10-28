@@ -52,11 +52,8 @@ const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 const BIG_FILE_THRESHOLD: u64 = 10000000;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = args::MononokeApp {
-        hide_advanced_args: false,
-    };
-    let app = app
-        .build("Tool to calculate repo statistic")
+    let app = args::MononokeApp::new("Tool to calculate repo statistic")
+        .build()
         .version("0.0.0")
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_STATISTICS_FROM_FILE)

@@ -73,74 +73,76 @@ const SERVICE_NAME: &str = "mononoke_lfs_server";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    }
-    .build("Mononoke LFS Server")
-    .arg(
-        Arg::with_name(ARG_LISTEN_HOST)
-            .long("--listen-host")
-            .takes_value(true)
-            .default_value("127.0.0.1")
-            .help("The host to listen on locally"),
-    )
-    .arg(
-        Arg::with_name(ARG_LISTEN_PORT)
-            .long("--listen-port")
-            .takes_value(true)
-            .default_value("8001")
-            .help("The port to listen on locally"),
-    )
-    .arg(
-        Arg::with_name(ARG_TLS_CERTIFICATE)
-            .long("--tls-certificate")
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name(ARG_TLS_PRIVATE_KEY)
-            .long("--tls-private-key")
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name(ARG_TLS_CA)
-            .long("--tls-ca")
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name(ARG_TLS_TICKET_SEEDS)
-            .long("--tls-ticket-seeds")
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name(ARG_SELF_URL)
-            .takes_value(true)
-            .required(true)
-            .help("The base URL for this server"),
-    )
-    .arg(
-        Arg::with_name(ARG_UPSTREAM_URL)
-            .takes_value(true)
-            .help("The base URL for an upstream server"),
-    )
-    .arg(
-        Arg::with_name(ARG_SCUBA_DATASET)
-            .long(ARG_SCUBA_DATASET)
-            .takes_value(true)
-            .help("The name of the scuba dataset to log to"),
-    )
-    .arg(
-        Arg::with_name(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
-            .long(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
-            .takes_value(false)
-            .help("Whether to always wait for an upstream response (primarily useful in testing)"),
-    )
-    .arg(
-        Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
-            .long("shutdown-grace-period")
-            .takes_value(true)
-            .required(false)
-            .default_value("0"),
-    );
+    let app = args::MononokeApp::new("Mononoke LFS Server")
+        .with_advanced_args_hidden()
+        .with_all_repos()
+        .build()
+        .arg(
+            Arg::with_name(ARG_LISTEN_HOST)
+                .long("--listen-host")
+                .takes_value(true)
+                .default_value("127.0.0.1")
+                .help("The host to listen on locally"),
+        )
+        .arg(
+            Arg::with_name(ARG_LISTEN_PORT)
+                .long("--listen-port")
+                .takes_value(true)
+                .default_value("8001")
+                .help("The port to listen on locally"),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_CERTIFICATE)
+                .long("--tls-certificate")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_PRIVATE_KEY)
+                .long("--tls-private-key")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_CA)
+                .long("--tls-ca")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_TICKET_SEEDS)
+                .long("--tls-ticket-seeds")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(ARG_SELF_URL)
+                .takes_value(true)
+                .required(true)
+                .help("The base URL for this server"),
+        )
+        .arg(
+            Arg::with_name(ARG_UPSTREAM_URL)
+                .takes_value(true)
+                .help("The base URL for an upstream server"),
+        )
+        .arg(
+            Arg::with_name(ARG_SCUBA_DATASET)
+                .long(ARG_SCUBA_DATASET)
+                .takes_value(true)
+                .help("The name of the scuba dataset to log to"),
+        )
+        .arg(
+            Arg::with_name(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
+                .long(ARG_ALWAYS_WAIT_FOR_UPSTREAM)
+                .takes_value(false)
+                .help(
+                    "Whether to always wait for an upstream response (primarily useful in testing)",
+                ),
+        )
+        .arg(
+            Arg::with_name(ARG_SHUTDOWN_GRACE_PERIOD)
+                .long("shutdown-grace-period")
+                .takes_value(true)
+                .required(false)
+                .default_value("0"),
+        );
 
     let app = args::add_fb303_args(app);
 

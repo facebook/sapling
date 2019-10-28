@@ -26,31 +26,30 @@ const DEFAULT_CONCURRENCY: usize = 16;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeApp {
-        hide_advanced_args: true,
-    }
-    .build(NAME)
-    .version("0.0.0")
-    .about("Import LFS blobs")
-    .arg(
-        Arg::with_name(ARG_CONCURRENCY)
-            .long("concurrency")
-            .takes_value(true)
-            .help("The number of OIDs to process in parallel"),
-    )
-    .arg(
-        Arg::with_name(ARG_LFS_HELPER)
-            .required(true)
-            .takes_value(true)
-            .help("LFS Helper"),
-    )
-    .arg(
-        Arg::with_name(ARG_POINTERS)
-            .takes_value(true)
-            .required(true)
-            .min_values(1)
-            .help("Raw LFS pointers to be imported"),
-    );
+    let app = args::MononokeApp::new(NAME)
+        .with_advanced_args_hidden()
+        .build()
+        .version("0.0.0")
+        .about("Import LFS blobs")
+        .arg(
+            Arg::with_name(ARG_CONCURRENCY)
+                .long("concurrency")
+                .takes_value(true)
+                .help("The number of OIDs to process in parallel"),
+        )
+        .arg(
+            Arg::with_name(ARG_LFS_HELPER)
+                .required(true)
+                .takes_value(true)
+                .help("LFS Helper"),
+        )
+        .arg(
+            Arg::with_name(ARG_POINTERS)
+                .takes_value(true)
+                .required(true)
+                .min_values(1)
+                .help("Raw LFS pointers to be imported"),
+        );
 
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);

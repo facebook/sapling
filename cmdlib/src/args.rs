@@ -8,7 +8,7 @@
 
 use std::{collections::HashMap, path::Path, sync::Arc};
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
 use failure_ext::{err_msg, Error, Result};
 use fbinit::FacebookInit;
@@ -62,9 +62,18 @@ const CACHE_ARGS: &[(&str, &str)] = &[
 ];
 
 pub struct MononokeApp {
+    /// The app name.
+    name: String,
+
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
-    pub hide_advanced_args: bool,
+    hide_advanced_args: bool,
+
+    /// Whether to operate on all repos, and not provide options to select a repo.
+    all_repos: bool,
+
+    /// Whether to require the user select a repo.
+    repo_required: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -78,28 +87,48 @@ pub fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
 }
 
 impl MononokeApp {
-    pub fn build<'a, 'b, S: Into<String>>(self, name: S) -> App<'a, 'b> {
-        let name = name.into();
+    /// Start building a new Mononoke app.  This adds the standard Mononoke args.  Use the `build`
+    /// method to get a `clap::App` that you can then customize further.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            hide_advanced_args: false,
+            all_repos: false,
+            repo_required: false,
+        }
+    }
 
-        let mut app = App::new(name)
-            .args_from_usage(
-                r#"
-                -d, --debug 'print debug output'
-                "#,
-            )
+    /// Hide advanced args.
+    pub fn with_advanced_args_hidden(mut self) -> Self {
+        self.hide_advanced_args = true;
+        self
+    }
+
+    /// This command operates on all configured repos, and removes the options for selecting a
+    /// repo.  The default behaviour is for the arguments to specify the repo to be optional, which is
+    /// probably not what you want, so you should call either this method or `with_repo_required`.
+    pub fn with_all_repos(mut self) -> Self {
+        self.all_repos = true;
+        self
+    }
+
+    /// This command operates on a specific repos, so this makes the options for selecting a
+    /// repo required.  The default behaviour is for the arguments to specify the repo to be
+    /// optional, which is probably not what you want, so you should call either this method or
+    /// `with_all_repos`.
+    pub fn with_repo_required(mut self) -> Self {
+        self.repo_required = true;
+        self
+    }
+
+    /// Build a `clap::App` for this Mononoke app, which can then be customized further.
+    pub fn build<'a, 'b>(self) -> App<'a, 'b> {
+        let mut app = App::new(self.name)
             .arg(
-                Arg::with_name("repo-id")
-                    .long("repo-id")
-                    // This is an old form that some consumers use
-                    .alias("repo_id")
-                    .value_name("ID")
-                    .help("numeric ID of repository"),
-            )
-            .arg(
-                Arg::with_name("repo-name")
-                    .long("repo-name")
-                    .value_name("NAME")
-                    .help("Name of repository"),
+                Arg::with_name("debug")
+                    .short("d")
+                    .long("debug")
+                    .help("print debug output"),
             )
             .arg(
                 Arg::with_name("mononoke-config-path")
@@ -107,6 +136,29 @@ impl MononokeApp {
                     .value_name("MONONOKE_CONFIG_PATH")
                     .help("Path to the Mononoke configs"),
             );
+
+        if !self.all_repos {
+            app = app
+                .arg(
+                    Arg::with_name("repo-id")
+                    .long("repo-id")
+                    // This is an old form that some consumers use
+                    .alias("repo_id")
+                    .value_name("ID")
+                    .help("numeric ID of repository"),
+                )
+                .arg(
+                    Arg::with_name("repo-name")
+                        .long("repo-name")
+                        .value_name("NAME")
+                        .help("Name of repository"),
+                )
+                .group(
+                    ArgGroup::with_name("repo")
+                        .args(&["repo-id", "repo-name"])
+                        .required(self.repo_required),
+                );
+        }
 
         app = add_logger_args(app);
         app = add_myrouter_args(app);
