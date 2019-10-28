@@ -4,9 +4,6 @@
   $ hginit master
   $ hginit sane
 
-  $ enable treemanifest
-  $ setconfig treemanifest.treeonly=True
-
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -35,7 +32,7 @@ Populate the second repository
   $ hg commit -qAm x1
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/sane shallow -q --config extensions.fastmanifest=
+  $ hgcloneshallow ssh://user@dummy/sane shallow -q
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over *s (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
