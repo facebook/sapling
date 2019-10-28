@@ -7,6 +7,10 @@
 #include "Python.h"
 #include "frameobject.h"
 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PY3K
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -56,13 +60,28 @@ struct FrameInfo {
   const char* file() {
     if (!code)
       return NULL;
+#ifdef IS_PY3K
+    PyObject* obj =
+        PyUnicode_AsEncodedString(code->co_filename, "utf-8", "strict");
+    if (!obj)
+      return NULL;
+    return PyBytes_AsString(obj);
+#else
     return PyString_AsString(code->co_filename);
+#endif
   }
 
   const char* name() {
     if (!code)
       return NULL;
+#ifdef IS_PY3K
+    PyObject* obj = PyUnicode_AsEncodedString(code->co_name, "utf-8", "strict");
+    if (!obj)
+      return NULL;
+    return PyBytes_AsString(obj);
+#else
     return PyString_AsString(code->co_name);
+#endif
   }
 
   ~FrameInfo() {
