@@ -43,11 +43,11 @@ Fine extension: remotefilelog
   0000000000000000000000000000000000000000
   __del__ called
 
-Fine extension: treemanifest and fastmanifest
+Fine extension: treemanifest
 
   $ newrepo
   __del__ called
-  $ setconfig extensions.treemanifest= extensions.fastmanifest= remotefilelog.reponame=x
+  $ setconfig extensions.treemanifest= remotefilelog.reponame=x
   $ hg log -r . -T '{node}\n'
   0000000000000000000000000000000000000000
   __del__ called
@@ -122,7 +122,6 @@ Somehow problematic: With many extensions
   > extorder=
   > fastannotate=
   > fastlog=
-  > fastmanifest=
   > fastpartialmatch=!
   > fbconduit=
   > fbhistedit=
