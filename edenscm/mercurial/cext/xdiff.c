@@ -10,6 +10,10 @@
 #include "lib/third-party/xdiff/xdiff.h"
 #include "Python.h"
 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PY3K
+#endif
+
 static int
 hunk_consumer(int64_t a1, int64_t a2, int64_t b1, int64_t b2, void* priv) {
   PyObject* rl = (PyObject*)priv;
@@ -67,9 +71,9 @@ static PyMethodDef methods[] = {
 static const int version = 1;
 
 #ifdef IS_PY3K
-static struct PyModuleDef bdiff_module = {
+static struct PyModuleDef xdiff_module = {
     PyModuleDef_HEAD_INIT,
-    "bdiff",
+    "xdiff",
     xdiff_doc,
     -1,
     methods,
