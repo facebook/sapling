@@ -93,7 +93,10 @@ class DiffTest {
   }
   folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
-    auto diffFuture = mount_.getEdenMount()->diff(commitHash, listIgnored);
+    auto diffFuture = mount_.getEdenMount()->diff(
+        commitHash,
+        listIgnored,
+        /*enforceCurrentParent=*/false);
     return std::move(diffFuture)
         .thenValue([](std::unique_ptr<ScmStatus>&& result) { return *result; });
   }
@@ -1211,7 +1214,10 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  auto diffFuture = mount.getEdenMount()->diff(commitHash2);
+  auto diffFuture = mount.getEdenMount()->diff(
+      commitHash2,
+      /*listIgnored=*/false,
+      /*enforceCurrentParent=*/false);
 
   // The diff should not be ready yet
   EXPECT_FALSE(diffFuture.isReady());

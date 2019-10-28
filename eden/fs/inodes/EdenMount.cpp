@@ -865,7 +865,31 @@ Future<Unit> EdenMount::diff(
     DiffCallback* callback,
     Hash commitHash,
     bool listIgnored,
+    bool enforceCurrentParent,
     ResponseChannelRequest* request) const {
+  if (enforceCurrentParent) {
+    auto parentInfo = parentInfo_.rlock(std::chrono::milliseconds{500});
+
+    if (!parentInfo) {
+      // We failed to get the lock, which generally means a checkout is in
+      // progress.
+      return makeFuture<Unit>(newEdenError(
+          "cannot compute status while a checkout is currently in progress"));
+    }
+
+    if (parentInfo->parents.parent1() != commitHash) {
+      return makeFuture<Unit>(newEdenError(
+          "error computing status: requested parent commit is out-of-date: requested ",
+          commitHash,
+          ", but current parent commit is ",
+          parentInfo->parents.parent1()));
+    }
+
+    // TODO: Should we perhaps hold the parentInfo read-lock for the duration of
+    // the status operation?  This would block new checkout operations from
+    // starting until we have finished computing this status call.
+  }
+
   // Create a DiffContext object for this diff operation.
   auto context = createDiffContext(callback, listIgnored, request);
   const DiffContext* ctxPtr = context.get();
@@ -880,10 +904,13 @@ Future<Unit> EdenMount::diff(
 folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
     Hash commitHash,
     bool listIgnored,
+    bool enforceCurrentParent,
     ResponseChannelRequest* request) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr = callback.get();
-  return this->diff(callbackPtr, commitHash, listIgnored, request)
+  return this
+      ->diff(
+          callbackPtr, commitHash, listIgnored, enforceCurrentParent, request)
       .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });

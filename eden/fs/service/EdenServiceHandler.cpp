@@ -992,9 +992,13 @@ void EdenServiceHandler::async_tm_getScmStatus(
         folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
         folly::to<string>("commitHash=", logHash(*commitHash)));
 
+    // This does not enforce  that the caller specified the current commit.  In
+    // the future we might want to enforce that for this call, if we confirm
+    // that all existing callers of this method can deal with the error.
     auto mount = server_->getMount(*mountPoint);
     auto hash = hashFromThrift(*commitHash);
-    return helper.wrapFuture(mount->diff(hash, listIgnored, request));
+    return helper.wrapFuture(mount->diff(
+        hash, listIgnored, /*enforceCurrentParent=*/false, request));
   })
       .thenTry([cb = std::move(callback)](
                    folly::Try<std::unique_ptr<ScmStatus>>&& result) mutable {

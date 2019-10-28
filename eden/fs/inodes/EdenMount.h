@@ -393,22 +393,17 @@ class EdenMount {
   folly::Future<folly::Unit> chown(uid_t uid, gid_t gid);
 
   /**
-   * This version of diff is primarily intended for testing.
-   * Use diff(DiffCallback* callback, bool listIgnored) instead.
-   * The caller must ensure that the DiffContext object ctsPtr points to
-   * exists at least until the returned Future completes.
-   */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
-      const DiffContext* ctxPtr,
-      Hash commitHash) const;
-
-  /**
    * Compute differences between the current commit and the working directory
    * state.
    *
    * @param listIgnored Whether or not to inform the callback of ignored files.
    *     When listIgnored is set to false can speed up the diff computation, as
    *     the code does not need to descend into ignored directories at all.
+   * @param enforceCurrentParent Whether or not to return an error if the
+   *     specified commitHash does not match the actual current working
+   *     directory parent.  If this is false the code will still compute a diff
+   *     against the specified commitHash even the working directory parent
+   *     points elsewhere, or when a checkout is currently in progress.
    * @param request This ResposeChannelRequest is passed from the ServiceHandler
    *     and is used to check if the request is still active, because if the
    *     request is no longer active we will cancel this diff operation.
@@ -420,7 +415,18 @@ class EdenMount {
   FOLLY_NODISCARD folly::Future<std::unique_ptr<ScmStatus>> diff(
       Hash commitHash,
       bool listIgnored = false,
+      bool enforceCurrentParent = true,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
+
+  /**
+   * This version of diff is primarily intended for testing.
+   * Use diff(DiffCallback* callback, bool listIgnored) instead.
+   * The caller must ensure that the DiffContext object ctsPtr points to
+   * exists at least until the returned Future completes.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+      const DiffContext* ctxPtr,
+      Hash commitHash) const;
 
   /**
    * Reset the state to point to the specified parent commit(s), without
@@ -654,6 +660,7 @@ class EdenMount {
       DiffCallback* callback,
       Hash commitHash,
       bool listIgnored,
+      bool enforceCurrentParent,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
 
   /**
