@@ -1,5 +1,5 @@
+  $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/hgsql/library.sh"
-  $ setconfig treemanifest.treeonly=False
 
 #testcases respondlightly respondfully
 
@@ -13,14 +13,14 @@ Do some initial setup
   > sendunbundlereplay=
   > smartlog=
   > treemanifest=
-  > fastmanifest=
   > remotefilelog=
   > pushrebase=
+  > remotenames=
   > [remotefilelog]
   > reponame=testrepo
   > cachepath=$CACHEDIR
   > [treemanifest]
-  > treeonly=False
+  > sendtrees=True
   > CONFIG
 
 Setup helpers
@@ -54,15 +54,9 @@ Setup a server repo
   > server = True
   > shallowtrees = True
   > CONFIG
-  $ DBGD=1 hg backfilltree
   $ cd ..
-  $ hg init hgsql-client-tmp && cd hgsql-client-tmp
-  $ cat >>.hg/hgrc <<CONFIG
-  > [paths]
-  > default=ssh://user@dummy/server
-  > [extensions]
-  > remotenames=
-  > CONFIG
+  $ hgcloneshallow ssh://user@dummy/server hgsql-client-tmp -q
+  $ cd hgsql-client-tmp
   $ hg debugdrawdag <<EOF
   > C
   > |
