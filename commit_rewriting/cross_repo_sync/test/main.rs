@@ -32,7 +32,7 @@ use mononoke_types::{
 };
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
 
-use cross_repo_sync::{sync_commit_compat, CommitSyncConfig, CommitSyncRepos};
+use cross_repo_sync::{sync_commit_compat, CommitSyncRepos, CommitSyncer};
 
 fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
@@ -117,7 +117,7 @@ fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
 
 fn sync_to_master<M>(
     ctx: CoreContext,
-    config: &CommitSyncConfig<M>,
+    config: &CommitSyncer<M>,
     source_bcs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error>
 where
@@ -136,7 +136,7 @@ where
 
 fn get_bcs_id<M>(
     ctx: CoreContext,
-    config: &CommitSyncConfig<M>,
+    config: &CommitSyncer<M>,
     source_hg_cs: HgChangesetId,
 ) -> ChangesetId
 where
@@ -152,7 +152,7 @@ where
 
 fn check_mapping<M>(
     ctx: CoreContext,
-    config: &CommitSyncConfig<M>,
+    config: &CommitSyncer<M>,
     source_bcs_id: ChangesetId,
     expected_bcs_id: Option<ChangesetId>,
 ) where
@@ -202,7 +202,7 @@ fn sync_parentage(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
-    let config = CommitSyncConfig::new(mapping, repos);
+    let config = CommitSyncer::new(mapping, repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -262,7 +262,7 @@ fn sync_removes_commit(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
-    let config = CommitSyncConfig::new(mapping, repos);
+    let config = CommitSyncer::new(mapping, repos);
 
     // Create a commit with one file called "master" in the blobrepo, and set the bookmark
     create_initial_commit(ctx.clone(), &megarepo);
@@ -353,8 +353,8 @@ fn sync_causes_conflict(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
-    let linear_config = CommitSyncConfig::new(mapping.clone(), linear_repos);
-    let master_file_config = CommitSyncConfig::new(mapping, master_file_repos);
+    let linear_config = CommitSyncer::new(mapping.clone(), linear_repos);
+    let master_file_config = CommitSyncer::new(mapping, master_file_repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -414,8 +414,8 @@ fn sync_empty_commit(fb: FacebookInit) {
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
 
-    let lts_config = CommitSyncConfig::new(mapping.clone(), lts_repos);
-    let stl_config = CommitSyncConfig::new(mapping, stl_repos);
+    let lts_config = CommitSyncer::new(mapping.clone(), lts_repos);
+    let stl_config = CommitSyncer::new(mapping, stl_repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -526,8 +526,8 @@ fn sync_copyinfo(fb: FacebookInit) {
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-    let stl_config = CommitSyncConfig::new(mapping.clone(), stl_repos);
-    let lts_config = CommitSyncConfig::new(mapping, lts_repos);
+    let stl_config = CommitSyncer::new(mapping.clone(), stl_repos);
+    let lts_config = CommitSyncer::new(mapping, lts_repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -615,9 +615,9 @@ fn sync_remap_failure(fb: FacebookInit) {
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-    let fail_config = CommitSyncConfig::new(mapping.clone(), fail_repos);
-    let stl_config = CommitSyncConfig::new(mapping.clone(), stl_repos);
-    let copyfrom_fail_config = CommitSyncConfig::new(mapping, copyfrom_fail_repos);
+    let fail_config = CommitSyncer::new(mapping.clone(), fail_repos);
+    let stl_config = CommitSyncer::new(mapping.clone(), stl_repos);
+    let copyfrom_fail_config = CommitSyncer::new(mapping, copyfrom_fail_repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 
@@ -714,8 +714,8 @@ fn sync_parent_search(fb: FacebookInit) {
         }),
     };
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-    let config = CommitSyncConfig::new(mapping.clone(), repos);
-    let reverse_config = CommitSyncConfig::new(mapping, reverse_repos);
+    let config = CommitSyncer::new(mapping.clone(), repos);
+    let reverse_config = CommitSyncer::new(mapping, reverse_repos);
 
     create_initial_commit(ctx.clone(), &megarepo);
 

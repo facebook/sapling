@@ -226,13 +226,13 @@ pub enum CommitSyncRepos {
 }
 
 #[derive(Clone)]
-pub struct CommitSyncConfig<M> {
+pub struct CommitSyncer<M> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
     pub repos: CommitSyncRepos,
 }
 
-impl<M> CommitSyncConfig<M>
+impl<M> CommitSyncer<M>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
@@ -262,7 +262,7 @@ where
         source_cs_id: ChangesetId,
     ) -> impl Future<Item = Option<CommitSyncOutcome>, Error = Error> {
         async fn get_commit_sync_outcome_wrapper<M>(
-            this: CommitSyncConfig<M>,
+            this: CommitSyncer<M>,
             ctx: CoreContext,
             source_cs_id: ChangesetId,
         ) -> Result<Option<CommitSyncOutcome>, Error>
@@ -395,7 +395,7 @@ where
         source_cs_id: ChangesetId,
     ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
         async fn sync_commit_compat_wrapper<M>(
-            this: CommitSyncConfig<M>,
+            this: CommitSyncer<M>,
             ctx: CoreContext,
             source_cs_id: ChangesetId,
         ) -> Result<Option<ChangesetId>, Error>
@@ -580,12 +580,12 @@ pub async fn upload_commits(
 pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    config: CommitSyncConfig<M>,
+    config: CommitSyncer<M>,
 ) -> impl Future<Item = (), Error = Error> {
     async fn update_mapping_compat_wrapper<M: SyncedCommitMapping + Clone + 'static>(
         ctx: CoreContext,
         mapped: HashMap<ChangesetId, ChangesetId>,
-        config: CommitSyncConfig<M>,
+        config: CommitSyncer<M>,
     ) -> Result<(), Error> {
         update_mapping(ctx, mapped, &config).await
     }
@@ -598,9 +598,9 @@ pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
 pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    config: &'a CommitSyncConfig<M>,
+    config: &'a CommitSyncer<M>,
 ) -> Result<(), Error> {
-    let CommitSyncConfig { repos, mapping } = config.clone();
+    let CommitSyncer { repos, mapping } = config.clone();
     let (source_repo, target_repo, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
             large_repo,
@@ -633,10 +633,10 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
 pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     cs: BonsaiChangeset,
-    config: &'a CommitSyncConfig<M>,
+    config: &'a CommitSyncer<M>,
     bookmark: BookmarkName,
 ) -> Result<Option<ChangesetId>, Error> {
-    let CommitSyncConfig { repos, mapping } = config.clone();
+    let CommitSyncer { repos, mapping } = config.clone();
     let hash = cs.get_changeset_id();
     let (source_repo, target_repo, rewrite_paths) = match repos.clone() {
         CommitSyncRepos::LargeToSmall {
@@ -728,13 +728,13 @@ pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
 pub fn sync_commit_compat<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     cs: BonsaiChangeset,
-    config: CommitSyncConfig<M>,
+    config: CommitSyncer<M>,
     bookmark: BookmarkName,
 ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
     async fn sync_commit_compat_wrapper<M: SyncedCommitMapping + Clone + 'static>(
         ctx: CoreContext,
         cs: BonsaiChangeset,
-        config: CommitSyncConfig<M>,
+        config: CommitSyncer<M>,
         bookmark: BookmarkName,
     ) -> Result<Option<ChangesetId>, Error> {
         sync_commit(ctx, cs, &config, bookmark).await
