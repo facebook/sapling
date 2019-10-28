@@ -10,12 +10,14 @@ use python27_sys::{
 };
 #[cfg(feature = "python3")]
 use python3_sys::{
-    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t, _PyObject_New,
+    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t,
+    _PyObject_New,
 };
 use std::mem;
 use std::os::raw::c_int;
 
 // From Python bytearrayobject.h. Must match the C definition.
+#[cfg(feature = "python2")]
 #[repr(C)]
 struct PyByteArrayObject {
     #[cfg(py_sys_config = "Py_TRACE_REFS")]
@@ -30,16 +32,33 @@ struct PyByteArrayObject {
     pub ob_bytes: *mut u8,
 }
 
+#[cfg(feature = "python3")]
+#[repr(C)]
+struct PyByteArrayObject {
+    pub ob_base: PyVarObject,
+    pub ob_alloc: Py_ssize_t,
+    pub ob_bytes: *mut u8,
+    pub ob_start: *mut u8,
+    pub ob_exports: c_int,
+}
+
 /// Consume a `Vec<u8>`. Create a Python `bytearray` object.
 /// Bytes stored are not copied.
 pub fn vec_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Vec<u8>) -> RustPyObject {
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);
-        (*typed).ob_size = value.len() as Py_ssize_t;
+        #[cfg(feature = "python2")]
+        {
+            (*typed).ob_size = value.len() as Py_ssize_t;
+        }
         (*typed).ob_exports = 0;
         (*typed).ob_alloc = value.capacity() as Py_ssize_t;
         (*typed).ob_bytes = value.as_mut_ptr();
+        #[cfg(feature = "python3")]
+        {
+            (*typed).ob_start = value.as_mut_ptr();
+        }
         assert_eq!(
             PyByteArray_Size(ptr) as usize,
             value.len(),
@@ -56,10 +75,17 @@ pub fn boxed_slice_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Box<[u8]>) ->
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);
-        (*typed).ob_size = value.len() as Py_ssize_t;
+        #[cfg(feature = "python2")]
+        {
+            (*typed).ob_size = value.len() as Py_ssize_t;
+        }
         (*typed).ob_exports = 0;
-        (*typed).ob_alloc = (*typed).ob_size;
+        (*typed).ob_alloc = value.len() as Py_ssize_t;
         (*typed).ob_bytes = value.as_mut_ptr();
+        #[cfg(feature = "python3")]
+        {
+            (*typed).ob_start = value.as_mut_ptr();
+        }
         assert_eq!(
             PyByteArray_Size(ptr) as usize,
             value.len(),
