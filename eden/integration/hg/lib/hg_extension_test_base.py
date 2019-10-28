@@ -448,23 +448,9 @@ class JournalEntry(object):
         return command[m.end() :]
 
 
-def _apply_treemanifest_config(test, config):
-    config["extensions"]["fastmanifest"] = ""
-    config["extensions"]["treemanifest"] = ""
-    config["extensions"]["pushrebase"] = ""
-    config["fastmanifest"] = {
-        "usetree": "True",
-        "usecache": "False",
-        "cacheonchange": "True",
-    }
-    config["remotefilelog"] = {
-        "reponame": "eden_integration_tests",
-        "cachepath": os.path.join(test.tmp_dir, "hgcache"),
-    }
-
-
 def _apply_treeonly_config(test, config):
     config["extensions"]["treemanifest"] = ""
+    config["extensions"]["pushrebase"] = ""
     config["treemanifest"] = {"treeonly": "True"}
     config["remotefilelog"] = {
         "reponame": "eden_integration_tests",
@@ -472,15 +458,12 @@ def _apply_treeonly_config(test, config):
     }
 
 
-ALL_CONFIGS = {
-    "Treemanifest": _apply_treemanifest_config,
-    "TreeOnly": _apply_treeonly_config,
-}
+ALL_CONFIGS = {"TreeOnly": _apply_treeonly_config}
 
 
 def _replicate_hg_test(test_class, *variants):
     if not variants:
-        variants = ("Treemanifest",)
+        variants = ("TreeOnly",)
 
     for name in variants:
         config_fn = ALL_CONFIGS[name]

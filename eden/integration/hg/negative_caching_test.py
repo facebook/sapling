@@ -13,9 +13,9 @@ from eden.integration.lib import hgrepo
 
 # This test is primarily exercising FUSE filesystem behavior.
 # We don't care too much about the mercurial configuration, so only run this
-# test with the Treemanifest configuration, rather than running it with
+# test with the TreeOnly configuration, rather than running it with
 # multiple configurations.
-@hg_test("Treemanifest")
+@hg_test("TreeOnly")
 # pyre-fixme[13]: Attribute `backing_repo` is never initialized.
 # pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
 # pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
