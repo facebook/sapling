@@ -111,6 +111,7 @@ Show debug commands if there are no other candidates
   debugformat
   debugfsinfo
   debuggetbundle
+  debughttp
   debugignore
   debugindex
   debugindexdot
@@ -304,6 +305,7 @@ Show all commands + options
   debugformat: template
   debugfsinfo: 
   debuggetbundle: head, common, type
+  debughttp: 
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir

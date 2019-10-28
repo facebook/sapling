@@ -514,16 +514,6 @@ def debugwaitonprefetch(repo):
         pass
 
 
-def debughttp(ui, repo, **opts):
-    """Query the hostname of the API server."""
-    edenapi.bailifdisabled(ui)
-    try:
-        hostname = repo.edenapi.hostname()
-        ui.write(_("successfully connected to: %s\n") % hostname)
-    except RuntimeError as e:
-        raise error.Abort(e)
-
-
 def debuggetfiles(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
 

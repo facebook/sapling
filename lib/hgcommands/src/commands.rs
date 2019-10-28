@@ -9,6 +9,7 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 
+use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
 };
@@ -45,6 +46,11 @@ pub fn table() -> CommandTable {
         "debugindexedlog-repair",
         "repair indexedlog log",
     );
+    table.register(
+        debughttp,
+        "debughttp",
+        "check whether api server is reachable",
+    );
 
     table
 }
@@ -75,6 +81,8 @@ define_flags! {
         #[args]
         args: Vec<String>,
     }
+
+    pub struct DebugHttpOpts {}
 }
 
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
@@ -163,5 +171,13 @@ pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {
         ))?;
         io.write("Done\n")?;
     }
+    Ok(0)
+}
+
+pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
+    let config = EdenApiConfig::from_hg_config(repo.config())?;
+    let client = EdenApiCurlClient::new(config)?;
+    let hostname = client.hostname()?;
+    io.write(format!("successfully connected to: {}\n", hostname))?;
     Ok(0)
 }

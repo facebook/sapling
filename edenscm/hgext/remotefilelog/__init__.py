@@ -1186,11 +1186,6 @@ def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
 
-@command("debughttp", [], _("hg debughttp"))
-def debughttp(ui, repo, **opts):
-    return debugcommands.debughttp(ui, repo, **opts)
-
-
 @command("debuggetfiles|debuggetfile", [], _("hg debuggetfiles"))
 def debuggetfiles(ui, repo, **opts):
     """download file content from the API server
