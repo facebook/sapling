@@ -4,7 +4,7 @@
 # GNU General Public License version 2 or any later version.
 
 Setup
-  $ source "$TESTDIR/setup.sh"
+  $ . "$TESTDIR/setup.sh"
 
 Generate test files
   $ cat << EOF > a
@@ -25,9 +25,9 @@ Generate test files
   > g
   > EOF
 
-  $ echo -n > empty
-  $ echo -ne "a\0" > binary_a
-  $ echo -ne "b\0" > binary_b
+  $ printf "" > empty
+  $ printf "a\0" > binary_a
+  $ printf "b\0" > binary_b
 
 
 Basic diff test
