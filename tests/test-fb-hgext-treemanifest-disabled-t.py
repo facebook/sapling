@@ -15,17 +15,9 @@ sh % '. "$TESTDIR/library.sh"'
 sh % "hg init client1"
 sh % "cd client1"
 sh % "cat" << r"""
-[extensions]
-fastmanifest=
-treemanifest=
-
 [remotefilelog]
 reponame=master
 cachepath=$CACHEDIR
-
-[fastmanifest]
-usetree=True
-usecache=False
 """ >> ".hg/hgrc"
 
 sh % "echo a" > "a"
