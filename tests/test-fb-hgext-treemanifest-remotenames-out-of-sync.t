@@ -2,12 +2,9 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fastmanifest=
   > pushrebase=
   > remotenames=
   > treemanifest=
-  > [fastmanifest]
-  > usetree=True
   > [treemanifest]
   > sendtrees=True
   > treeonly=True
