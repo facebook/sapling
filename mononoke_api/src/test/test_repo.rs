@@ -30,8 +30,10 @@ fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke =
+                Mononoke::new_test(ctx.clone(), vec![("test".to_string(), linear::getrepo(fb))])
+                    .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
             let cs_id = ChangesetId::from_str(hash)?;
@@ -59,8 +61,10 @@ fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke =
+                Mononoke::new_test(ctx.clone(), vec![("test".to_string(), linear::getrepo(fb))])
+                    .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let hg_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
             let hg_cs_id = HgChangesetId::from_str(hg_hash)?;
@@ -91,8 +95,10 @@ fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke =
+                Mononoke::new_test(ctx.clone(), vec![("test".to_string(), linear::getrepo(fb))])
+                    .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let cs = repo
                 .resolve_bookmark("master")
@@ -122,8 +128,10 @@ fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke = Mononoke::new_test(vec![("test".to_string(), linear::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke =
+                Mononoke::new_test(ctx.clone(), vec![("test".to_string(), linear::getrepo(fb))])
+                    .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let hash1 = "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48";
             let hash2 = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
@@ -158,9 +166,12 @@ fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke =
-                Mononoke::new_test(vec![("test".to_string(), branch_uneven::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), branch_uneven::getrepo(fb))],
+            )
+            .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let mut changesets = Vec::new();
             for hg_hash in [
@@ -222,9 +233,12 @@ fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke =
-                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), many_files_dirs::getrepo(fb))],
+            )
+            .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
             let cs_id = ChangesetId::from_str(hash)?;
@@ -264,9 +278,12 @@ fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke =
-                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), many_files_dirs::getrepo(fb))],
+            )
+            .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
             let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
             let cs_id = ChangesetId::from_str(hash)?;
@@ -393,9 +410,12 @@ fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke =
-                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), many_files_dirs::getrepo(fb))],
+            )
+            .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
 
             let expected_metadata = FileMetadata {
@@ -467,9 +487,12 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke =
-                Mononoke::new_test(vec![("test".to_string(), many_files_dirs::getrepo(fb))]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![("test".to_string(), many_files_dirs::getrepo(fb))],
+            )
+            .await?;
             let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
 
             let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
@@ -499,11 +522,15 @@ fn xrepo_commit_lookup(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(
         async move {
-            let mononoke = Mononoke::new_test(vec![
-                ("test".to_string(), linear::getrepo(fb)),
-                ("test2".to_string(), many_files_dirs::getrepo(fb)),
-            ]);
             let ctx = CoreContext::test_mock(fb);
+            let mononoke = Mononoke::new_test(
+                ctx.clone(),
+                vec![
+                    ("test".to_string(), linear::getrepo(fb)),
+                    ("test2".to_string(), many_files_dirs::getrepo(fb)),
+                ],
+            )
+            .await?;
             let repo1 = mononoke.repo(ctx.clone(), "test")?.expect("repo exists");
             let repo2 = mononoke.repo(ctx.clone(), "test2")?.expect("repo exists");
 

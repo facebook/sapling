@@ -22,7 +22,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use lock_ext::RwLockExt;
 use mononoke_types::ChangesetId;
-use slog::{info, Logger};
+use slog::info;
 use stats::{define_stats, Timeseries};
 use time_ext::DurationExt;
 
@@ -42,7 +42,6 @@ type WarmerFn =
 impl WarmBookmarksCache {
     pub fn new(
         ctx: CoreContext,
-        logger: Logger,
         repo: BlobRepo,
         warmers: Vec<Box<WarmerFn>>,
     ) -> impl Future<Item = Self, Error = Error> {
@@ -54,7 +53,6 @@ impl WarmBookmarksCache {
             bookmarks.clone(),
             receiver,
             ctx.clone(),
-            logger,
             repo.clone(),
             warmers.clone(),
             warm_cs_ids.clone(),
@@ -87,21 +85,23 @@ fn spawn_bookmarks_updater(
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
     terminate: sync::oneshot::Receiver<()>,
     ctx: CoreContext,
-    logger: Logger,
     repo: BlobRepo,
     warmers: Arc<Vec<Box<WarmerFn>>>,
     warm_cs_ids: Arc<RwLock<HashSet<ChangesetId>>>,
 ) {
     tokio::spawn(future::lazy(move || {
-        info!(logger, "Starting warm bookmark cache updater");
+        info!(ctx.logger(), "Starting warm bookmark cache updater");
         stream::repeat(())
-            .and_then(move |()| {
-                update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone(), warmers.clone(), warm_cs_ids.clone())
-                .timed(|stats, _| {
-                    STATS::cached_bookmark_update_time_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    Ok(())
-                })
+            .and_then({
+                cloned!(ctx);
+                move |()| {
+                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone(), warmers.clone(), warm_cs_ids.clone())
+                    .timed(|stats, _| {
+                        STATS::cached_bookmark_update_time_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        Ok(())
+                    })
+                }
             })
             .then(|_| {
                 let dur = Duration::from_millis(1000);
@@ -113,7 +113,7 @@ fn spawn_bookmarks_updater(
             .for_each(|_| -> Result<(), ()> { Ok(()) })
             .select2(terminate)
             .then(move |_| {
-                info!(logger, "Stopped warm bookmark cache updater");
+                info!(ctx.logger(), "Stopped warm bookmark cache updater");
                 Ok(())
             })
     }));

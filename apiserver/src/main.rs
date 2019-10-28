@@ -590,6 +590,7 @@ fn main(fb: FacebookInit) -> Fallible<()> {
             repo.repo.clone(),
             repo.skiplist_index.clone(),
             repo.unodes_derived_mapping.clone(),
+            repo.warm_bookmarks_cache.clone(),
             repo.synced_commit_mapping.clone(),
         )
     }));

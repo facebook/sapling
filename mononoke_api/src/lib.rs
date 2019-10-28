@@ -23,6 +23,7 @@ use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
 use synced_commit_mapping::SyncedCommitMapping;
 use unodes::RootUnodeManifestMapping;
+use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -100,13 +101,27 @@ impl Mononoke {
 
     /// Create a Mononoke instance for testing.
     #[cfg(test)]
-    fn new_test(repos: impl IntoIterator<Item = (String, BlobRepo)>) -> Self {
-        Self {
-            repos: repos
-                .into_iter()
-                .map(|(name, repo)| (name, Arc::new(Repo::new_test(repo))))
-                .collect(),
-        }
+    async fn new_test(
+        ctx: CoreContext,
+        repos: impl IntoIterator<Item = (String, BlobRepo)>,
+    ) -> Result<Self, Error> {
+        use futures_util::stream::FuturesOrdered;
+        use futures_util::try_stream::TryStreamExt;
+        let repos = repos
+            .into_iter()
+            .map(move |(name, repo)| {
+                cloned!(ctx);
+                async move {
+                    Repo::new_test(ctx.clone(), repo)
+                        .await
+                        .map(move |repo| (name, Arc::new(repo)))
+                }
+            })
+            .collect::<FuturesOrdered<_>>()
+            .try_collect()
+            .await?;
+
+        Ok(Self { repos })
     }
 
     /// Temporary function to create directly from parts.
@@ -117,6 +132,7 @@ impl Mononoke {
                 BlobRepo,
                 Arc<SkiplistIndex>,
                 Arc<RootUnodeManifestMapping>,
+                Arc<WarmBookmarksCache>,
                 Arc<dyn SyncedCommitMapping>,
             ),
         >,
@@ -130,6 +146,7 @@ impl Mononoke {
                         blob_repo,
                         skiplist_index,
                         unodes_derived_mapping,
+                        warm_bookmarks_cache,
                         synced_commit_mapping,
                     )| {
                         let fsnodes_derived_mapping =
@@ -141,6 +158,7 @@ impl Mononoke {
                                 skiplist_index,
                                 fsnodes_derived_mapping,
                                 unodes_derived_mapping,
+                                warm_bookmarks_cache,
                                 synced_commit_mapping,
                             )),
                         )

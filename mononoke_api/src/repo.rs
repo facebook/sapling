@@ -24,7 +24,8 @@ use mononoke_types::hash::{Sha1, Sha256};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::Logger;
 use synced_commit_mapping::{SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping};
-use unodes::RootUnodeManifestMapping;
+use unodes::{derive_unodes, RootUnodeManifestMapping};
+use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -37,6 +38,7 @@ pub(crate) struct Repo {
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
     pub(crate) fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
     pub(crate) unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+    pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
 }
@@ -97,7 +99,7 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
         let skiplist_index = fetch_skiplist_index(
-            ctx,
+            ctx.clone(),
             skiplist_index_blobstore_key,
             blob_repo.get_blobstore().boxed(),
         )
@@ -108,11 +110,22 @@ impl Repo {
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
 
+        let warm_bookmarks_cache = Arc::new(
+            WarmBookmarksCache::new(
+                ctx.clone(),
+                blob_repo.clone(),
+                vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
+            )
+            .compat()
+            .await?,
+        );
+
         Ok(Self {
             blob_repo,
             skiplist_index,
             unodes_derived_mapping,
             fsnodes_derived_mapping,
+            warm_bookmarks_cache,
             synced_commit_mapping,
         })
     }
@@ -123,6 +136,7 @@ impl Repo {
         skiplist_index: Arc<SkiplistIndex>,
         fsnodes_derived_mapping: Arc<RootFsnodeMapping>,
         unodes_derived_mapping: Arc<RootUnodeManifestMapping>,
+        warm_bookmarks_cache: Arc<WarmBookmarksCache>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Self {
         Self {
@@ -130,25 +144,36 @@ impl Repo {
             skiplist_index,
             fsnodes_derived_mapping,
             unodes_derived_mapping,
+            warm_bookmarks_cache,
             synced_commit_mapping,
         }
     }
 
     #[cfg(test)]
     /// Construct a Repo from a test BlobRepo
-    pub(crate) fn new_test(blob_repo: BlobRepo) -> Self {
+    pub(crate) async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
         let unodes_derived_mapping =
             Arc::new(RootUnodeManifestMapping::new(blob_repo.get_blobstore()));
         let fsnodes_derived_mapping = Arc::new(RootFsnodeMapping::new(blob_repo.get_blobstore()));
         let synced_commit_mapping =
             Arc::new(SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap());
-        Self {
+        let warm_bookmarks_cache = Arc::new(
+            WarmBookmarksCache::new(
+                ctx.clone(),
+                blob_repo.clone(),
+                vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
+            )
+            .compat()
+            .await?,
+        );
+        Ok(Self {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
             unodes_derived_mapping,
             fsnodes_derived_mapping,
+            warm_bookmarks_cache,
             synced_commit_mapping,
-        }
+        })
     }
 }
 
@@ -188,6 +213,11 @@ impl RepoContext {
         &self.repo.synced_commit_mapping
     }
 
+    /// The warm bookmarks cache for the references repository.
+    pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+        &self.repo.warm_bookmarks_cache
+    }
+
     /// Look up a changeset specifier to find the canonical bonsai changeset
     /// ID for a changeset.
     pub async fn resolve_specifier(
@@ -222,11 +252,20 @@ impl RepoContext {
         bookmark: impl ToString,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let bookmark = BookmarkName::new(bookmark.to_string())?;
-        let cs_id = self
-            .blob_repo()
-            .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
-            .compat()
-            .await?;
+
+        let mut cs_id = self.warm_bookmarks_cache().get(&bookmark);
+
+        if cs_id.is_none() {
+            // The bookmark wasn't in the warm bookmark cache.  Check
+            // the blobrepo directly in case this is a bookmark that
+            // has just been created.
+            cs_id = self
+                .blob_repo()
+                .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
+                .compat()
+                .await?;
+        }
+
         Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
     }
 

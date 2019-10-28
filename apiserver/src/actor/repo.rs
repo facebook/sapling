@@ -97,7 +97,7 @@ pub struct MononokeRepo {
     // Cached public bookmarks that are used by apiserver. They can be outdated but not by much
     // (normally just a few seconds).
     // These bookmarks are updated when derived data is generated for them.
-    warm_bookmarks_cache: Arc<WarmBookmarksCache>,
+    pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // Needed for the current way to create a new Mononoke object
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
 }
@@ -138,7 +138,6 @@ impl MononokeRepo {
             .map(move |(synced_commit_mapping, repo)| {
                 let warm_bookmarks_cache = WarmBookmarksCache::new(
                     ctx.clone(),
-                    logger.clone(),
                     repo.clone(),
                     vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
                 );
