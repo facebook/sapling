@@ -1,7 +1,5 @@
-  $ setconfig extensions.treemanifest=!
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
-  $ setconfig treemanifest.treeonly=False
   $ . "$TESTDIR/library.sh"
 
 
@@ -10,23 +8,15 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > server=True
+  > [treemanifest]
+  > server=True
   > EOF
   $ echo x > x
   $ hg commit -qAm 'add x'
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master client -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ hgcloneshallow ssh://user@dummy/master client -q --noupdate
   $ cd client
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
-  > EOF
 
 Test autocreatetrees
   $ cat >> .hg/hgrc <<EOF
@@ -44,22 +34,22 @@ Test autocreatetrees
   searching for changes
   adding changesets
   adding manifests
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets e4d61696a942
+  $ hg up -r tip
+  fetching tree '' 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66, found via e4d61696a942
+  2 trees fetched over * (glob)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls_l $CACHEDIR/master/packs/manifests
-  -r--r--r--    1154 6b4c4e7794e8f08e211ef803a189df5b46a01010.dataidx
-  -r--r--r--     365 6b4c4e7794e8f08e211ef803a189df5b46a01010.datapack
-  -r--r--r--    1224 ed1a27864c5d25f144a51961ad6e79088f2a7571.histidx
-  -r--r--r--     265 ed1a27864c5d25f144a51961ad6e79088f2a7571.histpack
+  -r--r--r--    1114 cc7c46997bf8e05307412ce3ac5e2a1ccb159a11.dataidx
+  -r--r--r--     262 cc7c46997bf8e05307412ce3ac5e2a1ccb159a11.datapack
+  -r--r--r--    1196 f102ab2df8567126527b595bd4f2b2125cf98975.histidx
+  -r--r--r--     183 f102ab2df8567126527b595bd4f2b2125cf98975.histpack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/6b4c4e7794e8f08e211ef803a189df5b46a01010:
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  bc0c2c938b92  000000000000  43            (missing)
-  
+  $TESTTMP/hgcache/master/packs/manifests/cc7c46997bf8e05307412ce3ac5e2a1ccb159a11:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
@@ -71,7 +61,6 @@ Test autocreatetrees
 
 Test that commit creates local trees
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ echo z >> subdir/z
   $ hg commit -qAm 'modify subdir/z'
   $ ls_l .hg/store/packs/manifests
@@ -104,14 +93,6 @@ Test that manifest matchers work
   $ hg status --rev 1 --rev 2 -I subdir/z
   M subdir/z
 
-Test config validation
-  $ hg log -r . --config extensions.fastmanifest=!
-  abort: cannot use treemanifest without fastmanifest
-  [255]
-  $ hg log -r . --config extensions.treemanifest=!
-  abort: fastmanifest.usetree cannot be enabled without enabling treemanifest
-  [255]
-
 Test rebasing a stack of commits results in a pack with all the trees
 
   $ echo >> subdir/y
@@ -120,6 +101,8 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg commit -Am 'modify subdir/y again'
   $ hg rebase -d 0 -s '.^'
   rebasing 6a2476258ba5 "modify subdir/y"
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, based on 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66
+  1 trees fetched over * (glob)
   rebasing f096b21e165f "modify subdir/y again" (tip)
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-rebase.hg (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
