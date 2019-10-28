@@ -10,10 +10,8 @@ Setup the server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=
   > [treemanifest]
   > server=True
-  > treeonly=True
   > [remotefilelog]
   > server=True
   > shallowtrees=True
@@ -88,7 +86,7 @@ time.
   o  0 base
   
 Create a client
-  $ hgcloneshallow ssh://user@dummy/master client -q --config treemanifest.treeonly=True --config extensions.treemanifest=
+  $ hgcloneshallow ssh://user@dummy/master client -q
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
   13 files fetched over *s (glob)
@@ -98,14 +96,8 @@ Create a client
   > evolution = createmarkers, allowunstable
   > [extensions]
   > amend=
-  > fastmanifest=
-  > treemanifest=
   > [treemanifest]
   > sendtrees=True
-  > treeonly=True
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
   > [remotefilelog]
   > reponame=treeonlyrepo
   > EOF
