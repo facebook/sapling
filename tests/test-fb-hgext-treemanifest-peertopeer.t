@@ -1,15 +1,11 @@
-  $ setconfig extensions.treemanifest=!
   $ CACHEDIR=`pwd`/hgcache
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig treemanifest.treeonly=False
 
 Create server
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -24,19 +20,13 @@ Create server
 Create client2 - it will have only the first commit, so client1 will be pushing
 two server and one local commits later.
   $ hgcloneshallow ssh://user@dummy/master client2 -q
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cat >> client2/.hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
   > [remotefilelog]
   > reponame=master
   > cachepath=$CACHEDIR
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
   > EOF
 
 Create create two more server commits
@@ -49,28 +39,20 @@ Create create two more server commits
 
 Create client1 - it will have both server commits
   $ hgcloneshallow ssh://user@dummy/master client1 -q
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via b8ff91c925b4
+  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
   > [remotefilelog]
   > reponame=master
   > cachepath=$CACHEDIR
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
   > EOF
 
   $ echo a > a
   $ mkdir dir
   $ echo b > dir/b
   $ hg commit -Aqm 'initial commit'
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via b8ff91c925b4
-  2 trees fetched over * (glob)
 
   $ ls .hg/store/packs/manifests
   53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histidx
@@ -80,12 +62,13 @@ Create client1 - it will have both server commits
 
 Pushing with treemanifest disabled does not produce trees
 (disable demand import so treemanifest.py is forced to load)
-  $ HGDEMANDIMPORT=disable hg push -q ../client2 --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ HGDEMANDIMPORT=disable hg push -q ../client2
+  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls ../client2/.hg/store/packs/manifests || true
   * $ENOENT$ (glob)
 
-  $ hg -R ../client2 debugstrip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ hg -R ../client2 debugstrip -q -r 'tip^^'
   $ rm -rf ../client2/.hg/store/packs
   $ clearcache
 
@@ -116,7 +99,7 @@ cache.
   -r--r--r--     347 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histpack
   -r--r--r--    1194 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.dataidx
   -r--r--r--     437 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.datapack
-  $ hg -R ../client2 debugstrip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ hg -R ../client2 debugstrip -q -r 'tip^^'
   $ rm -rf ../client2/.hg/store/packs
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ clearcache
