@@ -16,15 +16,48 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 
+#ifdef __APPLE__
+#include <mach/mach_init.h> // @manual
+#include <mach/task.h> // @manual
+#include <mach/task_info.h> // @manual
+#endif
+
 using folly::StringPiece;
 using std::optional;
+
+namespace {
+using namespace facebook::eden::proc_util;
+#ifdef __APPLE__
+optional<MemoryStats> readMemoryStatsApple() {
+  mach_task_basic_info_data_t taskinfo{};
+  mach_msg_type_number_t outCount = MACH_TASK_BASIC_INFO_COUNT;
+  auto result = task_info(
+      mach_task_self(),
+      MACH_TASK_BASIC_INFO,
+      reinterpret_cast<task_info_t>(&taskinfo),
+      &outCount);
+  if (result != KERN_SUCCESS) {
+    return std::nullopt;
+  }
+
+  MemoryStats ms;
+  ms.vsize = taskinfo.virtual_size;
+  ms.resident = taskinfo.resident_size;
+  return ms;
+}
+#endif
+} // namespace
 
 namespace facebook {
 namespace eden {
 namespace proc_util {
 
 optional<MemoryStats> readMemoryStats() {
+#ifdef __APPLE__
+  return readMemoryStatsApple();
+#else
   return readStatmFile("/proc/self/statm");
+#endif
 }
 
 optional<MemoryStats> readStatmFile(const char* filename) {
@@ -50,7 +83,7 @@ optional<MemoryStats> parseStatmFile(StringPiece data, size_t pageSize) {
   }
 
   MemoryStats stats{};
-  stats.size = pageSize * values[0];
+  stats.vsize = pageSize * values[0];
   stats.resident = pageSize * values[1];
   stats.shared = pageSize * values[2];
   stats.text = pageSize * values[3];

@@ -23,11 +23,19 @@ constexpr folly::StringPiece kLinuxProcSmapsPath{"/proc/self/smaps"};
 namespace proc_util {
 
 struct MemoryStats {
-  size_t size; // Total VM Size, in bytes
-  size_t resident; // Resident set size, in bytes
-  size_t shared; // Resident shared bytes (file mappings + shared memory)
-  size_t text; // text (code) bytes
-  size_t data; // data + stack bytes
+  /// Total VM Size, in bytes
+  size_t vsize = 0;
+  /// Resident set size, in bytes
+  size_t resident = 0;
+  /// Resident shared bytes (file mappings + shared memory)
+  /// Only available on Linux
+  std::optional<size_t> shared;
+  /// text (code) bytes
+  /// Only available on Linux
+  std::optional<size_t> text;
+  /// data + stack bytes
+  /// Only available on Linux
+  std::optional<size_t> data;
 };
 
 /**

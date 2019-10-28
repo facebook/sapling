@@ -91,28 +91,32 @@ TEST(proc_util, readMemoryStats) {
     return;
   }
 
-  EXPECT_GT(stats->size, 0);
+  EXPECT_GT(stats->vsize, 0);
   EXPECT_GT(stats->resident, 0);
-  EXPECT_GT(stats->shared, 0);
-  EXPECT_GT(stats->text, 0);
-  EXPECT_GT(stats->data, 0);
-  EXPECT_GE(stats->size, stats->resident);
-  EXPECT_GE(stats->size, stats->text);
-  EXPECT_GE(stats->size, stats->data);
+  if (folly::kIsLinux) {
+    EXPECT_GT(*stats->shared, 0);
+    EXPECT_GT(*stats->text, 0);
+    EXPECT_GT(*stats->data, 0);
+  }
+  EXPECT_GE(stats->vsize, stats->resident);
+  if (folly::kIsLinux) {
+    EXPECT_GE(stats->vsize, stats->text);
+    EXPECT_GE(stats->vsize, stats->data);
+  }
 }
 
 TEST(proc_util, parseMemoryStats) {
   size_t pageSize = 4096;
   auto stats = parseStatmFile("26995 164 145 11 0 80 0\n", pageSize);
   ASSERT_TRUE(stats.has_value());
-  EXPECT_EQ(pageSize * 26995, stats->size);
+  EXPECT_EQ(pageSize * 26995, stats->vsize);
   EXPECT_EQ(pageSize * 164, stats->resident);
   EXPECT_EQ(pageSize * 145, stats->shared);
   EXPECT_EQ(pageSize * 11, stats->text);
   EXPECT_EQ(pageSize * 80, stats->data);
 
   stats = parseStatmFile("6418297 547249 17716 22695 0 1657632 0\n", pageSize);
-  EXPECT_EQ(pageSize * 6418297, stats->size);
+  EXPECT_EQ(pageSize * 6418297, stats->vsize);
   EXPECT_EQ(pageSize * 547249, stats->resident);
   EXPECT_EQ(pageSize * 17716, stats->shared);
   EXPECT_EQ(pageSize * 22695, stats->text);
