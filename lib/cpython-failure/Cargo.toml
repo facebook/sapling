@@ -3,6 +3,11 @@ name = "cpython-failure"
 version = "0.1.0"
 edition = "2018"
 
+[features]
+default = ["python2"]
+python2 = []
+python3 = []
+
 [dependencies]
 failure = "0.1.3"
 

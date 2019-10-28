@@ -1,7 +1,14 @@
 // Copyright Facebook, Inc. 2018
 
 use libc::c_int;
+
+#[cfg(feature = "python2")]
 use python27_sys::{
+    PyEval_InitThreads, PySys_SetArgv, Py_Finalize, Py_Initialize, Py_IsInitialized, Py_Main,
+    Py_SetProgramName,
+};
+#[cfg(feature = "python3")]
+use python3_sys::{
     PyEval_InitThreads, PySys_SetArgv, Py_Finalize, Py_Initialize, Py_IsInitialized, Py_Main,
     Py_SetProgramName,
 };

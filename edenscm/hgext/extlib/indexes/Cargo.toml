@@ -3,6 +3,11 @@ name = "indexes"
 version = "0.1.0"
 edition = "2018"
 
+[features]
+default = ["python2"]
+python2 = []
+python3 = []
+
 [lib]
 name = "indexes"
 crate-type = ["cdylib"]

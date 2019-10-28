@@ -4,7 +4,12 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
+#[cfg(feature = "python2")]
 use python27_sys::{
+    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t, _PyObject_New,
+};
+#[cfg(feature = "python3")]
+use python3_sys::{
     PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t, _PyObject_New,
 };
 use std::mem;
