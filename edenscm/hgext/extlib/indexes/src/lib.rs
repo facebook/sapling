@@ -9,7 +9,6 @@ extern crate cpython;
 
 pub mod errors;
 pub mod nodemap;
-mod pybuf;
 
 #[allow(non_camel_case_types)]
 pub mod pyext;

@@ -13,6 +13,7 @@ name = "indexes"
 crate-type = ["cdylib"]
 
 [dependencies]
+cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython-failure = { path = "../../../../lib/cpython-failure" }
 radixbuf = { path = "../../../../lib/radixbuf" }
 failure = "0.1.5"

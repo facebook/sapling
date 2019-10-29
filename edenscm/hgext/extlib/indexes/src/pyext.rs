@@ -4,10 +4,10 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::nodemap::NodeRevMap;
-use crate::pybuf::SimplePyBuf;
 use cpython::{exc, PyBytes, PyObject, PyResult};
 use std::slice;
 
+use cpython_ext::SimplePyBuf;
 use cpython_failure::ResultPyErrExt;
 
 py_module_initializer!(indexes, initindexes, PyInit_indexes, |py, m| {
