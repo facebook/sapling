@@ -65,7 +65,10 @@ def getdiff(repo, diffid):
         )
         return client.getdifflatestversion(timeout, diffid)
     except Exception as e:
-        raise error.Abort("Could not not call phabricator graphql API: %s" % e)
+        raise error.Abort(
+            "Could not call phabricator graphql API: %s" % e,
+            hint="perhaps you need to run 'jf auth'?",
+        )
 
 
 def finddiff(repo, diffid, querythread=None):
