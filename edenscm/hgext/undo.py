@@ -86,6 +86,10 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     if "CHGINTERNALMARK" in encoding.environ:
         return orig(lui, repo, cmd, fullargs, *args)
 
+    # Unwrap _runcommandwrapper so nested "runcommand" (ex. "hg continue")
+    # would work.
+    extensions.unwrapfunction(dispatch, "runcommand", _runcommandwrapper)
+
     # For non-repo command, it's unnecessary to go through the undo logic
     if repo is None:
         return orig(lui, repo, cmd, fullargs, *args)

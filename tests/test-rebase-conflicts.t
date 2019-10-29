@@ -1,6 +1,7 @@
   $ setconfig extensions.treemanifest=!
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
+  $ enable undo
   $ cat >> $HGRCPATH <<EOF
   > [format]
   > usegeneraldelta=yes
