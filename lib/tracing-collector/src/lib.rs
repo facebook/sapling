@@ -21,7 +21,7 @@ use tracing::{
 /// A `tokio/tracing` subscriber that collects tracing data to [`TracingData`].
 /// [`TracingData`] is independent from `tokio/tracing`. See its docstring for
 /// more details.
-struct TracingCollector {
+pub struct TracingCollector {
     level: Level,
     data: Arc<Mutex<TracingData>>,
 }
