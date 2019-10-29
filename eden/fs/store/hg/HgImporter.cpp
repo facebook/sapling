@@ -342,7 +342,7 @@ ImporterOptions HgImporter::waitForHelperStart() {
   ChunkHeader header;
   try {
     header = readChunkHeader(0, "CMD_STARTED");
-  } catch (const HgImporterEofError& error) {
+  } catch (const HgImporterEofError&) {
     // If we get EOF trying to read the initial response this generally
     // indicates that the import helper exited with an error early on during
     // startup, before it could send us a success or error message.

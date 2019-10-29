@@ -349,7 +349,7 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
   try {
     server_->unmount(*mountPoint).get();
-  } catch (const EdenError& ex) {
+  } catch (const EdenError&) {
     throw;
   } catch (const std::exception& ex) {
     throw newEdenError(ex);

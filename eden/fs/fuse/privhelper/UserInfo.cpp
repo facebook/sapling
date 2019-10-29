@@ -185,13 +185,13 @@ bool UserInfo::initFromSudo() {
 
   try {
     uid_ = folly::to<uid_t>(sudoUid);
-  } catch (const std::range_error& ex) {
+  } catch (const std::range_error&) {
     throw std::runtime_error(
         std::string{"invalid value for SUDO_UID: "} + sudoUid);
   }
   try {
     gid_ = folly::to<gid_t>(sudoGid);
-  } catch (const std::range_error& ex) {
+  } catch (const std::range_error&) {
     throw std::runtime_error(
         std::string{"invalid value for SUDO_GID: "} + sudoGid);
   }

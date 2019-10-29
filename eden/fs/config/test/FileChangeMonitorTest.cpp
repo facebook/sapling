@@ -59,7 +59,7 @@ class MockFileChangeProcessor {
       if (!folly::readFile(f.fd(), fileContents_)) {
         fileProcessError_ = true;
       }
-    } catch (const std::exception& ex) {
+    } catch (const std::exception&) {
       fileProcessError_ = true;
     }
   }

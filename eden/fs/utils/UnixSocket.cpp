@@ -447,7 +447,7 @@ UnixSocket::SendQueuePtr UnixSocket::createSendQueueEntry(
   try {
     entry.reset(
         new (data) SendQueueEntry(std::move(message), callback, iovecElements));
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
 #if __cpp_sized_deallocation
     operator delete(data, allocationSize);
 #else

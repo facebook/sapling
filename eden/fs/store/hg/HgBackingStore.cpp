@@ -166,7 +166,7 @@ ConstantStringRef unionStoreGetWithRefresh(
     const Hash& id) {
   try {
     return unionStoreGet(unionStore, name, id);
-  } catch (const MissingKeyError& ex) {
+  } catch (const MissingKeyError&) {
     unionStore.markForRefresh();
     return unionStoreGet(unionStore, name, id);
   }

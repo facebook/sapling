@@ -1014,7 +1014,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     auto fuseCompleteFuture =
         channel_->initializeFromTakeover(takeoverData.connInfo);
     fuseInitSuccessful(std::move(fuseCompleteFuture));
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     transitionToFuseInitializationErrorState();
     throw;
   }
