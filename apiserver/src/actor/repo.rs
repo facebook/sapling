@@ -20,7 +20,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use failure::Error;
+use failure::{err_msg, Error};
 use fastlog::{prefetch_history, FastlogParent, RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use futures::{
@@ -86,6 +86,9 @@ define_stats! {
     eden_get_trees: timeseries(RATE, SUM),
     eden_prefetch_trees: timeseries(RATE, SUM),
 }
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+struct GraphUnfoldNode(ChangesetId, i32);
 
 #[derive(Clone)]
 pub struct MononokeRepo {
@@ -517,13 +520,19 @@ impl MononokeRepo {
         total_length: usize,
         history_graph: Arc<Mutex<HashMap<ChangesetId, Option<Vec<ChangesetId>>>>>,
         global_stage: Arc<Mutex<i32>>,
-    ) -> BoxFuture<((), Vec<(ChangesetId, i32)>), ErrorKind> {
+    ) -> BoxFuture<(Option<GraphUnfoldNode>, Vec<GraphUnfoldNode>), ErrorKind> {
         cloned!(ctx);
 
         self.prefetch_history_batch(ctx.clone(), changeset_id, path.clone())
             .map({
                 // construct the history graph
                 move |history_batch: Vec<_>| {
+                    // keeping potential source changeset for the graph traversal later
+                    let mut source_on_stage = None;
+                    if let Some((source_id, _)) = history_batch.first() {
+                        source_on_stage = Some(GraphUnfoldNode(source_id.clone(), stage.clone()));
+                    }
+
                     let mut next = vec![];
                     let mut graph = history_graph.lock().unwrap();
                     for (cs_id, parents) in history_batch {
@@ -556,7 +565,7 @@ impl MononokeRepo {
                                 // changeset as visited for other traversal branches
                                 graph.insert(cs_id, None);
                                 // the changeset hasn't been visited before
-                                next.push((cs_id, stage + 1));
+                                next.push(GraphUnfoldNode(cs_id, stage + 1));
                             } else {
                                 graph.insert(cs_id, Some(known_parents.clone()));
                             }
@@ -574,9 +583,9 @@ impl MononokeRepo {
                         if *global_stage < stage + 1 {
                             *global_stage = stage + 1;
                         }
-                        ((), next)
+                        (source_on_stage, next)
                     } else {
-                        ((), vec![])
+                        (source_on_stage, vec![])
                     }
                 }
             })
@@ -585,17 +594,24 @@ impl MononokeRepo {
 
     fn sort_history(
         &self,
-        changeset_id: ChangesetId,
+        source_changesets: Vec<GraphUnfoldNode>,
         history_graph: &HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
     ) -> Vec<ChangesetId> {
-        let mut sorted = vec![changeset_id.clone()];
+        // Traverse commit graph in BFS order starting from each source node
+        let mut sorted = vec![];
         let mut visited = HashSet::new();
-        visited.insert(changeset_id);
 
         let mut next: usize = 0;
-        while next < sorted.len() {
-            if let Some(maybe_parents) = history_graph.get(&sorted[next]) {
-                if let Some(parents) = maybe_parents {
+        for GraphUnfoldNode(changeset_id, _) in source_changesets {
+            if visited.contains(&changeset_id) {
+                continue;
+            }
+
+            sorted.push(changeset_id.clone());
+            visited.insert(changeset_id);
+
+            while next < sorted.len() {
+                if let Some(Some(parents)) = history_graph.get(&sorted[next]) {
                     for parent in parents {
                         if !visited.contains(parent) {
                             sorted.push(parent.clone());
@@ -603,8 +619,8 @@ impl MononokeRepo {
                         }
                     }
                 }
+                next += 1;
             }
-            next += 1;
         }
         return sorted;
     }
@@ -666,12 +682,12 @@ impl MononokeRepo {
                 move |bcs_id| {
                     bounded_traversal_dag(
                         256,
-                        (bcs_id.clone(), 0),
+                        GraphUnfoldNode(bcs_id.clone(), 0),
                         // unfold
                         {
                             cloned!(ctx, mpath);
                             let this = this.clone();
-                            move |(changeset_id, stage)| {
+                            move |GraphUnfoldNode(changeset_id, stage)| {
                                 this.do_history_graph_unfold(
                                     ctx.clone(),
                                     changeset_id,
@@ -684,22 +700,31 @@ impl MononokeRepo {
                             }
                         },
                         // fold
-                        move |_, _| ok(()),
-                    )
-                    .join(
-                        this.get_unode_entry_by_changeset_id(ctx.clone(), bcs_id, mpath.clone())
-                            .and_then({
-                                let this = this.clone();
-                                move |entry| this.get_unode_changeset_id(ctx.clone(), entry)
-                            }),
+                        move |maybe_source, previous| {
+                            let mut sources = previous.flatten().collect::<Vec<_>>();
+                            if let Some(current) = maybe_source {
+                                sources.push(current);
+                            }
+                            ok(sources)
+                        },
                     )
                 }
+            })
+            .and_then(move |maybe_sources: Option<_>| {
+                maybe_sources.ok_or(ErrorKind::InternalError(err_msg(format!(
+                    "couldn't fetch unode batch"
+                ))))
             })
             .and_then({
                 cloned!(ctx);
                 let this = self.clone();
-                move |(_, changeset_id)| {
-                    let history = this.sort_history(changeset_id, &history_graph.lock().unwrap());
+                move |mut sources: Vec<GraphUnfoldNode>| {
+                    // sort source nodes by the stage
+                    sources.sort_by(|GraphUnfoldNode(_, a_stage), GraphUnfoldNode(_, b_stage)| {
+                        a_stage.cmp(&b_stage)
+                    });
+
+                    let history = this.sort_history(sources, &history_graph.lock().unwrap());
                     let length = history.len();
                     let range = cmp::min(length, skip + limit);
                     let history_chunk = if skip > length {
