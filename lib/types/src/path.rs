@@ -38,7 +38,7 @@ use std::{
     ops::Deref,
 };
 
-use failure::{bail, Fallible};
+use failure::{bail, format_err, Fallible};
 use serde_derive::{Deserialize, Serialize};
 
 /// An owned version of a `RepoPath`.
@@ -440,10 +440,10 @@ fn validate_path(s: &str) -> Fallible<()> {
         return Ok(());
     }
     if s.bytes().next_back() == Some(b'/') {
-        bail!("Invalid path: ends with `/`.");
+        bail!("Invalid path: `{}`. Ends with `/`.", s);
     }
     for component in s.split(SEPARATOR) {
-        validate_component(component)?;
+        validate_component(component).map_err(|e| format_err!("Invalid path: `{}`. {}", s, e))?;
     }
     Ok(())
 }
@@ -776,11 +776,11 @@ mod tests {
     fn test_validate_path() {
         assert_eq!(
             format!("{}", validate_path("\n").unwrap_err()),
-            "Invalid component: contains byte 10."
+            "Invalid path: `\n`. Invalid component: contains byte 10."
         );
         assert_eq!(
             format!("{}", validate_path("boo/").unwrap_err()),
-            "Invalid path: ends with `/`."
+            "Invalid path: `boo/`. Ends with `/`."
         );
     }
 
