@@ -773,6 +773,48 @@ shallowtrees=True
 EOF
 }
 
+function hgmn_init() {
+  hg init "$@"
+  cat >> "$1"/.hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+remotenames=
+smartlog=
+clienttelemetry=
+lz4revlog=
+[treemanifest]
+flatcompat=False
+sendtrees=True
+treeonly=True
+[remotefilelog]
+reponame=$1
+cachepath=$TESTTMP/cachepath
+shallowtrees=True
+EOF
+}
+
+function hgmn_clone() {
+  hgmn clone -q --shallow --config remotefilelog.reponame=master "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True --config extensions.lz4revlog=
+  cat >> "$2"/.hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+remotenames=
+smartlog=
+clienttelemetry=
+lz4revlog=
+[treemanifest]
+flatcompat=False
+sendtrees=True
+treeonly=True
+[remotefilelog]
+reponame=$2
+cachepath=$TESTTMP/cachepath
+shallowtrees=True
+EOF
+}
+
 function enableextension() {
   cat >> .hg/hgrc <<EOF
 [extensions]
