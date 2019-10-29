@@ -132,7 +132,10 @@ struct DiffPayload<'a, 'b> {
     new_lines: Vec<&'b [u8]>,
 }
 
-struct DiffState<S, F> {
+struct DiffState<S, F>
+where
+    F: Fn(S, &[u8]) -> S,
+{
     seed: Option<S>,
     reduce: F,
 }
@@ -223,6 +226,20 @@ where
                 }
             }
         }
+    }
+
+    fn emit_binary_has_changed(&mut self, path: &[u8]) {
+        self.emit(b"Binary file ");
+        self.emit(path);
+        self.emit(b" has changed\n");
+    }
+
+    fn emit_binary_files_differ(&mut self, old_path: &[u8], new_path: &[u8]) {
+        self.emit(b"Binary files a/");
+        self.emit(old_path);
+        self.emit(b" and b/");
+        self.emit(new_path);
+        self.emit(b" differ\n");
     }
 
     pub fn collect(self) -> S {
@@ -439,8 +456,21 @@ where
     }
 }
 
+fn file_is_binary<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    match file {
+        Some(file) => file.contents.as_ref().contains(&b'\0'),
+        None => false,
+    }
+}
+
 /// Computes a diff between two files `old_file` and `new_file`,
 /// the number of `context` lines can be set in `opts` struct.
+///
+/// In case of binary files just emits a placeholder.
 ///
 /// `emit` callback is called many times as the parts of diff are generated.
 fn gen_diff_unified<P, C, F, S>(
@@ -528,6 +558,23 @@ where
         // Impossible here.
         (None, None) => (),
     }
+    // Header for binary files
+    if file_is_binary(&old_file) || file_is_binary(&new_file) {
+        match (old_file, new_file) {
+            (Some(old_file), None) => state.emit_binary_has_changed(old_file.path.as_ref()),
+            (None, Some(new_file)) => state.emit_binary_has_changed(new_file.path.as_ref()),
+            (Some(old_file), Some(new_file)) => {
+                if old_file.path.as_ref() == new_file.path.as_ref() {
+                    state.emit_binary_has_changed(new_file.path.as_ref())
+                } else {
+                    state.emit_binary_files_differ(old_file.path.as_ref(), new_file.path.as_ref())
+                }
+            }
+            _ => (),
+        }
+        return state.collect();
+    }
+
     // Headers for old file.
     if let Some(old_file) = &old_file {
         state.emit(b"--- a/");

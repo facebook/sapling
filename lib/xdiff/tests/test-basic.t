@@ -124,3 +124,17 @@ Test move
   +e
    f
   -g
+
+Test with binary file
+  $ xdiff a binary_a
+  diff --git a/a b/binary_a
+  Binary files a/a and b/binary_a differ
+
+  $ xdiff binary_a binary_b
+  diff --git a/binary_a b/binary_b
+  Binary files a/binary_a and b/binary_b differ
+
+  $ xdiff binary_b non-existent
+  diff --git a/binary_b b/binary_b
+  deleted file mode 100644
+  Binary file binary_b has changed
