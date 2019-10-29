@@ -14,6 +14,7 @@ from eden.cli.util import poll_until
 from eden.thrift import EdenClient, EdenNotRunningError
 from facebook.eden.ttypes import (
     EdenError,
+    EdenErrorType,
     FaultDefinition,
     MountState,
     UnblockFaultArg,
@@ -160,17 +161,20 @@ class MountTest(testcase.EdenRepoTest):
         mount_path = Path(self.mount)
         null_commit = b"\00" * 20
 
-        with self.assertRaisesRegex(EdenError, error_regex):
+        with self.assertRaisesRegex(EdenError, error_regex) as ctx:
             client.getFileInformation(mountPoint=bytes(mount_path), paths=[b""])
+        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-        with self.assertRaisesRegex(EdenError, error_regex):
+        with self.assertRaisesRegex(EdenError, error_regex) as ctx:
             client.getScmStatus(
                 mountPoint=bytes(mount_path), listIgnored=False, commit=null_commit
             )
+        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         parents = WorkingDirectoryParents(parent1=null_commit)
-        with self.assertRaisesRegex(EdenError, error_regex):
+        with self.assertRaisesRegex(EdenError, error_regex) as ctx:
             client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
+        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     def test_start_blocked_mount_init(self) -> None:
         self.eden.shutdown()

@@ -6,7 +6,7 @@
 
 from typing import List, Optional
 
-from facebook.eden.ttypes import EdenError, GlobParams
+from facebook.eden.ttypes import EdenError, EdenErrorType, GlobParams
 
 from .lib import testcase
 
@@ -118,10 +118,12 @@ class GlobTest(testcase.EdenRepoTest):
         with self.assertRaises(EdenError) as ctx:
             self.client.glob(self.mount_path_bytes, ["adir["])
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
+        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaises(EdenError) as ctx:
             self.client.globFiles(GlobParams(self.mount_path_bytes, ["adir["], True))
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
+        self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     def assert_glob(
         self,

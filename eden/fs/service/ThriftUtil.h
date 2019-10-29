@@ -13,6 +13,7 @@
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 
 namespace facebook {
 namespace eden {
@@ -51,6 +52,8 @@ inline Hash hashFromThrift(const std::string& commitID) {
     return Hash(commitID);
   } else {
     throw newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
         "expected argument to be a 20-byte binary hash or "
         "40-byte hexadecimal hash; got \"",
         commitID,

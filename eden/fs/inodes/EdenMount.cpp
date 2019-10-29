@@ -38,6 +38,7 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
@@ -874,11 +875,13 @@ Future<Unit> EdenMount::diff(
       // We failed to get the lock, which generally means a checkout is in
       // progress.
       return makeFuture<Unit>(newEdenError(
+          EdenErrorType::CHECKOUT_IN_PROGRESS,
           "cannot compute status while a checkout is currently in progress"));
     }
 
     if (parentInfo->parents.parent1() != commitHash) {
       return makeFuture<Unit>(newEdenError(
+          EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
           commitHash,
           ", but current parent commit is ",

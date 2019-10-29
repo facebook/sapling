@@ -15,26 +15,31 @@
 
 namespace facebook {
 namespace eden {
-
 /*
  * Helper functions for constructing thrift EdenError objects.
  */
 
 /**
- * Construct an EdenError from an error code and message.
+ * Construct an EdenError from an error code, error type, and message.
  *
  * The message arguments will be joined with folly::to<std::string>().
  */
 template <class Arg1, class... Args>
-EdenError newEdenError(int errorCode, Arg1&& msg, Args&&... args) {
+EdenError newEdenError(
+    int errorCode,
+    EdenErrorType errorType,
+    Arg1&& msg,
+    Args&&... args) {
   auto e = EdenError(folly::to<std::string>(
       std::forward<Arg1>(msg), std::forward<Args>(args)...));
   e.set_errorCode(errorCode);
+  e.set_errorType(errorType);
   return e;
 }
 
 /**
- * Construct an EdenError with an error message but no error code.
+ * Construct an EdenError with an error message and error type but no error
+ * code.
  *
  * The message arguments will be joined with folly::to<std::string>().
  *
@@ -44,8 +49,11 @@ EdenError newEdenError(int errorCode, Arg1&& msg, Args&&... args) {
  * numeric type other than `int` as the first argument.)
  */
 template <class... Args>
-EdenError newEdenError(folly::StringPiece msg, Args&&... args) {
-  return EdenError(folly::to<std::string>(msg, std::forward<Args>(args)...));
+EdenError
+newEdenError(EdenErrorType errorType, folly::StringPiece msg, Args&&... args) {
+  auto e = EdenError(folly::to<std::string>(msg, std::forward<Args>(args)...));
+  e.set_errorType(errorType);
+  return e;
 }
 
 /**

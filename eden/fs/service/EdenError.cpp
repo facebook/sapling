@@ -6,12 +6,31 @@
  */
 
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/utils/SystemError.h"
+#ifdef _WIN32
+#include "eden/fs/win/utils/WinError.h" // @manual
+#endif
 
 namespace facebook {
 namespace eden {
 
 EdenError newEdenError(const std::system_error& ex) {
-  return newEdenError(ex.code().value(), ex.what());
+  if (isErrnoError(ex)) {
+    return newEdenError(
+        ex.code().value(), EdenErrorType::POSIX_ERROR, ex.what());
+  }
+#ifdef _WIN32
+  else if (dynamic_cast<const Win32ErrorCategory*>(&ex.code().category())) {
+    return newEdenError(
+        ex.code().value(), EdenErrorType::WIN32_ERROR, ex.what());
+  } else if (dynamic_cast<const HResultErrorCategory*>(&ex.code().category())) {
+    return newEdenError(
+        ex.code().value(), EdenErrorType::HRESULT_ERROR, ex.what());
+  }
+#endif
+  else {
+    return newEdenError(EdenErrorType::GENERIC_ERROR, ex.what());
+  }
 }
 
 EdenError newEdenError(const std::exception& ex) {
@@ -23,7 +42,8 @@ EdenError newEdenError(const std::exception& ex) {
   if (systemError) {
     return newEdenError(*systemError);
   }
-  return EdenError(folly::exceptionStr(ex).toStdString());
+  return newEdenError(
+      EdenErrorType::GENERIC_ERROR, folly::exceptionStr(ex).toStdString());
 }
 
 EdenError newEdenError(const folly::exception_wrapper& ew) {
@@ -31,7 +51,8 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
   if (!ew.with_exception([&err](const EdenError& ex) { err = ex; }) &&
       !ew.with_exception(
           [&err](const std::system_error& ex) { err = newEdenError(ex); })) {
-    err = EdenError(folly::exceptionStr(ew).toStdString());
+    err = newEdenError(
+        EdenErrorType::GENERIC_ERROR, folly::exceptionStr(ew).toStdString());
   }
   return err;
 }

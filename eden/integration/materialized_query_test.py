@@ -105,6 +105,10 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(
             errno.ERANGE, context.exception.errorCode, msg="Must return ERANGE"
         )
+        self.assertEqual(
+            EdenService.EdenErrorType.MOUNT_GENERATION_CHANGED,
+            context.exception.errorType,
+        )
 
     def test_removeFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)

@@ -21,6 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -574,6 +575,8 @@ void FsOverlay::validateHeader(
   if (contents.size() < kHeaderLength) {
     // Something wrong with the file (may be corrupted)
     throw newEdenError(
+        EIO,
+        EdenErrorType::POSIX_ERROR,
         "Overlay file (inode ",
         inodeNumber,
         ") is too short for header: size=",
@@ -590,6 +593,8 @@ void FsOverlay::validateHeader(
   StringPiece identifier{id};
   if (identifier.compare(headerId) != 0) {
     throw newEdenError(
+        EINVAL,
+        EdenErrorType::POSIX_ERROR,
         "unexpected overlay header identifier : ",
         folly::hexlify(ByteRange{identifier}));
   }
@@ -597,7 +602,11 @@ void FsOverlay::validateHeader(
   // Validate header version
   auto version = cursor.readBE<uint32_t>();
   if (version != kHeaderVersion) {
-    throw newEdenError("Unexpected overlay version :", version);
+    throw newEdenError(
+        EINVAL,
+        EdenErrorType::POSIX_ERROR,
+        "Unexpected overlay version :",
+        version);
   }
 }
 

@@ -459,8 +459,10 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
     StringPiece path) {
 #ifndef _WIN32
   if (path.empty()) {
-    return makeFuture<Hash>(
-        newEdenError(EINVAL, "path cannot be the empty string"));
+    return makeFuture<Hash>(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path cannot be the empty string"));
   }
 
   auto edenMount = server_->getMount(mountPoint);
@@ -629,6 +631,7 @@ void EdenServiceHandler::getFilesChangedSince(
       static_cast<ssize_t>(edenMount->getMountGeneration())) {
     throw newEdenError(
         ERANGE,
+        EdenErrorType::MOUNT_GENERATION_CHANGED,
         "fromPosition.mountGeneration does not match the current "
         "mountGeneration.  "
         "You need to compute a new basis for delta queries.");
@@ -649,7 +652,10 @@ void EdenServiceHandler::getFilesChangedSince(
 
   if (summed) {
     if (summed->isTruncated) {
-      throw newEdenError(EDOM, "Journal entry range has been truncated.");
+      throw newEdenError(
+          EDOM,
+          EdenErrorType::JOURNAL_TRUNCATED,
+          "Journal entry range has been truncated.");
     }
     out.toPosition.sequenceNumber = summed->toSequence;
     out.toPosition.snapshotHash = thriftHash(summed->toHash);
@@ -683,11 +689,15 @@ void EdenServiceHandler::setJournalMemoryLimit(
     int64_t limit) {
 #ifndef _WIN32
   if (!mountPoint) {
-    throw newEdenError(EINVAL, "mount point must not be null");
+    throw newEdenError(
+        EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
   }
   auto edenMount = server_->getMount(*mountPoint);
   if (limit < 0) {
-    throw newEdenError(EINVAL, "memory limit must be non-negative");
+    throw newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "memory limit must be non-negative");
   }
   edenMount->getJournal().setMemoryLimit(static_cast<size_t>(limit));
 #else
@@ -699,7 +709,8 @@ int64_t EdenServiceHandler::getJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint) {
 #ifndef _WIN32
   if (!mountPoint) {
-    throw newEdenError(EINVAL, "mount point must not be null");
+    throw newEdenError(
+        EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
   }
   auto edenMount = server_->getMount(*mountPoint);
   return static_cast<int64_t>(edenMount->getJournal().getMemoryLimit());
@@ -711,7 +722,8 @@ int64_t EdenServiceHandler::getJournalMemoryLimit(
 void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
 #ifndef _WIN32
   if (!mountPoint) {
-    throw newEdenError(EINVAL, "mount point must not be null");
+    throw newEdenError(
+        EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
   }
   auto edenMount = server_->getMount(*mountPoint);
   edenMount->getJournal().flush();
@@ -1051,7 +1063,8 @@ void EdenServiceHandler::debugGetScmTree(
   }
 
   if (!tree) {
-    throw newEdenError("no tree found for id ", *idStr);
+    throw newEdenError(
+        ENOENT, EdenErrorType::POSIX_ERROR, "no tree found for id ", *idStr);
   }
 
   for (const auto& entry : tree->getTreeEntries()) {
@@ -1086,7 +1099,8 @@ void EdenServiceHandler::debugGetScmBlob(
   }
 
   if (!blob) {
-    throw newEdenError("no blob found for id ", *idStr);
+    throw newEdenError(
+        ENOENT, EdenErrorType::POSIX_ERROR, "no blob found for id ", *idStr);
   }
   auto dataBuf = blob->getContents().cloneCoalescedAsValue();
   data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
@@ -1115,7 +1129,11 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   }
 
   if (!metadata.has_value()) {
-    throw newEdenError("no blob metadata found for id ", *idStr);
+    throw newEdenError(
+        ENOENT,
+        EdenErrorType::POSIX_ERROR,
+        "no blob metadata found for id ",
+        *idStr);
   }
   result.size = metadata->size;
   result.contentsSha1 = thriftHash(metadata->sha1);
@@ -1427,7 +1445,8 @@ std::optional<folly::exception_wrapper> getFaultError(
     }
     // If we want to support other error types in the future they should
     // be added here.
-    throw newEdenError("unknown error type ", type);
+    throw newEdenError(
+        EdenErrorType::GENERIC_ERROR, "unknown error type ", type);
   };
 
   return createException(
@@ -1479,6 +1498,8 @@ int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
   if (!info->keyClass_ref().has_value()) {
     if (info->keyValueRegex_ref().has_value()) {
       throw newEdenError(
+          EINVAL,
+          EdenErrorType::ARGUMENT_ERROR,
           "cannot specify a key value regex without a key class");
     }
     if (error.has_value()) {

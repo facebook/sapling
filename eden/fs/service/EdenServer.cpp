@@ -49,7 +49,9 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
 #include "eden/fs/service/EdenCPUThreadPool.h"
+#include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -822,9 +824,11 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
     const auto mountPoints = mountPoints_.wlock();
     const auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
     if (!ret.second) {
-      // This mount point already exists.
-      throw EdenError(folly::to<string>(
-          "mount point \"", mountPath, "\" is already mounted"));
+      throw newEdenError(
+          EEXIST,
+          EdenErrorType::POSIX_ERROR,
+          folly::to<string>(
+              "mount point \"", mountPath, "\" is already mounted"));
     }
   }
 }
@@ -1130,8 +1134,11 @@ EdenServer::MountList EdenServer::getAllMountPoints() const {
 shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
   const auto mount = getMountUnsafe(mountPath);
   if (!mount->isSafeForInodeAccess()) {
-    throw EdenError(folly::to<string>(
-        "mount point \"", mountPath, "\" is still initializing"));
+    throw newEdenError(
+        EBUSY,
+        EdenErrorType::POSIX_ERROR,
+        folly::to<string>(
+            "mount point \"", mountPath, "\" is still initializing"));
   }
   return mount;
 }
@@ -1140,8 +1147,13 @@ shared_ptr<EdenMount> EdenServer::getMountUnsafe(StringPiece mountPath) const {
   const auto mountPoints = mountPoints_.rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
-    throw EdenError(folly::to<string>(
-        "mount point \"", mountPath, "\" is not known to this eden instance"));
+    throw newEdenError(
+        ENOENT,
+        EdenErrorType::POSIX_ERROR,
+        folly::to<string>(
+            "mount point \"",
+            mountPath,
+            "\" is not known to this eden instance"));
   }
   return it->second.edenMount;
 }
