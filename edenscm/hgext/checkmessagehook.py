@@ -5,7 +5,14 @@
 
 import string
 
+from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
+
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("checkmessage", "allownonprintable", default=False)
 
 
 def reposetup(ui, repo):
@@ -22,6 +29,9 @@ def checkcommitmessage(ui, repo, **kwargs):
     except UnicodeDecodeError:
         ui.warn(_("commit message is not utf-8\n"))
         return True
+
+    if ui.configbool("checkmessage", "allownonprintable"):
+        return False
 
     printable = set(string.printable)
     badlines = []
