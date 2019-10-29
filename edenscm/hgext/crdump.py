@@ -176,20 +176,21 @@ def crdump(ui, repo, *revs, **opts):
                 except KeyError:
                     pass
 
-                downstreams = repo.revs("%n:: & remotebookmark()", pbctx.node())
-                downstreambookmarks = set()
-                for r in downstreams:
-                    downstreambookmarks.update(
-                        repo.names["hoistednames"].names(repo, repo[r].node())
-                    )
+                if extensions.isenabled(ui, "remotenames"):
+                    downstreams = repo.revs("%n:: & remotebookmark()", pbctx.node())
+                    downstreambookmarks = set()
+                    for r in downstreams:
+                        downstreambookmarks.update(
+                            repo.names["hoistednames"].names(repo, repo[r].node())
+                        )
 
-                # If there's a single downstream remotebookmark, or master is a
-                # downstream remotebookmark, report it as the current branch.
-                if downstreambookmarks:
-                    if "master" in downstreambookmarks:
-                        rdata["branch"] = "master"
-                    elif len(downstreambookmarks) == 1:
-                        rdata["branch"] = list(downstreambookmarks)[0]
+                    # If there's a single downstream remotebookmark, or master is a
+                    # downstream remotebookmark, report it as the current branch.
+                    if downstreambookmarks:
+                        if "master" in downstreambookmarks:
+                            rdata["branch"] = "master"
+                        elif len(downstreambookmarks) == 1:
+                            rdata["branch"] = list(downstreambookmarks)[0]
 
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
             if not opts["nobinary"]:
