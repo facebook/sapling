@@ -1443,6 +1443,24 @@ def triggerhint(context, mapping, args):
     return ""
 
 
+@templatefunc("hyperlink(link, title)")
+def hyperlink(context, mapping, args):
+    """Render hyperlink in terminal"""
+    if len(args) != 2:
+        raise error.ParseError("hyperlink expects two arguments, got %s" % len(args))
+
+    ui = mapping["ui"]
+    hyperlink = ui.formatted() and ui.configbool("ui", "hyperlink", False)
+
+    title = evalstring(context, mapping, args[1])
+
+    if hyperlink:
+        return "\x1b]8;;{link}\x1b\\{title}\x1b]8;;\x1b\\".format(
+            link=evalstring(context, mapping, args[0]), title=title
+        )
+    return title
+
+
 # methods to interpret function arguments or inner expressions (e.g. {_(x)})
 exprmethods = {
     "integer": lambda e, c: (runinteger, e[1]),
