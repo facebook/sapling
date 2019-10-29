@@ -466,14 +466,6 @@ def clientreposetup(repo):
     if not repo.name:
         raise error.Abort(_("remotefilelog.reponame must be configured"))
 
-    if not repo.ui.configbool("treemanifest", "treeonly"):
-        # If we're not a pure-tree repo, we must be using fastmanifest to
-        # provide the hybrid manifest implementation.
-        try:
-            extensions.find("fastmanifest")
-        except KeyError:
-            raise error.Abort(_("cannot use treemanifest without fastmanifest"))
-
     repo.ui.setconfig("verify", "skipmanifests", "True")
 
 

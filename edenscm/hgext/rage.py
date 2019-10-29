@@ -353,15 +353,6 @@ def _makerage(ui, repo, **opts):
                     )
                 )
 
-    # This is quite slow, so we don't want to do it by default
-    if ui.configbool("rage", "fastmanifestcached", False):
-        detailed.append(
-            (
-                'hg sl -r "fastmanifestcached()"',
-                (lambda: hgcmd("smartlog", rev=["fastmanifestcached()"])),
-            )
-        )
-
     footnotes = []
     timeout = opts.get("timeout") or 20
 

@@ -124,7 +124,8 @@ Make a local tree-only draft commit
   \s*8 (re)
 # No manifest revlog revision was added
   $ hg debugindex -m --config treemanifest.treeonly=False
-  abort: cannot use treemanifest without fastmanifest
+  hg debugindex: invalid arguments
+  (use 'hg debugindex -h' to get help)
   [255]
 
 Tree-only amend
@@ -136,7 +137,8 @@ Tree-only amend
   \s*12 (re)
 # No manifest revlog revision was added
   $ hg debugindex -m --config treemanifest.treeonly=False
-  abort: cannot use treemanifest without fastmanifest
+  hg debugindex: invalid arguments
+  (use 'hg debugindex -h' to get help)
   [255]
 
 # Delete the original commits packs
@@ -206,7 +208,8 @@ Test pulling new commits from a hybrid server
   new changesets 098a163f13ea
 
   $ hg debugindex -m --config treemanifest.treeonly=False
-  abort: cannot use treemanifest without fastmanifest
+  hg debugindex: invalid arguments
+  (use 'hg debugindex -h' to get help)
   [255]
   $ hg log -r tip --stat --pager=off
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143* (glob)
@@ -263,7 +266,8 @@ Test turning treeonly off and making sure we can still commit on top of treeonly
 commits
   $ echo >> subdir/x
   $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
-  abort: cannot use treemanifest without fastmanifest
+  hg debugindex: invalid arguments
+  (use 'hg debugindex -h' to get help)
   $ hg commit -m 'treeonly from hybrid repo'
   $ hg log -r . -T '{desc}\n' --stat
   treeonly from hybrid repo
@@ -276,7 +280,8 @@ commits
    1 files changed, 1 insertions(+), 0 deletions(-)
   
   $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
-  abort: cannot use treemanifest without fastmanifest
+  hg debugindex: invalid arguments
+  (use 'hg debugindex -h' to get help)
   $ hg debugstrip -r .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/41373853bc69-c732668d-backup.hg

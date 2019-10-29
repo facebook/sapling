@@ -53,16 +53,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: extensions.remotenames (str)
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.enabled (bool)
-  undocumented: fastmanifest.cachecutoffdays (int) [60]
-  undocumented: fastmanifest.cacheonchange (bool)
-  undocumented: fastmanifest.cacheonchangebackground (bool) [True]
-  undocumented: fastmanifest.debugmetrics (bool)
-  undocumented: fastmanifest.logfile (str)
-  undocumented: fastmanifest.relevantremotenames (list) [["master"]]
-  undocumented: fastmanifest.silent (bool)
-  undocumented: fastmanifest.silentworker (bool) [True]
-  undocumented: fastmanifest.usecache (bool)
-  undocumented: fastmanifest.usetree (bool)
   undocumented: fbconduit.backingrepos (list) [[reponame]]
   undocumented: fbconduit.gitcallsigns (list)
   undocumented: fbconduit.host (str)
@@ -103,7 +93,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: phrevset.callsign (str)
   undocumented: pushrebase.blocknonpushrebase (bool)
   undocumented: pushrebase.rewritedates (bool)
-  undocumented: rage.fastmanifestcached (bool)
   undocumented: remotefilelog.backgroundrepack (bool)
   undocumented: remotefilelog.cachegroup (str)
   undocumented: remotefilelog.debug (bool)

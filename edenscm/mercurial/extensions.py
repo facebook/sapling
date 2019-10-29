@@ -36,6 +36,7 @@ _ignoreextensions = {
     "configwarn",
     "eden",
     "factotum",
+    "fastmanifest",
     "fastpartialmatch",
     "fbsparse",
     "graphlog",

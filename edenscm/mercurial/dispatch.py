@@ -257,7 +257,6 @@ def _preimportmodules():
         "extutil",
         "fastannotate",
         "fastlog",
-        "fastmanifest",
         "fbconduit",
         "fbhistedit",
         "fixcorrupt",

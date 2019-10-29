@@ -1,4 +1,0 @@
-fastmanifest is a tree-based implementation to speed up manifest
-operations in Mercurial.  Its design is optimized for quick
-deserialization from a persistent store.  In compact form, the entire tree
-is relocatable without any traversals.

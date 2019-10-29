@@ -310,8 +310,6 @@ Test extension help:
        extutil       (no help text available)
        fastannotate  yet another annotate implementation that might be faster
        fastlog
-       fastmanifest  a treemanifest disk cache for speeding up manifest
-                     comparison
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
        fixcorrupt    (no help text available)
