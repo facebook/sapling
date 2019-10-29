@@ -103,9 +103,24 @@ where
     return result;
 }
 
+pub struct HeaderlessDiffOpts {
+    /// Number of context lines
+    pub context: usize,
+}
+
+pub enum CopyInfo {
+    /// File was modified, added or removed.
+    None,
+    /// File was moved.
+    Move,
+    /// File was copied.
+    Copy,
+}
+
 pub struct DiffOpts {
     /// Number of context lines
     pub context: usize,
+    pub copy_info: CopyInfo,
 }
 
 const MISSING_NEWLINE_MARKER: &[u8] = b"\\ No newline at end of file\n";
@@ -229,7 +244,7 @@ where
 fn gen_diff_unified_headerless<T, F, S>(
     old_text: &T,
     new_text: &T,
-    opts: DiffOpts,
+    opts: HeaderlessDiffOpts,
     seed: S,
     reduce: F,
 ) -> S
@@ -378,7 +393,7 @@ where
 /// the number of `context` lines can be set in `opts` struct.
 ///
 /// Returns a vector of bytes containing the entire diff.
-pub fn diff_unified_headerless<T>(old_text: &T, new_text: &T, opts: DiffOpts) -> Vec<u8>
+pub fn diff_unified_headerless<T>(old_text: &T, new_text: &T, opts: HeaderlessDiffOpts) -> Vec<u8>
 where
     T: AsRef<[u8]>,
 {
@@ -388,17 +403,26 @@ where
     })
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum FileType {
+    Regular,
+    Executable,
+    Symlink,
+}
+
 /// Struct representing the diffed file. Contains all the information
 /// needed for header-generation.
+#[derive(Debug, Copy, Clone)]
 pub struct DiffFile<P, C>
 where
     P: AsRef<[u8]>,
     C: AsRef<[u8]>,
 {
     /// file path (as [u8])
-    path: P,
+    pub path: P,
     /// file contents (as [u8])
-    contents: C,
+    pub contents: C,
+    pub file_type: FileType,
 }
 
 impl<P, C> DiffFile<P, C>
@@ -406,8 +430,12 @@ where
     P: AsRef<[u8]>,
     C: AsRef<[u8]>,
 {
-    pub fn new(path: P, contents: C) -> Self {
-        Self { path, contents }
+    pub fn new(path: P, contents: C, file_type: FileType) -> Self {
+        Self {
+            path,
+            contents,
+            file_type,
+        }
     }
 }
 
@@ -418,12 +446,13 @@ where
 fn gen_diff_unified<P, C, F, S>(
     old_file: Option<DiffFile<P, C>>,
     new_file: Option<DiffFile<P, C>>,
-    opts: DiffOpts,
+    diff_opts: DiffOpts,
     seed: S,
     reduce: F,
 ) -> S
 where
     P: AsRef<[u8]>,
+    P: Clone,
     C: AsRef<[u8]>,
     F: Fn(S, &[u8]) -> S,
 {
@@ -431,6 +460,16 @@ where
         seed: Some(seed),
         reduce,
     };
+    fn file_type_to_mode(file_type: FileType) -> &'static [u8] {
+        if let FileType::Executable = file_type {
+            b"100755"
+        } else {
+            b"100644"
+        }
+    }
+    if let (None, None) = (&old_file, &new_file) {
+        return state.collect();
+    }
     // When the files have no differences the output should be empty.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
         let old_contents = old_file.contents.as_ref();
@@ -438,6 +477,56 @@ where
         if old_contents.len() == new_contents.len() && old_contents == new_contents {
             return state.collect();
         }
+    }
+    let old_name = &(old_file.as_ref()).or((&new_file).as_ref()).unwrap().path;
+    let new_name = &(new_file.as_ref()).or((&old_file).as_ref()).unwrap().path;
+    state.emit(b"diff --git a/");
+    state.emit(old_name.as_ref());
+    state.emit(b" b/");
+    state.emit(new_name.as_ref());
+    state.emit(b"\n");
+    match (&old_file, &new_file) {
+        (None, Some(new_file)) => {
+            state.emit(b"new file mode ");
+            state.emit(file_type_to_mode(new_file.file_type));
+            state.emit(b"\n");
+        }
+        (Some(old_file), None) => {
+            state.emit(b"deleted file mode ");
+            state.emit(file_type_to_mode(old_file.file_type));
+            state.emit(b"\n");
+        }
+        (Some(old_file), Some(new_file)) => {
+            if file_type_to_mode(old_file.file_type) != file_type_to_mode(new_file.file_type) {
+                state.emit(b"old mode ");
+                state.emit(file_type_to_mode(old_file.file_type));
+                state.emit(b"\n");
+                state.emit(b"new mode ");
+                state.emit(file_type_to_mode(new_file.file_type));
+                state.emit(b"\n");
+            }
+            match diff_opts.copy_info {
+                CopyInfo::Move => {
+                    state.emit(b"rename from ");
+                    state.emit(&old_file.path.as_ref());
+                    state.emit(b"\n");
+                    state.emit(b"rename to ");
+                    state.emit(&new_file.path.as_ref());
+                    state.emit(b"\n");
+                }
+                CopyInfo::Copy => {
+                    state.emit(b"copy from ");
+                    state.emit(&old_file.path.as_ref());
+                    state.emit(b"\n");
+                    state.emit(b"copy to ");
+                    state.emit(&new_file.path.as_ref());
+                    state.emit(b"\n");
+                }
+                CopyInfo::None => {}
+            }
+        }
+        // Impossible here.
+        (None, None) => (),
     }
     // Headers for old file.
     if let Some(old_file) = &old_file {
@@ -460,6 +549,9 @@ where
     match (&old_file, &new_file) {
         (Some(old_file), Some(new_file)) => {
             // Typical case, we need to call actual diff function to get the diff.
+            let opts = HeaderlessDiffOpts {
+                context: diff_opts.context,
+            };
             gen_diff_unified_headerless(&old_file.contents, &new_file.contents, opts, seed, reduce)
         }
         (Some(old_file), None) => {
@@ -487,7 +579,7 @@ pub fn diff_unified<N, C>(
     opts: DiffOpts,
 ) -> Vec<u8>
 where
-    N: AsRef<[u8]>,
+    N: AsRef<[u8]> + Clone,
     C: AsRef<[u8]>,
 {
     gen_diff_unified(old_file, new_file, opts, Vec::new(), |mut v, part| {
@@ -543,7 +635,7 @@ d
 e
 z"#;
         assert_eq!(
-            diff_unified_headerless(&a, &b, DiffOpts { context: 10 }),
+            diff_unified_headerless(&a, &b, HeaderlessDiffOpts { context: 10 }),
             r"@@ -1,4 +1,5 @@
  a
 -b
@@ -577,14 +669,20 @@ z"#;
                 Some(DiffFile {
                     contents: &a,
                     path: "x",
+                    file_type: FileType::Regular,
                 }),
                 Some(DiffFile {
                     contents: &b,
                     path: "y",
+                    file_type: FileType::Regular,
                 }),
-                DiffOpts { context: 10 }
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
             )),
-            r"--- a/x
+            r"diff --git a/x b/y
+--- a/x
 +++ b/y
 @@ -1,6 +1,7 @@
  a
@@ -614,11 +712,17 @@ d
                 Some(DiffFile {
                     contents: &a,
                     path: "x",
+                    file_type: FileType::Regular,
                 }),
                 None,
-                DiffOpts { context: 10 }
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
             )),
-            r"--- a/x
+            r"diff --git a/x b/x
+deleted file mode 100644
+--- a/x
 +++ /dev/null
 @@ -1,4 +0,0 @@
 -a

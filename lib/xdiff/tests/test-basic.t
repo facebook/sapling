@@ -28,10 +28,13 @@ Generate test files
   $ printf "" > empty
   $ printf "a\0" > binary_a
   $ printf "b\0" > binary_b
+  $ cp a a_exec
+  $ chmod +x a_exec
 
 
 Basic diff test
   $ xdiff a b
+  diff --git a/a b/b
   --- a/a
   +++ b/b
   @@ -1,6 +1,6 @@
@@ -46,6 +49,7 @@ Basic diff test
 
 Test with empty file
   $ xdiff a empty
+  diff --git a/a b/empty
   --- a/a
   +++ b/empty
   @@ -1,6 +1,1 @@
@@ -55,3 +59,68 @@ Test with empty file
   -d
   -e
   -f
+
+Test with non-existent file
+  $ xdiff a non-existent
+  diff --git a/a b/a
+  deleted file mode 100644
+  --- a/a
+  +++ /dev/null
+  @@ -1,6 +0,0 @@
+  -a
+  -b
+  -c
+  -d
+  -e
+  -f
+
+Test with executable file
+  $ xdiff b a_exec
+  diff --git a/b b/a_exec
+  old mode 100644
+  new mode 100755
+  --- a/b
+  +++ b/a_exec
+  @@ -1,6 +1,6 @@
+   a
+  -x
+  +b
+   c
+   d
+  +e
+   f
+  -g
+
+Test copy
+  $ xdiff --copy a b
+  diff --git a/a b/b
+  copy from a
+  copy to b
+  --- a/a
+  +++ b/b
+  @@ -1,6 +1,6 @@
+   a
+  -b
+  +x
+   c
+   d
+  -e
+   f
+  +g
+
+Test move
+  $ xdiff --move b a
+  diff --git a/b b/a
+  rename from b
+  rename to a
+  --- a/b
+  +++ b/a
+  @@ -1,6 +1,6 @@
+   a
+  -x
+  +b
+   c
+   d
+  +e
+   f
+  -g
