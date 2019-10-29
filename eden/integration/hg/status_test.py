@@ -4,9 +4,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import binascii
 import os
 
 from eden.integration.lib.hgrepo import HgRepository
+from facebook.eden.ttypes import (
+    EdenError,
+    EdenErrorType,
+    GetScmStatusParams,
+    ScmFileStatus,
+    ScmStatus,
+)
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -56,6 +64,91 @@ class StatusTest(EdenHgTestCase):
         self.hg("rm", "--force", "hello.txt")
         self.assert_status({"hello.txt": "R", "world.txt": "A"})
         self.assertFalse(os.path.exists(self.get_path("hello.txt")))
+
+    def thoroughly_get_scm_status(
+        self, client, mountPoint, commit, listIgnored, expected_status
+    ) -> None:
+        status_from_get_scm_status = client.getScmStatus(
+            mountPoint=bytes(mountPoint, encoding="utf-8"),
+            commit=commit,
+            listIgnored=False,
+        )
+        status_from_get_scm_status_v2 = client.getScmStatusV2(
+            GetScmStatusParams(
+                mountPoint=bytes(mountPoint, encoding="utf-8"),
+                commit=commit,
+                listIgnored=False,
+            )
+        ).status
+
+        self.assertEqual(
+            status_from_get_scm_status,
+            status_from_get_scm_status_v2,
+            "getScmStatus and getScmStatusV2 should agree",
+        )
+
+    def test_status_thrift_apis(self) -> None:
+        """Test both the getScmStatusV2() and getScmStatus() thrift APIs."""
+        # This confirms that both thrift APIs continue to work,
+        # independently of the one currently used by hg.
+        initial_commit_hex = self.repo.get_head_hash()
+        initial_commit = binascii.unhexlify(initial_commit_hex)
+
+        with self.get_thrift_client() as client:
+            # Test with a clean status.
+            expected_status = ScmStatus(entries={}, errors={})
+            self.thoroughly_get_scm_status(
+                client, self.mount, initial_commit, False, expected_status
+            )
+
+            # Modify the working directory and then test again
+            self.repo.write_file("hello.txt", "saluton")
+            self.touch("new_tracked.txt")
+            self.hg("add", "new_tracked.txt")
+            self.touch("untracked.txt")
+            expected_entries = {
+                b"hello.txt": ScmFileStatus.MODIFIED,
+                b"new_tracked.txt": ScmFileStatus.ADDED,
+                b"untracked.txt": ScmFileStatus.ADDED,
+            }
+            expected_status = ScmStatus(entries=expected_entries, errors={})
+            self.thoroughly_get_scm_status(
+                client, self.mount, initial_commit, False, expected_status
+            )
+
+            # Commit the modifications
+            self.repo.commit("committing changes")
+
+    def test_status_with_non_parent(self) -> None:
+        # This confirms that an error is thrown if getScmStatusV2 is called
+        # with a commit that is not the parent commit
+        initial_commit_hex = self.repo.get_head_hash()
+        initial_commit = binascii.unhexlify(initial_commit_hex)
+
+        with self.get_thrift_client() as client:
+            # Add file to commit
+            self.touch("new_tracked.txt")
+            self.hg("add", "new_tracked.txt")
+
+            # Commit the modifications
+            self.repo.commit("committing changes")
+
+            # Test calling getScmStatusV2() with a commit that is not the parent commit
+            error_regex = (
+                "error computing status: requested parent commit is "
+                + "out-of-date: requested .*, but current parent commit is .*"
+            )
+            with self.assertRaisesRegex(EdenError, error_regex) as context:
+                client.getScmStatusV2(
+                    GetScmStatusParams(
+                        mountPoint=bytes(self.mount, encoding="utf-8"),
+                        commit=initial_commit,
+                        listIgnored=False,
+                    )
+                )
+            self.assertEqual(
+                EdenErrorType.OUT_OF_DATE_PARENT, context.exception.errorType
+            )
 
     def test_manual_revert(self) -> None:
         self.assert_status_empty()

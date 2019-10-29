@@ -274,6 +274,7 @@ EdenServiceHandler::EdenServiceHandler(
       std::make_tuple("getFileInformation", HistConfig{}),
       std::make_tuple("glob", HistConfig{}),
       std::make_tuple("globFiles", HistConfig{}),
+      std::make_tuple("getScmStatusV2", HistConfig{}),
       std::make_tuple("getScmStatus", HistConfig{}),
       std::make_tuple("getScmStatusBetweenRevisions", HistConfig{}),
       std::make_tuple("getManifestEntry", HistConfig{}),
@@ -988,12 +989,36 @@ std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
 #endif // !_WIN32
 }
 
+Future<std::unique_ptr<GetScmStatusResult>>
+EdenServiceHandler::future_getScmStatusV2(
+    unique_ptr<GetScmStatusParams> params) {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG2,
+      params->mountPoint,
+      folly::to<string>("commitHash=", logHash(params->commit)),
+      folly::to<string>("listIgnored=", params->listIgnored));
+
+  auto mount = server_->getMount(params->mountPoint);
+  auto hash = hashFromThrift(params->commit);
+  return helper.wrapFuture(
+      mount->diff(hash, params->listIgnored)
+          .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
+            auto result = std::make_unique<GetScmStatusResult>();
+            result->status = std::move(*status);
+            result->version = server_->getVersion();
+            return result;
+          }));
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 void EdenServiceHandler::async_tm_getScmStatus(
-    std::unique_ptr<apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>>
-        callback,
-    std::unique_ptr<std::string> mountPoint,
+    unique_ptr<apache::thrift::HandlerCallback<unique_ptr<ScmStatus>>> callback,
+    unique_ptr<string> mountPoint,
     bool listIgnored,
-    std::unique_ptr<std::string> commitHash) {
+    unique_ptr<string> commitHash) {
 #ifndef _WIN32
   auto* request = callback->getRequest();
   folly::makeFutureWith([&, func = __func__] {
@@ -1004,9 +1029,10 @@ void EdenServiceHandler::async_tm_getScmStatus(
         folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
         folly::to<string>("commitHash=", logHash(*commitHash)));
 
-    // This does not enforce  that the caller specified the current commit.  In
-    // the future we might want to enforce that for this call, if we confirm
-    // that all existing callers of this method can deal with the error.
+    // Unlike getScmStatusV2(), this older getScmStatus() call does not enforce
+    // that the caller specified the current commit.  In the future we might
+    // want to enforce that even for this call, if we confirm that all existing
+    // callers of this method can deal with the error.
     auto mount = server_->getMount(*mountPoint);
     auto hash = hashFromThrift(*commitHash);
     return helper.wrapFuture(mount->diff(
@@ -1022,11 +1048,11 @@ void EdenServiceHandler::async_tm_getScmStatus(
 #endif // !_WIN32
 }
 
-folly::Future<std::unique_ptr<ScmStatus>>
+Future<unique_ptr<ScmStatus>>
 EdenServiceHandler::future_getScmStatusBetweenRevisions(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> oldHash,
-    std::unique_ptr<std::string> newHash) {
+    unique_ptr<string> mountPoint,
+    unique_ptr<string> oldHash,
+    unique_ptr<string> newHash) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,

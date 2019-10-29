@@ -721,12 +721,17 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   // checkout
   *lastCheckoutTime_.wlock() = clock_->getRealtime();
 
-  auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
-  auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
-
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
-  return folly::collect(fromTreeFuture, toTreeFuture)
+  return serverState_->getFaultInjector()
+      .checkAsync("checkout", getPath().stringPiece())
+      .via(serverState_->getThreadPool().get())
+      .thenValue(
+          [this, parent1Hash = oldParents.parent1(), snapshotHash](auto&&) {
+            auto fromTreeFuture = objectStore_->getTreeForCommit(parent1Hash);
+            auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
+            return folly::collect(fromTreeFuture, toTreeFuture);
+          })
       .thenValue([this, ctx, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
