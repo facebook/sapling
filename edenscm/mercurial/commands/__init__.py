@@ -5702,16 +5702,8 @@ def show(ui, repo, *args, **opts):
     opts["patch"] = not opts["stat"]
     opts["verbose"] = True
 
-    # Copy tracking is slow when doing a git diff. Override hgrc, and rely on
-    # opts getting us a git diff if it's been requested. Ideally, we'd find and
-    # fix the slowness in copy tracking, but this works for now.
-    # On a commit with lots of possible copies, Bryan O'Sullivan found that this
-    # reduces "time hg show" from 1.76 seconds to 0.81 seconds.
-    overrides = {
-        ("diff", "git"): opts.get("git"),
-        ("diff", "unified"): opts.get("unified"),
-        ("ui", "verbose"): True,
-    }
+    # Show full commit message.
+    overrides = {("ui", "verbose"): True}
 
     logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts("log", table)
     defaultlogopts.update(opts)
