@@ -30,6 +30,10 @@ struct Opt {
     /// Treat the <file-b> as a move of the <file-a>
     #[structopt(short, long)]
     move_: bool,
+
+    /// Number of lines of unified context (default: 3)
+    #[structopt(short = "U", long, default_value = "3")]
+    unified: usize,
 }
 
 fn main() -> Result<(), std::io::Error> {
@@ -81,7 +85,7 @@ fn main() -> Result<(), std::io::Error> {
         a,
         b,
         DiffOpts {
-            context: 3,
+            context: opt.unified,
             copy_info,
         },
     );

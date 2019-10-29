@@ -92,24 +92,22 @@ Test with executable file
   -g
 
 Test copy
-  $ xdiff --copy a b
+  $ xdiff --copy a b -U 0
   diff --git a/a b/b
   copy from a
   copy to b
   --- a/a
   +++ b/b
-  @@ -1,6 +1,6 @@
-   a
+  @@ -2,1 +2,1 @@
   -b
   +x
-   c
-   d
+  @@ -5,1 +5,0 @@
   -e
-   f
+  @@ -7,0 +6,1 @@
   +g
 
 Test move
-  $ xdiff --move b a
+  $ xdiff --move b a -U 1
   diff --git a/b b/a
   rename from b
   rename to a
