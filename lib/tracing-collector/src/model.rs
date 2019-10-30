@@ -42,6 +42,12 @@ pub struct TracingData {
     /// Relative start time (so other timestamps can use relative form).
     #[serde(skip, default = "std::time::Instant::now")]
     relative_start: std::time::Instant,
+
+    /// For testing purpose.
+    /// - 0: Use real clock.
+    /// - Non-zero: Use a faked clock.
+    #[serde(skip, default = "Default::default")]
+    test_clock_step: u64,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -136,6 +142,10 @@ impl TracingData {
             strings: Default::default(),
             espans: Default::default(),
             eventus: Default::default(),
+            test_clock_step: match std::env::var("TRACING_DATA_FAKE_CLOCK") {
+                Ok(clock) => clock.parse::<u64>().unwrap_or(0),
+                Err(_) => 0,
+            },
         })
     }
 
@@ -158,11 +168,17 @@ impl TracingData {
 
     /// Get the current relative time, in microseconds.
     fn now_micros(&self) -> RelativeTime {
-        RelativeTime(
-            std::time::Instant::now()
-                .duration_since(self.relative_start)
-                .as_micros() as u64,
-        )
+        if self.test_clock_step == 0 {
+            RelativeTime(
+                std::time::Instant::now()
+                    .duration_since(self.relative_start)
+                    .as_micros() as u64,
+            )
+        } else {
+            RelativeTime(
+                self.eventus.last().map(|e| e.timestamp.0).unwrap_or(0) + self.test_clock_step,
+            )
+        }
     }
 }
 
@@ -468,6 +484,7 @@ impl TracingData {
 
         let start = list.iter().map(|t| t.start).min().unwrap(); // list.len >= 1
         let relative_start = list.iter().map(|t| t.relative_start).min().unwrap();
+        let test_clock_step = list.iter().map(|t| t.test_clock_step).min().unwrap();
         let default_process_id = unsafe { libc::getpid() } as u64;
         let default_thread_id = THREAD_ID.with(|thread_id| *thread_id);
         let mut strings = InternedStrings::default();
@@ -533,6 +550,7 @@ impl TracingData {
             default_process_id,
             default_thread_id,
             relative_start,
+            test_clock_step,
         }
     }
 }
