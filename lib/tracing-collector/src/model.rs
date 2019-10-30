@@ -7,6 +7,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::io;
 use std::ops::DerefMut;
 
@@ -695,4 +696,595 @@ where
 {
     let mut iter = iter.borrow_mut();
     s.collect_seq(iter.deref_mut())
+}
+
+// -------- ASCII output --------
+
+/// Options used to control behavior of writing ASCII graph.
+#[derive(Default)]
+pub struct AsciiOptions {
+    /// Hide a "Duration Span" if a span takes less than the specified
+    /// microseconds.
+    pub min_duration_micros: u64,
+
+    // Prevent constructing this struct using fields so more fields
+    // can be added later.
+    _private: (),
+}
+
+/// Spans that form a Tree. Internal used by write_ascii functions.
+#[derive(Default)]
+struct TreeSpan {
+    // None: Root Span. Otherwise non-root span.
+    espan_id: Option<EspanId>,
+    start_time: u64,
+    duration: u64,
+    children: Vec<TreeSpanId>,
+}
+type TreeSpanId = usize;
+
+impl TreeSpan {
+    /// Whether the current [`TreeSpan`] covers another [`TreeSpan`] timestamp-wise.
+    fn covers(&self, other: &TreeSpan) -> bool {
+        self.end_time() >= other.end_time() && self.start_time <= other.start_time
+    }
+
+    /// End time (inaccurate if this is a merged span, i.e. call_count > 1).
+    fn end_time(&self) -> u64 {
+        self.start_time + self.duration
+    }
+
+    /// Is this span considered interesting (should it be printed)?
+    fn is_interesting(&self, opts: &AsciiOptions) -> bool {
+        self.duration >= opts.min_duration_micros
+    }
+}
+
+struct Row {
+    columns: Vec<String>,
+}
+
+struct Rows {
+    rows: Vec<Row>,
+    column_alignments: Vec<Alignment>,
+    column_min_widths: Vec<usize>,
+}
+
+enum Alignment {
+    Left,
+    Right,
+}
+
+impl fmt::Display for Rows {
+    /// Render rows with aligned columns.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let column_count = self.rows.iter().map(|r| r.columns.len()).max().unwrap_or(0);
+        let column_widths: Vec<usize> = (0..column_count)
+            .map(|i| {
+                self.rows
+                    .iter()
+                    .map(|r| r.columns.get(i).map(|s| s.len()).unwrap_or(0))
+                    .max()
+                    .unwrap_or(0)
+                    .max(self.column_min_widths.get(i).cloned().unwrap_or(0))
+            })
+            .collect();
+        for row in self.rows.iter() {
+            for (i, cell) in row.columns.iter().enumerate() {
+                let width = column_widths[i];
+                let pad = " ".repeat(width - cell.len());
+                let mut content = match self.column_alignments.get(i).unwrap_or(&Alignment::Left) {
+                    Alignment::Left => cell.clone() + &pad,
+                    Alignment::Right => pad + cell,
+                };
+                if i + 1 == row.columns.len() {
+                    content = content.trim_end().to_string();
+                };
+                if !content.is_empty() {
+                    if i != 0 {
+                        // Separator
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}", content)?;
+                }
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
+}
+
+impl TracingData {
+    /// Generate ASCII output.
+    pub fn ascii(&self, opts: &AsciiOptions) -> String {
+        let eventus_by_pid_tid = self.eventus_group_by_pid_tid();
+
+        // Handle (pid, tid) one by one.
+        let mut out = String::new();
+        for ((pid, tid), eventus) in eventus_by_pid_tid.iter() {
+            if self.test_clock_step > 0 {
+                out += &"Process _ Thread _:\n"
+            } else {
+                out += &format!("Process {} Thread {}:\n", pid, tid)
+            };
+            out += &self.ascii_single_thread(&eventus, opts);
+            out += "\n";
+        }
+        out
+    }
+
+    fn eventus_group_by_pid_tid(&self) -> IndexMap<(u64, u64), Vec<&Eventus>> {
+        // Group by (pid, tid).
+        let mut eventus_by_pid_tid = IndexMap::<(u64, u64), Vec<&Eventus>>::new();
+        for e in self.eventus.iter() {
+            let pid = match e.process_id {
+                0 => self.default_process_id,
+                v => v,
+            };
+            let tid = match e.thread_id {
+                0 => self.default_thread_id,
+                v => v,
+            };
+            eventus_by_pid_tid.entry((pid, tid)).or_default().push(e);
+        }
+        eventus_by_pid_tid
+    }
+
+    /// Generate ASCII call graph for a single thread.
+    fn ascii_single_thread(&self, eventus_list: &[&Eventus], opts: &AsciiOptions) -> String {
+        let tree_spans = self.build_tree_spans(eventus_list);
+        let rows = self.render_tree_spans(tree_spans, opts);
+        rows.to_string()
+    }
+
+    /// Scan `Eventus` list to reconstruct the call graph.
+    fn build_tree_spans(&self, eventus_list: &[&Eventus]) -> Vec<TreeSpan> {
+        // For example, eventus_list like:
+        // (`+`: Enter, `-`: Exit, Number: SpanId)
+        //
+        //   +1 +1 -1 +2 +3 -3 -2 -1 +3 -3
+        //
+        // forms the following tree:
+        //
+        //   <root>
+        //    |- span 1
+        //    |   |- span 1
+        //    |   |- span 2
+        //    |       |- span 3
+        //    |- span 3
+        //
+        // It's possible to replace "2" and "3" with "1" and the shape of the
+        // tree should remain unchanged.
+
+        // Build up some indexes to help analyze spans.
+        //
+        // `Eid` is the index in `eventus_list` passed in.
+        type Eid = usize;
+
+        /// Find out the matched ExitSpan for an EnterSpan.
+        ///
+        /// Note: a same function can reuse a same SpanId and be called
+        /// recursively.
+        #[derive(Default)]
+        struct EnterExitMatcher {
+            /// EnterSpan actions that are not yet matched.
+            unmatched: Vec<Eid>,
+
+            /// EnterSpan Eid -> ExitSpan Eid.
+            matched: IndexMap<Eid, Eid>,
+        }
+
+        impl EnterExitMatcher {
+            /// Attempt to find the Eid of ExitSpan matching an EnterSpan.
+            fn find_matched_exit_eid(&self, enter_eid: Eid) -> Option<Eid> {
+                self.matched.get(&enter_eid).cloned()
+            }
+
+            /// Process a [`Eventus`]. Must be called in timestamp order.
+            fn process(&mut self, action: Action, eid: Eid) {
+                match action {
+                    Action::EnterSpan => {
+                        self.unmatched.push(eid);
+                    }
+                    Action::ExitSpan => {
+                        if let Some(enter_eid) = self.unmatched.pop() {
+                            self.matched.insert(enter_eid, eid);
+                        }
+                    }
+                    Action::Event => (),
+                }
+            }
+        }
+
+        let mut enter_exit_matchers = IndexMap::<EspanId, EnterExitMatcher>::new();
+        for (eid, e) in eventus_list.iter().enumerate() {
+            enter_exit_matchers
+                .entry(e.espan_id)
+                .or_default()
+                .process(e.action, eid);
+        }
+        // NOTE: This does not handle incomplete (Enter without Exit). Consider
+        // force closing the spans somehow?
+
+        // To make the Rust borrowck happy, use another Vec for all TreeSpans,
+        // and refer to other TreeSpans using Vec indexes.
+        // A dummy root is created, so the root is unique. That makes it a bit
+        // easier to handle.
+        let mut tree_spans = vec![TreeSpan::default()];
+
+        // Keep a stack of TreeSpans to figure out parents.
+        let mut stack: Vec<TreeSpanId> = vec![0];
+
+        // Scan through the `Eventus` list. For any `EnterSpan` action, try
+        // to find the matching `ExitSpan` action and create a span with a
+        // proper parent.
+        for (eid, e) in eventus_list.iter().enumerate() {
+            let span_id = e.espan_id;
+            match e.action {
+                Action::EnterSpan => {
+                    // Find the matching ExitSpan.
+                    // The [`EnterExitMatcher`] should always exist.
+                    let matcher = &enter_exit_matchers[&span_id];
+                    if let Some(end_eid) = matcher.find_matched_exit_eid(eid) {
+                        let end = eventus_list[end_eid];
+                        // `eventus_list` should be sorted in time.
+                        // So this is guaranteed.
+                        assert!(end_eid >= eid);
+                        assert!(end.timestamp >= e.timestamp);
+
+                        // This is the matched ExitSpan!
+                        let tree_span = TreeSpan {
+                            espan_id: Some(span_id),
+                            start_time: e.timestamp.0,
+                            duration: end.timestamp.0 - e.timestamp.0,
+                            children: Vec::new(),
+                        };
+
+                        // Find a suitable parent span. Pop parent spans
+                        // if this span does not fit in it.
+                        //
+                        // But, always keep the (dummy) root parent span.
+                        let parent_id = loop {
+                            let parent_id = *stack.last().unwrap();
+                            let parent = &tree_spans[parent_id];
+                            if parent.covers(&tree_span) {
+                                break parent_id;
+                            } else if stack.len() == 1 {
+                                // Use the root span as parent.
+                                break 0;
+                            } else {
+                                stack.pop();
+                            }
+                        };
+
+                        // Record the new TreeSpan and record parent-child
+                        // relationship.
+                        let id = tree_spans.len();
+                        tree_spans.push(tree_span);
+                        stack.push(id);
+                        tree_spans[parent_id].children.push(id);
+                    }
+                }
+                Action::ExitSpan => {
+                    // Handled in EnterSpan. Therefore do nothing here.
+                }
+                Action::Event => {
+                    // NOTE: Consider implementing this in some way.
+                    // Potentially in another function (?)
+                }
+            }
+        }
+
+        tree_spans
+    }
+
+    /// Render one `TreeSpan` into `Rows`.
+    fn render_tree_spans(&self, tree_spans: Vec<TreeSpan>, opts: &AsciiOptions) -> Rows {
+        struct Context<'a> {
+            this: &'a TracingData,
+            opts: &'a AsciiOptions,
+            tree_spans: Vec<TreeSpan>,
+            rows: Vec<Row>,
+        }
+
+        /// Extract value from espan.meta.
+        fn extract<'a>(ctx: &'a Context, espan: &'a Espan, name: &'a str) -> &'a str {
+            let meta = &espan.meta;
+            if let Some((key_id, _)) = ctx.this.strings.0.get_full(name) {
+                let key_id = StringId(key_id as u64);
+                if let Some(value_id) = meta.get(&key_id) {
+                    return ctx.this.strings.get(*value_id);
+                }
+            }
+            ""
+        };
+
+        /// Render TreeSpan to rows.
+        fn render_span(ctx: &mut Context, id: usize, mut indent: usize, first_row_ch: char) {
+            let tree_span = &ctx.tree_spans[id];
+            if let Some(espan_id) = tree_span.espan_id {
+                let this = ctx.this;
+                let strings = &this.strings;
+                let espan = &ctx.this.espans[espan_id.0 as usize];
+                let name = extract(ctx, espan, "name");
+                let source_location = {
+                    let module_path = extract(ctx, espan, "module_path");
+                    let line = extract(ctx, espan, "line");
+                    if module_path.is_empty() {
+                        let cat = extract(ctx, espan, "cat");
+                        if cat.is_empty() {
+                            String::new()
+                        } else {
+                            format!("({})", cat)
+                        }
+                    } else if line.is_empty() {
+                        module_path.to_string()
+                    } else {
+                        format!("{} line {}", module_path, line)
+                    }
+                };
+                // Use milliseconds. This is consistent with traceprof.
+                let start = tree_span.start_time / 1000;
+                let duration = tree_span.duration / 1000;
+
+                let first_row = Row {
+                    columns: vec![
+                        start.to_string(),
+                        format!("+{}", duration),
+                        format!("{}{} {}", " ".repeat(indent), first_row_ch, name),
+                        source_location,
+                    ],
+                };
+                ctx.rows.push(first_row);
+
+                // Extra metadata (other than name, module_path and line)
+                let extra_meta: Vec<(&str, &str)> = espan
+                    .meta
+                    .iter()
+                    .map(|(&key, &value)| (strings.get(key), strings.get(value)))
+                    .filter(|(key, value)| {
+                        *key != "name" && *key != "module_path" && *key != "line" && *key != "cat"
+                    })
+                    .collect();
+                if first_row_ch == '\\' {
+                    indent += 1;
+                }
+                for (i, (key, value)) in extra_meta.iter().enumerate() {
+                    let value = if value.len() > 32 {
+                        format!("{}...", &value[..30])
+                    } else {
+                        value.to_string()
+                    };
+                    let row = Row {
+                        columns: vec![
+                            String::new(),
+                            String::new(),
+                            format!("{}| - {} = {}", " ".repeat(indent), key, value),
+                            format!(":"),
+                        ],
+                    };
+                    ctx.rows.push(row);
+                }
+            }
+        }
+
+        /// Visit a span and its children recursively.
+        fn visit(ctx: &mut Context, id: usize, indent: usize, ch: char) {
+            // Print out this span.
+            render_span(ctx, id, indent, ch);
+
+            // Figure out children to visit.
+            let child_ids: Vec<usize> = ctx.tree_spans[id]
+                .children
+                .iter()
+                .cloned()
+                .filter(|&id| ctx.tree_spans[id].is_interesting(ctx.opts))
+                .collect();
+
+            // Preserve a straight line if there is only one child:
+            //
+            //   | foo ('bar' is the only child)
+            //   | bar  <- case 1
+            //
+            // Increase indent if there are multi-children (case 2),
+            // or it's already not a straight line (case 3):
+            //
+            //   | foo ('bar1' and 'bar2' are children)
+            //    \ bar1     <- case 2
+            //     | bar1.1  <- case 3
+            //     | bar1.2  <- case 1
+            //    \ bar2     <- case 2
+            //     \ bar2.1  <- case 2
+            //     \ bar2.2  <- case 2
+            //
+            let (indent, ch) = if child_ids.len() >= 2 {
+                // case 2
+                (indent + 1, '\\')
+            } else if ch == '\\' {
+                // case 3
+                (indent + 1, '|')
+            } else {
+                // case 1
+                (indent, '|')
+            };
+
+            for id in child_ids {
+                visit(ctx, id, indent, ch)
+            }
+        }
+
+        let mut context = Context {
+            this: self,
+            opts,
+            tree_spans,
+            rows: vec![Row {
+                columns: ["Start", "Dur.ms", "| Name", "Source"]
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect(),
+            }],
+        };
+
+        // Visit the root TreeSpan.
+        visit(&mut context, 0, 0, '|');
+
+        let column_alignments = vec![
+            Alignment::Right, // start time
+            Alignment::Right, // duration
+            Alignment::Left,  // graph, name
+            Alignment::Left,  // module, line number
+        ];
+
+        let column_min_widths = vec![4, 4, 20, 0];
+
+        Rows {
+            rows: context.rows,
+            column_alignments,
+            column_min_widths,
+        }
+    }
+}
+
+// -------- Tests --------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl TracingData {
+        /// Similar to `new`, but use dummy clocks for testing purpose.
+        pub fn new_for_test() -> TracingData {
+            let mut data = Self::new();
+            data.test_clock_step = 2000; // 2 milliseconds
+            data
+        }
+    }
+
+    fn meta<'a>(name: &'a str, module_path: &'a str, line: &'a str) -> Vec<(&'a str, &'a str)> {
+        vec![("name", name), ("module_path", module_path), ("line", line)]
+    }
+
+    #[test]
+    fn test_empty() {
+        let data = TracingData::new_for_test();
+        assert_eq!(data.ascii(&Default::default()), "");
+    }
+
+    #[test]
+    fn test_reusable_span() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), Some(EspanId(0)));
+        let span_id2 = data.add_espan(&meta("foo", "a.py", "10"), Some(span_id1)); // reuse
+        let span_id3 = data.add_espan(&meta("foo", "a.py", "20"), Some(span_id1)); // not reuse
+        let span_id4 = data.add_espan(&meta("foo", "a.py", "10"), Some(span_id3)); // not reuse
+        assert_eq!(span_id1, span_id2);
+        assert_ne!(span_id1, span_id3);
+        assert_ne!(span_id1, span_id4);
+    }
+
+    #[test]
+    fn test_extra_meta() {
+        let mut meta1 = meta("eval", "eval.py", "10");
+        meta1.push(("expression", "['+', 1, 2]"));
+        meta1.push(("result", "3"));
+        let meta2 = meta("refresh", "view.py", "90");
+
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta1, None);
+        let span_id2 = data.add_espan(&meta2, None);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name                       Source
+    2     +6 | eval                       eval.py line 10
+             | - expression = ['+', 1, 2] :
+             | - result = 3               :
+    4     +2 | refresh                    view.py line 90
+
+"#
+        );
+
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta1, None);
+        let span_id2 = data.add_espan(&meta2, None);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name                         Source
+    2    +14 | refresh                      view.py line 90
+    4     +2  \ refresh                     view.py line 90
+    8     +6  \ eval                        eval.py line 10
+               | - expression = ['+', 1, 2] :
+               | - result = 3               :
+   10     +2   | refresh                    view.py line 90
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_recursive_single_span() {
+        let mut data = TracingData::new_for_test();
+        let span_id = data.add_espan(&meta("foo", "a.py", "10"), None);
+        data.add_action(span_id, Action::EnterSpan); // span
+        data.add_action(span_id, Action::EnterSpan); // +- span
+        data.add_action(span_id, Action::EnterSpan); // |  +- span
+        data.add_action(span_id, Action::EnterSpan); // |     +- span
+        data.add_action(span_id, Action::EnterSpan); // |        +- span
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::EnterSpan); // +- span
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::EnterSpan); // +- span
+        data.add_action(span_id, Action::EnterSpan); // |  +- span
+        data.add_action(span_id, Action::ExitSpan); //  |  |
+        data.add_action(span_id, Action::EnterSpan); // |  +- span
+        data.add_action(span_id, Action::ExitSpan); //  |
+        data.add_action(span_id, Action::ExitSpan);
+
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    4    +14  \ foo               a.py line 10
+    6    +10   | foo              a.py line 10
+    8     +6   | foo              a.py line 10
+   10     +2   | foo              a.py line 10
+   20     +2  \ foo               a.py line 10
+   24    +10  \ foo               a.py line 10
+   26     +2   \ foo              a.py line 10
+   30     +2   \ foo              a.py line 10
+
+"#
+        );
+
+        let mut opts = AsciiOptions::default();
+        opts.min_duration_micros = 4000;
+        assert_eq!(
+            data.ascii(&opts),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    4    +14  \ foo               a.py line 10
+    6    +10   | foo              a.py line 10
+    8     +6   | foo              a.py line 10
+   24    +10  \ foo               a.py line 10
+
+"#
+        );
+    }
+
 }
