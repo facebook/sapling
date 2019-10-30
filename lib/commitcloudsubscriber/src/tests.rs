@@ -22,24 +22,3 @@ fn test_read_access_token_from_file_should_return_token() {
     dir.close().unwrap();
     assert_eq!(result.token, "token");
 }
-
-#[cfg(target_os = "macos")]
-#[test]
-// we get panic with CommitCloudUnexpectedError("Token Lookup: token not found")
-#[ignore]
-fn test_read_access_token_from_keychain_should_return_token() {
-    let result = read_access_token(&None).unwrap();
-    assert!(!result.token.is_empty())
-}
-
-#[cfg(unix)]
-#[cfg(not(target_os = "macos"))]
-#[test]
-// I seem to get a real token from this test
-#[ignore]
-fn test_read_access_token_from_secrets_should_return_token() {
-    // Use the secret "COMMITCLOUD_TEST" for testing purposes
-    env::set_var("USER", "test");
-    let result = read_access_token(&None).unwrap();
-    assert_eq!(result.token, "token");
-}
