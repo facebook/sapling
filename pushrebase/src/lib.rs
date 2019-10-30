@@ -8,6 +8,7 @@
 
 #![cfg_attr(test, type_length_limit = "2434476")]
 #![deny(warnings)]
+#![feature(async_await)]
 
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server
@@ -52,10 +53,13 @@ use context::CoreContext;
 use failure::{Error, Fail};
 use failure_ext::{FutureFailureErrorExt, Result};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
-use futures::{Future, IntoFuture, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{stream, Future, IntoFuture, Stream};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_preview::compat::Future01CompatExt;
+use futures_util::{future::FutureExt as NewFutureExt, try_future::TryFutureExt};
+use manifest::ManifestOps;
 use maplit::hashmap;
-use mercurial_types::{Changeset, HgChangesetId, MPath};
+use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
@@ -64,7 +68,7 @@ use mononoke_types::{
 use revset::RangeNodeStream;
 use slog::info;
 use std::cmp::{max, Ordering};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use tracing::{trace_args, Traced};
 
@@ -97,6 +101,11 @@ pub enum ErrorKind {
         _0, _1
     )]
     P2RootRebaseForbidden(HgChangesetId, BookmarkName),
+    #[fail(
+        display = "internal error: unexpected file conflicts when adding new file changes to {}",
+        _0
+    )]
+    NewFileChangesConflict(ChangesetId),
 }
 
 #[derive(Debug)]
@@ -343,6 +352,8 @@ fn do_rebase(
         head,
         bookmark_val.unwrap_or(root),
     )
+    .boxed()
+    .compat()
     .and_then({
         move |(new_head, rebased_changesets)| match bookmark_val {
             Some(bookmark_val) => try_update_bookmark(
@@ -532,36 +543,53 @@ fn find_changed_files_between_manfiests(
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
+    find_bonsai_diff(ctx, repo, ancestor, descendant)
+        .map(|diff| match diff {
+            BonsaiDiffResult::Changed(path, ..)
+            | BonsaiDiffResult::ChangedReusedId(path, ..)
+            | BonsaiDiffResult::Deleted(path) => path,
+        })
+        .collect()
+        .from_err()
+}
+
+fn find_bonsai_diff(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+) -> BoxStream<BonsaiDiffResult, Error> {
     let id_to_manifest = {
-        cloned!(ctx, repo);
+        cloned!(ctx);
         move |bcs_id| {
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .and_then({
-                    cloned!(ctx, repo);
-                    move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
-                })
-                .map({
-                    cloned!(repo);
-                    move |cs| repo.get_root_entry(cs.manifestid())
-                })
+            id_to_manifestid(ctx.clone(), repo.clone(), bcs_id).map({
+                cloned!(repo);
+                move |manifest_id| repo.get_root_entry(manifest_id)
+            })
         }
     };
 
     (id_to_manifest(descendant), id_to_manifest(ancestor))
         .into_future()
-        .and_then({
+        .map({
             cloned!(ctx);
-            move |(d_mf, a_mf)| {
-                bonsai_diff(ctx, Box::new(d_mf), Some(Box::new(a_mf)), None)
-                    .map(|diff| match diff {
-                        BonsaiDiffResult::Changed(path, ..)
-                        | BonsaiDiffResult::ChangedReusedId(path, ..)
-                        | BonsaiDiffResult::Deleted(path) => path,
-                    })
-                    .collect()
-            }
+            move |(d_mf, a_mf)| bonsai_diff(ctx, Box::new(d_mf), Some(Box::new(a_mf)), None)
         })
-        .from_err()
+        .flatten_stream()
+        .boxify()
+}
+
+fn id_to_manifestid(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    bcs_id: ChangesetId,
+) -> impl Future<Item = HgManifestId, Error = Error> {
+    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+        .and_then({
+            cloned!(ctx, repo);
+            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
+        })
+        .map(|cs| cs.manifestid())
 }
 
 // from larger generation number to smaller
@@ -745,64 +773,91 @@ fn get_bookmark_value(
     repo.get_bonsai_bookmark(ctx, bookmark_name).from_err()
 }
 
-fn create_rebased_changesets(
+async fn create_rebased_changesets(
     ctx: CoreContext,
     repo: BlobRepo,
     config: PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
-) -> impl Future<Item = (ChangesetId, RebasedChangesets), Error = PushrebaseError> {
-    find_rebased_set(ctx.clone(), repo.clone(), root, head.clone()).and_then(move |rebased_set| {
-        let date = if config.rewritedates {
-            Some(Timestamp::now())
-        } else {
-            None
-        };
+) -> ::std::result::Result<(ChangesetId, RebasedChangesets), PushrebaseError> {
+    let rebased_set = find_rebased_set(ctx.clone(), repo.clone(), root, head.clone())
+        .compat()
+        .await?;
 
-        // rebased_set already sorted in reverse topological order, which guarantees
-        // that all required nodes will be updated by the time they are needed
+    let rebased_set_ids: HashSet<_> = rebased_set
+        .clone()
+        .into_iter()
+        .map(|cs| cs.get_changeset_id())
+        .collect();
 
-        // Create a fake timestamp, it doesn't matter what timestamp root has
-        let mut remapping = hashmap! { root => (onto, Timestamp::now()) };
-        let mut rebased = Vec::new();
-        for bcs_old in rebased_set {
-            let id_old = bcs_old.get_changeset_id();
-            let bcs_new = match rebase_changeset(bcs_old, &remapping, date.as_ref()) {
-                Ok(bcs_new) => bcs_new,
-                Err(e) => return err(e.into()).left_future(),
-            };
-            let timestamp = Timestamp::from(*bcs_new.author_date());
-            remapping.insert(id_old, (bcs_new.get_changeset_id(), timestamp));
-            rebased.push(bcs_new);
-        }
+    let date = if config.rewritedates {
+        Some(Timestamp::now())
+    } else {
+        None
+    };
 
-        save_bonsai_changesets(rebased, ctx, repo)
-            .map(move |_| {
-                (
-                    remapping
-                        .get(&head)
-                        .map(|(cs, _)| cs)
-                        .cloned()
-                        .unwrap_or(head),
-                    // `root` wasn't rebased, so let's remove it
-                    remapping
-                        .into_iter()
-                        .filter(|(id_old, _)| *id_old != root)
-                        .collect(),
-                )
-            })
-            .from_err()
-            .right_future()
-    })
+    // rebased_set already sorted in reverse topological order, which guarantees
+    // that all required nodes will be updated by the time they are needed
+
+    // Create a fake timestamp, it doesn't matter what timestamp root has
+
+    let mut remapping = hashmap! { root => (onto, Timestamp::now()) };
+    let mut rebased = Vec::new();
+    for bcs_old in rebased_set {
+        let id_old = bcs_old.get_changeset_id();
+        let bcs_new = rebase_changeset(
+            ctx.clone(),
+            bcs_old,
+            &remapping,
+            date.as_ref(),
+            &root,
+            &onto,
+            &repo,
+            &rebased_set_ids,
+        )
+        .await?;
+        let timestamp = Timestamp::from(*bcs_new.author_date());
+        remapping.insert(id_old, (bcs_new.get_changeset_id(), timestamp));
+        rebased.push(bcs_new);
+    }
+
+    save_bonsai_changesets(rebased, ctx, repo)
+        .map(move |_| {
+            (
+                remapping
+                    .get(&head)
+                    .map(|(cs, _)| cs)
+                    .cloned()
+                    .unwrap_or(head),
+                // `root` wasn't rebased, so let's remove it
+                remapping
+                    .into_iter()
+                    .filter(|(id_old, _)| *id_old != root)
+                    .collect(),
+            )
+        })
+        .from_err()
+        .compat()
+        .await
 }
 
-fn rebase_changeset(
+async fn rebase_changeset(
+    ctx: CoreContext,
     bcs: BonsaiChangeset,
     remapping: &HashMap<ChangesetId, (ChangesetId, Timestamp)>,
     timestamp: Option<&Timestamp>,
+    root: &ChangesetId,
+    onto: &ChangesetId,
+    repo: &BlobRepo,
+    rebased_set: &HashSet<ChangesetId>,
 ) -> Result<BonsaiChangeset> {
+    let orig_cs_id = bcs.get_changeset_id();
+    let new_file_changes =
+        generate_additional_bonsai_file_changes(ctx.clone(), &bcs, root, onto, repo, rebased_set)
+            .await?;
     let mut bcs = bcs.into_mut();
+
     bcs.parents = bcs
         .parents
         .into_iter()
@@ -825,7 +880,7 @@ fn rebase_changeset(
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
-    bcs.file_changes = bcs
+    let mut file_changes: BTreeMap<_, _> = bcs
         .file_changes
         .into_iter()
         .map(|(path, file_change_opt)| {
@@ -848,7 +903,161 @@ fn rebase_changeset(
         })
         .collect();
 
+    let new_file_paths: HashSet<_> =
+        HashSet::from_iter(new_file_changes.iter().map(|(path, _)| path));
+    for (path, _) in &file_changes {
+        if new_file_paths.contains(path) {
+            return Err(ErrorKind::NewFileChangesConflict(orig_cs_id).into());
+        }
+    }
+
+    file_changes.extend(new_file_changes);
+    bcs.file_changes = file_changes;
     bcs.freeze()
+}
+
+// Merge bonsai commits are treated specially in Mononoke. If parents of the merge commit
+// have the same file but with a different content, then there's a conflict and to resolve it
+// this file should be present in merge bonsai commit. So if we are pushrebasing a merge
+// commit we need to take special care.
+// See example below
+//
+// o <- onto
+// |
+// A   C <-  commit to pushrebase
+// | / |
+// o   D
+// | /
+// B
+//
+// If commit 'A' changes any of the files that existed in commit B (say, file.txt), then
+// after commit 'C' is pushrebased on top of master then bonsai logic will try to merge
+// file.txt from commit D and from "onto". If bonsai commit that corresponds
+// to a rebased commit C doesn't have a file.txt entry, then we'll have invalid bonsai
+// changeset (i.e. changeset for which no derived data can be derived, including hg changesets).
+//
+// generate_additional_bonsai_file_changes works around this problem. It returns a Vec containing
+// a file change for all files that were changed between root and onto and that are different between onto
+// and bcs (in the example above one of the file changes will be the file change for "file.txt").
+// The file change sets the file to the file as it exists in onto, thus resolving the
+// conflict. Since these files were changed after bcs lineage forked off of the root, that means
+// that bcs has a "stale" version of them, and that's why we use onto's version instead.
+//
+// Note that there's another correct solution - we could just add union of changed files for
+// (root::onto) and changed files for (root::bcs), however that would add a lot of unnecessary
+// file change entries to the pushrebased bonsai merge commit. That would be especially wasteful
+// for the case we care about the most - merging a new repo - because we'd list all newly added files.
+//
+// Note that we don't need to do that if both parents of the merge commit are in the rebased
+// set (see example below)
+//
+// o <- onto
+// |
+// A      C
+// |    / |
+// o   X  D
+// |  / /
+// | Z
+// |/
+// B
+async fn generate_additional_bonsai_file_changes(
+    ctx: CoreContext,
+    bcs: &BonsaiChangeset,
+    root: &ChangesetId,
+    onto: &ChangesetId,
+    repo: &BlobRepo,
+    rebased_set: &HashSet<ChangesetId>,
+) -> Result<Vec<(MPath, Option<FileChange>)>> {
+    let cs_id = bcs.get_changeset_id();
+    let parents: Vec<_> = bcs.parents().collect();
+
+    if parents.len() > 1 && parents.iter().any(|p| !rebased_set.contains(p)) {
+        let bonsai_diff = find_bonsai_diff(ctx.clone(), repo, *root, *onto)
+            .collect()
+            .compat()
+            .await?;
+
+        let mf_id = id_to_manifestid(ctx.clone(), repo.clone(), cs_id)
+            .compat()
+            .await?;
+
+        let mut paths = vec![];
+        for res in &bonsai_diff {
+            match res {
+                BonsaiDiffResult::Changed(path, ..)
+                | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+                    paths.push(path.clone());
+                }
+                BonsaiDiffResult::Deleted(path) => {
+                    paths.push(path.clone());
+                }
+            }
+        }
+
+        // If a file is not present in the `cs_id`, then no need to add it to the new_file_changes.
+        // This is done in order to not add unnecessary file changes if they are guaranteed to
+        // not have conflicts.
+        // Consider the following case:
+        //
+        // o <- onto
+        // |
+        // A  <- adds file.txt
+        // |
+        // |   C <-  commit C doesn't have file.txt, so no conflicts possible after pushrebase
+        // | / |
+        // o   D
+        // | /
+        // B
+        //
+        let stale_entries = mf_id
+            .find_entries(ctx.clone(), repo.get_blobstore(), paths)
+            .filter_map(|(path, _)| path)
+            .collect_to::<HashSet<_>>()
+            .compat()
+            .await?;
+
+        let mut new_file_changes = vec![];
+        for res in bonsai_diff {
+            match res {
+                BonsaiDiffResult::Changed(path, ty, node_id)
+                | BonsaiDiffResult::ChangedReusedId(path, ty, node_id) => {
+                    if !stale_entries.contains(&path) {
+                        continue;
+                    }
+                    let content_id_fut = repo.get_file_content_id(ctx.clone(), node_id);
+                    let file_size_fut = repo.get_file_size(ctx.clone(), node_id);
+
+                    let f =
+                        content_id_fut
+                            .join(file_size_fut)
+                            .map(move |(content_id, file_size)| {
+                                // Note that we intentionally do not set copy-from info,
+                                // even if a file has been copied from somewhere.
+                                // BonsaiChangeset requires that copy_from cs id points to one of
+                                // the parents of the commit, so if we just fetch the latest copy
+                                // info for a file change, then it might point to one of the
+                                // ancestors of `onto`, but not necessarily to the onto.
+                                let file_change = FileChange::new(content_id, ty, file_size, None);
+                                (path, Some(file_change))
+                            });
+                    new_file_changes.push(f.left_future());
+                }
+                BonsaiDiffResult::Deleted(path) => {
+                    if !stale_entries.contains(&path) {
+                        continue;
+                    }
+                    new_file_changes.push(ok((path, None)).right_future());
+                }
+            }
+        }
+
+        stream::futures_unordered(new_file_changes)
+            .collect()
+            .compat()
+            .await
+    } else {
+        Ok(vec![])
+    }
 }
 
 // Order - from lowest generation number to highest
@@ -993,6 +1202,7 @@ mod tests {
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::future::join_all;
     use futures_ext::spawn_future;
+    use manifest::{Entry, ManifestOps};
     use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
     use std::{collections::BTreeMap, str::FromStr};
@@ -2541,6 +2751,415 @@ mod tests {
         .wait()
         .expect("pushrebase should have been successful!");
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn pushrebase_of_branch_merge(fb: FacebookInit) -> Result<()> {
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+        // on top of master
+        let bcs_id_base = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+            store_files(
+                ctx.clone(),
+                btreemap! {"base" => Some("base")},
+                repo.clone(),
+            ),
+        );
+
+        let bcs_id_p1 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
+        );
+
+        let bcs_id_p2 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
+        );
+
+        let bcs_id_first_merge = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1, bcs_id_p2],
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge" => Some("merge")},
+                repo.clone(),
+            ),
+        );
+
+        let bcs_id_second_merge = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_first_merge, bcs_id_p2],
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge2" => Some("merge")},
+                repo.clone(),
+            ),
+        );
+
+        // Modify base file again
+        let bcs_id_master = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1],
+            store_files(
+                ctx.clone(),
+                btreemap! {"base" => Some("base2")},
+                repo.clone(),
+            ),
+        );
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            .wait()?;
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            &format!("{}", hg_cs),
+        );
+
+        let hgcss = vec![
+            run_future(
+                &mut runtime,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge),
+            )?,
+            run_future(
+                &mut runtime,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_second_merge),
+            )?,
+        ];
+
+        do_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            PushrebaseParams::default(),
+            book.clone(),
+            hgcss,
+            None,
+        )
+        .wait()
+        .unwrap();
+
+        let new_master = get_bookmark_value(
+            ctx.clone(),
+            &repo.clone(),
+            &BookmarkName::new("master").unwrap(),
+        )
+        .wait()
+        .unwrap()
+        .unwrap();
+        let master_hg = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+            .wait()?;
+
+        ensure_content(
+            &mut runtime,
+            &ctx,
+            master_hg,
+            &repo,
+            btreemap! {
+                    "base".to_string()=> "base2".to_string(),
+                    "merge".to_string()=> "merge".to_string(),
+                    "merge2".to_string()=> "merge".to_string(),
+                    "p1".to_string()=> "p1".to_string(),
+                    "p2".to_string()=> "p2".to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn pushrebase_of_branch_merge_with_removal(fb: FacebookInit) -> Result<()> {
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+        // on top of master
+        let bcs_id_base = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+            store_files(
+                ctx.clone(),
+                btreemap! {"base" => Some("base")},
+                repo.clone(),
+            ),
+        );
+
+        let bcs_id_p1 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
+        );
+
+        let bcs_id_p2 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
+        );
+
+        let bcs_id_merge = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1, bcs_id_p2],
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge" => Some("merge")},
+                repo.clone(),
+            ),
+        );
+
+        // Modify base file again
+        let bcs_id_master = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1],
+            store_files(
+                ctx.clone(),
+                btreemap! {"base" => None, "anotherfile" => Some("anotherfile")},
+                repo.clone(),
+            ),
+        );
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            .wait()?;
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            &format!("{}", hg_cs),
+        );
+
+        let hgcss = vec![run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge),
+        )?];
+
+        do_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            PushrebaseParams::default(),
+            book.clone(),
+            hgcss,
+            None,
+        )
+        .wait()
+        .unwrap();
+
+        let new_master = get_bookmark_value(
+            ctx.clone(),
+            &repo.clone(),
+            &BookmarkName::new("master").unwrap(),
+        )
+        .wait()
+        .unwrap()
+        .unwrap();
+        let master_hg = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+            .wait()?;
+
+        ensure_content(
+            &mut runtime,
+            &ctx,
+            master_hg,
+            &repo,
+            btreemap! {
+                    "anotherfile".to_string() => "anotherfile".to_string(),
+                    "merge".to_string()=> "merge".to_string(),
+                    "p1".to_string()=> "p1".to_string(),
+                    "p2".to_string()=> "p2".to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<()> {
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+        // on top of master
+        let bcs_id_base = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![],
+            store_files(
+                ctx.clone(),
+                btreemap! {"base" => Some("base")},
+                repo.clone(),
+            ),
+        );
+
+        let bcs_id_p1 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p1" => Some("p1")}, repo.clone()),
+        );
+
+        let bcs_id_p2 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_base],
+            store_files(ctx.clone(), btreemap! {"p2" => Some("p2")}, repo.clone()),
+        );
+
+        let bcs_id_merge = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1, bcs_id_p2],
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge" => Some("merge")},
+                repo.clone(),
+            ),
+        );
+
+        let removal: BTreeMap<&str, Option<&str>> = btreemap! {"base" => None};
+        // Remove base file
+        let bcs_id_pre_pre_master = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_p1],
+            store_files(ctx.clone(), removal, repo.clone()),
+        );
+
+        // Move to base file
+        let (path, rename) = store_rename(
+            ctx.clone(),
+            (MPath::new("p1")?, bcs_id_pre_pre_master),
+            "base",
+            "somecontent",
+            repo.clone(),
+        );
+        let bcs_id_pre_master = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_pre_pre_master],
+            btreemap! {
+                path => rename,
+            },
+        );
+
+        let bcs_id_master = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_pre_master],
+            store_files(
+                ctx.clone(),
+                btreemap! {"somefile" => Some("somecontent")},
+                repo.clone(),
+            ),
+        );
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            .wait()?;
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            &format!("{}", hg_cs),
+        );
+
+        let hgcss = vec![run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge),
+        )?];
+
+        do_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            PushrebaseParams::default(),
+            book.clone(),
+            hgcss,
+            None,
+        )
+        .wait()
+        .unwrap();
+
+        let new_master = get_bookmark_value(
+            ctx.clone(),
+            &repo.clone(),
+            &BookmarkName::new("master").unwrap(),
+        )
+        .wait()
+        .unwrap()
+        .unwrap();
+        let master_hg = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+            .wait()?;
+
+        ensure_content(
+            &mut runtime,
+            &ctx,
+            master_hg,
+            &repo,
+            btreemap! {
+                    "base".to_string() => "somecontent".to_string(),
+                    "somefile".to_string() => "somecontent".to_string(),
+                    "merge".to_string()=> "merge".to_string(),
+                    "p1".to_string()=> "p1".to_string(),
+                    "p2".to_string()=> "p2".to_string(),
+            },
+        )?;
+        Ok(())
+    }
+
+    fn ensure_content(
+        runtime: &mut tokio::runtime::Runtime,
+        ctx: &CoreContext,
+        hg_cs_id: HgChangesetId,
+        repo: &BlobRepo,
+        expected: BTreeMap<String, String>,
+    ) -> Result<()> {
+        let cs = runtime.block_on(repo.get_changeset_by_changesetid(ctx.clone(), hg_cs_id))?;
+
+        let entries = runtime.block_on(
+            cs.manifestid()
+                .list_all_entries(ctx.clone(), repo.get_blobstore())
+                .collect(),
+        )?;
+
+        let mut actual = BTreeMap::new();
+        for (path, entry) in entries {
+            match entry {
+                Entry::Leaf((_, filenode_id)) => {
+                    let content = runtime
+                        .block_on(repo.get_file_content(ctx.clone(), filenode_id).concat2())?;
+                    let s = String::from_utf8_lossy(content.as_bytes()).into_owned();
+                    actual.insert(format!("{}", path.unwrap()), s);
+                }
+                Entry::Tree(_) => {}
+            }
+        }
+
+        assert_eq!(expected, actual);
         Ok(())
     }
 
