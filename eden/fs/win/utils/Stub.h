@@ -8,6 +8,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include "eden/fs/service/EdenError.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 // This is a stub to compile eden/service on Window.
@@ -73,11 +74,14 @@ static int unlink(const char* path) {
   return _unlink(path);
 }
 
-#define NOT_IMPLEMENTED()                                                    \
-  do {                                                                       \
-    std::cout << " +++++  NOT IMPLEMETED +++++++ Function: " << __FUNCTION__ \
-              << " Line:" << __LINE__;                                       \
-    throw;                                                                   \
+#define NOT_IMPLEMENTED()                            \
+  do {                                               \
+    throw newEdenError(                              \
+        EdenErrorType::GENERIC_ERROR,                \
+        " +++++  NOT IMPLEMETED +++++++ Function: ", \
+        __FUNCTION__,                                \
+        " Line: ",                                   \
+        __LINE__);                                   \
   } while (true)
 
 } // namespace eden
