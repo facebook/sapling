@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use mononoke_types::MPath;
 
 use crate::fsencode::fncache_fsencode;
+use crate::globalrev::Globalrev;
 
 fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let mut elements = vec![];
@@ -18,6 +19,21 @@ fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     elements.extend(path.into_iter().cloned());
 
     assert_eq!(fncache_fsencode(&elements, true), PathBuf::from(expected));
+}
+
+#[test]
+fn test_parse_svnrev() {
+    let to_parse = "svn:uuid/path@1234";
+    assert_eq!(Globalrev::parse_svnrev(to_parse).unwrap(), 1234);
+
+    let to_parse = "svn:uuid@/pa@th@1";
+    assert_eq!(Globalrev::parse_svnrev(to_parse).unwrap(), 1);
+
+    let to_parse = "svn:uuid/path1234";
+    Globalrev::parse_svnrev(to_parse).expect_err("convert_revision without @ should fail");
+
+    let to_parse = "svn:uuid/path@1234a";
+    Globalrev::parse_svnrev(to_parse).expect_err("1234a shouldn't parse to int successfully");
 }
 
 #[test]

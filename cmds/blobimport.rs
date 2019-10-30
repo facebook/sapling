@@ -10,6 +10,7 @@
 
 use ascii::AsciiString;
 use blobimport_lib;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::{App, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers};
@@ -44,6 +45,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --concurrent-changesets [LIMIT]  'if provided, max number of changesets to upload concurrently'
             --concurrent-blobs [LIMIT]       'if provided, max number of blobs to process concurrently'
             --concurrent-lfs-imports [LIMIT] 'if provided, max number of LFS files to import concurrently'
+            --has-globalrev                  'if provided will update globalrev'
         "#,
         )
         .arg(
@@ -176,6 +178,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
 
     let phases_store = args::open_sql::<SqlPhases>(&matches);
+    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(&matches);
 
     let blobrepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(fb, &ctx.logger(), &matches).left_future()
@@ -190,10 +193,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         HashMap::new()
     };
 
-    let blobimport = blobrepo
-        .join(phases_store)
-        .and_then(move |(blobrepo, phases_store)| {
+    let has_globalrev = matches.is_present("has-globalrev");
+
+    let blobimport = blobrepo.join3(phases_store, globalrevs_store).and_then(
+        move |(blobrepo, phases_store, globalrevs_store)| {
             let phases_store = Arc::new(phases_store);
+            let globalrevs_store = Arc::new(globalrevs_store);
 
             blobimport_lib::Blobimport {
                 ctx: ctx.clone(),
@@ -205,11 +210,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                 commits_limit,
                 bookmark_import_policy,
                 phases_store,
+                globalrevs_store,
                 lfs_helper,
                 concurrent_changesets,
                 concurrent_blobs,
                 concurrent_lfs_imports,
                 fixed_parent_order,
+                has_globalrev,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())
@@ -221,7 +228,8 @@ fn main(fb: FacebookInit) -> Result<()> {
                 }
             })
             .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))
-        });
+        },
+    );
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

@@ -61,6 +61,8 @@ impl BonsaisOrGlobalrevs {
 pub trait BonsaiGlobalrevMapping: Send + Sync {
     fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error>;
 
+    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error>;
+
     fn get(
         &self,
         repo_id: RepositoryId,
@@ -83,6 +85,10 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
 impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
     fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error> {
         (**self).add(entry)
+    }
+
+    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error> {
+        (**self).add_many(entries)
     }
 
     fn get(
@@ -211,6 +217,24 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
                     .boxify()
                 }
             })
+            .boxify()
+    }
+
+    fn add_many(&self, entries: Vec<BonsaiGlobalrevMappingEntry>) -> BoxFuture<(), Error> {
+        let entries: Vec<_> = entries
+            .iter()
+            .map(
+                |BonsaiGlobalrevMappingEntry {
+                     repo_id,
+                     bcs_id,
+                     globalrev,
+                 }| (repo_id, bcs_id, globalrev),
+            )
+            .collect();
+
+        InsertMapping::query(&self.write_connection, &entries[..])
+            .from_err()
+            .map(|_| ())
             .boxify()
     }
 

@@ -11,6 +11,7 @@
 mod bookmark;
 mod changeset;
 mod concurrency;
+mod globalrev;
 
 use std::cmp;
 use std::collections::HashMap;
@@ -18,18 +19,21 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use ascii::AsciiString;
+use cloned::cloned;
 use failure_ext::{err_msg, Error};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use phases::Phases;
 
 use crate::changeset::UploadChangesets;
+use crate::globalrev::upload_globalrevs;
 
 // What to do with bookmarks when blobimporting a repo
 pub enum BookmarkImportPolicy {
@@ -49,11 +53,13 @@ pub struct Blobimport {
     pub commits_limit: Option<usize>,
     pub bookmark_import_policy: BookmarkImportPolicy,
     pub phases_store: Arc<dyn Phases>,
+    pub globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
     pub concurrent_lfs_imports: usize,
     pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
+    pub has_globalrev: bool,
 }
 
 impl Blobimport {
@@ -68,11 +74,13 @@ impl Blobimport {
             commits_limit,
             bookmark_import_policy,
             phases_store,
+            globalrevs_store,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
             fixed_parent_order,
+            has_globalrev,
         } = self;
 
         let stale_bookmarks = {
@@ -86,6 +94,8 @@ impl Blobimport {
             Some(commits_limit) => cmp::max(1, commits_limit / 10),
             None => 5000,
         };
+
+        let chunk_size = 100;
 
         let upload_changesets = UploadChangesets {
             ctx: ctx.clone(),
@@ -110,7 +120,7 @@ impl Blobimport {
                 if cs_count % log_step == 0 {
                     info!(logger, "inserted commits # {}", cs_count);
                 }
-                ()
+                cs.0.clone()
             }
         })
         .map_err({
@@ -126,13 +136,6 @@ impl Blobimport {
                 let msg = format!("failed to blobimport: {}", err);
                 err_msg(msg)
             }
-        })
-        .for_each(|()| Ok(()))
-        .inspect({
-            let logger = logger.clone();
-            move |()| {
-                info!(logger, "finished uploading changesets");
-            }
         });
 
         // Blobimport does not see scratch bookmarks in Mercurial, so we use
@@ -143,11 +146,26 @@ impl Blobimport {
 
         stale_bookmarks
             .join(mononoke_bookmarks.collect())
-            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
-                upload_changesets.map(move |()| (stale_bookmarks, mononoke_bookmarks))
+            .and_then({
+                cloned!(blobrepo);
+                move |(stale_bookmarks, mononoke_bookmarks)| {
+                    upload_changesets
+                        .chunks(chunk_size)
+                        .and_then(move |chunk| {
+                            cloned!(blobrepo, globalrevs_store);
+                            if has_globalrev {
+                                upload_globalrevs(blobrepo, globalrevs_store, chunk).left_future()
+                            } else {
+                                future::ok(()).right_future()
+                            }
+                        })
+                        .for_each(|_| Ok(()))
+                        .map(move |()| (stale_bookmarks, mononoke_bookmarks))
+                }
             })
-            .and_then(
-                move |(stale_bookmarks, mononoke_bookmarks)| match bookmark_import_policy {
+            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
+                info!(logger, "finished uploading changesets and globalrevs");
+                match bookmark_import_policy {
                     BookmarkImportPolicy::Ignore => {
                         info!(
                             logger,
@@ -164,8 +182,8 @@ impl Blobimport {
                         mononoke_bookmarks,
                         bookmark::get_bookmark_prefixer(prefix),
                     ),
-                },
-            )
+                }
+            })
             .boxify()
     }
 }

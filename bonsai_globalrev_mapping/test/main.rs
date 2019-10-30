@@ -73,6 +73,32 @@ fn add_and_get<M: BonsaiGlobalrevMapping>(mapping: M) {
     );
 }
 
+fn add_many<M: BonsaiGlobalrevMapping>(mapping: M) {
+    let entry1 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::ONES_CSID,
+        globalrev: GLOBALREV_ZERO,
+    };
+    let entry2 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+    let entry3 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::THREES_CSID,
+        globalrev: GLOBALREV_TWO,
+    };
+
+    assert_eq!(
+        (),
+        mapping
+            .add_many(vec![entry1.clone(), entry2.clone(), entry3.clone()])
+            .wait()
+            .expect("Adding new entries vector failed")
+    );
+}
+
 fn missing<M: BonsaiGlobalrevMapping>(mapping: M) {
     let result = mapping
         .get(
@@ -88,6 +114,13 @@ fn missing<M: BonsaiGlobalrevMapping>(mapping: M) {
 fn test_add_and_get() {
     async_unit::tokio_unit_test(move || {
         add_and_get(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
+    });
+}
+
+#[fbinit::test]
+fn test_add_many() {
+    async_unit::tokio_unit_test(move || {
+        add_many(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory().unwrap());
     });
 }
 

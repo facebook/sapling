@@ -354,6 +354,10 @@ function init_bookmark_log_sqlite3_db {
   sqlite3 "$TESTTMP/monsql/bookmarks" "select * from bookmarks_update_log";
 }
 
+function get_bonsai_globalrev_mapping {
+  sqlite3 "$TESTTMP/monsql/bonsai_globalrev_mapping" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
+}
+
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
   mkdir -p mononoke-config
