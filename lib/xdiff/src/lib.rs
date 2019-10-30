@@ -491,10 +491,10 @@ where
         reduce,
     };
     fn file_type_to_mode(file_type: FileType) -> &'static [u8] {
-        if let FileType::Executable = file_type {
-            b"100755"
-        } else {
-            b"100644"
+        match file_type {
+            FileType::Executable => b"100755",
+            FileType::Symlink => b"120000",
+            FileType::Regular => b"100644",
         }
     }
     if let (None, None) = (&old_file, &new_file) {

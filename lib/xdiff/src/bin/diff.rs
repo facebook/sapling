@@ -31,6 +31,10 @@ struct Opt {
     #[structopt(short, long)]
     move_: bool,
 
+    /// Do not follow symlinks - compare them instead (POSIX-only)
+    #[structopt(short, long)]
+    symlink: bool,
+
     /// Number of lines of unified context (default: 3)
     #[structopt(short = "U", long, default_value = "3")]
     unified: usize,
@@ -40,17 +44,30 @@ fn main() -> Result<(), std::io::Error> {
     let opt = Opt::from_args();
 
     #[cfg(target_family = "unix")]
-    fn file_mode(path: &Path) -> Result<FileType, std::io::Error> {
-        if (path.metadata()?.permissions().mode() & EXEC_BIT) > 0 {
-            Ok(FileType::Executable)
+    fn file_mode_and_contents(
+        opt: &Opt,
+        path: &Path,
+    ) -> Result<(FileType, Vec<u8>), std::io::Error> {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        if opt.symlink && path.symlink_metadata()?.file_type().is_symlink() {
+            let dest = path.read_link()?;
+            let dest: &OsStr = dest.as_ref();
+            Ok((FileType::Symlink, dest.as_bytes().to_owned()))
+        } else if (path.metadata()?.permissions().mode() & EXEC_BIT) > 0 {
+            Ok((FileType::Executable, fs::read(path)?))
         } else {
-            Ok(FileType::Regular)
+            Ok((FileType::Regular, fs::read(path)?))
         }
     }
 
     #[cfg(target_family = "windows")]
-    fn file_mode(path: &Path) -> Result<FileType, std::io::Error> {
-        Ok(FileType::Regular)
+    fn file_mode_and_contents(
+        _opt: &Opt,
+        path: &Path,
+    ) -> Result<(FileType, Vec<u8>), std::io::Error> {
+        Ok((FileType::Regular, fs::read(path)?))
     }
 
     let copy_info = match (opt.copy, opt.move_) {
@@ -62,21 +79,15 @@ fn main() -> Result<(), std::io::Error> {
 
     let a_path_str = opt.file_a.to_string_lossy();
     let a = if opt.file_a.is_file() {
-        Some(DiffFile::new(
-            a_path_str.as_bytes(),
-            fs::read(&opt.file_a)?,
-            file_mode(&opt.file_a)?,
-        ))
+        let (mode, contents) = file_mode_and_contents(&opt, &opt.file_a)?;
+        Some(DiffFile::new(a_path_str.as_bytes(), contents, mode))
     } else {
         None
     };
     let b_path_str = opt.file_b.to_string_lossy();
     let b = if opt.file_b.is_file() {
-        Some(DiffFile::new(
-            b_path_str.as_bytes(),
-            fs::read(&opt.file_b)?,
-            file_mode(&opt.file_b)?,
-        ))
+        let (mode, contents) = file_mode_and_contents(&opt, &opt.file_b)?;
+        Some(DiffFile::new(b_path_str.as_bytes(), contents, mode))
     } else {
         None
     };

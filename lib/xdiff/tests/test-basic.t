@@ -136,3 +136,48 @@ Test with binary file
   diff --git a/binary_b b/binary_b
   deleted file mode 100644
   Binary file binary_b has changed
+
+Test symlinks
+  $ ln -s a link_to_a
+  $ ln -s b link_to_b
+  $ ln -s a_exec link_to_a_exec
+
+  $ xdiff -s link_to_a link_to_b
+  diff --git a/link_to_a b/link_to_b
+  --- a/link_to_a
+  +++ b/link_to_b
+  @@ -1,1 +1,1 @@
+  -a
+  \ No newline at end of file
+  +b
+  \ No newline at end of file
+
+  $ xdiff -s link_to_a link_to_a
+
+  $ xdiff -s link_to_a link_to_a_exec
+  diff --git a/link_to_a b/link_to_a_exec
+  --- a/link_to_a
+  +++ b/link_to_a_exec
+  @@ -1,1 +1,1 @@
+  -a
+  \ No newline at end of file
+  +a_exec
+  \ No newline at end of file
+
+  $ xdiff -s link_to_a a
+  diff --git a/link_to_a b/a
+  old mode 120000
+  new mode 100644
+  --- a/link_to_a
+  +++ b/a
+  @@ -1,1 +1,6 @@
+  -a
+  \ No newline at end of file
+  +a
+  +b
+  +c
+  +d
+  +e
+  +f
+
+  $ xdiff link_to_a a
