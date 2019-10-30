@@ -4,14 +4,11 @@ import shutil
 import sys
 import tempfile
 
-from edenscm.hgext.hggit.git_handler import GitHandler
 from edenscm.mercurial import commands, hg, ui
 
 
 try:
-    import dulwich
-
-    type(dulwich)  # avoid pyflakes unused import error
+    from edenscm.hgext.hggit.git_handler import GitHandler
 except ImportError:
     print("skipped: missing feature: dulwich")
     sys.exit(80)
