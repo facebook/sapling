@@ -16,6 +16,7 @@ import xml.dom.minidom
 
 from edenscm.mercurial import error, node as nodemod, pycompat
 from edenscm.mercurial.i18n import _
+from past.builtins import basestring
 
 from . import common
 
@@ -183,12 +184,12 @@ class gitutil(object):
         return output
 
     @classmethod
-    def parsegitcommitraw(cls, commithash, commitstr):
+    def parsegitcommitraw(cls, source, commithash, commitstr):
         """Takes the text of a git commit in raw format and builds a commit object based
         on it.
         """
-        if not isinstance(commitstr, str):
-            raise TypeError("parsegitcommitraw: commitstr must be a string")
+        if not isinstance(commitstr, unicode):
+            raise TypeError("parsegitcommitraw: commitstr must be a unicode string")
         if len(commitstr) == 0:
             raise ValueError("parsegitcommitraw: commitstr is empty")
 
@@ -253,15 +254,15 @@ class gitutil(object):
             )
             timezone = committermatch.group("timezone")
 
-        extra = {"git-hash": commithash}
+        date = date.strftime("%Y-%m-%dT%H:%M:%S") + timezone
 
         return common.commit(
-            author=author,
-            date=date.strftime("%Y-%m-%dT%H:%M:%S") + timezone,
-            desc=description,
-            parents=parents,
-            rev=commithash,
-            extra=extra,
+            author=source.recode(author),
+            date=source.recode(date),
+            desc=source.recode(description),
+            parents=[source.recode(parent) for parent in parents],
+            rev=source.recode(commithash),
+            extra={"git-hash": source.recode(commithash)},
             saverev=True,
         )
 
@@ -310,14 +311,14 @@ class gitutil(object):
         pipein.flush()
         outheader = pipeout.readline()
         outhash, outtype, outbodysize = outheader.split()
-        outbody = pipeout.read(int(outbodysize))
+        outbodybytes = pipeout.read(int(outbodysize))
         finaloutchar = pipeout.read(1)  # read out final newline
         if finaloutchar != "\n":
             raise error.Abort(
                 _('cat-file(%s, %s) output ended with "%s" not \\n')
                 % (path, version, finaloutchar)
             )
-        return outtype, outbody
+        return outtype, outbodybytes
 
     @classmethod
     def catfile(cls, ui, path, version):
@@ -653,6 +654,11 @@ class repo_source(common.converter_source):
     """Reads commit data from a Google repo repository for the Mercurial convert
     extension.
 
+    Config options:
+      * repo.difftreecache: TODO
+      * repo.enabledirred: Include commits that are remapped into the file tree TODO
+      * repo.fullmerge: Use merge commits to tie together the various versions TODO
+
     Implementation notes: This class should be kept at a high-level of abstraction,
     saving the details of repo and git operations for the repo and git helper classes
     above.
@@ -719,6 +725,7 @@ class repo_source(common.converter_source):
             self.CONFIG_NAMESPACE, self.CONFIG_DIRRED_ENABLED, default=True
         )
 
+        self.srcencoding = "utf-8"  # TODO: Read from git source projects
         self.pprinter = pprint.PrettyPrinter()
         self.repo = repo(ui, path)
         self.repocommandline = repo_commandline(ui, path)
@@ -825,7 +832,7 @@ class repo_source(common.converter_source):
 
         if version is None:
             raise ValueError("version may not be None")
-        if not isinstance(version, str):
+        if not isinstance(version, basestring):
             raise TypeError(_("version must be a string"))
         if len(version) == 0:
             raise ValueError(_("verion must not be empty"))
@@ -905,7 +912,7 @@ class repo_source(common.converter_source):
         """
         if version is None:
             raise TypeError("getcommit: version must not be none")
-        if not isinstance(version, str):
+        if not isinstance(version, basestring):
             raise TypeError("getcommit: version must be a string not %s" % version)
         if len(version) == 0:
             raise ValueError("getcommit: version must not be empty")
@@ -922,9 +929,10 @@ class repo_source(common.converter_source):
 
         # full_path = self.path + "/" + project_path
         fullpath = os.path.join(self.path, projectpath)
-        catfilebody = gitutil.catfile(self.ui, fullpath, commithash)
+        catfilebodybytes = gitutil.catfile(self.ui, fullpath, commithash)
+        catfilebodystr = catfilebodybytes.decode(self.srcencoding, errors="replace")
 
-        commit = gitutil.parsegitcommitraw(commithash, catfilebody)
+        commit = gitutil.parsegitcommitraw(self, commithash, catfilebodystr)
 
         if variant == self.VARIANT_UNIFIED:
             previoushash = self.repo.unifiedprevioushashes[commit.rev]
@@ -987,7 +995,7 @@ class repo_source(common.converter_source):
         """See common.converter_source.getchangedfiles"""
         if rev is None:
             raise ValueError(_("version may not be None"))
-        if not isinstance(rev, str):
+        if not isinstance(rev, basestring):
             raise TypeError(_("version must be a string"))
         if len(rev) == 0:
             raise ValueError(_("verion must not be empty"))
