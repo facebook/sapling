@@ -8,7 +8,7 @@
 
 //! Tests for the synced commits mapping.
 
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use async_unit;
 use bytes::Bytes;
@@ -248,42 +248,6 @@ fn sync_parentage(fb: FacebookInit) {
 #[fbinit::test]
 fn test_sync_parentage(fb: FacebookInit) {
     async_unit::tokio_unit_test(move || sync_parentage(fb))
-}
-
-fn sync_removes_commit(fb: FacebookInit) {
-    let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1)).unwrap();
-    let linear = linear::getrepo(fb);
-    let repos = CommitSyncRepos::SmallToLarge {
-        small_repo: linear.clone(),
-        large_repo: megarepo.clone(),
-        mover: Arc::new(move |_path: &MPath| Ok(None)),
-    };
-
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-
-    let config = CommitSyncer::new(mapping, repos);
-
-    // Create a commit with one file called "master" in the blobrepo, and set the bookmark
-    create_initial_commit(ctx.clone(), &megarepo);
-
-    // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
-    // As this is the first commit from linear, it'll rewrite cleanly, but it should end up being removed
-    let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
-        &config,
-        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-    );
-    let megarepo_base_bcs_id = sync_to_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
-
-    // Confirm the commit was dropped
-    assert_eq!(megarepo_base_bcs_id, None);
-    check_mapping(ctx.clone(), &config, linear_base_bcs_id, None);
-}
-
-#[fbinit::test]
-fn test_sync_removes_commit(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || sync_removes_commit(fb))
 }
 
 fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
@@ -730,7 +694,8 @@ fn sync_parent_search(fb: FacebookInit) {
     sync_to_master(ctx.clone(), &config, linear_base_bcs_id).unwrap();
 
     // Change master_file
-    update_master_file(ctx.clone(), &megarepo);
+    let master_file_cs_id = update_master_file(ctx.clone(), &megarepo);
+    sync_to_master(ctx.clone(), &reverse_config, master_file_cs_id).unwrap();
     // And change a file in linear
     let new_commit = update_linear_1_file(ctx.clone(), &megarepo);
 

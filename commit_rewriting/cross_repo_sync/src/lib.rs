@@ -14,20 +14,22 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use failure::{Error, Fail};
+use failure::{err_msg, Error, Fail};
 use futures::Future;
 use futures_preview::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, FutureExt, TryFutureExt},
-    stream::{futures_unordered::FuturesUnordered, StreamExt as _, TryStreamExt},
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+    stream::{futures_unordered::FuturesUnordered, TryStreamExt},
 };
 use maplit::hashmap;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath};
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
-use revset::AncestorsNodeStream;
-use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
+use synced_commit_mapping::{
+    EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
+    WorkingCopyEquivalence,
+};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -46,6 +48,12 @@ pub enum ErrorKind {
         _0
     )]
     SameWcSearchFail(ChangesetId),
+    #[fail(display = "Parent commit {} hasn't been remapped", _0)]
+    ParentNotRemapped(ChangesetId),
+    #[fail(display = "Parent commit {} is not a sync candidate", _0)]
+    ParentNotSyncCandidate(ChangesetId),
+    #[fail(display = "Cannot choose working copy equivalent for {}", _0)]
+    AmbiguousWorkingCopyEquivalent(ChangesetId),
 }
 
 async fn identity<T>(res: T) -> Result<T, Error> {
@@ -150,48 +158,37 @@ async fn remap_changeset_id<'a, M: SyncedCommitMapping>(
         .await
 }
 
-async fn search_for_same_wc<'a, M: SyncedCommitMapping>(
-    ctx: CoreContext,
-    cs: ChangesetId,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
-    mapping: &'a M,
-) -> Result<Option<ChangesetId>, Error> {
-    let mut candidate_commits =
-        AncestorsNodeStream::new(ctx.clone(), &source_repo.get_changeset_fetcher(), cs)
-            .compat()
-            .and_then(|candidate| {
-                remap_changeset_id(ctx.clone(), candidate, source_repo, target_repo, mapping)
-            })
-            .try_skip_while(|r| future::ok(r.is_none()))
-            .boxed();
-
-    Ok(candidate_commits.try_next().await?.flatten())
-}
-
 /// Applies `rewrite_path` to all paths in `cs`, dropping any entry whose path rewrites to `None`
 /// E.g. adding a prefix can be done by a `rewrite` that adds the prefix and returns `Some(path)`.
 /// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
-/// Additionally, changeset IDs are rewritten, and the post-rewrite changeset IDs are returned for
-/// verification (e.g. to ensure that all changeset IDs have been correctly rewritten into IDs
-/// that will be present in the target repo after a cross-repo sync)
+/// Additionally, changeset IDs are rewritten.
 ///
 /// Precondition: *all* parents must already have been rewritten into the target repo. The
 /// behaviour of this function is unpredictable if some parents have not yet been remapped
-async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping>(
+async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
-    mut cs: BonsaiChangesetMut,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
-    mapping: &'a M,
-    rewrite_path: Mover,
+    cs: BonsaiChangesetMut,
+    commit_syncer: &'a CommitSyncer<M>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
+    let (_, _, rewrite_path) = commit_syncer.get_source_target_mover();
     let mut remapped_parents = HashMap::new();
-    for commit in cs.parents.iter_mut() {
-        let remapped_parent =
-            search_for_same_wc(ctx.clone(), *commit, source_repo, target_repo, mapping)
-                .await?
-                .ok_or(Error::from(ErrorKind::SameWcSearchFail(*commit)))?;
+    for commit in &cs.parents {
+        let maybe_sync_outcome = commit_syncer
+            .get_commit_sync_outcome(ctx.clone(), *commit)
+            .await?;
+        let sync_outcome: Result<_, Error> =
+            maybe_sync_outcome.ok_or(ErrorKind::ParentNotRemapped(*commit).into());
+        let sync_outcome = sync_outcome?;
+
+        use CommitSyncOutcome::*;
+        let remapped_parent = match sync_outcome {
+            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => cs_id,
+            Preserved => *commit,
+            NotSyncCandidate => {
+                return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
+            }
+        };
+
         remapped_parents.insert(*commit, remapped_parent);
     }
 
@@ -199,7 +196,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping>(
 }
 
 /// The state of a source repo commit in a target repo
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate,
@@ -276,38 +273,6 @@ where
             .compat()
     }
 
-    /// Check to see if this commit should exist in the target repo
-    /// Either the source repo is small or the source cs has files that should be present in the target repo
-    async fn should_be_present_in_target(
-        &self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> Result<bool, Error> {
-        if !self.repos.source_is_large() {
-            return Ok(true);
-        }
-
-        let source_cs = self
-            .get_source_repo()
-            .get_bonsai_changeset(ctx.clone(), source_cs_id)
-            .compat()
-            .await?;
-
-        let remapped_files: Result<Vec<_>, Error> = source_cs
-            .file_changes()
-            .map(|(path, _)| self.get_mover()(path))
-            .collect();
-
-        let remapped_files = remapped_files?;
-
-        // A commit will be synced if it touches no files at all, or if at least one
-        // file is kept in the target repo
-        Ok(remapped_files.is_empty()
-            || remapped_files
-                .into_iter()
-                .any(|opt_path| opt_path.is_some()))
-    }
-
     pub async fn get_commit_sync_outcome(
         &self,
         ctx: CoreContext,
@@ -331,62 +296,32 @@ where
             }
         }
 
-        let should_be_present_in_target = self
-            .should_be_present_in_target(ctx.clone(), source_cs_id)
+        let mapping = self.mapping.clone();
+        let maybe_wc_equivalence = mapping
+            .get_equivalent_working_copy(
+                ctx.clone(),
+                self.repos.get_source_repo().get_repoid(),
+                source_cs_id,
+                self.repos.get_target_repo().get_repoid(),
+            )
+            .compat()
             .await?;
 
-        // Do an ancestor walk to find out what outcome (if any) is in place
-        // TODO(T56351515): Replace this by recursion on parents, to correctly handle merges
-        let mut ancestors = AncestorsNodeStream::new(
-            ctx.clone(),
-            &self.get_source_repo().get_changeset_fetcher(),
-            source_cs_id,
-        )
-        .compat()
-        // Skip the commit we're considering - it's always the first to be returned, and we know it doesn't remap
-        .skip(1);
-
-        while let Some(ancestor) = ancestors.try_next().await? {
-            if let Some(remapped_ancestor) = remap_changeset_id(
-                ctx.clone(),
-                ancestor,
-                self.repos.get_source_repo(),
-                self.repos.get_target_repo(),
-                &self.mapping,
-            )
-            .await?
-            {
-                // We have an ancestor that's been synced.
-                // If that ancestor is unchanged, then we need to be synced, too, regardless of what files we change
-                // TODO(T56351515): This will only apply if all parents are unchanged in a merge situation
-                if remapped_ancestor == ancestor {
-                    return Ok(None);
-                }
-                // If we change files in the target repo, then we need to be synced, too.
-                else if should_be_present_in_target {
-                    return Ok(None);
-                }
-                // Finally, if the ancestor has been rewritten, but we don't change the target repo,
-                // then we have the same working copy as that ancestor in the target repo
-                // TODO(T56351515): Is this true in a merge situation?
-                else {
-                    return Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(
-                        remapped_ancestor,
-                    )));
-                }
-            } else {
-                // If this ancestor should be synced, but isn't, then we need to be synced, too
-                if self
-                    .should_be_present_in_target(ctx.clone(), ancestor)
-                    .await?
-                {
-                    return Ok(None);
+        match maybe_wc_equivalence {
+            None => Ok(None),
+            Some(WorkingCopyEquivalence::NoWorkingCopy) => {
+                Ok(Some(CommitSyncOutcome::NotSyncCandidate))
+            }
+            Some(WorkingCopyEquivalence::WorkingCopy(cs_id)) => {
+                if source_cs_id == cs_id {
+                    Ok(Some(CommitSyncOutcome::Preserved))
+                } else {
+                    Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(
+                        cs_id,
+                    )))
                 }
             }
         }
-
-        // The commit does not belong to this sync DAG - don't sync it
-        Ok(Some(CommitSyncOutcome::NotSyncCandidate))
     }
 
     pub fn sync_commit_compat(
@@ -415,9 +350,207 @@ where
         source_cs_id: ChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function sync_commit into here and delete. Leave pushrebase in next fn
-        let repos = self.repos.clone();
-        let mapping = self.mapping.clone();
-        let (source_repo, target_repo, rewrite_paths) = match repos.clone() {
+        let (source_repo, _, _) = self.get_source_target_mover();
+
+        let cs = source_repo
+            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+            .compat()
+            .await?;
+        let parents: Vec<_> = cs.parents().collect();
+
+        if parents.is_empty() {
+            self.sync_commit_no_parents(ctx.clone(), cs).await
+        } else if parents.len() == 1 {
+            self.sync_commit_single_parent(ctx.clone(), cs).await
+        } else {
+            return Err(err_msg("only single-parent changesets are supported now"));
+        }
+    }
+
+    pub fn preserve_commit_compat(
+        self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> impl Future<Item = (), Error = Error> {
+        async fn preserve_commit_compat_wrapper<M>(
+            this: CommitSyncer<M>,
+            ctx: CoreContext,
+            source_cs_id: ChangesetId,
+        ) -> Result<(), Error>
+        where
+            M: SyncedCommitMapping + Clone + 'static,
+        {
+            this.preserve_commit(ctx, source_cs_id).await
+        }
+        preserve_commit_compat_wrapper(self, ctx, source_cs_id)
+            .boxed()
+            .compat()
+    }
+
+    /// The difference between `sync_commit()` and `preserve_commit()` is that `preserve_commit()`
+    /// doesn't do any commit rewriting, and it requires all it's parents to be preserved.
+    pub async fn preserve_commit(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let cs = source_repo
+            .get_bonsai_changeset(ctx.clone(), source_cs_id)
+            .compat()
+            .await?;
+
+        for p in cs.parents() {
+            let maybe_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
+            let sync_outcome =
+                maybe_outcome.ok_or(err_msg(format!("Parent commit {} is not synced yet", p)))?;
+
+            if sync_outcome != CommitSyncOutcome::Preserved {
+                return Err(err_msg(format!(
+                    "trying to preserve a commit, but parent {} is not preserved",
+                    p
+                )));
+            }
+        }
+
+        upload_commits(
+            ctx.clone(),
+            vec![cs],
+            source_repo.clone(),
+            target_repo.clone(),
+        )
+        .await?;
+
+        // update_mapping also updates working copy equivalence, so no need
+        // to do it separately
+        update_mapping(
+            ctx.clone(),
+            hashmap! { source_cs_id => source_cs_id },
+            &self,
+        )
+        .await
+    }
+
+    async fn sync_commit_no_parents(
+        &self,
+        ctx: CoreContext,
+        cs: BonsaiChangeset,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let source_cs_id = cs.get_changeset_id();
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+
+        match rewrite_commit(cs.into_mut(), &HashMap::new(), rewrite_paths)? {
+            Some(rewritten) => {
+                let frozen = rewritten.freeze()?;
+                upload_commits(
+                    ctx.clone(),
+                    vec![frozen.clone()],
+                    source_repo.clone(),
+                    target_repo.clone(),
+                )
+                .await?;
+
+                // update_mapping also updates working copy equivalence, so no need
+                // to do it separately
+                update_mapping(
+                    ctx.clone(),
+                    hashmap! { source_cs_id => frozen.get_changeset_id() },
+                    &self,
+                )
+                .await?;
+                Ok(Some(frozen.get_changeset_id()))
+            }
+            None => {
+                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                    .await?;
+                Ok(None)
+            }
+        }
+    }
+
+    async fn sync_commit_single_parent(
+        &self,
+        ctx: CoreContext,
+        cs: BonsaiChangeset,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let source_cs_id = cs.get_changeset_id();
+        let cs = cs.into_mut();
+        let p = cs.parents[0];
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+
+        let maybe_parent_sync_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
+        let parent_sync_outcome = maybe_parent_sync_outcome
+            .ok_or(err_msg(format!("Parent commit {} is not synced yet", p)))?;
+
+        use CommitSyncOutcome::*;
+        match parent_sync_outcome {
+            NotSyncCandidate => {
+                // If there's not working copy for parent commit then there's no working
+                // copy for child either.
+                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                    .await?;
+                Ok(None)
+            }
+            RewrittenAs(remapped_p) | EquivalentWorkingCopyAncestor(remapped_p) => {
+                let mut remapped_parents = HashMap::new();
+                remapped_parents.insert(p, remapped_p);
+                let maybe_rewritten = rewrite_commit(cs, &remapped_parents, rewrite_paths)?;
+                match maybe_rewritten {
+                    Some(rewritten) => {
+                        let frozen = rewritten.freeze()?;
+                        upload_commits(
+                            ctx.clone(),
+                            vec![frozen.clone()],
+                            source_repo.clone(),
+                            target_repo.clone(),
+                        )
+                        .await?;
+
+                        // update_mapping also updates working copy equivalence, so no need
+                        // to do it separately
+                        update_mapping(
+                            ctx.clone(),
+                            hashmap! { source_cs_id => frozen.get_changeset_id() },
+                            &self,
+                        )
+                        .await?;
+                        Ok(Some(frozen.get_changeset_id()))
+                    }
+                    None => {
+                        // Source commit doesn't rewrite to any target commits.
+                        // In that case equivalent working copy is the equivalent working
+                        // copy of the parent
+                        self.update_wc_equivalence(ctx.clone(), source_cs_id, Some(remapped_p))
+                            .await?;
+                        Ok(None)
+                    }
+                }
+            }
+            Preserved => {
+                let frozen = cs.freeze()?;
+                upload_commits(
+                    ctx.clone(),
+                    vec![frozen],
+                    source_repo.clone(),
+                    target_repo.clone(),
+                )
+                .await?;
+
+                // update_mapping also updates working copy equivalence, so no need
+                // to do it separately
+                update_mapping(
+                    ctx.clone(),
+                    hashmap! { source_cs_id => source_cs_id },
+                    &self,
+                )
+                .await?;
+                Ok(Some(source_cs_id))
+            }
+        }
+    }
+
+    fn get_source_target_mover(&self) -> (BlobRepo, BlobRepo, Mover) {
+        match self.repos.clone() {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
                 small_repo,
@@ -428,46 +561,70 @@ where
                 large_repo,
                 mover,
             } => (small_repo, large_repo, mover),
+        }
+    }
+
+    async fn update_wc_equivalence(
+        &self,
+        ctx: CoreContext,
+        source_bcs_id: ChangesetId,
+        maybe_target_bcs_id: Option<ChangesetId>,
+    ) -> Result<(), Error> {
+        let CommitSyncer { repos, mapping } = self.clone();
+        let (source_repo, target_repo, source_is_large) = match repos {
+            CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo,
+                mover: _,
+            } => (large_repo, small_repo, true),
+            CommitSyncRepos::SmallToLarge {
+                small_repo,
+                large_repo,
+                mover: _,
+            } => (small_repo, large_repo, false),
         };
 
-        let cs = source_repo
-            .get_bonsai_changeset(ctx.clone(), source_cs_id)
-            .compat()
-            .await?;
-        // Rewrite the commit
-        match remap_parents_and_rewrite_commit(
-            ctx.clone(),
-            cs.into_mut(),
-            &source_repo,
-            &target_repo,
-            &mapping,
-            rewrite_paths,
-        )
-        .await?
-        {
-            None => Ok(None),
-            Some(rewritten) => {
-                // Sync commit
-                let frozen = rewritten.freeze()?;
-                let rewritten_cs_id = frozen.get_changeset_id();
-                let rewritten_list = vec![frozen];
-                upload_commits(
-                    ctx.clone(),
-                    rewritten_list.clone(),
-                    source_repo.clone(),
-                    target_repo.clone(),
-                )
-                .await?;
+        let source_repoid = source_repo.get_repoid();
+        let target_repoid = target_repo.get_repoid();
 
-                update_mapping(
-                    ctx.clone(),
-                    hashmap! { source_cs_id => rewritten_cs_id },
-                    &self,
-                )
-                .await?;
-                Ok(Some(rewritten_cs_id))
+        let wc_entry = match maybe_target_bcs_id {
+            Some(target_bcs_id) => {
+                if source_is_large {
+                    EquivalentWorkingCopyEntry {
+                        large_repo_id: source_repoid,
+                        large_bcs_id: source_bcs_id,
+                        small_repo_id: target_repoid,
+                        small_bcs_id: Some(target_bcs_id),
+                    }
+                } else {
+                    EquivalentWorkingCopyEntry {
+                        large_repo_id: target_repoid,
+                        large_bcs_id: target_bcs_id,
+                        small_repo_id: source_repoid,
+                        small_bcs_id: Some(source_bcs_id),
+                    }
+                }
             }
-        }
+            None => {
+                if !source_is_large {
+                    return Err(err_msg(
+                        "unexpected wc equivalence update: small repo commit should always remap to large repo",
+                    ));
+                }
+                EquivalentWorkingCopyEntry {
+                    large_repo_id: source_repoid,
+                    large_bcs_id: source_bcs_id,
+                    small_repo_id: target_repoid,
+                    small_bcs_id: None,
+                }
+            }
+        };
+
+        mapping
+            .insert_equivalent_working_copy(ctx.clone(), wc_entry)
+            .map(|_| ())
+            .compat()
+            .await
     }
 }
 
@@ -499,13 +656,6 @@ impl CommitSyncRepos {
                 small_repo: _,
                 mover: _,
             } => large_repo,
-        }
-    }
-
-    pub(crate) fn source_is_large(&self) -> bool {
-        match self {
-            CommitSyncRepos::LargeToSmall { .. } => true,
-            CommitSyncRepos::SmallToLarge { .. } => false,
         }
     }
 
@@ -633,12 +783,12 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
 pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     cs: BonsaiChangeset,
-    config: &'a CommitSyncer<M>,
+    commit_syncer: &'a CommitSyncer<M>,
     bookmark: BookmarkName,
 ) -> Result<Option<ChangesetId>, Error> {
-    let CommitSyncer { repos, mapping } = config.clone();
+    let CommitSyncer { repos, .. } = commit_syncer.clone();
     let hash = cs.get_changeset_id();
-    let (source_repo, target_repo, rewrite_paths) = match repos.clone() {
+    let (source_repo, target_repo, _) = match repos.clone() {
         CommitSyncRepos::LargeToSmall {
             large_repo,
             small_repo,
@@ -652,17 +802,43 @@ pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
     };
 
     // Rewrite the commit
-    match remap_parents_and_rewrite_commit(
-        ctx.clone(),
-        cs.into_mut(),
-        &source_repo,
-        &target_repo,
-        &mapping,
-        rewrite_paths,
-    )
-    .await?
+    match remap_parents_and_rewrite_commit(ctx.clone(), cs.clone().into_mut(), commit_syncer)
+        .await?
     {
-        None => Ok(None),
+        None => {
+            let mut remapped_parents_outcome = vec![];
+            for p in cs.parents() {
+                let maybe_commit_sync_outcome = commit_syncer
+                    .get_commit_sync_outcome(ctx.clone(), p)
+                    .await?
+                    .map(|sync_outcome| (sync_outcome, p));
+                remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
+            }
+
+            if remapped_parents_outcome.len() == 0 {
+                commit_syncer
+                    .update_wc_equivalence(ctx.clone(), hash, None)
+                    .await?;
+            } else if remapped_parents_outcome.len() == 1 {
+                use CommitSyncOutcome::*;
+                let (sync_outcome, parent) = &remapped_parents_outcome[0];
+                let wc_equivalence = match sync_outcome {
+                    NotSyncCandidate => None,
+                    RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(*cs_id),
+                    Preserved => Some(*parent),
+                };
+
+                commit_syncer
+                    .update_wc_equivalence(ctx.clone(), hash, wc_equivalence)
+                    .await?;
+            } else {
+                return Err(
+                    ErrorKind::AmbiguousWorkingCopyEquivalent(cs.get_changeset_id()).into(),
+                );
+            }
+
+            Ok(None)
+        }
         Some(rewritten) => {
             // Special case - commits with no parents (=> beginning of a repo) graft directly
             // to the bookmark, so that we can start a new sync with a fresh repo
@@ -717,7 +893,7 @@ pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
             update_mapping(
                 ctx.clone(),
                 hashmap! { hash => pushrebased_changeset },
-                config,
+                commit_syncer,
             )
             .await?;
             Ok(Some(pushrebased_changeset))
