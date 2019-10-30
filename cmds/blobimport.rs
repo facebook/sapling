@@ -223,8 +223,10 @@ fn main(fb: FacebookInit) -> Result<()> {
             .map_err({
                 cloned!(ctx);
                 move |err| {
+                    // NOTE: We log the error immediatley, then provide another one for main's
+                    // Result (which will set our exit code).
                     error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                    ::std::process::exit(1);
+                    err_msg("blobimport exited with a failure")
                 }
             })
             .then(move |result| helpers::upload_and_show_trace(ctx).then(move |_| result))

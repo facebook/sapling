@@ -58,6 +58,7 @@
   }
   * Error: failed to blobimport: While uploading changeset: 527169d71e0eac8abd0a25d18520cb3b8371edb5 (glob)
   * Originated in:  (glob)
+  Error: ErrorMessage { msg: "blobimport exited with a failure" }
   [1]
 
 # Create the blobimport LFS helper
