@@ -720,6 +720,7 @@ struct TreeSpan {
     start_time: u64,
     duration: u64,
     children: Vec<TreeSpanId>,
+    call_count: usize,
 }
 type TreeSpanId = usize;
 
@@ -736,7 +737,7 @@ impl TreeSpan {
 
     /// Is this span considered interesting (should it be printed)?
     fn is_interesting(&self, opts: &AsciiOptions) -> bool {
-        self.duration >= opts.min_duration_micros
+        self.call_count > 0 && self.duration >= opts.min_duration_micros
     }
 }
 
@@ -833,6 +834,7 @@ impl TracingData {
     /// Generate ASCII call graph for a single thread.
     fn ascii_single_thread(&self, eventus_list: &[&Eventus], opts: &AsciiOptions) -> String {
         let tree_spans = self.build_tree_spans(eventus_list);
+        let tree_spans = self.merge_tree_spans(tree_spans, opts);
         let rows = self.render_tree_spans(tree_spans, opts);
         rows.to_string()
     }
@@ -938,6 +940,7 @@ impl TracingData {
                             start_time: e.timestamp.0,
                             duration: end.timestamp.0 - e.timestamp.0,
                             children: Vec::new(),
+                            call_count: 1,
                         };
 
                         // Find a suitable parent span. Pop parent spans
@@ -976,6 +979,83 @@ impl TracingData {
         }
 
         tree_spans
+    }
+
+    /// Merge multiple similar spans into one larger span.
+    fn merge_tree_spans(&self, tree_spans: Vec<TreeSpan>, opts: &AsciiOptions) -> Vec<TreeSpan> {
+        // For example,
+        //
+        //   <root>
+        //    |- span 1
+        //    |   |- span 2
+        //    |   |- span 3
+        //    |   |- span 2
+        //    |   |- span 3
+        //    |   |- span 2
+        //    |- span 2
+        //
+        // might be rewritten into:
+        //
+        //   <root>
+        //    |- span 1
+        //    |   |- span 2 (x 3)
+        //    |   |- span 3 (x 2)
+        //    |- span 2
+
+        struct Context<'a> {
+            this: &'a TracingData,
+            opts: &'a AsciiOptions,
+            tree_spans: Vec<TreeSpan>,
+        }
+
+        /// Check children of tree_spans[id] recursively.
+        fn visit(ctx: &mut Context, id: usize) {
+            type TreeSpanId = usize;
+            // Treat spans with the same metadata as same spans.
+            // So different EspanIds can still be merged.
+            let mut meta_to_id = IndexMap::<Vec<(StringId, StringId)>, TreeSpanId>::new();
+            let child_ids: Vec<TreeSpanId> = ctx.tree_spans[id].children.iter().cloned().collect();
+            for child_id in child_ids {
+                // Do not try to merge this child span if itself, or any of the
+                // grand children is interesting. But some of the grand children
+                // might be merged. So go visit them.
+                if ctx.tree_spans[child_id].is_interesting(ctx.opts)
+                    || ctx.tree_spans[child_id]
+                        .children
+                        .iter()
+                        .any(|&id| ctx.tree_spans[id].is_interesting(ctx.opts))
+                {
+                    visit(ctx, child_id);
+                    continue;
+                }
+
+                // Otherwise, attempt to merge the child span.
+                if let Some(espan_id) = ctx.tree_spans[child_id].espan_id {
+                    let espan = &ctx.this.espans[espan_id.0 as usize];
+                    let meta: Vec<(StringId, StringId)> =
+                        espan.meta.iter().map(|(&k, &v)| (k, v)).collect();
+                    let existing_child_id: TreeSpanId = *meta_to_id.entry(meta).or_insert(child_id);
+                    if existing_child_id != child_id {
+                        let duration = ctx.tree_spans[child_id].duration;
+                        assert_eq!(ctx.tree_spans[child_id].call_count, 1);
+                        ctx.tree_spans[child_id].call_count -= 1;
+                        let mut merged = &mut ctx.tree_spans[existing_child_id];
+                        merged.call_count += 1;
+                        merged.duration += duration;
+                    }
+                }
+            }
+        }
+
+        let mut context = Context {
+            this: self,
+            opts,
+            tree_spans,
+        };
+
+        visit(&mut context, 0);
+
+        context.tree_spans
     }
 
     /// Render one `TreeSpan` into `Rows`.
@@ -1026,12 +1106,24 @@ impl TracingData {
                 // Use milliseconds. This is consistent with traceprof.
                 let start = tree_span.start_time / 1000;
                 let duration = tree_span.duration / 1000;
+                let call_count = if tree_span.call_count > 1 {
+                    format!(" ({} times)", tree_span.call_count)
+                } else {
+                    assert!(tree_span.call_count > 0);
+                    String::new()
+                };
 
                 let first_row = Row {
                     columns: vec![
                         start.to_string(),
                         format!("+{}", duration),
-                        format!("{}{} {}", " ".repeat(indent), first_row_ch, name),
+                        format!(
+                            "{}{} {}{}",
+                            " ".repeat(indent),
+                            first_row_ch,
+                            name,
+                            call_count
+                        ),
                         source_location,
                     ],
                 };
@@ -1282,6 +1374,43 @@ Start Dur.ms | Name               Source
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
    24    +10  \ foo               a.py line 10
+   26     +4   | foo (2 times)    a.py line 10
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_merged_spans() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+        let mut opts = AsciiOptions::default();
+        opts.min_duration_micros = 3000;
+
+        data.add_action(span_id1, Action::EnterSpan);
+        // Those spans should be merged.
+        for _ in 0..10000 {
+            data.add_action(span_id2, Action::EnterSpan);
+            data.add_action(span_id2, Action::ExitSpan);
+        }
+        // This should not be merged - it has children that take longer than 3ms.
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+
+        assert_eq!(
+            data.ascii(&opts),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    2 +40014 | foo                a.py line 10
+    4 +20000  \ bar (10000 times) a.py line 20
+40004    +10  \ bar               a.py line 20
+40006     +6   | foo              a.py line 10
 
 "#
         );
