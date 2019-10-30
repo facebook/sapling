@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-libc = "0.2.45" # keep it in sync with zstd-sys
+libc = "0.2.65" # keep it in sync with zstd-sys
 zstd-sys = { version = "= 1.4.14+zstd.1.4.3", features = ["experimental"] } # pinned. zstd advanced API changes rapidly
 
 [dev-dependencies]
