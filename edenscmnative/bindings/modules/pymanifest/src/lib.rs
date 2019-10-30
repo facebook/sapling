@@ -111,7 +111,18 @@ py_class!(class treemanifest |py| {
     // Returns (node, flag) for a given `path` in the manifest.
     // When the `path` does not exist, it return a KeyError.
     def find(&self, path: &PyBytes) -> PyResult<(PyBytes, String)> {
-        let repo_path = pybytes_to_path(py, path);
+        // Some code... probably sparse profile related is asking find to grab
+        // random invalid paths.
+        let repo_path = match RepoPath::from_utf8(path.data(py)) {
+            Ok(value) => value,
+            Err(_) => {
+                let msg = format!(
+                    "cannot find file '{}' in manifest",
+                    String::from_utf8_lossy(path.data(py))
+                );
+                return Err(PyErr::new::<exc::KeyError, _>(py, msg))
+            }
+        };
         let tree = self.underlying(py).borrow();
         match tree.get_file(&repo_path).map_pyerr::<exc::RuntimeError>(py)? {
             None => {
