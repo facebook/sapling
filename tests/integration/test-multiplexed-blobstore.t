@@ -12,11 +12,6 @@ setup common configuration
   > amend=
   > EOF
 
-Setup helpers
-  $ log() {
-  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
-  > }
-
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -64,5 +59,4 @@ Push
   updating bookmark master_bookmark
 
 Count number of entries the blobstore sync queue
-  $ NUM="$(sqlite3 "$TESTTMP/monsql/blobstore_sync_queue" "select count(*) from blobstore_sync_queue")"
-  $ [ "$NUM" -gt "0" ]
+  $ [[ "$(read_blobstore_sync_queue_size)" -gt 0 ]]

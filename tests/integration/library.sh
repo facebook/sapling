@@ -1089,3 +1089,20 @@ function add_synced_commit_mapping_entry() {
     VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id');
 EOF
 }
+
+function read_blobstore_sync_queue_size() {
+  local attempts timeout ret
+  timeout="100"
+  attempts="$((timeout * 10))"
+
+  for _ in $(seq 1 $attempts); do
+    ret="$(sqlite3 "$TESTTMP/monsql/blobstore_sync_queue" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
+    if [[ -n "$ret" ]]; then
+      echo "$ret"
+      return 0
+    fi
+    sleep 0.1
+  done
+
+  return 1
+}
