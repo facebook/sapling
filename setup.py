@@ -1944,11 +1944,6 @@ if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
         if cflags and re.search(r"-mno-fused-madd\b", cflags) is not None:
             os.environ["CFLAGS"] = os.environ.get("CFLAGS", "") + " -Qunused-arguments"
 
-if sys.platform == "darwin" and havefb:
-    # In Facebook, we want hg.rust to use out custom Python installation
-    os.environ[
-        "HGPYENTRYPOINTSEARCHPATH"
-    ] = "/opt/facebook/hg/lib/python2.7/site-packages"
 
 import distutils.command.build_clib
 from distutils.dep_util import newer_group

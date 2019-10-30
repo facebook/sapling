@@ -3675,14 +3675,6 @@ class TestRunner(object):
         if getattr(os, "symlink", None):
             tmphgpath = os.path.join(self._tmpbindir, "hg")
             vlog("# Symlink %s to %s" % (self._hgcommand, tmphgpath))
-            entrypointpath = os.path.join(
-                os.path.dirname(os.path.realpath(self._hgcommand)),
-                "mercurial",
-                "entrypoint.py",
-            )
-            if os.path.exists(entrypointpath):
-                vlog("# HGPYENTRYPOINT=%s" % entrypointpath)
-                os.environ["HGPYENTRYPOINT"] = entrypointpath
 
             try:
                 os.symlink(self._hgcommand, tmphgpath)
