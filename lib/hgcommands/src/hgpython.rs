@@ -11,7 +11,7 @@ use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
 
-const HGPYENTRYPOINT_MOD: &str = "edenscm.mercurial.entrypoint";
+const HGPYENTRYPOINT_MOD: &str = "edenscm";
 pub struct HgPython {
     py_initialized_by_us: bool,
 }

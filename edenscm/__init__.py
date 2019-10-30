@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 
 def _fixsyspath():
     """Fix sys.path so core edenscm modules (edenscmnative, and 3rd party
@@ -41,3 +43,32 @@ _fixsyspath()
 
 # Keep the module clean
 del globals()["_fixsyspath"]
+
+
+def run(args=None, fin=None, fout=None, ferr=None):
+    import sys
+
+    if args is None:
+        args = sys.argv
+
+    if args[1:4] == ["serve", "--cmdserver", "chgunix2"]:
+        # chgserver code path
+
+        # no demandimport, since chgserver wants to preimport everything.
+        from .mercurial import dispatch
+
+        dispatch.runchgserver()
+    else:
+        # non-chgserver code path
+        # - no chg in use: hgcommands::run -> HgPython::run_hg -> here
+        # - chg client: chgserver.runcommand -> bindings.commands.run ->
+        #               hgcommands::run -> HgPython::run_hg -> here
+        from . import hgdemandimport
+
+        hgdemandimport.enable()
+
+        # demandimport has side effect on importing dispatch.
+        # so 'import dispatch' happens after demandimport
+        from .mercurial import dispatch
+
+        dispatch.run(args, fin, fout, ferr)
