@@ -8,6 +8,7 @@
 #include "eden/fs/win/mount/StateDbNode.h"
 #include <eden/fs/model/Hash.h>
 #include <eden/fs/win/store/WinStore.h>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -37,7 +38,7 @@ class StateDbNodeTest : public ::testing::Test {
 
 // TODO(puneetk): This could use more test.
 
-TEST_F(StateDbNodeTest, testCreateDbNode) {
+TEST_F(StateDbNodeTest, testCreate) {
   const auto rootPath = rootPath_ / L"testStateDbNode";
   auto path = WinRelativePathW(L"dir1\\dir2\\file1");
   auto hash = Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b");
@@ -54,7 +55,7 @@ TEST_F(StateDbNodeTest, testCreateDbNode) {
   EXPECT_EQ(dbNode.getEntryState(), EntryState::CREATED);
 }
 
-TEST_F(StateDbNodeTest, testMoveDbNode) {
+TEST_F(StateDbNodeTest, testMove) {
   const auto rootPath = rootPath_ / L"testStateDbNode";
   auto path = WinRelativePathW(L"dir1\\dir2\\file1");
   auto hash = Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b");
@@ -73,7 +74,7 @@ TEST_F(StateDbNodeTest, testMoveDbNode) {
   EXPECT_EQ(dbNode2.getEntryState(), EntryState::CREATED);
 }
 
-TEST_F(StateDbNodeTest, fetchDirectoryEntries) {
+TEST_F(StateDbNodeTest, testDirEntries) {
   const auto rootPath = rootPath_ / L"testStateDbNode";
   auto path = WinRelativePathW(L"dir1\\dir2\\file1");
   auto hash = Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b");
