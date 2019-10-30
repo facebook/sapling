@@ -585,6 +585,9 @@ class localrepository(object):
             or self.ui.config("extensions", "remotenames") == "!"
             or "visibleheads" not in self.storerequirements
         ):
+            # Set narrow-heads to False so other code paths wouldn't try
+            # to use it.
+            self.ui.setconfig("experimental", "narrow-heads", False)
             narrowheadsdesired = False
         narrowheadscurrent = "narrowheads" in self.storerequirements
         if narrowheadsdesired != narrowheadscurrent:
