@@ -31,6 +31,10 @@
     # map. A True value corresponds to serving only missing map data while False
     # corresponds to serving the complete map.
     onlymapdelta = False
+    # Some repos might have missing hashes in the gitmap and there is no way
+    # to go back and fix them. We can safely skip them in the verification part
+    # of gitgetmeta.
+    skiphashes = []
 
 """
 
@@ -271,6 +275,9 @@ def _getbundlegithgmappart(bundler, repo, source, bundlecaps=None, **kwargs):
 
         missingcommits = repo.changelog.findmissing(commonheads, heads)
         missinghashes = set(hex(commit) for commit in missingcommits)
+        missinghashes.difference_update(
+            set(repo.ui.configlist("gitlookup", "skiphashes", []))
+        )
         missinglines = _getmissinglines(mapfile, missinghashes)
 
         payload = _githgmappayload(needfullsync, newheads, missinglines)

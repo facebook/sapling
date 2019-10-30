@@ -422,16 +422,55 @@ we try to sync changes and check that the syncing fails.
   abort: gitmeta: missing hashes in file $TESTTMP/repo1/.hg/git-mapfile
   [255]
 
+With gitlookup.skiphashes, gitgetmeta should work with missing map data.
+  $ cd ../repo1
+  $ cp .hg/hgrc .hg/hgrc.bak
+  $ echo "skiphashes = 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/hgrc
+  $ cd ../repo2
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 3 files (120 bytes)
+
+With gitlookup.skiphashes, non-skipped, missing map data will still abort.
+  $ rm -f .hg/git-*
+  $ cd $TESTTMP/repo1
+  $ mv .hg/git-mapfile .hg/git-mapfile-bak
+  $ grep -v "3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6" .hg/git-mapfile-bak > .hg/git-mapfile
+  $ cd $TESTTMP/repo2
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  abort: gitmeta: missing hashes in file $TESTTMP/repo1/.hg/git-mapfile
+  [255]
+
+With gitlookup.skiphashes, initial gitgetmeta will work.
+  $ echo "skiphashes = 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22 3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6" >> $TESTTMP/repo1/.hg/hgrc
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (365 bytes)
+
+Restore git data in repo1 and repo2, as well as the config for repo1
+  $ cd ../repo1
+  $ mv .hg/git-mapfile-bak .hg/git-mapfile
+  $ mv .hg/hgrc.bak .hg/hgrc
+  $ cd ../repo2
+  $ echo "627ddeb6657d60a21b87c725b5c4e60d91b75f19" > .hg/git-synced-hgheads
+
 Now adding the map entries to both the repos to simulate corruption on the
 client side
   $ cd ../repo1
   $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
   $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
   $ mv .hg/git-mapfile.bak .hg/git-mapfile
+  $ cp .hg/git-mapfile ../repo2/.hg/git-mapfile
   $ cd ../repo2
-  $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
-  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
-  $ mv .hg/git-mapfile.bak .hg/git-mapfile
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   warning: gitmeta: unexpected lines in .hg/git-mapfile
