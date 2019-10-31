@@ -278,9 +278,9 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether Eden reads from Mercurial's datapack store.
+   * Controls whether EdenFS reads directly from hgcache.
    */
-  ConfigSetting<bool> useDatapack{"hg:use-datapack", false, this};
+  ConfigSetting<bool> useHgCache{"hg:use-hgcache", false, this};
 
   /**
    * Location of scribe_cat binary on the system. If not specified, scribe

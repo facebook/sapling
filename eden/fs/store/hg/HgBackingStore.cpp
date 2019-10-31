@@ -675,7 +675,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
-  if (edenConfig->useDatapack.getValue() && datapackStore_) {
+  if (edenConfig->useHgCache.getValue() && datapackStore_) {
     if (auto content = datapackStore_->getBlob(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
                  << hgInfo.revHash().toString() << " from datapack store";
@@ -684,7 +684,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   } else
 #endif
       // Prefer using the above rust implementation over the C++ implementation
-      if (edenConfig->useDatapack.getValue() && unionStore_) {
+      if (edenConfig->useHgCache.getValue() && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
       return makeFuture(std::move(content));
