@@ -72,3 +72,33 @@ pub extern "C" fn rust_backingstore_get_blob(
 ) -> CFallible<CBytes> {
     backingstore_get_blob(store, name, name_len, node, node_len).into()
 }
+
+fn backingstore_get_tree(
+    store: *mut BackingStore,
+    name: *const u8,
+    name_len: usize,
+    node: *const u8,
+    node_len: usize,
+) -> Fallible<*mut CBytes> {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let path = stringpiece_to_slice(name, name_len)?;
+    let node = stringpiece_to_slice(node, node_len)?;
+
+    store
+        .get_tree(path, node)
+        .and_then(|opt| opt.ok_or_else(|| err_msg("no tree found")))
+        .map(CBytes::from_vec)
+        .map(|result| Box::into_raw(Box::new(result)))
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_tree(
+    store: *mut BackingStore,
+    name: *const u8,
+    name_len: usize,
+    node: *const u8,
+    node_len: usize,
+) -> CFallible<CBytes> {
+    backingstore_get_tree(store, name, name_len, node, node_len).into()
+}

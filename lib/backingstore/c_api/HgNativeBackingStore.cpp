@@ -48,5 +48,26 @@ folly::Optional<folly::IOBuf> HgNativeBackingStore::getBlob(
 
   return iobuf;
 }
+
+folly::Optional<folly::IOBuf> HgNativeBackingStore::getTree(
+    folly::ByteRange name,
+    folly::ByteRange node) {
+  RustCFallible<RustCBytes> result(
+      rust_backingstore_get_tree(
+          store_.get(), name.data(), name.size(), node.data(), node.size()),
+      rust_cbytes_free);
+
+  if (result.isError()) {
+    XLOG(DBG5) << "Error while getting tree name=" << name.data()
+               << " node=" << folly::hexlify(node)
+               << " from backingstore: " << result.getError();
+    return folly::none;
+  }
+  auto buffer = result.get();
+  auto iobuf =
+      folly::IOBuf{folly::IOBuf::COPY_BUFFER, buffer->ptr, buffer->len};
+
+  return iobuf;
+}
 } // namespace eden
 } // namespace facebook

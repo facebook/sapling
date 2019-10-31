@@ -6,12 +6,13 @@
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
 use failure::Fallible;
-use revisionstore::{ContentStore, DataStore};
+use revisionstore::{ContentStore, ContentStoreBuilder, DataStore};
 use std::path::Path;
 use types::{Key, Node, RepoPath};
 
 pub struct BackingStore {
-    store: ContentStore,
+    blobstore: ContentStore,
+    treestore: ContentStore,
 }
 
 impl BackingStore {
@@ -22,9 +23,16 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
-        let store = ContentStore::new(hg.join("store"), &config)?;
+        let store_path = hg.join("store");
+        let blobstore = ContentStore::new(&store_path, &config)?;
+        let treestore = ContentStoreBuilder::new(&store_path, &config)
+            .suffix(Path::new("manifests"))
+            .build()?;
 
-        Ok(Self { store })
+        Ok(Self {
+            blobstore,
+            treestore,
+        })
     }
 
     pub fn get_blob(&self, path: &[u8], node: &[u8]) -> Fallible<Option<Vec<u8>>> {
@@ -34,7 +42,7 @@ impl BackingStore {
 
         // Return None for LFS blobs
         // TODO: LFS support
-        if let Ok(Some(metadata)) = self.store.get_meta(&key) {
+        if let Ok(Some(metadata)) = self.blobstore.get_meta(&key) {
             if let Some(flag) = metadata.flags {
                 if flag == 0x2000 {
                     return Ok(None);
@@ -42,9 +50,17 @@ impl BackingStore {
             }
         }
 
-        self.store
+        self.blobstore
             .get(&key)
             .map(|blob| blob.map(discard_metadata_header))
+    }
+
+    pub fn get_tree(&self, path: &[u8], node: &[u8]) -> Fallible<Option<Vec<u8>>> {
+        let path = RepoPath::from_utf8(path)?.to_owned();
+        let node = Node::from_slice(node)?;
+        let key = Key::new(path, node);
+
+        self.treestore.get(&key)
     }
 }
 

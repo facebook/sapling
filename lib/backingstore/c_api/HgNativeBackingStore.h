@@ -29,6 +29,10 @@ class HgNativeBackingStore {
       folly::ByteRange name,
       folly::ByteRange node);
 
+  folly::Optional<folly::IOBuf> getTree(
+      folly::ByteRange name,
+      folly::ByteRange node);
+
  private:
   std::unique_ptr<RustBackingStore, std::function<void(RustBackingStore*)>>
       store_;
