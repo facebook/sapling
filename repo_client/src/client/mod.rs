@@ -1309,13 +1309,14 @@ impl HgCommands for RepoClient {
                     maybe_full_content,
                     pure_push_allowed,
                 ).and_then({
-                    cloned!(ctx, blobrepo, pushrebase_params, lca_hint);
+                    cloned!(ctx, blobrepo, pushrebase_params, lca_hint, phases_hint);
                     move |action| run_post_resolve_action(
                         ctx,
                         blobrepo,
                         hook_manager,
                         bookmark_attrs,
                         lca_hint,
+                        phases_hint,
                         infinitepush_params,
                         pushrebase_params,
                         action,

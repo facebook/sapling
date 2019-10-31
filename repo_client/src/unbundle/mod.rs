@@ -29,6 +29,7 @@ use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookMa
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{ChangesetId, RawBundle2Id};
+use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
@@ -54,6 +55,7 @@ pub fn run_post_resolve_action(
     hook_manager: Arc<HookManager>,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases: Arc<dyn Phases>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolveAction,
@@ -79,6 +81,7 @@ pub fn run_post_resolve_action(
             repo,
             bookmark_attrs,
             lca_hint,
+            phases,
             hook_manager,
             infinitepush_params,
             pushrebase_params,
@@ -209,6 +212,7 @@ fn run_pushrebase(
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases: Arc<dyn Phases>,
     hook_manager: Arc<HookManager>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
@@ -270,6 +274,23 @@ fn run_pushrebase(
     .and_then({
         cloned!(ctx, repo);
         move |((pushrebased_rev, pushrebased_changesets), bookmark, bookmark_push_part_id)| {
+            phases
+                .add_reachable_as_public(ctx, repo, vec![pushrebased_rev.clone()])
+                .map(move |_| {
+                    (
+                        pushrebased_rev,
+                        pushrebased_changesets,
+                        bookmark,
+                        bookmark_push_part_id,
+                    )
+                })
+                .context("While marking pushrebased changeset as public")
+                .from_err()
+        }
+    })
+    .and_then({
+        cloned!(ctx, repo);
+        move |(pushrebased_rev, pushrebased_changesets, bookmark, bookmark_push_part_id)| {
             // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
             let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
 

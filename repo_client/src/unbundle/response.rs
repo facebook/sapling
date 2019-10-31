@@ -12,7 +12,6 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bundle2_resolver::CommonHeads;
 use bytes::{Bytes, BytesMut};
-use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use failure_ext::FutureFailureErrorExt;
@@ -142,13 +141,7 @@ impl UnbundleResponse {
         let common = commonheads.heads;
         let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
-        // write phase as public for this commit
-        let pushrebased_rev = phases
-            .add_reachable_as_public(ctx.clone(), repo.clone(), vec![pushrebased_rev.clone()])
-            .and_then({
-                cloned!(ctx, repo);
-                move |_| repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
-            });
+        let pushrebased_hg_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
 
         let bookmark_reply_part = match bookmark_push_part_id {
             Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
@@ -167,13 +160,13 @@ impl UnbundleResponse {
 
         let mut scuba_logger = ctx.scuba().clone();
         maybe_onto_head
-            .join(pushrebased_rev)
-            .and_then(move |(maybe_onto_head, pushrebased_rev)| {
+            .join(pushrebased_hg_rev)
+            .and_then(move |(maybe_onto_head, pushrebased_hg_rev)| {
                 let mut heads = vec![];
                 if let Some(onto_head) = maybe_onto_head {
                     heads.push(onto_head);
                 }
-                heads.push(pushrebased_rev);
+                heads.push(pushrebased_hg_rev);
                 getbundle_response::create_getbundle_response(
                     ctx,
                     repo,
