@@ -184,7 +184,7 @@ class gitutil(object):
         return output
 
     @classmethod
-    def parsegitcommitraw(cls, source, commithash, commitstr):
+    def parsegitcommitraw(cls, commithash, commitstr, recode=None):
         """Takes the text of a git commit in raw format and builds a commit object based
         on it.
         """
@@ -192,6 +192,8 @@ class gitutil(object):
             raise TypeError("parsegitcommitraw: commitstr must be a unicode string")
         if len(commitstr) == 0:
             raise ValueError("parsegitcommitraw: commitstr is empty")
+        if recode is None:
+            recode = lambda x: x
 
         if commitstr.startswith("commit"):
             (hashline, remainder) = commitstr.split("\n", 1)
@@ -257,12 +259,12 @@ class gitutil(object):
         date = date.strftime("%Y-%m-%dT%H:%M:%S") + timezone
 
         return common.commit(
-            author=source.recode(author),
-            date=source.recode(date),
-            desc=source.recode(description),
-            parents=[source.recode(parent) for parent in parents],
-            rev=source.recode(commithash),
-            extra={"git-hash": source.recode(commithash)},
+            author=recode(author),
+            date=recode(date),
+            desc=recode(description),
+            parents=[recode(parent) for parent in parents],
+            rev=recode(commithash),
+            extra={"git-hash": recode(commithash)},
             saverev=True,
         )
 
@@ -932,7 +934,7 @@ class repo_source(common.converter_source):
         catfilebodybytes = gitutil.catfile(self.ui, fullpath, commithash)
         catfilebodystr = catfilebodybytes.decode(self.srcencoding, errors="replace")
 
-        commit = gitutil.parsegitcommitraw(self, commithash, catfilebodystr)
+        commit = gitutil.parsegitcommitraw(commithash, catfilebodystr, self.recode)
 
         if variant == self.VARIANT_UNIFIED:
             previoushash = self.repo.unifiedprevioushashes[commit.rev]

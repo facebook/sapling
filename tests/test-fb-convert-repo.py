@@ -130,7 +130,7 @@ class gitutiltest(unittest.TestCase):
 
     def test_parsegitcommitraw(self):
         commit_hash = "6c6677a7b5cf683a1883bc5e4ad47cad0a496904"
-        commit_string = """tree e2acedaa094c4b5f0606e2a5ff58c3648555cfd4
+        commit_string = u"""tree e2acedaa094c4b5f0606e2a5ff58c3648555cfd4
 parent c6c89b3401f3f6690e2307de7e2d079894c8147a
 parent 2051d0428d045796ded3764c4188249669d1fcf3
 author Linux Build Service Account <lnxbuild@localhost> 1521780995 -0700
