@@ -143,7 +143,6 @@ pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    pub non_fast_forward_policy: NonFastForwardPolicy,
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
@@ -386,7 +385,6 @@ fn resolve_push(
                             changegroup_id,
                             bookmark_push,
                             maybe_raw_bundle2_id,
-                            non_fast_forward_policy,
                         })
                     }
                 }

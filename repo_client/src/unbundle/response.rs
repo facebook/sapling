@@ -39,7 +39,6 @@ pub struct UnbundlePushResponse {
 /// Data, needed to generate an `InfinitePush` response
 pub struct UnbundleInfinitePushResponse {
     pub changegroup_id: Option<PartId>,
-    pub bookmark_ids: Vec<PartId>,
 }
 
 /// Data, needed to generate a `PushRebase` response
@@ -54,8 +53,6 @@ pub struct UnbundlePushRebaseResponse {
 /// Data, needed to generate a bookmark-only `PushRebase` response
 pub struct UnbundleBookmarkOnlyPushRebaseResponse {
     pub bookmark_push_part_id: PartId,
-    // TODO: this is never created with `success = false`, let's get rid of it
-    pub success: bool,
 }
 
 pub enum UnbundleResponse {
@@ -66,16 +63,21 @@ pub enum UnbundleResponse {
 }
 
 impl UnbundleResponse {
-    fn generate_push_or_infinitepush_response(
-        changegroup_id: Option<PartId>,
-        bookmark_ids: Vec<PartId>,
-    ) -> BoxFuture<Bytes, Error> {
+    fn get_bundle_builder() -> Bundle2EncodeBuilder<Cursor<Vec<u8>>> {
         let writer = Cursor::new(Vec::new());
         let mut bundle = Bundle2EncodeBuilder::new(writer);
         // Mercurial currently hangs while trying to read compressed bundles over the wire:
         // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
+        bundle
+    }
+
+    fn generate_push_or_infinitepush_response(
+        changegroup_id: Option<PartId>,
+        bookmark_ids: Vec<PartId>,
+    ) -> BoxFuture<Bytes, Error> {
+        let mut bundle = Self::get_bundle_builder();
         if let Some(changegroup_id) = changegroup_id {
             bundle.add_part(try_boxfuture!(parts::replychangegroup_part(
                 parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
@@ -109,11 +111,8 @@ impl UnbundleResponse {
         _ctx: CoreContext,
         data: UnbundleInfinitePushResponse,
     ) -> BoxFuture<Bytes, Error> {
-        let UnbundleInfinitePushResponse {
-            changegroup_id,
-            bookmark_ids,
-        } = data;
-        Self::generate_push_or_infinitepush_response(changegroup_id, bookmark_ids)
+        let UnbundleInfinitePushResponse { changegroup_id } = data;
+        Self::generate_push_or_infinitepush_response(changegroup_id, vec![])
             .context("While preparing infinitepush response")
             .from_err()
             .boxify()
@@ -217,17 +216,11 @@ impl UnbundleResponse {
     ) -> BoxFuture<Bytes, Error> {
         let UnbundleBookmarkOnlyPushRebaseResponse {
             bookmark_push_part_id,
-            success,
         } = data;
 
-        let writer = Cursor::new(Vec::new());
-        let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(None);
+        let mut bundle = Self::get_bundle_builder();
         bundle.add_part(try_boxfuture!(parts::replypushkey_part(
-            success,
+            true,
             bookmark_push_part_id
         )));
         bundle

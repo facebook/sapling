@@ -171,7 +171,6 @@ fn run_infinitepush(
         changegroup_id,
         bookmark_push,
         maybe_raw_bundle2_id,
-        ..
     } = action;
 
     ({
@@ -200,10 +199,7 @@ fn run_infinitepush(
     })()
     .context("While doing an infinitepush")
     .from_err()
-    .map(move |changegroup_id| UnbundleInfinitePushResponse {
-        changegroup_id,
-        bookmark_ids: Vec::new(),
-    })
+    .map(move |changegroup_id| UnbundleInfinitePushResponse { changegroup_id })
     .boxify()
 }
 
@@ -351,7 +347,6 @@ fn run_bookmark_only_pushrebase(
     .map({
         move |bookmark_push_part_id| UnbundleBookmarkOnlyPushRebaseResponse {
             bookmark_push_part_id,
-            success: true,
         }
     })
     .context("While doing a bookmark-only pushrebase")
