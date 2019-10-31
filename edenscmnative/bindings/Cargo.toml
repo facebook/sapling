@@ -13,7 +13,7 @@ lto = false
 
 [dependencies]
 cpython = { version = "0.3", features = ["python27-sys"], default-features = false }
-env_logger = "0.5"
+env_logger = "0.7"
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }

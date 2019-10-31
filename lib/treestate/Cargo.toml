@@ -13,7 +13,7 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
 itertools = "0.8"
-quickcheck = "0.6"
-rand = "0.5"
-rand_chacha = "0.1.1"
+quickcheck = "0.9"
+rand = "0.7"
+rand_chacha = "0.2"
 tempdir = "0.3.7"

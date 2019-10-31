@@ -92,7 +92,10 @@ impl FileMetadata {
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for FileType {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        g.choose(&[FileType::Regular, FileType::Executable, FileType::Symlink])
+        use rand::seq::SliceRandom;
+
+        [FileType::Regular, FileType::Executable, FileType::Symlink]
+            .choose(g)
             .unwrap()
             .to_owned()
     }

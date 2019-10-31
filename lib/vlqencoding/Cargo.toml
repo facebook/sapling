@@ -7,7 +7,7 @@ edition = "2018"
 
 [dev-dependencies]
 minibench = { path = "../minibench" }
-quickcheck = "0.6"
+quickcheck = "0.9"
 
 [[bench]]
 name = "bench"

@@ -8,9 +8,9 @@ libc = "0.2.65" # keep it in sync with zstd-sys
 zstd-sys = { version = "= 1.4.14+zstd.1.4.3", features = ["experimental"] } # pinned. zstd advanced API changes rapidly
 
 [dev-dependencies]
-quickcheck = "0.6"
-rand = "0.5"
-rand_chacha = "0.1.0"
+quickcheck = "0.9"
+rand = "0.7"
+rand_chacha = "0.2"
 
 [[bin]]
 name = "zstdelta"

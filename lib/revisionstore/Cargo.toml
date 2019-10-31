@@ -27,9 +27,9 @@ types = { path = "../types" }
 util = { path = "../util" }
 
 [dev-dependencies]
-rand = "0.6"
-rand_chacha = "0.1.0"
-quickcheck = "0.6.2"
+rand = "0.7"
+rand_chacha = "0.2"
+quickcheck = "0.9"
 types = { path = "../types", default-features = false, features = ["for-tests"] }
 
 [lib]

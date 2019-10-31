@@ -41,6 +41,9 @@ use std::{
 use failure::{bail, format_err, Fallible};
 use serde_derive::{Deserialize, Serialize};
 
+#[cfg(any(test, feature = "for-tests"))]
+use rand::Rng;
+
 /// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 #[derive(Serialize, Deserialize)]

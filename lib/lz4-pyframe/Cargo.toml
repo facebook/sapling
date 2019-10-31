@@ -12,9 +12,9 @@ lz4-sys = "1"
 
 [dev-dependencies]
 minibench = { path = "../minibench" }
-quickcheck = "0"
-rand_chacha = "0.1.0"
-rand_core = "0.3.0"
+quickcheck = "0.9"
+rand_chacha = "0.2"
+rand_core = "0.5"
 
 [[bench]]
 name = "bench"
