@@ -51,6 +51,7 @@ pub struct RequestContext {
     pub error_msg: Option<String>,
     pub response_size: Option<u64>,
     pub headers_duration: Option<Duration>,
+    pub should_log: bool,
 
     checkpoint: Option<Receiver<()>>,
     start_time: Instant,
@@ -58,13 +59,14 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    fn new() -> Self {
+    fn new(should_log: bool) -> Self {
         Self {
             repository: None,
             method: None,
             error_msg: None,
             response_size: None,
             headers_duration: None,
+            should_log,
             start_time: Instant::now(),
             checkpoint: None,
             post_request_callbacks: vec![],
@@ -168,7 +170,11 @@ impl RequestContextMiddleware {
 
 impl Middleware for RequestContextMiddleware {
     fn inbound(&self, state: &mut State) {
-        state.put(RequestContext::new());
+        let should_log = ClientIdentity::try_borrow_from(&state)
+            .map(|client_identity| !client_identity.is_proxygen_test_identity())
+            .unwrap_or(true);
+
+        state.put(RequestContext::new(should_log));
     }
 
     fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {

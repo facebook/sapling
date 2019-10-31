@@ -31,6 +31,10 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let repo = ctx.repository.clone()?;
     let repo_and_method = format!("{}.{}", &repo, method.to_string());
 
+    if !ctx.should_log {
+        return None;
+    }
+
     ctx.add_post_request(move |duration, _| {
         match method {
             LfsMethod::Upload => {

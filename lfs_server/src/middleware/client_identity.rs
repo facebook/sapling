@@ -11,6 +11,7 @@ use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
 use json_encoded::get_identities;
+use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
 use std::net::{IpAddr, SocketAddr};
 
@@ -19,6 +20,11 @@ use super::Middleware;
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_CORRELATOR: &str = "x-client-correlator";
+
+lazy_static! {
+    static ref PROXYGEN_ORIGIN_IDENTITY: Identity =
+        Identity::new("SERVICE_IDENTITY", "proxygen-origin");
+}
 
 #[derive(StateData, Default)]
 pub struct ClientIdentity {
@@ -38,6 +44,14 @@ impl ClientIdentity {
 
     pub fn client_correlator(&self) -> &Option<String> {
         &self.client_correlator
+    }
+
+    pub fn is_proxygen_test_identity(&self) -> bool {
+        if let Some(identities) = &self.identities {
+            identities.contains(&PROXYGEN_ORIGIN_IDENTITY)
+        } else {
+            false
+        }
     }
 }
 
