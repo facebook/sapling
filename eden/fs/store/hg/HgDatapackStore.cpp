@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/hg/HgDatapackStore.h"
 
+#include <folly/Optional.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <memory>
@@ -29,5 +30,12 @@ std::unique_ptr<Blob> HgDatapackStore::getBlob(
 
   return nullptr;
 }
+
+folly::Optional<folly::IOBuf> HgDatapackStore::getTree(
+    const Hash& id,
+    RelativePath path) {
+  return store_.getTree(path.stringPiece(), id.getBytes());
+}
+
 } // namespace eden
 } // namespace facebook

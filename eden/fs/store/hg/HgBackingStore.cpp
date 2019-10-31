@@ -500,6 +500,21 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
   try {
+#ifdef EDEN_HAVE_RUST_DATAPACK
+    if (config_) {
+      auto edenConfig = config_->getEdenConfig();
+      if (edenConfig->useDatapack.getValue() && datapackStore_) {
+        if (auto content = datapackStore_->getTree(manifestNode, path)) {
+          XLOG(DBG4) << "imported tree node=" << manifestNode
+                     << " path=" << path << " from Rust hgcache";
+          auto fbstr = content->moveToFbString();
+          auto ref = ConstantStringRef{fbstr.c_str(), fbstr.length()};
+          return folly::makeFuture(processTree(
+              ref, manifestNode, edenTreeID, path, writeBatch.get()));
+        }
+      }
+    }
+#endif
     auto content = unionStoreGetWithRefresh(
         *unionStore_->wlock(), path.stringPiece(), manifestNode);
     return folly::makeFuture(
