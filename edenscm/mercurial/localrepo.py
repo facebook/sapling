@@ -587,7 +587,8 @@ class localrepository(object):
         ):
             # Set narrow-heads to False so other code paths wouldn't try
             # to use it.
-            self.ui.setconfig("experimental", "narrow-heads", False)
+            if narrowheadsdesired:
+                self.ui.setconfig("experimental", "narrow-heads", False)
             narrowheadsdesired = False
         narrowheadscurrent = "narrowheads" in self.storerequirements
         if narrowheadsdesired != narrowheadscurrent:

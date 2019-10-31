@@ -9,7 +9,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh.enable("remotenames")
-sh.setconfig("infinitepush.branchpattern=re:draft.*")
+sh.setconfig("infinitepush.branchpattern=re:draft.*", "visibility.enabled=1")
 
 sh.newrepo("server")
 sh.setconfig("treemanifest.server=1")
@@ -56,4 +56,7 @@ sh % "hg --cwd ../server bookmark --delete book/b"
 sh % "hg pull -q"
 
 sh % "hg log -r 'head()' -T '{desc}' --config experimental.narrow-heads=0" == "BC"
-sh % "hg log -r 'head()' -T '{desc}' --config experimental.narrow-heads=1" == "C"
+sh % "hg log -r 'head()' -T '{desc}' --config experimental.narrow-heads=1" == r"""
+    migrating repo to new-style visibility and phases
+    (this does not affect most workflows; post in Source Control @ FB if you have issues)
+    C"""
