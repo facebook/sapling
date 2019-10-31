@@ -11,6 +11,7 @@ use std::fmt;
 use failure_ext::bail_err;
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
+use rand::{seq::SliceRandom, Rng};
 use serde_derive::Serialize;
 
 use crate::errors::*;
@@ -117,8 +118,9 @@ impl FileChange {
     /// Generate a random FileChange which picks copy-from parents from the list of parents
     /// provided.
     pub(crate) fn arbitrary_from_parents<G: Gen>(g: &mut G, parents: &[ChangesetId]) -> Self {
-        let copy_from = if g.gen_weighted_bool(5) {
-            g.choose(parents)
+        let copy_from = if g.gen_ratio(1, 5) {
+            parents
+                .choose(g)
                 .map(|parent| (MPath::arbitrary(g), *parent))
         } else {
             None
@@ -134,7 +136,7 @@ impl FileChange {
 
 impl Arbitrary for FileChange {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let copy_from = if g.gen_weighted_bool(5) {
+        let copy_from = if g.gen_ratio(1, 5) {
             Some((MPath::arbitrary(g), ChangesetId::arbitrary(g)))
         } else {
             None

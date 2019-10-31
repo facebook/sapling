@@ -24,6 +24,7 @@ use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
+use rand::{seq::SliceRandom, Rng};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::bonsai_changeset::BonsaiChangeset;
@@ -756,7 +757,7 @@ impl Arbitrary for MPathElement {
         let size = cmp::max(g.size(), 1);
         let mut element = Vec::with_capacity(size);
         for _ in 0..size {
-            let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
+            let c = COMPONENT_CHARS[..].choose(g).unwrap();
             element.push(*c);
         }
         MPathElement(Bytes::from(element))
@@ -788,7 +789,7 @@ impl Arbitrary for MPath {
                 path.push(b'/');
             }
             path.extend(
-                (0..g.gen_range(1, 2 * size_sqrt)).map(|_| g.choose(&COMPONENT_CHARS[..]).unwrap()),
+                (0..g.gen_range(1, 2 * size_sqrt)).map(|_| *COMPONENT_CHARS[..].choose(g).unwrap()),
             );
         }
 

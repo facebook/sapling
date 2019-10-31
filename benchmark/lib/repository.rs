@@ -28,15 +28,15 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memblob::EagerMemblob;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::{BlobstoreBytes, ChangesetId, RepoPath, RepositoryId};
-use rand::{
-    distributions::{Distribution, Normal},
-    Rng,
-};
+use rand::Rng;
+use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
 use sql_ext::SqlConstructors;
 use sqlfilenodes::SqlFilenodes;
 use std::{sync::Arc, time::Duration};
+
+pub type Normal = rand_distr::Normal<f64>;
 
 pub struct DelaySettings {
     pub blobstore_put_dist: Normal,
@@ -48,10 +48,10 @@ pub struct DelaySettings {
 impl Default for DelaySettings {
     fn default() -> Self {
         Self {
-            blobstore_put_dist: Normal::new(0.1, 0.05),
-            blobstore_get_dist: Normal::new(0.05, 0.025),
-            db_put_dist: Normal::new(0.02, 0.01),
-            db_get_dist: Normal::new(0.02, 0.01),
+            blobstore_put_dist: Normal::new(0.1, 0.05).expect("Normal::new failed"),
+            blobstore_get_dist: Normal::new(0.05, 0.025).expect("Normal::new failed"),
+            db_put_dist: Normal::new(0.02, 0.01).expect("Normal::new failed"),
+            db_get_dist: Normal::new(0.02, 0.01).expect("Normal::new failed"),
         }
     }
 }

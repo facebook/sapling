@@ -9,6 +9,7 @@
 //! QuickCheck support for wire packs.
 
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use rand::Rng;
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
 use revisionstore::Metadata;
@@ -25,7 +26,7 @@ impl Arbitrary for WirePackPartSequence {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let size = g.size();
 
-        let kind = if g.gen_weighted_bool(2) {
+        let kind = if g.gen_ratio(1, 2) {
             Kind::Tree
         } else {
             Kind::File
@@ -60,7 +61,7 @@ impl FileEntries {
         let filename = match kind {
             Kind::Tree => {
                 // 10% chance for it to be the root
-                if g.gen_weighted_bool(10) {
+                if g.gen_ratio(1, 10) {
                     RepoPath::root()
                 } else {
                     RepoPath::DirectoryPath(MPath::arbitrary(g))
@@ -107,7 +108,7 @@ impl HistoryEntry {
         let copy_from = match kind {
             Kind::File => {
                 // 20% chance of generating copy-from info
-                if g.gen_weighted_bool(5) {
+                if g.gen_ratio(1, 5) {
                     Some(RepoPath::FilePath(MPath::arbitrary(g)))
                 } else {
                     None
@@ -137,7 +138,7 @@ impl Arbitrary for HistoryEntry {
 impl Arbitrary for DataEntry {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // 20% chance of a fulltext revision
-        let (delta_base, delta) = if g.gen_weighted_bool(5) {
+        let (delta_base, delta) = if g.gen_ratio(1, 5) {
             (NULL_HASH, Delta::new_fulltext(Vec::arbitrary(g)))
         } else {
             let mut delta_base = NULL_HASH;
@@ -148,19 +149,11 @@ impl Arbitrary for DataEntry {
         };
 
         // 50% chance of having metadata (i.e. being v2)
-        let metadata = if g.gen_weighted_bool(2) {
+        let metadata = if g.gen_ratio(1, 2) {
             // 50% chance of flags being present
-            let flags = if g.gen_weighted_bool(2) {
-                Some(1)
-            } else {
-                None
-            };
+            let flags = if g.gen_ratio(1, 2) { Some(1) } else { None };
             // 50% chance of size being present
-            let size = if g.gen_weighted_bool(2) {
-                Some(2)
-            } else {
-                None
-            };
+            let size = if g.gen_ratio(1, 2) { Some(2) } else { None };
             Some(Metadata { flags, size })
         } else {
             None

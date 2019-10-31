@@ -13,6 +13,7 @@ use chrono::{
 };
 use failure_ext::bail_err;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::errors::*;

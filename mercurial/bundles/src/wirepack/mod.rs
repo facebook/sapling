@@ -364,8 +364,8 @@ mod test {
 
     use itertools::iproduct;
     use maplit::hashset;
-    use quickcheck::rand::{self, Rng};
     use quickcheck::{quickcheck, Gen, StdGen};
+    use rand::Rng;
 
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};

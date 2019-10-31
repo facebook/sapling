@@ -33,7 +33,8 @@ use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
 };
-use rand::{distributions::Normal, SeedableRng};
+use rand::SeedableRng;
+use rand_distr::Normal;
 use rand_xorshift::XorShiftRng;
 use scuba_ext::ScubaSampleBuilder;
 use sql_ext::SqlConstructors;
@@ -1425,10 +1426,10 @@ fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
 fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let delay_settings = DelaySettings {
-        blobstore_put_dist: Normal::new(0.01, 0.005),
-        blobstore_get_dist: Normal::new(0.005, 0.0025),
-        db_put_dist: Normal::new(0.002, 0.001),
-        db_get_dist: Normal::new(0.002, 0.001),
+        blobstore_put_dist: Normal::new(0.01, 0.005).expect("Normal::new failed"),
+        blobstore_get_dist: Normal::new(0.005, 0.0025).expect("Normal::new failed"),
+        db_put_dist: Normal::new(0.002, 0.001).expect("Normal::new failed"),
+        db_get_dist: Normal::new(0.002, 0.001).expect("Normal::new failed"),
     };
     cmdlib::helpers::init_cachelib_from_settings(fb, Default::default())?;
     let repo = new_benchmark_repo(fb, delay_settings)?;
@@ -1451,7 +1452,7 @@ fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     assert_eq!(
         runtime.block_on(test)?,
-        "6f67e722196896e645eec15b1d40fb0ecc5488d6".parse()?,
+        "e9b73f926c993c5232139d4eefa6f77fa8c41279".parse()?,
     );
 
     Ok(())

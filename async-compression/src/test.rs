@@ -11,6 +11,7 @@ use std::io::{self, BufReader, Cursor, Read, Write};
 use assert_matches::assert_matches;
 use futures::{Async, Poll};
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
+use rand::seq::SliceRandom;
 use tokio_io::io::read_to_end;
 use tokio_io::AsyncWrite;
 
@@ -64,11 +65,12 @@ struct BzipCompression(bzip2::Compression);
 impl Arbitrary for BzipCompression {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         BzipCompression(
-            g.choose(&[
+            [
                 bzip2::Compression::Fastest,
                 bzip2::Compression::Best,
                 bzip2::Compression::Default,
-            ])
+            ]
+            .choose(g)
             .unwrap()
             .clone(),
         )
@@ -80,11 +82,12 @@ struct GzipCompression(flate2::Compression);
 impl Arbitrary for GzipCompression {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         GzipCompression(
-            g.choose(&[
+            [
                 flate2::Compression::none(),
                 flate2::Compression::fast(),
                 flate2::Compression::best(),
-            ])
+            ]
+            .choose(g)
             .unwrap()
             .clone(),
         )

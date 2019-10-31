@@ -23,11 +23,6 @@ mod test {
     use crate::fixtures::unshared_merge_even;
     use crate::fixtures::unshared_merge_uneven;
     use crate::intersectnodestream::IntersectNodeStream;
-    use crate::quickcheck::rand::{
-        distributions::{range::Range, Sample},
-        thread_rng, Rng,
-    };
-    use crate::quickcheck::{quickcheck, Arbitrary, Gen};
     use crate::setdifferencenodestream::SetDifferenceNodeStream;
     use crate::unionnodestream::UnionNodeStream;
     use crate::validation::ValidateNodeStream;
@@ -45,6 +40,8 @@ mod test {
     };
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
     use mononoke_types::ChangesetId;
+    use quickcheck::{quickcheck, Arbitrary, Gen};
+    use rand::{seq::SliceRandom, thread_rng, Rng};
     use revset_test_helper::single_changeset_id;
     use skiplist::SkiplistIndex;
     use std::collections::HashSet;
@@ -96,7 +93,7 @@ mod test {
             for elem in self.rp_entries.iter_mut() {
                 if let &mut RevsetEntry::SingleNode(None) = elem {
                     *elem =
-                        RevsetEntry::SingleNode(random.choose(all_changesets.as_slice()).cloned());
+                        RevsetEntry::SingleNode(all_changesets.as_slice().choose(random).cloned());
                 }
             }
         }
@@ -204,7 +201,6 @@ mod test {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
             let mut revset: Vec<RevsetEntry> = Vec::with_capacity(g.size());
             let mut revspecs_in_set: usize = 0;
-            let mut range = Range::new(0, 4);
 
             for _ in 0..g.size() {
                 if revspecs_in_set == 0 {
@@ -214,7 +210,7 @@ mod test {
                     let input_count = g.gen_range(0, revspecs_in_set) + 1;
                     revset.push(
                         // Bias towards SingleNode if we only have 1 rev
-                        match range.sample(g) {
+                        match g.gen_range(0, 4) {
                             0 => RevsetEntry::SingleNode(None),
                             1 => {
                                 if revspecs_in_set >= 2 {
@@ -241,8 +237,7 @@ mod test {
             assert!(revspecs_in_set > 0, "Did not produce enough revs");
 
             if revspecs_in_set > 1 {
-                let mut range = Range::new(0, 2);
-                revset.push(match range.sample(g) {
+                revset.push(match g.gen_range(0, 2) {
                     0 => RevsetEntry::Intersect(revspecs_in_set),
                     1 => RevsetEntry::Union(revspecs_in_set),
                     _ => panic!("Range returned too wide a variation"),

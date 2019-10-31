@@ -8,8 +8,9 @@
 
 use failure_ext::{bail_err, bail_msg, ensure_msg, format_err};
 use heapsize_derive::HeapSizeOf;
-use quickcheck::rand::distributions::{IndependentSample, LogNormal};
 use quickcheck::{Arbitrary, Gen};
+use rand::Rng;
+use rand_distr::{Distribution, LogNormal};
 
 use crate::errors::*;
 
@@ -201,8 +202,8 @@ fn arbitrary_frag_content<G: Gen>(g: &mut G) -> Vec<u8> {
     // The choice of mean and stdev are pretty arbitrary, but they work well for
     // common sizes (~100).
     // TODO: make this more rigorous, e.g. by using params such that p95 = size.
-    let lognormal = LogNormal::new(-3.0, 2.0);
-    let content_len = ((size as f64) * lognormal.ind_sample(g)) as usize;
+    let lognormal = LogNormal::new(-3.0, 2.0).expect("Failed to make LogNormal");
+    let content_len = ((size as f64) * lognormal.sample(g)) as usize;
 
     let mut v = Vec::with_capacity(content_len);
     g.fill_bytes(&mut v);

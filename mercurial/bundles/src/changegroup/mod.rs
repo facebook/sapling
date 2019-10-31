@@ -52,7 +52,6 @@ mod test {
     use std::io::Cursor;
 
     use futures::{Future, Stream};
-    use quickcheck::rand;
     use quickcheck::{QuickCheck, StdGen, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
 

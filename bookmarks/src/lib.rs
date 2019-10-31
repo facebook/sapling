@@ -16,6 +16,7 @@ use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
 use quickcheck::{Arbitrary, Gen};
+use rand::Rng;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -123,7 +124,7 @@ impl Arbitrary for BookmarkName {
         let size = 128;
         let mut bookmark = AsciiString::with_capacity(size);
         for _ in 0..size {
-            bookmark.push(AsciiChar::arbitrary(g));
+            bookmark.push(ascii_ext::AsciiChar::arbitrary(g).0);
         }
         Self { bookmark }
     }
@@ -250,7 +251,7 @@ fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
     // here is a little bit like Ruby's str#next.
     loop {
         match prefix.pop() {
-            Some(chr) => match AsciiChar::from(chr.as_byte() + 1) {
+            Some(chr) => match AsciiChar::from_ascii(chr.as_byte() + 1) {
                 Ok(next_chr) => {
                     // Happy path, we found the next character, so just put that in and move on.
                     prefix.push(next_chr);
@@ -724,16 +725,16 @@ mod tests {
             prefix.to_range().contains(bookmark.name())
         }
 
-        fn test_prefix_range_contains_its_suffixes(bookmark: Bookmark, more: AsciiString) -> bool {
+        fn test_prefix_range_contains_its_suffixes(bookmark: Bookmark, more: ascii_ext::AsciiString) -> bool {
             let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
             let mut name = bookmark.name().as_ascii().clone();
-            name.push_str(&more);
+            name.push_str(&more.0);
             prefix.to_range().contains(&BookmarkName::new_ascii(name))
         }
 
-        fn test_prefix_range_does_not_contains_its_prefixes(bookmark: Bookmark, chr: AsciiChar) -> bool {
+        fn test_prefix_range_does_not_contains_its_prefixes(bookmark: Bookmark, chr: ascii_ext::AsciiChar) -> bool {
             let mut prefix = bookmark.name().as_ascii().clone();
-            prefix.push(chr);
+            prefix.push(chr.0);
             let prefix = BookmarkPrefix::new_ascii(prefix);
 
             !prefix.to_range().contains(bookmark.name())

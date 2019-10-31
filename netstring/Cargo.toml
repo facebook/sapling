@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/netstring:netstring
-# Signature<<1a46e0a8b4942037df72efdf333f4adfebb1f7b5>>
+# Signature<<99e6fa71cb31dfc8e9eceec72b7968693d33f01e>>
 [package]
 name = "netstring"
 edition = "2018"
@@ -13,5 +13,5 @@ bytes = { version="*", features=["serde"] }
 tokio-io = "0.1"
 
 [dev-dependencies]
-quickcheck = "0.6" # ascii has a hard-coded dep on 0.6
-# @end of Signature<<1a46e0a8b4942037df72efdf333f4adfebb1f7b5>>
+quickcheck = "0.9"
+# @end of Signature<<99e6fa71cb31dfc8e9eceec72b7968693d33f01e>>

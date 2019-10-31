@@ -26,7 +26,6 @@ use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use fbinit::FacebookInit;
 use mercurial_types::{HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
-use quickcheck::rand;
 use quickcheck::{QuickCheck, StdGen};
 
 use crate::bundle2::{Bundle2Stream, StreamEvent};

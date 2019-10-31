@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use bytes::{BufMut, Bytes};
 use failure_ext::bail_msg;
 use quickcheck::{Arbitrary, Gen};
+use rand::seq::SliceRandom;
 
 use crate::chunk::Chunk;
 use crate::errors::*;
@@ -424,14 +425,15 @@ impl PartHeaderBuilder {
 impl Arbitrary for PartHeaderType {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         use self::PartHeaderType::*;
-        g.choose(&[
+        [
             Changegroup,
             ReplyChangegroup,
             Replycaps,
             Listkeys,
             B2xTreegroup2,
             CheckHeads,
-        ])
+        ]
+        .choose(g)
         .expect("empty choice provided")
         .clone()
     }

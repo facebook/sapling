@@ -17,11 +17,8 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, MPathElement,
 };
-use rand::{
-    distributions::{Binomial, Uniform},
-    seq::SliceRandom,
-    Rng,
-};
+use rand::{seq::SliceRandom, Rng};
+use rand_distr::{Binomial, Uniform};
 use std::{collections::BTreeMap, convert::TryFrom, iter::FromIterator};
 
 #[derive(Clone, Copy)]
@@ -209,6 +206,6 @@ fn gen_ascii(len: usize, rng: &mut impl Rng) -> String {
 }
 
 fn gen_filename(rng: &mut impl Rng) -> MPathElement {
-    let len = rng.sample(&Binomial::new(20, 0.3)) as usize;
+    let len = rng.sample(&Binomial::new(20, 0.3).expect("Binomial::new failed")) as usize;
     MPathElement::new(gen_ascii(len + 3, rng).into()).expect("failed to create mpath element")
 }

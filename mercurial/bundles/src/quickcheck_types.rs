@@ -20,6 +20,7 @@ use bytes::Bytes;
 #[cfg(test)]
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use rand::Rng;
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
 
@@ -117,7 +118,7 @@ impl Arbitrary for CgPartSequence {
         use crate::changegroup::unpacker::*;
         use crate::changegroup::*;
 
-        let version_ind = g.gen_weighted_bool(2);
+        let version_ind = g.gen_ratio(1, 2);
         let version = match version_ind {
             true => CgVersion::Cg2Version,
             false => CgVersion::Cg3Version,

@@ -24,6 +24,6 @@ cloned = { path = "../cloned" }
 lock_ext = { path = "../lock_ext" }
 netstring = { path = "../netstring" }
 assert_matches = "*"
-quickcheck = "0.6" # ascii has a hard-coded dep on 0.6
+quickcheck = "0.9"
 pretty_assertions = "*"
 # @end of Signature<<6a0e77e7081ab26a03aadec26ed1ba45fb41ffa6>>

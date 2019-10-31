@@ -15,7 +15,7 @@ use futures::{
     future::{self, Future},
     stream,
 };
-use quickcheck::{rand, Arbitrary, StdGen};
+use quickcheck::{Arbitrary, StdGen};
 use std::collections::HashSet;
 use std::sync::Arc;
 

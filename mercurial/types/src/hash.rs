@@ -16,6 +16,7 @@ use failure_ext::bail_err;
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
+use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::errors::*;
@@ -155,7 +156,7 @@ impl Arbitrary for Sha1 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let mut bytes = [0; 20];
         // The null hash is special, so give it a 5% chance of happening
-        if !g.gen_weighted_bool(20) {
+        if !g.gen_ratio(1, 20) {
             g.fill_bytes(&mut bytes);
         }
         Sha1::from_bytes(&bytes).unwrap()

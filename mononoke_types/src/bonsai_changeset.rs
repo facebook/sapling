@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use failure_ext::{bail_err, chain::*, err_msg};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
+use rand::Rng;
 
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
 use crate::datetime::DateTime;
@@ -239,7 +240,7 @@ impl Arbitrary for BonsaiChangeset {
         let num_changes = g.gen_range(0, size);
         let file_changes: BTreeMap<_, _> = (0..num_changes)
             .map(|_| {
-                let fc_opt = if g.gen_weighted_bool(3) {
+                let fc_opt = if g.gen_ratio(1, 3) {
                     Some(FileChange::arbitrary_from_parents(g, &parents))
                 } else {
                     None
