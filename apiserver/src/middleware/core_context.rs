@@ -6,17 +6,22 @@
  * directory of this source tree.
  */
 
+use std::result::Result;
 use std::time::Instant;
 
+use aclchecker::Identity;
 use actix_web::{
-    error::Result,
-    http::header::HeaderValue,
+    error::Result as ActixResult,
+    http::header::{HeaderMap, HeaderValue},
     middleware::{Finished, Middleware, Response, Started},
     HttpRequest, HttpResponse,
 };
 use context::{generate_session_id, CoreContext};
+use failure::{format_err, Error};
 use fbinit::FacebookInit;
+use json_encoded::get_identities;
 use openssl::x509::X509;
+use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
 use sshrelay::SshEnvVars;
@@ -72,8 +77,35 @@ impl CoreContextMiddleware {
     }
 }
 
+fn extract_client_identities(cert: &X509, headers: &HeaderMap) -> Result<Vec<Identity>, Error> {
+    const PROXY_IDENTITY_TYPE: &str = "SERVICE_IDENTITY";
+    const PROXY_IDENTITY_DATA: &str = "proxygen";
+    const PROXY_IDENTITY_HEADER: &str = "x-fb-validated-client-encoded-identity";
+
+    let cert_identities = identity::get_identities(&cert)?;
+
+    let cert_is_trusted_proxy = cert_identities.iter().any(|identity| {
+        identity.get_type() == PROXY_IDENTITY_TYPE && identity.get_data() == PROXY_IDENTITY_DATA
+    });
+
+    if !cert_is_trusted_proxy {
+        return Ok(cert_identities);
+    }
+
+    let encoded_identities = headers.get(PROXY_IDENTITY_HEADER).ok_or_else(|| {
+        format_err!(
+            "Proxy did not provide expected header: {}",
+            PROXY_IDENTITY_HEADER
+        )
+    })?;
+
+    let json_identities = percent_decode(encoded_identities.as_bytes()).decode_utf8()?;
+
+    get_identities(&json_identities).map_err(Error::from)
+}
+
 impl<S> Middleware<S> for CoreContextMiddleware {
-    fn start(&self, req: &HttpRequest<S>) -> Result<Started> {
+    fn start(&self, req: &HttpRequest<S>) -> ActixResult<Started> {
         let mut scuba = self.scuba.clone();
 
         {
@@ -86,15 +118,11 @@ impl<S> Middleware<S> for CoreContextMiddleware {
 
         if let Some(stream_extensions) = (*req).stream_extensions() {
             if let Some(cert) = (*stream_extensions).get::<X509>() {
-                if let Ok(identities) = identity::get_identities(&cert) {
-                    scuba.add(
-                        "client_identities",
-                        identities
-                            .into_iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<_>>()
-                            .join(","),
-                    );
+                if let Ok(identities) = extract_client_identities(&cert, req.headers()) {
+                    let identities: Vec<_> =
+                        identities.into_iter().map(|i| i.to_string()).collect();
+                    scuba.add("client_identities", identities.join(","));
+                    scuba.add("client_identities_normvector", identities);
                 }
             }
         }
@@ -126,7 +154,7 @@ impl<S> Middleware<S> for CoreContextMiddleware {
         Ok(Started::Done)
     }
 
-    fn response(&self, req: &HttpRequest<S>, mut resp: HttpResponse) -> Result<Response> {
+    fn response(&self, req: &HttpRequest<S>, mut resp: HttpResponse) -> ActixResult<Response> {
         if let Some(ctx) = req.extensions_mut().get_mut::<CoreContext>() {
             if let Ok(session_header) = HeaderValue::from_str(&ctx.session().to_string()) {
                 resp.headers_mut().insert("X-Session-ID", session_header);
