@@ -8,16 +8,14 @@
 
 #![deny(warnings)]
 
-use crate::getbundle_response;
-
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bundle2_resolver::{
-    BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush, NonFastForwardPolicy,
-    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
-    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
+    BundleResolverError, Changesets, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
+    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
+    PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, format_err, Error};
@@ -28,20 +26,22 @@ use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
-use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartId};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{ChangesetId, RawBundle2Id};
-use obsolete;
-use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{o, warn};
 use std::collections::HashMap;
-use std::io::Cursor;
 use std::sync::Arc;
+
+mod response;
+use response::{
+    UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
+    UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
+};
 
 enum BookmarkPush<T: Copy> {
     PlainPush(PlainBookmarkPush<T>),
@@ -54,11 +54,10 @@ pub fn run_post_resolve_action(
     hook_manager: Arc<HookManager>,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Arc<dyn Phases>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolveAction,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<UnbundleResponse, BundleResolverError> {
     match action {
         PostResolveAction::Push(action) => run_push(
             ctx,
@@ -67,21 +66,26 @@ pub fn run_post_resolve_action(
             lca_hint,
             infinitepush_params,
             action,
-        ),
+        )
+        .map(UnbundleResponse::Push)
+        .boxify(),
         PostResolveAction::InfinitePush(action) => {
             run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
+                .map(UnbundleResponse::InfinitePush)
+                .boxify()
         }
         PostResolveAction::PushRebase(action) => run_pushrebase(
             ctx,
             repo,
             bookmark_attrs,
             lca_hint,
-            phases_hint,
             hook_manager,
             infinitepush_params,
             pushrebase_params,
             action,
-        ),
+        )
+        .map(UnbundleResponse::PushRebase)
+        .boxify(),
         PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
             ctx,
             repo,
@@ -89,7 +93,9 @@ pub fn run_post_resolve_action(
             lca_hint,
             infinitepush_params,
             action,
-        ),
+        )
+        .map(UnbundleResponse::BookmarkOnlyPushRebase)
+        .boxify(),
     }
 }
 
@@ -100,7 +106,7 @@ fn run_push(
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: InfinitepushParams,
     action: PostResolvePush,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<UnbundlePushResponse, BundleResolverError> {
     let PostResolvePush {
         changegroup_id,
         bookmark_pushes,
@@ -142,13 +148,12 @@ fn run_push(
                 .boxify()
         }
     })()
-    .context("While updating Bookmarks")
+    .context("While doing a push")
     .from_err()
-    .and_then(move |(changegroup_id, bookmark_ids)| {
-        prepare_push_response(changegroup_id, bookmark_ids)
+    .map(move |(changegroup_id, bookmark_ids)| UnbundlePushResponse {
+        changegroup_id,
+        bookmark_ids,
     })
-    .context("push error")
-    .from_err()
     .boxify()
 }
 
@@ -158,7 +163,7 @@ fn run_infinitepush(
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: InfinitepushParams,
     action: PostResolveInfinitePush,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<UnbundleInfinitePushResponse, BundleResolverError> {
     let PostResolveInfinitePush {
         changegroup_id,
         bookmark_push,
@@ -190,11 +195,12 @@ fn run_infinitepush(
             .boxify()
         }
     })()
-    .context("While updating Bookmarks")
+    .context("While doing an infinitepush")
     .from_err()
-    .and_then(move |changegroup_id| prepare_push_response(changegroup_id, Vec::new()))
-    .context("infinitepush error")
-    .from_err()
+    .map(move |changegroup_id| UnbundleInfinitePushResponse {
+        changegroup_id,
+        bookmark_ids: Vec::new(),
+    })
     .boxify()
 }
 
@@ -203,12 +209,11 @@ fn run_pushrebase(
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases_hint: Arc<dyn Phases>,
     hook_manager: Arc<HookManager>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolvePushRebase,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<UnbundlePushRebaseResponse, BundleResolverError> {
     let PostResolvePushRebase {
         changesets,
         bookmark_push_part_id,
@@ -230,6 +235,11 @@ fn run_pushrebase(
         cloned!(ctx, lca_hint, repo, pushrebase_params);
         move |()| {
             match bookmark_spec {
+                // There's no `.context()` after `normal_pushrebase`, as it has
+                // `Error=BundleResolverError` and doing `.context("bla").from_err()`
+                // would turn some useful variant of `BundleResolverError` into generic
+                // `BundleResolverError::Error`, which in turn would render incorrectly
+                // (see definition of `BundleResolverError`).
                 PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => normal_pushrebase(
                     ctx,
                     repo.clone(),
@@ -250,6 +260,7 @@ fn run_pushrebase(
                     bookmark_attrs,
                     infinitepush_params,
                 )
+                .context("While doing a force pushrebase")
                 .from_err()
                 .right_future(),
             }
@@ -268,19 +279,12 @@ fn run_pushrebase(
                 new_commits,
                 pushrebase_params.commit_scribe_category.clone(),
             )
-            .and_then(move |_| {
-                prepare_pushrebase_response(
-                    ctx,
-                    repo,
-                    commonheads,
-                    pushrebase_params,
-                    pushrebased_rev,
-                    pushrebased_changesets,
-                    bookmark,
-                    lca_hint,
-                    phases_hint,
-                    bookmark_push_part_id,
-                )
+            .map(move |_| UnbundlePushRebaseResponse {
+                commonheads,
+                pushrebased_rev,
+                pushrebased_changesets,
+                onto: bookmark,
+                bookmark_push_part_id,
             })
             .from_err()
         }
@@ -295,7 +299,7 @@ fn run_bookmark_only_pushrebase(
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: InfinitepushParams,
     action: PostResolveBookmarkOnlyPushRebase,
-) -> BoxFuture<Bytes, BundleResolverError> {
+) -> BoxFuture<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
         maybe_raw_bundle2_id,
@@ -323,159 +327,15 @@ fn run_bookmark_only_pushrebase(
         }
     })
     .and_then(move |_| ok(part_id).boxify())
-    .and_then({
-        cloned!(ctx);
-        move |bookmark_push_part_id| {
-            prepare_push_bookmark_response(ctx, bookmark_push_part_id, true)
+    .map({
+        move |bookmark_push_part_id| UnbundleBookmarkOnlyPushRebaseResponse {
+            bookmark_push_part_id,
+            success: true,
         }
     })
+    .context("While doing a bookmark-only pushrebase")
     .from_err()
     .boxify()
-}
-
-fn prepare_push_bookmark_response(
-    _ctx: CoreContext,
-    bookmark_push_part_id: PartId,
-    success: bool,
-) -> impl Future<Item = Bytes, Error = Error> {
-    let writer = Cursor::new(Vec::new());
-    let mut bundle = Bundle2EncodeBuilder::new(writer);
-    // Mercurial currently hangs while trying to read compressed bundles over the wire:
-    // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-    // TODO: possibly enable compression support once this is fixed.
-    bundle.set_compressor_type(None);
-    bundle.add_part(try_boxfuture!(parts::replypushkey_part(
-        success,
-        bookmark_push_part_id
-    )));
-    bundle
-        .build()
-        .map(|cursor| Bytes::from(cursor.into_inner()))
-        .context("While preparing response")
-        .from_err()
-        .boxify()
-}
-
-fn prepare_pushrebase_response(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    commonheads: CommonHeads,
-    pushrebase_params: PushrebaseParams,
-    pushrebased_rev: ChangesetId,
-    pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
-    onto: BookmarkName,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    phases: Arc<dyn Phases>,
-    bookmark_push_part_id: Option<PartId>,
-) -> impl Future<Item = Bytes, Error = Error> {
-    // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
-    // should be the same, however they might be different if bookmark
-    // suddenly moved before current pushrebase finished.
-    let common = commonheads.heads;
-    let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
-
-    // write phase as public for this commit
-    let pushrebased_rev = phases
-        .add_reachable_as_public(ctx.clone(), repo.clone(), vec![pushrebased_rev.clone()])
-        .and_then({
-            cloned!(ctx, repo);
-            move |_| repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
-        });
-
-    let bookmark_reply_part = match bookmark_push_part_id {
-        Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
-        None => None,
-    };
-
-    let obsmarkers_part = match pushrebase_params.emit_obsmarkers {
-        true => try_boxfuture!(obsolete::pushrebased_changesets_to_obsmarkers_part(
-            ctx.clone(),
-            &repo,
-            pushrebased_changesets,
-        )
-        .transpose()),
-        false => None,
-    };
-
-    let mut scuba_logger = ctx.scuba().clone();
-    maybe_onto_head
-        .join(pushrebased_rev)
-        .and_then(move |(maybe_onto_head, pushrebased_rev)| {
-            let mut heads = vec![];
-            if let Some(onto_head) = maybe_onto_head {
-                heads.push(onto_head);
-            }
-            heads.push(pushrebased_rev);
-            getbundle_response::create_getbundle_response(
-                ctx,
-                repo,
-                common,
-                heads,
-                lca_hint,
-                Some(phases),
-            )
-        })
-        .and_then(move |mut cg_part_builder| {
-            cg_part_builder.extend(bookmark_reply_part.into_iter());
-            cg_part_builder.extend(obsmarkers_part.into_iter());
-            let compression = None;
-            create_bundle_stream(cg_part_builder, compression)
-                .collect()
-                .map(|chunks| {
-                    let mut total_capacity = 0;
-                    for c in chunks.iter() {
-                        total_capacity += c.len();
-                    }
-
-                    // TODO(stash): make push and pushrebase response streamable - T34090105
-                    let mut res = BytesMut::with_capacity(total_capacity);
-                    for c in chunks {
-                        res.extend_from_slice(&c);
-                    }
-                    res.freeze()
-                })
-                .context("While preparing response")
-                .from_err()
-        })
-        .timed({
-            move |stats, result| {
-                if result.is_ok() {
-                    scuba_logger
-                        .add_future_stats(&stats)
-                        .log_with_msg("Pushrebase: prepared the response", None);
-                }
-                Ok(())
-            }
-        })
-}
-
-/// Takes a changegroup id and prepares a Bytes response containing Bundle2 with reply to
-/// changegroup part saying that the push was successful
-fn prepare_push_response(
-    changegroup_id: Option<PartId>,
-    bookmark_ids: Vec<PartId>,
-) -> BoxFuture<Bytes, Error> {
-    let writer = Cursor::new(Vec::new());
-    let mut bundle = Bundle2EncodeBuilder::new(writer);
-    // Mercurial currently hangs while trying to read compressed bundles over the wire:
-    // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-    // TODO: possibly enable compression support once this is fixed.
-    bundle.set_compressor_type(None);
-    if let Some(changegroup_id) = changegroup_id {
-        bundle.add_part(try_boxfuture!(parts::replychangegroup_part(
-            parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
-            changegroup_id,
-        )));
-    }
-    for part_id in bookmark_ids {
-        bundle.add_part(try_boxfuture!(parts::replypushkey_part(true, part_id)));
-    }
-    bundle
-        .build()
-        .map(|cursor| Bytes::from(cursor.into_inner()))
-        .context("While preparing response")
-        .from_err()
-        .boxify()
 }
 
 fn normal_pushrebase(

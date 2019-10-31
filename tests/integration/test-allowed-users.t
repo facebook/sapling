@@ -57,13 +57,11 @@ push new bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -83,13 +81,11 @@ push updates existing bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     [push] This user `Some("aslapvel")` is not allowed to move `BookmarkName { bookmark: "A" }`
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

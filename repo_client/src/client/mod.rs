@@ -1309,18 +1309,26 @@ impl HgCommands for RepoClient {
                     maybe_full_content,
                     pure_push_allowed,
                 ).and_then({
-                    cloned!(ctx);
+                    cloned!(ctx, blobrepo, pushrebase_params, lca_hint);
                     move |action| run_post_resolve_action(
                         ctx,
                         blobrepo,
                         hook_manager,
                         bookmark_attrs,
                         lca_hint,
-                        phases_hint,
                         infinitepush_params,
                         pushrebase_params,
                         action,
                     )
+                }).and_then({
+                    cloned!(ctx);
+                    move |response| response.generate_bytes(
+                        ctx,
+                        blobrepo,
+                        pushrebase_params,
+                        lca_hint,
+                        phases_hint)
+                        .from_err()
                 });
 
                 res

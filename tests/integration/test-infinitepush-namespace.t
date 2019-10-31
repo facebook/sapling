@@ -66,13 +66,11 @@ Invalid infinitepush, with pushrebase disabled
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     infinitepush error
+  remote:     While doing an infinitepush
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Invalid Infinitepush bookmark: bad/123 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     While verifying Infinite Push bookmark push
   remote:   Caused by:
@@ -86,13 +84,11 @@ Invalid infinitepush, with pushrebase enabled
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     infinitepush error
+  remote:     While doing an infinitepush
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Invalid Infinitepush bookmark: bad/456 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     While verifying Infinite Push bookmark push
   remote:   Caused by:
@@ -121,13 +117,11 @@ Invalid push, with pushrebase disabled
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -140,11 +134,13 @@ Invalid push, with pushrebase enabled
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$
+  remote:     While doing a bookmark-only pushrebase
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "[push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$",
   remote:     }
+  remote:   Caused by:
+  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

@@ -81,13 +81,11 @@ Try non fastforward moves (backwards and across branches)
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Non fastforward bookmark move",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -98,13 +96,11 @@ Try non fastforward moves (backwards and across branches)
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Non fastforward bookmark move",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -130,13 +126,11 @@ Try non fastfoward moves on regex bookmark
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Non fastforward bookmark move",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     Non fastforward bookmark move
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -150,13 +144,11 @@ Try to delete master
   no changes found
   remote: Command failed
   remote:   Error:
-  remote:     push error
+  remote:     While doing a push
   remote:   Root cause:
   remote:     ErrorMessage {
   remote:         msg: "Deletion of bookmark master_bookmark is forbidden.",
   remote:     }
-  remote:   Caused by:
-  remote:     While updating Bookmarks
   remote:   Caused by:
   remote:     Deletion of bookmark master_bookmark is forbidden.
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
