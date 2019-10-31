@@ -90,6 +90,7 @@ class DirstateChecker(HgFileChecker):
         # If we need to update state make sure we reported an error
         if (
             self._new_parents != self._old_dirstate_parents
+            # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
             or self._new_parents[0] != self._old_snapshot
         ):
             assert errors
@@ -131,7 +132,10 @@ class DirstateChecker(HgFileChecker):
             return
 
         self._old_snapshot = self._check_commit(
-            errors, self._old_snapshot, "Eden's snapshot file"
+            errors,
+            # pyre-fixme[6]: Expected `bytes` for 2nd param but got `Optional[bytes]`.
+            self._old_snapshot,
+            "Eden's snapshot file",
         )
 
     def _check_commit(

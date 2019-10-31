@@ -895,6 +895,7 @@ class ConfigUpdater(object):
             return
         while True:
             self._lock_file = typing.cast(typing.TextIO, open(self._lock_path, "w+"))
+            # pyre-fixme[16]: `Optional` has no attribute `fileno`.
             fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
             # The original creator of the lock file will unlink it when
             # it is finished.  Make sure we grab the lock on the file still on
@@ -907,6 +908,7 @@ class ConfigUpdater(object):
 
             # We acquired a lock on an old deleted file.
             # Close it, and try to acquire the current lock file again.
+            # pyre-fixme[16]: `Optional` has no attribute `close`.
             self._lock_file.close()
             self._lock_file = None
             continue
@@ -1037,6 +1039,7 @@ class EdenCheckout:
     def get_config(self) -> CheckoutConfig:
         if self._config is None:
             self._config = self._read_config()
+        # pyre-fixme[7]: Expected `CheckoutConfig` but got `Optional[CheckoutConfig]`.
         return self._config
 
     def save_config(self, checkout_config: CheckoutConfig) -> None:

@@ -524,6 +524,7 @@ def can_run_eden() -> bool:
     if _can_run_eden is None:
         _can_run_eden = _compute_can_run_eden()
 
+    # pyre-fixme[7]: Expected `bool` but got `Optional[bool]`.
     return _can_run_eden
 
 
@@ -547,6 +548,7 @@ def can_run_sudo() -> bool:
     if _can_run_sudo is None:
         _can_run_sudo = _compute_can_run_sudo()
 
+    # pyre-fixme[7]: Expected `bool` but got `Optional[bool]`.
     return _can_run_sudo
 
 

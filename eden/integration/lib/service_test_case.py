@@ -56,20 +56,25 @@ class ServiceTestCaseBase(
     def tmp_dir(self) -> pathlib.Path:
         if self.__tmp_dir is None:
             self.__tmp_dir = pathlib.Path(self.make_temporary_directory())
+        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
         return self.__tmp_dir
 
     @property
     def etc_eden_dir(self) -> pathlib.Path:
         if self.__etc_eden_dir is None:
             self.__etc_eden_dir = self.tmp_dir / "etc_eden"
+            # pyre-fixme[16]: Optional type has no attribute `mkdir`.
             self.__etc_eden_dir.mkdir()
+        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
         return self.__etc_eden_dir
 
     @property
     def home_dir(self) -> pathlib.Path:
         if self.__home_dir is None:
             self.__home_dir = self.tmp_dir / "home"
+            # pyre-fixme[16]: Optional type has no attribute `mkdir`.
             self.__home_dir.mkdir()
+        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
         return self.__home_dir
 
 

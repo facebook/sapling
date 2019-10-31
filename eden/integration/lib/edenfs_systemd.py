@@ -21,11 +21,14 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
     def set_up_edenfs_systemd_service(self) -> None:
         assert self.systemd is None
         self.systemd = self.make_temporary_systemd_user_service_manager()
+        # pyre-fixme[16]: Optional type has no attribute
+        #  `enable_runtime_unit_from_file`.
         self.systemd.enable_runtime_unit_from_file(
             unit_file=pathlib.Path(
                 typing.cast(str, FindExe.SYSTEMD_FB_EDENFS_SERVICE)  # T38947910
             )
         )
+        # pyre-fixme[16]: Optional type has no attribute `extra_env`.
         self.set_environment_variables(self.systemd.extra_env)
 
     def get_edenfs_systemd_service(self, eden_dir: pathlib.Path) -> SystemdService:

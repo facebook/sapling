@@ -89,7 +89,6 @@ class EdenTestCase(
             is enabled for a test case.
             This can be removed once a future version of hypothesis
             ships with support for this baked in. """
-        # pyre-fixme[16]: Module `testcase` has no attribute `is_hypothesis_test`.
         if is_hypothesis_test(getattr(self, self._testMethodName)):
             try:
                 old_setUp = self.setUp

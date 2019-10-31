@@ -370,6 +370,7 @@ class FilesystemChecker:
 
     def __enter__(self) -> "FilesystemChecker":
         self._overlay_lock = self.overlay.try_lock()
+        # pyre-fixme[16]: `Optional` has no attribute `__enter__`.
         self._overlay_locked = self._overlay_lock.__enter__()
         return self
 
