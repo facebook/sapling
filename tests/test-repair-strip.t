@@ -51,6 +51,9 @@
   rollback failed - please run hg recover
   strip failed, backup bundle
   abort: Permission denied .hg/store/data/b.i
+  (current process runs with uid 42)
+  ($TESTTMP/test/.hg/store/data/b.i: mode 0o52, uid 42, gid 42)
+  ($TESTTMP/test/.hg/store/data: mode 0o52, uid 42, gid 42)
   % after update 0, strip 2
   abandoned transaction found - run hg recover
   checking changesets
@@ -84,6 +87,9 @@
   summary:     a
   
   abort: Permission denied .hg/store/data/b.i
+  (current process runs with uid 42)
+  ($TESTTMP/test/.hg/store/data/b.i: mode 0o52, uid 42, gid 42)
+  ($TESTTMP/test/.hg/store/data: mode 0o52, uid 42, gid 42)
   % after update 0, strip 2
   checking changesets
   checking manifests
@@ -105,6 +111,9 @@
   rollback failed - please run hg recover
   strip failed, backup bundle
   abort: Permission denied .hg/store/00manifest.i
+  (current process runs with uid 42)
+  ($TESTTMP/test/.hg/store/00manifest.i: mode 0o52, uid 42, gid 42)
+  ($TESTTMP/test/.hg/store: mode 0o52, uid 42, gid 42)
   % after update 0, strip 2
   abandoned transaction found - run hg recover
   checking changesets

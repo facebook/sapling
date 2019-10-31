@@ -211,7 +211,8 @@ def callcatch(ui, func):
         ):
             pass
         elif getattr(inst, "strerror", None):
-            if getattr(inst, "filename", None):
+            filename = getattr(inst, "filename", None)
+            if filename:
                 ui.warn(
                     _("%s: %s\n") % (encoding.strtolocal(inst.strerror), inst.filename),
                     error=_("abort"),
@@ -220,6 +221,18 @@ def callcatch(ui, func):
                 ui.warn(
                     _("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort")
                 )
+            if not pycompat.iswindows:
+                # For permission errors on POSIX. Show more information about the
+                # current user, group, and stat results.
+                num = getattr(inst, "errno", None)
+                if filename is not None and num in {errno.EACCES, errno.EPERM}:
+                    if util.istest():
+                        uid = 42
+                    else:
+                        uid = os.getuid()
+                    ui.warn(_("(current process runs with uid %s)\n") % uid)
+                    _printstat(ui, filename)
+                    _printstat(ui, os.path.dirname(filename))
         else:
             ui.warn(_("%s\n") % inst, error=_("abort"))
     except OSError as inst:
@@ -240,6 +253,21 @@ def callcatch(ui, func):
         ui.warn(_("%s\n") % inst.args[-1], error=_("abort"))
 
     return -1
+
+
+def _printstat(ui, path):
+    """Attempt to print filesystem stat information on path"""
+    if util.istest():
+        mode = uid = gid = 42
+    else:
+        try:
+            st = os.stat(path)
+            mode = st.st_mode
+            uid = st.st_uid
+            gid = st.st_gid
+        except Exception:
+            return
+    ui.warn(_("(%s: mode 0o%o, uid %s, gid %s)\n") % (path, mode, uid, gid))
 
 
 def checknewlabel(repo, lbl, kind):

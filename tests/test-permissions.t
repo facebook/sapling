@@ -24,6 +24,9 @@
   crosschecking files in changesets and manifests
   checking files
   abort: Permission denied: $TESTTMP/t/.hg/store/data/a.i
+  (current process runs with uid 42)
+  ($TESTTMP/t/.hg/store/data/a.i: mode 0o52, uid 42, gid 42)
+  ($TESTTMP/t/.hg/store/data: mode 0o52, uid 42, gid 42)
   [255]
 
   $ chmod +r .hg/store/data/a.i
@@ -41,6 +44,9 @@
   $ hg commit -m "2"
   trouble committing a!
   abort: Permission denied: $TESTTMP/t/.hg/store/data/a.i
+  (current process runs with uid 42)
+  ($TESTTMP/t/.hg/store/data/a.i: mode 0o52, uid 42, gid 42)
+  ($TESTTMP/t/.hg/store/data: mode 0o52, uid 42, gid 42)
   [255]
 
   $ chmod -w .

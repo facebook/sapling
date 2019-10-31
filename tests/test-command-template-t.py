@@ -1066,6 +1066,9 @@ if feature.check(["unix-permissions", "no-root"]):
     os.chmod("q", 0)
     sh % "hg log --style ./q" == r"""
         abort: Permission denied: ./q
+        (current process runs with uid 42)
+        (./q: mode 0o52, uid 42, gid 42)
+        (.: mode 0o52, uid 42, gid 42)
         [255]"""
 
 
