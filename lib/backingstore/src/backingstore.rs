@@ -22,7 +22,7 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
-        let store = ContentStore::new(hg.join("store"), &config, None)?;
+        let store = ContentStore::new(hg.join("store"), &config)?;
 
         Ok(Self { store })
     }

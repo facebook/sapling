@@ -56,9 +56,13 @@ fn get_cache_path(config: &ConfigSet) -> Fallible<PathBuf> {
     Ok(path)
 }
 
-fn get_cache_packs_path(config: &ConfigSet) -> Fallible<PathBuf> {
+fn get_cache_packs_path(config: &ConfigSet, suffix: Option<&Path>) -> Fallible<PathBuf> {
     let mut path = get_cache_path(config)?;
     path.push("packs");
+    create_dir(&path)?;
+    if let Some(suffix) = suffix {
+        path.push(suffix);
+    }
     create_dir(&path)?;
     Ok(path)
 }
@@ -70,57 +74,22 @@ fn get_cache_indexedlogdatastore_path(config: &ConfigSet) -> Fallible<PathBuf> {
     Ok(path)
 }
 
-fn get_local_packs_path(path: impl AsRef<Path>) -> Fallible<PathBuf> {
+fn get_local_packs_path(path: impl AsRef<Path>, suffix: Option<&Path>) -> Fallible<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("packs");
+    create_dir(&path)?;
+
+    if let Some(suffix) = suffix {
+        path.push(suffix);
+    }
+
     create_dir(&path)?;
     Ok(path)
 }
 
 impl ContentStore {
-    pub fn new(
-        local_path: impl AsRef<Path>,
-        config: &ConfigSet,
-        edenapi: Option<Box<dyn EdenApi>>,
-    ) -> Fallible<Self> {
-        let cache_packs_path = get_cache_packs_path(config)?;
-        let local_pack_store = Box::new(MutableDataPackStore::new(
-            get_local_packs_path(local_path)?,
-            CorruptionPolicy::IGNORE,
-        )?);
-        let shared_pack_store = Box::new(MutableDataPackStore::new(
-            &cache_packs_path,
-            CorruptionPolicy::REMOVE,
-        )?);
-        let shared_indexedlogdatastore = Box::new(IndexedLogDataStore::new(
-            get_cache_indexedlogdatastore_path(config)?,
-        )?);
-
-        let mut datastore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
-
-        datastore.add(shared_indexedlogdatastore);
-        datastore.add(shared_pack_store.clone());
-        datastore.add(local_pack_store.clone());
-
-        let remote_store: Option<Box<dyn RemoteDataStore>> = if let Some(edenapi) = edenapi {
-            let store = Box::new(EdenApiRemoteStore::new(edenapi, shared_pack_store.clone()));
-            datastore.add(store.clone());
-            Some(store)
-        } else {
-            None
-        };
-
-        let local_mutabledatastore: Box<dyn MutableDeltaStore> = local_pack_store;
-        let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
-
-        Ok(Self {
-            inner: Arc::new(ContentStoreInner {
-                datastore,
-                local_mutabledatastore,
-                shared_mutabledatastore,
-                remote_store,
-            }),
-        })
+    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Fallible<Self> {
+        ContentStoreBuilder::new(&local_path, config).build()
     }
 }
 
@@ -186,6 +155,79 @@ impl MutableDeltaStore for ContentStore {
     }
 }
 
+/// Builder for `ContentStore`. An `impl AsRef<Path>` represents the path to the store and a
+/// `ConfigSet` of the Mercurial configuration are required to build a `ContentStore`. Users can
+/// use this builder to add optional `EdenApi` to enable remote data fetching， and a `Path` suffix
+/// to specify other type of stores.
+pub struct ContentStoreBuilder<'a> {
+    local_path: PathBuf,
+    config: &'a ConfigSet,
+    edenapi: Option<Box<dyn EdenApi>>,
+    suffix: Option<&'a Path>,
+}
+
+impl<'a> ContentStoreBuilder<'a> {
+    pub fn new(local_path: impl AsRef<Path>, config: &'a ConfigSet) -> Self {
+        Self {
+            local_path: local_path.as_ref().to_path_buf(),
+            config,
+            edenapi: None,
+            suffix: None,
+        }
+    }
+
+    pub fn edenapi(mut self, edenapi: Box<dyn EdenApi>) -> Self {
+        self.edenapi = Some(edenapi);
+        self
+    }
+
+    pub fn suffix(mut self, suffix: &'a Path) -> Self {
+        self.suffix = Some(suffix);
+        self
+    }
+
+    pub fn build(self) -> Fallible<ContentStore> {
+        let cache_packs_path = get_cache_packs_path(self.config, self.suffix)?;
+        let local_pack_store = Box::new(MutableDataPackStore::new(
+            get_local_packs_path(self.local_path, self.suffix)?,
+            CorruptionPolicy::IGNORE,
+        )?);
+        let shared_pack_store = Box::new(MutableDataPackStore::new(
+            &cache_packs_path,
+            CorruptionPolicy::REMOVE,
+        )?);
+        let shared_indexedlogdatastore = Box::new(IndexedLogDataStore::new(
+            get_cache_indexedlogdatastore_path(self.config)?,
+        )?);
+
+        let mut datastore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
+
+        datastore.add(shared_indexedlogdatastore);
+        datastore.add(shared_pack_store.clone());
+        datastore.add(local_pack_store.clone());
+
+        let remote_store: Option<Box<dyn RemoteDataStore>> = if let Some(edenapi) = self.edenapi {
+            let store = Box::new(EdenApiRemoteStore::new(edenapi, shared_pack_store.clone()));
+            datastore.add(store.clone());
+            Some(store)
+        } else {
+            None
+        };
+
+        let local_mutabledatastore: Box<dyn MutableDeltaStore> = local_pack_store;
+        let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
+
+        Ok(ContentStore {
+            inner: Arc::new(ContentStoreInner {
+                datastore,
+                local_mutabledatastore,
+                shared_mutabledatastore,
+                remote_store,
+            }),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,7 +266,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let _store = ContentStore::new(&localdir, &config, None)?;
+        let _store = ContentStore::new(&localdir, &config)?;
         Ok(())
     }
 
@@ -234,7 +276,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -253,7 +295,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -264,7 +306,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
         drop(store);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
         assert!(store.get_delta(&k1)?.is_none());
         Ok(())
     }
@@ -275,7 +317,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -295,7 +337,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -307,7 +349,7 @@ mod tests {
         store.flush()?;
         drop(store);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
         assert_eq!(store.get_delta(&k1)?, Some(delta));
         Ok(())
     }
@@ -326,7 +368,9 @@ mod tests {
 
         let edenapi = fake_edenapi(map);
 
-        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        let store = ContentStoreBuilder::new(&localdir, &config)
+            .edenapi(edenapi)
+            .build()?;
         let data_get = store.get(&k)?;
 
         assert_eq!(data_get.unwrap(), data);
@@ -347,11 +391,13 @@ mod tests {
 
         let edenapi = fake_edenapi(map);
 
-        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        let store = ContentStoreBuilder::new(&localdir, &config)
+            .edenapi(edenapi)
+            .build()?;
         store.get(&k)?;
         drop(store);
 
-        let store = ContentStore::new(&localdir, &config, None)?;
+        let store = ContentStore::new(&localdir, &config)?;
         let data_get = store.get(&k)?;
 
         assert_eq!(data_get.unwrap(), data);
@@ -368,7 +414,9 @@ mod tests {
         let map = HashMap::new();
         let edenapi = fake_edenapi(map);
 
-        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        let store = ContentStoreBuilder::new(&localdir, &config)
+            .edenapi(edenapi)
+            .build()?;
 
         let k = key("a", "1");
         assert_eq!(store.get(&k)?, None);
@@ -389,7 +437,9 @@ mod tests {
 
         let edenapi = fake_edenapi(map);
 
-        let store = ContentStore::new(&localdir, &config, Some(edenapi))?;
+        let store = ContentStoreBuilder::new(&localdir, &config)
+            .edenapi(edenapi)
+            .build()?;
         store.get(&k)?;
         store.inner.shared_mutabledatastore.get(&k)?;
         assert!(store.inner.local_mutabledatastore.get(&k)?.is_none());
