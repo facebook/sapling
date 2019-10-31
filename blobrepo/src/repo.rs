@@ -1701,6 +1701,30 @@ pub fn save_bonsai_changesets(
     let blobstore = repo.blobstore.clone();
     let repoid = repo.repoid.clone();
 
+    let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
+    for bcs in &bonsai_changesets {
+        parents_to_check.extend(bcs.parents());
+    }
+    // Remove commits that we are uploading in this batch
+    for bcs in &bonsai_changesets {
+        parents_to_check.remove(&bcs.get_changeset_id());
+    }
+
+    let parents_to_check = stream::futures_unordered(parents_to_check.into_iter().map({
+        cloned!(ctx, repo);
+        move |p| {
+            repo.changeset_exists_by_bonsai(ctx.clone(), p)
+                .and_then(move |exists| {
+                    if exists {
+                        Ok(())
+                    } else {
+                        Err(format_err!("Commit {} does not exist in the repo", p))
+                    }
+                })
+        }
+    }))
+    .collect();
+
     let bonsai_changesets: HashMap<_, _> = bonsai_changesets
         .into_iter()
         .map(|bcs| (bcs.get_changeset_id(), bcs))
@@ -1742,6 +1766,7 @@ pub fn save_bonsai_changesets(
     }
 
     bonsai_objects
+        .join(parents_to_check)
         .and_then(move |_| {
             loop_fn(
                 bonsai_complete_futs.into_iter(),
