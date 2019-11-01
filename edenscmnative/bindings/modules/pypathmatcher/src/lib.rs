@@ -99,21 +99,20 @@ fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) ->
     let py_path = PyBytes::new(py, path.as_byte_slice());
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
-    let py_result = py_matcher
+    let py_value = py_matcher
         .call_method(py, "visitdir", (py_path,), None)
         .unwrap();
-    match PyBool::extract(py, &py_result) {
-        Ok(py_bool) => match py_bool.is_true() {
-            true => DirectoryMatch::ShouldTraverse,
-            false => DirectoryMatch::Nothing,
-        },
-        Err(_) => {
-            let py_string = PyString::extract(py, &py_result).unwrap();
-            if py_string.to_string(py).unwrap() == "all" {
-                DirectoryMatch::Everything
-            } else {
-                panic!("Unexpected value returned from matcher: {:?}", py_result);
-            }
+
+    let is_all = PyString::extract(py, &py_value)
+        .and_then(|py_str| py_str.to_string(py).map(|s| s == "all"))
+        .unwrap_or(false);
+    if is_all {
+        DirectoryMatch::Everything
+    } else {
+        if py_value.is_true(py).unwrap() {
+            DirectoryMatch::ShouldTraverse
+        } else {
+            DirectoryMatch::Nothing
         }
     }
 }
@@ -122,6 +121,9 @@ fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> bool
     let py_path = PyBytes::new(py, path.as_byte_slice());
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
-    let py_result = py_matcher.call(py, (py_path,), None).unwrap();
-    PyBool::extract(py, &py_result).unwrap().is_true()
+    py_matcher
+        .call(py, (py_path,), None)
+        .unwrap()
+        .is_true(py)
+        .unwrap()
 }
