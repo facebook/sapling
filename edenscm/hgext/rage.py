@@ -299,10 +299,17 @@ def _makerage(ui, repo, **opts):
         ("hg sparse show", lambda: hgcmd("sparse show")),
         ("hg debuginstall", lambda: hgcmd("debuginstall")),
         ("usechg", (usechginfo)),
-        ("uptime", lambda: shcmd("uptime")),
+        (
+            "uptime",
+            lambda: shcmd(
+                "time /T & wmic path Win32_OperatingSystem get LastBootUpTime"
+                if pycompat.iswindows
+                else "uptime"
+            ),
+        ),
         ("rpm info", (partial(rpminfo, ui))),
         ("klist", lambda: shcmd("klist", check=False)),
-        ("ifconfig", lambda: shcmd("ifconfig")),
+        ("ifconfig", lambda: shcmd("ipconfig" if pycompat.iswindows else "ifconfig")),
         (
             "airport",
             lambda: shcmd(
@@ -354,7 +361,13 @@ def _makerage(ui, repo, **opts):
                     (
                         "%s packs (%s)" % (loc, constants.getunits(category)),
                         lambda path=path: "%s:\n%s"
-                        % (path, shcmd("ls -lhS %s" % path)),
+                        % (
+                            path,
+                            shcmd(
+                                ("dir /o-s %s" if pycompat.iswindows else "ls -lhS %s")
+                                % path
+                            ),
+                        ),
                     )
                 )
 
