@@ -1,6 +1,11 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # drawdag.py - convert ASCII revision DAG to actual changesets
 #
-# Copyright 2016 Facebook, Inc.
+# Copyright Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

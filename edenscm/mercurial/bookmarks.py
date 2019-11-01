@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Mercurial bookmark support code
 #
 # Copyright 2008 David Soria Parra <dsp@php.net>

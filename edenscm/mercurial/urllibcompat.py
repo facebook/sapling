@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # urllibcompat.py - adapters to ease using urllib2 on Py2 and urllib on Py3
 #
 # Copyright 2017 Google, Inc.

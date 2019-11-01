@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # obsutil.py - utility functions for obsolescence
 #
 # Copyright 2017 Boris Feld <boris.feld@octobus.net>

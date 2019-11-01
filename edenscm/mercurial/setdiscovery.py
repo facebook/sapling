@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # setdiscovery.py - improved discovery of common nodeset for mercurial
 #
 # Copyright 2010 Benoit Boissinot <bboissin@gmail.com>

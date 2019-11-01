@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # hgweb/common.py - Utility functions needed by hgweb_mod and hgwebdir_mod
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>

@@ -63,7 +63,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   Skipping tests/test-rustthreading.py it has no-che?k-code (glob)
-  edenscm/mercurial/commands/eden.py:408: use foobar, not foo_bar naming --> def cmd_get_file_size(self, request):
+  edenscm/mercurial/commands/eden.py:407: use foobar, not foo_bar naming --> def cmd_get_file_size(self, request):
   tests/run-tests.py:*: don't use camelcase in identifiers --> self.testsSkipped = 0 (glob)
 
 @commands in debugcommands.py should be in alphabetical order.

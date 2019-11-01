@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # patch.py - patch file parsing routines
 #
 # Copyright 2006 Brendan Cully <brendan@kublai.com>

@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # revsetlang.py - parser, tokenizer and utility for revision set language
 #
 # Copyright 2010 Matt Mackall <mpm@selenic.com>

@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # hgweb/webutil.py - utility library for the web interface.
 #
 # Copyright 21 May 2005 - (c) 2005 Jake Edge <jake@edge2.net>

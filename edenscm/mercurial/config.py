@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # config.py - configuration parsing for Mercurial
 #
 #  Copyright 2009 Matt Mackall <mpm@selenic.com> and others

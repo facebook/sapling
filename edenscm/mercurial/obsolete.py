@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # obsolete.py - obsolete markers handling
 #
 # Copyright 2012 Pierre-Yves David <pierre-yves.david@ens-lyon.org>

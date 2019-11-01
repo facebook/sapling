@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # configitems.py - centralized declaration of configuration option
 #
 #  Copyright 2017 Pierre-Yves David <pierre-yves.david@octobus.net>

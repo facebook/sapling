@@ -1,9 +1,9 @@
-# mutation.py - commit mutation tracking
-#
-# Copyright 2018 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# mutation.py - commit mutation tracking
 
 from __future__ import absolute_import
 

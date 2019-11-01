@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # bundlerepo.py - repository class for viewing uncompressed bundles
 #
 # Copyright 2006, 2007 Benoit Boissinot <bboissin@gmail.com>

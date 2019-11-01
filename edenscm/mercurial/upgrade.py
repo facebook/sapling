@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # upgrade.py - functions for in place upgrade of Mercurial repository
 #
 # Copyright (c) 2016-present, Gregory Szorc

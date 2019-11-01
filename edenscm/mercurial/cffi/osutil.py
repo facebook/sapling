@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # osutil.py - CFFI version of osutil.c
 #
 # Copyright 2016 Maciej Fijalkowski <fijall@gmail.com>

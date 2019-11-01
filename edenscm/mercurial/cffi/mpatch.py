@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # mpatch.py - CFFI implementation of mpatch.c
 #
 # Copyright 2016 Maciej Fijalkowski <fijall@gmail.com>

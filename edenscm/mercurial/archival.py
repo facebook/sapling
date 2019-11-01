@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # archival.py - revision archival for mercurial
 #
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>

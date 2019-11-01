@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # txnutil.py - transaction related utilities
 #
 #  Copyright FUJIWARA Katsunori <foozy@lares.dti.ne.jp> and others

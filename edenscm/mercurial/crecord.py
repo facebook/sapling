@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # stuff related specifically to patch manipulation / parsing
 #
 # Copyright 2008 Mark Edgington <edgimar@gmail.com>

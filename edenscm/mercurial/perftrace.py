@@ -1,9 +1,10 @@
-# perftrace.py - Module for tracing performance
-#
-# Copyright 2019 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# perftrace.py - Module for tracing performance
+
 import time
 from contextlib import contextmanager
 

@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # sslutil.py - SSL handling for mercurial
 #
 # Copyright 2005, 2006, 2007, 2008 Matt Mackall <mpm@selenic.com>

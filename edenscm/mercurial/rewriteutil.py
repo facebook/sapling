@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # rewriteutil.py - utility functions for rewriting changesets
 #
 # Copyright 2017 Octobus <contact@octobus.net>
