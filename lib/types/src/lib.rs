@@ -25,5 +25,7 @@ pub use crate::nodeinfo::NodeInfo;
 pub use crate::parents::Parents;
 pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
+pub type Id20 = HgId;
+
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
