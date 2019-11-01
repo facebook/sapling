@@ -36,10 +36,11 @@ use std::{
     convert::AsRef,
     fmt, mem,
     ops::Deref,
+    str::Utf8Error,
 };
 
-use failure::{bail, format_err, Fallible};
 use serde_derive::{Deserialize, Serialize};
+use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::Rng;
@@ -81,6 +82,48 @@ pub struct PathComponent(str);
 /// The One. The One Character We Use To Separate Paths Into Components.
 pub const SEPARATOR: char = '/';
 
+#[derive(Error, Debug)]
+pub enum ParseError {
+    ValidationError(String, ValidationError),
+    InvalidUtf8(Vec<u8>, Utf8Error),
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            ParseError::ValidationError(path, validation_error) => {
+                write!(f, "Failed to validate {:?}. {}", path, validation_error)
+            }
+            ParseError::InvalidUtf8(bytes, utf8_error) => write!(
+                f,
+                "Failed to parse to Utf8: {:?}. {}",
+                String::from_utf8_lossy(bytes),
+                utf8_error
+            ),
+        }
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum ValidationError {
+    #[error("Invalid component: \"{0}\".")]
+    InvalidPathComponent(#[from] InvalidPathComponent),
+    #[error("Invalid byte: {0:?}.")]
+    InvalidByte(u8),
+    #[error("Trailing slash.")]
+    TrailingSlash,
+}
+
+#[derive(Error, Debug)]
+pub enum InvalidPathComponent {
+    #[error("")]
+    Empty,
+    #[error(".")]
+    Current,
+    #[error("..")]
+    Parent,
+}
+
 impl RepoPathBuf {
     /// Constructs an empty RepoPathBuf. This path will have no
     /// components and will be equivalent to the root of the repository.
@@ -90,16 +133,21 @@ impl RepoPathBuf {
 
     /// Constructs a `RepoPathBuf` from a vector of bytes. It will fail when the bytes are are not
     /// valid utf8 or when the string does not respect the `RepoPathBuf` rules.
-    pub fn from_utf8(vec: Vec<u8>) -> Fallible<RepoPathBuf> {
-        let utf8_string = String::from_utf8(vec)?;
+    pub fn from_utf8(vec: Vec<u8>) -> Result<Self, ParseError> {
+        let utf8_string = String::from_utf8(vec).map_err(|e| {
+            let utf8_error = e.utf8_error();
+            ParseError::InvalidUtf8(e.into_bytes(), utf8_error)
+        })?;
         RepoPathBuf::from_string(utf8_string)
     }
 
     /// Constructs a `RepoPathBuf` from a `String`. It can fail when the contents of String is
     /// deemed invalid. See `RepoPath` for validation rules.
-    pub fn from_string(s: String) -> Fallible<Self> {
-        validate_path(&s)?;
-        Ok(RepoPathBuf(s))
+    pub fn from_string(s: String) -> Result<Self, ParseError> {
+        match validate_path(&s) {
+            Ok(()) => Ok(RepoPathBuf(s)),
+            Err(e) => Err(ParseError::ValidationError(s, e)),
+        }
     }
 
     /// Consumes the current instance and returns a String with the contents of this `RepoPathBuf`.
@@ -212,15 +260,16 @@ impl RepoPath {
 
     /// Constructs a `RepoPath` from a byte slice. It will fail when the bytes are are not valid
     /// utf8 or when the string does not respect the `RepoPath` rules.
-    pub fn from_utf8<'a, S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Fallible<&'a RepoPath> {
-        let utf8_str = std::str::from_utf8(s.as_ref())?;
+    pub fn from_utf8<'a, S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Result<&'a RepoPath, ParseError> {
+        let utf8_str = std::str::from_utf8(s.as_ref())
+            .map_err(|e| ParseError::InvalidUtf8(s.as_ref().to_vec(), e))?;
         RepoPath::from_str(utf8_str)
     }
 
     /// Constructs a `RepoPath` from a `str` slice. It will fail when the string does not respect
     /// the `RepoPath` rules.
-    pub fn from_str(s: &str) -> Fallible<&RepoPath> {
-        validate_path(s)?;
+    pub fn from_str(s: &str) -> Result<&RepoPath, ParseError> {
+        validate_path(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
         Ok(RepoPath::from_str_unchecked(s))
     }
 
@@ -330,9 +379,11 @@ impl fmt::Display for RepoPath {
 impl PathComponentBuf {
     /// Constructs an from a `String`. It can fail when the contents of `String` is deemed invalid.
     /// See `PathComponent` for validation rules.
-    pub fn from_string(s: String) -> Fallible<Self> {
-        validate_component(&s)?;
-        Ok(PathComponentBuf(s))
+    pub fn from_string(s: String) -> Result<Self, ParseError> {
+        match validate_component(&s) {
+            Ok(()) => Ok(PathComponentBuf(s)),
+            Err(e) => Err(ParseError::ValidationError(s, e)),
+        }
     }
 
     /// Consumes the current instance and returns a String with the contents of this
@@ -380,15 +431,16 @@ impl fmt::Display for PathComponentBuf {
 impl PathComponent {
     /// Constructs a `PathComponent` from a byte slice. It will fail when the bytes are are not
     /// valid utf8 or when the string does not respect the `PathComponent` rules.
-    pub fn from_utf8(s: &[u8]) -> Fallible<&PathComponent> {
-        let utf8_str = std::str::from_utf8(s)?;
+    pub fn from_utf8(s: &[u8]) -> Result<&PathComponent, ParseError> {
+        let utf8_str =
+            std::str::from_utf8(s).map_err(|e| ParseError::InvalidUtf8(s.to_vec(), e))?;
         PathComponent::from_str(utf8_str)
     }
 
     /// Constructs a `PathComponent` from a `str` slice. It will fail when the string does not
     /// respect the `PathComponent` rules.
-    pub fn from_str(s: &str) -> Fallible<&PathComponent> {
-        validate_component(s)?;
+    pub fn from_str(s: &str) -> Result<&PathComponent, ParseError> {
+        validate_component(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
         Ok(PathComponent::from_str_unchecked(s))
     }
 
@@ -438,29 +490,32 @@ impl fmt::Display for PathComponent {
     }
 }
 
-fn validate_path(s: &str) -> Fallible<()> {
+fn validate_path(s: &str) -> Result<(), ValidationError> {
     if s.is_empty() {
         return Ok(());
     }
     if s.bytes().next_back() == Some(b'/') {
-        bail!("Invalid path: `{}`. Ends with `/`.", s);
+        return Err(ValidationError::TrailingSlash);
     }
     for component in s.split(SEPARATOR) {
-        validate_component(component).map_err(|e| format_err!("Invalid path: `{}`. {}", s, e))?;
+        validate_component(component)?;
     }
     Ok(())
 }
 
-fn validate_component(s: &str) -> Fallible<()> {
+fn validate_component(s: &str) -> Result<(), ValidationError> {
     if s.is_empty() {
-        bail!("Invalid component: empty.");
+        return Err(InvalidPathComponent::Empty.into());
     }
-    if s == "." || s == ".." {
-        bail!("Invalid component: {}", s);
+    if s == "." {
+        return Err(InvalidPathComponent::Current.into());
+    }
+    if s == ".." {
+        return Err(InvalidPathComponent::Parent.into());
     }
     for b in s.bytes() {
         if b == 0u8 || b == 1u8 || b == b'\n' || b == b'/' {
-            bail!("Invalid component: contains byte {}.", b);
+            return Err(ValidationError::InvalidByte(b));
         }
     }
     Ok(())
@@ -779,11 +834,19 @@ mod tests {
     fn test_validate_path() {
         assert_eq!(
             format!("{}", validate_path("\n").unwrap_err()),
-            "Invalid path: `\n`. Invalid component: contains byte 10."
+            "Invalid byte: 10."
+        );
+        assert_eq!(
+            format!("{}", RepoPath::from_str("\n").unwrap_err()),
+            "Failed to validate \"\\n\". Invalid byte: 10."
         );
         assert_eq!(
             format!("{}", validate_path("boo/").unwrap_err()),
-            "Invalid path: `boo/`. Ends with `/`."
+            "Trailing slash."
+        );
+        assert_eq!(
+            format!("{}", RepoPath::from_str("boo/").unwrap_err()),
+            "Failed to validate \"boo/\". Trailing slash."
         );
     }
 
@@ -791,11 +854,19 @@ mod tests {
     fn test_validate_component() {
         assert_eq!(
             format!("{}", validate_component("foo/bar").unwrap_err()),
-            "Invalid component: contains byte 47."
+            "Invalid byte: 47."
+        );
+        assert_eq!(
+            format!("{}", PathComponent::from_str("\n").unwrap_err()),
+            "Failed to validate \"\\n\". Invalid byte: 10."
         );
         assert_eq!(
             format!("{}", validate_component("").unwrap_err()),
-            "Invalid component: empty."
+            "Invalid component: \"\"."
+        );
+        assert_eq!(
+            format!("{}", PathComponent::from_str("").unwrap_err()),
+            "Failed to validate \"\". Invalid component: \"\"."
         );
     }
 

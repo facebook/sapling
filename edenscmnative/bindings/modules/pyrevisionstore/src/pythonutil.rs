@@ -35,7 +35,7 @@ pub fn to_node(py: Python, node: &PyBytes) -> Node {
 
 pub fn to_path(py: Python, name: &PyBytes) -> PyResult<RepoPathBuf> {
     RepoPath::from_utf8(name.data(py))
-        .map_err(|e| to_pyerr(py, &e))
+        .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))
         .map(|path| path.to_owned())
 }
 
