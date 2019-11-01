@@ -64,7 +64,7 @@ impl Link {
     ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
         loop {
             match self {
-                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Leaf(_) => bail!("Path {} is a file but a directory was expected.", parent),
                 Ephemeral(ref mut links) => return Ok(links),
                 Durable(ref entry) => {
                     let durable_links = entry.get_links(store, parent)?;
