@@ -503,7 +503,7 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
 #ifdef EDEN_HAVE_RUST_DATAPACK
     if (config_) {
       auto edenConfig = config_->getEdenConfig();
-      if (edenConfig->useDatapack.getValue() && datapackStore_) {
+      if (edenConfig->useHgCache.getValue() && datapackStore_) {
         if (auto content = datapackStore_->getTree(manifestNode, path)) {
           XLOG(DBG4) << "imported tree node=" << manifestNode
                      << " path=" << path << " from Rust hgcache";
