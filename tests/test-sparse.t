@@ -87,6 +87,8 @@ Verify commiting while sparse includes other files
   $ hg manifest
   hide
   show
+  $ hg files
+  hide
 
 Verify --reset brings files back
 

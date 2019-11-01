@@ -30,6 +30,7 @@ from .. import (
     bundle2,
     changegroup,
     cmdutil,
+    context,
     copies,
     destutil,
     dirstateguard,
@@ -45,6 +46,7 @@ from .. import (
     hg,
     hintutil,
     lock as lockmod,
+    match as matchmod,
     merge as mergemod,
     mutation,
     obsolete,
@@ -2242,6 +2244,9 @@ def files(ui, repo, *pats, **opts):
     fmt = "%s" + end
 
     m = scmutil.match(ctx, pats, opts)
+    if isinstance(ctx, context.workingctx) and util.safehasattr(repo, "sparsematch"):
+        m = matchmod.intersectmatchers(m, repo.sparsematch())
+
     ui.pager("files")
     with ui.formatter("files", opts) as fm:
         return cmdutil.files(ui, ctx, m, fm, fmt)
