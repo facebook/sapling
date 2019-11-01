@@ -3,10 +3,6 @@
 """Automatically fix code
 
 Check and fix the following things:
-- Rust source code
-    - Copyright header
-- Python source code
-    - Copyright header
 - Cargo.toml
     - Change version = "*" to actual version (requires Cargo.lock)
 """
@@ -15,7 +11,6 @@ from __future__ import absolute_import
 import glob
 import os
 import re
-import subprocess
 import sys
 from distutils.version import LooseVersion
 
@@ -23,60 +18,6 @@ from distutils.version import LooseVersion
 HAVE_FB = os.path.exists(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../fb")
 )
-
-
-def getauthorandyear(path):
-    """Returns the appropriate copyright holder and year based on the commit
-    introducing the file.
-
-    e.g. ("Facebook, Inc.", 2018)
-    """
-    # Those lines look like "2010-02-17 20:30 +0100"
-    lines = sorted(
-        subprocess.check_output(
-            ["hg", "log", "-f", "-T{date|shortdate} {author|email}\n", path]
-        ).splitlines()
-    )
-    date, email = lines[0].split()
-    year = date.split("-", 1)[0]
-    if email.endswith("@fb.com"):
-        return "Facebook, Inc.", year
-    else:
-        return "Mercurial Contributors", year
-
-
-def fixcopyrightheader(path):
-    content = open(path).read()
-    if (
-        # Split strings to make it possible for fixing this script itself.
-        ("General" " Public") in content
-        or ("Copy" "right") in content
-        or len(content.strip()) == 0
-    ):
-        return
-
-    if path.endswith(".rs"):
-        comment = "//"
-    else:
-        comment = "#"
-
-    author, year = getauthorandyear(path)
-
-    header = (
-        "%(comment)s Copy"
-        + "right %(year)s %(author)s\n"
-        + "%(comment)s\n"
-        + "%(comment)s This software may be used and distributed according to the terms of the\n"
-        + "%(comment)s GNU General"
-        + " Public License version 2 or any later version.\n\n"
-    ) % {"year": year, "comment": comment, "author": author}
-
-    if content.startswith("#!") and not path.endswith(".rs"):
-        firstline, rest = content.split("\n", 1)
-        header = "%s\n\n%s" % (firstline, header)
-        content = rest
-
-    write(path, header + content)
 
 
 def fixcargotoml(path):
@@ -132,9 +73,7 @@ def fixpaths(paths):
     for path in paths:
         if ispathskipped(path):
             continue
-        if path.endswith(".rs") or path.endswith(".py") or path.endswith(".pyx"):
-            fixcopyrightheader(path)
-        elif os.path.basename(path) == "Cargo.toml":
+        if os.path.basename(path) == "Cargo.toml":
             fixcargotoml(path)
 
 
