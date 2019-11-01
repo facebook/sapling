@@ -1,4 +1,11 @@
 /*
+ * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+/*
  mpatch.c - efficient binary patching for Mercurial
 
  This implements a patch algorithm that's O(m + nlog n) where m is the

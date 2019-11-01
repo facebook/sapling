@@ -1,4 +1,11 @@
 /*
+ * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+/*
  parsers.c - efficient content parsing
 
  Copyright 2008 Matt Mackall <mpm@selenic.com> and others

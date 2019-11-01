@@ -1,4 +1,11 @@
 /*
+ * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+/*
  * manifest.c - manifest type that does on-demand parsing.
  *
  * Copyright 2015, Google Inc.
