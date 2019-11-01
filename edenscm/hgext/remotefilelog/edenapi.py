@@ -34,12 +34,12 @@ def bailifdisabled(ui):
         raise error.Abort(_("HTTPS data fetching is disabled"))
 
 
-def logexception(ui, exc):
+def logexception(ui, exc, quiet=False):
     """Log an exception to Mercurial's telemetry and print a user warning."""
     exctype = type(exc).__name__
     excmsg = str(exc)
 
-    if debug(ui):
+    if not quiet or debug(ui):
         ui.warn("%s: %s\n" % (exctype, excmsg))
 
     ui.log(
