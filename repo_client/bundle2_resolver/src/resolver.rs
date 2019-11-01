@@ -47,7 +47,7 @@ pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
-type UploadedHgBonsaiMap = HashMap<HgChangesetId, BonsaiChangeset>;
+pub type UploadedHgBonsaiMap = HashMap<HgChangesetId, BonsaiChangeset>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
 // Mercurial substitutes the `onto` parameter with this bookmark name when
@@ -136,6 +136,7 @@ pub struct PostResolvePush {
     pub bookmark_pushes: Vec<PlainBookmarkPush<HgChangesetId>>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
+    pub uploaded_hg_bonsai_map: UploadedHgBonsaiMap,
 }
 
 /// Data, needed to perform post-resolve `InfinitePush` action
@@ -143,16 +144,19 @@ pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub uploaded_hg_bonsai_map: UploadedHgBonsaiMap,
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
 pub struct PostResolvePushRebase {
-    pub changesets: Changesets,
+    pub changesets: Vec<HgChangesetId>,
+    pub any_merges: bool,
     pub bookmark_push_part_id: Option<PartId>,
     pub bookmark_spec: PushrebaseBookmarkSpec,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
+    pub uploaded_hg_bonsai_map: UploadedHgBonsaiMap,
 }
 
 /// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
@@ -331,27 +335,27 @@ fn resolve_push(
                     resolver
                         .upload_changesets(ctx, cg_push, manifests, false)
                         .map(move |uploaded_map| {
-                            (changegroup_id, bookmark_push, bundle2, Some(uploaded_map))
+                            (changegroup_id, bookmark_push, bundle2, uploaded_map)
                         })
                         .boxify()
                 } else {
-                    ok((None, bookmark_push, bundle2, None)).boxify()
+                    ok((None, bookmark_push, bundle2, HashMap::new())).boxify()
                 }
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)| {
+            move |(changegroup_id, bookmark_push, bundle2, uploaded_map)| {
                 resolver
                     .maybe_resolve_infinitepush_bookmarks(bundle2)
                     .map(move |((), bundle2)| {
-                        (changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)
+                        (changegroup_id, bookmark_push, bundle2, uploaded_map)
                     })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2, maybe_uploaded_map)| {
+            move |(changegroup_id, bookmark_push, bundle2, uploaded_map)| {
                 resolver
                     .ensure_stream_finished(bundle2, maybe_full_content)
                     .map(move |maybe_raw_bundle2_id| {
@@ -359,18 +363,13 @@ fn resolve_push(
                             changegroup_id,
                             bookmark_push,
                             maybe_raw_bundle2_id,
-                            maybe_uploaded_map,
+                            uploaded_map,
                         )
                     })
             }
         })
         .map({
-            move |(
-                changegroup_id,
-                bookmark_push,
-                maybe_raw_bundle2_id,
-                _maybe_uploaded_hg_bonsai_map,
-            )| {
+            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
                 match bookmark_push {
                     AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
                         PostResolveAction::Push(PostResolvePush {
@@ -378,6 +377,7 @@ fn resolve_push(
                             bookmark_pushes,
                             maybe_raw_bundle2_id,
                             non_fast_forward_policy,
+                            uploaded_hg_bonsai_map,
                         })
                     }
                     AllBookmarkPushes::Inifinitepush(bookmark_push) => {
@@ -385,6 +385,7 @@ fn resolve_push(
                             changegroup_id,
                             bookmark_push,
                             maybe_raw_bundle2_id,
+                            uploaded_hg_bonsai_map,
                         })
                     }
                 }
@@ -478,12 +479,12 @@ fn resolve_pushrebase(
                         manifests,
                         will_rebase,
                     )
-                    .map(move |_| (changesets, onto_params, bundle2)).right_future()
+                    .map(move |upload_map| (changesets, onto_params, bundle2, upload_map)).right_future()
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, onto_params, bundle2)| {
+            move |(changesets, onto_params, bundle2, upload_map)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
                     .and_then({
@@ -540,6 +541,7 @@ fn resolve_pushrebase(
                                         bookmark_push_part_id,
                                         bookmark_spec,
                                         maybe_raw_bundle2_id,
+                                        upload_map,
                                     )
                                 })
                                 .boxify()
@@ -548,14 +550,20 @@ fn resolve_pushrebase(
             }
         })
         .map({
-            move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id)| {
+            move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
+                let any_merges = changesets
+                    .iter()
+                    .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
+                let changesets = changesets.into_iter().map(|(hg_cs_id, _)| hg_cs_id).collect();
                 PostResolveAction::PushRebase(PostResolvePushRebase {
                     changesets,
+                    any_merges,
                     bookmark_push_part_id,
                     bookmark_spec,
                     maybe_raw_bundle2_id,
                     maybe_pushvars,
                     commonheads,
+                    uploaded_hg_bonsai_map,
                 })
             }
         })

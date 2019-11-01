@@ -11,7 +11,7 @@
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bundle2_resolver::{
-    BundleResolverError, Changesets, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
+    BundleResolverError, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
     PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
@@ -115,6 +115,7 @@ fn run_push(
         bookmark_pushes,
         maybe_raw_bundle2_id,
         non_fast_forward_policy,
+        uploaded_hg_bonsai_map: _,
     } = action;
 
     ({
@@ -171,6 +172,7 @@ fn run_infinitepush(
         changegroup_id,
         bookmark_push,
         maybe_raw_bundle2_id,
+        uploaded_hg_bonsai_map: _,
     } = action;
 
     ({
@@ -216,11 +218,13 @@ fn run_pushrebase(
 ) -> BoxFuture<UnbundlePushRebaseResponse, BundleResolverError> {
     let PostResolvePushRebase {
         changesets,
+        any_merges,
         bookmark_push_part_id,
         bookmark_spec,
         maybe_raw_bundle2_id,
         maybe_pushvars,
         commonheads,
+        uploaded_hg_bonsai_map: _,
     } = action;
 
     let bookmark = bookmark_spec.get_bookmark_name();
@@ -245,6 +249,7 @@ fn run_pushrebase(
                     repo.clone(),
                     pushrebase_params,
                     changesets,
+                    any_merges,
                     &onto_params,
                     maybe_raw_bundle2_id,
                     bookmark_attrs,
@@ -358,7 +363,8 @@ fn normal_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
     mut pushrebase_params: PushrebaseParams,
-    changesets: Changesets,
+    changesets: Vec<HgChangesetId>,
+    any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     bookmark_attrs: BookmarkAttrs,
@@ -387,11 +393,7 @@ fn normal_pushrebase(
     }
 
     let block_merges = pushrebase.block_merges.clone();
-    if block_merges
-        && changesets
-            .iter()
-            .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some())
-    {
+    if block_merges && any_merges {
         return err(format_err!(
             "Pushrebase blocked because it contains a merge commit.\n\
              If you need this for a specific use case please contact\n\
@@ -410,10 +412,7 @@ fn normal_pushrebase(
                 repo,
                 pushrebase,
                 onto_bookmark,
-                changesets
-                    .into_iter()
-                    .map(|(hg_cs_id, _)| hg_cs_id)
-                    .collect(),
+                changesets,
                 maybe_raw_bundle2_id,
             )
         }
@@ -844,14 +843,14 @@ fn log_commits_to_scribe(
 
 fn run_hooks(
     ctx: CoreContext,
-    changesets: Changesets,
+    changesets: Vec<HgChangesetId>,
     pushvars: Option<HashMap<String, Bytes>>,
     onto_bookmark: &BookmarkName,
     hook_manager: Arc<HookManager>,
 ) -> BoxFuture<(), BundleResolverError> {
     // TODO: should we also accept the Option<HgBookmarkPush> and run hooks on that?
     let mut futs = stream::FuturesUnordered::new();
-    for (hg_cs_id, _) in changesets {
+    for hg_cs_id in changesets {
         futs.push(
             hook_manager
                 .run_changeset_hooks_for_bookmark(
