@@ -1,9 +1,9 @@
-# nointerrupt.py - prevent mercurial from being ctrl-c'ed
-#
-# Copyright 2016 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# nointerrupt.py - prevent mercurial from being ctrl-c'ed
 """warns but doesn't exit when the user first hits Ctrl+C
 
 This extension shows a warning the first time a user hits Ctrl+C saying the

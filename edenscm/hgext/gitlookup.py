@@ -1,9 +1,9 @@
-# gitlookup.py - server-side support for hg->git and git->hg lookups
-#
-# Copyright 2014 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# gitlookup.py - server-side support for hg->git and git->hg lookups
 
 """ extension that will look up hashes from an hg-git map file over the wire.
     This also provides client and server commands to download all the Git

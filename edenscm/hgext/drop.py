@@ -1,9 +1,9 @@
-# drop - allows the user to drop changeset from the middle of a stack
-#
-# Copyright 2017 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# drop - allows the user to drop changeset from the middle of a stack
 
 """drop specified changeset from the stack
 

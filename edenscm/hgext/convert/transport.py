@@ -1,4 +1,7 @@
-# -*- coding: utf-8 -*-
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 # Copyright (C) 2007 Daniel Holth <dholth@fastmail.fm>
 # This is a stripped-down version of the original bzr-svn transport.py,

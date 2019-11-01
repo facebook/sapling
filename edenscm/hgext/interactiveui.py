@@ -1,9 +1,9 @@
-# interactiveui.py: display information and allow for left/right control
-#
-# Copyright 2017 Facebook, Inc.
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# interactiveui.py: display information and allow for left/right control
 
 from __future__ import absolute_import
 

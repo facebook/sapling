@@ -1,10 +1,14 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # prune.py - mark changesets as obsolete
 #
 # Copyright 2011 Peter Arrenbrecht <peter.arrenbrecht@gmail.com>
 #                Logilab SA        <contact@logilab.fr>
 #                Pierre-Yves David <pierre-yves.david@ens-lyon.org>
 #                Patrick Mezard <patrick@mezard.eu>
-# Copyright 2017 Facebook, Inc.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

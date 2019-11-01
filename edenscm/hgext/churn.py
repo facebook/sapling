@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # churn.py - create a graph of revisions count grouped by template
 #
 # Copyright 2006 Josef "Jeff" Sipek <jeffpc@josefsipek.net>

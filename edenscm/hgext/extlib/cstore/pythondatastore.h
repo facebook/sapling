@@ -1,10 +1,11 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 // pythondatastore.h - c++ declarations for a python data store
-//
-// Copyright 2017 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
-//
 // no-check-code
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,

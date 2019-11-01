@@ -1,9 +1,9 @@
-# Copyright 2016-present Facebook. All Rights Reserved.
-#
-# format: defines the format used to output annotate result
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# format: defines the format used to output annotate result
 
 from edenscm.mercurial import encoding, node, templatefilters, util
 from edenscm.mercurial.pycompat import range

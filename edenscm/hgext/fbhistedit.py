@@ -1,9 +1,9 @@
-# fbhistedit.py - improved amend functionality
-#
-# Copyright 2014 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# fbhistedit.py - improved amend functionality
 """extends the existing histedit functionality
 
 Adds a s/stop verb to histedit to stop after a changeset was picked.

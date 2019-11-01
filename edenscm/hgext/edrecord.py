@@ -1,9 +1,7 @@
-# edrecord.py
-#
-# Copyright 2017 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from edenscm.mercurial import cmdutil, crecord as crecordmod, patch as patchmod, util
 from edenscm.mercurial.i18n import _

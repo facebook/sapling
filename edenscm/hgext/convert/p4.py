@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Perforce source for convert extension.
 #
 # Copyright 2009, Frank Kingswood <frank@kingswood-consulting.co.uk>

@@ -1,10 +1,11 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 // pythondatastore.cpp - implementation of a python data store
-//
-// Copyright 2017 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
-//
 // no-check-code
 
 #include "edenscm/hgext/extlib/cstore/pythondatastore.h"

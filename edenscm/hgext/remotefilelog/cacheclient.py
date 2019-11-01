@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# cacheclient.py - example cache client implementation
-#
-# Copyright 2013 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# cacheclient.py - example cache client implementation
 
 # The remotefilelog extension can optionally use a caching layer to serve
 # file revision requests. This is an example implementation that uses

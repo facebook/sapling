@@ -1,10 +1,10 @@
-# checkserverbookmark.py - check whether the bookmark is where we expect
-# it to be on a server
-#
-# Copyright 2019-present Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# checkserverbookmark.py - check whether the bookmark is where we expect
+# it to be on a server
 from __future__ import absolute_import
 
 from edenscm.mercurial import error, hg, util

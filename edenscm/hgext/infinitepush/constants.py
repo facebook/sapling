@@ -1,9 +1,7 @@
-# Infinite push
-#
-# Copyright 2016-2019 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 scratchbranchparttype = "b2x:infinitepush"
 scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"

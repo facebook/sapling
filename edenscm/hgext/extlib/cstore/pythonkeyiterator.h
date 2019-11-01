@@ -1,10 +1,11 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 // pythonkeyiterator.h - c++ implementation of python key iterator
-//
-// Copyright 2017 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
-//
 // no-check-code
 
 #ifndef FBHGEXT_PYTHONKEYITERATOR_H

@@ -1,9 +1,9 @@
-# amend.py - improved amend functionality
-#
-# Copyright 2013 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# amend.py - improved amend functionality
 
 """extends the existing commit amend functionality
 

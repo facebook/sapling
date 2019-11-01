@@ -1,9 +1,9 @@
-# dirsync.py - keep two directories synchronized at commit time
-#
-# Copyright 2015 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# dirsync.py - keep two directories synchronized at commit time
 """
 keep directories in a repo synchronized (DEPRECATED)
 

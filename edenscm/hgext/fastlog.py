@@ -1,8 +1,9 @@
-# fastlog.py
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
-# An extension to query remote servers for logs using scmquery / fastlog
-#
-# Copyright 2016 Facebook, Inc.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# fastlog.py - An extension to query remote servers for logs using scmquery / fastlog
 """
 connect to scmquery servers for fast fetching of logs on files and directories.
 

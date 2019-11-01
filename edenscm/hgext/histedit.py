@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # histedit.py - interactive history editing for mercurial
 #
 # Copyright 2009 Augie Fackler <raf@durin42.com>

@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright (C) 2006 - Marco Barisione <marco@barisione.org>
 #
 # This is a small extension for Mercurial (https://mercurial-scm.org/)

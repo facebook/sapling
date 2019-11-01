@@ -1,9 +1,9 @@
-# __init__.py - remotefilelog extension
-#
-# Copyright 2013 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# __init__.py - remotefilelog extension
 """minimize and speed up large repositories
 
 remotefilelog allows leaving file contents on the server and only downloading

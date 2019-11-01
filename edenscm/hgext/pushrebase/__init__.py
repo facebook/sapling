@@ -1,9 +1,9 @@
-# pushrebase.py - server-side rebasing of pushed changesets
-#
-# Copyright 2014 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# pushrebase.py - server-side rebasing of pushed changesets
 """rebases commits during push
 
 The pushrebase extension allows the server to rebase incoming commits as part of

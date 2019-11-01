@@ -1,8 +1,10 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # fbconduit.py
-#
 # An extension to query remote servers for extra information via conduit RPC
-#
-# Copyright 2015 Facebook, Inc.
 
 import json
 import re

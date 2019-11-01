@@ -1,9 +1,9 @@
-# bundleparts.py - utilies to pack/unpack the snapshot metadata into bundles
-#
-# Copyright 2019 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# bundleparts.py - utilies to pack/unpack the snapshot metadata into bundles
 
 from edenscm.mercurial import bundle2, error
 from edenscm.mercurial.i18n import _

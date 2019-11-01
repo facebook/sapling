@@ -1,9 +1,9 @@
-# blobstore.py - local blob storage for snapshot metadata
-#
-# Copyright 2019 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# blobstore.py - local blob storage for snapshot metadata
 
 from __future__ import absolute_import
 

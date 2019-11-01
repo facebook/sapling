@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # highlight - syntax highlighting in hgweb, based on Pygments
 #
 #  Copyright 2008, 2009 Patrick Mezard <pmezard@gmail.com> and others

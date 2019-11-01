@@ -1,9 +1,8 @@
-# journal.py
-#
-# Copyright 2014-2016 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
 """track previous positions of bookmarks (EXPERIMENTAL)
 
 This extension adds a new command: `hg journal`, which shows you where

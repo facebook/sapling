@@ -1,9 +1,9 @@
-# remotefilelogserver.py - server logic for a remotefilelog server
-#
-# Copyright 2013 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# remotefilelogserver.py - server logic for a remotefilelog server
 from __future__ import absolute_import
 
 import errno

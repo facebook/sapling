@@ -1,9 +1,9 @@
-# Copyright 2016-present Facebook. All Rights Reserved.
-#
-# fastannotate: faster annotate implementation using linelog
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
+
+# fastannotate: faster annotate implementation using linelog
 
 """yet another annotate implementation that might be faster
 

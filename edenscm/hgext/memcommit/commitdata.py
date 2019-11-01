@@ -1,8 +1,8 @@
-# Copyright 2019 Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
-#
+# GNU General Public License version 2.
+
 # This module will be shared with other services. Therefore, please refrain from
 # importing anything from Mercurial and creating a dependency on Mercurial. This
 # module is only for specifying classes based on simple types to represent the

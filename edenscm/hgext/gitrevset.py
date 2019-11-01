@@ -1,6 +1,8 @@
-# gitrevset.py
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
-# Copyright 2014 Facebook, Inc.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 """map a git hash to a Mercurial hash:
 
     $ hg log -r "gitnode($HASH)"

@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # win32mbcs.py -- MBCS filename support for Mercurial
 #
 # Copyright (c) 2008 Shun-ichi Goto <shunichi.goto@gmail.com>

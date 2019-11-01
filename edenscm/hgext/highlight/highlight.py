@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # highlight.py - highlight extension implementation file
 #
 #  Copyright 2007-2009 Adam Hupp <adam@hupp.org> and others
