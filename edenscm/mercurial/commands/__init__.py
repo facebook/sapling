@@ -77,6 +77,7 @@ with hgdemandimport.disabled():
     from . import (  # noqa: F401
         blackbox,
         debug,
+        debugdirs,
         debugcheckoutidentifier,
         debugmutation,
         debugrunshell,

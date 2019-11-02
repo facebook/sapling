@@ -99,6 +99,7 @@ Show debug commands if there are no other candidates
   debugdata
   debugdate
   debugdeltachain
+  debugdirs
   debugdirstate
   debugdiscovery
   debugdrawdag
@@ -293,6 +294,7 @@ Show all commands + options
   debugdata: changelog, manifest, dir
   debugdate: extended
   debugdeltachain: changelog, manifest, dir, template
+  debugdirs: rev, print0
   debugdirstate: nodates, datesort, json
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: print

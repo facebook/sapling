@@ -962,6 +962,7 @@ Test list of internal help commands
    debugdate     parse and display a date
    debugdeltachain
                  dump information about delta chains in a revlog
+   debugdirs     list directories
    debugdirstate
                  show the contents of the current dirstate
    debugdiscovery
