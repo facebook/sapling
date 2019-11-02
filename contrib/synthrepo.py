@@ -1,9 +1,14 @@
-# synthrepo.py - repo synthesis
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
-# Copyright 2012 Facebook
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# synthrepo.py - repo synthesis
 
 """synthesize structurally interesting change history
 

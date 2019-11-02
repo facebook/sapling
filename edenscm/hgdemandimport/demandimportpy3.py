@@ -1,6 +1,11 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # demandimportpy3 - global demand-loading of modules for Mercurial
 #
-# Copyright 2017 Facebook Inc.
+# Copyright Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

@@ -1,11 +1,15 @@
 #!/usr/bin/env python
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
-# check-py3-compat - check Python 3 compatibility of Mercurial files
-#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright 2015 Gregory Szorc <gregory.szorc@gmail.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# check-py3-compat - check Python 3 compatibility of Mercurial files
 
 from __future__ import absolute_import, print_function
 

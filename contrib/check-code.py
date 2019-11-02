@@ -1,11 +1,15 @@
 #!/usr/bin/env python
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
-# check-code - a style and portability checker for Mercurial
-#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright 2010 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# check-code - a style and portability checker for Mercurial
 
 """style and portability checker for Mercurial
 

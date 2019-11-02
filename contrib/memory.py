@@ -1,9 +1,14 @@
-# memory.py - track memory usage
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright 2009 Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# memory.py - track memory usage
 
 """helper extension to measure memory usage
 

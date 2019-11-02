@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-# Copyright 2004-present Facebook. All Rights Reserved.
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 import argparse
 import errno
 import hashlib

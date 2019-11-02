@@ -1,6 +1,9 @@
-# distutils_rust.py - distutils extension for building Rust extension modules
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
-# Copyright 2017 Facebook, Inc.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# distutils_rust.py - distutils extension for building Rust extension modules
 
 from __future__ import absolute_import
 

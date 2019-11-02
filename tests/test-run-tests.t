@@ -1205,12 +1205,11 @@ running is placed.
   > If this prints a path, that means RUNTESTDIR didn't equal
   > TESTDIR as it should have.
   >   $ test "\$RUNTESTDIR" = "$TESTDIR" || echo "\$RUNTESTDIR"
-  > This should print the start of check-code. If this passes but the
-  > previous check failed, that means we found a copy of check-code at whatever
-  > RUNTESTSDIR ended up containing, even though it doesn't match TESTDIR.
-  >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py | sed 's@.!.*python@#!USRBINENVPY@'
-  >   #!USRBINENVPY
-  >   #
+  > Make sure we can find check-code.py relative to $RUNTESTDIR
+  > If this passes but the previous check failed, that means we found a copy of
+  > check-code at whatever RUNTESTSDIR ended up containing, even though it
+  > doesn't match TESTDIR.
+  >   $ grep 'a style and portability checker' "\$RUNTESTDIR"/../contrib/check-code.py
   >   # check-code - a style and portability checker for Mercurial
   > EOF
   $ rt test-runtestdir.t

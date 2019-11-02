@@ -1,3 +1,13 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 # If you want to change PREFIX, do not just edit it below. The changed
 # value wont get passed on to recursive make calls. You should instead
 # override the variable on the command like:

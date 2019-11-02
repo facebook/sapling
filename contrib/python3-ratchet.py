@@ -1,7 +1,13 @@
-# Copyright 2012 Facebook
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright Matt Mackall <mpm@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
 """Find tests that newly pass under Python 3.
 
 The approach is simple: we maintain a whitelist of Python 3 passing
