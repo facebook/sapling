@@ -1,7 +1,9 @@
-// Copyright 2017 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
 
 //! Types and helper functions to convert a `KeyId` to a Key (`[u8]`). The radix index is
 //! responsible for the other direction - `[u8]` to `KeyId`. This mapping is to remove the

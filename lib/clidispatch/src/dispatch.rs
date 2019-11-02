@@ -1,7 +1,10 @@
-// Copyright 2019 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 use crate::command::{CommandDefinition, CommandFunc, CommandTable};
 use crate::errors;
 use crate::global_flags::HgGlobalOpts;

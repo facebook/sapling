@@ -1,5 +1,10 @@
-/// Copyright Facebook, Inc. 2018
-///
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 /// A FanoutTable trait for providing fast HgId -> Bounds lookups to find bounds for bisecting.
 /// It comes with two modes, small-mode keys off the first byte in the hgid, while large-mode keys
 /// off the first two bytes in the hgid.

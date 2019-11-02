@@ -1,4 +1,10 @@
-// Copyright Facebook, Inc. 2017
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 //! Implementation of a store using file I/O.
 
 use crate::errors::ErrorKind;

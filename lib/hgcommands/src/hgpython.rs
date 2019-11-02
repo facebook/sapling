@@ -1,4 +1,10 @@
-// Copyright Facebook, Inc. 2018
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 use crate::commands;
 use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_is_initialized, py_main, py_set_argv,

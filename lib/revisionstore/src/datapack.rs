@@ -1,4 +1,10 @@
-// Copyright Facebook, Inc. 2018
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 //! Classes for constructing and serializing a datapack file and index.
 //!
 //! A datapack is a pair of files that contain the revision contents for various

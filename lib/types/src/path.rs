@@ -1,7 +1,9 @@
-// Copyright Facebook, Inc. 2019
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
 
 //! Here we have types for working with paths specialized for source control internals.
 //! They are akin to str and String in high level behavior. `RepoPath` is an unsized type wrapping

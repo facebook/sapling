@@ -1,4 +1,10 @@
-// Copyright Facebook, Inc. 2018
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 //! revisionstore - Data and history store for generic revision data (usually commit, manifest,
 //! and file data)
 

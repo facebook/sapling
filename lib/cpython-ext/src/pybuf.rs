@@ -1,7 +1,9 @@
-// Copyright 2017 Facebook, Inc.
-//
-// This software may be used and distributed according to the terms of the
-// GNU General Public License version 2 or any later version.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
 
 //! A simple `Py_buffer` wrapper that allows zero-copy reading of Python
 //! owned memory.

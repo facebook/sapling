@@ -1,4 +1,10 @@
-// Copyright Facebook, Inc. 2017
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 //! treestate - Tree-based State.
 //!
 //! The tree state stores a map from paths to a lightweight structure, and provides efficient
