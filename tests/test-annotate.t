@@ -60,7 +60,7 @@ annotate (JSON)
   [
    {
     "abspath": "a",
-    "lines": [{"line": "a\n", "rev": 0}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}],
     "path": "a"
    }
   ]
@@ -69,7 +69,7 @@ annotate (JSON)
   [
    {
     "abspath": "a",
-    "lines": [{"date": [1.0, 0], "file": "a", "line": "a\n", "line_number": 1, "node": "8435f90966e442695d2ded29fdade2bac5ad8065", "rev": 0, "user": "nobody"}],
+    "lines": [{"age_bucket": "old", "date": [1.0, 0], "file": "a", "line": "a\n", "line_number": 1, "node": "8435f90966e442695d2ded29fdade2bac5ad8065", "rev": 0, "user": "nobody"}],
     "path": "a"
    }
   ]
@@ -94,12 +94,12 @@ annotate multiple files (JSON)
   [
    {
     "abspath": "a",
-    "lines": [{"line": "a\n", "rev": 0}, {"line": "a\n", "rev": 1}, {"line": "a\n", "rev": 1}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "a\n", "rev": 1}],
     "path": "a"
    },
    {
     "abspath": "b",
-    "lines": [{"line": "a\n", "rev": 0}, {"line": "a\n", "rev": 1}, {"line": "a\n", "rev": 1}, {"line": "b4\n", "rev": 3}, {"line": "b5\n", "rev": 3}, {"line": "b6\n", "rev": 3}],
+    "lines": [{"age_bucket": "old", "line": "a\n", "rev": 0}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "a\n", "rev": 1}, {"age_bucket": "old", "line": "b4\n", "rev": 3}, {"age_bucket": "old", "line": "b5\n", "rev": 3}, {"age_bucket": "old", "line": "b6\n", "rev": 3}],
     "path": "b"
    }
   ]
@@ -533,7 +533,7 @@ annotate modified file
   [
    {
     "abspath": "foo",
-    "lines": [{"line": "foo\n", "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd", "rev": 11}, {"line": "foofoo\n", "node": null, "rev": null}],
+    "lines": [{"age_bucket": "old", "line": "foo\n", "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd", "rev": 11}, {"age_bucket": "1hour", "line": "foofoo\n", "node": null, "rev": null}],
     "path": "foo"
    }
   ]
