@@ -32,7 +32,7 @@ class gitutil(object):
     GIT_FILE_STATUS_ADDED = "A"
     GIT_FILE_STATUS_COPIED = "C"
     GIT_FILE_STATUS_DELETED = "D"
-    GIT_FILE_STATUS_MOVED = "M"
+    GIT_FILE_STATUS_MODIFIED = "M"
     GIT_FILE_STATUS_RENAMED = "R"
     GIT_FILE_STATUS_TYPE_CHANGED = "T"
     GIT_FILE_STATUS_UNMERGED = "U"
@@ -101,7 +101,7 @@ class gitutil(object):
             cls.GIT_FILE_STATUS_ADDED,
             cls.GIT_FILE_STATUS_COPIED,
             cls.GIT_FILE_STATUS_DELETED,
-            cls.GIT_FILE_STATUS_MOVED,
+            cls.GIT_FILE_STATUS_MODIFIED,
             cls.GIT_FILE_STATUS_RENAMED,
             cls.GIT_FILE_STATUS_TYPE_CHANGED,
             cls.GIT_FILE_STATUS_UNMERGED,
@@ -129,7 +129,8 @@ class gitutil(object):
         remainder = cls._parsespecificchar(remainder, " ")
         status, remainder = cls._parsestatus(remainder)
         if status in [cls.GIT_FILE_STATUS_COPIED, cls.GIT_FILE_STATUS_RENAMED] or (
-            status == cls.GIT_FILE_STATUS_MOVED and remainder[0] not in ["\t", "\x00"]
+            status == cls.GIT_FILE_STATUS_MODIFIED
+            and remainder[0] not in ["\t", "\x00"]
         ):
             score, remainder = int(remainder[0:2]), remainder[2:]
         else:
@@ -142,7 +143,7 @@ class gitutil(object):
             )
         lineseparator = "\n" if fieldseparator == "\t" else "\x00"
 
-        if status in ["C", "R"]:
+        if status in [cls.GIT_FILE_STATUS_COPIED, cls.GIT_FILE_STATUS_RENAMED]:
             srcpath, remainder = cls._parsepath(remainder, fieldseparator)
             remainder = cls._parsespecificchar(remainder, fieldseparator)
             dstpath, remainder = cls._parsepath(remainder, lineseparator)
