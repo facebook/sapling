@@ -15,17 +15,15 @@ use bundle2_resolver::{
     PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
-use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, format_err, Error};
 use failure_ext::FutureFailureErrorExt;
 pub use failure_ext::{prelude::*, Fail};
 use futures::future::{err, ok};
-use futures::{future, stream, Future, IntoFuture, Stream};
+use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{ChangesetId, RawBundle2Id};
@@ -35,9 +33,10 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{o, warn};
-use std::collections::HashMap;
 use std::sync::Arc;
 
+mod hook_running;
+pub use hook_running::run_hooks;
 mod response;
 use response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
@@ -52,7 +51,6 @@ enum BookmarkPush<T: Copy> {
 pub fn run_post_resolve_action(
     ctx: CoreContext,
     repo: BlobRepo,
-    hook_manager: Arc<HookManager>,
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     phases: Arc<dyn Phases>,
@@ -82,7 +80,6 @@ pub fn run_post_resolve_action(
             bookmark_attrs,
             lca_hint,
             phases,
-            hook_manager,
             infinitepush_params,
             pushrebase_params,
             action,
@@ -211,7 +208,6 @@ fn run_pushrebase(
     bookmark_attrs: BookmarkAttrs,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     phases: Arc<dyn Phases>,
-    hook_manager: Arc<HookManager>,
     infinitepush_params: InfinitepushParams,
     pushrebase_params: PushrebaseParams,
     action: PostResolvePushRebase,
@@ -222,59 +218,47 @@ fn run_pushrebase(
         bookmark_push_part_id,
         bookmark_spec,
         maybe_raw_bundle2_id,
-        maybe_pushvars,
+        maybe_pushvars: _,
         commonheads,
         uploaded_hg_bonsai_map: _,
     } = action;
 
     let bookmark = bookmark_spec.get_bookmark_name();
-    run_hooks(
-        ctx.clone(),
-        changesets.clone(),
-        maybe_pushvars,
-        &bookmark,
-        hook_manager,
-    )
-    .and_then({
-        cloned!(ctx, lca_hint, repo, pushrebase_params);
-        move |()| {
-            match bookmark_spec {
-                // There's no `.context()` after `normal_pushrebase`, as it has
-                // `Error=BundleResolverError` and doing `.context("bla").from_err()`
-                // would turn some useful variant of `BundleResolverError` into generic
-                // `BundleResolverError::Error`, which in turn would render incorrectly
-                // (see definition of `BundleResolverError`).
-                PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => normal_pushrebase(
-                    ctx,
-                    repo.clone(),
-                    pushrebase_params,
-                    changesets,
-                    any_merges,
-                    &onto_params,
-                    maybe_raw_bundle2_id,
-                    bookmark_attrs,
-                    infinitepush_params,
-                )
-                .left_future(),
-                PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => force_pushrebase(
-                    ctx,
-                    repo,
-                    lca_hint,
-                    plain_push,
-                    maybe_raw_bundle2_id,
-                    bookmark_attrs,
-                    infinitepush_params,
-                )
-                .context("While doing a force pushrebase")
-                .from_err()
-                .right_future(),
-            }
-            .map(move |pushrebased_rev| (pushrebased_rev, bookmark, bookmark_push_part_id))
-        }
-    })
+
+    match bookmark_spec {
+        // There's no `.context()` after `normal_pushrebase`, as it has
+        // `Error=BundleResolverError` and doing `.context("bla").from_err()`
+        // would turn some useful variant of `BundleResolverError` into generic
+        // `BundleResolverError::Error`, which in turn would render incorrectly
+        // (see definition of `BundleResolverError`).
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => normal_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            pushrebase_params.clone(),
+            changesets,
+            any_merges,
+            &onto_params,
+            maybe_raw_bundle2_id,
+            bookmark_attrs,
+            infinitepush_params,
+        )
+        .left_future(),
+        PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => force_pushrebase(
+            ctx.clone(),
+            repo.clone(),
+            lca_hint,
+            plain_push,
+            maybe_raw_bundle2_id,
+            bookmark_attrs,
+            infinitepush_params,
+        )
+        .context("While doing a force pushrebase")
+        .from_err()
+        .right_future(),
+    }
     .and_then({
         cloned!(ctx, repo);
-        move |((pushrebased_rev, pushrebased_changesets), bookmark, bookmark_push_part_id)| {
+        move |(pushrebased_rev, pushrebased_changesets)| {
             phases
                 .add_reachable_as_public(ctx, repo, vec![pushrebased_rev.clone()])
                 .map(move |_| {
@@ -839,62 +823,4 @@ fn log_commits_to_scribe(
             })
     });
     future::join_all(futs).map(|_| ()).boxify()
-}
-
-fn run_hooks(
-    ctx: CoreContext,
-    changesets: Vec<HgChangesetId>,
-    pushvars: Option<HashMap<String, Bytes>>,
-    onto_bookmark: &BookmarkName,
-    hook_manager: Arc<HookManager>,
-) -> BoxFuture<(), BundleResolverError> {
-    // TODO: should we also accept the Option<HgBookmarkPush> and run hooks on that?
-    let mut futs = stream::FuturesUnordered::new();
-    for hg_cs_id in changesets {
-        futs.push(
-            hook_manager
-                .run_changeset_hooks_for_bookmark(
-                    ctx.clone(),
-                    hg_cs_id.clone(),
-                    onto_bookmark,
-                    pushvars.clone(),
-                )
-                .join(hook_manager.run_file_hooks_for_bookmark(
-                    ctx.clone(),
-                    hg_cs_id,
-                    onto_bookmark,
-                    pushvars.clone(),
-                )),
-        )
-    }
-    futs.collect()
-        .from_err()
-        .and_then(|res| {
-            let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) = res.into_iter().unzip();
-            let cs_hook_failures: Vec<(ChangesetHookExecutionID, HookExecution)> = cs_hook_results
-                .into_iter()
-                .flatten()
-                .filter(|(_, exec)| match exec {
-                    HookExecution::Accepted => false,
-                    HookExecution::Rejected(_) => true,
-                })
-                .collect();
-            let file_hook_failures: Vec<(FileHookExecutionID, HookExecution)> = file_hook_results
-                .into_iter()
-                .flatten()
-                .filter(|(_, exec)| match exec {
-                    HookExecution::Accepted => false,
-                    HookExecution::Rejected(_) => true,
-                })
-                .collect();
-            if cs_hook_failures.len() > 0 || file_hook_failures.len() > 0 {
-                Err(BundleResolverError::HookError((
-                    cs_hook_failures,
-                    file_hook_failures,
-                )))
-            } else {
-                Ok(())
-            }
-        })
-        .boxify()
 }

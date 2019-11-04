@@ -9,7 +9,7 @@
 use crate::errors::*;
 use crate::getbundle_response;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
-use crate::unbundle::run_post_resolve_action;
+use crate::unbundle::{run_hooks, run_post_resolve_action};
 
 use blobrepo::BlobRepo;
 use bookmark_renaming::BookmarkRenamer;
@@ -1309,11 +1309,16 @@ impl HgCommands for RepoClient {
                     maybe_full_content,
                     pure_push_allowed,
                 ).and_then({
+                    cloned!(ctx);
+                    move |action| {
+                        run_hooks(ctx, hook_manager, &action)
+                            .map(move |_| action)
+                    }
+                }).and_then({
                     cloned!(ctx, blobrepo, pushrebase_params, lca_hint, phases_hint);
                     move |action| run_post_resolve_action(
                         ctx,
                         blobrepo,
-                        hook_manager,
                         bookmark_attrs,
                         lca_hint,
                         phases_hint,
