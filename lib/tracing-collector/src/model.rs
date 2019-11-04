@@ -536,6 +536,11 @@ impl TracingData {
     pub fn set_follows_from(&mut self, old_span_id: EspanId, new_span_id: EspanId) {
         // TODO: Implement this.
     }
+
+    /// Return the process id that created this [`TracingData`].
+    pub fn process_id(&self) -> u64 {
+        self.default_process_id
+    }
 }
 
 // -------- Merge multiple TracingData --------

@@ -7,10 +7,19 @@
 
 use crate::{commands, HgPython};
 use clidispatch::{dispatch, errors};
+use failure::Fallible;
+use parking_lot::Mutex;
 use std::env;
+use std::fs::File;
 use std::io;
+use std::io::{BufWriter, Write};
+use std::ops::DerefMut;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
 use std::time::SystemTime;
+use tracing::{span, Level};
+use tracing_collector::{TracingCollector, TracingData};
 
 /// Run a Rust or Python command.
 ///
@@ -37,37 +46,52 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         }
         Ok(dir) => dir,
     };
-    let table = commands::table();
 
-    let exit_code = match dispatch::dispatch(&table, args[1..].to_vec(), io) {
-        Ok(ret) => ret as i32,
-        Err(err) => {
-            let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
-                true
-            } else if err.downcast_ref::<errors::UnknownCommand>().is_some() {
-                // XXX: Right now the Rust command table does not have all Python
-                // commands. Therefore Rust "UnknownCommand" needs a fallback.
-                //
-                // Ideally the Rust command table has Python command information and
-                // there is no fallback path (ex. all commands are in Rust, and the
-                // Rust implementation might just call into Python cmdutil utilities).
-                true
-            } else {
-                false
-            };
+    let (_tracing_level, tracing_data) = setup_tracing();
+    let span = span!(
+        Level::INFO,
+        "run_command",
+        name = AsRef::<str>::as_ref(&args[1..args.len().min(64)].join(" ")),
+        exitcode = "",
+    );
 
-            if !should_fallback {
-                errors::print_error(&err, io);
-                return 255;
+    let exit_code = span.in_scope(|| {
+        let table = commands::table();
+
+        match dispatch::dispatch(&table, args[1..].to_vec(), io) {
+            Ok(ret) => ret as i32,
+            Err(err) => {
+                let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
+                    true
+                } else if err.downcast_ref::<errors::UnknownCommand>().is_some() {
+                    // XXX: Right now the Rust command table does not have all Python
+                    // commands. Therefore Rust "UnknownCommand" needs a fallback.
+                    //
+                    // Ideally the Rust command table has Python command information and
+                    // there is no fallback path (ex. all commands are in Rust, and the
+                    // Rust implementation might just call into Python cmdutil utilities).
+                    true
+                } else {
+                    false
+                };
+
+                if !should_fallback {
+                    errors::print_error(&err, io);
+                    return 255;
+                }
+
+                // Change the current dir back to the original so it is not surprising to the Python
+                // code.
+                let _ = env::set_current_dir(cwd);
+
+                HgPython::new(args.clone()).run_hg(args, io)
             }
-
-            // Change the current dir back to the original so it is not surprising to the Python
-            // code.
-            let _ = env::set_current_dir(cwd);
-
-            HgPython::new(args.clone()).run_hg(args, io)
         }
-    };
+    });
+
+    span.record("exitcode", &exit_code);
+
+    let _ = maybe_write_trace(io, &tracing_data);
 
     log_end(exit_code as u8, now);
 
@@ -100,6 +124,110 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
         }
     }
     result
+}
+
+fn setup_tracing() -> (Level, Arc<Mutex<TracingData>>) {
+    // Setup TracingData singleton (currently owned by pytracing).
+    {
+        let mut data = pytracing::DATA.lock();
+        // Only recreate TracingData if pid has changed (ex. chgserver's case
+        // where it forks and runs commands - we want to log to different
+        // blackbox trace events).  This makes it possible to use multiple
+        // `run()`s in a single process
+        if data.process_id() != unsafe { libc::getpid() } as u64 {
+            *data.deref_mut() = TracingData::new();
+        }
+    }
+    let data = pytracing::DATA.clone();
+
+    let level = std::env::var("EDENSCM_TRACE_LEVEL")
+        .ok()
+        .and_then(|s| Level::from_str(&s).ok())
+        .unwrap_or(Level::INFO);
+    let collector = TracingCollector::new(data.clone(), level.clone());
+    let _ = tracing::subscriber::set_global_default(collector);
+
+    (level, data)
+}
+
+fn maybe_write_trace(
+    io: &mut clidispatch::io::IO,
+    tracing_data: &Arc<Mutex<TracingData>>,
+) -> Fallible<()> {
+    // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
+    // to access the data is via the blackbox interface.
+    // Write ASCII or TraceEvent JSON (or gzipped JSON) to the specified path.
+    if let Ok(path) = std::env::var("EDENSCM_TRACE_OUTPUT") {
+        // A hardcoded minimal duration (in microseconds).
+        let data = tracing_data.lock();
+        match write_trace(io, &path, &data) {
+            Ok(_) => io.write_err(format!("(Trace was written to {})\n", &path))?,
+            Err(err) => {
+                io.write_err(format!("(Failed to write Trace to {}: {})\n", &path, &err))?
+            }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn write_trace(
+    io: &mut clidispatch::io::IO,
+    path: &str,
+    data: &TracingData,
+) -> Fallible<()> {
+    enum Format {
+        ASCII,
+        TraceEventJSON,
+        TraceEventGzip,
+        SpansJSON,
+    }
+
+    let format = if path.ends_with(".txt") {
+        Format::ASCII
+    } else if path.ends_with("spans.json") {
+        Format::SpansJSON
+    } else if path.ends_with(".json") {
+        Format::TraceEventJSON
+    } else if path.ends_with(".gz") {
+        Format::TraceEventGzip
+    } else {
+        Format::ASCII
+    };
+
+    let mut out: Box<dyn Write> = if path == "-" || path.is_empty() {
+        Box::new(&mut io.output)
+    } else {
+        Box::new(BufWriter::new(File::create(&path)?))
+    };
+
+    match format {
+        Format::ASCII => {
+            let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
+            ascii_opts.min_duration_parent_percentage_to_show = 80;
+            ascii_opts.min_duration_micros_to_hide = 60000;
+            out.write_all(data.ascii(&ascii_opts).as_bytes())?;
+            out.flush()?;
+        }
+        Format::SpansJSON => {
+            let spans = data.tree_spans();
+            blackbox::serde_json::to_writer(&mut out, &spans)?;
+            out.flush()?;
+        }
+        Format::TraceEventGzip => {
+            let mut out = Box::new(flate2::write::GzEncoder::new(
+                out,
+                flate2::Compression::new(6), // 6 is the default value
+            ));
+            data.write_trace_event_json(&mut out, Default::default())?;
+            out.finish()?.flush()?;
+        }
+        Format::TraceEventJSON => {
+            data.write_trace_event_json(&mut out, Default::default())?;
+            out.flush()?;
+        }
+    }
+
+    Ok(())
 }
 
 fn log_start(args: Vec<String>) {

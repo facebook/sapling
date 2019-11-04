@@ -17,9 +17,14 @@ cpython-ext = { path = "../cpython-ext" }
 edenapi = { path = "../edenapi" }
 failure = "0.1"
 indexedlog = { path = "../indexedlog" }
+flate2 = "1"
 libc = "0.2"
+parking_lot = "0.9"
 procinfo = { path = "../procinfo"}
+pytracing = { path = "../../edenscmnative/bindings/modules/pytracing" }
 revisionstore = { path = "../revisionstore"}
+tracing = "0.1"
+tracing-collector = { path = "../tracing-collector" }
 types = { path = "../types" }
 util = { path = "../util" }
 

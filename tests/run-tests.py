@@ -1503,6 +1503,7 @@ class Test(unittest.TestCase):
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
             + "NO_PROXY CHGDEBUG HGDETECTRACE"
+            + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
         ).split():
             if k in env:
                 del env[k]
