@@ -266,7 +266,7 @@ pub enum Event {
 
         /// Optional free-form extra metadata about the result.
         #[serde(
-            rename = "R",
+            rename = "RR",
             alias = "result",
             default,
             skip_serializing_if = "is_default"
@@ -733,8 +733,8 @@ mod tests {
         );
 
         assert_eq!(
-            v(r#"{"network":{"op":"http_getfiles","calls":3}}"#),
-            "{\"network\":{\"calls\":3,\"op\":\"http_getfiles\"}}"
+            v(r#"{"network":{"op":"http_getfiles","calls":3, "result": 123, "read_bytes": 456}}"#),
+            "{\"network\":{\"calls\":3,\"op\":\"http_getfiles\",\"read_bytes\":456,\"result\":123}}"
         );
     }
 
