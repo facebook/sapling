@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobsync::copy_content;
+use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use failure::{err_msg, Error, Fail};
@@ -214,11 +215,13 @@ pub enum CommitSyncRepos {
         large_repo: BlobRepo,
         small_repo: BlobRepo,
         mover: Mover,
+        bookmark_renamer: BookmarkRenamer,
     },
     SmallToLarge {
         small_repo: BlobRepo,
         large_repo: BlobRepo,
         mover: Mover,
+        bookmark_renamer: BookmarkRenamer,
     },
 }
 
@@ -251,6 +254,10 @@ where
 
     pub fn get_mover(&self) -> &Mover {
         self.repos.get_mover()
+    }
+
+    pub fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
+        self.repos.get_bookmark_renamer()
     }
 
     pub fn get_commit_sync_outcome_compat(
@@ -555,11 +562,13 @@ where
                 large_repo,
                 small_repo,
                 mover,
+                bookmark_renamer: _,
             } => (large_repo, small_repo, mover),
             CommitSyncRepos::SmallToLarge {
                 small_repo,
                 large_repo,
                 mover,
+                bookmark_renamer: _,
             } => (small_repo, large_repo, mover),
         }
     }
@@ -576,11 +585,13 @@ where
                 large_repo,
                 small_repo,
                 mover: _,
+                bookmark_renamer: _,
             } => (large_repo, small_repo, true),
             CommitSyncRepos::SmallToLarge {
                 small_repo,
                 large_repo,
                 mover: _,
+                bookmark_renamer: _,
             } => (small_repo, large_repo, false),
         };
 
@@ -635,11 +646,13 @@ impl CommitSyncRepos {
                 large_repo,
                 small_repo: _,
                 mover: _,
+                bookmark_renamer: _,
             } => large_repo,
             CommitSyncRepos::SmallToLarge {
                 large_repo: _,
                 small_repo,
                 mover: _,
+                bookmark_renamer: _,
             } => small_repo,
         }
     }
@@ -650,11 +663,13 @@ impl CommitSyncRepos {
                 large_repo: _,
                 small_repo,
                 mover: _,
+                bookmark_renamer: _,
             } => small_repo,
             CommitSyncRepos::SmallToLarge {
                 large_repo,
                 small_repo: _,
                 mover: _,
+                bookmark_renamer: _,
             } => large_repo,
         }
     }
@@ -665,12 +680,31 @@ impl CommitSyncRepos {
                 large_repo: _,
                 small_repo: _,
                 mover,
+                bookmark_renamer: _,
             } => mover,
             CommitSyncRepos::SmallToLarge {
                 large_repo: _,
                 small_repo: _,
                 mover,
+                bookmark_renamer: _,
             } => mover,
+        }
+    }
+
+    pub(crate) fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
+        match self {
+            CommitSyncRepos::LargeToSmall {
+                large_repo: _,
+                small_repo: _,
+                mover: _,
+                bookmark_renamer,
+            } => bookmark_renamer,
+            CommitSyncRepos::SmallToLarge {
+                large_repo: _,
+                small_repo: _,
+                mover: _,
+                bookmark_renamer,
+            } => bookmark_renamer,
         }
     }
 }
@@ -756,11 +790,13 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
             large_repo,
             small_repo,
             mover: _,
+            bookmark_renamer: _,
         } => (large_repo, small_repo, true),
         CommitSyncRepos::SmallToLarge {
             small_repo,
             large_repo,
             mover: _,
+            bookmark_renamer: _,
         } => (small_repo, large_repo, false),
     };
 
@@ -793,11 +829,13 @@ pub async fn sync_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
             large_repo,
             small_repo,
             mover,
+            bookmark_renamer: _,
         } => (large_repo, small_repo, mover),
         CommitSyncRepos::SmallToLarge {
             small_repo,
             large_repo,
             mover,
+            bookmark_renamer: _,
         } => (small_repo, large_repo, mover),
     };
 

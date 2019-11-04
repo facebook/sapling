@@ -12,11 +12,11 @@ use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use crate::unbundle::{run_hooks, run_post_resolve_action};
 
 use blobrepo::BlobRepo;
-use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
+use cross_repo_sync::CommitSyncer;
 use failure::{err_msg, format_err};
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
@@ -43,7 +43,6 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::{RepoReadOnly, WireprotoLoggingConfig};
-use movers::Mover;
 use rand::{self, Rng};
 use remotefilelog::{
     create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
@@ -62,6 +61,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use streaming_clone::RevlogStreamingChunks;
+use synced_commit_mapping::SyncedCommitMapping;
 use time_ext::DurationExt;
 use tokio::timer::timeout::Error as TimeoutError;
 use tokio::util::FutureExt as TokioFutureExt;
@@ -215,18 +215,10 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
 pub struct RepoSyncTarget {
     // target (large) repo to sync into
     pub repo: MononokeRepo,
-    // a function to apply to paths when syncing commits
-    // in small-to-large direction
-    pub small_to_large_mover: Mover,
-    // a function to apply to paths when syncing commits
-    // in large-to-small direction
-    pub large_to_small_mover: Mover,
-    // a function to apply to bookmark names when syncing
-    // commits in small-to-large direction.
-    pub small_to_large_renamer: BookmarkRenamer,
-    // a function to apply to bookmark names when syncing
-    // commits in large-to-small direction.
-    pub large_to_small_renamer: BookmarkRenamer,
+    // `CommitSyncer` struct to do push redirecion
+    pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
+    // `CommitSyncer` struct for the backsyncer
+    pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
 }
 
 #[derive(Clone)]
