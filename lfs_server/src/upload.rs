@@ -16,7 +16,7 @@ use futures_preview::{
 use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use hyper::{Body, Chunk, Request};
+use hyper::{Body, Request};
 use serde::Deserialize;
 use stats::{define_stats, Histogram, Timeseries};
 use std::collections::HashMap;
@@ -149,6 +149,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
+    STATS::size_bytes.add_value(size as i64);
 
     if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
         scuba.add("upload_size", size);
@@ -167,7 +168,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         .map_err(|()| ErrorKind::ClientCancelled)
         .err_into();
 
-    let internal_upload = (async || {
+    let internal_upload = async {
         STATS::internal_uploads.add_value(1);
 
         let res = ctx
@@ -187,13 +188,19 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         }
 
         res
-    })();
+    };
 
     let upstream_upload = upstream_upload(&ctx, oid, size, upstream_recv);
 
+    let mut received: usize = 0;
+
     let mut data = Body::take_from(state)
         .compat()
-        .map_ok(Chunk::into_bytes)
+        .map_ok(|chunk| {
+            let bytes = chunk.into_bytes();
+            received += bytes.len();
+            bytes
+        })
         .map_err(|_| ());
 
     // Note: this closure simply creates a single future that sends all data then closes the sink.
@@ -201,7 +208,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     // concurrently for the upload to succeed (if the destinations aren't making progress, we'll
     // deadlock, if the source isn't making progress, we'll deadlock too, and if the sink doesn't
     // close, we'll never finish the uploads).
-    let consume_stream = (async move || {
+    let consume_stream = async {
         sink.send_all(&mut data)
             .await
             .map_err(|_| ErrorKind::ClientCancelled)
@@ -210,10 +217,13 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         sink.close().await?;
 
         Ok(())
-    })();
+    };
 
-    try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500)?;
-    STATS::size_bytes.add_value(size as i64);
+    let res = try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500);
 
-    Ok(EmptyBody::new())
+    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
+        scuba.add("upload_bytes_received", received);
+    }
+
+    res.map(|_| EmptyBody::new())
 }
