@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io;
 use std::ops::DerefMut;
+use std::sync::atomic::{self, AtomicU64};
 
 /// Collected tracing data.
 ///
@@ -45,6 +46,10 @@ pub struct TracingData {
     /// Relative start time (so other timestamps can use relative form).
     #[serde(skip, default = "std::time::Instant::now")]
     relative_start: std::time::Instant,
+
+    /// The first [`EspanId`] that maps to `espans[0]`.
+    /// This is useful as a sanity check about valid [`EspanId`]s.
+    espan_id_offset: EspanId,
 
     /// For testing purpose.
     /// - 0: Use real clock.
@@ -145,6 +150,7 @@ impl TracingData {
             strings: Default::default(),
             espans: Default::default(),
             eventus: Default::default(),
+            espan_id_offset: next_espan_id_offset(),
             test_clock_step: match std::env::var("TRACING_DATA_FAKE_CLOCK") {
                 Ok(clock) => clock.parse::<u64>().unwrap_or(0),
                 Err(_) => 0,
@@ -153,7 +159,13 @@ impl TracingData {
     }
 
     /// Push an `Eventus` at the current timestamp.
-    fn push_eventus(&mut self, action: Action, espan_id: EspanId) {
+    /// Return `true` if the [`Eventus`] was pushed.
+    /// Return `false` if `espan_id` is invalid.
+    fn push_eventus(&mut self, action: Action, espan_id: EspanId) -> bool {
+        if self.get_espan_index(espan_id).is_none() {
+            // Ignore invalid EspanId.
+            return false;
+        }
         let timestamp = self.now_micros();
         let mut thread_id = THREAD_ID.with(|thread_id| *thread_id);
         if thread_id == self.default_thread_id {
@@ -166,7 +178,8 @@ impl TracingData {
             process_id: 0, // special value: use `self.process_id`.
             thread_id,
         };
-        self.eventus.push(eventus)
+        self.eventus.push(eventus);
+        true
     }
 
     /// Get the current relative time, in microseconds.
@@ -183,6 +196,38 @@ impl TracingData {
             )
         }
     }
+
+    /// Fetch a `Espan`. Does some minimal `EspanId` validation.
+    /// Return `None` if the `Espan` is unknown to this [`TracingData`].
+    fn get_espan(&self, id: EspanId) -> Option<&Espan> {
+        if id < self.espan_id_offset {
+            None
+        } else {
+            self.espans.get((id.0 - self.espan_id_offset.0) as usize)
+        }
+    }
+
+    /// Similar to `get_espan`. But returns an index of `espans` instead.
+    /// This is useful for mutating both `self.espans` and `self.strings`
+    /// (returning `&mut Espan` from `&mut self` prevents modifications
+    /// to `self.strings`).
+    fn get_espan_index(&self, id: EspanId) -> Option<usize> {
+        if id < self.espan_id_offset || id.0 > self.espan_id_offset.0 + self.espans.len() as u64 {
+            None
+        } else {
+            Some((id.0 - self.espan_id_offset.0) as usize)
+        }
+    }
+}
+
+/// Used for new TracingData
+static PROCESS_ESPAN_ID_FIRST: AtomicU64 = AtomicU64::new(0);
+
+/// Next `espan_id_offset` that can be used in new [`TracingData`].
+fn next_espan_id_offset() -> EspanId {
+    let reserved_spans = 1 << 24;
+    let id = PROCESS_ESPAN_ID_FIRST.fetch_add(reserved_spans, atomic::Ordering::SeqCst);
+    EspanId(id)
 }
 
 thread_local! {
@@ -227,9 +272,11 @@ impl TracingData {
     /// Matches `tracing::Subscriber::record`.
     pub fn record(&mut self, id: &tracing::span::Id, values: &tracing::span::Record) {
         let id: EspanId = id.clone().into();
-        let meta = &mut self.espans[id.0 as usize].meta;
-        let mut visitor = FieldVisitor::new(&mut self.strings, meta);
-        values.record(&mut visitor)
+        if let Some(espan_index) = self.get_espan_index(id) {
+            let meta = &mut self.espans[espan_index].meta;
+            let mut visitor = FieldVisitor::new(&mut self.strings, meta);
+            values.record(&mut visitor)
+        }
     }
 
     /// Matches `tracing::Subscriber::record_follows_from`.
@@ -266,9 +313,23 @@ impl TracingData {
 
         let espan = Espan { meta };
 
-        let result = EspanId(self.espans.len() as u64);
+        let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
         result.into()
+    }
+
+    /// Rewrite `moudle_path` and `line` information so they stay stable
+    /// across tests.
+    #[cfg(test)]
+    pub(crate) fn fixup_module_lines_for_tests(&mut self) {
+        // buck tests can change the crate name to "<crate>_unittest"
+        let module_path = self.strings.id("<mod>");
+        let line = self.strings.id("<line>");
+        for espan in self.espans.iter_mut() {
+            let meta = &mut espan.meta;
+            meta.insert(self.strings.id("module_path"), module_path);
+            meta.insert(self.strings.id("line"), line);
+        }
     }
 }
 
@@ -419,7 +480,7 @@ impl TracingData {
         reuse_espan_id: Option<EspanId>,
     ) -> EspanId {
         if let Some(reuse_espan_id) = reuse_espan_id {
-            if let Some(orig_espan) = self.espans.get(reuse_espan_id.0 as usize) {
+            if let Some(orig_espan) = self.get_espan(reuse_espan_id) {
                 if orig_espan
                     .meta
                     .iter()
@@ -444,7 +505,7 @@ impl TracingData {
 
         let espan = Espan { meta };
 
-        let result = EspanId(self.espans.len() as u64);
+        let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
         result.into()
     }
@@ -455,7 +516,8 @@ impl TracingData {
         id: EspanId,
         key_values: impl IntoIterator<Item = (S1, S2)>,
     ) {
-        if let Some(espan) = self.espans.get_mut(id.0 as usize) {
+        if let Some(espan_index) = self.get_espan_index(id) {
+            let espan = &mut self.espans[espan_index];
             for (key, value) in key_values {
                 espan.meta.insert(
                     self.strings.id(key.to_string()),
@@ -466,8 +528,8 @@ impl TracingData {
     }
 
     /// Record a new "Action" about an [`EspanId`].
-    pub fn add_action(&mut self, espan_id: EspanId, action: Action) {
-        self.push_eventus(action, espan_id);
+    pub fn add_action(&mut self, espan_id: EspanId, action: Action) -> bool {
+        self.push_eventus(action, espan_id)
     }
 
     /// Mark `new_span_id` as following `old_span_id`.
@@ -493,9 +555,10 @@ impl TracingData {
         let mut strings = InternedStrings::default();
         let mut espans = Vec::with_capacity(list.iter().map(|t| t.espans.len()).sum());
         let mut eventus = Vec::with_capacity(list.iter().map(|t| t.eventus.len()).sum());
+        let espan_id_offset = next_espan_id_offset();
 
         for data in list {
-            let espan_offset = espans.len() as u64;
+            let espan_offset = espans.len() as u64 + espan_id_offset.0;
             let time_offset = data.start.duration_since(start).unwrap().as_micros() as u64;
 
             // Add Espans (and strings as a side effect)
@@ -523,7 +586,7 @@ impl TracingData {
             {
                 let action = *action;
                 let timestamp = RelativeTime(timestamp.0 + time_offset);
-                let espan_id = EspanId(espan_id.0 + espan_offset);
+                let espan_id = EspanId(espan_id.0 + espan_offset - data.espan_id_offset.0);
                 let process_id = match *process_id {
                     0 => data.default_process_id,
                     v => v,
@@ -550,6 +613,7 @@ impl TracingData {
             strings,
             espans,
             eventus,
+            espan_id_offset,
             default_process_id,
             default_thread_id,
             relative_start,
@@ -633,7 +697,8 @@ impl TracingData {
 
         // Calculate JSON objects in a streaming way to reduce memory usage.
         let trace_event_iter = self.eventus.iter().map(|eventus| {
-            let espan = &self.espans[eventus.espan_id.0 as usize];
+            // EspanId recorded in eventus should be verified.
+            let espan = self.get_espan(eventus.espan_id).unwrap();
             let ph = match eventus.action {
                 Action::Event => "i",     // Instant Event
                 Action::EnterSpan => "B", // Duration Event: Begin
@@ -1057,17 +1122,19 @@ impl TracingData {
 
                 // Otherwise, attempt to merge the child span.
                 if let Some(espan_id) = ctx.tree_spans[child_id].espan_id {
-                    let espan = &ctx.this.espans[espan_id.0 as usize];
-                    let meta: Vec<(StringId, StringId)> =
-                        espan.meta.iter().map(|(&k, &v)| (k, v)).collect();
-                    let existing_child_id: TreeSpanId = *meta_to_id.entry(meta).or_insert(child_id);
-                    if existing_child_id != child_id {
-                        let duration = ctx.tree_spans[child_id].duration;
-                        assert_eq!(ctx.tree_spans[child_id].call_count, 1);
-                        ctx.tree_spans[child_id].call_count -= 1;
-                        let mut merged = &mut ctx.tree_spans[existing_child_id];
-                        merged.call_count += 1;
-                        merged.duration += duration;
+                    if let Some(espan) = ctx.this.get_espan(espan_id) {
+                        let meta: Vec<(StringId, StringId)> =
+                            espan.meta.iter().map(|(&k, &v)| (k, v)).collect();
+                        let existing_child_id: TreeSpanId =
+                            *meta_to_id.entry(meta).or_insert(child_id);
+                        if existing_child_id != child_id {
+                            let duration = ctx.tree_spans[child_id].duration;
+                            assert_eq!(ctx.tree_spans[child_id].call_count, 1);
+                            ctx.tree_spans[child_id].call_count -= 1;
+                            let mut merged = &mut ctx.tree_spans[existing_child_id];
+                            merged.call_count += 1;
+                            merged.duration += duration;
+                        }
                     }
                 }
             }
@@ -1111,7 +1178,10 @@ impl TracingData {
             if let Some(espan_id) = tree_span.espan_id {
                 let this = ctx.this;
                 let strings = &this.strings;
-                let espan = &ctx.this.espans[espan_id.0 as usize];
+                let espan = match ctx.this.get_espan(espan_id) {
+                    Some(espan) => espan,
+                    None => return,
+                };
                 let name = extract(ctx, espan, "name");
                 let source_location = {
                     let module_path = extract(ctx, espan, "module_path");
@@ -1486,4 +1556,20 @@ Start Dur.ms | Name               Source
         );
     }
 
+    #[test]
+    fn test_invalid_espan_ids() {
+        let mut data1 = TracingData::new_for_test();
+        let span_id1 = data1.add_espan(&meta("foo", "a.py", "10"), None);
+
+        let mut data2 = TracingData::new_for_test();
+        let span_id2 = data2.add_espan(&meta("foo", "a.py", "10"), None);
+
+        assert_ne!(span_id1, span_id2);
+
+        // Mixing EspanIds with incompatible TracingData is detected and ignored.
+        assert!(!data1.add_action(span_id2, Action::EnterSpan));
+        assert!(!data2.add_action(span_id1, Action::EnterSpan));
+        assert_eq!(data1.ascii(&Default::default()), "");
+        assert_eq!(data2.ascii(&Default::default()), "");
+    }
 }

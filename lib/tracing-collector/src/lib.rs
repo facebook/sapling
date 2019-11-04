@@ -93,14 +93,8 @@ mod tests {
         tracing::subscriber::with_default(collector, || fib(5));
 
         let mut data = data.lock();
-        // Replace line numbers so the test is more stable.
-        // Also rewrite module name, since the buck test mangles crate name too.
-        for id in 0..20 {
-            data.edit_espan(
-                crate::model::EspanId(id),
-                vec![("line", "<line>"), ("module_path", "<mod>")],
-            );
-        }
+        data.fixup_module_lines_for_tests();
+
         assert_eq!(
             data.ascii(&Default::default()),
             r#"Process _ Thread _:
@@ -148,12 +142,7 @@ Start Dur.ms | Name               Source
             tracing::subscriber::with_default(collector, || fib(2));
         });
         thread.join().unwrap();
-        for id in 0..20 {
-            data.lock().edit_espan(
-                crate::model::EspanId(id),
-                vec![("line", "<line>"), ("module_path", "<mod>")],
-            );
-        }
+        data.lock().fixup_module_lines_for_tests();
 
         assert_eq!(
             data.lock().ascii(&Default::default()),
