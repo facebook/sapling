@@ -35,6 +35,7 @@ alias expansion is logged
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
+  [tracing] (binary data of * bytes) (glob)
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
   [legacy][env_vars]
@@ -56,6 +57,7 @@ recursive aliases work correctly
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
+  [tracing] (binary data of * bytes) (glob)
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
   [legacy][env_vars]

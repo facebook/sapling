@@ -13,11 +13,12 @@ use std::env;
 use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
+use tracing::dispatcher::{self, Dispatch};
 use tracing::{span, Level};
 use tracing_collector::{TracingCollector, TracingData};
 
@@ -93,7 +94,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     let _ = maybe_write_trace(io, &tracing_data);
 
-    log_end(exit_code as u8, now);
+    log_end(exit_code as u8, now, tracing_data);
 
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
@@ -275,7 +276,7 @@ fn log_start(args: Vec<String>) {
     });
 }
 
-fn log_end(exit_code: u8, now: SystemTime) {
+fn log_end(exit_code: u8, now: SystemTime, tracing_data: Arc<Mutex<TracingData>>) {
     let inside_test = is_inside_test();
     let duration_ms = if inside_test {
         0
@@ -295,6 +296,26 @@ fn log_end(exit_code: u8, now: SystemTime) {
         exit_code,
         max_rss,
         duration_ms,
+    });
+
+    // Stop sending tracing events to subscribers. This prevents
+    // deadlock in this scope.
+    dispatcher::with_default(&Dispatch::none(), || {
+        // Log tracing data.
+        if let Ok(serialized_trace) = {
+            let data = tracing_data.lock();
+            // Note: if mincode::serialize wants to mutate tracing_data here,
+            // it can deadlock if the dispatcher is not Dispatch::none().
+            mincode::serialize(&data.deref())
+        } {
+            if let Ok(compressed) = zstd::stream::encode_all(&serialized_trace[..], 0) {
+                let event = blackbox::event::Event::TracingData {
+                    serialized: blackbox::event::Binary(compressed),
+                };
+                blackbox::log(&event);
+            }
+        }
+        blackbox::sync();
     });
 }
 

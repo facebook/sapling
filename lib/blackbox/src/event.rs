@@ -361,6 +361,12 @@ pub enum Event {
         args: Vec<String>,
     },
 
+    #[serde(rename = "TD", alias = "tracing_data")]
+    TracingData {
+        #[serde(rename = "S", alias = "serialized")]
+        serialized: Binary,
+    },
+
     /// A watchman command has finished.
     #[serde(rename = "W", alias = "watchman")]
     Watchman {
@@ -380,6 +386,11 @@ pub enum Event {
         result: Option<Value>,
     },
 }
+
+/// A simple wrapper to (potentially long) `Vec<u8>` that has a simple `Debug` implementation.
+#[serde_alt]
+#[derive(Serialize, Deserialize, Default, PartialEq)]
+pub struct Binary(pub Vec<u8>);
 
 /// A truncated (file) list.
 #[serde_alt]
@@ -500,6 +511,13 @@ impl ToValue for Event {
         // human-friendly version.
         let event_alt: EventAlt = serde_json::from_value(value).unwrap();
         serde_json::to_value(&event_alt).unwrap()
+    }
+}
+
+#[serde_alt]
+impl fmt::Debug for Binary {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<binary data ({} bytes)>", self.0.len())
     }
 }
 
@@ -675,6 +693,9 @@ impl fmt::Display for Event {
                 write!(f, " (this process)")?;
             }
             Profile { msg } => write!(f, "[profile] {}", msg)?,
+            TracingData { serialized } => {
+                write!(f, "[tracing] (binary data of {} bytes)", serialized.0.len())?
+            }
             Watchman {
                 args,
                 duration_ms,
