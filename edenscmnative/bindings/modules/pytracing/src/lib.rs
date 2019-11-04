@@ -28,8 +28,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<meta>(py)?;
     m.add_class::<wrapfunc>(py)?;
     m.add_class::<wrapiter>(py)?;
+    m.add(py, "isheaptype", py_fn!(py, is_heap_type(obj: PyType)))?;
+
     impl_getsetattr::<wrapfunc>(py);
     impl_getsetattr::<wrapiter>(py);
+
     let singleton = tracingdata::create_instance(py, DATA.clone())?;
     m.add(py, "singleton", singleton)?;
     Ok(m)
@@ -422,6 +425,22 @@ impl wrapiter {
         let name = format!("{}.next", tostr(py, getattr(py, &obj, "__name__")));
         Self::create_instance(py, obj, name, Cell::new(EspanId(0)))
     }
+}
+
+/// Test whether a `type` (aka. `class`) object is a heap type or not.
+/// This is not exposed in Python stdlib. But can be useful to check
+/// whether `setattr` is supported or not, which decides whether that
+/// class can be traced or not.
+///
+/// Practically, a heap type is usually defined in Python land using
+/// the `class` keyword. A non-heap type is usually defined using native
+/// languages. A heap type usually has a `__dict__` slot so it can
+/// store attributes and support `setattr`.
+fn is_heap_type(_py: Python, typeobj: PyType) -> PyResult<bool> {
+    use python27_sys as ffi;
+    let type_ptr: *mut ffi::PyTypeObject = typeobj.as_type_ptr();
+    let result = (unsafe { *type_ptr }.tp_flags & ffi::Py_TPFLAGS_HEAPTYPE) != 0;
+    Ok(result)
 }
 
 /// Add T.__get__ and __set__ so it can proxy attributes
