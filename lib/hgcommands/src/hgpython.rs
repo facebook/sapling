@@ -16,6 +16,7 @@ use cpython_ext::{format_py_error, wrap_pyio, Bytes, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::CString;
+use tracing::{debug_span, info_span};
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm";
 pub struct HgPython {
@@ -34,6 +35,8 @@ impl HgPython {
     }
 
     fn setup_python(args: Vec<String>) {
+        let span = info_span!("Initialize Python");
+        let _guard = span.enter();
         let args = Self::args_to_local_cstrings(args);
         let executable_name = args[0].clone();
         py_set_program_name(executable_name);
@@ -77,7 +80,8 @@ impl HgPython {
         io: &mut clidispatch::io::IO,
     ) -> PyResult<()> {
         self.update_python_command_table(py)?;
-        let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
+        let entry_point_mod =
+            info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
         let call_args = {
             let fin = read_to_py_object(py, &io.input);
             let fout = write_to_py_object(py, &io.output);
@@ -94,10 +98,13 @@ impl HgPython {
 
     /// Update the Python command table so it knows commands implemented in Rust.
     fn update_python_command_table(&self, py: Python<'_>) -> PyResult<()> {
-        let table = commands::table();
-        let table_mod = py.import("edenscm.mercurial.commands")?;
-        let py_table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
+        let span = info_span!("update_python_command_table");
+        let _guard = span.enter();
 
+        let table = commands::table();
+        let table_mod =
+            info_span!("import_commands").in_scope(|| py.import("edenscm.mercurial.commands"))?;
+        let py_table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
         for def in table.values() {
             let doc = Bytes::from(def.doc().to_string());
             py_table.set_item(py, def.name(), (doc, def.flags()))?;
@@ -163,7 +170,7 @@ impl HgPython {
 impl Drop for HgPython {
     fn drop(&mut self) {
         if self.py_initialized_by_us {
-            py_finalize();
+            info_span!("Finalize Python").in_scope(|| py_finalize())
         }
     }
 }
@@ -238,6 +245,9 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
 /// Python extension, because `blackbox` will be compiled separately, and
 /// the global instance might be different.
 fn prepare_builtin_modules(py: Python<'_>) -> PyResult<()> {
+    let span = debug_span!("Initialize bindings");
+    let _guard = span.enter();
+
     let name = "bindings";
     let bindings_module = PyModule::new(py, &name)?;
 
