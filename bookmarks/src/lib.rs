@@ -442,6 +442,10 @@ pub enum BookmarkUpdateReason {
     TestMove {
         bundle_replay_data: Option<BundleReplayData>,
     },
+    /// Used during sync from a large repo into small repo.
+    Backsyncer {
+        bundle_replay_data: Option<BundleReplayData>,
+    },
 }
 
 impl std::fmt::Display for BookmarkUpdateReason {
@@ -454,6 +458,7 @@ impl std::fmt::Display for BookmarkUpdateReason {
             Blobimport => "blobimport",
             ManualMove => "manualmove",
             TestMove { .. } => "testmove",
+            Backsyncer { .. } => "backsyncer",
         };
         write!(f, "{}", s)
     }
@@ -475,6 +480,7 @@ impl BookmarkUpdateReason {
                 None => Ok(self),
             },
             TestMove { .. } => Ok(TestMove { bundle_replay_data }),
+            Backsyncer { .. } => Ok(Backsyncer { bundle_replay_data }),
         }
     }
 
@@ -488,6 +494,9 @@ impl BookmarkUpdateReason {
                 ref bundle_replay_data,
             }
             | TestMove {
+                ref bundle_replay_data,
+            }
+            | Backsyncer {
                 ref bundle_replay_data,
             } => bundle_replay_data.as_ref(),
             Blobimport | ManualMove => None,
@@ -534,6 +543,7 @@ impl From<BookmarkUpdateReason> for Value {
             BookmarkUpdateReason::Blobimport { .. } => Value::Bytes(b"blobimport".to_vec()),
             BookmarkUpdateReason::ManualMove { .. } => Value::Bytes(b"manualmove".to_vec()),
             BookmarkUpdateReason::TestMove { .. } => Value::Bytes(b"testmove".to_vec()),
+            BookmarkUpdateReason::Backsyncer { .. } => Value::Bytes(b"backsyncer".to_vec()),
         }
     }
 }
