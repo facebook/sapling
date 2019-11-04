@@ -786,7 +786,16 @@ where
 pub struct AsciiOptions {
     /// Hide a "Duration Span" if a span takes less than the specified
     /// microseconds.
-    pub min_duration_micros: u64,
+    pub min_duration_micros_to_hide: u64,
+
+    /// Hide a "Duration Span" if it is less than the specified
+    /// percentage of the parent's duration.
+    pub min_duration_parent_percentage_to_hide: u8,
+
+    /// Show a "Duration Span" if it was hidden by the above rules
+    /// but it is more than the specified percentage of the parent's
+    /// duration. Not effective if it's 0.
+    pub min_duration_parent_percentage_to_show: u8,
 
     // Prevent constructing this struct using fields so more fields
     // can be added later.
@@ -821,8 +830,37 @@ impl TreeSpan {
     }
 
     /// Is this span considered interesting (should it be printed)?
-    fn is_interesting(&self, opts: &AsciiOptions) -> bool {
-        self.call_count > 0 && self.duration >= opts.min_duration_micros
+    fn is_interesting(&self, opts: &AsciiOptions, parent: Option<&TreeSpan>) -> bool {
+        if self.call_count == 0 {
+            return false;
+        }
+
+        if let Some(parent) = parent {
+            // Special case: Parent is root (which does not have a duration). Show the span.
+            if parent.espan_id.is_none() {
+                return true;
+            }
+
+            // "to_show" conditions
+            if opts.min_duration_parent_percentage_to_show != 0 && parent.is_interesting(opts, None)
+            {
+                if self.duration
+                    >= (parent.duration * opts.min_duration_parent_percentage_to_show as u64) / 100
+                {
+                    return true;
+                }
+            }
+
+            // "to_hide" conditions
+            if self.duration
+                < (parent.duration * opts.min_duration_parent_percentage_to_hide as u64) / 100
+            {
+                return false;
+            }
+        }
+
+        // "to_hide" conditions
+        self.duration >= opts.min_duration_micros_to_hide
     }
 
     /// A very long, impractical `duration` that indicates an incomplete span
@@ -1124,11 +1162,10 @@ impl TracingData {
                 // Do not try to merge this child span if itself, or any of the
                 // grand children is interesting. But some of the grand children
                 // might be merged. So go visit them.
-                if ctx.tree_spans[child_id].is_interesting(ctx.opts) || {
-                    ctx.tree_spans[child_id]
-                        .children
-                        .iter()
-                        .any(|&id| ctx.tree_spans[id].is_interesting(ctx.opts))
+                if ctx.tree_spans[child_id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id])) || {
+                    ctx.tree_spans[child_id].children.iter().any(|&id| {
+                        ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[child_id]))
+                    })
                 } {
                     visit(ctx, child_id);
                     continue;
@@ -1284,7 +1321,9 @@ impl TracingData {
                 .children
                 .iter()
                 .cloned()
-                .filter(|&id| ctx.tree_spans[id].is_interesting(ctx.opts))
+                .filter(|&id| {
+                    ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id]))
+                })
                 .collect();
 
             // Preserve a straight line if there is only one child:
@@ -1569,7 +1608,7 @@ Start Dur.ms | Name               Source
         );
 
         let mut opts = AsciiOptions::default();
-        opts.min_duration_micros = 4000;
+        opts.min_duration_micros_to_hide = 4000;
         assert_eq!(
             data.ascii(&opts),
             r#"Process _ Thread _:
@@ -1591,7 +1630,7 @@ Start Dur.ms | Name               Source
         let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
         let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
         let mut opts = AsciiOptions::default();
-        opts.min_duration_micros = 3000;
+        opts.min_duration_micros_to_hide = 3000;
 
         data.add_action(span_id1, Action::EnterSpan);
         // Those spans should be merged.
