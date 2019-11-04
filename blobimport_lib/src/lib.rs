@@ -11,7 +11,6 @@
 mod bookmark;
 mod changeset;
 mod concurrency;
-mod globalrev;
 
 use std::cmp;
 use std::collections::HashMap;
@@ -26,14 +25,13 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::{upload_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use phases::Phases;
 
 use crate::changeset::UploadChangesets;
-use crate::globalrev::upload_globalrevs;
 
 // What to do with bookmarks when blobimporting a repo
 pub enum BookmarkImportPolicy {
@@ -147,14 +145,20 @@ impl Blobimport {
         stale_bookmarks
             .join(mononoke_bookmarks.collect())
             .and_then({
-                cloned!(blobrepo);
+                cloned!(blobrepo, ctx);
                 move |(stale_bookmarks, mononoke_bookmarks)| {
                     upload_changesets
                         .chunks(chunk_size)
                         .and_then(move |chunk| {
                             cloned!(blobrepo, globalrevs_store);
                             if has_globalrev {
-                                upload_globalrevs(blobrepo, globalrevs_store, chunk).left_future()
+                                upload_globalrevs(
+                                    ctx.clone(),
+                                    blobrepo.get_repoid(),
+                                    globalrevs_store,
+                                    chunk,
+                                )
+                                .left_future()
                             } else {
                                 future::ok(()).right_future()
                             }

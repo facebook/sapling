@@ -13,13 +13,15 @@ pub use sql_ext::SqlConstructors;
 use std::collections::HashSet;
 
 use cloned::cloned;
+use context::CoreContext;
 use failure_ext as failure;
 use failure_ext::Error;
 use futures::future::Future;
 use futures::{future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::Globalrev;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use slog::warn;
 use sql::queries;
 use std::sync::Arc;
 
@@ -354,4 +356,29 @@ fn select_mapping(
                 .collect()
         })
         .boxify()
+}
+
+pub fn upload_globalrevs(
+    ctx: CoreContext,
+    repo_id: RepositoryId,
+    globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
+    cs_ids: Vec<BonsaiChangeset>,
+) -> BoxFuture<(), Error> {
+    let mut entries = vec![];
+    for bcs in cs_ids {
+        match Globalrev::from_bcs(bcs.clone()) {
+            Ok(globalrev) => {
+                let entry =
+                    BonsaiGlobalrevMappingEntry::new(repo_id, bcs.get_changeset_id(), globalrev);
+                entries.push(entry);
+            }
+            Err(e) => {
+                warn!(
+                    ctx.logger(),
+                    "Couldn't fetch globalrev from commit: {:?}", e
+                );
+            }
+        }
+    }
+    globalrevs_store.add_many(entries).boxify()
 }
