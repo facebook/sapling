@@ -9,9 +9,4 @@ python2 = []
 python3 = []
 
 [dependencies]
-failure = "0.1.3"
-
-[dependencies.cpython]
-version = "0.3"
-default-features = false
-features = ["python27-sys"]
+cpython-ext = { path = "../cpython-ext" }

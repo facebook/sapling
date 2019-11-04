@@ -8,6 +8,7 @@
 mod bytearrayobject;
 mod bytes;
 mod bytesobject;
+pub mod failure;
 mod io;
 mod pybuf;
 mod pyerr;
@@ -15,6 +16,7 @@ mod pyset;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;
+pub use crate::failure::{FallibleExt, PyErr, ResultPyErrExt};
 pub use crate::io::{wrap_pyio, WrappedIO};
 pub use crate::pybuf::SimplePyBuf;
 pub use crate::pyerr::format_py_error;
