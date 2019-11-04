@@ -426,7 +426,7 @@ def annotate(ui, repo, *pats, **opts):
         and not opts.get("file")
     ):
         opts["number"] = True
-    opts["agebucket"] = True
+    opts["age_bucket"] = True
 
     linenumber = opts.get("line_number") is not None
     if linenumber and (not opts.get("changeset")) and (not opts.get("number")):
