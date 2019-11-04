@@ -1509,14 +1509,11 @@ def bundle2pushkey(orig, op, part):
             cl = op.repo.changelog
             revserver = cl.rev(serverbin)
             revclient = cl.rev(bin(clienthex))
-            if revclient in cl.ancestors([revserver]):
+            if revclient in cl.ancestors([revserver]) and new in replacements:
                 # if the client's bookmark origin is an lagging behind the
-                # server's location for that bookmark (usual for pushrebase)
-                # then update the old location to match the real location
-                #
-                # TODO: We would prefer to only do this for pushrebase pushes
-                # but that isn't straightforward so we just do it always here.
-                # This forbids moving bookmarks backwards from clients.
+                # server's location for that bookmark (usual for pushrebase),
+                # and the commit being pushed was indeed pushrebased then update
+                # the old location to match the real location
                 part.params["old"] = pushkey.encode(hex(serverbin))
 
     return orig(op, part)
