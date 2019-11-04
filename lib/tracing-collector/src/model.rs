@@ -729,7 +729,11 @@ type TreeSpanId = usize;
 impl TreeSpan {
     /// Whether the current [`TreeSpan`] covers another [`TreeSpan`] timestamp-wise.
     fn covers(&self, other: &TreeSpan) -> bool {
-        self.end_time() >= other.end_time() && self.start_time <= other.start_time
+        if self.is_incomplete() {
+            self.start_time <= other.start_time
+        } else {
+            self.end_time() >= other.end_time() && self.start_time <= other.start_time
+        }
     }
 
     /// End time (inaccurate if this is a merged span, i.e. call_count > 1).
@@ -740,6 +744,16 @@ impl TreeSpan {
     /// Is this span considered interesting (should it be printed)?
     fn is_interesting(&self, opts: &AsciiOptions) -> bool {
         self.call_count > 0 && self.duration >= opts.min_duration_micros
+    }
+
+    /// A very long, impractical `duration` that indicates an incomplete span
+    /// that has started but not ended.
+    const fn incomplete_duration() -> u64 {
+        1 << 63
+    }
+
+    fn is_incomplete(&self) -> bool {
+        self.duration >= Self::incomplete_duration()
     }
 }
 
@@ -929,46 +943,56 @@ impl TracingData {
                     // Find the matching ExitSpan.
                     // The [`EnterExitMatcher`] should always exist.
                     let matcher = &enter_exit_matchers[&span_id];
-                    if let Some(end_eid) = matcher.find_matched_exit_eid(eid) {
+                    let tree_span = if let Some(end_eid) = matcher.find_matched_exit_eid(eid) {
+                        // `end_eid` points to the matched ExitSpan.
                         let end = eventus_list[end_eid];
                         // `eventus_list` should be sorted in time.
                         // So this is guaranteed.
                         assert!(end_eid >= eid);
                         assert!(end.timestamp >= e.timestamp);
 
-                        // This is the matched ExitSpan!
-                        let tree_span = TreeSpan {
+                        TreeSpan {
                             espan_id: Some(span_id),
                             start_time: e.timestamp.0,
                             duration: end.timestamp.0 - e.timestamp.0,
                             children: Vec::new(),
                             call_count: 1,
-                        };
+                        }
+                    } else {
+                        // No matched ExitSpan. Still create a TreeSpan
+                        // so it shows up.
+                        TreeSpan {
+                            espan_id: Some(span_id),
+                            start_time: e.timestamp.0,
+                            duration: TreeSpan::incomplete_duration(),
+                            children: Vec::new(),
+                            call_count: 1,
+                        }
+                    };
 
-                        // Find a suitable parent span. Pop parent spans
-                        // if this span does not fit in it.
-                        //
-                        // But, always keep the (dummy) root parent span.
-                        let parent_id = loop {
-                            let parent_id = *stack.last().unwrap();
-                            let parent = &tree_spans[parent_id];
-                            if parent.covers(&tree_span) {
-                                break parent_id;
-                            } else if stack.len() == 1 {
-                                // Use the root span as parent.
-                                break 0;
-                            } else {
-                                stack.pop();
-                            }
-                        };
+                    // Find a suitable parent span. Pop parent spans
+                    // if this span does not fit in it.
+                    //
+                    // But, always keep the (dummy) root parent span.
+                    let parent_id = loop {
+                        let parent_id = *stack.last().unwrap();
+                        let parent = &tree_spans[parent_id];
+                        if parent.covers(&tree_span) {
+                            break parent_id;
+                        } else if stack.len() == 1 {
+                            // Use the root span as parent.
+                            break 0;
+                        } else {
+                            stack.pop();
+                        }
+                    };
 
-                        // Record the new TreeSpan and record parent-child
-                        // relationship.
-                        let id = tree_spans.len();
-                        tree_spans.push(tree_span);
-                        stack.push(id);
-                        tree_spans[parent_id].children.push(id);
-                    }
+                    // Record the new TreeSpan and record parent-child
+                    // relationship.
+                    let id = tree_spans.len();
+                    tree_spans.push(tree_span);
+                    stack.push(id);
+                    tree_spans[parent_id].children.push(id);
                 }
                 Action::ExitSpan => {
                     // Handled in EnterSpan. Therefore do nothing here.
@@ -1021,12 +1045,12 @@ impl TracingData {
                 // Do not try to merge this child span if itself, or any of the
                 // grand children is interesting. But some of the grand children
                 // might be merged. So go visit them.
-                if ctx.tree_spans[child_id].is_interesting(ctx.opts)
-                    || ctx.tree_spans[child_id]
+                if ctx.tree_spans[child_id].is_interesting(ctx.opts) || {
+                    ctx.tree_spans[child_id]
                         .children
                         .iter()
                         .any(|&id| ctx.tree_spans[id].is_interesting(ctx.opts))
-                {
+                } {
                     visit(ctx, child_id);
                     continue;
                 }
@@ -1105,9 +1129,13 @@ impl TracingData {
                         format!("{} line {}", module_path, line)
                     }
                 };
-                // Use milliseconds. This is consistent with traceprof.
                 let start = tree_span.start_time / 1000;
-                let duration = tree_span.duration / 1000;
+                let duration = if tree_span.is_incomplete() {
+                    "...".to_string()
+                } else {
+                    // Use milliseconds. This is consistent with traceprof.
+                    format!("+{}", tree_span.duration / 1000)
+                };
                 let call_count = if tree_span.call_count > 1 {
                     format!(" ({} times)", tree_span.call_count)
                 } else {
@@ -1118,7 +1146,7 @@ impl TracingData {
                 let first_row = Row {
                     columns: vec![
                         start.to_string(),
-                        format!("+{}", duration),
+                        duration,
                         format!(
                             "{}{} {}{}",
                             " ".repeat(indent),
@@ -1354,6 +1382,7 @@ Start Dur.ms | Name                         Source
             data.ascii(&Default::default()),
             r#"Process _ Thread _:
 Start Dur.ms | Name               Source
+    2    ... | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -1372,6 +1401,7 @@ Start Dur.ms | Name               Source
             data.ascii(&opts),
             r#"Process _ Thread _:
 Start Dur.ms | Name               Source
+    2    ... | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -1413,6 +1443,44 @@ Start Dur.ms | Name               Source
     4 +20000  \ bar (10000 times) a.py line 20
 40004    +10  \ bar               a.py line 20
 40006     +6   | foo              a.py line 10
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_incomplete_spans() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+
+        data.add_action(span_id1, Action::EnterSpan); // incomplete
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id2, Action::EnterSpan); // incomplete
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id1, Action::EnterSpan); // incomplete
+        data.add_action(span_id1, Action::EnterSpan); // incomplete
+        data.add_action(span_id1, Action::EnterSpan); // incomplete
+
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    2    ... | foo                a.py line 10
+    4     +6  \ foo               a.py line 10
+    6     +2   | bar              a.py line 20
+   12    ...  \ bar               a.py line 20
+   14     +6   \ foo              a.py line 10
+   16     +2    | bar             a.py line 20
+   22    ...   \ foo              a.py line 10
+   24    ...    | foo             a.py line 10
+   26    ...    | foo             a.py line 10
 
 "#
         );
