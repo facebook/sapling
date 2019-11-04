@@ -265,17 +265,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> impl Future<Item = Option<CommitSyncOutcome>, Error = Error> {
-        async fn get_commit_sync_outcome_wrapper<M>(
-            this: CommitSyncer<M>,
-            ctx: CoreContext,
-            source_cs_id: ChangesetId,
-        ) -> Result<Option<CommitSyncOutcome>, Error>
-        where
-            M: SyncedCommitMapping + Clone + 'static,
-        {
-            this.get_commit_sync_outcome(ctx, source_cs_id).await
-        }
-        get_commit_sync_outcome_wrapper(self, ctx, source_cs_id)
+        async move { self.get_commit_sync_outcome(ctx, source_cs_id).await }
             .boxed()
             .compat()
     }
@@ -336,17 +326,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-        async fn sync_commit_compat_wrapper<M>(
-            this: CommitSyncer<M>,
-            ctx: CoreContext,
-            source_cs_id: ChangesetId,
-        ) -> Result<Option<ChangesetId>, Error>
-        where
-            M: SyncedCommitMapping + Clone + 'static,
-        {
-            this.sync_commit(ctx, source_cs_id).await
-        }
-        sync_commit_compat_wrapper(self, ctx, source_cs_id)
+        async move { self.sync_commit(ctx, source_cs_id).await }
             .boxed()
             .compat()
     }
@@ -379,17 +359,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> impl Future<Item = (), Error = Error> {
-        async fn preserve_commit_compat_wrapper<M>(
-            this: CommitSyncer<M>,
-            ctx: CoreContext,
-            source_cs_id: ChangesetId,
-        ) -> Result<(), Error>
-        where
-            M: SyncedCommitMapping + Clone + 'static,
-        {
-            this.preserve_commit(ctx, source_cs_id).await
-        }
-        preserve_commit_compat_wrapper(self, ctx, source_cs_id)
+        async move { self.preserve_commit(ctx, source_cs_id).await }
             .boxed()
             .compat()
     }
@@ -766,15 +736,7 @@ pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
     mapped: HashMap<ChangesetId, ChangesetId>,
     config: CommitSyncer<M>,
 ) -> impl Future<Item = (), Error = Error> {
-    async fn update_mapping_compat_wrapper<M: SyncedCommitMapping + Clone + 'static>(
-        ctx: CoreContext,
-        mapped: HashMap<ChangesetId, ChangesetId>,
-        config: CommitSyncer<M>,
-    ) -> Result<(), Error> {
-        update_mapping(ctx, mapped, &config).await
-    }
-
-    update_mapping_compat_wrapper(ctx, mapped, config)
+    async move { update_mapping(ctx, mapped, &config).await }
         .boxed()
         .compat()
 }
@@ -945,16 +907,7 @@ pub fn sync_commit_compat<M: SyncedCommitMapping + Clone + 'static>(
     config: CommitSyncer<M>,
     bookmark: BookmarkName,
 ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-    async fn sync_commit_compat_wrapper<M: SyncedCommitMapping + Clone + 'static>(
-        ctx: CoreContext,
-        cs: BonsaiChangeset,
-        config: CommitSyncer<M>,
-        bookmark: BookmarkName,
-    ) -> Result<Option<ChangesetId>, Error> {
-        sync_commit(ctx, cs, &config, bookmark).await
-    }
-
-    sync_commit_compat_wrapper(ctx, cs, config, bookmark)
+    async move { sync_commit(ctx, cs, &config, bookmark).await }
         .boxed()
         .compat()
 }
