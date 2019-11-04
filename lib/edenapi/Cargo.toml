@@ -17,6 +17,9 @@ serde = "1.0.89"
 serde_cbor = "0.9.0"
 types = { path = "../types" }
 url = "2.1.0"
+blackbox = { path = "../blackbox" }
+regex = "1.0"
+lazy_static = "1.2"
 
 [dev-dependencies]
 tempdir = "0.3.7"

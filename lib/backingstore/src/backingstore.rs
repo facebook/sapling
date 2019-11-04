@@ -98,17 +98,20 @@ fn discard_metadata_header(data: Vec<u8>) -> Vec<u8> {
 
 #[test]
 fn test_discard_metadata_header() {
-    assert_eq!(discard_metadata_header(vec![]), vec![]);
+    assert_eq!(discard_metadata_header(vec![]), Vec::<u8>::new());
     assert_eq!(discard_metadata_header(vec![0x1]), vec![0x1]);
     assert_eq!(discard_metadata_header(vec![0x1, 0x1]), vec![0x1, 0x1]);
     assert_eq!(discard_metadata_header(vec![0x1, 0xA]), vec![0x1, 0xA]);
 
     // Empty metadata header and empty blob
-    assert_eq!(discard_metadata_header(vec![0x1, 0xA, 0x1, 0xA]), vec![]);
+    assert_eq!(
+        discard_metadata_header(vec![0x1, 0xA, 0x1, 0xA]),
+        Vec::<u8>::new()
+    );
     // Metadata header with some data but empty blob
     assert_eq!(
         discard_metadata_header(vec![0x1, 0xA, 0xA, 0xB, 0xC, 0x1, 0xA]),
-        vec![]
+        Vec::<u8>::new()
     );
     // Metadata header with data and blob
     assert_eq!(

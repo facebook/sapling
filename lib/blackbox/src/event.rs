@@ -123,6 +123,21 @@ pub enum Event {
         value: Value,
     },
 
+    /// An EdenApi HTTP request was dispatched.
+    #[serde(rename = "EA", alias = "edenapi")]
+    EdenApi {
+        #[serde(rename = "U")]
+        url: Option<String>,
+        #[serde(rename = "T")]
+        status: u32,
+        #[serde(rename = "I")]
+        session_id: Option<String>,
+        #[serde(rename = "DD")]
+        downloaded: f64,
+        #[serde(rename = "UD")]
+        uploaded: f64,
+    },
+
     #[serde(rename = "E", alias = "exception")]
     Exception {
         #[serde(rename = "M", alias = "msg")]
@@ -272,6 +287,12 @@ pub enum Event {
             skip_serializing_if = "is_default"
         )]
         result: Option<Value>,
+
+        #[serde(rename = "U", default, skip_serializing_if = "is_default")]
+        url: String,
+
+        #[serde(rename = "I", default, skip_serializing_if = "is_default")]
+        session_id: String,
     },
 
     #[serde(rename = "PE", alias = "perftrace")]
@@ -401,6 +422,9 @@ pub enum NetworkOp {
 
     #[serde(rename = "P", alias = "http_getpack")]
     HttpGetPack,
+
+    #[serde(rename = "E", alias = "edenapi")]
+    EdenApiRequest,
 }
 
 #[serde_alt]
@@ -616,6 +640,8 @@ impl fmt::Display for Event {
                 calls,
                 duration_ms,
                 latency_ms,
+                session_id,
+                url,
                 result,
             } => {
                 let result = match result {
@@ -624,8 +650,8 @@ impl fmt::Display for Event {
                 };
                 write!(
                     f,
-                    "[network] {:?} finished in {} calls, duration {} ms, latency {} ms, read {} bytes, write {} bytes{}",
-                    op, calls, duration_ms, latency_ms, read_bytes, write_bytes, result,
+                    "[network] {:?} finished in {} calls, duration {} ms, latency {} ms, read {} bytes, write {} bytes, session id {}, url {}{}",
+                    op, calls, duration_ms, latency_ms, read_bytes, write_bytes, session_id, url, result,
                 )?;
             }
             Start {

@@ -121,9 +121,9 @@ impl EdenApiCurlClient {
 
 impl EdenApi for EdenApiCurlClient {
     fn health_check(&self) -> ApiResult<()> {
-        let handler = Collector::new();
-        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HEALTH_CHECK)?;
+        let handler = Collector::new(&url);
+        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         handle.url(url.as_str())?;
         handle.get(true)?;
         handle.perform()?;
@@ -143,9 +143,9 @@ impl EdenApi for EdenApiCurlClient {
     }
 
     fn hostname(&self) -> ApiResult<String> {
-        let handler = Collector::new();
-        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HOSTNAME)?;
+        let handler = Collector::new(&url);
+        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         handle.url(url.as_str())?;
         handle.get(true)?;
         handle.perform()?;
@@ -269,7 +269,7 @@ impl EdenApi for EdenApiCurlClient {
         let stats = if self.stream_trees {
             multi_request_threaded(
                 self.multi.clone(),
-                &url,
+                url,
                 creds,
                 requests,
                 progress,
@@ -281,7 +281,7 @@ impl EdenApi for EdenApiCurlClient {
         } else {
             multi_request_threaded(
                 self.multi.clone(),
-                &url,
+                url,
                 creds,
                 requests,
                 progress,
@@ -345,7 +345,7 @@ impl EdenApiCurlClient {
         let stats = if self.stream_data {
             multi_request_threaded(
                 self.multi.clone(),
-                &url,
+                url,
                 self.creds.as_ref(),
                 requests,
                 progress,
@@ -359,7 +359,7 @@ impl EdenApiCurlClient {
         } else {
             multi_request_threaded(
                 self.multi.clone(),
-                &url,
+                url,
                 self.creds.as_ref(),
                 requests,
                 progress,
@@ -421,7 +421,7 @@ where
 
     for request in requests {
         let updater = progress.new_updater();
-        let handler = Collector::with_progress(updater);
+        let handler = Collector::with_progress(url, updater);
         let mut easy = new_easy_handle(creds, handler)?;
         prepare_cbor_post(&mut easy, &url, &request)?;
         driver.add(easy)?;
@@ -477,7 +477,7 @@ where
 /// without affecting the other ongoing HTTP transfers.
 fn multi_request_threaded<R, I, T, F>(
     multi: SyncMulti,
-    url: &Url,
+    url: Url,
     creds: Option<&ClientCreds>,
     requests: I,
     progress_cb: Option<ProgressFn>,
@@ -492,7 +492,6 @@ where
     // Convert arguments to owned types since these will be sent
     // to a new thread, which requires captured values to have a
     // 'static lifetime.
-    let url = url.clone();
     let creds = creds.cloned();
     let requests = requests.into_iter().collect::<Vec<_>>();
 
