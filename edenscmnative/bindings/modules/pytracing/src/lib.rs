@@ -477,14 +477,44 @@ fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
         }
     }
 
+    // `__get__`, useful to bind `self` to a free function.
+    // See https://docs.python.org/2/howto/descriptor.html.
+    extern "C" fn descr_get<T: PythonTypeWithInner>(
+        this: *mut ffi::PyObject,
+        obj: *mut ffi::PyObject,
+        typeobj: *mut ffi::PyObject,
+    ) -> *mut ffi::PyObject {
+        let py = unsafe { Python::assume_gil_acquired() };
+
+        let this = unsafe { PyObject::from_borrowed_ptr(py, this) };
+        let this = unsafe { T::unchecked_downcast_from(this) };
+        let inner = this.inner_obj(py);
+
+        // Need to call inner->ob_type->tp_descr_get.
+        // There does not seem to have a Python API for calling this.
+        let inner_type = inner.get_type(py);
+        let inner_type_ptr: *mut ffi::PyTypeObject = inner_type.as_type_ptr();
+        let inner_descr_get = unsafe { *inner_type_ptr }.tp_descr_get;
+        if let Some(descr_get) = inner_descr_get {
+            // Delegate to the original descr_get implementation.
+            // Most interestingly, `func_descr_get` in `funcobject.c`.
+            let result: *mut ffi::PyObject =
+                unsafe { descr_get(this.into_object().steal_ptr(), obj, typeobj) };
+            result
+        } else {
+            this.into_object().steal_ptr()
+        }
+    }
+
     // Modify the type object to make __get__ working.
     unsafe {
         (*type_ptr).tp_getattro = Some(getattr::<T>);
         (*type_ptr).tp_setattro = Some(setattr::<T>);
+        (*type_ptr).tp_descr_get = Some(descr_get::<T>);
     }
 }
 
-trait PythonTypeWithInner: PythonObjectWithTypeObject {
+trait PythonTypeWithInner: PythonObjectWithTypeObject + PythonObject {
     fn inner_obj<'a>(&'a self, _py: Python<'a>) -> &'a PyObject;
 }
 
