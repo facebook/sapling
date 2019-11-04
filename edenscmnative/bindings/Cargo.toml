@@ -28,6 +28,7 @@ pypathmatcher = { path = "modules/pypathmatcher" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }
 pystackdesc = { path = "modules/pystackdesc" }
+pytracing = { path = "modules/pytracing" }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
