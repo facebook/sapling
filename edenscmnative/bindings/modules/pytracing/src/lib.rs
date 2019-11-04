@@ -27,7 +27,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<tracingdata>(py)?;
     m.add_class::<meta>(py)?;
     m.add_class::<wrapfunc>(py)?;
+    m.add_class::<wrapiter>(py)?;
     impl_getsetattr::<wrapfunc>(py);
+    impl_getsetattr::<wrapiter>(py);
     let singleton = tracingdata::create_instance(py, DATA.clone())?;
     m.add(py, "singleton", singleton)?;
     Ok(m)
@@ -266,7 +268,16 @@ py_class!(class wrapfunc |py| {
         self.last_espan_id(py).set(espan_id);
 
         // This calls into Python and cannot take DATA.lock().
-        let result = self.inner(py).call(py, args, kwargs);
+        let mut result = self.inner(py).call(py, args, kwargs);
+
+        // Wrap generator automatically.
+        if *self.is_generator(py) {
+            if let Ok(ref obj) = result {
+                if let Ok(obj) = wrapiter::new(py, obj.clone_ref(py)) {
+                    result = Ok(obj.into_object());
+                }
+            }
+        }
 
         // Exit Span.
         {
@@ -358,6 +369,61 @@ impl wrapfunc {
     }
 }
 
+py_class!(class wrapiter |py| {
+    data inner: PyObject;
+    data name: String;
+    data last_espan_id: Cell<EspanId>;
+
+    def __new__(_cls, obj: PyObject) -> PyResult<wrapiter> {
+        Self::new(py, obj)
+    }
+
+    def __iter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __next__(&self) -> PyResult<Option<PyObject>> {
+        // PERF: Could be a bit faster using unsafe `ffi::PyIter_Next` directly.
+        let mut iter = PyIterator::from_object(py, self.inner(py).clone_ref(py))?;
+
+        // Enter Span.
+        let espan_id = {
+            let last_id = self.last_espan_id(py).get();
+            let name = self.name(py);
+            let meta: [(&str, &str); 2] = [("name", &name), ("cat", "generator")];
+            let mut data = DATA.lock();
+            let espan_id = data.add_espan(&meta[..], Some(last_id));
+            data.add_action(espan_id, Action::EnterSpan);
+            espan_id
+        };
+
+        // next(generator)
+        let result = match iter.next() {
+            None => Ok(None),
+            Some(Err(err)) => Err(err),
+            Some(Ok(obj)) => Ok(Some(obj)),
+        };
+
+        // Exit Span.
+        {
+            let mut data = DATA.lock();
+            data.add_action(espan_id, Action::ExitSpan);
+        }
+        self.last_espan_id(py).set(espan_id);
+        result
+    }
+});
+
+impl wrapiter {
+    fn new(py: Python, obj: PyObject) -> PyResult<Self> {
+        if let Ok(wrapped) = obj.extract::<Self>(py) {
+            return Ok(wrapped);
+        }
+        let name = format!("{}.next", tostr(py, getattr(py, &obj, "__name__")));
+        Self::create_instance(py, obj, name, Cell::new(EspanId(0)))
+    }
+}
+
 /// Add T.__get__ and __set__ so it can proxy attributes
 /// like __doc__ to the original object.
 fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
@@ -423,6 +489,12 @@ trait PythonTypeWithInner: PythonObjectWithTypeObject {
 }
 
 impl PythonTypeWithInner for wrapfunc {
+    fn inner_obj<'a>(&'a self, py: Python<'a>) -> &'a PyObject {
+        self.inner(py)
+    }
+}
+
+impl PythonTypeWithInner for wrapiter {
     fn inner_obj<'a>(&'a self, py: Python<'a>) -> &'a PyObject {
         self.inner(py)
     }
