@@ -1337,6 +1337,66 @@ impl TracingData {
     }
 }
 
+// -------- Serde-serializable Spans Output --------
+
+#[derive(Serialize)]
+pub struct TreeSpanWithMeta<'a> {
+    #[serde(flatten)]
+    meta: IndexMap<&'a str, &'a str>,
+    start: u64,
+    duration: Option<u64>,
+    children: Vec<TreeSpanId>,
+}
+
+impl<'a> TreeSpanWithMeta<'a> {
+    fn from_tree_span(data: &TracingData, span: TreeSpan) -> TreeSpanWithMeta {
+        let meta = match span.espan_id {
+            None => Default::default(),
+            Some(espan_id) => {
+                if let Some(espan) = data.get_espan(espan_id) {
+                    espan
+                        .meta
+                        .iter()
+                        .map(|(k, v)| (data.strings.get(*k), data.strings.get(*v)))
+                        .collect()
+                } else {
+                    Default::default()
+                }
+            }
+        };
+        TreeSpanWithMeta {
+            meta,
+            start: span.start_time,
+            duration: if span.is_incomplete() {
+                None
+            } else {
+                Some(span.duration)
+            },
+            children: span.children,
+        }
+    }
+}
+
+impl TracingData {
+    /// Calculate [`TreeSpan`]s for each `(pid, tid)` pair.
+    /// The result is serializable and can be useful for assertions in tests.
+    pub fn tree_spans(&self) -> IndexMap<(u64, u64), Vec<TreeSpanWithMeta>> {
+        let eventus_by_pid_tid = self.eventus_group_by_pid_tid();
+
+        eventus_by_pid_tid
+            .iter()
+            .map(|(&pid_tid, eventus_list)| {
+                let tree_spans = self.build_tree_spans(eventus_list);
+                let tree_spans_with_meta = tree_spans
+                    .into_iter()
+                    .map(|t| TreeSpanWithMeta::from_tree_span(self, t))
+                    .collect();
+                (pid_tid, tree_spans_with_meta)
+            })
+            .collect()
+    }
+}
+
 // -------- Tests --------
 
 #[cfg(test)]
@@ -1423,6 +1483,35 @@ Start Dur.ms | Name                         Source
    10     +2   | refresh                    view.py line 90
 
 "#
+        );
+    }
+
+    #[test]
+    fn test_tree_span_serialize() {
+        let mut data = TracingData::new_for_test();
+        let span_id = data.add_espan(&meta("foo", "a.py", "10"), None);
+        data.add_action(span_id, Action::EnterSpan);
+        data.add_action(span_id, Action::ExitSpan);
+        let tree_spans: Vec<_> = data.tree_spans().into_iter().nth(0).unwrap().1;
+        assert_eq!(
+            serde_json::to_string_pretty(&tree_spans).unwrap(),
+            r#"[
+  {
+    "start": 0,
+    "duration": 0,
+    "children": [
+      1
+    ]
+  },
+  {
+    "name": "foo",
+    "module_path": "a.py",
+    "line": "10",
+    "start": 2000,
+    "duration": 2000,
+    "children": []
+  }
+]"#
         );
     }
 
