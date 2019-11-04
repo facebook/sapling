@@ -160,13 +160,7 @@ pub fn fetch_skiplist_index(
 
 pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<SkiplistIndex> {
     let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
-    // chashmap 2.2.2 load factor len/buckets before expanding in CHashMap::insert is 85/100.
-    // Unfortunately CHashMap::with_capacity ignores load factor and adds in a factor of 4
-    // This takes into account load factor and removes the factor of 4 so we can preallocate to
-    // right size and that insert won't reallocate.  CHashMap::shrink_to_fit has same 4x issue.
-    // TODO - try to fix upstream
-    let cmap: CHashMap<ChangesetId, SkiplistNodeType> =
-        CHashMap::with_capacity((map.len() * 100 / 85 + 4) / 4);
+    let cmap: CHashMap<ChangesetId, SkiplistNodeType> = CHashMap::with_capacity(map.len());
     let mut pnodecount = 0;
     let mut snodecount = 0;
     let mut maxsedgelen = 0;
