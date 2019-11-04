@@ -14,7 +14,7 @@ include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 const i32 MC_CODEVER = 0
 const i32 MC_SITEVER = 1
 
-typedef i32 RepoId (hs.newtype)
+typedef i32 RepoId (rust.newtype)
 
 struct BonsaiHgMappingEntry {
   1: required RepoId repo_id,

@@ -179,4 +179,4 @@ service MononokeAPIService extends fb303.FacebookService {
 
   MononokeDirectory get_tree(1: MononokeGetTreeParams params)
     throws (1: MononokeAPIException e),
-}
+} (rust.mod = "mononoke_apiservice")

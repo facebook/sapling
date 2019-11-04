@@ -15,10 +15,10 @@ struct SkiplistEntry {
   4: SkiplistNodeType node_type,
 }
 
-typedef i32 RepoId (hs.newtype)
+typedef i32 RepoId (rust.newtype)
 
  // Thrift does not support unsigned, so using i64 here
-typedef i64 GenerationNum (hs.newtype)
+typedef i64 GenerationNum (rust.newtype)
 
 struct CommitAndGenerationNumber {
   1: mononoke_types_thrift.ChangesetId cs_id,

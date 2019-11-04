@@ -8,7 +8,7 @@
 
 include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
-typedef mononoke_types_thrift.Sha1 HgNodeHash (hs.newtype)
+typedef mononoke_types_thrift.Sha1 HgNodeHash (rust.newtype)
 
 // Changeset contents are stored inline.
 struct HgChangesetEnvelope {

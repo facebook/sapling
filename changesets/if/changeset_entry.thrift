@@ -13,10 +13,10 @@ include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 const i32 MC_CODEVER = 0
 const i32 MC_SITEVER = 0
 
-typedef i32 RepoId (hs.newtype)
+typedef i32 RepoId (rust.newtype)
 
  // Thrift does not support unsigned, so using i64 here
-typedef i64 GenerationNum (hs.newtype)
+typedef i64 GenerationNum (rust.newtype)
 
 struct ChangesetEntry {
   1: required RepoId repo_id,

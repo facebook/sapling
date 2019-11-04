@@ -9,7 +9,7 @@
 use std::{convert::TryFrom, convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
-use apiserver_thrift::server::MononokeApiservice;
+use apiserver_thrift::server::MononokeAPIService;
 use apiserver_thrift::services::mononoke_apiservice::{
     GetBlobExn, GetBranchesExn, GetChangesetExn, GetFileHistoryExn, GetLastCommitOnPathExn,
     GetRawExn, GetTreeExn, IsAncestorExn, ListDirectoryExn, ListDirectoryUnodesExn,
@@ -143,7 +143,7 @@ fn log_response_size(mut scuba: ScubaSampleBuilder, size: usize) {
 }
 
 #[async_trait]
-impl MononokeApiservice for MononokeAPIServiceImpl {
+impl MononokeAPIService for MononokeAPIServiceImpl {
     async fn get_raw(&self, params: MononokeGetRawParams) -> Result<Vec<u8>, GetRawExn> {
         let scuba = self.create_scuba_logger(
             Some(params.path.clone()),

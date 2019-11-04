@@ -8,7 +8,7 @@
 
 include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
-typedef mononoke_types_thrift.IdType FastlogBatchId (hs.newtype)
+typedef mononoke_types_thrift.IdType FastlogBatchId (rust.newtype)
 
 // Structure that holds a commit graph, usually a history of a file
 // or a directory hence the name. Semantically it stores list of
@@ -52,7 +52,7 @@ struct FastlogBatch {
   2: list<FastlogBatchId> previous_batches,
 }
 
-typedef i32 ParentOffset (hs.newtype)
+typedef i32 ParentOffset (rust.newtype)
 
 struct CompressedHashAndParents {
   1: mononoke_types_thrift.ChangesetId cs_id,

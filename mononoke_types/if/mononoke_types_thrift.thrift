@@ -31,41 +31,41 @@
 // Going with representation 2, with the hope that this will be able to use
 // SmallVecs soon.
 // TODO (T26959816): add support to represent these as SmallVecs.
-typedef binary Blake2 (hs.newtype)
+typedef binary Blake2 (rust.newtype)
 
 // Allow the hash type to change in the future.
 union IdType {
   1: Blake2 Blake2,
-}
+} (rust.ord)
 
-typedef IdType ChangesetId (hs.newtype)
-typedef IdType ContentId (hs.newtype)
-typedef IdType ContentChunkId (hs.newtype)
-typedef IdType RawBundle2Id (hs.newtype)
-typedef IdType FileUnodeId (hs.newtype)
-typedef IdType ManifestUnodeId (hs.newtype)
-typedef IdType DeletedManifestId(hs.newtype)
-typedef IdType FsnodeId (hs.newtype)
-typedef IdType MPathHash (hs.newtype)
+typedef IdType ChangesetId (rust.newtype)
+typedef IdType ContentId (rust.newtype)
+typedef IdType ContentChunkId (rust.newtype)
+typedef IdType RawBundle2Id (rust.newtype)
+typedef IdType FileUnodeId (rust.newtype)
+typedef IdType ManifestUnodeId (rust.newtype)
+typedef IdType DeletedManifestId(rust.newtype)
+typedef IdType FsnodeId (rust.newtype)
+typedef IdType MPathHash (rust.newtype)
 
-typedef IdType ContentMetadataId (hs.newtype)
-typedef IdType FastlogBatchId (hs.newtype)
+typedef IdType ContentMetadataId (rust.newtype)
+typedef IdType FastlogBatchId (rust.newtype)
 
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary. Could also be used for
 // raw content sha1 (should this be separated?)
-typedef binary Sha1 (hs.newtype)
+typedef binary Sha1 (rust.newtype)
 
 // Other content alias types
-typedef binary Sha256 (hs.newtype)
-typedef binary GitSha1 (hs.newtype)
+typedef binary Sha256 (rust.newtype)
+typedef binary GitSha1 (rust.newtype)
 
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
 // manifests can be applied in a streaming way.
-typedef binary MPathElement (hs.newtype)
-typedef list<MPathElement> MPath (hs.newtype)
+typedef binary MPathElement (rust.newtype)
+typedef list<MPathElement> MPath (rust.newtype)
 
 union RepoPath {
   # Thrift language doesn't support void here, so put a dummy bool
@@ -309,7 +309,7 @@ struct FastlogBatch {
   2: list<FastlogBatchId> previous_batches,
 }
 
-typedef i32 ParentOffset (hs.newtype)
+typedef i32 ParentOffset (rust.newtype)
 
 struct CompressedHashAndParents {
   1: ChangesetId cs_id,
