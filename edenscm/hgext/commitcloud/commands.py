@@ -563,7 +563,7 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
         raise error.Abort(msg, hint=hint)
 
     # Do some sanity checking on the names
-    if not re.match(r"^[-a-zA-Z0-9._/]+$", sourcereporoot):
+    if not re.match(r"^[-a-zA-Z0-9._/:\\ ]+$", sourcereporoot):
         msg = _("repo root contains unexpected characters")
         raise error.Abort(msg)
     if not re.match(r"^[-a-zA-Z0-9.]+$", sourcehostname):
