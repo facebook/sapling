@@ -127,3 +127,18 @@ impl fmt::Debug for PyErr {
 }
 
 impl std::error::Error for PyErr {}
+
+impl serde::ser::Error for PyErr {
+    fn custom<T: std::fmt::Display>(msg: T) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let err = cpython::PyErr::new::<cpython::exc::TypeError, _>(py, msg.to_string());
+        Self { inner: err }
+    }
+}
+
+impl PyErr {
+    pub fn into_inner(self) -> cpython::PyErr {
+        self.inner
+    }
+}

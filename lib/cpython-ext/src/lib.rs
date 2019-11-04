@@ -13,6 +13,7 @@ mod io;
 mod pybuf;
 mod pyerr;
 mod pyset;
+pub mod ser;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;
