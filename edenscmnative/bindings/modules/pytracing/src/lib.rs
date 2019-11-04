@@ -27,6 +27,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<tracingdata>(py)?;
     m.add_class::<meta>(py)?;
     m.add_class::<wrapfunc>(py)?;
+    impl_getsetattr::<wrapfunc>(py);
     let singleton = tracingdata::create_instance(py, DATA.clone())?;
     m.add(py, "singleton", singleton)?;
     Ok(m)
@@ -357,3 +358,72 @@ impl wrapfunc {
     }
 }
 
+/// Add T.__get__ and __set__ so it can proxy attributes
+/// like __doc__ to the original object.
+fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
+    // rust-cpython does not provide a safe way to define __get__.
+    // So we have to use some unsafe ffi.
+    use python27_sys as ffi;
+    let type_object: PyType = T::type_object(py);
+    let type_ptr: *mut ffi::PyTypeObject = type_object.as_type_ptr();
+
+    extern "C" fn getattr<T: PythonTypeWithInner>(
+        this: *mut ffi::PyObject,
+        name: *mut ffi::PyObject,
+    ) -> *mut ffi::PyObject {
+        // This function is called by the Python interpreter.
+        // So GIL is already held.
+        let py = unsafe { Python::assume_gil_acquired() };
+
+        // Convert raw ffi pointer to friendly rust-cpython objects.
+        let this = unsafe { PyObject::from_borrowed_ptr(py, this) };
+        let this = unsafe { T::unchecked_downcast_from(this) };
+        let name = unsafe { PyObject::from_borrowed_ptr(py, name) };
+
+        match this.inner_obj(py).getattr(py, name) {
+            Err(err) => {
+                err.restore(py);
+                std::ptr::null_mut()
+            }
+            Ok(obj) => obj.steal_ptr(),
+        }
+    }
+
+    extern "C" fn setattr<T: PythonTypeWithInner>(
+        this: *mut ffi::PyObject,
+        name: *mut ffi::PyObject,
+        value: *mut ffi::PyObject,
+    ) -> std::os::raw::c_int {
+        let py = unsafe { Python::assume_gil_acquired() };
+
+        // Convert raw ffi pointer to friendly rust-cpython objects.
+        let this = unsafe { PyObject::from_borrowed_ptr(py, this) };
+        let this = unsafe { T::unchecked_downcast_from(this) };
+        let name = unsafe { PyObject::from_borrowed_ptr(py, name) };
+        let value = unsafe { PyObject::from_borrowed_ptr(py, value) };
+
+        match this.inner_obj(py).setattr(py, name, value) {
+            Err(err) => {
+                err.restore(py);
+                -1
+            }
+            Ok(_) => 0,
+        }
+    }
+
+    // Modify the type object to make __get__ working.
+    unsafe {
+        (*type_ptr).tp_getattro = Some(getattr::<T>);
+        (*type_ptr).tp_setattro = Some(setattr::<T>);
+    }
+}
+
+trait PythonTypeWithInner: PythonObjectWithTypeObject {
+    fn inner_obj<'a>(&'a self, _py: Python<'a>) -> &'a PyObject;
+}
+
+impl PythonTypeWithInner for wrapfunc {
+    fn inner_obj<'a>(&'a self, py: Python<'a>) -> &'a PyObject {
+        self.inner(py)
+    }
+}

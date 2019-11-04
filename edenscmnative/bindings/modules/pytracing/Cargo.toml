@@ -10,6 +10,7 @@ cpython = { version = "0.3", features = ["python27-sys"], default-features = fal
 lazy_static = "1"
 mincode = { path = "../../../../lib/mincode" }
 parking_lot = "0.9"
+python27-sys = "0.3"
 serde_json = "1"
 tracing = "0.1"
 tracing-collector = { path = "../../../../lib/tracing-collector" }
