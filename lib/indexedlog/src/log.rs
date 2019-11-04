@@ -49,6 +49,7 @@ use std::ops::{Range, RangeBounds};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
+use tracing::debug_span;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
@@ -512,6 +513,12 @@ impl Log {
     /// For in-memory-only Logs, this function does nothing, and returns 0.
     pub fn sync(&mut self) -> crate::Result<u64> {
         let result: crate::Result<_> = (|| {
+            let span = debug_span!("Log::sync", dirty_bytes = self.mem_buf.len());
+            if let Some(dir) = &self.dir {
+                span.record("dir", &dir.to_string_lossy().as_ref());
+            }
+            let _guard = span.enter();
+
             if self.dir.is_none() {
                 // See Index::flush for why this is not an Err.
                 return Ok(0);
@@ -1688,6 +1695,8 @@ impl OpenOptions {
     /// transaction.
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<Log> {
         let dir = dir.as_ref();
+        let span = debug_span!("Log::open", dir = &dir.to_string_lossy().as_ref());
+        let _guard = span.enter();
         self.open_internal(dir, None, None)
             .context(|| format!("in log::OpenOptions::open({:?})", dir))
     }

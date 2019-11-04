@@ -17,6 +17,7 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use tracing::debug_span;
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -134,6 +135,9 @@ impl OpenOptions {
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
         let dir = dir.as_ref();
         let result: crate::Result<_> = (|| {
+            let span = debug_span!("RotateLog::open", dir = &dir.to_string_lossy().as_ref());
+            let _guard = span.enter();
+
             let latest_and_log = read_latest_and_logs(dir, &self);
 
             let (latest, logs) = match latest_and_log {
@@ -369,6 +373,12 @@ impl RotateLog {
     /// For in-memory [`RotateLog`], this function always returns 0.
     pub fn sync(&mut self) -> crate::Result<u8> {
         let result: crate::Result<_> = (|| {
+            let span = debug_span!("RotateLog::sync", latest = self.latest as u32);
+            if let Some(dir) = &self.dir {
+                span.record("dir", &dir.to_string_lossy().as_ref());
+            }
+            let _guard = span.enter();
+
             if self.dir.is_none() {
                 return Ok(0);
             }
@@ -454,6 +464,12 @@ impl RotateLog {
     /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
     /// and do not have dirty entries in non-writable logs).
     fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
+        let span = debug_span!("RotateLog::rotate", latest = self.latest as u32);
+        if let Some(dir) = &self.dir {
+            span.record("dir", &dir.to_string_lossy().as_ref());
+        }
+        let _guard = span.enter();
+
         // Create a new Log. Bump latest.
         let next = self.latest.wrapping_add(1);
         let log = create_empty_log(

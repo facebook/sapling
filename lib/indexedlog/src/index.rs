@@ -73,6 +73,7 @@ use crate::utils::{self, mmap_empty, mmap_readonly};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use fs2::FileExt;
 use memmap::Mmap;
+use tracing::debug_span;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 //// Structures and serialization
@@ -1695,6 +1696,9 @@ impl OpenOptions {
     pub fn open<P: AsRef<Path>>(&self, path: P) -> crate::Result<Index> {
         let path = path.as_ref();
         let result: crate::Result<_> = (|| {
+            let span = debug_span!("Index::open", path = path.to_string_lossy().as_ref());
+            let _guard = span.enter();
+
             let mut open_options = self.clone();
             let open_result = if self.write == Some(false) {
                 fs::OpenOptions::new().read(true).open(path)
@@ -2053,6 +2057,9 @@ impl Index {
     /// unless read-only was set at open time.
     pub fn flush(&mut self) -> crate::Result<u64> {
         let result: crate::Result<_> = (|| {
+            let span = debug_span!("Index::flush", path = self.path.to_string_lossy().as_ref());
+            let _guard = span.enter();
+
             if self.open_options.write == Some(false) {
                 return Err(crate::Error::path(
                     self.path(),
