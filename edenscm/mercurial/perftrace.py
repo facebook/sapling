@@ -8,8 +8,30 @@
 import time
 from contextlib import contextmanager
 
+from bindings import tracing
+
 from . import encoding, error, util
 
+
+# Native tracing utilities
+
+tracer = tracing.singleton
+currentspanid = [0]  # XXX: thread-local? Move to Rust?
+
+
+def newspan(meta, _span=tracer.span, _currentspanid=currentspanid):
+    """Crate a new native span. Return SpanId. meta: [(key, value)]"""
+    spanid = _span(meta)
+    _currentspanid[0] = spanid
+    return spanid
+
+
+def editspan(meta, _edit=tracer.edit, _currentspanid=currentspanid):
+    """Edit the current native span. meta: [(key, value)]"""
+    _edit(_currentspanid[0], meta)
+
+
+# PerfTrace
 
 spans = []
 
@@ -63,6 +85,8 @@ def gettime():
 
 @contextmanager
 def trace(name):
+    spanid = newspan([("name", name), ("cat", "perftrace")])
+    tracer.enter(spanid)
     try:
         latest = None
         if spans:
@@ -76,6 +100,7 @@ def trace(name):
         span.start = gettime()
         yield
     finally:
+        tracer.exit(spanid)
         span.end = gettime()
         spans.pop(-1)
         if not spans:
@@ -91,6 +116,9 @@ def traceflag(flagname):
     latest = spans[-1]
     latest.flags.add(flagname)
 
+    # XXX: No multi-flag support for now.
+    editspan([("flag", flagname)])
+
 
 def tracevalue(name, value):
     """Records the given name=value as being associated with the latest trace
@@ -102,6 +130,8 @@ def tracevalue(name, value):
 
     # TODO: report when overwriting a value
     latest.values[name] = StringValue("%s" % value)
+
+    editspan([(name, str(value))])
 
 
 def tracebytes(name, value):
@@ -118,6 +148,10 @@ def tracebytes(name, value):
         latest.values[name].value += value
     else:
         latest.values[name] = ByteValue(value)
+
+    # XXX: Rust tracing does not do an addition - But there do not seem to be
+    # any users relying on the behavior.
+    editspan([(name, str(value))])
 
 
 def tracefunc(name):
