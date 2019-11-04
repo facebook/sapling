@@ -148,8 +148,8 @@ class gitutil(object):
             remainder = cls._parsespecificchar(remainder, fieldseparator)
             dstpath, remainder = cls._parsepath(remainder, lineseparator)
         else:
-            srcpath, remainder = cls._parsepath(remainder, lineseparator)
-            dstpath = srcpath
+            dstpath, remainder = cls._parsepath(remainder, lineseparator)
+            srcpath = dstpath
         if dstpath.find("\x00") > -1 or dstpath.find("\n") > -1:
             raise error.Abort(_('delimiter "%s"') % repr(dstpath))
         remainder = cls._parsespecificchar(remainder, lineseparator)
@@ -876,32 +876,25 @@ class repo_source(common.converter_source):
             self.VARIANT_UNIFIED: projectpath,
         }[variant]
 
-        changes = (
-            [
-                (
-                    os.path.join(pathprefix, filediff["dest"]["path"]),
-                    filediff["source"]["hash"],
-                )
-                for parentdiff in difftree
-                for filediff in parentdiff
-            ]
-            if difftree
-            else []
-        )
+        changes = []
+        copies = {}
 
-        # TODO: Do we need to consider cross-project copies?
-        copies = (
-            {
-                os.path.join(pathprefix, filediff["dest"]["path"]): os.path.join(
-                    pathprefix, filediff["source"]["path"]
-                )
-                for parentdiff in difftree
-                for filediff in parentdiff
-                if gitutil.iscopystatus(filediff["status"])
-            }
-            if difftree
-            else {}
-        )
+        for parentdiff in difftree:
+            for filediff in parentdiff:
+                newpath = os.path.join(pathprefix, filediff["dest"]["path"])
+                changes.append((newpath, filediff["dest"]["hash"]))
+
+                if filediff["status"] in [
+                    gitutil.GIT_FILE_STATUS_COPIED,
+                    gitutil.GIT_FILE_STATUS_RENAMED,
+                ]:
+                    oldpath = os.path.join(pathprefix, filediff["source"]["path"])
+                    copies[newpath] = oldpath
+
+                    # Renamed files are represented as an addition and a removal along with
+                    # an entry in `copies`.
+                    if filediff["status"] == gitutil.GIT_FILE_STATUS_RENAMED:
+                        changes.append((oldpath, nodemod.nullhex))
 
         cleanp2 = set()
         return (changes, copies, cleanp2)
