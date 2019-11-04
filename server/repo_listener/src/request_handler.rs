@@ -228,7 +228,7 @@ fn loadlimiting_configs(
         let config: Option<MononokeThrottleLimits> = serde_json::from_str(&data.contents).ok();
         config
     })
-    .and_then(|config| {
+    .map(|config| {
         let region_percentage = config
             .datacenter_prefix_capacity
             .get(&*DATACENTER_REGION_PREFIX)
@@ -238,8 +238,7 @@ fn loadlimiting_configs(
         let limit = config
             .hostprefixes
             .get(&host_scheme)
-            .or(Some(&config.defaults))
-            .copied();
+            .unwrap_or(&config.defaults);
 
         let multiplier = if is_quicksand {
             region_percentage / 100.0 * config.quicksand_multiplier
@@ -247,17 +246,14 @@ fn loadlimiting_configs(
             region_percentage / 100.0
         };
 
-        match limit {
-            Some(limit) => Some(MononokeThrottleLimit {
-                egress_bytes: limit.egress_bytes * multiplier,
-                ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
-                total_manifests: limit.total_manifests * multiplier,
-                quicksand_manifests: limit.quicksand_manifests * multiplier,
-                getfiles_files: limit.getfiles_files * multiplier,
-                getpack_files: limit.getpack_files * multiplier,
-                commits: limit.commits * multiplier,
-            }),
-            _ => None,
+        MononokeThrottleLimit {
+            egress_bytes: limit.egress_bytes * multiplier,
+            ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
+            total_manifests: limit.total_manifests * multiplier,
+            quicksand_manifests: limit.quicksand_manifests * multiplier,
+            getfiles_files: limit.getfiles_files * multiplier,
+            getpack_files: limit.getpack_files * multiplier,
+            commits: limit.commits * multiplier,
         }
     })
 }
