@@ -71,6 +71,10 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     log_end(exit_code as u8, now);
 
+    // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
+    // so we need to flush now.
+    blackbox::sync();
+
     exit_code
 }
 
