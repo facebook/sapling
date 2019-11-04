@@ -196,7 +196,7 @@ pub fn do_pushrebase(
         .traced(&ctx.trace(), "do_pushrebase", trace_args!())
 }
 
-/// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
+/// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
 /// The commits from the pushed set should already be committed to the blobrepo
 /// Returns updated bookmark value.
 pub fn do_pushrebase_bonsai(

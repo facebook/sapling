@@ -35,7 +35,7 @@ use mercurial_types::{
     HgChangesetId, HgNodeKey, RepoPath,
 };
 use metaconfig_types::RepoReadOnly;
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, RawBundle2, RawBundle2Id};
+use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, trace};
 use std::collections::HashMap;
@@ -133,7 +133,7 @@ impl From<BundleResolverError> for Error {
 /// Data, needed to perform post-resolve `Push` action
 pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
-    pub bookmark_pushes: Vec<PlainBookmarkPush<HgChangesetId>>,
+    pub bookmark_pushes: Vec<PlainBookmarkPush<ChangesetId>>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
     pub uploaded_hg_bonsai_map: UploadedHgBonsaiMap,
@@ -142,17 +142,16 @@ pub struct PostResolvePush {
 /// Data, needed to perform post-resolve `InfinitePush` action
 pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
-    pub bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
+    pub bookmark_push: InfiniteBookmarkPush<ChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub uploaded_hg_bonsai_map: UploadedHgBonsaiMap,
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
 pub struct PostResolvePushRebase {
-    pub changesets: Vec<HgChangesetId>,
     pub any_merges: bool,
     pub bookmark_push_part_id: Option<PartId>,
-    pub bookmark_spec: PushrebaseBookmarkSpec,
+    pub bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
@@ -161,7 +160,7 @@ pub struct PostResolvePushRebase {
 
 /// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
 pub struct PostResolveBookmarkOnlyPushRebase {
-    pub bookmark_push: PlainBookmarkPush<HgChangesetId>,
+    pub bookmark_push: PlainBookmarkPush<ChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
 }
@@ -368,6 +367,21 @@ fn resolve_push(
                     })
             }
         })
+        .and_then({
+            cloned!(ctx, resolver);
+            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
+                hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).map(
+                    move |bookmark_push| {
+                        (
+                            changegroup_id,
+                            bookmark_push,
+                            maybe_raw_bundle2_id,
+                            uploaded_hg_bonsai_map,
+                        )
+                    },
+                )
+            }
+        })
         .map({
             move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
                 match bookmark_push {
@@ -401,12 +415,12 @@ fn resolve_push(
 // stack of) commit(s) and rebase it on top of a given bookmark.
 // Force pushrebase is basically a push, which for logging
 // and respondin purposes is treated like a pushrebase
-pub enum PushrebaseBookmarkSpec {
+pub enum PushrebaseBookmarkSpec<T: Copy> {
     NormalPushrebase(pushrebase::OntoBookmarkParams),
-    ForcePushrebase(PlainBookmarkPush<HgChangesetId>),
+    ForcePushrebase(PlainBookmarkPush<T>),
 }
 
-impl PushrebaseBookmarkSpec {
+impl<T: Copy> PushrebaseBookmarkSpec<T> {
     pub fn get_bookmark_name(&self) -> BookmarkName {
         match self {
             PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params.bookmark.clone(),
@@ -549,14 +563,19 @@ fn resolve_pushrebase(
                     })
             }
         })
+        .and_then({
+            cloned!(ctx, resolver);
+            move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
+                hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec)
+                    .map(move |bookmark_spec| (changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_hg_bonsai_map))
+            }
+        })
         .map({
             move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_hg_bonsai_map)| {
                 let any_merges = changesets
                     .iter()
                     .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
-                let changesets = changesets.into_iter().map(|(hg_cs_id, _)| hg_cs_id).collect();
                 PostResolveAction::PushRebase(PostResolvePushRebase {
-                    changesets,
                     any_merges,
                     bookmark_push_part_id,
                     bookmark_spec,
@@ -573,7 +592,7 @@ fn resolve_pushrebase(
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
 fn resolve_bookmark_only_pushrebase(
-    _ctx: CoreContext,
+    ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
@@ -608,6 +627,13 @@ fn resolve_bookmark_only_pushrebase(
                     .ensure_stream_finished(bundle2, maybe_full_content)
                     .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
                     .boxify()
+            }
+        })
+        .and_then({
+            cloned!(resolver);
+            move |(bookmark_push, maybe_raw_bundle2_id)| {
+                plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push)
+                    .map(move |bookmark_push| (bookmark_push, maybe_raw_bundle2_id))
             }
         })
         .map({
@@ -1339,4 +1365,120 @@ fn toposort_changesets(
         .rev() // reversing to get parents before the children
         .filter_map(|cs| changesets.remove(&cs).map(|revlog_cs| (cs, revlog_cs)))
         .collect())
+}
+
+fn bonsai_from_hg_opt(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    cs_id: Option<HgChangesetId>,
+) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
+    match cs_id {
+        None => ok(None).left_future(),
+        Some(cs_id) => repo
+            .get_bonsai_from_hg(ctx, cs_id.clone())
+            .and_then(move |maybe_bcs_id| {
+                if maybe_bcs_id.is_none() {
+                    err(format_err!("No bonsai mapping found for {}", cs_id))
+                } else {
+                    ok(maybe_bcs_id)
+                }
+            })
+            .right_future(),
+    }
+}
+
+/// TODO: this function belongs in some `common` module,
+/// once `bundle2_resolver` is merged into` unbundle`
+fn plain_hg_bookmark_push_to_bonsai(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bookmark_push: PlainBookmarkPush<HgChangesetId>,
+) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
+    let PlainBookmarkPush {
+        part_id,
+        name,
+        old,
+        new,
+    } = bookmark_push;
+    (
+        bonsai_from_hg_opt(ctx.clone(), repo, old),
+        bonsai_from_hg_opt(ctx.clone(), repo, new),
+    )
+        .into_future()
+        .map(move |(old, new)| PlainBookmarkPush {
+            part_id,
+            name,
+            old,
+            new,
+        })
+}
+
+fn infinite_hg_bookmark_push_to_bonsai(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
+) -> impl Future<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
+    let InfiniteBookmarkPush {
+        name,
+        force,
+        create,
+        old,
+        new,
+    } = bookmark_push;
+
+    (
+        bonsai_from_hg_opt(ctx.clone(), repo, old),
+        repo.get_bonsai_from_hg(ctx.clone(), new),
+    )
+        .into_future()
+        .and_then(|(old, new)| match new {
+            Some(new) => Ok((old, new)),
+            None => Err(err_msg("Bonsai Changeset not found")),
+        })
+        .map(move |(old, new)| InfiniteBookmarkPush {
+            name,
+            force,
+            create,
+            old,
+            new,
+        })
+}
+
+fn hg_pushrebase_bookmark_spec_to_bonsai(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
+) -> impl Future<Item = PushrebaseBookmarkSpec<ChangesetId>, Error = Error> + Send {
+    match bookmark_spec {
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
+            ok(PushrebaseBookmarkSpec::NormalPushrebase(onto_params)).left_future()
+        }
+        PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
+            plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push)
+                .map(PushrebaseBookmarkSpec::ForcePushrebase)
+                .right_future()
+        }
+    }
+}
+
+fn hg_all_bookmark_pushes_to_bonsai(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    all_bookmark_pushes: AllBookmarkPushes<HgChangesetId>,
+) -> impl Future<Item = AllBookmarkPushes<ChangesetId>, Error = Error> {
+    match all_bookmark_pushes {
+        AllBookmarkPushes::PlainPushes(plain_pushes) => {
+            future::join_all(plain_pushes.into_iter().map({
+                cloned!(ctx, repo);
+                move |plain_push| plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo, plain_push)
+            }))
+            .map(AllBookmarkPushes::PlainPushes)
+            .left_future()
+        }
+        AllBookmarkPushes::Inifinitepush(infinite_bookmark_push) => {
+            infinite_hg_bookmark_push_to_bonsai(ctx, repo, infinite_bookmark_push)
+                .map(AllBookmarkPushes::Inifinitepush)
+                .right_future()
+        }
+    }
 }

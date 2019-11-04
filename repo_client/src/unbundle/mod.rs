@@ -24,9 +24,8 @@ use futures::future::{err, ok};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_stats::Timed;
-use mercurial_types::HgChangesetId;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
-use mononoke_types::{ChangesetId, RawBundle2Id};
+use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
 use phases::Phases;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -126,15 +125,16 @@ fn run_push(
             let bookmark_pushes_futures = bookmark_pushes.into_iter().map({
                 cloned!(ctx, repo, lca_hint, bookmark_attrs, infinitepush_params);
                 move |bookmark_push| {
-                    get_bonsai_plain_bookmark_push_future(
+                    check_plain_bookmark_push_allowed(
                         ctx.clone(),
                         repo.clone(),
+                        bookmark_attrs.clone(),
+                        non_fast_forward_policy,
+                        infinitepush_params.clone(),
                         bookmark_push,
                         lca_hint.clone(),
-                        non_fast_forward_policy,
-                        bookmark_attrs.clone(),
-                        infinitepush_params.clone(),
                     )
+                    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
                 }
             });
 
@@ -179,13 +179,14 @@ fn run_infinitepush(
                 bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
             };
 
-            get_bonsai_infinite_bookmark_push_future(
+            filter_or_check_infinitepush_allowed(
                 ctx.clone(),
                 repo.clone(),
-                bookmark_push,
                 lca_hint,
                 infinitepush_params,
+                bookmark_push,
             )
+            .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
             .and_then({
                 cloned!(ctx, repo);
                 move |maybe_bonsai_bookmark_push| {
@@ -213,14 +214,13 @@ fn run_pushrebase(
     action: PostResolvePushRebase,
 ) -> BoxFuture<UnbundlePushRebaseResponse, BundleResolverError> {
     let PostResolvePushRebase {
-        changesets,
         any_merges,
         bookmark_push_part_id,
         bookmark_spec,
         maybe_raw_bundle2_id,
         maybe_pushvars: _,
         commonheads,
-        uploaded_hg_bonsai_map: _,
+        uploaded_hg_bonsai_map,
     } = action;
 
     let bookmark = bookmark_spec.get_bookmark_name();
@@ -235,7 +235,10 @@ fn run_pushrebase(
             ctx.clone(),
             repo.clone(),
             pushrebase_params.clone(),
-            changesets,
+            uploaded_hg_bonsai_map
+                .into_iter()
+                .map(|(_, bcs)| bcs)
+                .collect(),
             any_merges,
             &onto_params,
             maybe_raw_bundle2_id,
@@ -317,15 +320,16 @@ fn run_bookmark_only_pushrebase(
         // Since this a bookmark-only pushrebase, there are no changeset timestamps
         bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
     };
-    get_bonsai_plain_bookmark_push_future(
+    check_plain_bookmark_push_allowed(
         ctx.clone(),
         repo.clone(),
+        bookmark_attrs,
+        non_fast_forward_policy,
+        infinitepush_params,
         bookmark_push,
         lca_hint,
-        non_fast_forward_policy,
-        bookmark_attrs,
-        infinitepush_params,
     )
+    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
     .and_then({
         cloned!(ctx, repo);
         move |maybe_bookmark_push| {
@@ -347,7 +351,7 @@ fn normal_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
     mut pushrebase_params: PushrebaseParams,
-    changesets: Vec<HgChangesetId>,
+    changesets: Vec<BonsaiChangeset>,
     any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
@@ -391,7 +395,7 @@ fn normal_pushrebase(
         cloned!(repo, pushrebase, onto_bookmark, ctx);
         move || {
             ctx.scuba().clone().log_with_msg("pushrebase started", None);
-            pushrebase::do_pushrebase(
+            pushrebase::do_pushrebase_bonsai(
                 ctx,
                 repo,
                 pushrebase,
@@ -427,93 +431,39 @@ fn force_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    bookmark_push: PlainBookmarkPush<HgChangesetId>,
+    bookmark_push: PlainBookmarkPush<ChangesetId>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
 ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error> {
-    bonsai_from_hg_opt(ctx.clone(), &repo.clone(), bookmark_push.new.clone()).and_then(
-        move |maybe_target_bcs| {
-            let target_bcs =
-                try_boxfuture!(maybe_target_bcs
-                    .ok_or(err_msg("new changeset is required for force pushrebase")));
-            let reason = BookmarkUpdateReason::Pushrebase {
-                bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-            };
-            // Note that this push did not do any actual rebases, so we do not
-            // need to provide any actual mapping, an empty Vec will do
-            let ret = (target_bcs, Vec::new());
-            get_bonsai_plain_bookmark_push_future(
-                ctx.clone(),
-                repo.clone(),
-                bookmark_push,
-                lca_hint,
-                NonFastForwardPolicy::Allowed,
-                bookmark_attrs,
-                infinitepush_params,
-            )
-            .and_then({
-                cloned!(ctx, repo);
-                move |maybe_bookmark_push| {
-                    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
-                }
-            })
-            .map(move |_| ret)
-            .boxify()
-        },
+    let maybe_target_bcs = bookmark_push.new.clone();
+    let target_bcs = try_boxfuture!(
+        maybe_target_bcs.ok_or(err_msg("new changeset is required for force pushrebase"))
+    );
+    let reason = BookmarkUpdateReason::Pushrebase {
+        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+    };
+    // Note that this push did not do any actual rebases, so we do not
+    // need to provide any actual mapping, an empty Vec will do
+    let ret = (target_bcs, Vec::new());
+    check_plain_bookmark_push_allowed(
+        ctx.clone(),
+        repo.clone(),
+        bookmark_attrs,
+        NonFastForwardPolicy::Allowed,
+        infinitepush_params,
+        bookmark_push,
+        lca_hint,
     )
-}
-
-/// Produce a future for a plain bookmark push
-fn get_bonsai_plain_bookmark_push_future(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_push: PlainBookmarkPush<HgChangesetId>,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    non_fast_forward_policy: NonFastForwardPolicy,
-    bookmark_attrs: BookmarkAttrs,
-    infinitepush_params: InfinitepushParams,
-) -> impl Future<Item = Option<BookmarkPush<ChangesetId>>, Error = Error> {
-    plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo.clone(), bookmark_push)
-        .and_then({
-            cloned!(repo, ctx, lca_hint, bookmark_attrs, infinitepush_params);
-            move |bookmark_push| {
-                check_plain_bookmark_push_allowed(
-                    ctx,
-                    repo,
-                    bookmark_attrs,
-                    non_fast_forward_policy,
-                    infinitepush_params,
-                    bookmark_push,
-                    lca_hint,
-                )
-            }
-        })
-        .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-}
-
-/// Produce a future for an infinitepush bookmark push
-fn get_bonsai_infinite_bookmark_push_future(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
-) -> impl Future<Item = Option<BookmarkPush<ChangesetId>>, Error = Error> {
-    infinite_hg_bookmark_push_to_bonsai(ctx.clone(), &repo.clone(), bookmark_push)
-        .and_then({
-            cloned!(repo, ctx, lca_hint, infinitepush_params);
-            move |bookmark_push| {
-                filter_or_check_infinitepush_allowed(
-                    ctx.clone(),
-                    repo.clone(),
-                    lca_hint,
-                    infinitepush_params,
-                    bookmark_push,
-                )
-            }
-        })
-        .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
+    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
+    .and_then({
+        cloned!(ctx, repo);
+        move |maybe_bookmark_push| {
+            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
+        }
+    })
+    .map(move |_| ret)
+    .boxify()
 }
 
 /// Save several bookmark pushes to the database
@@ -711,81 +661,6 @@ fn check_is_ancestor_opt(
             }
         }
         .right_future(),
-    }
-}
-
-fn plain_hg_bookmark_push_to_bonsai(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    bookmark_push: PlainBookmarkPush<HgChangesetId>,
-) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
-    let PlainBookmarkPush {
-        part_id,
-        name,
-        old,
-        new,
-    } = bookmark_push;
-    (
-        bonsai_from_hg_opt(ctx.clone(), repo, old),
-        bonsai_from_hg_opt(ctx.clone(), repo, new),
-    )
-        .into_future()
-        .map(move |(old, new)| PlainBookmarkPush {
-            part_id,
-            name,
-            old,
-            new,
-        })
-}
-
-fn infinite_hg_bookmark_push_to_bonsai(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
-) -> impl Future<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
-    let InfiniteBookmarkPush {
-        name,
-        force,
-        create,
-        old,
-        new,
-    } = bookmark_push;
-
-    (
-        bonsai_from_hg_opt(ctx.clone(), repo, old),
-        repo.get_bonsai_from_hg(ctx.clone(), new),
-    )
-        .into_future()
-        .and_then(|(old, new)| match new {
-            Some(new) => Ok((old, new)),
-            None => Err(err_msg("Bonsai Changeset not found")),
-        })
-        .map(move |(old, new)| InfiniteBookmarkPush {
-            name,
-            force,
-            create,
-            old,
-            new,
-        })
-}
-
-fn bonsai_from_hg_opt(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    cs_id: Option<HgChangesetId>,
-) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
-    match cs_id {
-        None => ok(None).left_future(),
-        Some(cs_id) => repo
-            .get_bonsai_from_hg(ctx, cs_id.clone())
-            .and_then(move |maybe_bcs_id| {
-                if maybe_bcs_id.is_none() {
-                    err(format_err!("No bonsai mapping found for {}", cs_id))
-                } else {
-                    ok(maybe_bcs_id)
-                }
-            })
-            .right_future(),
     }
 }
 
