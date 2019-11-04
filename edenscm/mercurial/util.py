@@ -3382,6 +3382,7 @@ timecount = unitcountfn(
 )
 
 _timenesting = [0]
+_tracewrap = bindings.tracing.wrapfunc
 
 
 def timed(topfunc=None, annotation=None):
@@ -3400,6 +3401,12 @@ def timed(topfunc=None, annotation=None):
     """
 
     def outerwrapper(func):
+        meta = [("cat", "timed")]
+        if annotation:
+            meta.append(("annotation", annotation))
+        func.meta = meta
+        func = _tracewrap(func)
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             start = timer()
@@ -4337,6 +4344,9 @@ def timefunction(key, uiposition=None, uiname=None):
     """
 
     def wrapper(func):
+        func.meta = [("cat", "timefunction"), ("name", key)]
+        func = _tracewrap(func)
+
         def inner(*args, **kwargs):
             uiarg = None
             if uiposition is not None:
