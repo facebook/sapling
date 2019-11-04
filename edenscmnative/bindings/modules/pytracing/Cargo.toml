@@ -11,4 +11,5 @@ lazy_static = "1"
 mincode = { path = "../../../../lib/mincode" }
 parking_lot = "0.9"
 serde_json = "1"
+tracing = "0.1"
 tracing-collector = { path = "../../../../lib/tracing-collector" }
