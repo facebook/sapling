@@ -1174,6 +1174,44 @@ class dirstate(object):
                 self._repo.clearpostdsstatus()
                 self._repo._insidepoststatusfixup = False
 
+    def matches(self, match):
+        """
+        return files in the dirstate (in whatever state) filtered by match
+        """
+        dmap = self._map
+        if match.always():
+            return dmap.keys()
+        files = match.files()
+        if match.isexact():
+            # fast path -- filter the other way around, since typically files is
+            # much smaller than dmap
+            return [f for f in files if f in dmap]
+        if match.prefix():
+            if self._istreestate:
+                # treestate has a fast path to get files inside a subdirectory.
+                # files are prefixes
+                result = set()
+                fastpathvalid = True
+                for prefix in files:
+                    if prefix in dmap:
+                        # prefix is a file
+                        result.add(prefix)
+                    elif dmap.hastrackeddir(prefix + "/"):
+                        # prefix is a directory
+                        result.update(dmap.keys(prefix=prefix + "/"))
+                    else:
+                        # unknown pattern (ex. "."), fast path is invalid
+                        fastpathvalid = False
+                        break
+                if fastpathvalid:
+                    return sorted(result)
+            else:
+                # fast path -- all the values are known to be files, so just
+                # return that
+                if all(fn in dmap for fn in files):
+                    return list(files)
+        return [f for f in dmap if match(f)]
+
     def _actualfilename(self, tr):
         if tr:
             return self._pendingfilename

@@ -1627,7 +1627,7 @@ class committablectx(basectx):
         return sorted(files)
 
     def matches(self, match):
-        return sorted(self._manifest.matches(match))
+        return sorted(self._repo.dirstate.matches(match))
 
     def ancestors(self):
         for p in self._parents:
