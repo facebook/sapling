@@ -627,7 +627,7 @@ impl TracingData {
 /// Zero-copy `serde_json::Value` alternative.
 #[derive(Serialize)]
 #[serde(untagged)]
-enum RefValue<'a> {
+pub enum RefValue<'a> {
     Str(&'a str),
     Int(u64),
     Map(IndexMap<&'a str, RefValue<'a>>),
@@ -678,25 +678,38 @@ impl TracingData {
         out: &mut dyn io::Write,
         other_data: HashMap<String, String>,
     ) -> Result<(), serde_json::Error> {
+        serde_json::to_writer(out, &self.trace_event(other_data))
+    }
+
+    /// Return a serializable object that if serialized in JSON, matches
+    /// the "Trace Event" format.
+    pub fn trace_event<'a>(
+        &'a self,
+        other_data: HashMap<String, String>,
+    ) -> impl serde::Serialize + 'a {
         // FEATURE: "Trace Event" supports a lot of things. Features to consider:
         // - Handle async events (set "id" to espan_id, and use async phase names).
         // - Translate Espan::follower_ids to "Flow Events" (if follower_ids get used).
         // - Using "Metadata Events" to add names to threads.
 
         // Extract string from espan.meta.
-        let extract = |espan: &Espan, name: &str| -> Option<&str> {
+        fn extract<'a>(
+            strings: &'a InternedStrings,
+            espan: &'a Espan,
+            name: &str,
+        ) -> Option<&'a str> {
             let meta = &espan.meta;
-            if let Some((key_id, _)) = self.strings.0.get_full(name) {
+            if let Some((key_id, _)) = strings.0.get_full(name) {
                 let key_id = StringId(key_id as u64);
                 if let Some(value_id) = meta.get(&key_id) {
-                    return Some(self.strings.get(*value_id));
+                    return Some(strings.get(*value_id));
                 }
             }
             None
         };
 
         // Calculate JSON objects in a streaming way to reduce memory usage.
-        let trace_event_iter = self.eventus.iter().map(|eventus| {
+        let trace_event_iter = self.eventus.iter().map(move |eventus| {
             // EspanId recorded in eventus should be verified.
             let espan = self.get_espan(eventus.espan_id).unwrap();
             let ph = match eventus.action {
@@ -722,8 +735,8 @@ impl TracingData {
                 v => v,
             };
             let mut obj = object!({
-                name: extract(espan, "name").unwrap_or("(unnamed)"),
-                cat: extract(espan, "cat").unwrap_or("default"),
+                name: extract(&self.strings, espan, "name").unwrap_or("(unnamed)"),
+                cat: extract(&self.strings, espan, "cat").unwrap_or("default"),
                 ts: eventus.timestamp.0,
                 pid: pid,
                 tid: tid,
@@ -737,9 +750,10 @@ impl TracingData {
             obj
         });
 
+        /// Top-level object used by the "Trace Event" format.
         #[allow(non_snake_case)]
         #[derive(Serialize)]
-        struct Trace<'a, I: Iterator<Item = RefValue<'a>>> {
+        pub struct Trace<'b, I: Iterator<Item = RefValue<'b>>> {
             #[serde(serialize_with = "serialize_iter")]
             traceEvents: RefCell<I>,
             displayTimeUnit: &'static str,
@@ -751,7 +765,7 @@ impl TracingData {
             otherData: other_data,
         };
 
-        serde_json::to_writer(out, &trace)
+        trace
     }
 }
 
