@@ -44,6 +44,7 @@ typedef IdType ContentChunkId (hs.newtype)
 typedef IdType RawBundle2Id (hs.newtype)
 typedef IdType FileUnodeId (hs.newtype)
 typedef IdType ManifestUnodeId (hs.newtype)
+typedef IdType DeletedManifestId(hs.newtype)
 typedef IdType FsnodeId (hs.newtype)
 typedef IdType MPathHash (hs.newtype)
 
@@ -224,6 +225,11 @@ struct ManifestUnode {
   1: list<ManifestUnodeId> parents,
   2: map<MPathElement, UnodeEntry> subentries,
   3: ChangesetId linknode,
+}
+
+struct DeletedManifest {
+  1: optional ChangesetId linknode,
+  2: map<MPathElement, DeletedManifestId> subentries,
 }
 
 struct FsnodeFile {
