@@ -672,6 +672,10 @@ function lfs_server {
       shift
       args=("${args[@]}" "$1")
       shift
+    elif [[ "$1" = "--live-config" ]]; then
+      opts=("${opts[@]}" "$1" "$2")
+      shift
+      shift
     elif [[ "$1" = "--tls" ]]; then
       shift
       proto="https"

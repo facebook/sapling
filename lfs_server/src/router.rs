@@ -9,7 +9,7 @@
 use futures_preview::{FutureExt, TryFutureExt};
 use gotham::{
     handler::{HandlerError, HandlerFuture, IntoHandlerError},
-    helpers::http::response::create_response,
+    helpers::http::response::{create_empty_response, create_response},
     middleware::state::StateMiddleware,
     pipeline::{new_pipeline, single::single_pipeline},
     router::{
@@ -18,8 +18,9 @@ use gotham::{
     },
     state::{request_id, FromState, State},
 };
-use hyper::{Body, Response};
+use hyper::{Body, Response, StatusCode};
 use itertools::Itertools;
+use mime;
 use std::iter;
 
 use failure_ext::chain::ChainExt;
@@ -121,6 +122,17 @@ fn health_handler(state: State) -> (State, &'static str) {
     (state, res)
 }
 
+fn config_handler(state: State) -> (State, Response<Body>) {
+    let lfs_ctx = LfsServerContext::borrow_from(&state);
+
+    let res = match serde_json::to_string(&lfs_ctx.get_config()) {
+        Ok(json) => create_response(&state, StatusCode::OK, mime::APPLICATION_JSON, json),
+        Err(_) => create_empty_response(&state, StatusCode::INTERNAL_SERVER_ERROR),
+    };
+
+    (state, res)
+}
+
 pub fn build_router(lfs_ctx: LfsServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(lfs_ctx)).build();
 
@@ -143,5 +155,6 @@ pub fn build_router(lfs_ctx: LfsServerContext) -> Router {
             .to(upload_handler);
 
         route.get("/health_check").to(health_handler);
+        route.get("/config").to(config_handler);
     })
 }

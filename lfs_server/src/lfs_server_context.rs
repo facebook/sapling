@@ -33,6 +33,7 @@ use hyper_openssl::HttpsConnector;
 use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
 use mononoke_types::ContentId;
 
+use crate::config::{ServerConfig, ServerConfigHandle};
 use crate::errors::ErrorKind;
 use crate::middleware::{LfsMethod, RequestContext};
 
@@ -44,6 +45,7 @@ struct LfsServerContextInner {
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
+    config_handle: ServerConfigHandle,
 }
 
 #[derive(Clone, StateData)]
@@ -61,6 +63,7 @@ impl LfsServerContext {
         server: ServerUris,
         always_wait_for_upstream: bool,
         will_exit: Arc<AtomicBool>,
+        config_handle: ServerConfigHandle,
     ) -> Result<Self, Error> {
         // TODO: Configure threads?
         let connector = HttpsConnector::new(4)
@@ -74,6 +77,7 @@ impl LfsServerContext {
             server: Arc::new(server),
             client: Arc::new(client),
             always_wait_for_upstream,
+            config_handle,
         };
 
         Ok(LfsServerContext {
@@ -103,11 +107,17 @@ impl LfsServerContext {
                         server: inner.server.clone(),
                     },
                     client: inner.client.clone(),
+                    config: inner.config_handle.get(),
                     always_wait_for_upstream,
                 })
             }
             None => Err(ErrorKind::RepositoryDoesNotExist(repository).into()),
         }
+    }
+
+    pub fn get_config(&self) -> ServerConfig {
+        let inner = self.inner.lock().expect("poisoned lock");
+        inner.config_handle.get()
     }
 
     pub fn will_exit(&self) -> bool {
@@ -120,6 +130,7 @@ pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: BlobRepo,
     pub uri_builder: UriBuilder,
+    pub config: ServerConfig,
     always_wait_for_upstream: bool,
     client: Arc<HttpsHyperClient>,
 }

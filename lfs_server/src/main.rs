@@ -38,6 +38,7 @@ use metaconfig_parser::RepoConfigs;
 
 use cmdlib::{args, monitoring::create_fb303_and_stats_agg};
 
+use crate::config::spawn_config_poller;
 use crate::handler::MononokeLfsHandler;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
@@ -47,6 +48,7 @@ use crate::middleware::{
 use crate::router::build_router;
 
 mod batch;
+mod config;
 mod download;
 mod errors;
 mod handler;
@@ -69,6 +71,7 @@ const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
+const ARG_LIVE_CONFIG: &str = "live-config";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -149,6 +152,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long(ARG_SCUBA_LOG_FILE)
                 .takes_value(true)
                 .help("A log file to write Scuba logs to (primarily useful in testing)"),
+        )
+        .arg(
+            Arg::with_name(ARG_LIVE_CONFIG)
+                .long(ARG_LIVE_CONFIG)
+                .takes_value(true)
+                .required(false)
+                .help("Source for live config (configerator:SPEC, file:SPEC, default)"),
         );
 
     let app = args::add_fb303_args(app);
@@ -220,6 +230,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
+    let (poller, config) = spawn_config_poller(
+        fb,
+        logger.clone(),
+        will_exit.clone(),
+        matches.value_of(ARG_LIVE_CONFIG),
+    )
+    .chain_err(err_msg("Failed to load configuration"))?;
+
     let ctx = LfsServerContext::new(
         fb,
         logger.clone(),
@@ -227,6 +245,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         server,
         matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
         will_exit.clone(),
+        config,
     )?;
 
     let router = build_router(ctx);
@@ -348,6 +367,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .wait()
         .map_err(|_| err_msg("Failed to shutdown runtime!"))?;
 
+    info!(&logger, "Waiting for configuration poller to exit...");
+    poller
+        .join()
+        .map_err(|_| err_msg("Failed to shutdown configuration poller!"))?;
+
     info!(&logger, "Exiting...");
+
     Ok(())
 }
