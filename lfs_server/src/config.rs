@@ -38,8 +38,8 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            track_bytes_sent: true,
-            enable_consistent_routing: true,
+            track_bytes_sent: false,
+            enable_consistent_routing: false,
             max_bytes_sent_5s: None,
             max_bytes_sent_15s: None,
         }

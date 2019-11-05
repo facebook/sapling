@@ -7,6 +7,8 @@
  */
 
 use failure_ext::chain::ChainExt;
+use futures::Stream;
+use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -14,11 +16,17 @@ use serde::Deserialize;
 
 use filestore::{self, FetchKey};
 use mononoke_types::ContentId;
+use stats::{define_stats, Timeseries};
 
 use crate::errors::ErrorKind;
 use crate::http::{HttpError, StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
+
+define_stats! {
+    prefix = "mononoke.lfs.download";
+    size_bytes_sent: timeseries("size_bytes_sent"; SUM; 5, 15, 60),
+}
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct DownloadParams {
@@ -54,6 +62,14 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
     let (stream, size) = fetch_stream
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id))
         .map_err(HttpError::e404)?;
+
+    let stream = if ctx.config.track_bytes_sent {
+        stream
+            .inspect(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
+            .left_stream()
+    } else {
+        stream.right_stream()
+    };
 
     Ok(StreamBody::new(
         stream,
