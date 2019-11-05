@@ -189,10 +189,14 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 
-    def text(&self) -> PyResult<PyBytes> {
+    def text(&self, matcher: Option<PyObject> = None) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
         let tree = self.underlying(py).borrow();
-        for entry in tree.files(&AlwaysMatcher::new()) {
+        let matcher: Box<dyn Matcher> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+        };
+        for entry in tree.files(&matcher) {
             let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
             lines.push(format!(
                 "{}\0{}{}\n",
@@ -293,20 +297,10 @@ py_class!(class treemanifest |py| {
     }
 
     def matches(&self, pymatcher: PyObject) -> PyResult<PyObject> {
+        let flatmanifest = self.text(py, Some(pymatcher))?;
         let manifestmod = py.import("edenscm.mercurial.manifest")?;
         let manifestdict = manifestmod.get(py, "manifestdict")?;
-        let result = manifestdict.call(py, NoArgs, None)?;
-        let tree = self.underlying(py).borrow();
-        for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
-            let file = entry.map_pyerr::<exc::RuntimeError>(py)?;
-            let pypath = path_to_pybytes(py, &file.path);
-            let pynode = node_to_pybytes(py, file.meta.hgid);
-            result.call_method(py, "__setitem__", (pypath, pynode), None)?;
-            let pypath = path_to_pybytes(py, &file.path);
-            let pyflags = file_type_to_pystring(py, file.meta.file_type);
-            result.call_method(py, "setflag", (pypath, pyflags), None)?;
-        }
-        Ok(result)
+        manifestdict.call(py, (flatmanifest,), None)
     }
 
     def __setitem__(&self, path: &PyBytes, binnode: &PyBytes) -> PyResult<()> {
