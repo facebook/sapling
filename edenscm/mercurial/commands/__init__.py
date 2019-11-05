@@ -2742,15 +2742,14 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     reporoot = os.path.dirname(repo.path)
     wctx = repo[None]
+
     if not pats:
         # Search everything in the current directory
         m = scmutil.match(wctx, ["."], match_opts)
         # Scope biggrep to the cwd equivalent path, relative to the root
         # of its corpus.
-        biggrepcmd += [
-            "-f",
-            os.path.normpath(util.pathto(reporoot, repo.getcwd(), ".")),
-        ]
+        if repo.getcwd():
+            biggrepcmd += ["-f", repo.getcwd()]
     else:
         # Search using the specified patterns
         m = scmutil.match(wctx, pats, match_opts)
@@ -2761,10 +2760,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             "-f",
             "(%s)"
             % "|".join(
-                [
-                    os.path.normpath(util.pathto(reporoot, repo.getcwd(), f))
-                    for f in pats
-                ]
+                [os.path.normpath(os.path.join(repo.getcwd(), f)) for f in pats]
             ),
         ]
 

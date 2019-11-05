@@ -4,7 +4,9 @@
   > rebase=
   > EOF
 
-Set up the repository with some simple files
+Set up the repository with some simple files.
+This is coupled with the files dictionary in
+scm/hg/tests/fake-biggrep-client.py
   $ hg init repo
   $ cd repo
   $ mkdir grepdir
@@ -105,13 +107,40 @@ Test symlinks
   [123]
 #endif
 
-Test basic biggrep client
+Test with context
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake foobar \
-  > | sort
-  \x1b[35m\x1b[Kfakefile\x1b[m\x1b[K\x1b[36m\x1b[K:\x1b[m\x1b[Kfakeresult (esc)
-  grepfile1:foobarbaz
-  grepfile2:foobarboo
-  subdir1/subfile1:foobar_subdir
-  subdir2/subfile2:foobar_dirsub
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > --color=off \
+  > -n foobar | sort
+  grepfile1:1:foobarbaz_bg
+  grepfile2:1:foobarboo_bg
+  subdir1/subfile1:1:foobar_subdir_bg
+  subdir2/subfile2:1:foobar_dirsub_bg
 
+Test basic biggrep client in subdir1
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > --cwd subdir1 foobar | sort
+  subfile1:foobar_subdir_bg
+
+Test basic biggrep client with subdir2 matcher
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > foobar subdir2 | sort
+  subdir2/subfile2:foobar_dirsub_bg
+
+Test biggrep searching in a sibling subdirectory, using a relative path
+  $ cd subdir1
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > foobar ../subdir2 -n | sort
+  ../subdir2/subfile2:1:foobar_dirsub_bg
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -n foobar | sort
+  subfile1:1:foobar_subdir_bg
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -n foobar . | sort
+  subfile1:1:foobar_subdir_bg
+  $ cd ..
