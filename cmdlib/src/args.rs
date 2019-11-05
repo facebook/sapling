@@ -316,7 +316,7 @@ where
 {
     let (_, config) = try_boxfuture!(get_config(matches));
     let maybe_myrouter_port = parse_myrouter_port(matches);
-    open_sql_with_config_and_myrouter_port(config, maybe_myrouter_port)
+    open_sql_with_config_and_myrouter_port(config.storage_config.dbconfig, maybe_myrouter_port)
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.

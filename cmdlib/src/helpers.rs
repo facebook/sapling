@@ -21,7 +21,7 @@ use bookmarks::BookmarkName;
 use changesets::SqlConstructors;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::{MetadataDBConfig, RepoConfig};
+use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
@@ -269,14 +269,14 @@ pub fn csid_resolve(
 }
 
 pub fn open_sql_with_config_and_myrouter_port<T>(
-    config: RepoConfig,
+    dbconfig: MetadataDBConfig,
     maybe_myrouter_port: Option<u16>,
 ) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
 {
     let name = T::LABEL;
-    match config.storage_config.dbconfig {
+    match dbconfig {
         MetadataDBConfig::LocalDB { path } => {
             T::with_sqlite_path(path.join(name)).into_future().boxify()
         }
