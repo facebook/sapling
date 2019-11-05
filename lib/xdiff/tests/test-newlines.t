@@ -37,13 +37,14 @@ test behaviour arround handling newlines
   diff --git a/a b/b
   --- a/a
   +++ b/b
-  @@ -3,5 +3,9 @@
+  @@ -2,6 +2,10 @@
+   fn one() {
    }
    
-   #[something]
+  +#[something]
   +fn two() {
   +}
   +
-  +#[something]
+   #[something]
    fn three() {
    }

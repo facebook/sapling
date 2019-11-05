@@ -89,7 +89,9 @@ where
         ptr: new_text.as_ptr() as *mut c_char,
         size: new_text.len() as i64,
     };
-    let xpp = ffi::xpparam_t { flags: 0 };
+    let xpp = ffi::xpparam_t {
+        flags: ffi::XDF_INDENT_HEURISTIC as u64,
+    };
     let xecfg = ffi::xdemitconf_t {
         flags: 0,
         hunk_func: Some(hunk_consumer),
