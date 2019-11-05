@@ -248,6 +248,22 @@ where
         self.repos.get_target_repo()
     }
 
+    pub fn get_large_repo(&self) -> &BlobRepo {
+        use CommitSyncRepos::*;
+        match self.repos {
+            LargeToSmall { ref large_repo, .. } => large_repo,
+            SmallToLarge { ref large_repo, .. } => large_repo,
+        }
+    }
+
+    pub fn get_small_repo(&self) -> &BlobRepo {
+        use CommitSyncRepos::*;
+        match self.repos {
+            LargeToSmall { ref small_repo, .. } => small_repo,
+            SmallToLarge { ref small_repo, .. } => small_repo,
+        }
+    }
+
     pub fn get_mapping(&self) -> &M {
         &self.mapping
     }

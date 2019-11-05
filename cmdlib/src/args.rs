@@ -12,7 +12,7 @@ use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
 use failure_ext::{err_msg, Error, Result};
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
+use futures::Future;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -36,6 +36,15 @@ use crate::helpers::{
     CachelibSettings,
 };
 use crate::log;
+
+const REPO_ID: &str = "repo-id";
+const REPO_NAME: &str = "repo-name";
+const SOURCE_REPO_GROUP: &str = "source-repo";
+const SOURCE_REPO_ID: &str = "source-repo-id";
+const SOURCE_REPO_NAME: &str = "source-repo-name";
+const TARGET_REPO_GROUP: &str = "target-repo";
+const TARGET_REPO_ID: &str = "target-repo-id";
+const TARGET_REPO_NAME: &str = "target-repo-name";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -74,6 +83,10 @@ pub struct MononokeApp {
 
     /// Whether to require the user select a repo.
     repo_required: bool,
+
+    /// Adds --source-repo-id/repo-name and --target-repo-id/repo-name options.
+    /// Necessary for crossrepo operations
+    source_and_target_repos: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -95,6 +108,7 @@ impl MononokeApp {
             hide_advanced_args: false,
             all_repos: false,
             repo_required: false,
+            source_and_target_repos: false,
         }
     }
 
@@ -121,6 +135,13 @@ impl MononokeApp {
         self
     }
 
+    /// This command might operate on two repos in the same time. This is normally used
+    /// for two repos where one repo is synced into another.
+    pub fn with_source_and_target_repos(mut self) -> Self {
+        self.source_and_target_repos = true;
+        self
+    }
+
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
         let mut app = App::new(self.name)
@@ -138,26 +159,71 @@ impl MononokeApp {
             );
 
         if !self.all_repos {
+            let conflicts = &[
+                SOURCE_REPO_ID,
+                SOURCE_REPO_NAME,
+                TARGET_REPO_ID,
+                TARGET_REPO_NAME,
+            ];
+
             app = app
                 .arg(
-                    Arg::with_name("repo-id")
-                    .long("repo-id")
+                    Arg::with_name(REPO_ID)
+                    .long(REPO_ID)
                     // This is an old form that some consumers use
                     .alias("repo_id")
                     .value_name("ID")
-                    .help("numeric ID of repository"),
+                    .help("numeric ID of repository")
+                    .conflicts_with_all(conflicts),
                 )
                 .arg(
-                    Arg::with_name("repo-name")
-                        .long("repo-name")
+                    Arg::with_name(REPO_NAME)
+                        .long(REPO_NAME)
                         .value_name("NAME")
-                        .help("Name of repository"),
+                        .help("Name of repository")
+                        .conflicts_with_all(conflicts),
                 )
                 .group(
                     ArgGroup::with_name("repo")
-                        .args(&["repo-id", "repo-name"])
+                        .args(&[REPO_ID, REPO_NAME])
                         .required(self.repo_required),
                 );
+
+            if self.source_and_target_repos {
+                app = app
+                    .arg(
+                        Arg::with_name(SOURCE_REPO_ID)
+                        .long(SOURCE_REPO_ID)
+                        .value_name("ID")
+                        .help("numeric ID of source repository (used only for commands that operate on more than one repo)"),
+                    )
+                    .arg(
+                        Arg::with_name(SOURCE_REPO_NAME)
+                        .long(SOURCE_REPO_NAME)
+                        .value_name("NAME")
+                        .help("Name of source repository (used only for commands that operate on more than one repo)"),
+                    )
+                    .group(
+                        ArgGroup::with_name(SOURCE_REPO_GROUP)
+                            .args(&[SOURCE_REPO_ID, SOURCE_REPO_NAME])
+                    )
+                    .arg(
+                        Arg::with_name(TARGET_REPO_ID)
+                        .long(TARGET_REPO_ID)
+                        .value_name("ID")
+                        .help("numeric ID of target repository (used only for commands that operate on more than one repo)"),
+                    )
+                    .arg(
+                        Arg::with_name(TARGET_REPO_NAME)
+                        .long(TARGET_REPO_NAME)
+                        .value_name("NAME")
+                        .help("Name of target repository (used only for commands that operate on more than one repo)"),
+                    )
+                    .group(
+                        ArgGroup::with_name(TARGET_REPO_GROUP)
+                            .args(&[TARGET_REPO_ID, TARGET_REPO_NAME])
+                    );
+            }
         }
 
         app = add_logger_args(app);
@@ -246,11 +312,15 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     logger
 }
 
-pub fn get_repo_id_and_name_from_values(
-    repo_name: Option<&str>,
-    repo_id: Option<&str>,
-    configs: RepoConfigs,
+fn get_repo_id_and_name_from_values<'a>(
+    matches: &ArgMatches<'a>,
+    option_repo_name: &str,
+    option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
+    let repo_name = matches.value_of(option_repo_name);
+    let repo_id = matches.value_of(option_repo_id);
+    let configs = read_configs(matches)?;
+
     match (repo_name, repo_id) {
         (Some(_), Some(_)) => Err(err_msg("both repo-name and repo-id parameters set")),
         (None, None) => Err(err_msg("neither repo-name nor repo-id parameter set")),
@@ -295,19 +365,23 @@ pub fn get_repo_id_and_name_from_values(
 }
 
 pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let repo_name = matches.value_of("repo-name");
-    let repo_id = matches.value_of("repo-id");
-    let configs = read_configs(matches)?;
-    let (repo_id, _) = get_repo_id_and_name_from_values(repo_name, repo_id, configs)?;
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
     Ok(repo_id)
 }
 
 pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
-    let repo_name = matches.value_of("repo-name");
-    let repo_id = matches.value_of("repo-id");
-    let configs = read_configs(matches)?;
-    let (_, repo_name) = get_repo_id_and_name_from_values(repo_name, repo_id, configs)?;
+    let (_, repo_name) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
     Ok(repo_name)
+}
+
+pub fn get_source_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+    Ok(repo_id)
+}
+
+pub fn get_target_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
+    Ok(repo_id)
 }
 
 pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
@@ -315,6 +389,16 @@ where
     T: SqlConstructors,
 {
     let (_, config) = try_boxfuture!(get_config(matches));
+    let maybe_myrouter_port = parse_myrouter_port(matches);
+    open_sql_with_config_and_myrouter_port(config.storage_config.dbconfig, maybe_myrouter_port)
+}
+
+pub fn open_source_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
+where
+    T: SqlConstructors,
+{
+    let source_repo_id = try_boxfuture!(get_source_repo_id(matches));
+    let (_, config) = try_boxfuture!(get_config_by_repoid(matches, source_repo_id));
     let maybe_myrouter_port = parse_myrouter_port(matches);
     open_sql_with_config_and_myrouter_port(config.storage_config.dbconfig, maybe_myrouter_port)
 }
@@ -560,6 +644,13 @@ pub fn read_storage_configs<'a>(
 
 pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
     let repo_id = get_repo_id(matches)?;
+    get_config_by_repoid(matches, repo_id)
+}
+
+pub fn get_config_by_repoid<'a>(
+    matches: &ArgMatches<'a>,
+    repo_id: RepositoryId,
+) -> Result<(String, RepoConfig)> {
     let configs = read_configs(matches)?;
     configs
         .get_repo_config(repo_id)
@@ -576,23 +667,39 @@ fn open_repo_internal<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let repo_id = get_repo_id(matches);
+    let repo_id = try_boxfuture!(get_repo_id(matches));
+    open_repo_internal_with_repo_id(
+        fb,
+        logger,
+        repo_id,
+        matches,
+        create,
+        caching,
+        scrub,
+        redaction_override,
+    )
+}
 
+fn open_repo_internal_with_repo_id<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    repo_id: RepositoryId,
+    matches: &ArgMatches<'a>,
+    create: bool,
+    caching: Caching,
+    scrub: Scrubbing,
+    redaction_override: Option<Redaction>,
+) -> BoxFuture<BlobRepo, Error> {
     let common_config = try_boxfuture!(read_common_config(&matches));
 
     let (reponame, config) = {
-        let (reponame, mut config) = try_boxfuture!(get_config(matches));
+        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(matches, repo_id));
         if let Scrubbing::Enabled = scrub {
             config.storage_config.blobstore.set_scrubbed();
         }
         (reponame, config)
     };
-    info!(
-        logger,
-        "using repo \"{}\" repoid {:?}",
-        reponame,
-        repo_id.as_ref().unwrap()
-    );
+    info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
         BlobConfig::Files { path } | BlobConfig::Rocks { path } | BlobConfig::Sqlite { path } => {
             setup_repo_dir(path, create).expect("Setting up file blobrepo failed");
@@ -603,23 +710,38 @@ fn open_repo_internal<'a>(
     let myrouter_port = parse_myrouter_port(matches);
 
     cloned!(logger);
-    repo_id
-        .into_future()
-        .and_then(move |repo_id| {
-            open_blobrepo(
-                fb,
-                config.storage_config,
-                repo_id,
-                myrouter_port,
-                caching,
-                config.bookmarks_cache_ttl,
-                redaction_override.unwrap_or(config.redaction),
-                common_config.scuba_censored_table,
-                config.filestore,
-                logger,
-            )
-        })
-        .boxify()
+    open_blobrepo(
+        fb,
+        config.storage_config,
+        repo_id,
+        myrouter_port,
+        caching,
+        config.bookmarks_cache_ttl,
+        redaction_override.unwrap_or(config.redaction),
+        common_config.scuba_censored_table,
+        config.filestore,
+        logger,
+    )
+    .boxify()
+}
+
+pub fn open_repo_with_repo_id<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    repo_id: RepositoryId,
+    matches: &ArgMatches<'a>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal_with_repo_id(
+        fb,
+        logger,
+        repo_id,
+        matches,
+        false,
+        parse_caching(matches),
+        Scrubbing::Disabled,
+        None,
+    )
+    .boxify()
 }
 
 pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
