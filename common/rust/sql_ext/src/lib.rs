@@ -217,6 +217,11 @@ pub trait SqlConstructors: Sized + Send + Sync + 'static {
         // When opening an sqlite database we might already have the proper tables in it, so ignore
         // errors from table creation
         let _ = con.execute_batch(Self::get_up_query());
+        // By default, when there's a read/write contention, SQLite will not wait,
+        // but rather throw a `SQLITE_BUSY` error. See https://www.sqlite.org/lockingv3.html
+        // This means that tests will fail in cases when production setup (e.g. one with MySQL)
+        // would not. To change that, let's make sqlite wait for some time, before erroring out
+        let _ = con.busy_timeout(Duration::from_secs(10));
         with_sqlite(con)
     }
 }
