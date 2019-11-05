@@ -68,16 +68,6 @@ class eden_dirstate(dirstate.dirstate):
         self._mapcls = create_eden_dirstate
         self._fs = eden_dirstate_fs.eden_filesystem(self._root, self)
 
-    def restorebackup(self, tr, backupname):
-        oldparents = self.parents()
-        super(eden_dirstate, self).restorebackup(tr, backupname)
-
-        newparents = self.parents()
-        if oldparents != newparents:
-            self._map._thrift_client.setHgParents(
-                newparents[0], newparents[1], need_flush=False
-            )
-
     def __iter__(self):
         # FIXME: This appears to be called by `hg reset`, so we provide a dummy
         # response here, but really, we should outright prohibit this.
