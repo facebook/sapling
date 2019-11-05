@@ -9,53 +9,14 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::os::raw::{c_char, c_int, c_void};
+mod bindgen;
 
-#[repr(C)]
-pub struct mmfile_t {
-    pub ptr: *const c_char,
-    pub size: i64,
-}
-
-#[repr(C)]
-pub struct xpparam_t {
-    pub flags: u64,
-}
-
-#[repr(C)]
-pub struct xdemitcb_t {
-    pub priv_: *mut c_void,
-}
-
-pub type xdl_emit_hunk_consume_func_t = Option<
-    unsafe extern "C" fn(
-        start_a: i64,
-        count_a: i64,
-        start_b: i64,
-        count_b: i64,
-        cb_data: *mut c_void,
-    ) -> c_int,
->;
-
-#[repr(C)]
-pub struct xdemitconf_t {
-    pub flags: u64,
-    pub hunk_func: xdl_emit_hunk_consume_func_t,
-}
-
-extern "C" {
-    pub fn xdl_diff(
-        mf1: *const mmfile_t,
-        mf2: *const mmfile_t,
-        xpp: *const xpparam_t,
-        xecfg: *const xdemitconf_t,
-        ecb: *mut xdemitcb_t,
-    ) -> c_int;
-}
+pub use bindgen::*;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::raw::{c_char, c_int, c_void};
 
     #[test]
     fn test_xdl_diff() {
@@ -70,11 +31,11 @@ mod tests {
         let a = "a\nb\nc\nd\n".to_owned();
         let b = "a\nc\nd\ne\n".to_owned();
         let mut a_mmfile = mmfile_t {
-            ptr: a.as_ptr() as *const c_char,
+            ptr: a.as_ptr() as *mut c_char,
             size: a.len() as i64,
         };
         let mut b_mmfile = mmfile_t {
-            ptr: b.as_ptr() as *const c_char,
+            ptr: b.as_ptr() as *mut c_char,
             size: b.len() as i64,
         };
         let xpp = xpparam_t { flags: 0 };

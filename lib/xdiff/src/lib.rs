@@ -81,12 +81,12 @@ where
 
     let old_text = old_text.as_ref();
     let mut old_mmfile = ffi::mmfile_t {
-        ptr: old_text.as_ptr() as *const c_char,
+        ptr: old_text.as_ptr() as *mut c_char,
         size: old_text.len() as i64,
     };
     let new_text = new_text.as_ref();
     let mut new_mmfile = ffi::mmfile_t {
-        ptr: new_text.as_ptr() as *const c_char,
+        ptr: new_text.as_ptr() as *mut c_char,
         size: new_text.len() as i64,
     };
     let xpp = ffi::xpparam_t { flags: 0 };
