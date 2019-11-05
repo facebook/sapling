@@ -14,7 +14,10 @@ use futures::{Future, IntoFuture};
 use futures_ext::{asynchronize, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
-use hyper::{Body, Response};
+use hyper::{
+    body::{Body, Payload},
+    Response,
+};
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::{
@@ -24,7 +27,8 @@ use tokio::{
 
 use super::{ClientIdentity, Middleware};
 
-type PostRequestCallback = Box<dyn FnOnce(&Duration, &Option<String>) + Sync + Send + 'static>;
+type PostRequestCallback =
+    Box<dyn FnOnce(&Duration, &Option<String>, Option<u64>) + Sync + Send + 'static>;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {
@@ -49,11 +53,10 @@ pub struct RequestContext {
     pub repository: Option<String>,
     pub method: Option<LfsMethod>,
     pub error_msg: Option<String>,
-    pub response_size: Option<u64>,
     pub headers_duration: Option<Duration>,
     pub should_log: bool,
 
-    checkpoint: Option<Receiver<()>>,
+    checkpoint: Option<Receiver<u64>>,
     start_time: Instant,
     post_request_callbacks: Vec<PostRequestCallback>,
 }
@@ -64,7 +67,6 @@ impl RequestContext {
             repository: None,
             method: None,
             error_msg: None,
-            response_size: None,
             headers_duration: None,
             should_log,
             start_time: Instant::now(),
@@ -82,29 +84,26 @@ impl RequestContext {
         self.error_msg = Some(error_msg);
     }
 
-    pub fn set_response_size(&mut self, size: u64) {
-        self.response_size = Some(size);
-    }
-
     pub fn headers_ready(&mut self) {
         self.headers_duration = Some(self.start_time.elapsed());
     }
 
     pub fn add_post_request<T>(&mut self, callback: T)
     where
-        T: FnOnce(&Duration, &Option<String>) + Sync + Send + 'static,
+        T: FnOnce(&Duration, &Option<String>, Option<u64>) + Sync + Send + 'static,
     {
         self.post_request_callbacks.push(Box::new(callback));
     }
 
-    pub fn delay_post_request(&mut self) -> Sender<()> {
+    /// Delay post request until a callback has completed. This is useful to e.g. record how much data was sent.
+    pub fn delay_post_request(&mut self) -> Sender<u64> {
         // NOTE: If this is called twice ... then the first one will be ignored
         let (sender, receiver) = channel();
         self.checkpoint = Some(receiver);
         sender
     }
 
-    fn dispatch_post_request(self, client_address: Option<IpAddr>) {
+    fn dispatch_post_request(self, client_address: Option<IpAddr>, content_length: Option<u64>) {
         let Self {
             start_time,
             post_request_callbacks,
@@ -112,9 +111,9 @@ impl RequestContext {
             ..
         } = self;
 
-        let run_callbacks = move |elapsed, client_hostname| {
+        let run_callbacks = move |elapsed, client_hostname, bytes_sent| {
             for callback in post_request_callbacks.into_iter() {
-                callback(&elapsed, &client_hostname)
+                callback(&elapsed, &client_hostname, bytes_sent)
             }
         };
 
@@ -133,16 +132,18 @@ impl RequestContext {
 
         let fut = if let Some(checkpoint) = checkpoint {
             // NOTE: We use then() here: if the receiver was dropped, we still want to run our
-            // callbacks! In fact, right now, for reasons unknown but probably having to do with
-            // content length our data streams never get polled to completion.
-            let request_complete = checkpoint
-                .into_future()
-                .then(move |_| -> Result<_, !> { Ok(start_time.elapsed()) });
+            // callbacks!
+            let request_complete =
+                checkpoint
+                    .into_future()
+                    .then(move |bytes_sent| -> Result<_, !> {
+                        Ok((start_time.elapsed(), bytes_sent.map(Some).unwrap_or(None)))
+                    });
 
             (request_complete, client_hostname)
                 .into_future()
-                .map(move |(elapsed, client_hostname)| {
-                    run_callbacks(elapsed, client_hostname);
+                .map(move |((elapsed, bytes_sent), client_hostname)| {
+                    run_callbacks(elapsed, client_hostname, bytes_sent);
                 })
                 .left_future()
         } else {
@@ -150,7 +151,7 @@ impl RequestContext {
 
             client_hostname
                 .map(move |client_hostname| {
-                    run_callbacks(elapsed, client_hostname);
+                    run_callbacks(elapsed, client_hostname, content_length);
                 })
                 .right_future()
         };
@@ -177,13 +178,15 @@ impl Middleware for RequestContextMiddleware {
         state.put(RequestContext::new(should_log));
     }
 
-    fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         let client_address = ClientIdentity::try_borrow_from(&state)
             .map(|client_identity| *client_identity.address())
             .flatten();
 
+        let content_length = response.body().content_length();
+
         if let Some(ctx) = state.try_take::<RequestContext>() {
-            ctx.dispatch_post_request(client_address);
+            ctx.dispatch_post_request(client_address, content_length);
         }
     }
 }

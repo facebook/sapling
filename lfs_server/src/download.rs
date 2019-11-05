@@ -14,17 +14,11 @@ use serde::Deserialize;
 
 use filestore::{self, FetchKey};
 use mononoke_types::ContentId;
-use stats::{define_stats, Histogram};
 
 use crate::errors::ErrorKind;
 use crate::http::{HttpError, StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
-
-define_stats! {
-    prefix ="mononoke.lfs.download";
-    size_bytes: histogram(1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-}
 
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct DownloadParams {
@@ -60,8 +54,6 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
     let (stream, size) = fetch_stream
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(content_id))
         .map_err(HttpError::e404)?;
-
-    STATS::size_bytes.add_value(size as i64);
 
     Ok(StreamBody::new(
         stream,

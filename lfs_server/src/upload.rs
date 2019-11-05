@@ -33,7 +33,7 @@ use mononoke_types::hash::Sha256;
 use crate::errors::ErrorKind;
 use crate::http::{EmptyBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
-use crate::middleware::{LfsMethod, ScubaMiddlewareState};
+use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
 
 define_stats! {
     prefix ="mononoke.lfs.upload";
@@ -151,9 +151,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
     STATS::size_bytes.add_value(size as i64);
 
-    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
-        scuba.add("upload_size", size);
-    }
+    ScubaMiddlewareState::try_borrow_add(state, ScubaKey::RequestContentLength, size);
 
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
     let (upstream_send, upstream_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
@@ -221,9 +219,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
     let res = try_join!(internal_upload, upstream_upload, consume_stream).map_err(HttpError::e500);
 
-    if let Some(scuba) = state.try_borrow_mut::<ScubaMiddlewareState>() {
-        scuba.add("upload_bytes_received", received);
-    }
+    ScubaMiddlewareState::try_borrow_add(state, ScubaKey::RequestBytesReceived, received);
 
     res.map(|_| EmptyBody::new())
 }

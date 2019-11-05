@@ -68,6 +68,7 @@ const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
+const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -142,6 +143,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false)
                 .default_value("0"),
+        )
+        .arg(
+            Arg::with_name(ARG_SCUBA_LOG_FILE)
+                .long(ARG_SCUBA_LOG_FILE)
+                .takes_value(true)
+                .help("A log file to write Scuba logs to (primarily useful in testing)"),
         );
 
     let app = args::add_fb303_args(app);
@@ -230,7 +237,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .add(LogMiddleware::new(logger.clone()))
         .add(ServerIdentityMiddleware::new())
         .add(LoadMiddleware::new())
-        .add(ScubaMiddleware::new(scuba_logger))
+        .add(ScubaMiddleware::new(
+            scuba_logger,
+            matches.value_of(ARG_SCUBA_LOG_FILE),
+        )?)
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
         .build(router);

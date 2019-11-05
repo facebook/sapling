@@ -41,11 +41,9 @@ fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option
         .map(|addr| addr.to_string());
 
     let ctx = state.try_borrow_mut::<RequestContext>()?;
-    let response_size = ctx.response_size.unwrap_or(0);
-
     let logger = logger.new(o!("request_id" => request_id));
 
-    ctx.add_post_request(move |duration, client_hostname| {
+    ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
         info!(
             &logger,
             "{} {} \"{} {} {:?}\" {} {} - {}ms",
@@ -55,7 +53,7 @@ fn log_request(logger: &Logger, state: &mut State, status: StatusCode) -> Option
             uri,
             version,
             status.as_u16(),
-            response_size,
+            bytes_sent.unwrap_or(0),
             duration.as_millis_unchecked()
         );
     });

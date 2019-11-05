@@ -30,7 +30,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 use crate::errors::ErrorKind;
 use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::{LfsMethod, ScubaMiddlewareState};
+use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
@@ -303,7 +303,7 @@ fn batch_download_response_objects(
         .collect();
 
     if let Some(ref mut scuba) = scuba {
-        scuba.add("batch_internal_missing_blobs", upstream_blobs);
+        scuba.add(ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
     }
 
     responses
@@ -348,7 +348,7 @@ async fn batch_download(
 
     let mut update_batch_order = |status| {
         if let Some(ref mut scuba) = scuba.as_mut() {
-            scuba.add("batch_order", status);
+            scuba.add(ScubaKey::BatchOrder, status);
         }
     };
 
@@ -414,8 +414,9 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .map_err(HttpError::e400)?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+
     if let Some(ref mut scuba) = scuba {
-        scuba.add("batch_object_count", request_batch.objects.len());
+        scuba.add(ScubaKey::BatchObjectCount, request_batch.objects.len());
     }
 
     let res = match request_batch.operation {

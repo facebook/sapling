@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::convert::TryInto;
 use std::error::Error as StdError;
 use std::str::FromStr;
 
@@ -22,7 +23,7 @@ use lazy_static::lazy_static;
 use mime::Mime;
 use tokio::sync::oneshot::Sender;
 
-use crate::middleware::RequestContext;
+use crate::middleware::{RequestContext, ScubaKey, ScubaMiddlewareState};
 
 // Provide an easy way to map from Error -> Http code
 pub struct HttpError {
@@ -39,7 +40,7 @@ pub struct BytesBody<B> {
 
 pub struct StreamBody<S> {
     stream: S,
-    size: u64,
+    content_length: u64,
     mime: Mime,
 }
 
@@ -56,8 +57,12 @@ impl<B> BytesBody<B> {
 }
 
 impl<S> StreamBody<S> {
-    pub fn new(stream: S, size: u64, mime: Mime) -> Self {
-        Self { stream, size, mime }
+    pub fn new(stream: S, content_length: u64, mime: Mime) -> Self {
+        Self {
+            stream,
+            content_length,
+            mime,
+        }
     }
 }
 
@@ -66,11 +71,7 @@ pub trait TryIntoResponse {
 }
 
 impl TryIntoResponse for EmptyBody {
-    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
-            ctx.set_response_size(0);
-        }
-
+    fn try_into_response(self, _state: &mut State) -> Result<Response<Body>, Error> {
         Response::builder()
             .status(StatusCode::OK)
             .header(CONTENT_LENGTH, 0)
@@ -83,13 +84,9 @@ impl<B> TryIntoResponse for BytesBody<B>
 where
     B: Into<Bytes>,
 {
-    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
+    fn try_into_response(self, _state: &mut State) -> Result<Response<Body>, Error> {
         let bytes = self.bytes.into();
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
-
-        if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
-            ctx.set_response_size(bytes.len() as u64);
-        }
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
@@ -105,12 +102,23 @@ where
     S::Error: Into<Box<dyn StdError + Send + Sync>>,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let Self { stream, size, mime } = self;
+        let Self {
+            stream,
+            content_length,
+            mime,
+        } = self;
+
+        // Provide a response size hint for this: stream length cannot be derived from a
+        // Response<Body> later!
+        ScubaMiddlewareState::try_borrow_add(
+            state,
+            ScubaKey::ResponseContentLength,
+            content_length,
+        );
 
         let mime_header: HeaderValue = mime.as_ref().parse()?;
 
         let stream = if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
-            ctx.set_response_size(self.size);
             let sender = ctx.delay_post_request();
             SignalStream::new(stream, sender).left_stream()
         } else {
@@ -119,7 +127,7 @@ where
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
-            .header(CONTENT_LENGTH, size)
+            .header(CONTENT_LENGTH, content_length)
             .status(StatusCode::OK)
             .body(Body::wrap_stream(stream))
             .map_err(Error::from)
@@ -165,21 +173,40 @@ pub fn git_lfs_mime() -> mime::Mime {
     GIT_LFS_MIME.clone()
 }
 
+trait Sizeable {
+    fn size(&self) -> u64;
+}
+
+impl Sizeable for Bytes {
+    fn size(&self) -> u64 {
+        // NOTE: It is reasonable to unwrap here because we're not going to have buffers of bytes
+        // that are larger than a u64.
+        self.len().try_into().unwrap()
+    }
+}
+
+/// A stream that will fire to the sender associated upon completing or being dropped. The Sender
+/// will receive the amount of data that passed through the stream.
 struct SignalStream<S> {
     stream: S,
-    sender: Option<Sender<()>>,
+    sender: Option<Sender<u64>>,
+    size_sent: u64,
 }
 
 impl<S> SignalStream<S> {
-    fn new(stream: S, sender: Sender<()>) -> Self {
+    fn new(stream: S, sender: Sender<u64>) -> Self {
         Self {
             stream,
             sender: Some(sender),
+            size_sent: 0,
         }
     }
 }
 
-impl<S: Stream> Stream for SignalStream<S> {
+impl<S: Stream> Stream for SignalStream<S>
+where
+    S::Item: Sizeable,
+{
     type Item = S::Item;
     type Error = S::Error;
 
@@ -189,10 +216,27 @@ impl<S: Stream> Stream for SignalStream<S> {
         }
 
         let poll = try_ready!(self.stream.poll());
-        if poll.is_none() {
-            let _ = self.sender.take().expect("presence checked above").send(());
+
+        if let Some(ref item) = poll {
+            // We have an item: increment the amount of data we sent.
+            self.size_sent += item.size();
+        } else {
+            // No items left: signal our receiver.
+            let _ = self
+                .sender
+                .take()
+                .expect("presence checked above")
+                .send(self.size_sent);
         }
 
         Ok(Async::Ready(poll))
+    }
+}
+
+impl<S> Drop for SignalStream<S> {
+    fn drop(&mut self) {
+        if let Some(sender) = self.sender.take() {
+            let _ = sender.send(self.size_sent);
+        }
     }
 }

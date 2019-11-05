@@ -687,6 +687,10 @@ function lfs_server {
     elif [[ "$1" = "--always-wait-for-upstream" ]]; then
       opts=("${opts[@]}" "$1")
       shift
+    elif [[ "$1" = "--scuba-log-file" ]]; then
+      opts=("${opts[@]}" "$1" "$2")
+      shift
+      shift
     elif [[ "$1" = "--log" ]]; then
       shift
       log="$1"

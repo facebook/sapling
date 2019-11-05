@@ -24,7 +24,7 @@ pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
-pub use self::scuba::{ScubaMiddleware, ScubaMiddlewareState};
+pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};
 pub use self::server_identity::ServerIdentityMiddleware;
 pub use self::timer::TimerMiddleware;
 

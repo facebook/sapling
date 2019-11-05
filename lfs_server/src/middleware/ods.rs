@@ -23,6 +23,7 @@ define_stats! {
     upload_duration: dynamic_histogram("{}.upload_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_duration: dynamic_histogram("{}.download_ms", (repo: String); 100, 0, 5000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     batch_duration: dynamic_histogram("{}.batch_ms", (repo: String); 10, 0, 500, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (repo_and_method: String); 1_500_000, 0, 150_000_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -35,7 +36,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         return None;
     }
 
-    ctx.add_post_request(move |duration, _| {
+    ctx.add_post_request(move |duration, _, response_bytes_sent| {
         match method {
             LfsMethod::Upload => {
                 STATS::upload_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
@@ -56,6 +57,11 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::failure_4xx.add_value(1, (repo_and_method.clone(),));
         } else if status.is_server_error() {
             STATS::failure_5xx.add_value(1, (repo_and_method.clone(),));
+        }
+
+        if let Some(response_bytes_sent) = response_bytes_sent {
+            STATS::response_bytes_sent
+                .add_value(response_bytes_sent as i64, (repo_and_method.clone(),))
         }
     });
 
