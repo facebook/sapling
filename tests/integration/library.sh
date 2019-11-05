@@ -653,7 +653,7 @@ function wait_for_apiserver {
 }
 
 function lfs_server {
-  local port uri log opts args proto poll
+  local port uri log opts args proto poll lfs_server_pid
   port="$(get_free_socket)"
   log="${TESTTMP}/lfs_server.${port}"
   proto="http"
@@ -706,6 +706,9 @@ function lfs_server {
 
   GLOG_minloglevel=5 "$LFS_SERVER" \
     "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
+
+  lfs_server_pid="$!"
+  echo "$lfs_server_pid" >> "$DAEMON_PIDS"
 
   for _ in $(seq 1 200); do
     if "$poll" "${uri}/health_check" >/dev/null 2>&1; then
