@@ -15,7 +15,7 @@ use cpython::*;
 use cpython_ext::{format_py_error, wrap_pyio, Bytes, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
-use std::ffi::CString;
+use std::ffi::{CString, OsString};
 use tracing::{debug_span, info_span};
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm";
@@ -24,7 +24,7 @@ pub struct HgPython {
 }
 
 impl HgPython {
-    pub fn new(args: Vec<String>) -> HgPython {
+    pub fn new(args: &[String]) -> HgPython {
         let py_initialized_by_us = !py_is_initialized();
         if py_initialized_by_us {
             Self::setup_python(args);
@@ -34,10 +34,10 @@ impl HgPython {
         }
     }
 
-    fn setup_python(args: Vec<String>) {
+    fn setup_python(args: &[String]) {
         let span = info_span!("Initialize Python");
         let _guard = span.enter();
-        let args = Self::args_to_local_cstrings(args);
+        let args = Self::args_to_local_cstrings(&args);
         let executable_name = args[0].clone();
         py_set_program_name(executable_name);
         py_initialize();
@@ -51,7 +51,7 @@ impl HgPython {
         prepare_builtin_modules(py).unwrap();
     }
 
-    fn args_to_local_cstrings(args: Vec<String>) -> Vec<CString> {
+    fn args_to_local_cstrings(args: &[String]) -> Vec<CString> {
         // Replace args[0] with the absolute current_exe path. This workarounds
         // an issue in libpython sys.path handling.
         //
@@ -68,7 +68,11 @@ impl HgPython {
         // it some hint by passing the absolute path resolved by the Rust stdlib.
         Some(env::current_exe().unwrap().into_os_string())
             .into_iter()
-            .chain(args.into_iter().skip(1).map(Into::into))
+            .chain(args.iter().skip(1).map(|arg| {
+                let mut s = OsString::new();
+                s.push(arg);
+                s
+            }))
             .map(|x| osstring_to_local_cstring(&x))
             .collect()
     }
@@ -148,8 +152,8 @@ impl HgPython {
     }
 
     /// Run the Python interpreter.
-    pub fn run_python(&mut self, args: Vec<String>, io: &mut clidispatch::io::IO) -> u8 {
-        let args = Self::args_to_local_cstrings(args);
+    pub fn run_python(&mut self, args: &[String], io: &mut clidispatch::io::IO) -> u8 {
+        let args = Self::args_to_local_cstrings(&args);
         if self.py_initialized_by_us {
             // Py_Main will call Py_Finalize. Therefore skip Py_Finalize here.
             self.py_initialized_by_us = false;

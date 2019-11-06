@@ -135,8 +135,8 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Fallible<u8>
 pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Fallible<u8> {
     let mut args = opts.args;
     args.insert(0, "hgpython".to_string());
-    let mut interp = crate::HgPython::new(args.clone());
-    Ok(interp.run_python(args, io))
+    let mut interp = crate::HgPython::new(&args);
+    Ok(interp.run_python(&args, io))
 }
 
 pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Fallible<u8> {

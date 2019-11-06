@@ -34,7 +34,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         && args.get(2).map(|s| s.as_ref()) == Some("--cmdserver")
         && args.get(3).map(|s| s.as_ref()) == Some("chgunix2")
     {
-        return HgPython::new(args.clone()).run_hg(args, io);
+        return HgPython::new(&args).run_hg(args, io);
     }
 
     // This is intended to be "process start". "exec/hgmain" seems to be
@@ -94,7 +94,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
                 // code.
                 let _ = env::set_current_dir(cwd);
 
-                HgPython::new(args.clone()).run_hg(args, io)
+                HgPython::new(&args).run_hg(args, io)
             }
         }
     });
