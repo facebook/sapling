@@ -83,7 +83,6 @@ impl HgPython {
         args: Vec<String>,
         io: &mut clidispatch::io::IO,
     ) -> PyResult<()> {
-        self.update_python_command_table(py)?;
         let entry_point_mod =
             info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
         let call_args = {
@@ -97,23 +96,6 @@ impl HgPython {
             (args, fin, fout, ferr).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
-        Ok(())
-    }
-
-    /// Update the Python command table so it knows commands implemented in Rust.
-    fn update_python_command_table(&self, py: Python<'_>) -> PyResult<()> {
-        let span = info_span!("update_python_command_table");
-        let _guard = span.enter();
-
-        let table = commands::table();
-        let table_mod =
-            info_span!("import_commands").in_scope(|| py.import("edenscm.mercurial.commands"))?;
-        let py_table: PyDict = table_mod.get(py, "table")?.extract::<PyDict>(py)?;
-        for def in table.values() {
-            let doc = Bytes::from(def.doc().to_string());
-            py_table.set_item(py, def.name(), (doc, def.flags()))?;
-        }
-
         Ok(())
     }
 
@@ -220,6 +202,16 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         Ok(crate::run_command(args, &mut io))
     }
 
+    fn table_py(py: Python) -> PyResult<PyDict> {
+        let table = crate::commands::table();
+        let py_table: PyDict = PyDict::new(py);
+        for def in table.values() {
+            let doc = Bytes::from(def.doc().to_string());
+            py_table.set_item(py, def.name(), (doc, def.flags()))?;
+        }
+        Ok(py_table)
+    }
+
     let name = [package, "commands"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add(
@@ -235,6 +227,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(py, "table", py_fn!(py, table_py()))?;
     Ok(m)
 }
 

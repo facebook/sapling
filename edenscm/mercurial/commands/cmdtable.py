@@ -10,8 +10,10 @@
 
 from __future__ import absolute_import
 
+import bindings
+
 from .. import registrar
 
 
-table = {}
+table = bindings.commands.table()
 command = registrar.command(table)
