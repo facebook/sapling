@@ -12,6 +12,10 @@ use cpython_ext::Bytes;
 use cpython_failure::ResultPyErrExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
+#[cfg(feature = "python2")]
+use python27_sys as ffi;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -437,7 +441,6 @@ impl wrapiter {
 /// languages. A heap type usually has a `__dict__` slot so it can
 /// store attributes and support `setattr`.
 fn is_heap_type(_py: Python, typeobj: PyType) -> PyResult<bool> {
-    use python27_sys as ffi;
     let type_ptr: *mut ffi::PyTypeObject = typeobj.as_type_ptr();
     let result = (unsafe { *type_ptr }.tp_flags & ffi::Py_TPFLAGS_HEAPTYPE) != 0;
     Ok(result)
@@ -448,7 +451,6 @@ fn is_heap_type(_py: Python, typeobj: PyType) -> PyResult<bool> {
 fn impl_getsetattr<T: PythonTypeWithInner>(py: Python) {
     // rust-cpython does not provide a safe way to define __get__.
     // So we have to use some unsafe ffi.
-    use python27_sys as ffi;
     let type_object: PyType = T::type_object(py);
     let type_ptr: *mut ffi::PyTypeObject = type_object.as_type_ptr();
 
