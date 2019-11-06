@@ -209,6 +209,12 @@ class visibleheads(object):
         if self._invisiblerevs is not None:
             return self._invisiblerevs
 
+        if repo.ui.configbool("experimental", "narrow-heads"):
+            # With narrow-heads, "draft()" lists all visible draft commits,
+            # nothing needs to be filtered out.
+            self._invisiblerevs = frozenset()
+            return self._invisiblerevs
+
         from . import phases  # avoid circular import
 
         hidden = set(repo._phasecache.getrevset(repo, (phases.draft, phases.secret)))
@@ -221,6 +227,7 @@ class visibleheads(object):
                 if p != node.nullrev and p in hidden:
                     hidden.remove(p)
                     visible.append(p)
+
         self._invisiblerevs = hidden
         return hidden
 

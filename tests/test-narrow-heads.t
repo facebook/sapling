@@ -187,11 +187,10 @@ BUG: D should show up.
 
  (Both C and D should show up here, too)
   $ hg log -Gr 'draft()' -T '{desc} {phase}'
-  x  D draft
+  o  D draft
   |
   ~
   @  C draft
   |
   ~
 
-BUG: D shows up, but should not have 'x'.
