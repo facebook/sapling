@@ -33,7 +33,7 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": 0,
+      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "time": * (glob)
@@ -61,7 +61,7 @@
       "http_status": 200,
       "request_bytes_received": 2048,
       "request_content_length": 2048,
-      "request_load": 1,
+      "request_load": *, (glob)
       "response_bytes_sent": 0,
       "response_content_length": 0,
       "time": * (glob)
@@ -89,7 +89,7 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": 0,
+      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "time": * (glob)
@@ -119,7 +119,7 @@
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "request_load": 1,
+      "request_load": *, (glob)
       "response_bytes_sent": 2048,
       "response_content_length": 2048,
       "time": * (glob)

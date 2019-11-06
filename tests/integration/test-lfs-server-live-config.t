@@ -31,7 +31,7 @@
   > }
   > EOF
 
-# Wait for it to be updatd
+# Wait for it to be updated
   $ sleep 10
 
 # Get the updated config

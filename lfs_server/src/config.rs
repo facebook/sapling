@@ -176,7 +176,11 @@ impl ConfigLoader {
         match self {
             Configerator(cfgr, spec) => cfgr.get_entity(spec, timeout).map_err(Error::from),
             File(path) => {
+                // NOTE: We pass the version as the contents here, so if the file is changing more
+                // often than 1 second, we still see it's changed.
                 let contents = fs::read_to_string(path)?;
+                let version = Some(contents.clone());
+
                 let mod_time = fs::metadata(path)?
                     .modified()?
                     .duration_since(SystemTime::UNIX_EPOCH)?
@@ -185,7 +189,7 @@ impl ConfigLoader {
                 Ok(Entity {
                     contents,
                     mod_time,
-                    version: None,
+                    version,
                 })
             }
             Default => {
