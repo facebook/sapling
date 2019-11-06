@@ -72,6 +72,7 @@ const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 const ARG_SCUBA_LOG_FILE: &str = "scuba-log-file";
 const ARG_LIVE_CONFIG: &str = "live-config";
+const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -159,6 +160,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false)
                 .help("Source for live config (configerator:SPEC, file:SPEC, default)"),
+        )
+        .arg(
+            Arg::with_name(ARG_LIVE_CONFIG_FETCH_INTERVAL)
+                .long(ARG_LIVE_CONFIG_FETCH_INTERVAL)
+                .takes_value(true)
+                .required(false)
+                .default_value("5")
+                .help("How often to reload the live config, in seconds"),
         );
 
     let app = args::add_fb303_args(app);
@@ -230,11 +239,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
+    let config_interval: u64 = matches
+        .value_of(ARG_LIVE_CONFIG_FETCH_INTERVAL)
+        .unwrap()
+        .parse()?;
+
     let (poller, config) = spawn_config_poller(
         fb,
         logger.clone(),
         will_exit.clone(),
         matches.value_of(ARG_LIVE_CONFIG),
+        config_interval,
     )
     .chain_err(err_msg("Failed to load configuration"))?;
 

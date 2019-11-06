@@ -673,7 +673,7 @@ function lfs_server {
       args=("${args[@]}" "$1")
       shift
     elif [[ "$1" = "--live-config" ]]; then
-      opts=("${opts[@]}" "$1" "$2")
+      opts=("${opts[@]}" "$1" "$2" "--live-config-fetch-interval" "1")
       shift
       shift
     elif [[ "$1" = "--tls" ]]; then

@@ -13,7 +13,7 @@
   > }
   > EOF
 
-# Start a LFS server
+# Start an LFS server
   $ lfs_log="$TESTTMP/lfs.log"
   $ lfs_root="$(lfs_server --log "$lfs_log" --live-config "file:${LIVE_CONFIG}")"
 
@@ -32,7 +32,7 @@
   > EOF
 
 # Wait for it to be updated
-  $ sleep 10
+  $ sleep 2
 
 # Get the updated config
   $ curl -fs "${lfs_root}/config"

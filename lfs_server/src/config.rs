@@ -24,7 +24,6 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime};
 
 const FETCH_TIMEOUT: u64 = 10;
-const FETCH_INTERVAL: u64 = 5;
 
 /// Struct representing actual config data.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -213,6 +212,7 @@ pub fn spawn_config_poller(
     logger: Logger,
     will_exit: Arc<AtomicBool>,
     source_spec: Option<&str>,
+    fetch_interval: u64,
 ) -> Result<(JoinHandle<()>, ServerConfigHandle), Error> {
     let timeout = Duration::from_secs(FETCH_TIMEOUT);
 
@@ -238,7 +238,7 @@ pub fn spawn_config_poller(
 
             // NOTE: We only sleep for 1 second here in order to exit the thread quickly if we are
             // asked to exit.
-            if last_poll.elapsed() <= Duration::from_secs(FETCH_INTERVAL) {
+            if last_poll.elapsed() <= Duration::from_secs(fetch_interval) {
                 thread::sleep(Duration::from_secs(1));
                 continue;
             }
