@@ -78,6 +78,9 @@ define_flags! {
     }
 
     pub struct DebugPythonOpts {
+        /// modules to trace (ex. 'edenscm.* subprocess import')
+        trace: String,
+
         #[args]
         args: Vec<String>,
     }
@@ -136,6 +139,10 @@ pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Fallible<u8> {
     let mut args = opts.args;
     args.insert(0, "hgpython".to_string());
     let mut interp = crate::HgPython::new(&args);
+    if !opts.trace.is_empty() {
+        // Setup tracing via edenscm.traceimport
+        let _ = interp.setup_tracing(opts.trace.clone());
+    }
     Ok(interp.run_python(&args, io))
 }
 

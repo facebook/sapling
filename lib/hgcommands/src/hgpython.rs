@@ -133,6 +133,26 @@ impl HgPython {
         }
     }
 
+    /// Setup ad-hoc tracing with `pattern` about modules.
+    /// See `edenscm/traceimport.py` for details.
+    ///
+    /// Call this before `run_python`, or `run_hg`.
+    ///
+    /// This is merely to provide convenience.  The user can achieve the same
+    /// effect via `run_python`, then import the modules and calling methods
+    /// manually.
+    pub fn setup_tracing(&mut self, pattern: String) -> PyResult<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let traceimport = py.import("edenscm.traceimport")?;
+        traceimport.call(py, "enable", (pattern,), None)?;
+        // Show >= 20ms calls. This is an arbitrary setting. Users want to
+        // control this (and use output format other than ASCII) should
+        // consider setting up the tracing module explicitly.
+        traceimport.call(py, "registeratexit", (20_000,), None)?;
+        Ok(())
+    }
+
     /// Run the Python interpreter.
     pub fn run_python(&mut self, args: &[String], io: &mut clidispatch::io::IO) -> u8 {
         let args = Self::args_to_local_cstrings(&args);

@@ -222,3 +222,18 @@ def enable(config=None):
             return _any(startswith(p) for p in _prefix)
 
     sys.meta_path.insert(0, TraceImporter(shouldtrace))
+
+
+def registeratexit(threshold=20000):
+    """Register an atexit handler that prints ASCII tracing output.
+
+    This is for quick ad-hoc performance analysis.
+    """
+    import atexit
+
+    def printtrace():
+        tracer = bindings.tracing.singleton
+        sys.stderr.write(tracer.ascii(threshold))
+        sys.stderr.flush()
+
+    atexit.register(printtrace)

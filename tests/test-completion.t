@@ -329,7 +329,7 @@ Show all commands + options
   debugprogress: spinner, nototal, bytes, sleep, nested, with-output
   debugpushkey: 
   debugpvec: 
-  debugpython: 
+  debugpython: trace
   debugreadauthforuri: user
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
