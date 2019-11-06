@@ -84,22 +84,3 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     | o  3  default/project/bookmark
     |/
     @  0 mybook"""
-
-# Change remote master to a non-existing locally commit.
-
-sh % "cat" << r"""
-6dd477f76ca35ae46e82972648735867cf335d3e bookmarks remote/master
-""" > ".hg/store/remotenames"
-sh % "hg sl" == r"""
-    o  changeset:   3:8e2253d950ae
-    |  tag:         tip
-    |  parent:      0:b292c1e3311f
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     x4
-    |
-    @  changeset:   0:b292c1e3311f
-       bookmark:    mybook
-       user:        test
-       date:        Thu Jan 01 00:00:00 1970 +0000
-       summary:     x"""
