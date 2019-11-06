@@ -158,3 +158,37 @@ Rebase
   $ hg rebase -s $D -d $B
   "source" revision set is invisible - nothing to rebase
   (hint: use 'hg unhide' to make commits visible first)
+
+Visible heads got out of sync with "." or bookmarks
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  > M B
+  > |/
+  > | C
+  > |/
+  > | D
+  > |/
+  > A
+  > EOS
+  $ hg debugremotebookmark master $M
+  $ hg hide -q $B+$C+$D
+  $ hg up -q $C
+  $ hg bookmark -r $D book-D
+
+ (Both C and D should show up since they are working parents and bookmarked)
+  $ hg log -Gr 'all()' -T '{desc} {phase}'
+  o  M public
+  |
+  o  A public
+  
+BUG: C should show up.
+BUG: D should show up.
+
+ (Both C and D should show up here, too)
+  $ hg log -Gr 'draft()' -T '{desc} {phase}'
+  @  C draft
+  |
+  ~
+
+BUG: D does not show up.
