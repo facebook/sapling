@@ -63,6 +63,12 @@ def run(args=None, fin=None, fout=None, ferr=None):
         # - no chg in use: hgcommands::run -> HgPython::run_hg -> here
         # - chg client: chgserver.runcommand -> bindings.commands.run ->
         #               hgcommands::run -> HgPython::run_hg -> here
+
+        from . import traceimport
+
+        traceimport.enable()
+
+        # enable demandimport after enabling traceimport
         from . import hgdemandimport
 
         hgdemandimport.enable()
