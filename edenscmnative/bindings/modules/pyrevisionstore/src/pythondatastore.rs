@@ -11,10 +11,10 @@ use cpython::{
 };
 use failure::Fallible;
 
+use cpython_ext::PyErr;
 use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};
 use types::Key;
 
-use crate::pyerror::PythonError;
 use crate::pythonutil::{
     bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
     to_metadata,
@@ -46,12 +46,12 @@ impl DataStore for PythonDataStore {
                 if py_err.get_type(py) == exc::KeyError::type_object(py) {
                     return Ok(None);
                 } else {
-                    return Err(PythonError::from(py_err).into());
+                    return Err(PyErr::from(py_err).into());
                 }
             }
         };
 
-        let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| PythonError::from(e))?;
+        let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| PyErr::from(e))?;
 
         Ok(Some(py_bytes.data(py).to_vec()))
     }
@@ -70,11 +70,11 @@ impl DataStore for PythonDataStore {
                 if py_err.get_type(py) == exc::KeyError::type_object(py) {
                     return Ok(None);
                 } else {
-                    return Err(PythonError::from(py_err).into());
+                    return Err(PyErr::from(py_err).into());
                 }
             }
         };
-        let py_tuple = PyTuple::extract(py, &py_delta).map_err(|e| PythonError::from(e))?;
+        let py_tuple = PyTuple::extract(py, &py_delta).map_err(|e| PyErr::from(e))?;
 
         let py_name = bytes_from_tuple(py, &py_tuple, 0)?;
         let py_node = bytes_from_tuple(py, &py_tuple, 1)?;
@@ -82,8 +82,7 @@ impl DataStore for PythonDataStore {
         let py_delta_node = bytes_from_tuple(py, &py_tuple, 3)?;
         let py_bytes = bytes_from_tuple(py, &py_tuple, 4)?;
 
-        let base_key =
-            to_key(py, &py_delta_name, &py_delta_node).map_err(|e| PythonError::from(e))?;
+        let base_key = to_key(py, &py_delta_name, &py_delta_node).map_err(|e| PyErr::from(e))?;
         Ok(Some(Delta {
             data: py_bytes.data(py).to_vec().into(),
             base: if base_key.hgid.is_null() {
@@ -91,7 +90,7 @@ impl DataStore for PythonDataStore {
             } else {
                 Some(base_key)
             },
-            key: to_key(py, &py_name, &py_node).map_err(|e| PythonError::from(e))?,
+            key: to_key(py, &py_name, &py_node).map_err(|e| PyErr::from(e))?,
         }))
     }
 
@@ -110,14 +109,14 @@ impl DataStore for PythonDataStore {
                     if py_err.get_type(py) == exc::KeyError::type_object(py) {
                         return Ok(None);
                     } else {
-                        return Err(PythonError::from(py_err).into());
+                        return Err(PyErr::from(py_err).into());
                     }
                 }
             };
-        let py_list = PyList::extract(py, &py_chain).map_err(|e| PythonError::from(e))?;
+        let py_list = PyList::extract(py, &py_chain).map_err(|e| PyErr::from(e))?;
         let deltas = py_list
             .iter(py)
-            .map(|b| from_tuple_to_delta(py, &b).map_err(|e| PythonError::from(e).into()))
+            .map(|b| from_tuple_to_delta(py, &b).map_err(|e| PyErr::from(e).into()))
             .collect::<Fallible<Vec<Delta>>>()?;
         Ok(Some(deltas))
     }
@@ -136,13 +135,13 @@ impl DataStore for PythonDataStore {
                 if py_err.get_type(py) == exc::KeyError::type_object(py) {
                     return Ok(None);
                 } else {
-                    return Err(PythonError::from(py_err).into());
+                    return Err(PyErr::from(py_err).into());
                 }
             }
         };
-        let py_dict = PyDict::extract(py, &py_meta).map_err(|e| PythonError::from(e))?;
+        let py_dict = PyDict::extract(py, &py_meta).map_err(|e| PyErr::from(e))?;
         to_metadata(py, &py_dict)
-            .map_err(|e| PythonError::from(e).into())
+            .map_err(|e| PyErr::from(e).into())
             .map(Some)
     }
 }
@@ -162,7 +161,7 @@ impl RemoteDataStore for PythonDataStore {
 
         self.py_store
             .call_method(py, "prefetch", (keys,), None)
-            .map_err(|e| PythonError::from(e))?;
+            .map_err(|e| PyErr::from(e))?;
 
         Ok(())
     }
@@ -182,11 +181,11 @@ impl LocalStore for PythonDataStore {
         let py_missing = self
             .py_store
             .call_method(py, "getmissing", (py_missing,), None)
-            .map_err(|e| PythonError::from(e))?;
-        let py_list = PyList::extract(py, &py_missing).map_err(|e| PythonError::from(e))?;
+            .map_err(|e| PyErr::from(e))?;
+        let py_list = PyList::extract(py, &py_missing).map_err(|e| PyErr::from(e))?;
         let missing = py_list
             .iter(py)
-            .map(|k| from_tuple_to_key(py, &k).map_err(|e| PythonError::from(e).into()))
+            .map(|k| from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e).into()))
             .collect::<Fallible<Vec<Key>>>()?;
         Ok(missing)
     }

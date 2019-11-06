@@ -36,7 +36,6 @@ use crate::pythonutil::to_pyerr;
 
 mod datastorepyext;
 mod historystorepyext;
-mod pyerror;
 mod pythondatastore;
 mod pythonutil;
 

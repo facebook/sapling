@@ -13,10 +13,9 @@ use cpython::{
 };
 use failure::{Error, Fallible};
 
+use cpython_ext::PyErr as ExtPyErr;
 use revisionstore::datastore::{Delta, Metadata};
 use types::{Key, Node, RepoPath, RepoPathBuf};
-
-use crate::pyerror::PythonError;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     if let Some(io_error) = error.downcast_ref::<io::Error>() {
@@ -135,7 +134,7 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
 }
 
 pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Fallible<PyBytes> {
-    PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| PythonError::from(e).into())
+    PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
 }
 
 pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
