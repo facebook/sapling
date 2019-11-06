@@ -102,7 +102,16 @@ class Dispatcher {
 
     explicit Attr(
         const struct stat& st,
-        uint64_t timeout = std::numeric_limits<uint64_t>::max());
+        // We want an ostensibly infinite TTL for the attributes
+        // we send to the kernel, but need to take care as the
+        // macOS fuse kext implementation casts this to a signed
+        // value and adds it to another timespec to compute the
+        // absolute deadline.  If we make the value the maximum
+        // possible unsigned 64 bit value the deadline overflows
+        // and we never achieve a cache hit.  Limiting ourselves
+        // to the maximum possible signed 32 bit value gives us
+        // ta large and effective timeout
+        uint64_t timeout = std::numeric_limits<int32_t>::max());
 
     fuse_attr_out asFuseAttr() const;
   };
