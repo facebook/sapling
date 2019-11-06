@@ -31,6 +31,7 @@ use failure_ext::chain::ChainExt;
 use hyper::{client::HttpConnector, Client};
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
+use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
 use crate::config::{ServerConfig, ServerConfigHandle};
@@ -252,6 +253,21 @@ impl UriBuilder {
             .map_err(Error::from)
     }
 
+    pub fn consistent_download_uri(
+        &self,
+        content_id: &ContentId,
+        oid: Sha256,
+    ) -> Result<Uri, Error> {
+        self.server
+            .self_uri
+            .build(format_args!(
+                "{}/download/{}?routing={}",
+                &self.repository, content_id, oid
+            ))
+            .chain_err(ErrorKind::UriBuilderFailed("consistent_download_uri"))
+            .map_err(Error::from)
+    }
+
     pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, Error> {
         self.server
             .upstream_uri
@@ -336,6 +352,7 @@ mod test {
     use std::str::FromStr;
 
     const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
+    const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";
     const SIZE: u64 = 123;
 
     fn obj() -> Result<RequestObject, Error> {
@@ -347,6 +364,10 @@ mod test {
 
     fn content_id() -> Result<ContentId, Error> {
         Ok(ContentId::from_str(ONES_HASH)?)
+    }
+
+    fn oid() -> Result<Sha256, Error> {
+        Sha256::from_str(TWOS_HASH)
     }
 
     fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
@@ -433,6 +454,20 @@ mod test {
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
             format!("http://foo.com/bar/repo123/download/{}", ONES_HASH),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_consistent_download_uri() -> Result<(), Error> {
+        let b = uri_builder("http://foo.com", "http://bar.com")?;
+        assert_eq!(
+            b.consistent_download_uri(&content_id()?, oid()?)?
+                .to_string(),
+            format!(
+                "http://foo.com/repo123/download/{}?routing={}",
+                ONES_HASH, TWOS_HASH
+            ),
         );
         Ok(())
     }
