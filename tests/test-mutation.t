@@ -54,7 +54,27 @@ Rebase
 
 Metaedit
 
+ (Before metaedit)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c3 054edf9500f5 draft
+  |
+  o  c2 33ca17be2228 draft
+  |
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg meta -m "c3 (metaedited)"
+ (After metaedit)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c3 (metaedited) 374724d5279b draft
+  |
+  o  c2 33ca17be2228 draft
+  |
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg debugmutation .
    *  374724d5279b5992bf6ec2ccb3d326844e36b4ba metaedit by test at 1970-01-01T00:00:00 from:
       054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
@@ -64,9 +84,29 @@ Metaedit
 
 Fold
 
+ (Before fold)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c3 (metaedited) 374724d5279b draft
+  |
+  o  c2 33ca17be2228 draft
+  |
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg fold --from ".^"
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+ (After fold)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c2
+  |
+  |
+  |  c3 (metaedited) f05234144e37 draft
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg debugmutation .
    *  f05234144e37d59b175fa4283563aac4dfe81ec0 fold by test at 1970-01-01T00:00:00 from:
       |-  33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
@@ -169,8 +209,48 @@ Split leaves the checkout at the top of the split commits
 
 Amend with rebase afterwards (split info should not be propagated)
 
+ (Before amend)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  o  c6 0623f07d148d draft
+  |
+  @  c5 aa10382521dc draft
+  |
+  o  c5 36e4e93ec194 draft
+  |
+  o  c4 9c2c451b82d0 draft
+  |
+  o  c4 7d383d1b236d draft
+  |
+  o  c2
+  |
+  |
+  |  c3 (metaedited) f05234144e37 draft
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg amend --rebase -m "c5 (split)"
   rebasing 0623f07d148d "c6"
+ (After amend)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  o  c6 c3b5428c707b draft
+  |
+  @  c5 (split) 48b076c1640c draft
+  |
+  o  c5 36e4e93ec194 draft
+  |
+  o  c4 9c2c451b82d0 draft
+  |
+  o  c4 7d383d1b236d draft
+  |
+  o  c2
+  |
+  |
+  |  c3 (metaedited) f05234144e37 draft
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg debugmutation ".::tip"
    *  48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
       aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
@@ -191,6 +271,32 @@ Histedit
   $ hg commit -Aqm c8
   $ echo "g" >> file4
   $ hg commit -Aqm c9
+ (Before histedit)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c9 b6ea0faadebf draft
+  |
+  o  c8 64a3bc96c043 draft
+  |
+  o  c7 c4484fcb5ac0 draft
+  |
+  o  c6 c3b5428c707b draft
+  |
+  o  c5 (split) 48b076c1640c draft
+  |
+  o  c5 36e4e93ec194 draft
+  |
+  o  c4 9c2c451b82d0 draft
+  |
+  o  c4 7d383d1b236d draft
+  |
+  o  c2
+  |
+  |
+  |  c3 (metaedited) f05234144e37 draft
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg histedit 8 --commands - 2>&1 <<EOF | fixbundle
   > pick cc809964b024
   > pick f05234144e37
@@ -203,6 +309,24 @@ Histedit
   > roll 64a3bc96c043
   > pick b6ea0faadebf
   > EOF
+ (After histedit)
+  $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
+  @  c9 3c3b86a5a351 draft
+  |
+  o  c6 dd5d0e1bc12e draft
+  |
+  o  c2
+  |
+  |
+  |  c3 (metaedited)
+  |  ***
+  |  c4
+  |  ***
+  |  c5 1851fa2d6ef0 draft
+  o  c1 (amended 8) cc809964b024 draft
+  |
+  o  base d20a80d4def3 draft
+  
   $ hg debugmutation 8::tip
    *  cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
       8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
