@@ -234,16 +234,17 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
     let command_name = first_arg.to_string();
     let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
     let (command_name, command_arg_len) =
-        find_command_name(|name| command_table.contains_key(name), &expanded)
+        find_command_name(|name| command_table.get(name).is_some(), &expanded)
             .ok_or_else(|| errors::UnknownCommand(command_name))?;
 
     let mut new_args = Vec::with_capacity(args.len());
     new_args.extend_from_slice(&args[..first_arg_index]);
     new_args.push(command_name.clone());
     new_args.extend_from_slice(&expanded[command_arg_len..]);
+
     let full_args = new_args;
 
-    let def = &command_table[&command_name];
+    let def = command_table.get(&command_name).unwrap();
     let parsed = parse(&def, &full_args)?;
 
     let global_opts: HgGlobalOpts = parsed.clone().try_into()?;

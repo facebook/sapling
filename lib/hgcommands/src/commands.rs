@@ -39,7 +39,7 @@ pub fn table() -> CommandTable {
         "debugstore",
         "print information about blobstore",
     );
-    table.register(debugpython, "debugpython", "run python interpreter");
+    table.register(debugpython, "debugpython|debugpy", "run python interpreter");
     table.register(debugargs, "debug-args", "print arguments received");
     table.register(
         debugindexedlogdump,
