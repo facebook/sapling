@@ -28,6 +28,15 @@ use tracing_collector::{TracingCollector, TracingData};
 pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     let now = SystemTime::now();
 
+    // The chgserver does not want tracing or blackbox setup, or going through
+    // the Rust command table. Bypass them.
+    if args.get(1).map(|s| s.as_ref()) == Some("serve")
+        && args.get(2).map(|s| s.as_ref()) == Some("--cmdserver")
+        && args.get(3).map(|s| s.as_ref()) == Some("chgunix2")
+    {
+        return HgPython::new(args.clone()).run_hg(args, io);
+    }
+
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
     // decides to use chg, then there is no way to figure out which `blackbox`
