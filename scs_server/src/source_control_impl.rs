@@ -14,26 +14,27 @@ use std::ops::RangeBounds;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes};
 use context::generate_session_id;
 use faster_hex::hex_string;
 use fbinit::FacebookInit;
 use futures::stream::Stream;
-use futures_preview::compat::Future01CompatExt;
-use futures_util::try_join;
+use futures_preview::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
+use futures_util::{try_future::try_join_all, try_join};
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId,
-    FileMetadata, FileType, HgChangesetId, Mononoke, MononokeError, PathEntry, RepoContext,
-    TreeContext, TreeEntry, TreeId,
+    ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetSpecifier, CoreContext,
+    FileContext, FileId, FileMetadata, FileType, HgChangesetId, Mononoke, MononokeError, PathEntry,
+    RepoContext, TreeContext, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
+use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
-use source_control::types as thrift;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
+use xdiff;
 
 const MAX_LIMIT: i64 = 1000;
 const MAX_CHUNK_SIZE: i64 = 16 * 1024 * 1024;
@@ -409,6 +410,84 @@ async fn map_commit_identities(
     Ok(result)
 }
 
+// Diff file against other file.
+async fn changeset_path_diff(
+    old_path: &Option<ChangesetPathContext>,
+    new_path: &Option<ChangesetPathContext>,
+    copy_info: thrift::CopyInfo,
+    context_lines: usize,
+) -> Result<thrift::Diff, errors::ServiceError> {
+    // Helper for getting file information.
+    async fn get_file_data(
+        path: &Option<ChangesetPathContext>,
+    ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, errors::ServiceError> {
+        match path {
+            Some(path) => {
+                if let Some(file_type) = path.file_type().await? {
+                    let file = path.file().await?.ok_or_else(|| {
+                        errors::internal_error("assertion error: file should exist")
+                    })?;
+                    let contents = file
+                        .content()
+                        .await
+                        .compat()
+                        .try_concat()
+                        .await
+                        .map_err(errors::internal_error)?;
+                    let file_type = match file_type {
+                        FileType::Regular => xdiff::FileType::Regular,
+                        FileType::Executable => xdiff::FileType::Executable,
+                        FileType::Symlink => xdiff::FileType::Symlink,
+                    };
+                    Ok(Some(xdiff::DiffFile {
+                        path: path.to_string(),
+                        contents,
+                        file_type,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    // Helper for checking if we should mark the diff as binary
+    fn is_binary(
+        old_diff_file: &Option<xdiff::DiffFile<String, Bytes>>,
+        new_diff_file: &Option<xdiff::DiffFile<String, Bytes>>,
+    ) -> bool {
+        old_diff_file
+            .as_ref()
+            .map(|f| f.contents.contains(&b'\0'))
+            .unwrap_or(false)
+            || new_diff_file
+                .as_ref()
+                .map(|f| f.contents.contains(&b'\0'))
+                .unwrap_or(false)
+    }
+
+    let (old_diff_file, new_diff_file) =
+        try_join!(get_file_data(&old_path), get_file_data(&new_path))?;
+    let is_binary = is_binary(&old_diff_file, &new_diff_file);
+    let copy_info = match copy_info {
+        thrift::CopyInfo::NONE => xdiff::CopyInfo::None,
+        thrift::CopyInfo::MOVE => xdiff::CopyInfo::Move,
+        thrift::CopyInfo::COPY => xdiff::CopyInfo::Copy,
+        // thrift is using numbers under the hood so I have to add a default case
+        _ => Err(errors::internal_error("unexpected value of copy_info!"))?,
+    };
+    let opts = xdiff::DiffOpts {
+        context: context_lines,
+        copy_info,
+    };
+    let raw_diff = Some(xdiff::diff_unified(old_diff_file, new_diff_file, opts));
+    Ok(thrift::Diff::raw_diff(thrift::RawDiff {
+        raw_diff,
+        is_binary,
+    }))
+}
+
 /// Trait to extend CommitId with useful functions.
 trait CommitIdExt {
     fn scheme(&self) -> thrift::CommitIdentityScheme;
@@ -630,6 +709,7 @@ mod errors {
 
     impl_into_thrift_error!(service::RepoResolveBookmarkExn);
     impl_into_thrift_error!(service::RepoListBookmarksExn);
+    impl_into_thrift_error!(service::CommitFileDiffsExn);
     impl_into_thrift_error!(service::CommitLookupExn);
     impl_into_thrift_error!(service::CommitInfoExn);
     impl_into_thrift_error!(service::CommitIsAncestorOfExn);
@@ -679,6 +759,27 @@ mod errors {
         thrift::RequestError {
             kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
             reason: format!("tree not found ({})", tree),
+        }
+    }
+
+    pub(super) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::INVALID_REQUEST_INPUT_TOO_BIG,
+            reason: format!(
+                "only {} bytes of files (in total) can be diffed in one request, you asked for {} bytes",
+                thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT, total_size,
+            ),
+        }
+    }
+
+    pub(super) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestError {
+        thrift::RequestError {
+            kind: thrift::RequestErrorKind::INVALID_REQUEST_TOO_MANY_PATHS,
+            reason: format!(
+                "only at most {} paths can be diffed in one request, you asked for {}",
+                thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT,
+                path_count,
+            ),
         }
     }
 }
@@ -784,6 +885,91 @@ impl SourceControlService for SourceControlServiceImpl {
                 ids: None,
             }),
         }
+    }
+
+    /// Get diff.
+    async fn commit_file_diffs(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitFileDiffsParams,
+    ) -> Result<thrift::CommitFileDiffsResponse, service::CommitFileDiffsExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let context_lines = params.context as usize;
+
+        // Check the path count limit
+        if params.paths.len() as i64 > thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT {
+            Err(errors::diff_input_too_many_paths(params.paths.len()))?;
+        }
+
+        // Resolve the CommitSpecfier into ChangesetContext
+        let other_commit = thrift::CommitSpecifier {
+            repo: commit.repo.clone(),
+            id: params.other_commit_id.clone(),
+        };
+        let ((_repo1, base_commit), (_repo2, other_commit)) = try_join!(
+            self.repo_changeset(ctx.clone(), &commit),
+            self.repo_changeset(ctx.clone(), &other_commit,)
+        )?;
+
+        // Resolve the path into ChangesetPathContext
+        let paths = params
+            .paths
+            .into_iter()
+            .map(|path_pair| {
+                Ok((
+                    match path_pair.base_path {
+                        Some(path) => Some(base_commit.path(path)?),
+                        None => None,
+                    },
+                    match path_pair.other_path {
+                        Some(path) => Some(other_commit.path(path)?),
+                        None => None,
+                    },
+                    path_pair.copy_info,
+                ))
+            })
+            .collect::<Result<Vec<_>, errors::ServiceError>>()?;
+
+        // Check the total file size limit
+        let flat_paths = paths
+            .iter()
+            .flat_map(|(base_path, other_path, _)| vec![base_path, other_path])
+            .filter_map(|x| x.as_ref());
+        let total_input_size: u64 = try_join_all(flat_paths.map(|path| {
+            async move {
+                let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
+                    Ok(file.metadata().await?.total_size)
+                } else {
+                    Ok(0)
+                };
+                r
+            }
+        }))
+        .await?
+        .into_iter()
+        .sum();
+
+        if total_input_size as i64 > thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT {
+            Err(errors::diff_input_too_big(total_input_size))?;
+        }
+
+        let path_diffs =
+            try_join_all(paths.into_iter().map(|(base_path, other_path, copy_info)| {
+                async move {
+                    let diff =
+                        changeset_path_diff(&other_path, &base_path, copy_info, context_lines)
+                            .await?;
+                    let r: Result<_, errors::ServiceError> =
+                        Ok(thrift::CommitFileDiffsResponseElement {
+                            base_path: base_path.map(|p| p.to_string()),
+                            other_path: other_path.map(|p| p.to_string()),
+                            diff,
+                        });
+                    r
+                }
+            }))
+            .await?;
+        Ok(thrift::CommitFileDiffsResponse { path_diffs })
     }
 
     /// Get commit info.

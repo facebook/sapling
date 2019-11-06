@@ -6,6 +6,7 @@
  * directory of this source tree.
  */
 
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -176,5 +177,15 @@ impl ChangesetPathContext {
             _ => PathEntry::NotPresent,
         };
         Ok(entry)
+    }
+}
+
+impl fmt::Display for ChangesetPathContext {
+    /// Returns a slash-separated `String` path suitable for returning to API user.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref mpath) = self.mpath {
+            return write!(f, "{}", mpath);
+        }
+        write!(f, "")
     }
 }
