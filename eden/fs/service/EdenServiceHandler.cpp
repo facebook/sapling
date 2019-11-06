@@ -1321,9 +1321,8 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     auto inodeMap = mount->getInodeMap();
     // Set LoadedInde Count and unloaded Inode count for the mountPoint.
     MountInodeInfo mountInodeInfo;
-    auto counts = inodeMap->getLoadedInodeCounts();
-    mountInodeInfo.loadedInodeCount = counts.fileCount + counts.treeCount;
-    mountInodeInfo.unloadedInodeCount = inodeMap->getUnloadedInodeCount();
+    auto counts = inodeMap->getInodeCounts();
+    mountInodeInfo.unloadedInodeCount = counts.unloadedInodeCount;
     mountInodeInfo.loadedFileCount = counts.fileCount;
     mountInodeInfo.loadedTreeCount = counts.treeCount;
 
@@ -1339,20 +1338,6 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     result.mountPointJournalInfo[mount->getPath().stringPiece().str()] =
         journalThrift;
 
-    // TODO: Currently getting Materialization status of an inode using
-    // getDebugStatus which walks through entire Tree of inodes, in future we
-    // can add some mechanism to get materialized inode count without walking
-    // through the entire tree.
-    vector<TreeInodeDebugInfo> debugInfoStatus;
-    auto root = mount->getRootInode();
-    root->getDebugStatus(debugInfoStatus);
-    uint64_t materializedCount = 0;
-    for (auto& entry : debugInfoStatus) {
-      if (entry.materialized) {
-        materializedCount++;
-      }
-    }
-    mountInodeInfo.materializedInodeCount = materializedCount;
     result.mountPointInfo[mount->getPath().stringPiece().str()] =
         mountInodeInfo;
   }

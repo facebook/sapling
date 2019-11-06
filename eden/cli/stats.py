@@ -78,9 +78,9 @@ def do_stats_general(
         info = inode_info[key]
         mount_path = os.fsdecode(key)
 
-        in_memory = info.loadedInodeCount
         files = info.loadedFileCount
         trees = info.loadedTreeCount
+        in_memory = files + trees
 
         if stat_info.mountPointJournalInfo is None:
             journal = None
@@ -110,7 +110,6 @@ def do_stats_general(
             {mount_path}
               - Inodes in memory: {in_memory} ({trees} trees, {files} files)
               - Unloaded, tracked inodes: {info.unloadedInodeCount}
-              - Loaded and materialized inodes: {info.materializedInodeCount}
               {journalLine}
             """
             )

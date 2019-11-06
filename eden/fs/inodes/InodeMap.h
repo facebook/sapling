@@ -365,23 +365,17 @@ class InodeMap {
 
   void inodeCreated(const InodePtr& inode);
 
-  struct LoadedInodeCounts {
+  struct InodeCounts {
     size_t fileCount = 0;
     size_t treeCount = 0;
+    size_t unloadedInodeCount = 0;
   };
 
   /**
-   * More expensive than getLoadedInodeCount() because it checks the type of
-   * each inode.
+   * Get stats about how many Inode objects are loaded in memory, and how many
+   * are unloaded but still tracked.
    */
-  LoadedInodeCounts getLoadedInodeCounts() const;
-
-  size_t getLoadedInodeCount() const {
-    return data_.rlock()->loadedInodes_.size();
-  }
-  size_t getUnloadedInodeCount() const {
-    return data_.rlock()->unloadedInodes_.size();
-  }
+  InodeCounts getInodeCounts() const;
 
   /*
    * Return all referenced inodes (loaded and unloaded inodes whose
@@ -523,6 +517,20 @@ class InodeMap {
     bool isUnmounted_{false};
 
     /**
+     * The number of loaded TreeInode objects
+     */
+    size_t numTreeInodes_{0};
+
+    /**
+     * The number of loaded FileInode objects
+     * Note: We could remove this counter: numTreeInodes_ + numFileInodes_
+     * should always equal loadedInodes_.size(), so we could compute it.
+     * For now we track it just to allow us to assert that this invariant does
+     * hold true to make sure our calculations are correct.
+     */
+    size_t numFileInodes_{0};
+
+    /**
      * A promise to fulfill once shutdown() completes.
      *
      * This is only initialized when shutdown() is called, and will be
@@ -598,6 +606,10 @@ class InodeMap {
       PathComponentPiece name,
       bool isUnlinked,
       const folly::Synchronized<Members>::LockedPtr& lock);
+
+  void insertLoadedInode(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      InodeBase* inode);
 
   /**
    * The EdenMount that owns this InodeMap.

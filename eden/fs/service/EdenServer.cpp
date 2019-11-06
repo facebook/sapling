@@ -837,11 +837,13 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 #ifndef _WIN32
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(
-      edenMount->getCounterName(CounterName::INODEMAP_LOADED),
-      [edenMount] { return edenMount->getInodeMap()->getLoadedInodeCount(); });
+      edenMount->getCounterName(CounterName::INODEMAP_LOADED), [edenMount] {
+        auto counts = edenMount->getInodeMap()->getInodeCounts();
+        return counts.fileCount + counts.treeCount;
+      });
   counters->registerCallback(
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED), [edenMount] {
-        return edenMount->getInodeMap()->getUnloadedInodeCount();
+        return edenMount->getInodeMap()->getInodeCounts().unloadedInodeCount;
       });
   counters->registerCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY),

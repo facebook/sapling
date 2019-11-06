@@ -103,12 +103,25 @@ InodeMap::~InodeMap() {
   // destroy the EdenMount.
 }
 
+inline void InodeMap::insertLoadedInode(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    InodeBase* inode) {
+  auto ret = data->loadedInodes_.emplace(inode->getNodeId(), inode);
+  CHECK(ret.second);
+  if (inode->getType() == dtype_t::Dir) {
+    ++data->numTreeInodes_;
+  } else {
+    ++data->numFileInodes_;
+  }
+}
+
 void InodeMap::initialize(TreeInodePtr root) {
   auto data = data_.wlock();
   CHECK(!root_);
   root_ = std::move(root);
-  auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
-  CHECK(ret.second);
+  insertLoadedInode(data, root_.get());
+  DCHECK_EQ(1, data->numTreeInodes_);
+  DCHECK_EQ(0, data->numFileInodes_);
 }
 
 void InodeMap::initializeFromTakeover(
@@ -123,8 +136,9 @@ void InodeMap::initializeFromTakeover(
 
   CHECK(!root_);
   root_ = std::move(root);
-  auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
-  CHECK(ret.second);
+  insertLoadedInode(data, root_.get());
+  DCHECK_EQ(1, data->numTreeInodes_);
+  DCHECK_EQ(0, data->numFileInodes_);
   for (const auto& entry : takeover.unloadedInodes) {
     if (entry.numFuseReferences < 0) {
       auto message = folly::to<std::string>(
@@ -350,7 +364,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     inode->setFuseRefcount(it->second.numFuseReferences);
 
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
-    data->loadedInodes_.emplace(number, inode);
+    insertLoadedInode(data, inode);
     data->unloadedInodes_.erase(it);
     return promises;
   } catch (const std::exception& ex) {
@@ -745,6 +759,11 @@ void InodeMap::unloadInode(
   auto numErased = data->loadedInodes_.erase(inode->getNodeId());
   CHECK_EQ(numErased, 1) << "inconsistent loaded inodes data: "
                          << inode->getLogPath();
+  if (inode->getType() == dtype_t::Dir) {
+    --data->numTreeInodes_;
+  } else {
+    --data->numFileInodes_;
+  }
 }
 
 optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
@@ -874,19 +893,17 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
   XLOG(DBG4) << "created new inode " << inode->getNodeId() << ": "
              << inode->getLogPath();
   auto data = data_.wlock();
-  data->loadedInodes_.emplace(inode->getNodeId(), inode.get());
+  insertLoadedInode(data, inode.get());
 }
 
-InodeMap::LoadedInodeCounts InodeMap::getLoadedInodeCounts() const {
-  LoadedInodeCounts counts;
+InodeMap::InodeCounts InodeMap::getInodeCounts() const {
+  InodeCounts counts;
   auto data = data_.rlock();
-  for (const auto& entry : data->loadedInodes_) {
-    if (entry.second->getType() == dtype_t::Dir) {
-      ++counts.treeCount;
-    } else {
-      ++counts.fileCount;
-    }
-  }
+  DCHECK_EQ(
+      data->numTreeInodes_ + data->numFileInodes_, data->loadedInodes_.size());
+  counts.treeCount = data->numTreeInodes_;
+  counts.fileCount = data->numFileInodes_;
+  counts.unloadedInodeCount = data->unloadedInodes_.size();
   return counts;
 }
 

@@ -68,15 +68,19 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   // At this point, every file and tree should be loaded, plus the root and
   // .eden.
   // 4 files + 3 subdirectories + 1 root + 1 .eden + 4 .eden entries
-  EXPECT_EQ(13, inodeMap->getLoadedInodeCount());
-  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+  auto counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(5, counts.treeCount);
+  EXPECT_EQ(8, counts.fileCount);
+  EXPECT_EQ(0, counts.unloadedInodeCount);
 
   // Count includes files only, and the root's refcount will never go to zero
   // while the mount is up.
   EXPECT_EQ(12, this->unloader.unload(*edenMount->getRootInode()));
 
-  EXPECT_EQ(1, inodeMap->getLoadedInodeCount());
-  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+  counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(1, counts.treeCount);
+  EXPECT_EQ(0, counts.fileCount);
+  EXPECT_EQ(0, counts.unloadedInodeCount);
 }
 
 TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
@@ -123,12 +127,16 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   inode.reset();
 
   // 1 file + 1 subdirectory + 1 root + 1 .eden + 4 .eden entries
-  EXPECT_EQ(8, inodeMap->getLoadedInodeCount());
-  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+  auto counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(3, counts.treeCount);
+  EXPECT_EQ(5, counts.fileCount);
+  EXPECT_EQ(0, counts.unloadedInodeCount);
 
   EXPECT_EQ(5, edenMount->getRootInode()->unloadChildrenUnreferencedByFuse());
 
   // root + src + file.txt
-  EXPECT_EQ(3, inodeMap->getLoadedInodeCount());
-  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+  counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(2, counts.treeCount);
+  EXPECT_EQ(1, counts.fileCount);
+  EXPECT_EQ(0, counts.unloadedInodeCount);
 }
