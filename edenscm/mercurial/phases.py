@@ -324,9 +324,9 @@ class phasecache(object):
                 publicheadrevs = cl.headrevs(includepublic=True, includedraft=False)
                 draftheadrevs = cl.headrevs(includepublic=False, includedraft=True)
 
-                # Also consider "." as a draft. This prevents "." from being
-                # hidden (secret).
-                draftheadrevs += list(repo.revs("parents()"))
+                # Also consider "." and bookmarks as drafts.
+                # This prevents them (and their ancestors) from being hidden (secret).
+                draftheadrevs += list(repo.revs("parents() + bookmark()"))
 
                 self._publicrevs, self._draftrevs = cl.index2.phasesets(
                     publicheadrevs, draftheadrevs
