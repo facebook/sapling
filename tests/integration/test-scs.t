@@ -30,6 +30,11 @@ import testing repo to mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo
 
+try talking to the server before it is up
+  $ SCS_PORT=$(get_free_socket) scsc lookup --repo repo  -B BOOKMARK_B
+  error: apache::thrift::transport::TTransportException: AsyncSocketException: connect failed, type = Socket not open, errno = 111 (Connection refused): Connection refused
+  [1]
+
 start SCS server
   $ start_and_wait_for_scs_server
 
