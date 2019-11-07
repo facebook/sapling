@@ -40,6 +40,7 @@ mod facebook;
 mod source_control_impl;
 
 const ARG_PORT: &str = "port";
+const ARG_HOST: &str = "host";
 const ARG_SCUBA_DATASET: &str = "scuba-dataset";
 const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 
@@ -53,6 +54,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()
+        .arg(
+            Arg::with_name(ARG_HOST)
+                .short("H")
+                .long("host")
+                .takes_value(true)
+                .default_value("::")
+                .value_name("HOST")
+                .help("Thrift port"),
+        )
         .arg(
             Arg::with_name(ARG_PORT)
                 .short("p")
@@ -78,7 +88,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let caching = args::init_cachelib(fb, &matches);
-    let port = value_t!(matches.value_of("port"), u16)?;
+    let port = value_t!(matches.value_of(ARG_PORT), u16)?;
+    let host = matches.value_of(ARG_HOST).unwrap_or("::");
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("must set config path");
@@ -146,7 +157,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let thrift: ThriftServer = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
-        .with_port(port as u32)
+        .with_address(&host, port.into(), false)?
         .with_tls()
         .expect("failed to enable TLS")
         .with_factory(exec, move || service)
@@ -177,7 +188,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     });
 
     // Start listening.
-    info!(logger, "Listening on {}", port);
+    info!(logger, "Listening on {}:{}", &host, port);
     service_framework
         .serve_background()
         .expect("failed to start thrift service");
