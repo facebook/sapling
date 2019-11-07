@@ -652,6 +652,43 @@ function wait_for_apiserver {
   fi
 }
 
+function start_and_wait_for_scs_server {
+  export SCS_PORT
+  SCS_PORT=$(get_free_socket)
+  GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
+    -p "$SCS_PORT" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    "${CACHING_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
+  export SCS_SERVER_PID=$!
+  echo "$SCS_SERVER_PID_PID" >> "$DAEMON_PIDS"
+
+  # Wait until a SCS server is available
+  # MONONOKE_START_TIMEOUT is set in seconds
+  # Number of attempts is timeout multiplied by 10, since we
+  # sleep every 0.1 seconds.
+  local attempts timeout
+  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
+  attempts="$((timeout * 10))"
+
+  CHECK_SSL="openssl s_client -connect localhost:$SCS_PORT"
+
+  for _ in $(seq 1 $attempts); do
+    $CHECK_SSL 2>&1  </dev/null | grep -q 'DONE' && break
+    sleep 0.1
+  done
+
+  if ! $CHECK_SSL 2>&1 </dev/null | grep -q 'DONE'; then
+    echo "SCS server did not start" >&2
+    cat "$TESTTMP/scs_server.out"
+    exit 1
+  fi
+}
+
+function scsc {
+  GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
+}
+
+
 function lfs_server {
   local port uri log opts args proto poll lfs_server_pid
   port="$(get_free_socket)"
