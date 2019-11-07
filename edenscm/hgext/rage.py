@@ -305,7 +305,7 @@ def _makerage(ui, repo, **opts):
         (
             "uptime",
             lambda: shcmd(
-                "time /T & wmic path Win32_OperatingSystem get LastBootUpTime"
+                "wmic path Win32_OperatingSystem get LastBootUpTime"
                 if pycompat.iswindows
                 else "uptime"
             ),
