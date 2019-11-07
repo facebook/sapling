@@ -62,41 +62,41 @@ class OverlayFileAccess {
    * The inode parameter is used for error messages when the underlying overlay
    * data has been corrupted.
    */
-  off_t getFileSize(InodeNumber ino, FileInode& inode);
+  off_t getFileSize(FileInode& inode);
 
   /**
    * Returns the SHA-1 hash of the file contents for the given inode number.
    */
-  Hash getSha1(InodeNumber ino);
+  Hash getSha1(FileInode& inode);
 
   /**
    * Reads the entire file's contents into memory and returns it.
    */
-  std::string readAllContents(InodeNumber ino);
+  std::string readAllContents(FileInode& inode);
 
   /**
    * Reads a range from the file. At EOF, may return a BufVec smaller than the
    * requested size.
    */
-  BufVec read(InodeNumber ino, size_t size, off_t off);
+  BufVec read(FileInode& inode, size_t size, off_t off);
 
   /**
    * Writes data into the file at the specified offset. Returns the number of
    * bytes written.
    */
   size_t
-  write(InodeNumber ino, const struct iovec* iov, size_t iovcnt, off_t off);
+  write(FileInode& inode, const struct iovec* iov, size_t iovcnt, off_t off);
 
   /**
    * Sets the size of the file in the overlay.
    */
-  void truncate(InodeNumber ino, off_t size = 0);
+  void truncate(FileInode& inode, off_t size = 0);
 
   /**
    * If datasync is true, only the user data should be flushed, not the
    * metadata. It corresponds to datasync parameter to fuse_lowlevel_ops::fsync.
    */
-  void fsync(InodeNumber ino, bool datasync);
+  void fsync(FileInode& inode, bool datasync);
 
  private:
   /*

@@ -6,10 +6,13 @@
  */
 
 #include "eden/fs/inodes/OverlayFileAccess.h"
+
+#include <folly/Expected.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <openssl/sha.h>
+
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodePtr.h"
@@ -69,8 +72,8 @@ void OverlayFileAccess::createFile(
       ino, std::make_shared<Entry>(std::move(file), blob.getSize(), sha1));
 }
 
-off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
-  auto entry = getEntryForInode(ino);
+off_t OverlayFileAccess::getFileSize(FileInode& inode) {
+  auto entry = getEntryForInode(inode.getNodeId());
   uint64_t version;
   {
     auto info = entry->info.rlock();
@@ -82,15 +85,17 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
 
   // Size is not known, so fstat the file. Do so while the lock is not held to
   // improve concurrency.
-  struct stat st;
-  folly::checkUnixError(
-      entry->file.fstat(&st),
-      folly::to<std::string>("unable to fstat inode entry ", ino));
+  auto ret = entry->file.fstat();
+  if (ret.hasError()) {
+    throw InodeError(
+        ret.error(), inode.inodePtrFromThis(), "unable to fstat overlay file");
+  }
+  auto st = ret.value();
   if (st.st_size < static_cast<off_t>(FsOverlay::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
-    XLOG(ERR) << "overlay file for " << ino
+    XLOG(ERR) << "overlay file for " << inode.getNodeId()
               << " is too short for header: size=" << st.st_size;
     throw InodeError(EIO, inode.inodePtrFromThis(), "corrupt overlay file");
   }
@@ -105,8 +110,8 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
   return size;
 }
 
-Hash OverlayFileAccess::getSha1(InodeNumber ino) {
-  auto entry = getEntryForInode(ino);
+Hash OverlayFileAccess::getSha1(FileInode& inode) {
+  auto entry = getEntryForInode(inode.getNodeId());
   uint64_t version;
   {
     auto info = entry->info.rlock();
@@ -130,8 +135,14 @@ Hash OverlayFileAccess::getSha1(InodeNumber ino) {
     // like a good property of this function to avoid changing that
     // state.
     uint8_t buf[8192];
-    auto len = entry->file.preadNoInt(&buf, sizeof(buf), off);
-    folly::checkUnixError(len, "pread failed during SHA-1 calculation");
+    auto ret = entry->file.preadNoInt(&buf, sizeof(buf), off);
+    if (ret.hasError()) {
+      throw InodeError(
+          ret.error(),
+          inode.inodePtrFromThis(),
+          "pread failed during SHA-1 calculation");
+    }
+    auto len = ret.value();
     if (len == 0) {
       break;
     }
@@ -151,8 +162,8 @@ Hash OverlayFileAccess::getSha1(InodeNumber ino) {
   return sha1;
 }
 
-std::string OverlayFileAccess::readAllContents(InodeNumber ino) {
-  auto entry = getEntryForInode(ino);
+std::string OverlayFileAccess::readAllContents(FileInode& inode) {
+  auto entry = getEntryForInode(inode.getNodeId());
 
   // Note that this code requires a write lock on the entry because the lseek()
   // call modifies the file offset of the file descriptor. Otherwise, concurrent
@@ -166,58 +177,87 @@ std::string OverlayFileAccess::readAllContents(InodeNumber ino) {
   auto info = entry->info.wlock();
 
   auto rc = entry->file.lseek(FsOverlay::kHeaderLength, SEEK_SET);
-  folly::checkUnixError(rc, "unable to seek in materialized FileInode");
-  std::string result;
-  if (!entry->file.readFile(result)) {
-    folly::throwSystemError();
+  if (rc.hasError()) {
+    throw InodeError(
+        rc.error(),
+        inode.inodePtrFromThis(),
+        "unable to seek in materialized FileInode");
   }
-  return result;
+  auto result = entry->file.readFile();
+
+  if (result.hasError()) {
+    throw InodeError(
+        result.error(),
+        inode.inodePtrFromThis(),
+        "unable to read overlay file");
+  }
+  return result.value();
 }
 
-BufVec OverlayFileAccess::read(InodeNumber ino, size_t size, off_t off) {
-  auto entry = getEntryForInode(ino);
+BufVec OverlayFileAccess::read(FileInode& inode, size_t size, off_t off) {
+  auto entry = getEntryForInode(inode.getNodeId());
 
   auto buf = folly::IOBuf::createCombined(size);
   auto res = entry->file.preadNoInt(
       buf->writableBuffer(), size, off + FsOverlay::kHeaderLength);
 
-  folly::checkUnixError(res);
-  buf->append(res);
+  if (res.hasError()) {
+    throw InodeError(
+        res.error(),
+        inode.inodePtrFromThis(),
+        "pread failed during overlay file read");
+  }
+
+  buf->append(res.value());
   return BufVec{std::move(buf)};
 }
 
 size_t OverlayFileAccess::write(
-    InodeNumber ino,
+    FileInode& inode,
     const struct iovec* iov,
     size_t iovcnt,
     off_t off) {
-  auto entry = getEntryForInode(ino);
+  auto entry = getEntryForInode(inode.getNodeId());
 
   auto xfer = entry->file.pwritev(iov, iovcnt, off + FsOverlay::kHeaderLength);
-  folly::checkUnixError(xfer);
-
+  if (xfer.hasError()) {
+    throw InodeError(
+        xfer.error(),
+        inode.inodePtrFromThis(),
+        "pwritev failed during file write");
+  }
   auto info = entry->info.wlock();
   info->invalidateMetadata();
 
-  return xfer;
+  return xfer.value();
 }
 
-void OverlayFileAccess::truncate(InodeNumber ino, off_t size) {
-  auto entry = getEntryForInode(ino);
-
-  folly::checkUnixError(entry->file.ftruncate(size + FsOverlay::kHeaderLength));
+void OverlayFileAccess::truncate(FileInode& inode, off_t size) {
+  auto entry = getEntryForInode(inode.getNodeId());
+  auto result = entry->file.ftruncate(size + FsOverlay::kHeaderLength);
+  if (result.hasError()) {
+    throw InodeError(
+        result.error(),
+        inode.inodePtrFromThis(),
+        "unable to ftruncate overlay file");
+  }
 
   auto info = entry->info.wlock();
   info->invalidateMetadata();
 }
 
-void OverlayFileAccess::fsync(InodeNumber ino, bool datasync) {
+void OverlayFileAccess::fsync(FileInode& inode, bool datasync) {
   // TODO: If the inode is not currently in cache, we could avoid calling fsync.
   // That said, close() does not ensure data is synced, so it's safest to
   // reopen.
-  auto entry = getEntryForInode(ino);
-  folly::checkUnixError(
-      datasync ? entry->file.fdatasync() : entry->file.fsync());
+  auto entry = getEntryForInode(inode.getNodeId());
+  auto result = datasync ? entry->file.fdatasync() : entry->file.fsync();
+  if (result.hasError()) {
+    throw InodeError(
+        result.error(),
+        inode.inodePtrFromThis(),
+        "unable to fsync overlay file");
+  }
 }
 
 OverlayFileAccess::EntryPtr OverlayFileAccess::getEntryForInode(

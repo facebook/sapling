@@ -16,40 +16,74 @@ namespace eden {
 
 OverlayFile::OverlayFile(folly::File file) : file_{std::move(file)} {}
 
-int OverlayFile::fstat(struct stat* buf) const {
-  return ::fstat(file_.fd(), buf);
+folly::Expected<struct stat, int> OverlayFile::fstat() const {
+  struct stat st {};
+  if (::fstat(file_.fd(), &st)) {
+    return folly::makeUnexpected(errno);
+  }
+  return st;
 }
 
-ssize_t OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
-  return folly::preadNoInt(file_.fd(), buf, n, offset);
+folly::Expected<ssize_t, int>
+OverlayFile::preadNoInt(void* buf, size_t n, off_t offset) const {
+  auto ret = folly::preadNoInt(file_.fd(), buf, n, offset);
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return ret;
 }
 
-off_t OverlayFile::lseek(off_t offset, int whence) const {
-  return ::lseek(file_.fd(), offset, whence);
+folly::Expected<off_t, int> OverlayFile::lseek(off_t offset, int whence) const {
+  auto ret = ::lseek(file_.fd(), offset, whence);
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return ret;
 }
 
-ssize_t OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
-  return folly::pwritevNoInt(file_.fd(), iov, iovcnt, offset);
+folly::Expected<ssize_t, int>
+OverlayFile::pwritev(const iovec* iov, int iovcnt, off_t offset) const {
+  auto ret = folly::pwritevNoInt(file_.fd(), iov, iovcnt, offset);
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return ret;
 }
 
-int OverlayFile::ftruncate(off_t length) const {
-  return ::ftruncate(file_.fd(), length);
+folly::Expected<int, int> OverlayFile::ftruncate(off_t length) const {
+  auto ret = ::ftruncate(file_.fd(), length);
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(ret);
 }
 
-int OverlayFile::fsync() const {
-  return ::fsync(file_.fd());
+folly::Expected<int, int> OverlayFile::fsync() const {
+  auto ret = ::fsync(file_.fd());
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(ret);
 }
 
-int OverlayFile::fdatasync() const {
+folly::Expected<int, int> OverlayFile::fdatasync() const {
 #ifndef __APPLE__
-  return ::fdatasync(file_.fd());
+  auto ret = ::fdatasync(file_.fd());
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(ret);
 #else
   return fsync();
 #endif
 }
 
-bool OverlayFile::readFile(std::string& out) const {
-  return folly::readFile(file_.fd(), out);
+folly::Expected<std::string, int> OverlayFile::readFile() const {
+  std::string out;
+  if (!folly::readFile(file_.fd(), out)) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(std::move(out));
 }
 
 } // namespace eden

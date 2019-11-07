@@ -433,7 +433,7 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
     // Set the size of the file when FATTR_SIZE is set
     if (attr.valid & FATTR_SIZE) {
       // Throws upon error.
-      self->getOverlayFileAccess(state)->truncate(ino, attr.size);
+      self->getOverlayFileAccess(state)->truncate(*self, attr.size);
     }
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
@@ -446,7 +446,7 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
     // when FATTR_SIZE flag is set but when the flag is not set we
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
-    off_t size = self->getOverlayFileAccess(state)->getFileSize(ino, *self);
+    off_t size = self->getOverlayFileAccess(state)->getFileSize(*self);
     result.st.st_ino = ino.get();
     result.st.st_size = size;
     metadata.applyToStat(result.st);
@@ -584,7 +584,7 @@ Future<Hash> FileInode::getSha1() {
       // If a file is not materialized, it should have a hash value.
       return getObjectStore()->getBlobSha1(state->hash.value());
     case State::MATERIALIZED_IN_OVERLAY:
-      return getOverlayFileAccess(state)->getSha1(getNodeId());
+      return getOverlayFileAccess(state)->getSha1(*this);
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
@@ -618,7 +618,7 @@ folly::Future<struct stat> FileInode::stat() {
           });
 
     case State::MATERIALIZED_IN_OVERLAY:
-      st.st_size = getOverlayFileAccess(state)->getFileSize(getNodeId(), *this);
+      st.st_size = getOverlayFileAccess(state)->getFileSize(*this);
       updateBlockCount(st);
       return st;
   }
@@ -639,7 +639,7 @@ void FileInode::updateBlockCount(struct stat& st) {
 void FileInode::fsync(bool datasync) {
   auto state = LockedState{this};
   if (state->isMaterialized()) {
-    getOverlayFileAccess(state)->fsync(getNodeId(), datasync);
+    getOverlayFileAccess(state)->fsync(*this, datasync);
   }
 }
 
@@ -668,8 +668,7 @@ Future<string> FileInode::readAll(CacheHint cacheHint) {
         switch (state->tag) {
           case State::MATERIALIZED_IN_OVERLAY: {
             DCHECK(!blob);
-            result = self->getOverlayFileAccess(state)->readAllContents(
-                self->getNodeId());
+            result = self->getOverlayFileAccess(state)->readAllContents(*self);
             break;
           }
           case State::BLOB_NOT_LOADING: {
@@ -704,8 +703,7 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
 
         // Materialized either before or during blob load.
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          return self->getOverlayFileAccess(state)->read(
-              self->getNodeId(), size, off);
+          return self->getOverlayFileAccess(state)->read(*self, size, off);
         }
 
         // runWhileDataLoaded() ensures that the state is either
@@ -746,8 +744,7 @@ size_t FileInode::writeImpl(
     off_t off) {
   DCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
 
-  auto xfer =
-      getOverlayFileAccess(state)->write(getNodeId(), iov, numIovecs, off);
+  auto xfer = getOverlayFileAccess(state)->write(*this, iov, numIovecs, off);
 
   updateMtimeAndCtimeLocked(*state, getNow());
 
@@ -902,7 +899,7 @@ void FileInode::truncateInOverlay(LockedState& state) {
   CHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
   CHECK(!state->hash);
 
-  getOverlayFileAccess(state)->truncate(getNodeId());
+  getOverlayFileAccess(state)->truncate(*this);
 }
 
 ObjectStore* FileInode::getObjectStore() const {

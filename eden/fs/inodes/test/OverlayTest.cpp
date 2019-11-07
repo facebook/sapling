@@ -9,6 +9,7 @@
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 
 #include <folly/Exception.h>
+#include <folly/Expected.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/Subprocess.h>
@@ -84,10 +85,10 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(hash2, subdirEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
 
-  folly::checkUnixError(file.lseek(FsOverlay::kHeaderLength, SEEK_SET));
-  std::string result;
-  file.readFile(result);
-  EXPECT_EQ("contents", result);
+  EXPECT_TRUE(file.lseek(FsOverlay::kHeaderLength, SEEK_SET).hasValue());
+  auto result = file.readFile();
+  EXPECT_FALSE(result.hasError());
+  EXPECT_EQ("contents", result.value());
 
   ASSERT_TRUE(subdir);
   EXPECT_EQ(2, subdir->size());
@@ -103,9 +104,10 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   ASSERT_TRUE(emptyDir);
   EXPECT_EQ(0, emptyDir->size());
 
-  folly::checkUnixError(hello.lseek(FsOverlay::kHeaderLength, SEEK_SET));
-  file.readFile(result);
-  EXPECT_EQ("", result);
+  EXPECT_TRUE(hello.lseek(FsOverlay::kHeaderLength, SEEK_SET).hasValue());
+  result = file.readFile();
+  EXPECT_FALSE(result.hasError());
+  EXPECT_EQ("", result.value());
 }
 
 class OverlayTest : public ::testing::Test {

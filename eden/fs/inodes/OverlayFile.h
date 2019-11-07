@@ -7,8 +7,10 @@
 
 #pragma once
 
+#include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/portability/SysUio.h>
+
 namespace folly {
 class File;
 }
@@ -23,14 +25,16 @@ class OverlayFile {
   OverlayFile() = default;
   explicit OverlayFile(folly::File file);
 
-  int fstat(struct stat* buf) const;
-  ssize_t preadNoInt(void* buf, size_t n, off_t offset) const;
-  off_t lseek(off_t offset, int whence) const;
-  ssize_t pwritev(const iovec* iov, int iovcnt, off_t offset) const;
-  int ftruncate(off_t length) const;
-  int fsync() const;
-  int fdatasync() const;
-  bool readFile(std::string& out) const;
+  folly::Expected<struct stat, int> fstat() const;
+  folly::Expected<ssize_t, int> preadNoInt(void* buf, size_t n, off_t offset)
+      const;
+  folly::Expected<off_t, int> lseek(off_t offset, int whence) const;
+  folly::Expected<ssize_t, int>
+  pwritev(const iovec* iov, int iovcnt, off_t offset) const;
+  folly::Expected<int, int> ftruncate(off_t length) const;
+  folly::Expected<int, int> fsync() const;
+  folly::Expected<int, int> fdatasync() const;
+  folly::Expected<std::string, int> readFile() const;
 
  private:
   folly::File file_;
