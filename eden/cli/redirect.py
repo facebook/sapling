@@ -410,7 +410,21 @@ def get_effective_redirections(
         mount_point = mount_info.mount_point
         if mount_point.startswith(checkout_path_bytes):
             rel_path = os.fsdecode(mount_point[len(checkout_path_bytes) :])
-            if rel_path:
+            # The is_bind_mount test may appear to be redundant but it is
+            # possible for mounts to layer such that we have:
+            #
+            # /my/repo    <-- fuse at the top of the vfs
+            # /my/repo/buck-out
+            # /my/repo    <-- earlier generation fuse at bottom
+            #
+            # The buck-out bind mount in the middle is visible in the
+            # mount table but is not visible via the VFS because there
+            # is a different /my/repo mounted over the top.
+            #
+            # We test whether we can see a mount point at that location
+            # before recording it in the effective redirection list so
+            # that we don't falsely believe that the bind mount is up.
+            if rel_path and is_bind_mount(Path(os.fsdecode(mount_point))):
                 redirs[rel_path] = Redirection(
                     repo_path=Path(rel_path),
                     redir_type=RedirectionType.UNKNOWN,
