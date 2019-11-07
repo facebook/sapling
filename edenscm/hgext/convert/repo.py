@@ -374,7 +374,7 @@ class gitutil(object):
         # whole change at a time in between looking for newlines
         outbody = pipeout.readline()
 
-        return outbody
+        return outbody[:-1]  # Strip newline delimiter
 
 
 class repo_commandline(common.commandline):
@@ -854,7 +854,7 @@ class repo_source(common.converter_source):
         else:
             gitpath = os.path.join(self.path, projectpath)
             difftreeoutput = gitutil.difftree(self.ui, gitpath, commithash)
-            difftree = gitutil.parsedifftree(difftreeoutput[0:-1], commithash)
+            difftree = gitutil.parsedifftree(difftreeoutput, commithash)
             if len(self._difftreecache) > self.DIFFCACHE_SIZE_MAX:
                 self._difftreecache.popitem()
             if self._difftreecacheenabled:
