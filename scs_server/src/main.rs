@@ -6,7 +6,6 @@
  * directory of this source tree.
  */
 
-#![feature(async_await)]
 #![deny(unused)]
 
 use std::sync::atomic::{AtomicBool, Ordering};
