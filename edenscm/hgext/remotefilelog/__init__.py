@@ -118,6 +118,8 @@ Configs:
 
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
+    ``remotefilelog.useruststore`` use the Rust ContentStore and MetadataStore.
+
     ``remotefilelog.cacheprocess2`` name of the cache client.
 
     ``remotefilelog.cachekey`` cache key prefix to use.

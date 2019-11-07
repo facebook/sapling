@@ -66,7 +66,7 @@ def _runrustrepack(repo, packpath, incremental):
 
 
 def _shareddatastoresrepack(repo, incremental):
-    if util.safehasattr(repo.fileslog, "shareddatastores"):
+    if util.safehasattr(repo.fileslog, "shareddatastores") or repo.fileslog._ruststore:
         packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
         limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
         _cleanuppacks(repo.ui, packpath, limit)
@@ -75,8 +75,8 @@ def _shareddatastoresrepack(repo, incremental):
 
 
 def _localdatarepack(repo, incremental):
-    if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
-        repo.fileslog, "localdatastores"
+    if repo.ui.configbool("remotefilelog", "localdatarepack") and (
+        util.safehasattr(repo.fileslog, "localdatastores") or repo.fileslog._ruststore
     ):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY

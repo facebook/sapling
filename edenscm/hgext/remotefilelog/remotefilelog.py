@@ -468,28 +468,51 @@ class remotefileslog(filelog.fileslog):
 
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
-        self._mutablelocalpacks = mutablestores.pendingmutablepack(
-            repo,
-            lambda: shallowutil.getlocalpackpath(
-                self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-            ),
+        self._ruststore = repo.ui.configbool("remotefilelog", "useruststore", False)
+        if self._ruststore:
+            self.makeruststore(repo)
+        else:
+            self._mutablelocalpacks = mutablestores.pendingmutablepack(
+                repo,
+                lambda: shallowutil.getlocalpackpath(
+                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+                ),
+            )
+            self._mutablesharedpacks = mutablestores.pendingmutablepack(
+                repo,
+                lambda: shallowutil.getcachepackpath(
+                    self.repo, constants.FILEPACK_CATEGORY
+                ),
+            )
+            self.makeunionstores()
+
+    def makeruststore(self, repo):
+        remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
+        self.contentstore = revisionstore.contentstore(
+            repo.svfs.vfs.base, repo.ui._rcfg, remotestore
         )
-        self._mutablesharedpacks = mutablestores.pendingmutablepack(
-            repo,
-            lambda: shallowutil.getcachepackpath(
-                self.repo, constants.FILEPACK_CATEGORY
-            ),
+        self.metadatastore = revisionstore.metadatastore(
+            repo.svfs.vfs.base, repo.ui._rcfg, remotestore
         )
-        self.makeunionstores()
 
     def getmutablelocalpacks(self):
-        return self._mutablelocalpacks.getmutablepack()
+        if self._ruststore:
+            return self.contentstore, self.metadatastore
+        else:
+            return self._mutablelocalpacks.getmutablepack()
 
     def getmutablesharedpacks(self):
+        assert not self._ruststore
         return self._mutablesharedpacks.getmutablepack()
 
     def commitsharedpacks(self):
         """Persist the dirty data written to the shared packs."""
+        if self._ruststore:
+            self.contentstore = None
+            self.metadatastore = None
+            self.makeruststore(self.repo)
+            return
+
         dpackpath, hpackpath = self._mutablesharedpacks.commit()
 
         self.repo.fileservice.updatecache(dpackpath, hpackpath)
@@ -500,14 +523,24 @@ class remotefileslog(filelog.fileslog):
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        self._mutablelocalpacks.commit()
+        if self._ruststore:
+            if self.contentstore:
+                self.contentstore.flush()
+            if self.metadatastore:
+                self.metadatastore.flush()
+        else:
+            self._mutablelocalpacks.commit()
         self.commitsharedpacks()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
-        self._mutablelocalpacks.abort()
-        self.commitsharedpacks()
+        if self._ruststore:
+            self.contentstore = None
+            self.metadatastore = None
+        else:
+            self._mutablelocalpacks.abort()
+            self.commitsharedpacks()
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""

@@ -77,6 +77,8 @@ def wraprepo(repo):
         def close(self):
             result = super(shallowrepository, self).close()
             self.fileservice.close()
+            if "fileslog" in self.__dict__:
+                self.fileslog.abortpending()
             return result
 
         @localrepo.unfilteredmethod

@@ -665,6 +665,19 @@ class fileserverclient(object):
 
             idstocheck.append((file, bin(id)))
 
+        batchlfsdownloads = self.ui.configbool(
+            "remotefilelog", "_batchlfsdownloads", True
+        )
+        dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
+
+        if repo.fileslog._ruststore:
+            repo.fileslog.contentstore.prefetch(idstocheck)
+            repo.fileslog.metadatastore.prefetch(idstocheck)
+
+            if batchlfsdownloads and dolfsprefetch:
+                self._lfsprefetch(fileids)
+            return
+
         datastore = self.datastore
         historystore = self.historystore
         if force:
@@ -693,10 +706,6 @@ class fileserverclient(object):
                 ),
                 config="remotefilelog-ext",
             )
-        batchlfsdownloads = self.ui.configbool(
-            "remotefilelog", "_batchlfsdownloads", True
-        )
-        dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
         if missingids:
             global fetches, fetched, fetchcost
             fetches += 1
