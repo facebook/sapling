@@ -14,6 +14,7 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 
+use blackbox::event::Event;
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
@@ -34,6 +35,8 @@ pub fn table() -> CommandTable {
 
     Returns 0 on success."#,
     );
+    table.register(dump_trace, "dump-trace", "export tracing information");
+
     table.register(
         debugstore,
         "debugstore",
@@ -64,6 +67,20 @@ define_flags! {
     pub struct RootOpts {
         /// show root of the shared repo
         shared: bool,
+    }
+
+    pub struct DumpTraceOpts {
+        /// time range
+        #[short('t')]
+        time_range: String = "since 15 minutes ago",
+
+        /// blackbox session id (overrides --time-range)
+        #[short('s')]
+        session_id: i64,
+
+        /// output path (.txt, .json, .json.gz, .spans.json)
+        #[short('o')]
+        output_path: String,
     }
 
     pub struct DebugstoreOpts {
@@ -104,6 +121,42 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Fallible<u8> {
         "{}\n",
         util::path::normalize_for_display(&path.to_string_lossy())
     ))?;
+    Ok(0)
+}
+
+pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Fallible<u8> {
+    let filter = if opts.session_id != 0 {
+        blackbox::IndexFilter::SessionId(opts.session_id as u64)
+    } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
+        // Blackbox uses milliseconds. HgTime uses seconds.
+        let ratio = 1000;
+        blackbox::IndexFilter::Time(
+            range.start.unixtime.saturating_mul(ratio),
+            range.end.unixtime.saturating_mul(ratio),
+        )
+    } else {
+        return Err(errors::Abort("both --time-range and --session-id are invalid".into()).into());
+    };
+
+    let entries = {
+        let blackbox = blackbox::SINGLETON.lock();
+        blackbox.filter::<Event>(filter, None)
+    };
+
+    let mut tracing_data_list = Vec::new();
+    for entry in entries {
+        if let Event::TracingData { serialized } = entry.data {
+            if let Ok(uncompressed) = zstd::stream::decode_all(&serialized.0[..]) {
+                if let Ok(data) = mincode::deserialize(&uncompressed) {
+                    tracing_data_list.push(data)
+                }
+            }
+        }
+    }
+    let merged = tracing_collector::TracingData::merge(tracing_data_list);
+
+    crate::run::write_trace(io, &opts.output_path, &merged)?;
+
     Ok(0)
 }
 

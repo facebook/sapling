@@ -16,8 +16,9 @@ cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext" }
 edenapi = { path = "../edenapi" }
 failure = "0.1"
-indexedlog = { path = "../indexedlog" }
 flate2 = "1"
+hgtime = { path = "../hgtime"}
+indexedlog = { path = "../indexedlog" }
 libc = "0.2"
 mincode = { path = "../mincode"}
 parking_lot = "0.9"

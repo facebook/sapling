@@ -20,6 +20,7 @@ Show all commands except debug commands
   copy
   diff
   doctor
+  dump-trace
   export
   files
   forget
@@ -77,6 +78,7 @@ Do not show debug commands if there are other candidates
   $ hg debugcomplete d
   diff
   doctor
+  dump-trace
 
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
@@ -353,6 +355,7 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   doctor: 
+  dump-trace: time-range, session-id, output-path
   export: output, switch-parent, rev, pattern, text, git, binary, nodates, include, exclude
   files: rev, print0, include, exclude, template
   forget: include, exclude
