@@ -6,7 +6,6 @@
  */
 
 use crate::util::{read_access_token, TOKEN_FILENAME};
-use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;

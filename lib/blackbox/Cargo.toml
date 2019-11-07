@@ -10,7 +10,6 @@ indexedlog = { path = "../indexedlog" }
 lazy_static = "1"
 libc = "0.2"
 parking_lot = "0.9"
-rand = "0.6"
 serde = "1"
 serde_alt = { path = "serde_alt" }
 serde_cbor = "0.9"

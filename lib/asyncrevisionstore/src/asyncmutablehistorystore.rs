@@ -49,7 +49,7 @@ impl<T: MutableHistoryStore + Send> AsyncMutableHistoryStore<T> {
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
-                    let mut inner = inner.expect("The history store is closed");
+                    let inner = inner.expect("The history store is closed");
                     inner.add(&key, &info).map(|()| inner)
                 })
             }
@@ -71,7 +71,7 @@ impl<T: MutableHistoryStore + Send> AsyncMutableHistoryStore<T> {
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
-                    let mut inner = inner.expect("The history store is closed");
+                    let inner = inner.expect("The history store is closed");
                     inner.flush()
                 })
             }

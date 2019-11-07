@@ -7,7 +7,6 @@
 
 pub mod error;
 
-use self::error::*;
 use clap::{App, Arg};
 use commitcloudsubscriber::{
     CommitCloudConfig, CommitCloudTcpReceiverService, CommitCloudWorkspaceSubscriberService,

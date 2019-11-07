@@ -223,7 +223,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
     }
 
     fn table_py(py: Python) -> PyResult<PyDict> {
-        let table = crate::commands::table();
+        let table = commands::table();
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
             let doc = Bytes::from(def.doc().to_string());

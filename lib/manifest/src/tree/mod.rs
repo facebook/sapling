@@ -1447,11 +1447,11 @@ mod tests {
 
         // Attempting to use a directory link should fail.
         let ephemeral = Link::ephemeral();
-        let _file = File::from_link(&ephemeral, path.clone());;
+        let _file = File::from_link(&ephemeral, path.clone());
 
         // Durable link should result in a directory.
         let durable = Link::durable(hgid("a"));
-        let file = File::from_link(&durable, path.clone());;
+        let file = File::from_link(&durable, path.clone());
         assert!(file.is_none());
     }
 

@@ -47,7 +47,7 @@ mod tests {
         tempdir: &TempDir,
         nodes: &HashMap<Key, NodeInfo>,
     ) -> impl Future<Item = AsyncHistoryPack, Error = Error> + 'static {
-        let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
@@ -65,7 +65,7 @@ mod tests {
         let file2 = "a/b";
 
         // Insert key 1
-        let key1 = key(&file1, "2");;
+        let key1 = key(&file1, "2");
         let info = NodeInfo {
             parents: [key(&file1, "1"), null_key(&file1)],
             linknode: hgid("101"),
