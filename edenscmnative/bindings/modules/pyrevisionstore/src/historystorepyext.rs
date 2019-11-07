@@ -11,7 +11,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{HistoryStore, MutableHistoryStore, ToKeys};
+use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{
@@ -39,6 +39,10 @@ pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
         copyfrom: Option<&PyBytes>,
     ) -> PyResult<PyObject>;
     fn flush_py(&self, py: Python) -> PyResult<PyObject>;
+}
+
+pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
+    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
 }
 
 impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
@@ -180,5 +184,16 @@ impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
             .map_err(|e| to_pyerr(py, &e.into()))?;
         let opt = opt.map(|path| PyBytes::new(py, &path));
         Ok(opt.into_py_object(py))
+    }
+}
+
+impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
+    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject> {
+        let keys = keys
+            .iter(py)
+            .map(|tuple| from_tuple_to_key(py, &tuple))
+            .collect::<PyResult<Vec<Key>>>()?;
+        self.prefetch(keys).map_err(|e| to_pyerr(py, &e))?;
+        Ok(Python::None(py))
     }
 }

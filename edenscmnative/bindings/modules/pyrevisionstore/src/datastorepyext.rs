@@ -11,7 +11,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{DataStore, MutableDeltaStore, ToKeys};
+use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
 
 use crate::pythonutil::{
@@ -42,6 +42,10 @@ pub trait MutableDeltaStorePyExt: DataStorePyExt {
         metadata: Option<PyDict>,
     ) -> PyResult<PyObject>;
     fn flush_py(&self, py: Python) -> PyResult<PyObject>;
+}
+
+pub trait RemoteDataStorePyExt: RemoteDataStore {
+    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
 }
 
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
@@ -187,5 +191,16 @@ impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
             .map_err(|e| to_pyerr(py, &e.into()))?;
         let opt = opt.map(|path| PyBytes::new(py, &path));
         Ok(opt.into_py_object(py))
+    }
+}
+
+impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
+    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject> {
+        let keys = keys
+            .iter(py)
+            .map(|tuple| from_tuple_to_key(py, &tuple))
+            .collect::<PyResult<Vec<Key>>>()?;
+        self.prefetch(keys).map_err(|e| to_pyerr(py, &e))?;
+        Ok(Python::None(py))
     }
 }
