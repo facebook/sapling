@@ -1504,7 +1504,7 @@ class Test(unittest.TestCase):
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
             + "NO_PROXY CHGDEBUG HGDETECTRACE"
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
-            + " EDENSCM_TRACE_PY"
+            + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
         ).split():
             if k in env:
                 del env[k]

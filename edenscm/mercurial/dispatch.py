@@ -481,36 +481,25 @@ def dispatch(req):
             duration,
         )
 
-        traces = perftrace.traces()
-        if traces:
-            threshold = req.ui.configint("tracing", "threshold")
-            for trace in traces:
-                if trace.duration() > threshold:
-                    output = perftrace.asciirender(trace)
-                    if req.ui.configbool("tracing", "stderr"):
-                        req.ui.warn("%s\n" % output)
-
-                    key = "flat/perftrace-%(host)s-%(pid)s-%(time)s" % {
-                        "host": socket.gethostname(),
-                        "pid": os.getpid(),
-                        "time": time.time(),
-                    }
-                    splitoutput = output.split("\n")
-                    if len(splitoutput) > 200:
-                        readableoutput = "\n".join(
-                            splitoutput[:200]
-                            + ["Perftrace truncated at 200 lines, see {}".format(key)]
-                        )
-                    else:
-                        readableoutput = output
-                    req.ui.log(
-                        "perftrace",
-                        "Trace:\n%s\n",
-                        readableoutput,
-                        key=key,
-                        payload=output,
-                    )
-                    req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
+        threshold = req.ui.configint("tracing", "threshold") * 1000  # milliseconds
+        if duration >= threshold:
+            key = "flat/perftrace-%(host)s-%(pid)s-%(time)s" % {
+                "host": socket.gethostname(),
+                "pid": os.getpid(),
+                "time": time.time(),
+            }
+            # TODO: Move this into a background task that renders from
+            # blackbox instead.
+            # The "duration" is chosen dynamically for long commands.
+            # The ASCII implementation will fold repetitive calls so
+            # the length of the output is practically bounded.
+            output = bindings.tracing.singleton.ascii(
+                max([duration / 100, threshold]) * 1e6
+            )
+            if req.ui.configbool("tracing", "stderr"):
+                req.ui.warn("%s\n" % output)
+            req.ui.log("perftrace", "Trace:\n%s\n", output, key=key, payload=output)
+            req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
 
         req.ui._measuredtimes["command_duration"] = duration * 1000
         retmask = req.ui.configint("ui", "exitcodemask")
@@ -1122,7 +1111,7 @@ def _dispatch(req):
             return commands.help_(ui)
 
         msg = _formatargs(fullargs)
-        with perftrace.trace("hg " + msg):
+        with perftrace.trace("Main Python Command"):
             repo = None
             if func.cmdtemplate:
                 templ = cmdtemplatestate(ui, cmdoptions)

@@ -4344,7 +4344,10 @@ def timefunction(key, uiposition=None, uiname=None):
     """
 
     def wrapper(func):
-        func.meta = [("cat", "timefunction"), ("name", key)]
+        # TODO: Move these to async analysis reading from blackbox.
+        func.meta = [("cat", "timefunction"), ("name", "Timed Function: %s" % key)]
+        if istest():
+            func.meta.append(("line", "_"))
         func = _tracewrap(func)
 
         def inner(*args, **kwargs):

@@ -1547,8 +1547,8 @@ def batchget(repo, mctx, wctx, actions):
         yield i, size, f
 
 
-@util.timefunction("applyupdates", 0, "ui")
 @perftrace.tracefunc("Apply Updates")
+@util.timefunction("applyupdates", 0, "ui")
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None):
     """apply the merge action list to the working directory
 
@@ -1990,6 +1990,7 @@ def _logupdatedistance(ui, repo, node, branchmerge):
         pass
 
 
+@perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def update(
     repo,
