@@ -165,7 +165,7 @@ class gitutil(object):
         )
 
     @classmethod
-    def parsedifftree(cls, diffstr):
+    def parsedifftree(cls, diffstr, expectedrev=None):
         """
         returns: [[source:{}, dest:{}, status:"", score:0]]
         """
@@ -177,7 +177,12 @@ class gitutil(object):
                 diff, remainder = cls._parsedifftreeline(remainder)
                 parentdiffs.append(diff)
             else:
-                diffhash, remainder = cls._parsehash(remainder)
+                rev, remainder = cls._parsehash(remainder)
+                if expectedrev is not None and rev != expectedrev:
+                    raise error.Abort(
+                        _("diff-tree out of sync! Expected %s, found %s")
+                        % (expectedrev, rev)
+                    )
                 remainder = remainder[1:]  # remove separator
                 parentdiffs = []
                 output.append(parentdiffs)
@@ -855,7 +860,7 @@ class repo_source(common.converter_source):
         else:
             gitpath = os.path.join(self.path, projectpath)
             difftreeoutput = gitutil.difftree(self.ui, gitpath, commithash)
-            difftree = gitutil.parsedifftree(difftreeoutput[0:-1])
+            difftree = gitutil.parsedifftree(difftreeoutput[0:-1], commithash)
             if len(self._difftreecache) > self.DIFFCACHE_SIZE_MAX:
                 self._difftreecache.popitem()
             if self._difftreecacheenabled:
@@ -1019,7 +1024,7 @@ class repo_source(common.converter_source):
         if exitcode > 0:
             raise error.Abort(_("diff-tree failed with %d") % exitcode)
 
-        filediffs = gitutil.parsedifftree(difftreeoutput)
+        filediffs = gitutil.parsedifftree(difftreeoutput, rev)
         return [filediff["source"]["path"] for filediff in filediffs]
 
     def converted(self, rev, sinkrev):
