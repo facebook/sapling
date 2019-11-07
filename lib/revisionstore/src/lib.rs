@@ -16,6 +16,7 @@ mod historyindex;
 mod indexedloghistorystore;
 mod sliceext;
 mod unionstore;
+mod util;
 
 pub mod c_api;
 pub mod datapack;
