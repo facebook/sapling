@@ -26,6 +26,7 @@ fn get_cache_path(config: &ConfigSet) -> Fallible<PathBuf> {
         .ok_or_else(|| format_err!("remotefilelog.cachepath is not set"))?;
     let mut path = PathBuf::new();
     path.push(config_path);
+    create_dir(&path)?;
     path.push(reponame);
     create_dir(&path)?;
     Ok(path)
