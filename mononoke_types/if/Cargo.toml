@@ -1,0 +1,27 @@
+# @autocargo from //scm/mononoke/mononoke_types:mononoke_types-thrift
+# Signature<<5eb81eee7f7a502b027f1b5cd4e97bcf7b7243cd>>
+[package]
+name = "mononoke_types-thrift"
+edition = "2018"
+version = "0.0.0"
+include = ["thrift_lib.rs"]
+build = "thrift_build.rs"
+
+[lib]
+path = "thrift_lib.rs"
+
+[build-dependencies]
+build_script_helpers = { path = "../../../../common/rust/cargo_from_buck/build_script_helpers" }
+
+[dependencies]
+buck_gen_proc_macro = { path = "../../../../common/rust/cargo_from_buck/buck_gen_proc_macro" }
+fbthrift = { path = "../../../../thrift/lib/rust" }
+async-trait = { version = "*", features = ["support_old_nightly"] }
+failure = "*"
+futures = "0.1"
+lazy_static = "*"
+serde = "*"
+serde_derive = "*"
+tokio-service = "0.1"
+futures-preview = { package = "futures-preview", version = "=0.3.0-alpha.18", features = ["async-await", "compat", "nightly"] } # prerelease using standard library futures
+# @end of Signature<<5eb81eee7f7a502b027f1b5cd4e97bcf7b7243cd>>
