@@ -42,7 +42,7 @@ pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
-pub use crate::historystore::{HistoryStore, MutableHistoryStore};
+pub use crate::historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHistoryStore;
 pub use crate::localstore::LocalStore;
