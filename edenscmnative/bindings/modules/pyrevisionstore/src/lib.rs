@@ -12,27 +12,33 @@
 use std::{
     fs::read_dir,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use cpython::*;
 use failure::{format_err, Error, Fallible};
+use parking_lot::RwLock;
 
-use cpython_ext::Bytes;
+use cpython_ext::{Bytes, PyErr};
 use cpython_failure::ResultPyErrExt;
+use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    CorruptionPolicy, DataPack, DataPackStore, DataPackVersion, DataStore, Delta, HistoryPack,
-    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogDataStore,
-    IndexedLogHistoryStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
-    MutableHistoryPack, MutableHistoryStore,
+    ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
+    DataStore, Delta, HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore,
+    IndexedLogDataStore, IndexedLogHistoryStore, LocalStore, Metadata, MetadataStore,
+    MetadataStoreBuilder, MutableDataPack, MutableDeltaStore, MutableHistoryPack,
+    MutableHistoryStore, RemoteDataStore, RemoteHistoryStore, RemoteStore,
 };
 use types::{Key, NodeInfo};
 
-use crate::datastorepyext::{DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt};
-use crate::historystorepyext::{
-    HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
+use crate::datastorepyext::{
+    DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt, RemoteDataStorePyExt,
 };
-use crate::pythonutil::to_pyerr;
+use crate::historystorepyext::{
+    HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt, RemoteHistoryStorePyExt,
+};
+use crate::pythonutil::{from_key, to_pyerr};
 
 mod datastorepyext;
 mod historystorepyext;
@@ -52,6 +58,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<indexedloghistorystore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
     m.add_class::<mutablehistorystore>(py)?;
+    m.add_class::<pyremotestore>(py)?;
+    m.add_class::<contentstore>(py)?;
+    m.add_class::<metadatastore>(py)?;
     m.add(
         py,
         "repackdatapacks",
@@ -504,7 +513,7 @@ fn make_mutabledeltastore(
 }
 
 py_class!(pub class mutabledeltastore |py| {
-    data store: Box<dyn MutableDeltaStore + Send>;
+    data store: Box<dyn MutableDeltaStore>;
 
     def __new__(_cls, packfilepath: Option<PyBytes> = None, indexedlogpath: Option<PyBytes> = None) -> PyResult<mutabledeltastore> {
         let store = make_mutabledeltastore(py, packfilepath, indexedlogpath).map_err(|e| to_pyerr(py, &e.into()))?;
@@ -618,7 +627,7 @@ fn make_mutablehistorystore(
 }
 
 py_class!(pub class mutablehistorystore |py| {
-    data store: Box<dyn MutableHistoryStore + Send>;
+    data store: Box<dyn MutableHistoryStore>;
 
     def __new__(_cls, packfilepath: Option<PyBytes>) -> PyResult<mutablehistorystore> {
         let store = make_mutablehistorystore(py, packfilepath).map_err(|e| to_pyerr(py, &e.into()))?;
@@ -679,3 +688,257 @@ impl MutableHistoryStore for mutablehistorystore {
         self.store(py).flush()
     }
 }
+
+struct PyRemoteStoreInner {
+    py_store: PyObject,
+    datastore: Option<mutabledeltastore>,
+    historystore: Option<mutablehistorystore>,
+}
+
+#[derive(Clone)]
+struct PyRemoteStore {
+    inner: Arc<RwLock<PyRemoteStoreInner>>,
+}
+
+impl PyRemoteStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let keys = keys
+            .into_iter()
+            .map(|key| from_key(py, &key))
+            .collect::<Vec<_>>();
+
+        let inner = self.inner.read();
+        inner
+            .py_store
+            .call_method(
+                py,
+                "prefetch",
+                (
+                    inner.datastore.clone_ref(py),
+                    inner.historystore.clone_ref(py),
+                    keys,
+                ),
+                None,
+            )
+            .map_err(|e| PyErr::from(e))?;
+        Ok(())
+    }
+}
+
+struct PyRemoteDataStore(PyRemoteStore);
+struct PyRemoteHistoryStore(PyRemoteStore);
+
+impl RemoteStore for PyRemoteStore {
+    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut inner = self.inner.write();
+        inner.datastore = Some(mutabledeltastore::create_instance(py, store).unwrap());
+
+        Arc::new(PyRemoteDataStore(self.clone()))
+    }
+
+    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut inner = self.inner.write();
+        inner.historystore = Some(mutablehistorystore::create_instance(py, store).unwrap());
+
+        Arc::new(PyRemoteHistoryStore(self.clone()))
+    }
+}
+
+impl RemoteDataStore for PyRemoteDataStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        self.0.prefetch(keys)
+    }
+}
+
+impl DataStore for PyRemoteDataStore {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+        unreachable!();
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+        match self.prefetch(vec![key.clone()]) {
+            Ok(()) => self
+                .0
+                .inner
+                .read()
+                .datastore
+                .as_ref()
+                .unwrap()
+                .get_delta(key),
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+        match self.prefetch(vec![key.clone()]) {
+            Ok(()) => self
+                .0
+                .inner
+                .read()
+                .datastore
+                .as_ref()
+                .unwrap()
+                .get_delta_chain(key),
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+        match self.prefetch(vec![key.clone()]) {
+            Ok(()) => self
+                .0
+                .inner
+                .read()
+                .datastore
+                .as_ref()
+                .unwrap()
+                .get_meta(key),
+            Err(_) => Ok(None),
+        }
+    }
+}
+
+impl LocalStore for PyRemoteDataStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        Ok(keys.to_vec())
+    }
+}
+
+impl RemoteHistoryStore for PyRemoteHistoryStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        self.0.prefetch(keys)
+    }
+}
+
+impl HistoryStore for PyRemoteHistoryStore {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+        match self.prefetch(vec![key.clone()]) {
+            Ok(()) => self
+                .0
+                .inner
+                .read()
+                .historystore
+                .as_ref()
+                .unwrap()
+                .get_node_info(key),
+            Err(_) => Ok(None),
+        }
+    }
+}
+
+impl LocalStore for PyRemoteHistoryStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        Ok(keys.to_vec())
+    }
+}
+
+py_class!(class pyremotestore |py| {
+    data remote: PyRemoteStore;
+
+    def __new__(_cls, py_store: PyObject) -> PyResult<pyremotestore> {
+        let store = PyRemoteStore { inner: Arc::new(RwLock::new(PyRemoteStoreInner { py_store, datastore: None, historystore: None })) };
+        pyremotestore::create_instance(py, store)
+    }
+});
+
+impl pyremotestore {
+    fn into_inner(&self, py: Python) -> PyRemoteStore {
+        self.remote(py).clone()
+    }
+}
+
+py_class!(class contentstore |py| {
+    data store: ContentStore;
+
+    def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<contentstore> {
+        let path = encoding::local_bytes_to_path(path.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let remotestore = remote.into_inner(py);
+
+        let contentstore = ContentStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_err(|e| to_pyerr(py, &e.into()))?;
+        contentstore::create_instance(py, contentstore)
+    }
+
+    def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.get_py(py, name, node)
+    }
+
+    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.get_delta_py(py, name, node)
+    }
+
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_delta_chain_py(py, name, node)
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.get_meta_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.add_py(py, name, node, deltabasenode, delta, metadata)
+    }
+
+    def flush(&self) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.flush_py(py)
+    }
+
+    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.prefetch_py(py, keys)
+    }
+});
+
+py_class!(class metadatastore |py| {
+    data store: MetadataStore;
+
+    def __new__(_cls, path: &PyBytes, config: config, remote: pyremotestore) -> PyResult<metadatastore> {
+        let path = encoding::local_bytes_to_path(path.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+        let remotestore = remote.into_inner(py);
+
+        let metadatastore = MetadataStoreBuilder::new(path, &config.get_cfg(py)).remotestore(Box::new(remotestore)).build().map_err(|e| to_pyerr(py, &e.into()))?;
+        metadatastore::create_instance(py, metadatastore)
+    }
+
+    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+        self.store(py).get_node_info_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.add_py(py, name, node, p1, p2, linknode, copyfrom)
+    }
+
+    def flush(&self) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.flush_py(py)
+    }
+
+    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.prefetch_py(py, keys)
+    }
+});
