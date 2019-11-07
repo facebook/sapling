@@ -5,8 +5,8 @@ setup configuration
   $ REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
   $ setup_commitsyncmap
-  $ ls $TESTTMP/monsql/synced_commit_mapping
-  ls: cannot access $TESTTMP/monsql/synced_commit_mapping: No such file or directory
+  $ ls $TESTTMP/monsql/sqlite_dbs
+  ls: cannot access $TESTTMP/monsql/sqlite_dbs: No such file or directory
   [2]
 
 setup hg server repos

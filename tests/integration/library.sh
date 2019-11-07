@@ -193,11 +193,11 @@ function create_mutable_counters_sqlite3_db {
     PRIMARY KEY (repo_id, name)
   );
 SQL
-  sqlite3 "$TESTTMP/monsql/mutable_counters" < "$TESTTMP"/mutable_counters.sql
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" < "$TESTTMP"/mutable_counters.sql
 }
 
 function init_mutable_counters_sqlite3_db {
-  sqlite3 "$TESTTMP/monsql/mutable_counters" \
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
   "insert into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 0)";
 }
 
@@ -214,7 +214,7 @@ function create_books_sqlite3_db {
 );
 SQL
 
-  sqlite3 "$TESTTMP/monsql/bookmarks" < "$TESTTMP"/bookmarks.sql
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" < "$TESTTMP"/bookmarks.sql
 }
 
 function mononoke_hg_sync_loop {
@@ -346,16 +346,16 @@ function init_pushrebaserecording_sqlite3_db {
 }
 
 function init_bookmark_log_sqlite3_db {
-  sqlite3 "$TESTTMP/monsql/bookmarks" \
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
   "insert into bookmarks_update_log \
   (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp) \
   values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
 
-  sqlite3 "$TESTTMP/monsql/bookmarks" "select * from bookmarks_update_log";
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from bookmarks_update_log";
 }
 
 function get_bonsai_globalrev_mapping {
-  sqlite3 "$TESTTMP/monsql/bonsai_globalrev_mapping" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
 }
 
 function setup_mononoke_config {
@@ -1132,7 +1132,7 @@ function add_synced_commit_mapping_entry() {
   small_bcs_id="$2"
   large_repo_id="$3"
   large_bcs_id="$4"
-  sqlite3 "$TESTTMP/monsql/synced_commit_mapping" <<EOF
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<EOF
     INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
     VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id');
 EOF
@@ -1144,7 +1144,7 @@ function read_blobstore_sync_queue_size() {
   attempts="$((timeout * 10))"
 
   for _ in $(seq 1 $attempts); do
-    ret="$(sqlite3 "$TESTTMP/monsql/blobstore_sync_queue" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
+    ret="$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
     if [[ -n "$ret" ]]; then
       echo "$ret"
       return 0

@@ -55,7 +55,7 @@ Push to Mononoke
   [1]
 
 Check that new entry was added to the sync database. 3 pushes and 1 blobimport
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "select count(*) from bookmarks_update_log";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   4
 
 Sync it to another client
@@ -134,7 +134,7 @@ Enable replay verification hooks
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'replay failed'
   replay failed: error:pushkey
   replay failed: error:pushkey
@@ -152,7 +152,7 @@ Now bookmark is not blocked
   replay failed: error:pushkey
 
 Set the correct timestamp back
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
 
   $ cd repo-hg-2
   $ hg log -r master_bookmark
@@ -171,7 +171,7 @@ Replay in a loop
   * successful sync of entries [2] (glob)
   * successful sync of entries [3] (glob)
   * successful sync of entries [4] (glob)
-  $ sqlite3 "$TESTTMP/monsql/mutable_counters" "select * from mutable_counters";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
   0|latest-replayed-request|4
 
 Make one more push from the client
@@ -284,12 +284,12 @@ Test hook bypass using REPLAY_BYPASS file
   $ touch repo-hg-2/.hg/REPLAY_BYPASS
 
 Test failing to sync, but already having the correct bookmark location
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"add0c792bfce89610d277fd5b1e32f5287994d1d\":10000000000}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"add0c792bfce89610d277fd5b1e32f5287994d1d\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
 
 Test further sync
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep -E '(sync failed|successful sync)'
   * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)

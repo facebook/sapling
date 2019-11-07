@@ -160,7 +160,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   |
   o  0: 3903775176ed public 'a' master_bookmark
   
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
   $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123"
@@ -182,13 +182,13 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123" --force
   pushing to ssh://user@dummy/repo
   searching for changes
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123"
   pushing to ssh://user@dummy/repo
   searching for changes
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
   $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123" --create --config "infinitepush.branchpattern=foo"

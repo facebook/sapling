@@ -63,7 +63,7 @@ Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
-  $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
 
 Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
@@ -71,7 +71,7 @@ Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
-  $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
@@ -80,7 +80,7 @@ Censor multiple files
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
-  $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
   3|content.blake2.5119c9ed8ede459c6992624164307f82dc1edc3efd074481a4cc9afdb7755061|[TASK]Censor g,f|* (glob)
@@ -101,7 +101,7 @@ Expect error when trying to censor nonexisting file
   [1]
 
 No new entry in the table
-  $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
   3|content.blake2.5119c9ed8ede459c6992624164307f82dc1edc3efd074481a4cc9afdb7755061|[TASK]Censor g,f|* (glob)
@@ -113,7 +113,7 @@ Uncensor some of the stuff
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
 Fewer entries in the table
-  $ sqlite3 "$TESTTMP/monsql/censored_contents" 'SELECT * FROM censored_contents;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 

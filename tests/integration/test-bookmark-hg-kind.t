@@ -33,7 +33,7 @@ setup repo-push, repo-pull
 blobimport
 
   $ blobimport repo-hg/.hg repo
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind FROM bookmarks;'
   master_bookmark|pull_default
 start mononoke
 
@@ -60,9 +60,9 @@ create new bookmarks, then update their properties
   pushing rev b2d646f64a99 to destination ssh://user@dummy/repo bookmark scratch
   searching for changes
   exporting bookmark scratch
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE name LIKE 'scratch';"
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks SET hg_kind = CAST('publishing' AS BLOB) WHERE name LIKE 'not_pull_default';"
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE name LIKE 'scratch';"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('publishing' AS BLOB) WHERE name LIKE 'not_pull_default';"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind FROM bookmarks;'
   master_bookmark|pull_default
   not_pull_default|publishing
   scratch|scratch
@@ -124,7 +124,7 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
      more/2                    b2d646f64a9978717516887968786c6b7a33edf9
      not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
      scratch                   b2d646f64a9978717516887968786c6b7a33edf9
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE name LIKE 'more/%';"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE name LIKE 'more/%';"
 Exercise the limit (6 bookmarks should fail)
   $ hgmn push ssh://user@dummy/repo -r . --to "more/3" --create >/dev/null 2>&1
   $ hgmn bookmarks --list-remote "*"

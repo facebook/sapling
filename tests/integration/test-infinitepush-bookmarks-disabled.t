@@ -65,7 +65,7 @@ Do infinitepush (aka commit cloud) push
   o  0: 3903775176ed public 'a' master_bookmark
   
 Bookmark push should have been ignored
-  $ sqlite3 "$TESTTMP/monsql/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
 Commit should have been accepted
   $ cd ../repo-pull

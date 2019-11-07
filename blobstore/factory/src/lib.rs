@@ -142,7 +142,7 @@ impl SqliteFactory {
 
 impl SqlFactoryBase for SqliteFactory {
     fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
-        let r = try_boxfuture!(T::with_sqlite_path(self.path.join(T::LABEL)));
+        let r = try_boxfuture!(T::with_sqlite_path(self.path.join("sqlite_dbs")));
         Ok(Arc::new(r)).into_future().boxify()
     }
 
@@ -152,8 +152,8 @@ impl SqlFactoryBase for SqliteFactory {
             .boxify()
     }
 
-    fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
-        create_sqlite_connections(&self.path.join(label))
+    fn create_connections(&self, _label: String) -> BoxFuture<SqlConnections, Error> {
+        create_sqlite_connections(&self.path.join("sqlite_dbs"))
             .into_future()
             .boxify()
     }

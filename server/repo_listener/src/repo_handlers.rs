@@ -118,7 +118,7 @@ fn open_db_from_config<S: SqlConstructors>(
     myrouter_port: Option<u16>,
 ) -> BoxFuture<S, Error> {
     match dbconfig {
-        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join(S::LABEL))
+        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join("sqlite_dbs"))
             .into_future()
             .boxify(),
         MetadataDBConfig::Mysql { ref db_address, .. } => {
