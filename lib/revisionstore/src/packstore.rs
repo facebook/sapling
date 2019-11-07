@@ -444,6 +444,7 @@ struct MutableHistoryPackStoreInner {
 }
 
 /// A `MutableHistoryPackStore` allows both reading and writing to history packfiles.
+#[derive(Clone)]
 pub struct MutableHistoryPackStore {
     inner: Arc<MutableHistoryPackStoreInner>,
 }
