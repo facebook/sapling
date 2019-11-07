@@ -15,13 +15,18 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
+use futures::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt, Shared};
+use futures_util::try_join;
+use manifest::ManifestOps;
+use manifest::{Diff as ManifestDiff, Entry as ManifestEntry};
 use mononoke_types::{BonsaiChangeset, MPath};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
 use crate::changeset_path::ChangesetPathContext;
+use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 use crate::specifiers::{ChangesetId, HgChangesetId};
@@ -220,5 +225,54 @@ impl ChangesetContext {
             .compat()
             .await?;
         Ok(is_ancestor_of)
+    }
+
+    /// Returns differences between this changeset and some other changeset.
+    ///
+    /// `self` is considered the "new" changeset (so files missing there are "Removed")
+    /// `other` is considered the "old" changeset (so files missing there are "Added")
+    pub async fn diff(
+        &self,
+        other: ChangesetId,
+    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+        let other = ChangesetContext::new(self.repo.clone(), other);
+        Ok({
+            // yes, we start from "other" as manfest.diff() is backwards
+            let (self_manifest_root, other_manifest_root) =
+                try_join!(self.root_fsnode_id(), other.root_fsnode_id(),)?;
+            other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
+                .fsnode_id()
+                .diff(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().get_blobstore(),
+                    self_manifest_root.fsnode_id().clone(),
+                )
+                .filter_map(|diff_entry| match diff_entry {
+                    ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
+                        Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
+                            self.clone(),
+                            Some(path),
+                        )))
+                    }
+                    ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
+                        Some(ChangesetPathDiffContext::Removed(
+                            ChangesetPathContext::new(self.clone(), Some(path)),
+                        ))
+                    }
+                    ManifestDiff::Changed(
+                        Some(path),
+                        ManifestEntry::Leaf(_a),
+                        ManifestEntry::Leaf(_b),
+                    ) => Some(ChangesetPathDiffContext::Changed(
+                        ChangesetPathContext::new(self.clone(), Some(path.clone())),
+                        ChangesetPathContext::new(other.clone(), Some(path)),
+                    )),
+                    // We don't care about diffs not involving leaves
+                    _ => None,
+                })
+                .collect()
+                .compat()
+                .await?
+        })
     }
 }

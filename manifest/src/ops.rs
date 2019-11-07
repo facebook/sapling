@@ -214,6 +214,10 @@ where
             .boxify()
     }
 
+    /// Returns differences between two manifests.
+    ///
+    /// `self` is considered the "old" manifest (so entries missing there are "Added")
+    /// `other` is considered the "new" manifest (so entries missing there are "Removed")
     fn diff(
         &self,
         ctx: CoreContext,

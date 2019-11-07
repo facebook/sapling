@@ -19,12 +19,14 @@ use context::generate_session_id;
 use faster_hex::hex_string;
 use fbinit::FacebookInit;
 use futures::stream::Stream;
-use futures_preview::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
+use futures_preview::{
+    compat::Future01CompatExt, compat::Stream01CompatExt, stream, StreamExt, TryStreamExt,
+};
 use futures_util::{try_future::try_join_all, try_join};
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetSpecifier, CoreContext,
-    FileContext, FileId, FileMetadata, FileType, HgChangesetId, Mononoke, MononokeError, PathEntry,
-    RepoContext, TreeContext, TreeEntry, TreeId,
+    ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
+    ChangesetSpecifier, CoreContext, FileContext, FileId, FileMetadata, FileType, HgChangesetId,
+    Mononoke, MononokeError, PathEntry, RepoContext, TreeContext, TreeEntry, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use scuba_ext::ScubaSampleBuilder;
@@ -38,6 +40,8 @@ use xdiff;
 
 const MAX_LIMIT: i64 = 1000;
 const MAX_CHUNK_SIZE: i64 = 16 * 1024 * 1024;
+// Magic number used when we want to limit concurrency with buffer_unordered.
+const CONCURRENCY_LIMIT: usize = 100;
 
 trait SpecifierExt {
     fn description(&self) -> String;
@@ -665,6 +669,61 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
     }
 }
 
+#[async_trait]
+trait AsyncIntoResponse<T> {
+    async fn into_response(self) -> Result<T, errors::ServiceError>;
+}
+
+#[async_trait]
+impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
+    async fn into_response(self) -> Result<Option<thrift::FilePathInfo>, errors::ServiceError> {
+        let path = &self;
+        let (meta, type_) = try_join!(
+            async {
+                let file = path.file().await?;
+                match file {
+                    Some(file) => Ok(Some(file.metadata().await?)),
+                    None => Ok(None),
+                }
+            },
+            path.file_type()
+        )?;
+        if let (Some(meta), Some(type_)) = (meta, type_) {
+            Ok(Some(thrift::FilePathInfo {
+                path: path.to_string(),
+                type_: type_.into_response(),
+                info: meta.into_response(),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[async_trait]
+impl AsyncIntoResponse<thrift::CommitCompareFile> for ChangesetPathDiffContext {
+    async fn into_response(self) -> Result<thrift::CommitCompareFile, errors::ServiceError> {
+        let (other_file, base_file) = match self {
+            ChangesetPathDiffContext::Added(base_context) => {
+                let entry = base_context.into_response().await?;
+                (None, entry)
+            }
+            ChangesetPathDiffContext::Removed(other_context) => {
+                let entry = other_context.into_response().await?;
+                (entry, None)
+            }
+            ChangesetPathDiffContext::Changed(base_context, other_context) => {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                (other_entry, base_entry)
+            }
+        };
+        Ok(thrift::CommitCompareFile {
+            base_file,
+            other_file,
+        })
+    }
+}
 mod errors {
     use super::{service, thrift};
     use mononoke_api::MononokeError;
@@ -712,6 +771,7 @@ mod errors {
     impl_into_thrift_error!(service::CommitFileDiffsExn);
     impl_into_thrift_error!(service::CommitLookupExn);
     impl_into_thrift_error!(service::CommitInfoExn);
+    impl_into_thrift_error!(service::CommitCompareExn);
     impl_into_thrift_error!(service::CommitIsAncestorOfExn);
     impl_into_thrift_error!(service::CommitPathInfoExn);
     impl_into_thrift_error!(service::TreeListExn);
@@ -1043,6 +1103,40 @@ impl SourceControlService for SourceControlServiceImpl {
         })?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset_id).await?;
         Ok(is_ancestor_of)
+    }
+
+    // Diff two commits
+    async fn commit_compare(
+        &self,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitCompareParams,
+    ) -> Result<thrift::CommitCompareResponse, service::CommitCompareExn> {
+        let ctx = self.create_ctx(Some(&commit));
+        let repo = self.repo(ctx, &commit.repo)?;
+
+        let base_changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
+        let (base_changeset, other_changeset_id) = try_join!(
+            repo.changeset(base_changeset_specifier),
+            repo.resolve_specifier(other_changeset_specifier),
+        )?;
+        let base_changeset =
+            base_changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
+        let other_changeset_id = other_changeset_id.ok_or_else(|| {
+            errors::commit_not_found(format!(
+                "repo={} commit={}",
+                commit.repo.name,
+                params.other_commit_id.to_string()
+            ))
+        })?;
+        let diff = base_changeset.diff(other_changeset_id).await?;
+        let diff_files = stream::iter(diff)
+            .map(|d| d.into_response())
+            .buffer_unordered(CONCURRENCY_LIMIT)
+            .try_collect()
+            .await?;
+
+        Ok(thrift::CommitCompareResponse { diff_files })
     }
 
     /// Returns information about the file or directory at a path in a commit.

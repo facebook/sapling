@@ -102,8 +102,13 @@ impl ChangesetPathContext {
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo(&self) -> &RepoContext {
+    pub fn repo(&self) -> &RepoContext {
         &self.changeset.repo()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext {
+        &self.changeset
     }
 
     async fn fsnode_id(
