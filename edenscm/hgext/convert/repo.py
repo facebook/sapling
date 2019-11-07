@@ -23,7 +23,9 @@ from . import common
 class gitutil(object):
     """Helper functions for dealing with git data"""
 
+    OBJECT_TYPE_COMMIT = "commit"
     OBJECT_TYPE_TREE = "tree"
+    OBJECT_TYPE_BLOB = "blob"
 
     FILE_MODE_MASK_LINK = 0o020000
     FILE_MODE_MASK_GLOBAL_EXEC = 0o000100
@@ -325,12 +327,17 @@ class gitutil(object):
         return outtype, outbodybytes
 
     @classmethod
-    def catfile(cls, ui, path, version):
+    def catfile(cls, ui, path, version, expectedtype=None):
         """Uses the catfile pipe implementation to get the file contents for a
         particular object hash
         """
-        out_type, out_body = cls.catfilewithtype(ui, path, version)
-        return out_body
+        outtype, outbody = cls.catfilewithtype(ui, path, version)
+        if expectedtype is not None and outtype != expectedtype:
+            raise error.Abort(
+                _("Object %s is of wrong type! Expected %s, found %s")
+                % (expectedtype, outtype)
+            )
+        return outbody
 
     @classmethod
     def _createdifftreepipe(cls, ui, path):
@@ -795,18 +802,17 @@ class repo_source(common.converter_source):
             return None, None
 
         if (name, rev) in self.filecache:
-            objecttype, filebytes = self.filecache[(name, rev)]
+            filebytes = self.filecache[(name, rev)]
         else:
             projectpath = self.objecthashprojectindex[rev]
             fullpath = os.path.join(self.path, projectpath)
-            objecttype, filebytes = gitutil.catfilewithtype(self.ui, fullpath, rev)
-
-        if objecttype == gitutil.OBJECT_TYPE_TREE:
-            return None, None
+            filebytes = gitutil.catfile(
+                self.ui, fullpath, rev, gitutil.OBJECT_TYPE_BLOB
+            )
 
         if len(self.filecache) > self.FILECACHE_SIZE_MAX:
             self.filecache.pop(self.filecache.keys()[0])
-        self.filecache[(name, rev)] = (objecttype, filebytes)
+        self.filecache[(name, rev)] = filebytes
 
         mode = ""  # TODO
 
@@ -917,7 +923,9 @@ class repo_source(common.converter_source):
 
         # full_path = self.path + "/" + project_path
         fullpath = os.path.join(self.path, projectpath)
-        catfilebodybytes = gitutil.catfile(self.ui, fullpath, commithash)
+        catfilebodybytes = gitutil.catfile(
+            self.ui, fullpath, commithash, gitutil.OBJECT_TYPE_COMMIT
+        )
         catfilebodystr = catfilebodybytes.decode(self.srcencoding, errors="replace")
 
         commit = gitutil.parsegitcommitraw(commithash, catfilebodystr, self.recode)
