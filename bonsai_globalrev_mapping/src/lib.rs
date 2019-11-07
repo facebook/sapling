@@ -60,6 +60,30 @@ impl BonsaisOrGlobalrevs {
     }
 }
 
+impl From<ChangesetId> for BonsaisOrGlobalrevs {
+    fn from(cs_id: ChangesetId) -> Self {
+        BonsaisOrGlobalrevs::Bonsai(vec![cs_id])
+    }
+}
+
+impl From<Vec<ChangesetId>> for BonsaisOrGlobalrevs {
+    fn from(cs_ids: Vec<ChangesetId>) -> Self {
+        BonsaisOrGlobalrevs::Bonsai(cs_ids)
+    }
+}
+
+impl From<Globalrev> for BonsaisOrGlobalrevs {
+    fn from(rev: Globalrev) -> Self {
+        BonsaisOrGlobalrevs::Globalrev(vec![rev])
+    }
+}
+
+impl From<Vec<Globalrev>> for BonsaisOrGlobalrevs {
+    fn from(revs: Vec<Globalrev>) -> Self {
+        BonsaisOrGlobalrevs::Globalrev(revs)
+    }
+}
+
 pub trait BonsaiGlobalrevMapping: Send + Sync {
     fn add(&self, entry: BonsaiGlobalrevMappingEntry) -> BoxFuture<bool, Error>;
 

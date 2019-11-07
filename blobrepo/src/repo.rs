@@ -12,6 +12,7 @@ use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::repo_commit::*;
 use blobstore::{Blobstore, Loadable, LoadableError};
+use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
@@ -44,8 +45,8 @@ use mercurial_types::{
         UploadHgFileEntry, UploadHgNodeHash,
     },
     manifest::Content,
-    Changeset, FileBytes, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope, HgFileNodeId,
-    HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
+    Changeset, FileBytes, Globalrev, HgChangesetId, HgEntry, HgEntryId, HgFileEnvelope,
+    HgFileNodeId, HgManifest, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId,
@@ -112,6 +113,7 @@ pub struct BlobRepo {
     bookmarks: Arc<dyn Bookmarks>,
     filenodes: Arc<dyn Filenodes>,
     changesets: Arc<dyn Changesets>,
+    bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     repoid: RepositoryId,
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
@@ -128,6 +130,7 @@ impl BlobRepo {
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
+        bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
@@ -149,6 +152,7 @@ impl BlobRepo {
             blobstore,
             filenodes,
             changesets,
+            bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
@@ -162,6 +166,7 @@ impl BlobRepo {
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
+        bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         changeset_fetcher_factory: Arc<
             dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
@@ -175,6 +180,7 @@ impl BlobRepo {
             blobstore,
             filenodes,
             changesets,
+            bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory,
@@ -198,6 +204,7 @@ impl BlobRepo {
             blobstore,
             filenodes,
             changesets,
+            bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             repoid,
             derived_data_lease,
@@ -215,6 +222,7 @@ impl BlobRepo {
             repo_blobstore_args,
             filenodes,
             changesets,
+            bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             derived_data_lease,
             filestore_config,
@@ -551,6 +559,37 @@ impl BlobRepo {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks.get(ctx, name, self.repoid)
+    }
+
+    pub fn get_bonsai_from_globalrev(
+        &self,
+        globalrev: Globalrev,
+    ) -> BoxFuture<Option<ChangesetId>, Error> {
+        self.bonsai_globalrev_mapping
+            .get_bonsai_from_globalrev(self.repoid, globalrev)
+    }
+
+    pub fn get_globalrev_from_bonsai(
+        &self,
+        bcs: ChangesetId,
+    ) -> BoxFuture<Option<Globalrev>, Error> {
+        self.bonsai_globalrev_mapping
+            .get_globalrev_from_bonsai(self.repoid, bcs)
+    }
+
+    pub fn get_bonsai_globalrev_mapping(
+        &self,
+        bonsai_or_globalrev_ids: impl Into<BonsaisOrGlobalrevs>,
+    ) -> BoxFuture<Vec<(ChangesetId, Globalrev)>, Error> {
+        self.bonsai_globalrev_mapping
+            .get(self.repoid, bonsai_or_globalrev_ids.into())
+            .map(|result| {
+                result
+                    .into_iter()
+                    .map(|entry| (entry.bcs_id, entry.globalrev))
+                    .collect()
+            })
+            .boxify()
     }
 
     pub fn list_bookmark_log_entries(
@@ -2125,6 +2164,7 @@ impl Clone for BlobRepo {
             blobstore: self.blobstore.clone(),
             filenodes: self.filenodes.clone(),
             changesets: self.changesets.clone(),
+            bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),

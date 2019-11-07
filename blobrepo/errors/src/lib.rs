@@ -24,6 +24,7 @@ pub enum StateOpenError {
     Bookmarks,
     Changesets,
     Filenodes,
+    BonsaiGlobalrevMapping,
     BonsaiHgMapping,
 }
 
@@ -34,6 +35,7 @@ impl fmt::Display for StateOpenError {
             StateOpenError::Bookmarks => write!(f, "bookmarks"),
             StateOpenError::Changesets => write!(f, "changesets"),
             StateOpenError::Filenodes => write!(f, "filenodes"),
+            StateOpenError::BonsaiGlobalrevMapping => write!(f, "bonsai_globalrev_mapping"),
             StateOpenError::BonsaiHgMapping => write!(f, "bonsai_hg_mapping"),
         }
     }

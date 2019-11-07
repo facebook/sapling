@@ -21,6 +21,7 @@ use futures_preview::future::{FutureExt, Shared};
 use futures_util::try_join;
 use manifest::ManifestOps;
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry};
+use mercurial_types::Globalrev;
 use mononoke_types::{BonsaiChangeset, MPath};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
@@ -122,6 +123,17 @@ impl ChangesetContext {
             .compat()
             .await?;
         Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
+    }
+
+    /// The Globalrev for the changeset.
+    pub async fn globalrev(&self) -> Result<Option<Globalrev>, MononokeError> {
+        let mapping = self
+            .repo()
+            .blob_repo()
+            .get_globalrev_from_bonsai(self.id)
+            .compat()
+            .await?;
+        Ok(mapping.into_iter().next())
     }
 
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {

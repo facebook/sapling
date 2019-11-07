@@ -10,6 +10,7 @@
 //! to all underlying stores, but which all the caching enabled.
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     SqlBonsaiHgMapping,
@@ -102,6 +103,8 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         ))
     };
 
+    let bonsai_globalrev_mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);
+
     let bonsai_hg_mapping = {
         let mapping: Arc<dyn BonsaiHgMapping> = Arc::new(DelayedBonsaiHgMapping::new(
             SqlBonsaiHgMapping::with_sqlite_in_memory()?,
@@ -131,6 +134,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         blobstore,
         filenodes,
         changesets,
+        bonsai_globalrev_mapping,
         bonsai_hg_mapping,
         Arc::new(DummyLease {}),
         FilestoreConfig::default(),

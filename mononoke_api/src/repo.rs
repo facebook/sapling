@@ -19,6 +19,7 @@ use fsnodes::RootFsnodeMapping;
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
+use mercurial_types::Globalrev;
 use metaconfig_types::{CommonConfig, MetadataDBConfig, RepoConfig};
 use mononoke_types::hash::{Sha1, Sha256};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
@@ -242,6 +243,12 @@ impl RepoContext {
                     .compat()
                     .await?
             }
+            ChangesetSpecifier::Globalrev(rev) => {
+                self.blob_repo()
+                    .get_bonsai_from_globalrev(rev)
+                    .compat()
+                    .await?
+            }
         };
         Ok(id)
     }
@@ -305,6 +312,21 @@ impl RepoContext {
             .await?
             .into_iter()
             .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Similar to changeset_hg_ids, but returning Globalrevs.
+    pub async fn changeset_globalrev_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .get_bonsai_globalrev_mapping(changesets)
+            .compat()
+            .await?
+            .into_iter()
             .collect();
         Ok(mapping)
     }

@@ -14,6 +14,9 @@ pub type ChangesetId = mononoke_types::ChangesetId;
 /// A Mercurial changeset ID.
 pub type HgChangesetId = mercurial_types::HgChangesetId;
 
+/// A Globalrev.
+pub type Globalrev = mercurial_types::Globalrev;
+
 /// A changeset specifier.  This is anything that may be used to specify a
 /// unique changeset, such as its bonsai changeset ID, a changeset hash in an
 /// alternative hashing scheme, a globally unique hash prefix, or an
@@ -22,6 +25,7 @@ pub type HgChangesetId = mercurial_types::HgChangesetId;
 pub enum ChangesetSpecifier {
     Bonsai(ChangesetId),
     Hg(HgChangesetId),
+    Globalrev(Globalrev),
 }
 
 impl fmt::Display for ChangesetSpecifier {
@@ -29,6 +33,7 @@ impl fmt::Display for ChangesetSpecifier {
         match self {
             ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {}", cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
+            ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
         }
     }
 }

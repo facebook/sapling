@@ -8,7 +8,7 @@
 
 use std::cmp::min;
 use std::collections::{BTreeMap, BTreeSet};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display};
 use std::ops::RangeBounds;
 use std::sync::Arc;
@@ -22,7 +22,8 @@ use futures::stream::Stream;
 use futures_preview::{
     compat::Future01CompatExt, compat::Stream01CompatExt, stream, StreamExt, TryStreamExt,
 };
-use futures_util::{try_future::try_join_all, try_join};
+use futures_util::{future::FutureExt, try_future::try_join_all, try_join};
+use mercurial_types::Globalrev;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetPathContext, ChangesetPathDiffContext,
     ChangesetSpecifier, CoreContext, FileContext, FileId, FileMetadata, FileType, HgChangesetId,
@@ -373,12 +374,39 @@ async fn map_commit_identity(
         thrift::CommitIdentityScheme::BONSAI,
         thrift::CommitId::bonsai(changeset_ctx.id().as_ref().into()),
     );
+    let mut scheme_identities = vec![];
     if schemes.contains(&thrift::CommitIdentityScheme::HG) {
-        if let Some(hg_cs_id) = changeset_ctx.hg_id().await? {
-            ids.insert(
-                thrift::CommitIdentityScheme::HG,
-                thrift::CommitId::hg(hg_cs_id.as_ref().into()),
-            );
+        let identity = async {
+            if let Some(hg_id) = changeset_ctx.hg_id().await? {
+                let result: Result<Option<_>, MononokeError> = Ok(Some((
+                    thrift::CommitIdentityScheme::HG,
+                    thrift::CommitId::hg(hg_id.as_ref().into()),
+                )));
+                result
+            } else {
+                Ok(None)
+            }
+        };
+        scheme_identities.push(identity.boxed());
+    }
+    if schemes.contains(&thrift::CommitIdentityScheme::GLOBALREV) {
+        let identity = async {
+            if let Some(globalrev) = changeset_ctx.globalrev().await? {
+                let result: Result<Option<_>, MononokeError> = Ok(Some((
+                    thrift::CommitIdentityScheme::GLOBALREV,
+                    thrift::CommitId::globalrev(globalrev.id() as i64),
+                )));
+                result
+            } else {
+                Ok(None)
+            }
+        };
+        scheme_identities.push(identity.boxed());
+    }
+    let scheme_identities = try_join_all(scheme_identities).await?;
+    for maybe_identity in scheme_identities {
+        if let Some((scheme, id)) = maybe_identity {
+            ids.insert(scheme, id);
         }
     }
     Ok(ids)
@@ -403,12 +431,53 @@ async fn map_commit_identities(
         );
         result.insert(*id, idmap);
     }
+    let mut scheme_identities = vec![];
     if schemes.contains(&thrift::CommitIdentityScheme::HG) {
-        for (cs_id, hg_cs_id) in repo_ctx.changeset_hg_ids(ids).await?.into_iter() {
-            result.entry(cs_id).or_insert_with(BTreeMap::new).insert(
-                thrift::CommitIdentityScheme::HG,
-                thrift::CommitId::hg(hg_cs_id.as_ref().into()),
-            );
+        let ids = ids.clone();
+        let identities = async {
+            let bonsai_hg_ids = repo_ctx
+                .changeset_hg_ids(ids)
+                .await?
+                .into_iter()
+                .map(|(cs_id, hg_cs_id)| {
+                    (
+                        cs_id,
+                        thrift::CommitIdentityScheme::HG,
+                        thrift::CommitId::hg(hg_cs_id.as_ref().into()),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let result: Result<_, MononokeError> = Ok(bonsai_hg_ids);
+            result
+        };
+        scheme_identities.push(identities.boxed());
+    }
+    if schemes.contains(&thrift::CommitIdentityScheme::GLOBALREV) {
+        let identities = async {
+            let bonsai_globalrev_ids = repo_ctx
+                .changeset_globalrev_ids(ids)
+                .await?
+                .into_iter()
+                .map(|(cs_id, globalrev)| {
+                    (
+                        cs_id,
+                        thrift::CommitIdentityScheme::GLOBALREV,
+                        thrift::CommitId::globalrev(globalrev.id() as i64),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let result: Result<_, MononokeError> = Ok(bonsai_globalrev_ids);
+            result
+        };
+        scheme_identities.push(identities.boxed());
+    }
+    let scheme_identities = try_join_all(scheme_identities).await?;
+    for ids in scheme_identities {
+        for (cs_id, commit_identity_scheme, commit_id) in ids {
+            result
+                .entry(cs_id)
+                .or_insert_with(BTreeMap::new)
+                .insert(commit_identity_scheme, commit_id);
         }
     }
     Ok(result)
@@ -505,7 +574,7 @@ impl CommitIdExt for thrift::CommitId {
             thrift::CommitId::bonsai(_) => thrift::CommitIdentityScheme::BONSAI,
             thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
             thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
-            thrift::CommitId::global_rev(_) => thrift::CommitIdentityScheme::GLOBAL_REV,
+            thrift::CommitId::globalrev(_) => thrift::CommitIdentityScheme::GLOBALREV,
             thrift::CommitId::UnknownField(t) => (*t).into(),
         }
     }
@@ -518,7 +587,7 @@ impl CommitIdExt for thrift::CommitId {
             thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
-            thrift::CommitId::global_rev(rev) => rev.to_string(),
+            thrift::CommitId::globalrev(rev) => rev.to_string(),
             thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
         }
     }
@@ -554,6 +623,12 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     ))
                 })?;
                 Ok(ChangesetSpecifier::Hg(hg_cs_id))
+            }
+            thrift::CommitId::globalrev(rev) => {
+                let rev = Globalrev::new((*rev).try_into().map_err(|_| {
+                    errors::invalid_request(format!("cannot parse globalrev {} to u64", rev))
+                })?);
+                Ok(ChangesetSpecifier::Globalrev(rev))
             }
             _ => Err(errors::invalid_request(format!(
                 "unsupported commit identity scheme ({})",
