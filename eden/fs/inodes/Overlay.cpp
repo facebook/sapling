@@ -31,6 +31,14 @@ namespace eden {
 using folly::Unit;
 using std::optional;
 
+std::shared_ptr<Overlay> Overlay::create(AbsolutePathPiece localDir) {
+  struct MakeSharedEnabler : public Overlay {
+    explicit MakeSharedEnabler(AbsolutePathPiece localDir)
+        : Overlay(localDir) {}
+  };
+  return std::make_shared<MakeSharedEnabler>(localDir);
+}
+
 Overlay::Overlay(AbsolutePathPiece localDir) : fsOverlay_{localDir} {}
 
 Overlay::~Overlay() {
@@ -260,11 +268,13 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
 OverlayFile Overlay::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
-  return OverlayFile(fsOverlay_.openFile(inodeNumber, headerId));
+  return OverlayFile(
+      fsOverlay_.openFile(inodeNumber, headerId), weak_from_this());
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
-  return OverlayFile(fsOverlay_.openFileNoVerify(inodeNumber));
+  return OverlayFile(
+      fsOverlay_.openFileNoVerify(inodeNumber), weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -272,7 +282,8 @@ OverlayFile Overlay::createOverlayFile(
     folly::ByteRange contents) {
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
-  return OverlayFile(fsOverlay_.createOverlayFile(inodeNumber, contents));
+  return OverlayFile(
+      fsOverlay_.createOverlayFile(inodeNumber, contents), weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -280,7 +291,8 @@ OverlayFile Overlay::createOverlayFile(
     const folly::IOBuf& contents) {
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
-  return OverlayFile(fsOverlay_.createOverlayFile(inodeNumber, contents));
+  return OverlayFile(
+      fsOverlay_.createOverlayFile(inodeNumber, contents), weak_from_this());
 }
 
 InodeNumber Overlay::getMaxInodeNumber() {

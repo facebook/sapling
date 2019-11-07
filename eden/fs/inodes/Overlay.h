@@ -54,7 +54,7 @@ class OverlayFile;
  * of files in the root, the list of files in "foo", the list of files in
  * "foo/bar" and finally materializes "foo/bar/baz".
  */
-class Overlay {
+class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
   /**
    * Create a new Overlay object.
@@ -62,7 +62,8 @@ class Overlay {
    * The caller must call initialize() after creating the Overlay and wait for
    * it to succeed before using any other methods.
    */
-  explicit Overlay(AbsolutePathPiece localDir);
+  static std::shared_ptr<Overlay> create(AbsolutePathPiece localDir);
+
   ~Overlay();
 
   Overlay(const Overlay&) = delete;
@@ -185,6 +186,8 @@ class Overlay {
   struct statfs statFs() const;
 
  private:
+  explicit Overlay(AbsolutePathPiece localDir);
+
   /**
    * A request for the background GC thread.  There are two types of requests:
    * recursively forget data underneath an given directory, or complete a

@@ -23,7 +23,7 @@ class Overlay;
 class OverlayFile {
  public:
   OverlayFile() = default;
-  explicit OverlayFile(folly::File file);
+  explicit OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay);
 
   folly::Expected<struct stat, int> fstat() const;
   folly::Expected<ssize_t, int> preadNoInt(void* buf, size_t n, off_t offset)
@@ -38,6 +38,7 @@ class OverlayFile {
 
  private:
   folly::File file_;
+  std::weak_ptr<Overlay> overlay_;
 };
 } // namespace eden
 } // namespace facebook

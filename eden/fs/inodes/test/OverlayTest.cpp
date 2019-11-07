@@ -60,19 +60,20 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
                          tmpdir.path().string()});
   tarProcess.waitChecked();
 
-  Overlay overlay{realpath(tmpdir.path().string()) + "overlay-v2"_pc};
-  overlay.initialize().get();
+  auto overlay =
+      Overlay::create(realpath(tmpdir.path().string()) + "overlay-v2"_pc);
+  overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
   Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
   Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
-  auto rootTree = overlay.loadOverlayDir(kRootNodeId);
-  auto file = overlay.openFile(2_ino, FsOverlay::kHeaderIdentifierFile);
-  auto subdir = overlay.loadOverlayDir(3_ino);
-  auto emptyDir = overlay.loadOverlayDir(4_ino);
-  auto hello = overlay.openFile(5_ino, FsOverlay::kHeaderIdentifierFile);
+  auto rootTree = overlay->loadOverlayDir(kRootNodeId);
+  auto file = overlay->openFile(2_ino, FsOverlay::kHeaderIdentifierFile);
+  auto subdir = overlay->loadOverlayDir(3_ino);
+  auto emptyDir = overlay->loadOverlayDir(4_ino);
+  auto hello = overlay->openFile(5_ino, FsOverlay::kHeaderIdentifierFile);
 
   ASSERT_TRUE(rootTree);
   EXPECT_EQ(2, rootTree->size());
@@ -270,7 +271,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   void unloadOverlay(
       std::optional<OverlayRestartMode> restartMode = std::nullopt) {
     overlay->close();
-    overlay.reset();
+    overlay = nullptr;
     switch (restartMode.value_or(GetParam())) {
       case OverlayRestartMode::CLEAN:
         break;
@@ -283,7 +284,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   void loadOverlay() {
-    overlay = std::make_unique<Overlay>(getLocalDir());
+    overlay = Overlay::create(getLocalDir());
     overlay->initialize().get();
   }
 
@@ -312,7 +313,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   folly::test::TemporaryDirectory testDir_;
-  std::unique_ptr<Overlay> overlay;
+  std::shared_ptr<Overlay> overlay;
 };
 
 TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
@@ -554,45 +555,45 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
  public:
   DebugDumpOverlayInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
-        overlay{AbsolutePathPiece{testDir_.path().string()}} {
-    overlay.initialize().get();
+        overlay{Overlay::create(AbsolutePathPiece{testDir_.path().string()})} {
+    overlay->initialize().get();
   }
 
   folly::test::TemporaryDirectory testDir_;
-  Overlay overlay;
+  std::shared_ptr<Overlay> overlay;
 };
 
 TEST_F(DebugDumpOverlayInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
-  overlay.saveOverlayDir(ino, DirContents{});
+  overlay->saveOverlayDir(ino, DirContents{});
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
       "  Entries (0 total):\n",
-      debugDumpOverlayInodes(overlay, ino));
+      debugDumpOverlayInodes(*overlay, ino));
 }
 
 TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_3_regular_files) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
-  auto fileAIno = overlay.allocateInodeNumber();
+  auto fileAIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, fileAIno);
-  auto fileBIno = overlay.allocateInodeNumber();
+  auto fileBIno = overlay->allocateInodeNumber();
   EXPECT_EQ(3_ino, fileBIno);
-  auto fileCIno = overlay.allocateInodeNumber();
+  auto fileCIno = overlay->allocateInodeNumber();
   EXPECT_EQ(4_ino, fileCIno);
 
   DirContents root;
   root.emplace("file_a"_pc, S_IFREG | 0644, fileAIno);
   root.emplace("file_b"_pc, S_IFREG | 0644, fileBIno);
   root.emplace("file_c"_pc, S_IFREG | 0644, fileCIno);
-  overlay.saveOverlayDir(rootIno, root);
+  overlay->saveOverlayDir(rootIno, root);
 
-  overlay.createOverlayFile(fileAIno, folly::ByteRange{""_sp});
-  overlay.createOverlayFile(fileBIno, folly::ByteRange{""_sp});
-  overlay.createOverlayFile(fileCIno, folly::ByteRange{""_sp});
+  overlay->createOverlayFile(fileAIno, folly::ByteRange{""_sp});
+  overlay->createOverlayFile(fileBIno, folly::ByteRange{""_sp});
+  overlay->createOverlayFile(fileCIno, folly::ByteRange{""_sp});
 
   EXPECT_EQ(
       "/\n"
@@ -601,20 +602,20 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_3_regular_files) {
       "            2 f  644 file_a\n"
       "            3 f  644 file_b\n"
       "            4 f  644 file_c\n",
-      debugDumpOverlayInodes(overlay, rootIno));
+      debugDumpOverlayInodes(*overlay, rootIno));
 }
 
 TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_an_empty_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
-  auto subdirIno = overlay.allocateInodeNumber();
+  auto subdirIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, subdirIno);
 
   DirContents root;
   root.emplace("subdir"_pc, S_IFDIR | 0755, subdirIno);
-  overlay.saveOverlayDir(rootIno, root);
+  overlay->saveOverlayDir(rootIno, root);
 
-  overlay.saveOverlayDir(subdirIno, DirContents{});
+  overlay->saveOverlayDir(subdirIno, DirContents{});
 
   EXPECT_EQ(
       "/\n"
@@ -624,19 +625,19 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_an_empty_subdirectory) {
       "/subdir\n"
       "  Inode number: 2\n"
       "  Entries (0 total):\n",
-      debugDumpOverlayInodes(overlay, rootIno));
+      debugDumpOverlayInodes(*overlay, rootIno));
 }
 
 TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
-  auto directoryDoesNotExistIno = overlay.allocateInodeNumber();
+  auto directoryDoesNotExistIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, directoryDoesNotExistIno);
 
   DirContents root;
   root.emplace(
       "directory_does_not_exist"_pc, S_IFDIR | 0755, directoryDoesNotExistIno);
-  overlay.saveOverlayDir(rootIno, root);
+  overlay->saveOverlayDir(rootIno, root);
 
   EXPECT_EQ(
       "/\n"
@@ -645,13 +646,13 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
       "            2 d  755 directory_does_not_exist\n"
       "/directory_does_not_exist\n"
       "  Inode number: 2\n",
-      debugDumpOverlayInodes(overlay, rootIno));
+      debugDumpOverlayInodes(*overlay, rootIno));
 }
 
 TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_regular_file) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
-  auto regularFileDoesNotExistIno = overlay.allocateInodeNumber();
+  auto regularFileDoesNotExistIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, regularFileDoesNotExistIno);
 
   DirContents root;
@@ -659,47 +660,47 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_regular_file) {
       "regular_file_does_not_exist"_pc,
       S_IFREG | 0644,
       regularFileDoesNotExistIno);
-  overlay.saveOverlayDir(rootIno, root);
+  overlay->saveOverlayDir(rootIno, root);
 
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
       "  Entries (1 total):\n"
       "            2 f  644 regular_file_does_not_exist\n",
-      debugDumpOverlayInodes(overlay, rootIno));
+      debugDumpOverlayInodes(*overlay, rootIno));
 }
 
 TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
-  auto subdirAIno = overlay.allocateInodeNumber();
+  auto subdirAIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, subdirAIno);
-  auto subdirAXIno = overlay.allocateInodeNumber();
+  auto subdirAXIno = overlay->allocateInodeNumber();
   EXPECT_EQ(3_ino, subdirAXIno);
-  auto subdirAYIno = overlay.allocateInodeNumber();
+  auto subdirAYIno = overlay->allocateInodeNumber();
   EXPECT_EQ(4_ino, subdirAYIno);
-  auto subdirBIno = overlay.allocateInodeNumber();
+  auto subdirBIno = overlay->allocateInodeNumber();
   EXPECT_EQ(5_ino, subdirBIno);
-  auto subdirBXIno = overlay.allocateInodeNumber();
+  auto subdirBXIno = overlay->allocateInodeNumber();
   EXPECT_EQ(6_ino, subdirBXIno);
 
   DirContents root;
   root.emplace("subdir_a"_pc, S_IFDIR | 0755, subdirAIno);
   root.emplace("subdir_b"_pc, S_IFDIR | 0755, subdirBIno);
-  overlay.saveOverlayDir(rootIno, root);
+  overlay->saveOverlayDir(rootIno, root);
 
   DirContents subdirA;
   subdirA.emplace("x"_pc, S_IFDIR | 0755, subdirAXIno);
   subdirA.emplace("y"_pc, S_IFDIR | 0755, subdirAYIno);
-  overlay.saveOverlayDir(subdirAIno, subdirA);
+  overlay->saveOverlayDir(subdirAIno, subdirA);
 
   DirContents subdirB;
   subdirB.emplace("x"_pc, S_IFDIR | 0755, subdirBXIno);
-  overlay.saveOverlayDir(subdirBIno, subdirB);
+  overlay->saveOverlayDir(subdirBIno, subdirB);
 
-  overlay.saveOverlayDir(subdirAXIno, DirContents{});
-  overlay.saveOverlayDir(subdirAYIno, DirContents{});
-  overlay.saveOverlayDir(subdirBXIno, DirContents{});
+  overlay->saveOverlayDir(subdirAXIno, DirContents{});
+  overlay->saveOverlayDir(subdirAYIno, DirContents{});
+  overlay->saveOverlayDir(subdirBXIno, DirContents{});
 
   EXPECT_EQ(
       "/\n"
@@ -725,7 +726,7 @@ TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
       "/subdir_b/x\n"
       "  Inode number: 6\n"
       "  Entries (0 total):\n",
-      debugDumpOverlayInodes(overlay, rootIno));
+      debugDumpOverlayInodes(*overlay, rootIno));
 }
 
 namespace {

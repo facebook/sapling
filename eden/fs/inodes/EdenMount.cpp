@@ -192,7 +192,7 @@ EdenMount::EdenMount(
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
-      overlay_{std::make_unique<Overlay>(config_->getOverlayPath())},
+      overlay_{Overlay::create(config_->getOverlayPath())},
       overlayFileAccess_{overlay_.get()},
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},

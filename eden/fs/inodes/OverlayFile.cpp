@@ -14,7 +14,8 @@
 namespace facebook {
 namespace eden {
 
-OverlayFile::OverlayFile(folly::File file) : file_{std::move(file)} {}
+OverlayFile::OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay)
+    : file_{std::move(file)}, overlay_{overlay} {}
 
 folly::Expected<struct stat, int> OverlayFile::fstat() const {
   struct stat st {};

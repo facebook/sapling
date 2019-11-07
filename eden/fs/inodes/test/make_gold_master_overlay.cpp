@@ -37,13 +37,13 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
   Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
-  Overlay overlay{overlayPath};
+  auto overlay = Overlay::create(overlayPath);
 
-  auto fileInode = overlay.allocateInodeNumber();
+  auto fileInode = overlay->allocateInodeNumber();
   CHECK_EQ(2_ino, fileInode);
-  auto subdirInode = overlay.allocateInodeNumber();
-  auto emptyDirInode = overlay.allocateInodeNumber();
-  auto helloInode = overlay.allocateInodeNumber();
+  auto subdirInode = overlay->allocateInodeNumber();
+  auto emptyDirInode = overlay->allocateInodeNumber();
+  auto helloInode = overlay->allocateInodeNumber();
 
   DirContents root;
   root.emplace("file"_pc, S_IFREG | 0644, fileInode, hash1);
@@ -55,12 +55,12 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
 
   DirContents emptyDir;
 
-  overlay.saveOverlayDir(kRootNodeId, root);
-  overlay.saveOverlayDir(subdirInode, subdir);
-  overlay.saveOverlayDir(emptyDirInode, emptyDir);
+  overlay->saveOverlayDir(kRootNodeId, root);
+  overlay->saveOverlayDir(subdirInode, subdir);
+  overlay->saveOverlayDir(emptyDirInode, emptyDir);
 
-  overlay.createOverlayFile(fileInode, folly::ByteRange{"contents"_sp});
-  overlay.createOverlayFile(helloInode, folly::ByteRange{"world"_sp});
+  overlay->createOverlayFile(fileInode, folly::ByteRange{"contents"_sp});
+  overlay->createOverlayFile(helloInode, folly::ByteRange{"world"_sp});
 }
 
 int main(int argc, char* argv[]) {

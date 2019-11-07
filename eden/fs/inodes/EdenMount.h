@@ -731,7 +731,7 @@ class EdenMount {
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;
   BlobAccess blobAccess_;
-  std::unique_ptr<Overlay> overlay_;
+  std::shared_ptr<Overlay> overlay_;
   OverlayFileAccess overlayFileAccess_;
   InodeNumber dotEdenInodeNumber_{};
 

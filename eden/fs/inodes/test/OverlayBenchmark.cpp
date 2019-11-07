@@ -26,8 +26,8 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   //
   // overlayPath is parameterized to measure on different filesystem types.
 
-  Overlay overlay{overlayPath};
-  overlay.initialize().get();
+  auto overlay = Overlay::create(overlayPath);
+  overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -36,12 +36,12 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   contents.emplace(
       PathComponent{"one"},
       S_IFREG | 0644,
-      overlay.allocateInodeNumber(),
+      overlay->allocateInodeNumber(),
       hash1);
   contents.emplace(
       PathComponent{"two"},
       S_IFDIR | 0755,
-      overlay.allocateInodeNumber(),
+      overlay->allocateInodeNumber(),
       hash2);
 
   uint64_t N = 500000;
@@ -49,8 +49,8 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   folly::stop_watch<> timer;
 
   for (uint64_t i = 1; i <= N; i++) {
-    auto ino = overlay.allocateInodeNumber();
-    overlay.saveOverlayDir(ino, contents);
+    auto ino = overlay->allocateInodeNumber();
+    overlay->saveOverlayDir(ino, contents);
   }
 
   auto elapsed = timer.elapsed();
