@@ -115,32 +115,6 @@ class histpacktestsbase(object):
             self.assertEquals(linknode, actual[2])
             self.assertEquals(copyfrom, actual[3])
 
-    def testAddAncestorChain(self):
-        """Test putting multiple revisions in into a pack and read the ancestor
-        chain.
-        """
-        revisions = []
-        filename = "foo"
-        lastnode = nullid
-        for i in range(10):
-            node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid, None))
-            lastnode = node
-
-        # revisions must be added in topological order, newest first
-        revisions = list(reversed(revisions))
-        pack = self.createPack(revisions)
-        store = unionmetadatastore(pack)
-
-        # Test that the chain has all the entries
-        ancestors = store.getancestors(revisions[0][0], revisions[0][1], known=None)
-        for filename, node, p1, p2, linknode, copyfrom in revisions:
-            ap1, ap2, alinknode, acopyfrom = ancestors[node]
-            self.assertEquals(ap1, p1)
-            self.assertEquals(ap2, p2)
-            self.assertEquals(alinknode, linknode)
-            self.assertEquals(acopyfrom, copyfrom)
-
     def testPackMany(self):
         """Pack many related and unrelated ancestors.
         """
@@ -175,14 +149,12 @@ class histpacktestsbase(object):
 
         # Verify the pack contents
         for (filename, node), (p1, p2, lastnode) in allentries.iteritems():
-            ancestors = store.getancestors(filename, node, known=None)
-            self.assertEquals(ancestorcounts[(filename, node)], len(ancestors))
-            for anode, (ap1, ap2, alinknode, copyfrom) in ancestors.iteritems():
-                ep1, ep2, elinknode = allentries[(filename, anode)]
-                self.assertEquals(ap1, ep1)
-                self.assertEquals(ap2, ep2)
-                self.assertEquals(alinknode, elinknode)
-                self.assertEquals(copyfrom, None)
+            ap1, ap2, alinknode, acopyfrom = store.getnodeinfo(filename, node)
+            ep1, ep2, elinknode = allentries[(filename, node)]
+            self.assertEquals(ap1, ep1)
+            self.assertEquals(ap2, ep2)
+            self.assertEquals(alinknode, elinknode)
+            self.assertEquals(acopyfrom, None)
 
     def testGetNodeInfo(self):
         revisions = []
