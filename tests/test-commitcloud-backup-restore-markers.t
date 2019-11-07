@@ -129,7 +129,7 @@ Clone fresh repo and try to restore from backup
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   new changesets 3969cd9723d1
   $ hg sl --all
   @  changeset:   2:948715751816
@@ -186,7 +186,7 @@ Test createlandedasmarkers option disabled
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   new changesets 9b3ead1d8005:3969cd9723d1
   $ hg sl --all
   @  changeset:   2:948715751816

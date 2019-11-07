@@ -174,7 +174,7 @@ Test unbundling the original commit
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets 43903a6bf43f
 # Verify the packs were brought back and the data is accessible
   $ ls_l .hg/store/packs/manifests | wc -l
@@ -204,7 +204,7 @@ Test pulling new commits from a hybrid server
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets 098a163f13ea
 
   $ hg debugindex -m --config treemanifest.treeonly=False
@@ -449,7 +449,7 @@ Test prefetch
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets dad1be784127
   $ cd ..
 
@@ -486,7 +486,7 @@ Test pulling to a treeonly client from a treeonly server
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files (+1 heads)
+  added 2 changesets with 0 changes to 0 files
   new changesets dad1be784127:7253109af085
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
@@ -679,7 +679,7 @@ with pullprefetchrevs configured.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files (+1 heads)
+  added 3 changesets with 3 changes to 2 files
   new changesets d618f764f9a1:dad1be784127
   prefetching tree for dad1be784127
   2 trees fetched over * (glob)

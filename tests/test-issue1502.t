@@ -19,7 +19,7 @@ Initialize repository
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 273d008d6e8e
 
   $ hg -R foo1 book branchy

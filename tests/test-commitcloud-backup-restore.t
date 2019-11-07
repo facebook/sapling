@@ -110,7 +110,7 @@ Check bookmarks escaping
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 89ecc969c0ac
   $ hg book
      abook                     1:89ecc969c0ac
@@ -139,7 +139,7 @@ Create a repo with `/bookmarks/` in path
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets a2a9ae518b62
   $ hg book
      abook                     1:89ecc969c0ac

@@ -118,7 +118,7 @@ Create repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
@@ -139,7 +139,7 @@ Test checkheadshook alias
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
@@ -160,7 +160,7 @@ We can fix the head and push again
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files (+1 heads)
+  added 3 changesets with 3 changes to 2 files
   $ hg -R ../main rollback
   repository tip rolled back to revision 5 (undo push)
 
@@ -176,7 +176,7 @@ Test it still fails with checkallhook
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files (+1 heads)
+  added 3 changesets with 3 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
@@ -206,7 +206,7 @@ Test multiple files/revisions output
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files (+1 heads)
+  added 3 changesets with 3 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
     d.txt in a7040e68714f should not have CRLF line endings

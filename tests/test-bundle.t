@@ -102,7 +102,7 @@ Pull full.hg into empty (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
 
 Rollback empty
@@ -118,7 +118,7 @@ Pull full.hg into empty again (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
 
 Pull full.hg into test (using -R)
@@ -148,7 +148,7 @@ Pull full.hg into empty again (using -R)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
 
 Log -R full.hg in fresh empty
@@ -232,7 +232,7 @@ hg -R ../full.hg verify
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle*../full.hg (glob)
 
@@ -256,7 +256,7 @@ Pull full.hg into empty again (using -R; with hook)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle:empty+full.hg
 
@@ -545,7 +545,7 @@ Direct clone from bundle (all-history)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets f9ee2f85a263:aa35859c02ea
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

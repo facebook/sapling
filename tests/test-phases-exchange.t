@@ -81,7 +81,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 54acac6f23ab:b555f63b6063
   test-debug-phase: new rev 3:  x -> 0
   test-debug-phase: new rev 4:  x -> 0
@@ -149,7 +149,7 @@ update must update phase of common changeset too
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets f54f1bb90ff3
   test-debug-phase: new rev 4:  x -> 0
 
@@ -203,7 +203,7 @@ changegroup are added without phase movement
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 5 files (+1 heads)
+  added 5 changesets with 5 changes to 5 files
   new changesets 054250a37db4:b555f63b6063
   test-debug-phase: new rev 0:  x -> 1
   test-debug-phase: new rev 1:  x -> 1
@@ -257,7 +257,7 @@ Even for common
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets f54f1bb90ff3
   test-debug-phase: new rev 3:  x -> 1
   $ hgph
@@ -711,7 +711,7 @@ Pushing to Publish=False (common changeset that change phase + unknown one)
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   test-debug-phase: move rev 2: 1 -> 0
   test-debug-phase: move rev 5: 1 -> 0
   test-debug-phase: new rev 9:  x -> 1
@@ -840,7 +840,7 @@ Bare push with next changeset and common changeset needing sync (issue3575)
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   test-debug-phase: new rev 10:  x -> 0
   test-debug-phase: move rev 8: 1 -> 0
   test-debug-phase: move rev 9: 1 -> 0
@@ -1037,7 +1037,7 @@ pull new changeset with common draft locally
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   test-debug-phase: new rev 11:  x -> 1
   $ cd ../mu
   $ hg phase --secret --force 1c5cfd894796
@@ -1256,7 +1256,7 @@ server won't turn changeset public.
   adding changesets
   adding manifests
   adding file changes
-  added 14 changesets with 14 changes to 14 files (+3 heads)
+  added 14 changesets with 14 changes to 14 files
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 0

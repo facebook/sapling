@@ -247,7 +247,7 @@ the server supports our custom getfiles method.
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 4 changes to 3 files (+2 heads)
+  added 5 changesets with 4 changes to 3 files
   new changesets cb9a9f314b8b:d8f06a4c6d38
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 2966},

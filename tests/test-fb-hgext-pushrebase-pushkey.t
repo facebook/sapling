@@ -84,7 +84,7 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+  remote: added 1 changesets with 1 changes to 1 files
   remote: log bookmarks master commitA -> commitC
   remote: pushkey-abort: prepushkey.log hook failed
   remote: transaction abort!

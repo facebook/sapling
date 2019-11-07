@@ -52,10 +52,10 @@ sh % "hg pull --rebase -d default" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 177f92b77385
     rebasing 86d71924e1d0 "x"
-    saved backup bundle to $TESTTMP/* (glob)"""
+    saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg"""
 sh % "hg log -G -T '{rev} {desc}'" == r"""
     @  3 x
     |

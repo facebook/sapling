@@ -56,7 +56,7 @@ sh % "hg pull --rebase" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 177f92b77385
     rebasing 86d71924e1d0 "x" (localbookmark)
     saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg"""

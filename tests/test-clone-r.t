@@ -217,7 +217,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 3 files (+1 heads)
+  added 4 changesets with 2 changes to 3 files
   new changesets 095197eb4973:a6a34bfa0076
   $ hg verify
   checking changesets

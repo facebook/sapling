@@ -823,7 +823,7 @@ Support for changegroup
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 7 changes to 7 files (+3 heads)
+  added 8 changesets with 7 changes to 7 files
   new changesets cd010b8cd998:02de42196ebe
 
   $ hg log -G

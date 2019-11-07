@@ -101,7 +101,7 @@ TODO: Make this test compatibile with obsstore enabled.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets fed61014d323
 
   $ hg rebase -d tip

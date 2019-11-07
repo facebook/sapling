@@ -106,7 +106,7 @@ Pull a treeonly scratch branch into a normal client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files (+1 heads)
+  added 2 changesets with 2 changes to 1 files
   new changesets 02c12aef64ff:5a7a7de8a420
 - Verify no new manifest revlog entry was written
 - ...but we can still read the manifest
@@ -183,7 +183,7 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 3ef288300b64
   $ hg log -r 3ef288300b64 --stat
   changeset:   3:3ef288300b64

@@ -85,7 +85,7 @@ Test that pushing to a remotename gets rebased
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   updating bookmark master
 
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
@@ -210,7 +210,7 @@ Test a push that comes with out-of-date bookmark discovery
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   updating bookmark bm
   $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
   o  2 "cc" bm
@@ -301,7 +301,7 @@ Test force pushes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 86cf3bb05fcf
   $ hg log -G -T '{rev} {desc} {remotebookmarks}'
   o  2 aa
@@ -350,7 +350,7 @@ Test 'hg push' with a tracking bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   updating bookmark master
   $ hg log -T '{rev} {desc}' -G
   o  3 b

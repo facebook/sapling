@@ -118,7 +118,7 @@ Stack of non-conflicting commits should be accepted
   adding file changes
   adding a revisions
   adding b revisions
-  added 3 changesets with 1 changes to 2 files (+1 heads)
+  added 3 changesets with 1 changes to 2 files
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 15 bytes
@@ -170,7 +170,7 @@ Push using changegroup2
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 1 changes to 2 files (+1 heads)
+  added 3 changesets with 1 changes to 2 files
 
   $ cd ../client
   $ hg debugstrip 1
@@ -359,7 +359,7 @@ Pushing a merge should rebase only the latest side of the merge
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 1 changes to 3 files (+1 heads)
+  added 4 changesets with 1 changes to 3 files
   updating bookmark master
   $ cd ../server
   $ log
@@ -441,7 +441,7 @@ With evolution enabled, should set obsolescence markers
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 4 files (+1 heads)
+  added 4 changesets with 2 changes to 4 files
   2 new obsolescence markers
   obsoleted 2 changesets
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -770,7 +770,7 @@ Test date rewriting with a merge commit
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 2 files (+1 heads)
+  added 3 changesets with 0 changes to 2 files
   3 new obsolescence markers
   obsoleted 3 changesets
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -871,7 +871,7 @@ Test force pushes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 86cf3bb05fcf
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  2 aa
@@ -930,7 +930,7 @@ phase is updated correctly with the marker information.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   1 new obsolescence markers
   obsoleted 1 changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

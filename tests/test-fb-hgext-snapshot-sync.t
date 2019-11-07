@@ -167,7 +167,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets 7917335ca006
   commitcloud: commits synchronized
   finished in 0.00 sec
@@ -235,7 +235,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets 5e55990d9843
   commitcloud: commits synchronized
   finished in 0.00 sec

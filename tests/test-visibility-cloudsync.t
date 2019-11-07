@@ -275,15 +275,15 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
+  added 1 changesets with 1 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files (+1 heads)
+  added 1 changesets with 1 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 2 files (+1 heads)
+  added 1 changesets with 0 changes to 2 files
   new changesets dae3b312bb78:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -341,7 +341,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files (+1 heads)
+  added 1 changesets with 0 changes to 3 files
   new changesets 1ef69cfd595b
   commitcloud: commits synchronized
   finished in * sec (glob)

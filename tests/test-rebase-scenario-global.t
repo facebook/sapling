@@ -16,7 +16,7 @@ TODO: Make this test compatibile with obsstore enabled.
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 7 changes to 7 files (+2 heads)
+  added 8 changesets with 7 changes to 7 files
   new changesets cd010b8cd998:02de42196ebe
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -413,7 +413,7 @@ All destination are B
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 9 changes to 9 files (+2 heads)
+  added 9 changesets with 9 changes to 9 files
   new changesets 9ae2ed22e576:479ddb54a924
   $ tglog
   o  8: 479ddb54a924 'I'

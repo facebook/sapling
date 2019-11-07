@@ -50,7 +50,7 @@ start a pull...
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets ca3c05af513e
   $ cat pull.out
   pulling from ../source1

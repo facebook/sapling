@@ -111,7 +111,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
   updating bookmark master
   obsoleted 1 changesets

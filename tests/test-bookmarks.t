@@ -569,7 +569,7 @@ test clone with pull protocol
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files (+1 heads)
+  added 3 changesets with 3 changes to 3 files
   new changesets f7b1eb17ad24:db815d6d32e6
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -645,7 +645,7 @@ create bundle with two heads
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 125c9a1d6df6:9c404beeabc2
 
 update to active bookmark if it's not the parent
@@ -687,7 +687,7 @@ pull --update works the same as pull && update
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
   new changesets 125c9a1d6df6:9c404beeabc2
@@ -712,7 +712,7 @@ pull --update works the same as pull && update
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
   new changesets 125c9a1d6df6:9c404beeabc2
@@ -737,7 +737,7 @@ We warn about divergent during bare update to the active bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   updating bookmark Y
   updating bookmark Z
   new changesets 125c9a1d6df6:9c404beeabc2

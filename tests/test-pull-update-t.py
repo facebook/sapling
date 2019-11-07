@@ -36,7 +36,7 @@ sh % "hg --config 'commands.update.check=abort' pull -u ../tt" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 107cefe13e42
     abort: uncommitted changes
     [255]"""
@@ -51,7 +51,7 @@ sh % "hg pull -u ../tt" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 107cefe13e42
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "800c91d5bfc1: m"
@@ -67,7 +67,7 @@ sh % "hg pull -u ../t" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 800c91d5bfc1
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "107cefe13e42: m"
@@ -89,7 +89,7 @@ sh % "hg pull -u ../tt" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (-1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 483b76ad4309
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 

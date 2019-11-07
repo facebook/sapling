@@ -154,7 +154,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding changesets
   adding manifests
   adding file changes
-  added 11 changesets with 8 changes to 3 files (+1 heads)
+  added 11 changesets with 8 changes to 3 files
   new changesets 24797d4f68de:2f2496ddf49d
   updating to branch f1
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

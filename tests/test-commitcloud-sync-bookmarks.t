@@ -77,7 +77,7 @@ Fake land the commit
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 2 files (+1 heads)
+  added 3 changesets with 2 changes to 2 files
   new changesets 031d760782fb:67d363c9001e
   obsoleted 1 changesets
   $ tglogp
@@ -143,7 +143,7 @@ Pull so that we have the public commit and sync again.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 2 files (+1 heads)
+  added 3 changesets with 2 changes to 2 files
   new changesets 031d760782fb:67d363c9001e
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'

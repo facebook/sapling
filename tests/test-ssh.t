@@ -299,7 +299,7 @@ clone bookmarks
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 5 changes to 4 files (+1 heads)
+  added 4 changesets with 5 changes to 4 files
   new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -400,7 +400,7 @@ Test hg-ssh in read-only mode:
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 5 changes to 4 files (+1 heads)
+  added 4 changesets with 5 changes to 4 files
   new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

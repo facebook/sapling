@@ -173,7 +173,7 @@ TODO: Make this test compatibile with obsstore enabled.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
 
 
 # This should work even if the HG server does not have access to LFS server

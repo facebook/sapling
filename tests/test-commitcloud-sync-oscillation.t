@@ -123,7 +123,7 @@ Share commits A B C D and E into the repo manually with a bundle
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 5 files (+1 heads)
+  added 5 changesets with 5 changes to 5 files
   new changesets 04b96a2be922:27ad02806080
   $ cd client2
   $ tglogp
@@ -157,7 +157,7 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 3 files (+1 heads)
+  added 2 changesets with 2 changes to 3 files
   detected obsmarker inconsistency (fixing by obsoleting [] and reviving [449486ddff7a, 65299708466c, 27ad02806080])
   new changesets 64b4d9634423:878302dcadc7
   commitcloud: commits synchronized
@@ -264,7 +264,7 @@ Pull it into one client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 5817a557f93f
   $ tglogp
   o  8: 5817a557f93f public 'next'
@@ -514,7 +514,7 @@ with commit cloud inactive.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 48be23e24839
   $ cd client1
   $ hg hide tip --config extensions.commitcloud=!

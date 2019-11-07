@@ -136,7 +136,7 @@ TODO: Make this test compatibile with obsstore enabled.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files (+1 heads)
+  added 3 changesets with 0 changes to 0 files
   new changesets 01979f9404f8:7200df4e0aca
   $ hg update tip -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)

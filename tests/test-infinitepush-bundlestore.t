@@ -361,7 +361,7 @@ Use --force because this push creates new head
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 2 changesets with 2 changes to 2 files (+1 heads)
+  remote: added 2 changesets with 2 changes to 2 files
   $ hg -R ../repo log -G -T '{desc} {phase} {bookmarks}'
   o  newcommit public
   |
@@ -593,7 +593,7 @@ Pull two bookmarks from the second client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets * (glob)
   $ hg log -r scratch/secondpart -T '{node}'
   8db3891c220e216f6da214e8254bd4371f55efca (no-eol)
@@ -635,7 +635,7 @@ Make sure phase on the client is public.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets a79b6597f322
   $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
   o  publiccommit public  a79b6597f322
@@ -659,7 +659,7 @@ Make sure phase on the client is public.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
@@ -732,7 +732,7 @@ Test debugfillinfinitepushmetadata
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 33910bfe6ffe:d8fde0ddfc96
   'd8fde0ddfc962183977f92d2bc52d303b8840f9d' found remotely
   pull finished in * sec (glob)

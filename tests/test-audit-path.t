@@ -77,7 +77,7 @@ unbundle tampered bundle
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 6 changes to 6 files (+4 heads)
+  added 5 changesets with 6 changes to 6 files
   new changesets b7da9bf6b037:fc1393d727bc
 
 attack .hg/test

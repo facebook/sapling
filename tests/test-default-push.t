@@ -123,7 +123,7 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
 
   $ hg --config 'paths.default:pushrev=draft()' push -f
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
@@ -131,7 +131,7 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
 
 Invalid :pushrev raises appropriately
 

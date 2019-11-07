@@ -185,7 +185,7 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   1f9ebd6d1390ebc603e401171eda0c444a0f8754 not found, omitting oldbook bookmark
   new changesets 1c1b7955142c:7f958333fe84
   commitcloud: commits synchronized
@@ -228,7 +228,7 @@ Sync these commits to the first client - it has everything
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets ff52de2f760c
   commitcloud: commits synchronized
   finished in * (glob)
@@ -400,7 +400,7 @@ Second client syncs the old stack in, and now has the bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files (+1 heads)
+  added 3 changesets with 3 changes to 3 files
   new changesets 1f9ebd6d1390:2b8dce7bd745
   commitcloud: commits synchronized
   finished in * (glob)
@@ -459,14 +459,14 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files (+1 heads)
+  added 3 changesets with 3 changes to 3 files
   pulling 2b8dce7bd745
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files (+1 heads)
+  added 3 changesets with 3 changes to 3 files
   1c1b7955142cd8a3beec705c9cca9d775ecb0fa8 not found, omitting midbook bookmark
   new changesets ff52de2f760c:2b8dce7bd745
   commitcloud: commits synchronized
@@ -593,7 +593,7 @@ A full sync pulls the old commits in
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 1c1b7955142c:d133b886da68
   commitcloud: commits synchronized
   finished in * (glob)
@@ -815,7 +815,7 @@ Pull this into client1
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets f770b7f72fa5
 
 Move midbook to the public commit.
@@ -865,7 +865,7 @@ from the cloud workspace, but the sync should still work.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files (+1 heads)
+  added 1 changesets with 0 changes to 3 files
   f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
   obsoleted 1 changesets
   new changesets 2ace67ee4791

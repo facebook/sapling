@@ -242,7 +242,7 @@ Testing clone --pull -u:
   adding changesets
   adding manifests
   adding file changes
-  added 16 changesets with 16 changes to 3 files (+1 heads)
+  added 16 changesets with 16 changes to 3 files
   new changesets acb14030fe0a:7b0a8591eda2
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -712,7 +712,7 @@ Clone with existing share dir should result in pull + share
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 4 changes to 1 files (+4 heads)
+  added 4 changesets with 4 changes to 1 files
   adding remote bookmark branch1
   adding remote bookmark branch2
   adding remote bookmark head1
@@ -796,7 +796,7 @@ remote naming mode works as advertised
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 6 changes to 1 files (+4 heads)
+  added 6 changesets with 6 changes to 1 files
   new changesets b5f04eac9d8f:79168763a548
   searching for changes
   no changes found
@@ -847,7 +847,7 @@ making another clone should only pull down requested rev
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   adding remote bookmark head1
   adding remote bookmark head2
   new changesets 99f71071f117

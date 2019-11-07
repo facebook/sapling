@@ -313,7 +313,6 @@ class cg1unpacker(object):
             # will not see an inconsistent view
             cl = repo.changelog
             cl.delayupdate(tr)
-            oldheads = set(cl.heads())
 
             trp = weakref.proxy(tr)
             # pull off the changeset group
@@ -369,16 +368,7 @@ class cg1unpacker(object):
             revisions += newrevs
             files += newfiles
 
-            deltaheads = 0
-            if oldheads:
-                heads = cl.heads()
-                deltaheads = len(heads) - len(oldheads)
-                for h in heads:
-                    if h not in oldheads and repo[h].closesbranch():
-                        deltaheads -= 1
             htext = ""
-            if deltaheads:
-                htext = _(" (%+d heads)") % deltaheads
 
             repo.ui.status(
                 _("added %d changesets" " with %d changes to %d files%s\n")
@@ -447,14 +437,6 @@ class cg1unpacker(object):
 
                     repo.hook("changegroup", **pycompat.strkwargs(hookargs))
 
-                    newheads = [h for h in repo.heads() if h not in oldheads]
-                    repo.ui.log(
-                        "incoming",
-                        "%s incoming changes - new heads: %s\n",
-                        len(added),
-                        ", ".join([hex(c[:6]) for c in newheads]),
-                    )
-
                 tr.addpostclose(
                     "changegroup-runhooks-%020i" % clstart,
                     lambda tr: repo._afterlock(runhooks),
@@ -464,10 +446,7 @@ class cg1unpacker(object):
         finally:
             repo.ui.flush()
         # never return 0 here:
-        if deltaheads < 0:
-            ret = deltaheads - 1
-        else:
-            ret = deltaheads + 1
+        ret = 1
         return ret
 
     def deltaiter(self):

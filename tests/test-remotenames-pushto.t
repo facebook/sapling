@@ -159,7 +159,7 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   updating bookmark @
   $ hg push --to @ -r 0
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
@@ -222,7 +222,7 @@ Test that rebasing and pushing works as expected
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 1846eede8b68
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 b  default/@

@@ -83,7 +83,7 @@ Specify bookmark to pull
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets ed7a9fd254d1
   $ hg bookmarks --list-subscriptions
      default/master            1:0238718db2b1
@@ -287,7 +287,7 @@ Clone remote repo with the selectivepull enabled
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 4 changes to 1 files (+1 heads)
+  added 4 changesets with 4 changes to 1 files
   new changesets 1449e7934ec1:c47dca9795c9
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

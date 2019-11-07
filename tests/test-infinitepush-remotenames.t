@@ -143,7 +143,7 @@ Go back to client, make pull and make sure that we pulled remote branches
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+2 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 64d557aa86fd:dc4b2ecb723b
   $ cat .hg/store/remotenames | sort
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
@@ -193,7 +193,7 @@ Create new bookmark and try to pull it
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 36667a3f76e4:2885148f6198
   'scratch/branchtoupdateto1' found remotely
   pull finished in * sec (glob)
@@ -212,7 +212,7 @@ Create new bookmark and try to pull it
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
+  added 1 changesets with 1 changes to 2 files
   new changesets 1f558bd20eaa
   'scratch/branchtoupdateto2' found remotely
   pull finished in * sec (glob)

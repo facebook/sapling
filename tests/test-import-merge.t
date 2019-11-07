@@ -44,7 +44,7 @@ Test import and merge diffs
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 102a90ea7b4a
 
 Test without --exact and diff.p1 == workingdir.p1

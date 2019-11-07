@@ -67,5 +67,5 @@ Set knownserverbookmarks - fastdiscovery is used
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets 85d8b0ac7dad

@@ -1330,7 +1330,7 @@ sh % "hg pull" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 1 files (+1 heads)
+    added 1 changesets with 0 changes to 1 files
     2 new obsolescence markers
     obsoleted 1 changesets
     new changesets 7a230b46bf61"""

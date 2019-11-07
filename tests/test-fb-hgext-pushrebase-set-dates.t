@@ -92,7 +92,7 @@ Make a push from the client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 2 changesets with 1 changes to 2 files
   $ log
   o  client push [draft:a8078509f8d1]
   |

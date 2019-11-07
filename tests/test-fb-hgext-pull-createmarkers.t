@@ -86,7 +86,7 @@ The first client works on several diffs while the second client lands one of her
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 1 changes to 4 files (+1 heads)
+  added 4 changesets with 1 changes to 4 files
   3 new obsolescence markers
   updating bookmark master
   obsoleted 3 changesets
@@ -172,7 +172,7 @@ changesets
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files (+1 heads)
+  added 1 changesets with 0 changes to 1 files
   new changesets a4884e89c0d5
   obsoleted 1 changesets
 

@@ -9,7 +9,7 @@ creating 'remote' repo
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files (+1 heads)
+  added 9 changesets with 7 changes to 4 files
   new changesets bfaf4b5cbf01:916f1afdef90
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -139,7 +139,7 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 3 files (+1 heads)
+  added 4 changesets with 2 changes to 3 files
   new changesets c70afb1ee985:faa2e4234c7a
   $ hg verify
   checking changesets
@@ -155,7 +155,7 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files
   new changesets c70afb1ee985
   $ hg verify
   checking changesets
@@ -179,7 +179,7 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files (+1 heads)
+  added 2 changesets with 0 changes to 0 files
   new changesets c70afb1ee985:f03ae5a9b979
   $ hg verify
   checking changesets

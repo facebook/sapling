@@ -75,7 +75,7 @@ sh % "hg pull ../other" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 1 files (+1 heads)
+    added 1 changesets with 0 changes to 1 files
     new changesets f89bcc95eba5"""
 
 # check that bundle is not affected
@@ -86,7 +86,7 @@ sh % "hg unbundle ../f89bcc95eba5.hg" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 1 files (+1 heads)"""
+    added 1 changesets with 0 changes to 1 files"""
 
 # check-that bundle can contain markers:
 
@@ -147,7 +147,7 @@ sh % "hg pull --debug" == r"""
     searching for changes
     taking quick initial sample
     query 2; still undecided: 2, sample size is: 2
-    2 total queries in *.????s (glob)
+    2 total queries in 0.0000s
     1 changesets found
     list of changesets:
     bec0734cd68e84477ba7fc1d13e6cff53ab70129
@@ -163,7 +163,7 @@ sh % "hg pull --debug" == r"""
     adding manifests
     adding file changes
     adding foo revisions
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     bundle2-input-part: total payload size 476
     bundle2-input-part: "listkeys" (params: 1 mandatory) supported
     bundle2-input-part: "phase-heads" supported

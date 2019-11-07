@@ -174,7 +174,7 @@ Test for `hg diff --since-last-submit`
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files (+1 heads)
+  added 1 changesets with 1 changes to 3 files
   diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
   --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
@@ -213,5 +213,5 @@ Test for `hg diff --since-last-submit`
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files (+1 heads)
+  added 1 changesets with 1 changes to 3 files
   a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)

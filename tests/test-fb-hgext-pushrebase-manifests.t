@@ -157,7 +157,7 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] adding changesets
   [client2 push] adding manifests
   [client2 push] adding file changes
-  [client2 push] added 2 changesets with 1 changes to 2 files (+1 heads)
+  [client2 push] added 2 changesets with 1 changes to 2 files
   [client2 push] 1 new obsolescence markers
   [client2 push] obsoleted 1 changesets
   [client2 push] 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -194,7 +194,7 @@ Check that the first push is still running/blocked...
   [client1 push] adding changesets
   [client1 push] adding manifests
   [client1 push] adding file changes
-  [client1 push] added 4 changesets with 2 changes to 3 files (+1 heads)
+  [client1 push] added 4 changesets with 2 changes to 3 files
   [client1 push] 2 new obsolescence markers
   [client1 push] obsoleted 2 changesets
   [client1 push] 2 files updated, 0 files merged, 0 files removed, 0 files unresolved

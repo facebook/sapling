@@ -411,7 +411,7 @@ Pushing to an empty repo works
   adding changesets
   adding manifests
   adding file changes
-  added 11 changesets with 15 changes to 10 files (+3 heads)
+  added 11 changesets with 15 changes to 10 files
   $ grep treemanifest clone/.hg/requires
   treemanifest
   $ hg -R clone verify
@@ -875,7 +875,7 @@ other branch
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   new changesets 73699489fb7c
 
 Committing a empty commit does not duplicate root treemanifest

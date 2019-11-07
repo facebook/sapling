@@ -61,7 +61,7 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 77ae9631bcca
     rebasing ff8d69a621f9 "L1"'''
 
@@ -237,7 +237,7 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 00e3b7781125
     rebasing 518d153c0ba3 "L1"'''
 sh % "tglog" == r"""
@@ -284,7 +284,7 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 88dd24261747
     rebasing 0d0727eb7ce0 "L1"
     rebasing c1f58876e3bf "L2"'''
@@ -322,7 +322,7 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files (+1 heads)
+    added 1 changesets with 1 changes to 1 files
     new changesets 65bc164c1d9b
     nothing to rebase - updating instead
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved

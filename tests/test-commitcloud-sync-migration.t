@@ -154,7 +154,7 @@ The first client can now successfully sync using the new server.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 3 files (+1 heads)
+  added 2 changesets with 2 changes to 3 files
   new changesets 02f6fc2b7154:c701070be855
   commitcloud: commits synchronized
   finished in * (glob)

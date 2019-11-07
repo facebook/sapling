@@ -164,7 +164,7 @@ Test secret changeset are not pushed
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 5 files (+1 heads)
+  added 5 changesets with 5 changes to 5 files
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 1
@@ -219,7 +219,7 @@ head shadowed by the remote secret head.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   test-debug-phase: new rev 6:  x -> 1
   test-hook-close-phase: 6d6770faffce199f1fddd1cf87f6f026138cf061:   -> draft
 
@@ -240,7 +240,7 @@ Test secret changeset are not pull
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 5 files (+1 heads)
+  added 5 changesets with 5 changes to 5 files
   new changesets 4a2df7238c3b:cf9fe039dfd6
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0

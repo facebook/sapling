@@ -86,7 +86,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files (+2 heads)
+  added 2 changesets with 2 changes to 2 files
   new changesets 7a820e70c81f:4557926d2166
   updating to active bookmark bmnottracking
   nothing to rebase
@@ -189,7 +189,7 @@ Test pull with --rebase and --tool
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 2 changes to 2 files (+1 heads)
+  added 1 changesets with 2 changes to 2 files
   new changesets b1a3b9086dc9
   rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth

@@ -119,7 +119,7 @@ sh % "hg -R b pull a" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 0 files (+1 heads)
+    added 1 changesets with 0 changes to 0 files
     new changesets 1ec3c74fc0e0"""
 
 sh % "hg -R c pull a" == r"""
@@ -128,5 +128,5 @@ sh % "hg -R c pull a" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 0 changes to 0 files (+1 heads)
+    added 1 changesets with 0 changes to 0 files
     new changesets d15a0c284984"""

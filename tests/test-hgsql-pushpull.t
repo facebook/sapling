@@ -118,7 +118,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   exporting bookmark bar
   $ hg log -R ../master -T '{rev} {bookmarks}\n' -G
   o  4 bar

@@ -192,7 +192,7 @@ Make sure that we don't record anything on non-pushrebase push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 4 changesets with 1 changes to 3 files (+2 heads)
+  remote: added 4 changesets with 1 changes to 3 files
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
   count(*)
   3

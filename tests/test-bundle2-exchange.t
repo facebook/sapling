@@ -49,7 +49,7 @@ The extension requires a repo (currently unused)
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 7 changes to 7 files (+3 heads)
+  added 8 changesets with 7 changes to 7 files
   pre-close-tip:02de42196ebe draft 
   new changesets cd010b8cd998:02de42196ebe
   postclose-tip:02de42196ebe draft 
@@ -111,7 +111,7 @@ pull
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
   new changesets 24b6387c8c8c
@@ -249,7 +249,7 @@ push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 0 changes to 0 files (-1 heads)
+  remote: added 1 changesets with 0 changes to 0 files
   remote: 1 new obsolescence markers
   remote: pre-close-tip:eea13746799a public book_eea1
   remote: postclose-tip:eea13746799a public book_eea1
@@ -281,7 +281,7 @@ pull over ssh
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
   updating bookmark book_02de
   pre-close-tip:02de42196ebe draft book_02de
@@ -307,7 +307,7 @@ pull over http
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
