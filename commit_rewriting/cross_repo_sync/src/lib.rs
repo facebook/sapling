@@ -24,9 +24,12 @@ use futures_preview::{
 };
 use maplit::hashmap;
 use metaconfig_types::PushrebaseParams;
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath};
+use mononoke_types::{
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
+};
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
+use std::fmt;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
     WorkingCopyEquivalence,
@@ -232,6 +235,17 @@ pub struct CommitSyncer<M> {
     pub repos: CommitSyncRepos,
 }
 
+impl<M> fmt::Debug for CommitSyncer<M>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let source_repo_id = self.get_source_repo_id();
+        let target_repo_id = self.get_target_repo_id();
+        write!(f, "CommitSyncer{{{}->{}}}", source_repo_id, target_repo_id)
+    }
+}
+
 impl<M> CommitSyncer<M>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -244,8 +258,16 @@ where
         self.repos.get_source_repo()
     }
 
+    pub fn get_source_repo_id(&self) -> RepositoryId {
+        self.get_source_repo().get_repoid()
+    }
+
     pub fn get_target_repo(&self) -> &BlobRepo {
         self.repos.get_target_repo()
+    }
+
+    pub fn get_target_repo_id(&self) -> RepositoryId {
+        self.get_target_repo().get_repoid()
     }
 
     pub fn get_large_repo(&self) -> &BlobRepo {
@@ -274,6 +296,10 @@ where
 
     pub fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
         self.repos.get_bookmark_renamer()
+    }
+
+    pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Option<BookmarkName> {
+        self.repos.get_bookmark_renamer()(bookmark)
     }
 
     pub fn get_commit_sync_outcome_compat(

@@ -8,7 +8,7 @@
 
 //! Tests for the synced commits mapping.
 
-// #![deny(warnings)]
+#![deny(warnings)]
 
 use async_unit;
 use bytes::Bytes;
