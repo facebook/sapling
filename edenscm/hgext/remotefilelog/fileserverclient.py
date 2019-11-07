@@ -273,6 +273,75 @@ class lazyfield(object):
         return obj.__dict__[self.name]
 
 
+class getpackclient(object):
+    def __init__(self, repo):
+        self.repo = repo
+        self.ui = repo.ui
+
+    def _sendpackrequest(self, remote, fileids):
+        """Formats and writes the given fileids to the remote as part of a
+        getpackv1 call.
+        """
+        # Sort the requests by name, so we receive requests in batches by name
+        grouped = {}
+        for filename, node in fileids:
+            grouped.setdefault(filename, set()).add(node)
+
+        # Issue request
+        pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
+        for filename, nodes in grouped.iteritems():
+            filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
+            countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
+            rawnodes = "".join(n for n in nodes)
+
+            pipeo.write("%s%s%s%s" % (filenamelen, filename, countlen, rawnodes))
+            pipeo.flush()
+        pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
+        pipeo.flush()
+
+    def _connect(self):
+        return self.repo.connectionpool.get(self.repo.fallbackpath)
+
+    def prefetch(self, datastore, historystore, fileids):
+        rcvd = 0
+        total = len(fileids)
+
+        try:
+            with self._connect() as conn:
+                self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
+                self.ui.metrics.gauge("ssh_getpack_calls", 1)
+
+                getpackversion = self.ui.configint("remotefilelog", "getpackversion")
+
+                remote = conn.peer
+                remote._callstream("getpackv%d" % getpackversion)
+
+                self._sendpackrequest(remote, fileids)
+
+                pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
+
+                receiveddata, receivedhistory = wirepack.receivepack(
+                    self.repo.ui, pipei, datastore, historystore, version=getpackversion
+                )
+
+                rcvd = len(receiveddata)
+
+            self.ui.log(
+                "remotefilefetchlog",
+                "Success(pack)\n" if (rcvd == total) else "Fail(pack)\n",
+                fetched_files=rcvd,
+                total_to_fetch=total,
+            )
+        except Exception:
+            self.ui.log(
+                "remotefilefetchlog",
+                "Fail(pack)\n",
+                fetched_files=rcvd,
+                total_to_fetch=total,
+            )
+            raise
+
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -299,6 +368,7 @@ class fileserverclient(object):
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.remotecache = cacheconnection(repo)
+        self.getpackclient = getpackclient(repo)
 
     datastore = lazyfield("datastore")
     historystore = lazyfield("historystore")
@@ -308,9 +378,6 @@ class fileserverclient(object):
         d = self.__dict__
         d["datastore"] = datastore
         d["historystore"] = historystore
-
-    def _connect(self):
-        return self.repo.connectionpool.get(self.repo.fallbackpath)
 
     def request(self, fileids, fetchdata, fetchhistory):
         return self.requestpacks(fileids, fetchdata, fetchhistory)
@@ -409,65 +476,9 @@ class fileserverclient(object):
                 edenapi.logexception(self.ui, e)
                 self.ui.metrics.gauge("edenapi_fallbacks", 1)
 
-        rcvd = 0
-        total = len(fileids)
-
-        try:
-            with self._connect() as conn:
-                self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
-                self.ui.metrics.gauge("ssh_getpack_calls", 1)
-
-                getpackversion = self.ui.configint("remotefilelog", "getpackversion")
-
-                remote = conn.peer
-                remote._callstream("getpackv%d" % getpackversion)
-
-                self._sendpackrequest(remote, fileids)
-
-                pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
-
-                dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
-                receiveddata, receivedhistory = wirepack.receivepack(
-                    self.repo.ui, pipei, dpack, hpack, version=getpackversion
-                )
-
-                rcvd = len(receiveddata)
-
-            self.ui.log(
-                "remotefilefetchlog",
-                "Success(pack)\n" if (rcvd == total) else "Fail(pack)\n",
-                fetched_files=rcvd,
-                total_to_fetch=total,
-            )
-        except Exception:
-            self.ui.log(
-                "remotefilefetchlog",
-                "Fail(pack)\n",
-                fetched_files=rcvd,
-                total_to_fetch=total,
-            )
-            raise
-
-    def _sendpackrequest(self, remote, fileids):
-        """Formats and writes the given fileids to the remote as part of a
-        getpackv1 call.
-        """
-        # Sort the requests by name, so we receive requests in batches by name
-        grouped = {}
-        for filename, node in fileids:
-            grouped.setdefault(filename, set()).add(node)
-
-        # Issue request
-        pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
-        for filename, nodes in grouped.iteritems():
-            filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
-            countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
-            rawnodes = "".join(bin(n) for n in nodes)
-
-            pipeo.write("%s%s%s%s" % (filenamelen, filename, countlen, rawnodes))
-            pipeo.flush()
-        pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
-        pipeo.flush()
+        dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
+        fileids = [(filename, bin(node)) for filename, node in fileids]
+        self.getpackclient.prefetch(dpack, hpack, fileids)
 
     def _httpfetchpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTPS using the Eden API"""
