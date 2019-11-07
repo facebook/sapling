@@ -7,7 +7,7 @@
  */
 
 #![recursion_limit = "256"]
-#![feature(async_await, async_closure, option_flattening, never_type)]
+#![feature(async_closure, option_flattening, never_type)]
 #![deny(warnings)]
 
 use clap::Arg;

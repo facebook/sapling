@@ -283,7 +283,7 @@ impl LeaseOps for MemcacheOps {
 
     fn release_lease(&self, key: &str, put_success: bool) -> BoxFuture<(), ()> {
         let mc_key = self.presence_keygen.key(key);
-        LEASE_STATS::release.add_value(1, (self.lease_type,));;
+        LEASE_STATS::release.add_value(1, (self.lease_type,));
         if put_success {
             let uploaded = compact_protocol::serialize(&LockState::uploaded_key(key.to_string()));
             LEASE_STATS::release_good.add_value(1, (self.lease_type,));

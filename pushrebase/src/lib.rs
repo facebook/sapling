@@ -8,7 +8,6 @@
 
 #![cfg_attr(test, type_length_limit = "2434476")]
 #![deny(warnings)]
-#![feature(async_await)]
 
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server

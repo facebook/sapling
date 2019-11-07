@@ -7,7 +7,6 @@
  */
 
 #![deny(warnings)]
-#![feature(async_await)]
 
 use std::collections::HashMap;
 use std::sync::Arc;

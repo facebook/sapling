@@ -7,7 +7,6 @@
  */
 
 #![deny(warnings)]
-#![feature(async_await)]
 #![feature(process_exitcode_placeholder)]
 
 use clap::{App, Arg, SubCommand};
