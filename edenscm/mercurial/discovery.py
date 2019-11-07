@@ -90,7 +90,7 @@ class outgoing(object):
         assert None in (commonheads, missingroots)
         cl = repo.changelog
         if missingheads is None:
-            missingheads = cl.heads()
+            missingheads = repo.heads()
         if missingroots:
             discbases = []
             for n in missingroots:

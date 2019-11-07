@@ -134,9 +134,9 @@ class branchcache(dict):
             return
 
         # Since we have no branches, the default branch heads are equal to
-        # cl.headrevs(). Note: cl.headrevs() is already sorted and it may return
-        # -1.
-        branchheads = [i for i in cl.headrevs() if i >= 0]
+        # repo.headrevs(). Note: repo.headrevs() is already sorted and it may
+        # return -1.
+        branchheads = [i for i in repo.headrevs(reverse=False) if i >= 0]
 
         if not branchheads:
             if "default" in self:

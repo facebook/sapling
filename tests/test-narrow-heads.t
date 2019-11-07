@@ -180,11 +180,12 @@ Visible heads got out of sync with "." or bookmarks
   $ hg log -Gr 'all()' -T '{desc} {phase}'
   o  M public
   |
+  | o  D draft
+  |/
+  | @  C draft
+  |/
   o  A public
   
-BUG: C should show up.
-BUG: D should show up.
-
  (Both C and D should show up here, too)
   $ hg log -Gr 'draft()' -T '{desc} {phase}'
   o  D draft

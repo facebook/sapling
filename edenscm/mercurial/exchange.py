@@ -277,7 +277,7 @@ def _computeoutgoing(repo, heads, common):
     else:
         common = [nullid]
     if not heads:
-        heads = cl.heads()
+        heads = repo.heads()
     return discovery.outgoing(repo, common, heads)
 
 

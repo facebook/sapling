@@ -1626,7 +1626,7 @@ def only(repo, subset, x):
         descendants = set(dagop.revdescendants(repo, include, False))
         exclude = [
             rev
-            for rev in cl.headrevs()
+            for rev in repo.headrevs(reverse=False)
             if not rev in descendants and not rev in include
         ]
     else:

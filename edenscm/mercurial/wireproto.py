@@ -1016,7 +1016,7 @@ def getbundle(repo, proto, others):
     try:
         if repo.ui.configbool("server", "disablefullbundle"):
             # Check to see if this is a full clone.
-            clheads = set(repo.changelog.heads())
+            clheads = set(repo.heads())
             heads = set(opts.get("heads", set()))
             common = set(opts.get("common", set()))
             common.discard(nullid)

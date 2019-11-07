@@ -375,8 +375,15 @@ class changelog(revlog.revlog):
     def reachableroots(self, minroot, heads, roots, includepath=False):
         return self.index.reachableroots2(minroot, heads, roots, includepath)
 
+    def heads(self, start=None, stop=None):
+        raise error.ProgrammingError(
+            "do not use changelog.heads, use repo.heads instead"
+        )
+
     def headrevs(self):
-        return self._headrevs([])
+        raise error.ProgrammingError(
+            "do not use changelog.headrevs, use repo.headrevs instead"
+        )
 
     def _headrevs(self, additionalheads, includepublic=True, includedraft=True):
         # This should only be used by repo.heads()

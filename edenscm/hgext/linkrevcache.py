@@ -313,9 +313,6 @@ _linkrevdbpath = "cache/linkrevdb"
 
 def reposetup(ui, repo):
     if repo.local():
-        # if the repo is single headed, adjustlinkrev can just return linkrev
-        repo._singleheaded = len(repo.unfiltered().changelog.headrevs()) == 1
-
         dbpath = repo.localvfs.join(_linkrevdbpath)
         setattr(repo, "_linkrevcache", linkrevdb(dbpath, write=False))
 
@@ -497,10 +494,6 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
 def _adjustlinkrev(orig, self, *args, **kwds):
     lkr = self.linkrev()
     repo = self._repo
-
-    # for a repo with only a single head, linkrev is accurate
-    if getattr(repo, "_singleheaded", False):
-        return lkr
 
     # argv can be "path, flog, fnode, srcrev", or "srcrev" - see e81d72b4b0ae
     srcrev = args[-1]

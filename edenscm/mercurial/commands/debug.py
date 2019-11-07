@@ -942,7 +942,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                     ("unpruned common: %s\n")
                     % " ".join(sorted(short(n) for n in common))
                 )
-                dag = dagutil.revlogdag(repo.changelog)
+                dag = dagutil.revlogdag(repo.changelogwithrepoheads)
                 all = dag.ancestorset(dag.internalizeall(common))
                 common = dag.externalizeall(dag.headsetofconnecteds(all))
         else:

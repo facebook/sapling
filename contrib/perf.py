@@ -541,9 +541,10 @@ def clearcaches(cl):
 def perfheads(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     cl = repo.changelog
+    headrevs = repo.headrevs
 
     def d():
-        len(cl.headrevs())
+        len(headrevs())
         clearcaches(cl)
 
     timer(d)
@@ -569,7 +570,7 @@ def perftags(ui, repo, **opts):
 @command("perfancestors", formatteropts)
 def perfancestors(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
-    heads = repo.changelog.headrevs()
+    heads = repo.headrevs()
 
     def d():
         for a in repo.changelog.ancestors(heads):
@@ -583,7 +584,7 @@ def perfancestors(ui, repo, **opts):
 def perfancestorset(ui, repo, revset, **opts):
     timer, fm = gettimer(ui, opts)
     revs = repo.revs(revset)
-    heads = repo.changelog.headrevs()
+    heads = repo.headrevs()
 
     def d():
         s = repo.changelog.ancestors(heads)

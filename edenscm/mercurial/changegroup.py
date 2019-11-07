@@ -646,7 +646,7 @@ class cg1packer(object):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         """yield a sequence of changegroup chunks (strings)"""
         repo = self._repo
-        cl = repo.changelog
+        cl = repo.changelogwithrepoheads
 
         clrevorder = {}
         mfs = {}  # needed manifests
@@ -669,6 +669,7 @@ class cg1packer(object):
 
         self._verbosenote(_("uncompressed size of bundle content:\n"))
         size = 0
+
         with progress.bar(repo.ui, _("bundling"), _("changesets")) as prog:
             for chunk in self.group(clnodes, cl, lookupcl, prog):
                 size += len(chunk)
