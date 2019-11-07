@@ -44,9 +44,6 @@ class gitutil(object):
 
     catfilepipes = {}
     difftreepipes = {}
-    difftreepipecounts = {}
-
-    DIFFTREE_PIPE_CALLS_MAX = 1000
 
     @classmethod
     def getfilemodestr(cls, mode):
@@ -351,13 +348,8 @@ class gitutil(object):
     def _getdifftreepipe(cls, ui, path):
         """
         """
-        if (
-            path not in cls.difftreepipes
-            or cls.difftreepipecounts[path] > cls.DIFFTREE_PIPE_CALLS_MAX
-        ):
+        if path not in cls.difftreepipes:
             cls.difftreepipes[path] = cls._createdifftreepipe(ui, path)
-            cls.difftreepipecounts[path] = 0
-        cls.difftreepipecounts[path] += 1
         return cls.difftreepipes[path]
 
     @classmethod
@@ -368,16 +360,12 @@ class gitutil(object):
         pipein.write(treeishhash)
         # Diff-tree in stdin mode doesn't use a clear way of separating the responses
         # for each input line. We need to put in a clear separator.
-        pipein.write("\n\n\n")
+        pipein.write("\n\n")
         pipein.flush()
 
-        outbody = ""
-        while True:
-            # TODO: Write out pipe_err
-            outline = pipeout.readline()
-            if outline == "\n":
-                break
-            outbody += outline
+        # TODO: This won't be reliable for filenames with newlines. We need to parse a
+        # whole change at a time in between looking for newlines
+        outbody = pipeout.readline()
 
         return outbody
 
