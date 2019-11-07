@@ -57,11 +57,11 @@ impl LocalStore for MetadataStore {
     }
 }
 
-impl Drop for MetadataStore {
+impl Drop for MetadataStoreInner {
     /// The shared store is a cache, so let's flush all pending data when the `MetadataStore` goes
     /// out of scope.
     fn drop(&mut self) {
-        let _ = self.inner.shared_mutablehistorystore.flush();
+        let _ = self.shared_mutablehistorystore.flush();
     }
 }
 

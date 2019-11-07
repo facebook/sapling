@@ -87,11 +87,11 @@ impl LocalStore for ContentStore {
     }
 }
 
-impl Drop for ContentStore {
+impl Drop for ContentStoreInner {
     /// The shared store is a cache, so let's flush all pending data when the `ContentStore` goes
     /// out of scope.
     fn drop(&mut self) {
-        let _ = self.inner.shared_mutabledatastore.flush();
+        let _ = self.shared_mutabledatastore.flush();
     }
 }
 
