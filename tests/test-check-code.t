@@ -43,6 +43,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/hgext/extlib/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/globalrevs.py it has no-che?k-code (glob)
   Skipping edenscm/hgext/hgsql.py it has no-che?k-code (glob)
+  Skipping edenscm/mercurial/commands/eden.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/statprof.py it has no-che?k-code (glob)
@@ -63,7 +64,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   Skipping tests/test-rustthreading.py it has no-che?k-code (glob)
-  edenscm/mercurial/commands/eden.py:407: use foobar, not foo_bar naming --> def cmd_get_file_size(self, request):
+  edenscm/hgext/extlib/phabricator/graphql.py:37: use foobar, not foo_bar naming --> ca_bundle = repo.ui.configpath("web", "cacerts")
   tests/run-tests.py:*: don't use camelcase in identifiers --> self.testsSkipped = 0 (glob)
 
 @commands in debugcommands.py should be in alphabetical order.

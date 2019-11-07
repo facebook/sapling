@@ -14,6 +14,7 @@ import json
 import operator
 
 from edenscm.mercurial import encoding, pycompat, util
+from edenscm.mercurial.node import bin
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
 
@@ -29,6 +30,11 @@ class ClientError(Exception):
 
 class Client(object):
     def __init__(self, repodir=None, ca_bundle=None, repo=None):
+        if repo is not None:
+            if repodir is None:
+                repodir = repo.root
+            if ca_bundle is None:
+                ca_bundle = repo.ui.configpath("web", "cacerts")
         if not repodir:
             repodir = pycompat.getcwd()
         self._mock = "HG_ARC_CONDUIT_MOCK" in encoding.environ
@@ -156,6 +162,49 @@ class Client(object):
         return ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
             "latest_phabricator_version"
         ]
+
+    def getlandednodes(self, diffids, timeout=10):
+        """Get landed nodes for diffids. Return {diffid: node}"""
+        query = """
+            query DiffToCommitQuery($diffids: [String!]!){
+                phabricator_diff_query(query_params: {
+                    numbers: $diffids
+                }) {
+                    results {
+                        nodes {
+                            number
+                            phabricator_diff_commit {
+                                nodes {
+                                    commit_identifier
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            """
+        params = {"diffids": diffids}
+        ret = self._client.query(timeout, query, params)
+        # Example result:
+        # { "data": {
+        #     "phabricator_diff_query": [
+        #       { "results": {
+        #           "nodes": [
+        #             { "phabricator_diff_commit": {
+        #                 "nodes": [
+        #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
+        difftonode = {}
+        for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
+            try:
+                diffid = "%s" % result["number"]
+                nodes = result["phabricator_diff_commit"]["nodes"]
+                if nodes:
+                    difftonode[diffid] = bin(nodes[0]["commit_identifier"])
+            except (KeyError, IndexError):
+                # Not fatal.
+                continue
+
+        return difftonode
 
     def getrevisioninfo(self, timeout, signalstatus, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)

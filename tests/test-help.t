@@ -351,7 +351,6 @@ Test extension help:
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
        pullcreatemarkers
-                     (no help text available)
        purge         command to delete untracked files from the working
                      directory
        pushrebase    rebases commits during push
