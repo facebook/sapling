@@ -17,10 +17,14 @@ import errno
 import threading
 import time
 
+from bindings import tracing
 from edenscmnative import threading as rustthreading
 
 from . import encoding, util
 from .i18n import _
+
+
+_tracer = tracing.singleton
 
 
 def spacejoin(*args):
@@ -592,7 +596,27 @@ def _progvalue(value):
         return value, ""
 
 
-class normalbar(object):
+class tracedbar(object):
+    """base class for progress bars that generates tracing events"""
+
+    def __enter__(self):
+        spanid = _tracer.span(
+            [("name", "Progress Bar: %s" % self._topic), ("cat", "progressbar")]
+        )
+        _tracer.enter(spanid)
+        self._spanid = spanid
+        return self.enter()
+
+    def __exit__(self, exctype, excvalue, traceback):
+        spanid = self._spanid
+        total = getattr(self, "_total", None)
+        if total is not None:
+            _tracer.edit(spanid, [("total", str(total))])
+        _tracer.exit(spanid)
+        return self.exit(exctype, excvalue, traceback)
+
+
+class normalbar(tracedbar):
     """context manager that adds a progress bar to slow operations
 
     To use this, wrap a section of code that takes a long time like this:
@@ -638,16 +662,16 @@ class normalbar(object):
             pos, _item = _progvalue(self.value)
             ring.push((pos, now))
 
-    def __enter__(self):
+    def enter(self):
         self.value = self._start
         _engine.register(self)
         return self
 
-    def __exit__(self, type, value, traceback):
+    def exit(self, type, value, traceback):
         _engine.unregister(self)
 
 
-class debugbar(object):
+class debugbar(tracedbar):
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
         self._ui = ui
         self._topic = topic
@@ -666,11 +690,11 @@ class debugbar(object):
         self.value = self._start
         self._started = False
 
-    def __enter__(self):
+    def enter(self):
         super(debugbar, self).__setattr__("value", self._start)
         return self
 
-    def __exit__(self, type, value, traceback):
+    def exit(self, type, value, traceback):
         if self._started:
             self._ui.write(("progress: %s (end)\n") % self._topic)
 
@@ -693,7 +717,7 @@ class debugbar(object):
         super(debugbar, self).__setattr__(name, value)
 
 
-class nullbar(object):
+class nullbar(tracedbar):
     """A progress bar context manager that just keeps track of state."""
 
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
@@ -709,11 +733,11 @@ class nullbar(object):
         self._total = total
         self.value = self._start
 
-    def __enter__(self):
+    def enter(self):
         self.value = self._start
         return self
 
-    def __exit__(self, type, value, traceback):
+    def exit(self, type, value, traceback):
         pass
 
 
