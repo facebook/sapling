@@ -1,5 +1,5 @@
 # @autocargo from //common/rust/futures-ext:futures-ext
-# Signature<<6a0e77e7081ab26a03aadec26ed1ba45fb41ffa6>>
+# Signature<<1af28a850646c58a19088bcaf1e9c865c9c9053e>>
 [package]
 name = "futures-ext"
 edition = "2018"
@@ -26,4 +26,4 @@ netstring = { path = "../netstring" }
 assert_matches = "*"
 quickcheck = "0.9"
 pretty_assertions = "*"
-# @end of Signature<<6a0e77e7081ab26a03aadec26ed1ba45fb41ffa6>>
+# @end of Signature<<1af28a850646c58a19088bcaf1e9c865c9c9053e>>
