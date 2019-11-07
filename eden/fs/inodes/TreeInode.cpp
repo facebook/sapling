@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
@@ -886,8 +887,7 @@ FileInodePtr TreeInode::createImpl(
     auto childNumber = getOverlay()->allocateInodeNumber();
 
     // Create the overlay file before we insert the file into our entries map.
-    folly::File file =
-        getOverlay()->createOverlayFile(childNumber, fileContents);
+    auto file = getOverlay()->createOverlayFile(childNumber, fileContents);
 
     auto now = getNow();
     auto inodeTimestamps = InodeTimestamps{now};

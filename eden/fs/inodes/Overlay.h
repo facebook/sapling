@@ -34,6 +34,7 @@ template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
 struct SerializedInodeMap;
+class OverlayFile;
 
 /** Manages the write overlay storage area.
  *
@@ -156,17 +157,17 @@ class Overlay {
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.
    */
-  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId);
+  OverlayFile openFile(InodeNumber inodeNumber, folly::StringPiece headerId);
 
   /**
    * Open an existing overlay file without verifying the header.
    */
-  folly::File openFileNoVerify(InodeNumber inodeNumber);
+  OverlayFile openFileNoVerify(InodeNumber inodeNumber);
 
   /**
    * Helper function that creates an overlay file for a new FileInode.
    */
-  folly::File createOverlayFile(
+  OverlayFile createOverlayFile(
       InodeNumber inodeNumber,
       folly::ByteRange contents);
 
@@ -174,7 +175,7 @@ class Overlay {
    * Helper function to write an overlay file for a FileInode with existing
    * contents.
    */
-  folly::File createOverlayFile(
+  OverlayFile createOverlayFile(
       InodeNumber inodeNumber,
       const folly::IOBuf& contents);
 

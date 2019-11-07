@@ -23,6 +23,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -83,9 +84,9 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ(hash2, subdirEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
 
-  folly::checkUnixError(lseek(file.fd(), FsOverlay::kHeaderLength, SEEK_SET));
+  folly::checkUnixError(file.lseek(FsOverlay::kHeaderLength, SEEK_SET));
   std::string result;
-  folly::readFile(file.fd(), result);
+  file.readFile(result);
   EXPECT_EQ("contents", result);
 
   ASSERT_TRUE(subdir);
@@ -102,8 +103,8 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   ASSERT_TRUE(emptyDir);
   EXPECT_EQ(0, emptyDir->size());
 
-  folly::checkUnixError(lseek(hello.fd(), FsOverlay::kHeaderLength, SEEK_SET));
-  folly::readFile(file.fd(), result);
+  folly::checkUnixError(hello.lseek(FsOverlay::kHeaderLength, SEEK_SET));
+  file.readFile(result);
   EXPECT_EQ("", result);
 }
 

@@ -21,6 +21,7 @@
 
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -256,30 +257,30 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
 
 // Helper function to open,validate,
 // get file pointer of an overlay file
-folly::File Overlay::openFile(
+OverlayFile Overlay::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
-  return fsOverlay_.openFile(inodeNumber, headerId);
+  return OverlayFile(fsOverlay_.openFile(inodeNumber, headerId));
 }
 
-folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
-  return fsOverlay_.openFileNoVerify(inodeNumber);
+OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
+  return OverlayFile(fsOverlay_.openFileNoVerify(inodeNumber));
 }
 
-folly::File Overlay::createOverlayFile(
+OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     folly::ByteRange contents) {
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
-  return fsOverlay_.createOverlayFile(inodeNumber, contents);
+  return OverlayFile(fsOverlay_.createOverlayFile(inodeNumber, contents));
 }
 
-folly::File Overlay::createOverlayFile(
+OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     const folly::IOBuf& contents) {
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
-  return fsOverlay_.createOverlayFile(inodeNumber, contents);
+  return OverlayFile(fsOverlay_.createOverlayFile(inodeNumber, contents));
 }
 
 InodeNumber Overlay::getMaxInodeNumber() {

@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/utils/Bug.h"
@@ -82,7 +83,9 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
   // Size is not known, so fstat the file. Do so while the lock is not held to
   // improve concurrency.
   struct stat st;
-  folly::checkUnixError(fstat(entry->file.fd(), &st));
+  folly::checkUnixError(
+      entry->file.fstat(&st),
+      folly::to<std::string>("unable to fstat inode entry ", ino));
   if (st.st_size < static_cast<off_t>(FsOverlay::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
@@ -127,7 +130,7 @@ Hash OverlayFileAccess::getSha1(InodeNumber ino) {
     // like a good property of this function to avoid changing that
     // state.
     uint8_t buf[8192];
-    auto len = folly::preadNoInt(entry->file.fd(), buf, sizeof(buf), off);
+    auto len = entry->file.preadNoInt(&buf, sizeof(buf), off);
     folly::checkUnixError(len, "pread failed during SHA-1 calculation");
     if (len == 0) {
       break;
@@ -162,11 +165,10 @@ std::string OverlayFileAccess::readAllContents(InodeNumber ino) {
   // TODO: implement readFile with pread instead of lseek.
   auto info = entry->info.wlock();
 
-  int fd = entry->file.fd();
-  auto rc = lseek(fd, FsOverlay::kHeaderLength, SEEK_SET);
+  auto rc = entry->file.lseek(FsOverlay::kHeaderLength, SEEK_SET);
   folly::checkUnixError(rc, "unable to seek in materialized FileInode");
   std::string result;
-  if (!folly::readFile(fd, result)) {
+  if (!entry->file.readFile(result)) {
     folly::throwSystemError();
   }
   return result;
@@ -176,11 +178,8 @@ BufVec OverlayFileAccess::read(InodeNumber ino, size_t size, off_t off) {
   auto entry = getEntryForInode(ino);
 
   auto buf = folly::IOBuf::createCombined(size);
-  auto res = folly::preadNoInt(
-      entry->file.fd(),
-      buf->writableBuffer(),
-      size,
-      off + FsOverlay::kHeaderLength);
+  auto res = entry->file.preadNoInt(
+      buf->writableBuffer(), size, off + FsOverlay::kHeaderLength);
 
   folly::checkUnixError(res);
   buf->append(res);
@@ -194,9 +193,7 @@ size_t OverlayFileAccess::write(
     off_t off) {
   auto entry = getEntryForInode(ino);
 
-  // TODO: Introduce a folly::pwritevNoInt and call that instead.
-  auto xfer =
-      ::pwritev(entry->file.fd(), iov, iovcnt, off + FsOverlay::kHeaderLength);
+  auto xfer = entry->file.pwritev(iov, iovcnt, off + FsOverlay::kHeaderLength);
   folly::checkUnixError(xfer);
 
   auto info = entry->info.wlock();
@@ -208,8 +205,7 @@ size_t OverlayFileAccess::write(
 void OverlayFileAccess::truncate(InodeNumber ino, off_t size) {
   auto entry = getEntryForInode(ino);
 
-  folly::checkUnixError(
-      ftruncate(entry->file.fd(), size + FsOverlay::kHeaderLength));
+  folly::checkUnixError(entry->file.ftruncate(size + FsOverlay::kHeaderLength));
 
   auto info = entry->info.wlock();
   info->invalidateMetadata();
@@ -220,12 +216,8 @@ void OverlayFileAccess::fsync(InodeNumber ino, bool datasync) {
   // That said, close() does not ensure data is synced, so it's safest to
   // reopen.
   auto entry = getEntryForInode(ino);
-  int fd = entry->file.fd();
-#ifdef __APPLE__
-  folly::checkUnixError(::fsync(fd));
-#else
-  folly::checkUnixError(datasync ? ::fdatasync(fd) : ::fsync(fd));
-#endif
+  folly::checkUnixError(
+      datasync ? entry->file.fdatasync() : entry->file.fsync());
 }
 
 OverlayFileAccess::EntryPtr OverlayFileAccess::getEntryForInode(

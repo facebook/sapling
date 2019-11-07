@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/OverlayFile.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;

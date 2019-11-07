@@ -13,6 +13,7 @@
 #include <memory>
 #include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/model/Hash.h"
 
 namespace facebook {
@@ -118,7 +119,7 @@ class OverlayFileAccess {
    */
 
   struct Entry {
-    Entry(folly::File f, std::optional<size_t> s, const std::optional<Hash>& h)
+    Entry(OverlayFile f, std::optional<size_t> s, const std::optional<Hash>& h)
         : file{std::move(f)}, info{folly::in_place, s, h} {}
 
     struct Info {
@@ -132,7 +133,7 @@ class OverlayFileAccess {
       uint64_t version{0};
     };
 
-    const folly::File file;
+    const OverlayFile file;
     folly::Synchronized<Info> info;
   };
 
