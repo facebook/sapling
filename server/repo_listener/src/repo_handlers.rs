@@ -189,10 +189,11 @@ fn create_repo_sync_target(
     let repo = target_incomplete_repo_handler.repo.clone();
 
     open_backsyncer_dbs_compat(ctx.clone(), db_config, maybe_myrouter_port)
-        .map(move |_target_repo_dbs| RepoSyncTarget {
+        .map(move |target_repo_dbs| RepoSyncTarget {
             repo,
             small_to_large_commit_syncer,
             large_to_small_commit_syncer,
+            target_repo_dbs,
         })
         .boxify()
 }

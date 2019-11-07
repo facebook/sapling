@@ -9,6 +9,7 @@
 use crate::errors::*;
 use crate::getbundle_response;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
+use crate::push_redirector::RepoSyncTarget;
 use crate::unbundle::{run_hooks, run_post_resolve_action};
 
 use blobrepo::BlobRepo;
@@ -16,7 +17,6 @@ use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
 use context::{CoreContext, Metric, PerfCounterType};
-use cross_repo_sync::CommitSyncer;
 use failure::{err_msg, format_err};
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
@@ -61,7 +61,6 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use streaming_clone::RevlogStreamingChunks;
-use synced_commit_mapping::SyncedCommitMapping;
 use time_ext::DurationExt;
 use tokio::timer::timeout::Error as TimeoutError;
 use tokio::util::FutureExt as TokioFutureExt;
@@ -209,16 +208,6 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
     }
 
     percent_encode(&encodedcaps.join("\n"))
-}
-
-#[derive(Clone)]
-pub struct RepoSyncTarget {
-    // target (large) repo to sync into
-    pub repo: MononokeRepo,
-    // `CommitSyncer` struct to do push redirecion
-    pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
-    // `CommitSyncer` struct for the backsyncer
-    pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
 }
 
 #[derive(Clone)]
@@ -718,6 +707,21 @@ impl RepoClient {
             self.wireproto_logging.clone(),
             self.repo.reponame().clone(),
         )
+    }
+
+    /// This function exists to provide per-unbundle control
+    /// of whether the push-redirector should be used
+    fn maybe_get_repo_sync_target_for_action(
+        &self,
+        _action: &bundle2_resolver::PostResolveAction,
+    ) -> Option<RepoSyncTarget> {
+        // TODO(ikostia): here we should differentiate between infinitepush,
+        //                pushrebase and push unbundles. Also here we should
+        //                verify if push redirection is not disabled in some
+        //                override system (configerator?)
+        // Until push redirector is either ready or gated
+        // this should only be returning `None`.
+        None
     }
 }
 
@@ -1307,17 +1311,24 @@ impl HgCommands for RepoClient {
                             .map(move |_| action)
                     }
                 }).and_then({
-                    cloned!(ctx, blobrepo, pushrebase_params, lca_hint, phases_hint);
-                    move |action| run_post_resolve_action(
-                        ctx,
-                        blobrepo,
-                        bookmark_attrs,
-                        lca_hint,
-                        phases_hint,
-                        infinitepush_params,
-                        pushrebase_params,
-                        action,
-                    )
+                    cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint, phases_hint);
+                    move |action| {
+                        match client.maybe_get_repo_sync_target_for_action(&action) {
+                            Some(repo_sync_target) => repo_sync_target
+                                .run_redirected_post_resolve_action_compat(ctx, action)
+                                .boxify(),
+                            None => run_post_resolve_action(
+                                ctx,
+                                blobrepo,
+                                bookmark_attrs,
+                                lca_hint,
+                                phases_hint,
+                                infinitepush_params,
+                                pushrebase_params,
+                                action,
+                            )
+                        }
+                    }
                 }).and_then({
                     cloned!(ctx);
                     move |response| response.generate_bytes(

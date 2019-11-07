@@ -36,7 +36,7 @@ use std::sync::Arc;
 
 mod hook_running;
 pub use hook_running::run_hooks;
-mod response;
+pub mod response;
 use response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
