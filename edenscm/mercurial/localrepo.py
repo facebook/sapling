@@ -242,8 +242,8 @@ class localpeer(repository.peer):
         else:
             return changegroup.getunbundler("01", cb, None)
 
-    def heads(self):
-        return self._repo.heads()
+    def heads(self, *args, **kwargs):
+        return self._repo.heads(*args, **kwargs)
 
     def known(self, nodes):
         return self._repo.known(nodes)
@@ -2558,15 +2558,24 @@ class localrepository(object):
         """Used by workingctx to clear post-dirstate-status hooks."""
         del self._postdsstatus[:]
 
-    def heads(self, start=None):
-        if start is None:
-            cl = self.changelog
-            headrevs = reversed(cl.headrevs())
-            return [cl.node(rev) for rev in headrevs]
+    def headrevs(self, start=None, includepublic=True, includedraft=True, reverse=True):
+        if includedraft:
+            nodes = list(self.nodes("parents() + bookmark()"))
+        else:
+            nodes = []
+        cl = self.changelog
+        headrevs = cl._headrevs(nodes, includepublic, includedraft)
+        if start is not None:
+            startrev = cl.rev(start)
+            headrevs = [r for r in headrevs if r > startrev]
+        if reverse:
+            return list(reversed(headrevs))
+        else:
+            return headrevs
 
-        heads = self.changelog.heads(start)
-        # sort the output in rev descending order
-        return sorted(heads, key=self.changelog.rev, reverse=True)
+    def heads(self, start=None, includepublic=True, includedraft=True):
+        headrevs = self.headrevs(start, includepublic, includedraft)
+        return map(self.changelog.node, headrevs)
 
     def branchheads(self, branch=None, start=None, closed=False):
         """return a (possibly filtered) list of heads for the given branch

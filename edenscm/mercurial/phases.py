@@ -321,12 +321,8 @@ class phasecache(object):
                 def torevs(nodes):
                     return list(repo.revs("%ln", nodes))
 
-                publicheadrevs = cl.headrevs(includepublic=True, includedraft=False)
-                draftheadrevs = cl.headrevs(includepublic=False, includedraft=True)
-
-                # Also consider "." and bookmarks as drafts.
-                # This prevents them (and their ancestors) from being hidden (secret).
-                draftheadrevs += list(repo.revs("parents() + bookmark()"))
+                publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
+                draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
 
                 self._publicrevs, self._draftrevs = cl.index2.phasesets(
                     publicheadrevs, draftheadrevs

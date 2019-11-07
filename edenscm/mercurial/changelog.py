@@ -375,11 +375,15 @@ class changelog(revlog.revlog):
     def reachableroots(self, minroot, heads, roots, includepath=False):
         return self.index.reachableroots2(minroot, heads, roots, includepath)
 
-    def headrevs(self, includepublic=True, includedraft=True):
+    def headrevs(self):
+        return self._headrevs([])
+
+    def _headrevs(self, additionalheads, includepublic=True, includedraft=True):
+        # This should only be used by repo.heads()
         if self._uiconfig.configbool("experimental", "narrow-heads"):
             publicnodes, draftnodes = self._remotenodes()
             torev = self.nodemap.__getitem__
-            nodes = []
+            nodes = list(additionalheads)
             if includepublic:
                 nodes += publicnodes
             if includedraft:
