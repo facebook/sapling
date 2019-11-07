@@ -26,6 +26,18 @@ pub trait MutableHistoryStore: HistoryStore + Send + Sync {
     }
 }
 
+/// The `RemoteHistoryStore` trait indicates that data can fetched over the network. Care must be
+/// taken to avoid serially fetching data and instead data should be fetched in bulk via the
+/// `prefetch` API.
+pub trait RemoteHistoryStore: HistoryStore + Send + Sync {
+    /// Attempt to bring the data corresponding to the passed in keys to a local store.
+    ///
+    /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
+    /// everything that was asked. On a higher level store, such as the `MetadataStore`, this will
+    /// avoid fetching data that is already present locally.
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()>;
+}
+
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
 impl<T: HistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> HistoryStore for U {
     fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {

@@ -13,15 +13,14 @@ use std::{
 use failure::Fallible;
 
 use configparser::config::ConfigSet;
-use edenapi::EdenApi;
 use types::Key;
 
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
-    edenapi::EdenApiRemoteStore,
     indexedlogdatastore::IndexedLogDataStore,
     localstore::LocalStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
+    remotestore::RemoteStore,
     uniondatastore::UnionDataStore,
     util::{get_cache_indexedlogdatastore_path, get_cache_packs_path, get_local_packs_path},
 };
@@ -30,7 +29,7 @@ struct ContentStoreInner {
     datastore: UnionDataStore<Box<dyn DataStore>>,
     local_mutabledatastore: Box<dyn MutableDeltaStore>,
     shared_mutabledatastore: Box<dyn MutableDeltaStore>,
-    remote_store: Option<Box<dyn RemoteDataStore>>,
+    remote_store: Option<Arc<dyn RemoteDataStore>>,
 }
 
 /// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
@@ -112,12 +111,12 @@ impl MutableDeltaStore for ContentStore {
 
 /// Builder for `ContentStore`. An `impl AsRef<Path>` represents the path to the store and a
 /// `ConfigSet` of the Mercurial configuration are required to build a `ContentStore`. Users can
-/// use this builder to add optional `EdenApi` to enable remote data fetching， and a `Path` suffix
-/// to specify other type of stores.
+/// use this builder to add optional `RemoteStore` to enable remote data fetching， and a `Path`
+/// suffix to specify other type of stores.
 pub struct ContentStoreBuilder<'a> {
     local_path: PathBuf,
     config: &'a ConfigSet,
-    edenapi: Option<Box<dyn EdenApi>>,
+    remotestore: Option<Box<dyn RemoteStore>>,
     suffix: Option<&'a Path>,
 }
 
@@ -126,13 +125,13 @@ impl<'a> ContentStoreBuilder<'a> {
         Self {
             local_path: local_path.as_ref().to_path_buf(),
             config,
-            edenapi: None,
+            remotestore: None,
             suffix: None,
         }
     }
 
-    pub fn edenapi(mut self, edenapi: Box<dyn EdenApi>) -> Self {
-        self.edenapi = Some(edenapi);
+    pub fn remotestore(mut self, remotestore: Box<dyn RemoteStore>) -> Self {
+        self.remotestore = Some(remotestore);
         self
     }
 
@@ -161,13 +160,14 @@ impl<'a> ContentStoreBuilder<'a> {
         datastore.add(shared_pack_store.clone());
         datastore.add(local_pack_store.clone());
 
-        let remote_store: Option<Box<dyn RemoteDataStore>> = if let Some(edenapi) = self.edenapi {
-            let store = Box::new(EdenApiRemoteStore::new(edenapi, shared_pack_store.clone()));
-            datastore.add(store.clone());
-            Some(store)
-        } else {
-            None
-        };
+        let remote_store: Option<Arc<dyn RemoteDataStore>> =
+            if let Some(remotestore) = self.remotestore {
+                let store = remotestore.datastore(shared_pack_store.clone());
+                datastore.add(Box::new(store.clone()));
+                Some(store)
+            } else {
+                None
+            };
 
         let local_mutabledatastore: Box<dyn MutableDeltaStore> = local_pack_store;
         let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
@@ -194,7 +194,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::testutil::fake_edenapi;
+    use crate::testutil::FakeRemoteStore;
 
     fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
         let mut config = ConfigSet::new();
@@ -320,11 +320,11 @@ mod tests {
 
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
-
-        let edenapi = fake_edenapi(map);
+        let mut remotestore = FakeRemoteStore::new();
+        remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&localdir, &config)
-            .edenapi(edenapi)
+            .remotestore(Box::new(remotestore))
             .build()?;
         let data_get = store.get(&k)?;
 
@@ -344,10 +344,11 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
 
-        let edenapi = fake_edenapi(map);
+        let mut remotestore = FakeRemoteStore::new();
+        remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&localdir, &config)
-            .edenapi(edenapi)
+            .remotestore(Box::new(remotestore))
             .build()?;
         store.get(&k)?;
         drop(store);
@@ -367,10 +368,11 @@ mod tests {
         let config = make_config(&cachedir);
 
         let map = HashMap::new();
-        let edenapi = fake_edenapi(map);
+        let mut remotestore = FakeRemoteStore::new();
+        remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&localdir, &config)
-            .edenapi(edenapi)
+            .remotestore(Box::new(remotestore))
             .build()?;
 
         let k = key("a", "1");
@@ -390,10 +392,11 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
 
-        let edenapi = fake_edenapi(map);
+        let mut remotestore = FakeRemoteStore::new();
+        remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&localdir, &config)
-            .edenapi(edenapi)
+            .remotestore(Box::new(remotestore))
             .build()?;
         store.get(&k)?;
         store.inner.shared_mutabledatastore.get(&k)?;

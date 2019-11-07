@@ -15,6 +15,7 @@ mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
 mod metadatastore;
+mod remotestore;
 mod sliceext;
 mod unionstore;
 mod util;
@@ -53,6 +54,7 @@ pub use crate::packstore::{
     CorruptionPolicy, DataPackStore, HistoryPackStore, MutableDataPackStore,
     MutableHistoryPackStore,
 };
+pub use crate::remotestore::RemoteStore;
 pub use crate::repack::ToKeys;
 pub use crate::uniondatastore::UnionDataStore;
 

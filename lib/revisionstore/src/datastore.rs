@@ -43,7 +43,7 @@ pub trait DataStore: LocalStore + Send + Sync {
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
 /// taken to avoid serially fetching data and instead data should be fetched in bulk via the
 /// `prefetch` API.
-pub trait RemoteDataStore: Send + Sync {
+pub trait RemoteDataStore: DataStore + Send + Sync {
     /// Attempt to bring the data corresponding to the passed in keys to a local store.
     ///
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch

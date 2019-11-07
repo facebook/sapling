@@ -5,20 +5,153 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use bytes::Bytes;
+use failure::{err_msg, Fallible};
 
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
-use types::{HgId, HistoryEntry, Key, RepoPathBuf};
+use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
 
-use crate::datastore::Delta;
+use crate::{
+    datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
+    historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
+    localstore::LocalStore,
+    remotestore::RemoteStore,
+};
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
     Delta {
         data: Bytes::from(data),
         base,
         key,
+    }
+}
+
+pub struct FakeRemoteStore {
+    data: Option<HashMap<Key, Bytes>>,
+    hist: Option<HashMap<Key, NodeInfo>>,
+}
+
+impl FakeRemoteStore {
+    pub fn new() -> FakeRemoteStore {
+        Self {
+            data: None,
+            hist: None,
+        }
+    }
+
+    pub fn data(&mut self, map: HashMap<Key, Bytes>) {
+        self.data = Some(map)
+    }
+
+    pub fn hist(&mut self, map: HashMap<Key, NodeInfo>) {
+        self.hist = Some(map)
+    }
+}
+
+impl RemoteStore for FakeRemoteStore {
+    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+        assert!(self.data.is_some());
+
+        Arc::new(FakeRemoteDataStore {
+            store,
+            map: self.data.as_ref().unwrap().clone(),
+        })
+    }
+
+    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+        assert!(self.hist.is_some());
+
+        Arc::new(FakeRemoteHistoryStore {
+            store,
+            map: self.hist.as_ref().unwrap().clone(),
+        })
+    }
+}
+
+struct FakeRemoteDataStore {
+    store: Box<dyn MutableDeltaStore>,
+    map: HashMap<Key, Bytes>,
+}
+
+impl RemoteDataStore for FakeRemoteDataStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        for k in keys {
+            let data = self.map.get(&k).ok_or(err_msg("Not found"))?;
+            let delta = Delta {
+                data: data.clone(),
+                base: None,
+                key: k,
+            };
+            self.store.add(&delta, &Default::default())?;
+        }
+
+        Ok(())
+    }
+}
+
+impl DataStore for FakeRemoteDataStore {
+    fn get(&self, _key: &Key) -> Fallible<Option<Vec<u8>>> {
+        unreachable!();
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Option<Delta>> {
+        match self.prefetch(vec![key.clone()]) {
+            Err(_) => Ok(None),
+            Ok(()) => self.store.get_delta(key),
+        }
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Option<Vec<Delta>>> {
+        match self.prefetch(vec![key.clone()]) {
+            Err(_) => Ok(None),
+            Ok(()) => self.store.get_delta_chain(key),
+        }
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Option<Metadata>> {
+        match self.prefetch(vec![key.clone()]) {
+            Err(_) => Ok(None),
+            Ok(()) => self.store.get_meta(key),
+        }
+    }
+}
+
+impl LocalStore for FakeRemoteDataStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        Ok(keys.to_vec())
+    }
+}
+
+struct FakeRemoteHistoryStore {
+    store: Box<dyn MutableHistoryStore>,
+    map: HashMap<Key, NodeInfo>,
+}
+
+impl RemoteHistoryStore for FakeRemoteHistoryStore {
+    fn prefetch(&self, keys: Vec<Key>) -> Fallible<()> {
+        for k in keys {
+            self.store
+                .add(&k, self.map.get(&k).ok_or(err_msg("Not found"))?)?
+        }
+
+        Ok(())
+    }
+}
+
+impl HistoryStore for FakeRemoteHistoryStore {
+    fn get_node_info(&self, key: &Key) -> Fallible<Option<NodeInfo>> {
+        match self.prefetch(vec![key.clone()]) {
+            Err(_) => Ok(None),
+            Ok(()) => self.store.get_node_info(key),
+        }
+    }
+}
+
+impl LocalStore for FakeRemoteHistoryStore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        Ok(keys.to_vec())
     }
 }
 
