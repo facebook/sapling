@@ -59,7 +59,7 @@ start mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (-1 heads)
+  added 1 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   new changesets 38674c683e74
   $ hgmn up 2

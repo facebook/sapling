@@ -427,7 +427,7 @@ Check phases on another side (for pull command and pull -r)
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files (+1 heads)
+  added 2 changesets with 0 changes to 0 files
   new changesets 500658c138a4:eca836c7c651
 
   $ tglogp

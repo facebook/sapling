@@ -205,7 +205,7 @@ Do a streaming clone of the repo
   adding changesets
   adding manifests
   adding file changes
-  added 10 changesets with 0 changes to 0 files (+1 heads)
+  added 10 changesets with 0 changes to 0 files
   new changesets * (glob)
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved

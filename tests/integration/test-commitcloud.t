@@ -146,7 +146,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files (+1 heads)
+  added 3 changesets with 0 changes to 0 files
   new changesets 15f040cf571c:58508421158d
   commitcloud: commits synchronized
   finished in * (glob)
@@ -305,7 +305,7 @@ Commit still becomes available in the other repo
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 0 changes to 0 files (+2 heads)
+  added 4 changesets with 0 changes to 0 files
   new changesets * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
