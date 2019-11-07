@@ -12,7 +12,7 @@ use std::{
 
 use failure::Fallible;
 
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::{Key, NodeInfo};
 
 use crate::{
@@ -132,13 +132,18 @@ impl<'a> MetadataStoreBuilder<'a> {
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let shared_indexedloghistorystore = Box::new(IndexedLogHistoryStore::new(
-            get_cache_indexedloghistorystore_path(self.config)?,
-        )?);
-
         let mut historystore: UnionHistoryStore<Box<dyn HistoryStore>> = UnionHistoryStore::new();
 
-        historystore.add(shared_indexedloghistorystore);
+        if self
+            .config
+            .get_or_default::<bool>("remotefilelog", "indexedloghistorystore")?
+        {
+            let shared_indexedloghistorystore = Box::new(IndexedLogHistoryStore::new(
+                get_cache_indexedloghistorystore_path(self.config)?,
+            )?);
+            historystore.add(shared_indexedloghistorystore);
+        }
+
         historystore.add(shared_pack_store.clone());
         historystore.add(local_pack_store.clone());
 

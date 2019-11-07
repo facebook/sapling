@@ -12,7 +12,7 @@ use std::{
 
 use failure::Fallible;
 
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::Key;
 
 use crate::{
@@ -150,13 +150,18 @@ impl<'a> ContentStoreBuilder<'a> {
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let shared_indexedlogdatastore = Box::new(IndexedLogDataStore::new(
-            get_cache_indexedlogdatastore_path(self.config)?,
-        )?);
-
         let mut datastore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
 
-        datastore.add(shared_indexedlogdatastore);
+        if self
+            .config
+            .get_or_default::<bool>("remotefilelog", "indexedlogdatastore")?
+        {
+            let shared_indexedlogdatastore = Box::new(IndexedLogDataStore::new(
+                get_cache_indexedlogdatastore_path(self.config)?,
+            )?);
+            datastore.add(shared_indexedlogdatastore);
+        }
+
         datastore.add(shared_pack_store.clone());
         datastore.add(local_pack_store.clone());
 
