@@ -315,7 +315,6 @@ pub fn generate_session_id() -> SessionId {
 pub struct SessionContainerInner {
     session_id: SessionId,
     trace: TraceContext,
-    perf_counters: PerfCounters,
     user_unix_name: Option<String>,
     ssh_env_vars: SshEnvVars,
     load_limiter: Option<LoadLimiter>,
@@ -342,7 +341,6 @@ impl SessionContainer {
         let inner = SessionContainerInner {
             session_id,
             trace,
-            perf_counters: PerfCounters::new(),
             user_unix_name,
             ssh_env_vars,
             load_limiter,
@@ -374,10 +372,6 @@ impl SessionContainer {
 
     pub fn trace(&self) -> &TraceContext {
         &self.inner.trace
-    }
-
-    pub fn perf_counters(&self) -> &PerfCounters {
-        &self.inner.perf_counters
     }
 
     pub fn user_unix_name(&self) -> &Option<String> {
@@ -423,6 +417,7 @@ impl SessionContainer {
 pub struct LoggingContainer {
     logger: Logger,
     scuba: Arc<ScubaSampleBuilder>,
+    perf_counters: Arc<PerfCounters>,
 }
 
 impl LoggingContainer {
@@ -430,6 +425,7 @@ impl LoggingContainer {
         Self {
             logger,
             scuba: Arc::new(scuba),
+            perf_counters: Arc::new(PerfCounters::new()),
         }
     }
 
@@ -439,6 +435,10 @@ impl LoggingContainer {
 
     pub fn scuba(&self) -> &ScubaSampleBuilder {
         &self.scuba
+    }
+
+    pub fn perf_counters(&self) -> &PerfCounters {
+        &self.perf_counters
     }
 }
 
@@ -491,11 +491,12 @@ impl CoreContext {
         &self.logging.scuba()
     }
 
+    pub fn perf_counters(&self) -> &PerfCounters {
+        &self.logging.perf_counters
+    }
+
     pub fn trace(&self) -> &TraceContext {
         &self.session.trace()
-    }
-    pub fn perf_counters(&self) -> &PerfCounters {
-        &self.session.perf_counters()
     }
 
     pub fn user_unix_name(&self) -> &Option<String> {
