@@ -50,6 +50,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             "#,
         );
     let app = cmdlib::args::add_myrouter_args(app);
+    let app = cmdlib::args::add_mcrouter_args(app);
     let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
     let app = cmdlib::args::add_disabled_hooks_args(app);
     let app = cmdlib::args::add_logger_args(app);
@@ -64,6 +65,7 @@ fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
 #[fbinit::main]
 fn main(fb: FacebookInit) {
     let matches = setup_app().get_matches();
+    cmdlib::args::maybe_enable_mcrouter(fb, &matches);
     let root_log = cmdlib::args::init_logging(fb, &matches);
 
     panichandler::set_panichandler(panichandler::Fate::Abort);

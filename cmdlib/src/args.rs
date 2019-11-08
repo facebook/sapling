@@ -45,6 +45,7 @@ const SOURCE_REPO_NAME: &str = "source-repo-name";
 const TARGET_REPO_GROUP: &str = "target-repo";
 const TARGET_REPO_ID: &str = "target-repo-id";
 const TARGET_REPO_NAME: &str = "target-repo-name";
+const ENABLE_MCROUTER: &str = "enable-mcrouter";
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -594,6 +595,15 @@ pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--myrouter-port=[PORT]    'port for local myrouter instance'")
 }
 
+pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(ENABLE_MCROUTER)
+            .long(ENABLE_MCROUTER)
+            .help("Use local McRouter for rate limits")
+            .takes_value(false),
+    )
+}
+
 pub fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--fb303-thrift-port=[PORT]    'port for fb303 service'")
 }
@@ -751,6 +761,12 @@ pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
                 .expect("Provided --myrouter-port is not u16"),
         ),
         None => None,
+    }
+}
+
+pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {
+    if matches.is_present(ENABLE_MCROUTER) {
+        ::ratelim::use_proxy_if_available(fb);
     }
 }
 
