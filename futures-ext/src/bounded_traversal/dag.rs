@@ -118,18 +118,20 @@ where
             unscheduled: VecDeque::new(),
             execution_tree: HashMap::new(),
         };
-        this.enqueue_unfold(
+        let init_out = this.enqueue_unfold(
             NodeLocation {
                 node_index: init.clone(),
                 child_index: 0,
             },
             init,
         );
+        // can not be resolved since execution tree is empty
+        debug_assert!(init_out.is_none());
         this
     }
 
-    fn enqueue_unfold(&mut self, parent: NodeLocation<In>, value: In) {
-        let result = match self.execution_tree.get_mut(&value) {
+    fn enqueue_unfold(&mut self, parent: NodeLocation<In>, value: In) -> Option<Out> {
+        match self.execution_tree.get_mut(&value) {
             None => {
                 // schedule unfold for previously unseen `value`
                 self.execution_tree.insert(
@@ -143,18 +145,16 @@ where
                     value: value.clone(),
                     future: (self.unfold)(value).into_future(),
                 });
-                return;
+                None
             }
             Some(Node::Pending { parents, .. }) => {
                 // we already have a node associated with the same input value,
                 // register as a dependency for this node.
                 parents.push(parent);
-                return;
+                None
             }
-            Some(Node::Done(result)) => result.clone(),
-        };
-        // we have a cached result value associated with the same input value
-        self.update_location(parent, result)
+            Some(Node::Done(result)) => Some(result.clone()),
+        }
     }
 
     fn enqueue_fold(&mut self, value: In, context: OutCtx, children: Iter<Out>) {
@@ -166,18 +166,26 @@ where
 
     fn process_unfold(&mut self, value: In, (context, children): UFut::Item) {
         // schedule unfold for node's children
-        let count = children.into_iter().fold(0, |child_index, child| {
-            self.enqueue_unfold(
-                NodeLocation {
-                    node_index: value.clone(),
-                    child_index,
-                },
-                child,
-            );
-            child_index + 1
-        });
+        let mut children_left = 0;
+        let children: Vec<_> = children
+            .into_iter()
+            .enumerate()
+            .map(|(child_index, child)| {
+                let out = self.enqueue_unfold(
+                    NodeLocation {
+                        node_index: value.clone(),
+                        child_index,
+                    },
+                    child,
+                );
+                if out.is_none() {
+                    children_left += 1;
+                }
+                out
+            })
+            .collect();
 
-        if count != 0 {
+        if children_left != 0 {
             // update pending node with `wait` state
             let node = self
                 .execution_tree
@@ -185,14 +193,12 @@ where
                 .expect("unfold referenced invalid node");
             match node {
                 Node::Pending { children: wait, .. } => {
-                    let mut children = Vec::new();
-                    children.resize_with(count, || None);
                     mem::replace(
                         wait,
                         Some(Children {
                             context,
                             children,
-                            children_left: count,
+                            children_left,
                         }),
                     );
                 }
@@ -200,7 +206,7 @@ where
             }
         } else {
             // do not have any dependencies (leaf node), schedule fold immediately
-            self.enqueue_fold(value, context, Vec::new().into_iter().flatten());
+            self.enqueue_fold(value, context, children.into_iter().flatten());
         }
     }
 

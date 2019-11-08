@@ -326,6 +326,8 @@ fn test_bounded_traversal_dag() -> Result<(), Error> {
     // 5   6
     //  \ /
     //   7
+    //   |
+    //   4 - will be resolved by the time it is reached
     let dag = hashmap! {
         0 => vec![1, 2],
         1 => vec![3],
@@ -334,6 +336,7 @@ fn test_bounded_traversal_dag() -> Result<(), Error> {
         4 => vec![],
         5 => vec![7],
         6 => vec![7],
+        7 => vec![4],
     };
 
     let tick = Tick::new();
@@ -409,26 +412,26 @@ fn test_bounded_traversal_dag() -> Result<(), Error> {
     assert_eq!(log, reference);
 
     tick();
-    reference.fold(7, 6, "7".to_string());
+    reference.fold(7, 6, "74".to_string());
     assert_eq!(log, reference);
 
     tick();
-    reference.fold(5, 7, "57".to_string());
-    reference.fold(6, 7, "67".to_string());
+    reference.fold(5, 7, "574".to_string());
+    reference.fold(6, 7, "674".to_string());
     assert_eq!(log, reference);
 
     tick();
-    reference.fold(3, 8, "35767".to_string());
+    reference.fold(3, 8, "3574674".to_string());
     assert_eq!(log, reference);
 
     tick();
-    reference.fold(1, 9, "135767".to_string());
-    reference.fold(2, 9, "2357674".to_string());
+    reference.fold(1, 9, "13574674".to_string());
+    reference.fold(2, 9, "235746744".to_string());
     assert_eq!(log, reference);
 
     tick();
-    reference.fold(0, 10, "01357672357674".to_string());
-    reference.done(Some("01357672357674".to_string()));
+    reference.fold(0, 10, "013574674235746744".to_string());
+    reference.done(Some("013574674235746744".to_string()));
     assert_eq!(log, reference);
     Ok(())
 }
